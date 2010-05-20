@@ -1,0 +1,48 @@
+This directory contains an example app ("cloudreader") that runs in the
+Python version of the Google App Engine, accessing Google storage via the
+Google-modified version of the boto open source Python library.
+
+To install and try the cloudreader app, take the following steps:
+
+1. The current code assumes you are already familiar with Google
+App Engine, and have it installed.  If that's not true, start at
+http://code.google.com/appengine/
+
+In the remainder of these instructions, we assume you have gsutil unpacked
+in /usr/local/gsutil, and Google App Engine installed at /usr/local/google_appengine
+
+2. Copy the boto and cloudreader code into the google_appengine directory:
+     % cp -pr /usr/local/gsutil/cloudreader /usr/local/google_appengine
+     % cp -pr /usr/local/gsutil/boto /usr/local/google_appengine/cloudreader
+
+3. Edit cloudreader/boto.cfg to contain the keys you received from Google
+   (and Amazon, if you also want to use those keys):
+     % vim /usr/local/google_appengine/cloudreader/boto.cfg
+     (or use your favorite text editor)
+
+  FYI, the cloudreader app reads a publicly readable object
+  (gs://pub/shakespeare/rose.txt), but that the boto library requires
+  credentials for all accesses, even to public objects.
+
+4. Try running it:
+     % cd /usr/local/google_appengine
+     % ./dev_appserver.py cloudreader
+   and then open your browser to http://localhost:8080
+
+   If it works, you should see a short Shakespeare quote.
+
+5. A note about key security: Be careful not to put
+   the boto.cfg file in any directory that app.yaml defines as serving
+   static content.  The example (cloudreader) app is correctly configured in
+   this regard, and is important to make sure your configuration continues
+   to enforce this constraint when you incorporate the code and config file
+   into your real app.
+
+   For good measure, whenever you change configurations you should try
+   opening your web browser to http://localhost:8080/boto.cfg (or whatever
+   path your app.yaml would map to where your boto.cfg file is located).
+   This should *fail* to open your boto.cfg file!
+
+6. At this point you can upload your app to Google
+   infrastructure, following the instructions at
+   http://code.google.com/appengine/docs/python/gettingstarted/uploading.html

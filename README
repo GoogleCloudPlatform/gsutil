@@ -1,0 +1,42 @@
+This directory contains Python code Google is releasing as open source,
+to demonstrate the Google Storage API and to provide a command line
+tool for manipulating data in the system.
+
+Contents:
+  - gsutil is the command line tool
+  - cloudreader contains an example Google App Engine app that accesses Google
+    storage
+  - both depend on a Google-modified version of the boto open source Python
+    library.
+
+The cloudreader app is explained in
+cloud/bigstore/opensrc/gsutil/cloudreader/README.google.
+
+To install gsutil take the following steps:
+
+1. Pick a place where you want to install the software.  You can
+   install the code wherever you prefer; for brevity the instructions below
+   assume you want to install in $HOME/gsutil.
+
+2. To install gsutil on Linux/Unix or MacOS, open a shell window, change
+   directories to where you downloaded the gsutil.tar.gz file, and do this:
+   % tar xfz gsutil.tar.gz -C $HOME
+
+   Then add the following line to your $HOME/.bashrc shell initialization
+   file:
+       export PATH=${PATH}:$HOME/gsutil
+
+   The next time you start a shell you should be able to run gsutil from
+   the command line.
+
+3. To install gsutil on Windows, install cygwin (http://www.cygwin.com/),
+   with at least version 2.5.1 of Python. Once you have that, start a shell
+   and follow the Linux instructions above for unpacking and installing gsutil.
+
+4. The first time you try to run gsutil, it will detect that you have no
+   configuration file containing your credentials, interactively prompt you,
+   and create the file.  For this you will need the key IDs and secret access
+   keys provided by your cloud storage provider(s).
+
+   After this you can use the tool.  Running gsutil with with no arguments
+   will print a help summary.
