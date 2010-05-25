@@ -21,7 +21,7 @@
 #
 from boto.pyami.config import Config, BotoConfigLocations
 from boto.storage_uri import BucketStorageUri, FileStorageUri
-import os, sys
+import os, re, sys
 import logging
 import logging.config
 from boto.exception import InvalidUriError
@@ -308,9 +308,6 @@ def storage_uri(uri_str, default_provider='file', debug=False):
       provider = uri_str[0:end_provider_idx].lower()
       path = uri_str[end_provider_idx + 3:]
 
-    if path.find(':') != -1:
-      raise InvalidUriError('Invalid URI ' '(%s)' % uri_str)
-
     if provider not in ['file', 's3', 'gs']:
         raise InvalidUriError('Unrecognized provider "%s"' % provider)
     if provider == 'file':
@@ -320,6 +317,12 @@ def storage_uri(uri_str, default_provider='file', debug=False):
     else:
         path_parts = path.split('/', 1)
         bucket_name = path_parts[0]
+        # Ensure the bucket name is valid, to avoid possibly confusing other
+        # parts of the code. (For example if we didn't catch bucket names
+        # containing ':', when a user tried to connect to the server with that
+        # name they might get a confusing error about non-integer port numbers.)
+        if not re.match('^[a-z0-9][a-z0-9\._-]{1,253}[a-z0-9]$', bucket_name):
+          raise InvalidUriError('Invalid bucket name in URI "%s"' % uri_str)
         object_name = ''
         if len(path_parts) > 1:
             object_name = path_parts[1]
