@@ -321,7 +321,8 @@ def storage_uri(uri_str, default_provider='file', debug=False):
         # parts of the code. (For example if we didn't catch bucket names
         # containing ':', when a user tried to connect to the server with that
         # name they might get a confusing error about non-integer port numbers.)
-        if not re.match('^[a-z0-9][a-z0-9\._-]{1,253}[a-z0-9]$', bucket_name):
+        if (bucket_name and
+            not re.match('^[a-z0-9][a-z0-9\._-]{1,253}[a-z0-9]$', bucket_name)):
           raise InvalidUriError('Invalid bucket name in URI "%s"' % uri_str)
         object_name = ''
         if len(path_parts) > 1:
