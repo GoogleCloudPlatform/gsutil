@@ -73,6 +73,8 @@ SYNOPSIS
   -d option will show HTTP protocol detail.
 
   Commands:
+    Concatenate object content to stdout:
+      cat [-h] uri1 [uri2...]
     Copy objects:
       cp src_uri dst_uri
         - or -
@@ -221,6 +223,38 @@ def InsistUriNamesContainer(command, uri):
                   'for the multiple source\nform of the "%s" command.' %
                   command)
 
+def CatCommand(args, sub_opts, debug):
+  """Implementation of cat command.
+
+  Args:
+    args: command-line arguments
+    sub_opts: command-specific options from getopt.
+    debug: flag indicating whether to include debug output
+  """
+
+  show_header = False
+  for o, unused_a in sub_opts:
+    if o == '-h':
+      show_header = True
+
+  # Expand object name globs, if any.
+  exp_args = []
+  for uri_str in args:
+    for exp_uri_str in ExpandStorageUriGlob(uri_str, debug):
+      exp_args.append(exp_uri_str)
+  if not exp_args:
+    OutputAndExit('No objects matched.')
+  printed_one = False
+  for uri_str in exp_args:
+    uri = StorageUri(uri_str, False, debug)
+    if not uri.object_name:
+      OutputAndExit('"cat" command must specify objects.')
+    if show_header:
+      if printed_one:
+        print
+      print('==> %s <==' % uri_str)
+      printed_one = True
+    sys.stdout.write(uri.get_contents_as_string())
 
 def SetAclCommand(args, unused_sub_opts, debug):
   """Implementation of setacl command.
@@ -437,7 +471,7 @@ def CheckForDirFileConflict(src_uri, dst_path):
                   (src_uri, dst_path))
 
 
-def ReportNoMatches(uri):
+def ReportNoMatchesAndExit(uri):
   """Reports no URI wildcard matches and exits.
 
   Args:
@@ -657,7 +691,7 @@ def ListCommand(args, sub_opts, debug):
 
   # Handle the case of a complete URI that didn't match anything
   if uri.names_singleton() and not exp_args:
-    ReportNoMatches(uri)
+    ReportNoMatchesAndExit(uri)
 
   # Now iterate over all URIs in exp_args and print requested info for each
   for uri_str in exp_args:
@@ -793,9 +827,6 @@ def HaveFileUris(args):
     True if args contains any file URIs.
   """
   for uri_str in args:
-    # Technically we should check for '://' but the urlparse class (used
-    # in parsing the URIs) lets just ':' represent a URI (e.g., 'gs:mybucket'
-    # is treated as equivalent to 'gs://mybucket').
     if uri_str.lower().startswith('file://') or uri_str.find(':') == -1:
       return True
   return False
@@ -954,6 +985,7 @@ def SetupConfigIfNeeded():
 #  provider_uri_ok, uris_start_arg]
 NO_MAX = sys.maxint
 commands = {
+    'cat': [CatCommand, 0, NO_MAX, 'h', False, True, 0],
     'cp': [CopyObjsCommand, 2, NO_MAX, '', True, False, 0],
     'getacl': [GetAclCommand, 1, 1, '', False, False, 0],
     'help': [HelpCommand, 0, 0, '', False, False, 0],
@@ -973,14 +1005,15 @@ def main():
           ) < 2.51:
     OutputAndExit('This tool requires Python 2.5.1 or higher.')
 
-  SetupConfigIfNeeded()
-
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
     OutputUsageAndExit()
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'dh', ['debug', 'help'])
-    command = args[0]
+    if len(args) == 0:
+      command = 'help'
+    else:
+      command = args[0]
     if command not in commands:
       OutputAndExit('Invalid command "%s".' % command)
     command_info = commands[command]
@@ -1003,6 +1036,8 @@ def main():
     OutputAndExit(e.message)
   except getopt.GetoptError, e:
     OutputAndExit(e.msg)
+
+  SetupConfigIfNeeded()
 
   debug = 0
   for o, unused_a in opts:
