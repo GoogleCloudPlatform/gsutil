@@ -79,7 +79,6 @@ SYNOPSIS
       cp src_uri dst_uri
         - or -
       cp uri1 [uri2 ...] dst_uri
-      Currently this copies via the local file system (so, costs bandwidth).
     List buckets or objects:
       ls [-l] uri1 [uri2...]
     Make buckets:
@@ -88,7 +87,6 @@ SYNOPSIS
       mv src_uri dst_uri
         - or -
       mv uri1 [uri2 ...] dst_uri
-      Currently this copies via the local file system (so, costs bandwidth).
     Remove buckets:
       rb uri1 [uri2...]
     Remove objects:
@@ -505,6 +503,48 @@ def GetAclCommand(args, unused_sub_opts, debug):
   parsed_xml = xml.dom.minidom.parseString(acl.to_xml())
   print parsed_xml.toprettyxml(indent='    ')
 
+def PerformCopy(src_uri, dst_uri):
+  """Helper method for CopyObjsCommand.
+
+  Args:
+    src_uri source URI for copy.
+    dst_uri: destination URI for copy.
+  """
+
+  src_key = src_uri.get_key()
+  if not src_key:
+    OutputAndExit('"%s" does not exist.' % src_uri)
+
+  # Separately handle cases to avoid extra file and network copying of
+  # potentially very large files/objects.
+
+  if (src_uri.is_cloud_uri() and dst_uri.is_cloud_uri() and
+      src_uri.provider == dst_uri.provider):
+    # Object -> object, within same provider (uses x-<provider>-copy-source
+    # metadata HTTP header to request copying at the server):
+    src_bucket = src_uri.get_bucket()
+    dst_bucket = dst_uri.get_bucket()
+    dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
+                        src_uri.object_name)
+    return
+
+  dst_key = dst_uri.new_key()
+  if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
+    # File -> object:
+    dst_key.set_contents_from_file(src_key.fp)
+  elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
+    # Object -> file:
+    src_key.get_file(dst_key.fp)
+  elif src_uri.is_file_uri() and dst_uri.is_file_uri():
+    # File -> file:
+    dst_key.set_contents_from_file(src_key.fp)
+  else:
+    # We implement cross-provider object copy through a local temp file:
+    tmp = tempfile.TemporaryFile()
+    src_key.get_file(tmp)
+    tmp.seek(0)
+    dst_key.set_contents_from_file(tmp)
+
 
 def CopyObjsCommand(args, unused_sub_opts, debug):
   """Implementation of cp command.
@@ -563,9 +603,6 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
     if len(exp_src_uri_strs) > 1:
       # Progress indicator
       print 'Copying %s...' % src_uri
-    src_key = src_uri.get_key()
-    if not src_key:
-      OutputAndExit('"%s" does not exist.' % src_uri)
     if dst_uri.names_container():
       if dst_uri.is_file_uri():
         # dest names a directory, so append src obj name to dst obj name
@@ -578,15 +615,7 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
       # dest is an object or file: use dst obj name
       dst_key_name = dst_uri.object_name
     new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-    dst_key = new_dst_uri.new_key()
-    # At present we copy by retrieving to a local temp file and writing
-    # back to the server.
-    # TODO: change to use x-goog-copy-source and x-amz-copy-source.
-    # TODO: for case of copying to/from a local file this is an extra file copy.
-    tmp = tempfile.TemporaryFile()
-    src_key.get_file(tmp)
-    tmp.seek(0)
-    dst_key.set_contents_from_file(tmp)
+    PerformCopy(src_uri, new_dst_uri)
 
 
 def PrintAcl(uri, indent):
