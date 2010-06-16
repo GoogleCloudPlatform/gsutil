@@ -43,6 +43,7 @@ class Key(object):
         self.bucket = bucket
         self.name = name
         self.metadata = {}
+        self.cache_control = None
         self.content_type = self.DefaultContentType
         self.content_encoding = None
         self.filename = None
@@ -95,7 +96,9 @@ class Key(object):
             if self.resp.status < 199 or self.resp.status > 299:
                 raise S3ResponseError(self.resp.status, self.resp.reason)
             response_headers = self.resp.msg
-            self.metadata = boto.utils.get_aws_metadata(response_headers)
+            provider_headers = self.bucket.connection.provider_headers
+            self.metadata = boto.utils.get_aws_metadata(response_headers,
+                                                        provider_headers)
             for name,value in response_headers.items():
                 if name.lower() == 'content-length':
                     self.size = int(value)
@@ -107,6 +110,8 @@ class Key(object):
                     self.content_encoding = value
                 elif name.lower() == 'last-modified':
                     self.last_modified = value
+                elif name.lower() == 'cache-control':
+                    self.cache_control = value
 
     def open_write(self, headers=None):
         """
@@ -353,6 +358,8 @@ class Key(object):
         headers['Content-MD5'] = self.base64md5
         if headers.has_key('Content-Type'):
             self.content_type = headers['Content-Type']
+        if headers.has_key('Content-Encoding'):
+            self.content_encoding = headers['Content-Encoding']
         elif self.path:
             self.content_type = mimetypes.guess_type(self.path)[0]
             if self.content_type == None:
@@ -362,7 +369,8 @@ class Key(object):
             headers['Content-Type'] = self.content_type
         headers['Content-Length'] = str(self.size)
         headers['Expect'] = '100-Continue'
-        headers = boto.utils.merge_meta(headers, self.metadata)
+        headers = boto.utils.merge_meta(headers, self.metadata,
+                                        self.bucket.connection.provider_headers)
         return self.bucket.connection.make_request('PUT', self.bucket.name,
                 self.name, headers, sender=sender)
 
@@ -436,9 +444,9 @@ class Key(object):
         """
         if policy:
             if headers:
-                headers['x-amz-acl'] = policy
+                headers[self.bucket.connection.provider_headers.acl_header] = policy
             else:
-                headers = {'x-amz-acl' : policy}
+                headers = {self.bucket.connection.provider_headers.acl_header : policy}
         if hasattr(fp, 'name'):
             self.path = fp.name
         if self.bucket != None:

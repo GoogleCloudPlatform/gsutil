@@ -20,6 +20,7 @@ import datetime
 import fnmatch
 import getopt
 import glob
+import mimetypes
 import os
 import platform
 import re
@@ -59,42 +60,49 @@ else:
   os.environ['PYTHONPATH'] = boto_lib_dir + ':' + os.getenv('PYTHONPATH')
 
 import boto
+boto.UserAgent = boto.UserAgent + '/gsutil'
 from boto import handler
 from boto.exception import BotoClientError
+from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
 from boto.exception import S3ResponseError
-from boto.s3.acl import CannedACLStrings
-from boto.s3.acl import Policy
 
 usage_string = """
 SYNOPSIS
-  gsutil [-d] command args
+  gsutil [-d] [-h header]... command args
 
-  -d option will show HTTP protocol detail.
+  -d option shows HTTP protocol detail.
+
+  -h option allows you to specify additional HTTP headers, for example:
+     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp * gs://bucket
 
   Commands:
     Concatenate object content to stdout:
-      cat [-h] uri1 [uri2...]
+      cat [-h] uri...
+        -h  Prints short header for each object.
     Copy objects:
-      cp src_uri dst_uri
+      cp [-a canned_acl] [-t] src_uri dst_uri
         - or -
-      cp uri1 [uri2 ...] dst_uri
+      cp [-a canned_acl] [-t] uri... dst_uri
+        -a Sets named canned_acl when uploaded objects created (list below).
+        -t Sets MIME type based on file extension.
+    Get ACL XML for a bucket or object (save and edit for "setacl" command):
+      getacl uri
     List buckets or objects:
-      ls [-l] uri1 [uri2...]
+      ls [-l] uri...
+        -l Prints long listing.
     Make buckets:
-      mb uri1 [uri2...]
+      mb uri...
     Move/rename objects:
       mv src_uri dst_uri
         - or -
-      mv uri1 [uri2 ...] dst_uri
+      mv uri... dst_uri
     Remove buckets:
-      rb uri1 [uri2...]
+      rb uri...
     Remove objects:
-      rm uri1 [uri2...]
+      rm uri...
     Set ACL on buckets and/or objects:
-      setacl <canned_acl_name> uri1 [uri2...]
-      canned_acl_name can be one of: "public-read", "public-read-write",
-      "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"
+      setacl file-or-canned_acl_name uri...
 
   Omitting URI scheme defaults to "file". For example, "dir/file.txt" is
   equivalent to "file://dir/file.txt"
@@ -105,6 +113,9 @@ SYNOPSIS
   Source directory or bucket names are implicitly wildcarded, so
     gsutil cp localdir gs://mybucket
   will recursively copy localdir.
+
+  canned_acl_name can be one of: "public-read", "public-read-write",
+  "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"
 """
 
 
@@ -117,7 +128,7 @@ def StorageUri(uri_str, disallow_object_name=False, debug=False):
   """Instantiate boto.StorageUri with given debug flag with validity checks.
 
   Args:
-    uri_str: URI naming bucket + optional object.
+    uri_str: StorageUri naming bucket + optional object.
     disallow_object_name: Set to true to only allow object name-less buckets.
     debug: Whether to enable debugging on StorageUri method calls.
 
@@ -136,18 +147,20 @@ def StorageUri(uri_str, disallow_object_name=False, debug=False):
   return uri
 
 
-def ExpandStorageUriGlob(bucket_obj_glob, debug):
+def ExpandStorageUriGlob(bucket_obj_glob, headers=None, debug=False):
   """Expands globbing (if any) in bucket_obj_glob.
 
   Args:
     bucket_obj_glob: bucket+object name, possibly including glob chars.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
 
   Returns:
-    list of uri strings, after expanding any globbing.
+    list of boto.StorageUri, after expanding any globbing.
 
-  For example, ExpandStorageUriGlob('gs://mybucket/*.txt', debug) might return
-  ['gs://mybucket/obj1.txt', 'gs://mybucket/obj2.txt']
+  For example, ExpandStorageUriGlob('gs://mybucket/*.txt', headers, debug)
+  might return [StorageUri('gs://mybucket/obj1.txt'),
+                StorageUri('gs://mybucket/obj2.txt')]
   """
 
   uri = StorageUri(bucket_obj_glob, False, debug)
@@ -155,57 +168,57 @@ def ExpandStorageUriGlob(bucket_obj_glob, debug):
   result = []
   # Avoid server round trip if input contains no glob chars.
   if not re.search('[*?\[\]]', key_glob):
-    result.append(bucket_obj_glob)
+    result.append(uri)
   elif uri.is_file_uri():
     # FileStorageUri objects don't provide a way to return a list of all
     # files in the 'bucket', so do our own wildcard expansion for that case.
     filenames = glob.glob(uri.object_name)
     for filename in filenames:
       expanded_uri = uri.clone_replace_name(filename)
-      result.append(expanded_uri.uri)
+      result.append(expanded_uri)
   else:
     # BucketStorageUri with wildcarding.
-    objs = uri.get_bucket()
+    objs = uri.get_bucket(False, headers)
     for obj in objs:
       if fnmatch.fnmatch(obj.name, key_glob):
         # Replace wildcard name in URI with specific matched obj.name
         expanded_uri = uri.clone_replace_name(obj.name)
-        result.append(expanded_uri.__str__())
+        result.append(expanded_uri)
   return result
 
 
-def ExpandWildcardsAndContainers(uri_strs, debug):
+def ExpandWildcardsAndContainers(uri_strs, headers=None, debug=False):
   """Expands any URI globbing, object-less bucket names, or directory names.
 
   Args:
     uri_strs: URI strings needing expansion
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
 
   Returns:
-    list of uri strings, after expanding any globbing and recursively
+    list of boto.StorageUri, after expanding any globbing and recursively
     walking directories.
   """
 
-  exp_uri_strs = []
+  result = []
   for uri_str in uri_strs:
-    for exp_uri_str in ExpandStorageUriGlob(uri_str, debug):
-      exp_uri = StorageUri(exp_uri_str, False, debug)
+    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
       if exp_uri.is_file_uri() and exp_uri.names_container():
-        # exp_uri_str is a file:// URI that names a directory, so include
+        # exp_uri is a file:// URI that names a directory, so include
         # all its nested files.
         for root, unused_dirs, files in os.walk(exp_uri.object_name):
           for name in files:
-            exp_uri_strs.append(os.path.join(root, name))
+            result.append(StorageUri(os.path.join(root, name)))
       elif exp_uri.is_cloud_uri() and exp_uri.names_container():
-        # exp_uri_str is an object-less bucket URI, so include
+        # exp_uri is an object-less bucket URI, so include
         # all its nested objects.
         bucket_wildcard = exp_uri.clone_replace_name('*').uri
-        obj_list = ExpandStorageUriGlob(bucket_wildcard, debug)
-        for exp_bucket_uri_str in obj_list:
-          exp_uri_strs.append(exp_bucket_uri_str)
+        uris = ExpandStorageUriGlob(bucket_wildcard, headers, debug)
+        for uri in uris:
+          result.append(uri)
       else:
-        exp_uri_strs.append(exp_uri_str)
-  return exp_uri_strs
+        result.append(exp_uri)
+  return result
 
 
 def InsistUriNamesContainer(command, uri):
@@ -217,16 +230,18 @@ def InsistUriNamesContainer(command, uri):
   """
 
   if uri.names_singleton():
-    OutputAndExit('Destination URI must name a bucket or directory '
+    OutputAndExit('destination StorageUri must name a bucket or directory '
                   'for the multiple source\nform of the "%s" command.' %
                   command)
 
-def CatCommand(args, sub_opts, debug):
+
+def CatCommand(args, sub_opts, headers=None, debug=False):
   """Implementation of cat command.
 
   Args:
     args: command-line arguments
     sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -236,66 +251,78 @@ def CatCommand(args, sub_opts, debug):
       show_header = True
 
   # Expand object name globs, if any.
-  exp_args = []
+  exp_uris = []
   for uri_str in args:
-    for exp_uri_str in ExpandStorageUriGlob(uri_str, debug):
-      exp_args.append(exp_uri_str)
-  if not exp_args:
+    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
+      exp_uris.append(exp_uri)
+  if not exp_uris:
     OutputAndExit('No objects matched.')
   printed_one = False
-  for uri_str in exp_args:
-    uri = StorageUri(uri_str, False, debug)
+  for uri in exp_uris:
     if not uri.object_name:
       OutputAndExit('"cat" command must specify objects.')
     if show_header:
       if printed_one:
         print
-      print('==> %s <==' % uri_str)
+      print '==> %s <==' % uri.__str__()
       printed_one = True
-    sys.stdout.write(uri.get_contents_as_string())
+    sys.stdout.write(uri.get_contents_as_string(False, headers))
 
-def SetAclCommand(args, unused_sub_opts, debug):
+
+def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
   """Implementation of setacl command.
 
   Args:
     args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
   acl_arg = args[0]
   # Expand object name globs, if any.
-  exp_args = []
+  exp_uris = []
   for uri_str in args[1:]:
-    for exp_uri_str in ExpandStorageUriGlob(uri_str, debug):
-      exp_args.append(exp_uri_str)
+    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
+      exp_uris.append(exp_uri)
 
-  # Determine whether acl_arg names a file vs. a canned ACL name.
-  # Note: passing an XML file is currently experimental.
+  # Disallow setacl command spanning multiple providers because
+  # there are differences in the ACL models.
+  provider = None
+  for uri in exp_uris:
+    if not provider:
+      provider = uri.provider
+    elif uri.provider != provider:
+      OutputAndExit('"setacl" command spanning multiple providers not allowed.')
+
+  # Get ACL object from connection for the first URI, for interpreting the
+  # ACL.  This won't fail because the main startup code insists on 1 arg
+  # for this command.
+  storage_uri = exp_uris[0]
+  acl_class = storage_uri.acl_class()
+  canned_acls = storage_uri.canned_acls()
+
+  # Determine whether acl_arg names a file containing XML ACL text vs. the
+  # string name of a canned ACL.
   if os.path.isfile(acl_arg):
     acl_file = open(acl_arg, 'r')
     acl_txt = acl_file.read()
     acl_file.close()
-    # We need a bucket object for parsing the XML into a Policy, so just
-    # use the bucket object from the first URI. This won't fail because the
-    # main startup code insists on 1 arg for this command.
-    bucket = StorageUri(exp_args[0], False, debug).get_bucket()
-    policy = Policy(bucket)
-    h = handler.XmlHandler(policy, bucket)
+    acl_obj = acl_class()
+    h = handler.XmlHandler(acl_obj, storage_uri.get_bucket())
     xml.sax.parseString(acl_txt, h)
-    acl_arg = policy
+    acl_arg = acl_obj
   else:
     # No file exists, so expect a canned ACL string.
-    if acl_arg not in CannedACLStrings:
+    if acl_arg not in canned_acls:
       OutputAndExit('Invalid canned ACL "%s".' % acl_arg)
 
-  # Now iterate over URI args and set the ACL on each.
-  for uri_str in exp_args:
-    uri = StorageUri(uri_str, False, debug)
-    if len(exp_args) > 1:
+  # Now iterate over URIs and set the ACL on each.
+  for uri in exp_uris:
+    if len(exp_uris) > 1:
       # Progress indicator
       print 'Setting ACL on %s...' % uri
-    uri.set_acl(acl_arg, uri.object_name)
+    uri.set_acl(acl_arg, uri.object_name, False, headers)
 
 
 def ExplainIfSudoNeeded(tf, dirs_to_remove):
@@ -364,12 +391,13 @@ def LoadVersionString():
   return installed_version_string
 
 
-def UpdateCommand(unused_args, sub_opts, debug):
+def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
   """Implementation of experimental update command.
 
   Args:
     unused_args: command-line arguments
     sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -377,14 +405,15 @@ def UpdateCommand(unused_args, sub_opts, debug):
 
   dirs_to_remove = []
   # Retrieve gsutil tarball and check if it's newer than installed code.
-  # TODO: Expose a way to set metadata on objects via gsutil, then store
-  # this version info there and change this command's implementation to check
-  # that metadata instead of downloading the tarball to check the version info.
+  # TODO: Store this version info as metadata on the tarball object and
+  # change this command's implementation to check that metadata instead of
+  # downloading the tarball to check the version info.
   tmp_dir = tempfile.mkdtemp()
   dirs_to_remove.append(tmp_dir)
   os.chdir(tmp_dir)
   print 'Checking for software update...'
-  CopyObjsCommand(['gs://pub/gsutil.tar.gz', 'file://gsutil.tar.gz'], [], debug)
+  CopyObjsCommand(['gs://pub/gsutil.tar.gz', 'file://gsutil.tar.gz'], [],
+                  headers, debug)
   tf = tarfile.open('gsutil.tar.gz')
   tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
   tf.extract('./gsutil/VERSION')
@@ -455,7 +484,7 @@ def CheckForDirFileConflict(src_uri, dst_path):
      the file x exists.
 
   Args:
-    src_uri: source URI of copy
+    src_uri: source StorageUri of copy
     dst_path: destination path.
   """
 
@@ -473,7 +502,7 @@ def ReportNoMatchesAndExit(uri):
   """Reports no URI wildcard matches and exits.
 
   Args:
-    uri: the URI that didn't match.
+    uri: the StorageUri that didn't match.
   """
   if uri.is_file_uri():
     OutputAndExit('"%s" matches no files.' % uri.uri)
@@ -481,37 +510,63 @@ def ReportNoMatchesAndExit(uri):
     OutputAndExit('"%s" matches no objects.' % uri.uri)
 
 
-def GetAclCommand(args, unused_sub_opts, debug):
-  """Implementation of experimental getacl command.
+def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
+  """Implementation of getacl command.
 
   Args:
     args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
   # Wildcarding is allowed but must resolve to just one object.
-  uris = ExpandStorageUriGlob(args[0], debug)
+  uris = ExpandStorageUriGlob(args[0], headers, debug)
   if len(uris) != 1:
     OutputAndExit('Wildcards must resolve to exactly one object for "getacl" '
                   'command.')
-  uri = StorageUri(uris[0], False, debug)
+  uri = uris[0]
   if not uri.bucket_name:
     OutputAndExit('"getacl" command must specify a bucket or object.')
-  acl = uri.get_acl()
+  acl = uri.get_acl(False, headers)
   # Pretty-print the XML to make it more easily human editable.
   parsed_xml = xml.dom.minidom.parseString(acl.to_xml())
   print parsed_xml.toprettyxml(indent='    ')
 
-def PerformCopy(src_uri, dst_uri):
+
+def PerformCopy(src_uri, dst_uri, sub_opts, headers):
   """Helper method for CopyObjsCommand.
 
   Args:
-    src_uri source URI for copy.
-    dst_uri: destination URI for copy.
+    src_uri: source StorageUri for copy.
+    dst_uri: destination StorageUri for copy.
+    sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
   """
 
-  src_key = src_uri.get_key()
+  # Make a copy of the input headers each time so we can set a different
+  # MIME type for each object.
+  metadata = headers.copy()
+  canned_acl = None
+  for o, a in sub_opts:
+    if o == "-a":
+      canned_acls = dst_uri.canned_acls()
+      if a not in canned_acls:
+        OutputAndExit('Invalid canned ACL "%s".' % a)
+      canned_acl = a
+    elif o == "-t":
+      mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
+      mime_type = mimetype_tuple[0]
+      content_encoding = mimetype_tuple[1]
+      if mime_type:
+        metadata['Content-Type'] = mime_type
+        print '\t[Setting Content-Type=%s]' % mime_type
+      else:
+        print '\t[Unknown content type -> using application/octet stream]'
+      if content_encoding:
+        metadata['Content-Encoding'] = content_encoding
+
+  src_key = src_uri.get_key(False, headers)
   if not src_key:
     OutputAndExit('"%s" does not exist.' % src_uri)
 
@@ -521,37 +576,41 @@ def PerformCopy(src_uri, dst_uri):
   if (src_uri.is_cloud_uri() and dst_uri.is_cloud_uri() and
       src_uri.provider == dst_uri.provider):
     # Object -> object, within same provider (uses x-<provider>-copy-source
-    # metadata HTTP header to request copying at the server):
-    src_bucket = src_uri.get_bucket()
-    dst_bucket = dst_uri.get_bucket()
+    # metadata HTTP header to request copying at the server). (Note: boto
+    # does not currently provide a way to pass canned_acl when copying from
+    # object-to-object through x-<provider>-copy-source):
+    src_bucket = src_uri.get_bucket(False, headers)
+    dst_bucket = dst_uri.get_bucket(False, headers)
     dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
-                        src_uri.object_name)
+                        src_uri.object_name, metadata)
     return
 
-  dst_key = dst_uri.new_key()
+  dst_key = dst_uri.new_key(False, headers)
   if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
     # File -> object:
-    dst_key.set_contents_from_file(src_key.fp)
+    fname_parts = src_uri.object_name.split('.')
+    dst_key.set_contents_from_file(src_key.fp, metadata, policy=canned_acl)
   elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
     # Object -> file:
-    src_key.get_file(dst_key.fp)
+    src_key.get_file(dst_key.fp, headers)
   elif src_uri.is_file_uri() and dst_uri.is_file_uri():
     # File -> file:
-    dst_key.set_contents_from_file(src_key.fp)
+    dst_key.set_contents_from_file(src_key.fp, metadata)
   else:
     # We implement cross-provider object copy through a local temp file:
     tmp = tempfile.TemporaryFile()
-    src_key.get_file(tmp)
+    src_key.get_file(tmp, headers)
     tmp.seek(0)
-    dst_key.set_contents_from_file(tmp)
+    dst_key.set_contents_from_file(tmp, metadata)
 
 
-def CopyObjsCommand(args, unused_sub_opts, debug):
+def CopyObjsCommand(args, sub_opts, headers=None, debug=False):
   """Implementation of cp command.
 
   Args:
     args: command-line arguments
-    unused_sub_opts: command-specific options from getopt.
+    sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -559,12 +618,12 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
   dst_uri = StorageUri(args[-1], False, debug)
   multi_obj_copy = True
 
-  # Expand wildcards and containers in source URIs.
-  exp_src_uri_strs = ExpandWildcardsAndContainers(src_uri_strs, debug)
+  # Expand wildcards and containers in source StorageUris.
+  exp_src_uris = ExpandWildcardsAndContainers(src_uri_strs, headers, debug)
 
   # Abort if wildcarding produced no matches.
-  if not exp_src_uri_strs:
-    ReportNoMatches(StorageUri(src_uri_strs[0]))
+  if not exp_src_uris:
+    ReportNoMatchesAndExit(StorageUri(src_uri_strs[0]))
 
   # If there is 1 source arg after expansion, with src_uri naming an
   # object-less bucket and dst_uri naming a directory, handle two cases to
@@ -573,8 +632,8 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
   #      with the dst_uri name, e.g., "bucket/a" -> "dir/a"
   #   b) if a directory exists for dst_uri copy objects to a new directory
   #      under that directory, e.g., "bucket/a" -> "dir/bucket/a"
-  if len(exp_src_uri_strs) == 1:
-    src_uri_to_check = StorageUri(exp_src_uri_strs[0])
+  if len(exp_src_uris) == 1:
+    src_uri_to_check = exp_src_uris[0]
     if src_uri_to_check.names_container():
       if dst_uri.names_container() and os.path.exists(dst_uri.object_name):
         dst_uri = dst_uri.clone_replace_name(dst_uri.object_name + os.sep +
@@ -590,17 +649,15 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
     InsistUriNamesContainer('cp', dst_uri)
 
   # Abort if any source overlaps with a dest.
-  for src_uri_str in exp_src_uri_strs:
-    src_uri = StorageUri(src_uri_str, False, debug)
+  for src_uri in exp_src_uris:
     if (src_uri.equals(dst_uri) or
         # Example case: gsutil cp gs://mybucket/a/bb mybucket
         (dst_uri.is_cloud_uri() and src_uri.uri.find(dst_uri.uri) != -1)):
       OutputAndExit('Overlapping source and dest URIs not allowed.')
 
   # Now iterate over expanded src URIs, and perform copy operations.
-  for src_uri_str in exp_src_uri_strs:
-    src_uri = StorageUri(src_uri_str, False, debug)
-    if len(exp_src_uri_strs) > 1:
+  for src_uri in exp_src_uris:
+    if len(exp_src_uris) > 1:
       # Progress indicator
       print 'Copying %s...' % src_uri
     if dst_uri.names_container():
@@ -615,66 +672,51 @@ def CopyObjsCommand(args, unused_sub_opts, debug):
       # dest is an object or file: use dst obj name
       dst_key_name = dst_uri.object_name
     new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-    PerformCopy(src_uri, new_dst_uri)
+    PerformCopy(src_uri, new_dst_uri, sub_opts, headers)
 
 
-def PrintAcl(uri, indent):
-  """Print human-readable info in ACL for given URI.
-
-  Args:
-    uri: object- or bucket- granularity StorageUri.
-    indent: string to indent each output line.
-  """
-  acl = uri.get_acl()
-  for grant in acl.acl.grants:
-    if grant.type == 'AmazonCustomerByEmail':
-      grantee = grant.email_address
-    if grant.type == 'CanonicalUser':
-      grantee = grant.id
-    elif grant.type == 'Group':
-      # Extract the group name from the URI (e.g.,
-      # "http://acs.amazonaws.com/groups/global/AuthenticatedUsers")
-      grantee = re.sub('.*/', '', grant.uri)
-    else:
-      OutputAndExit('Unexpected grant type "%s".' % grant.type)
-    print '%s%s: %s' % (indent, grantee, grant.permission)
-
-
-def HelpCommand(unused_args, unused_sub_opts, unused_debug):
+def HelpCommand(unused_args, unused_sub_opts, unused_headers=None,
+                unused_debug=None):
   """Implementation of help command.
 
   Args:
     unused_args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    unused_headers: dictionary containing optional HTTP headers to pass to boto.
     unused_debug: flag indicating whether to include debug output
   """
 
   OutputUsageAndExit()
 
 
-def PrintObjectMetaData(uri):
+def PrintObjectMetaData(uri, headers):
   """Print object metadata.
 
   Args:
     uri: object-granularity StorageUri
+    headers: dictionary containing optional HTTP headers to pass to boto.
   """
   print '%s:' % uri
-  key = uri.get_key()
+  key = uri.get_key(False, headers)
   key.open_read()
   print '\tObject size:\t%s' % key.size
   print '\tLast mod:\t%s' % key.last_modified
+  if key.cache_control:
+    print '\tCache control:\t%s' % key.cache_control
   print '\tMIME type:\t%s' % key.content_type
+  if key.content_encoding:
+    print '\tContent-Encoding:\t%s' % key.content_encoding
   print '\tMD5:\t%s' % key.etag.strip('"\'')
-  print '\tACL:' % uri
-  PrintAcl(uri, '\t\t')
+  print '\tACL:\t%s' % uri.get_acl(False, headers)
 
 
-def ListCommand(args, sub_opts, debug):
+def ListCommand(args, sub_opts, headers=None, debug=False):
   """Implementation of ls command.
 
   Args:
     args: command-line arguments
     sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -707,13 +749,13 @@ def ListCommand(args, sub_opts, debug):
         exp_args.append(uri.__str__())
       else:
         # case c: bucket-only URI without -l option
-        bucket = uri.get_bucket()
+        bucket = uri.get_bucket(False, headers)
         for obj in bucket:
           exp_args.append(uri.clone_replace_name(obj.name).uri)
     else:
       # case d: complete URI
       regex = fnmatch.translate(uri.object_name)
-      bucket = uri.get_bucket()
+      bucket = uri.get_bucket(False, headers)
       for obj in bucket:
         if re.match(regex, obj.name):
           exp_args.append(uri.clone_replace_name(obj.name).uri)
@@ -732,8 +774,8 @@ def ListCommand(args, sub_opts, debug):
         for bucket in buckets:
           bucket_uri = StorageUri(uri.provider + '://' + bucket.name, False,
                                   debug)
-          print '%s:\n\tACL:' % bucket_uri
-          PrintAcl(bucket_uri, '\t\t')
+          print '%s:\n\tACL:\t%s' % (bucket_uri,
+                                     bucket_uri.get_acl(False, headers))
       else:
         # Provider short listing: list all buckets
         buckets = uri.get_all_buckets()
@@ -745,27 +787,28 @@ def ListCommand(args, sub_opts, debug):
       if long_listing:
         # Bucket long listing
         print '%s:\n\tACL:' % uri
-        PrintAcl(uri, '\t\t')
+        print '\t\t%s' % uri.get_acl(False, headers)
       else:
         # Bucket short listing
-        bucket = uri.get_bucket()
+        bucket = uri.get_bucket(False, headers)
         for obj in bucket:
           print '%s://%s/%s' % (uri.provider, uri.bucket_name, obj.name)
     else:
       if long_listing:
         # Object long listing
-        PrintObjectMetaData(uri)
+        PrintObjectMetaData(uri, headers)
       else:
         # Object short listing
         print uri
 
 
-def MakeBucketsCommand(args, unused_sub_opts, debug):
+def MakeBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
   """Implementation of mb command.
 
   Args:
     args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -774,10 +817,10 @@ def MakeBucketsCommand(args, unused_sub_opts, debug):
     if len(args) > 1:
       # Progress indicator
       print 'Creating %s...' % bucket_uri
-    bucket_uri.create_bucket()
+    bucket_uri.create_bucket(headers)
 
 
-def MoveObjsCommand(args, sub_opts, debug):
+def MoveObjsCommand(args, sub_opts, headers=None, debug=False):
   """Implementation of mv command.
 
      Note that there is no atomic rename operation - this command is simply
@@ -786,6 +829,7 @@ def MoveObjsCommand(args, sub_opts, debug):
   Args:
     args: command-line arguments
     sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -799,16 +843,17 @@ def MoveObjsCommand(args, sub_opts, debug):
   if len(args) > 2:
     InsistUriNamesContainer('mv', StorageUri(args[-1]))
 
-  CopyObjsCommand(args, sub_opts, debug)
-  RemoveObjsCommand(args[0:1], sub_opts, debug)
+  CopyObjsCommand(args, sub_opts, headers, debug)
+  RemoveObjsCommand(args[0:1], sub_opts, headers, debug)
 
 
-def RemoveBucketsCommand(args, unused_sub_opts, debug):
+def RemoveBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
   """Implementation of rb command.
 
   Args:
     args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
@@ -817,33 +862,33 @@ def RemoveBucketsCommand(args, unused_sub_opts, debug):
     if len(args) > 1:
       # Progress indicator
       print 'Removing %s...' % bucket_uri
-    bucket_uri.delete_bucket()
+    bucket_uri.delete_bucket(headers)
 
 
-def RemoveObjsCommand(args, unused_sub_opts, debug):
+def RemoveObjsCommand(args, unused_sub_opts, headers=None, debug=False):
   """Implementation of rm command.
 
   Args:
     args: command-line arguments
     unused_sub_opts: command-specific options from getopt.
+    headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
 
   # Expand object name globs, if any.
-  exp_args = []
+  exp_uris = []
   for uri_str in args:
-    for exp_uri_str in ExpandStorageUriGlob(uri_str, debug):
-      exp_args.append(exp_uri_str)
-  for uri_str in exp_args:
-    uri = StorageUri(uri_str, False, debug)
+    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
+      exp_uris.append(exp_uri)
+  for uri in exp_uris:
     if uri.names_container():
       OutputAndExit('"rm" command will not remove buckets.  To delete this '
                     'bucket do:\n\tgsutil rm %s/*\n\tgsutil rb %s' %
                     (uri.uri, uri.uri))
-    if len(exp_args) > 1:
+    if len(exp_uris) > 1:
       # Progress indicator
       print 'Removing %s...' % uri
-    uri.delete_key()
+    uri.delete_key(False, headers)
 
 
 def HaveFileUris(args):
@@ -1015,7 +1060,7 @@ def SetupConfigIfNeeded():
 NO_MAX = sys.maxint
 commands = {
     'cat': [CatCommand, 0, NO_MAX, 'h', False, True, 0],
-    'cp': [CopyObjsCommand, 2, NO_MAX, '', True, False, 0],
+    'cp': [CopyObjsCommand, 2, NO_MAX, 'a:tz:', True, False, 0],
     'getacl': [GetAclCommand, 1, 1, '', False, False, 0],
     'help': [HelpCommand, 0, 0, '', False, False, 0],
     'ls': [ListCommand, 0, NO_MAX, 'l', False, True, 0],
@@ -1038,8 +1083,9 @@ def main():
   if len(sys.argv) == 1:
     OutputUsageAndExit()
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'dh', ['debug', 'help'])
-    if len(args) == 0:
+    opts, args = getopt.getopt(sys.argv[1:], 'd?h:',
+                               ['debug', 'help', 'header'])
+    if not args:
       command = 'help'
     else:
       command = args[0]
@@ -1069,28 +1115,36 @@ def main():
   SetupConfigIfNeeded()
 
   debug = 0
-  for o, unused_a in opts:
+  headers = {}
+  for o, a in opts:
     if o in ('-d', '--debug'):
       # Debug level 2 causes httplib output plus boto debug output
       debug = 2
-    if o in ('-h', '--help'):
+    if o in ('-?', '--help'):
       OutputUsageAndExit()
+    if o in ('-h', '--header'):
+      (hdr_name, unused_ptn, hdr_val) = a.partition(':')
+      if not hdr_name or not hdr_val:
+        OutputUsageAndExit()
+      headers[hdr_name] = hdr_val
 
   try:
-    command_func(args, sub_opts, debug)
+    command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
-    OutputAndExit('Failure: %s.' % e.reason)
-  except boto.exception.InvalidUriError, e:
-    OutputAndExit('Failure: %s.' % e.message)
+    OutputAndExit('BotoClientError,: %s.' % e.reason)
+  except InvalidAclError, e:
+    OutputAndExit('InvalidAclError: %s.' % e.message)
+  except InvalidUriError, e:
+    OutputAndExit('InvalidUriError: %s.' % e.message)
   except S3ResponseError, e:
     detail_start = e.body.find('<Details>')
     detail_end = e.body.find('</Details>')
     if detail_start != -1 and detail_end != -1:
       detail = e.body[detail_start+9:detail_end]
-      OutputAndExit('Failure: status=%d, code=%s, reason=%s, detail=%s.' %
-                    (e.status, e.code, e.reason, detail))
+      OutputAndExit('S3ResponseError: status=%d, code=%s, reason=%s, detail=%s.'
+                    % (e.status, e.code, e.reason, detail))
     else:
-      OutputAndExit('Failure: status=%d, code=%s, reason=%s.' %
+      OutputAndExit('S3ResponseError:: status=%d, code=%s, reason=%s.' %
                     (e.status, e.code, e.reason))
   except AttributeError, e:
     if e.message.find('aws_secret_access_key') != -1:

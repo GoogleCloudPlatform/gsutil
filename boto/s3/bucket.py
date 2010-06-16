@@ -34,7 +34,7 @@ import urllib
 
 S3Permissions = ['READ', 'WRITE', 'READ_ACP', 'WRITE_ACP', 'FULL_CONTROL']
 
-class Bucket:
+class Bucket(object):
 
     BucketLoggingBody = """<?xml version="1.0" encoding="UTF-8"?>
        <BucketLoggingStatus xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
@@ -122,7 +122,9 @@ class Bucket:
         if response.status == 200:
             body = response.read()
             k = self.key_class(self)
-            k.metadata = boto.utils.get_aws_metadata(response.msg)
+            provider_headers = self.connection.provider_headers
+            k.metadata = boto.utils.get_aws_metadata(response.msg,
+                                                     provider_headers)
             k.etag = response.getheader('etag')
             k.content_type = response.getheader('content-type')
             k.content_encoding = response.getheader('content-encoding')
@@ -266,12 +268,12 @@ class Bucket:
         """
         src = '%s/%s' % (src_bucket_name, urllib.quote(src_key_name))
         if metadata:
-            headers = {'x-amz-copy-source' : src,
-                       'x-amz-metadata-directive' : 'REPLACE'}
-            headers = boto.utils.merge_meta(headers, metadata)
+            headers = {self.connection.provider_headers.copy_source_header : src,
+                       self.connection.provider_headers.metadata_directive_header : 'REPLACE'}
+            headers = boto.utils.merge_meta(headers, metadata, self.connection.provider_headers)
         else:
-            headers = {'x-amz-copy-source' : src,
-                       'x-amz-metadata-directive' : 'COPY'}
+            headers = {self.connection.provider_headers.copy_source_header : src,
+                       self.connection.provider_headers.metadata_directive_header : 'COPY'}
         response = self.connection.make_request('PUT', self.name, new_key_name,
                                                 headers=headers)
         body = response.read()
@@ -289,9 +291,9 @@ class Bucket:
         assert acl_str in CannedACLStrings
 
         if headers:
-            headers['x-amz-acl'] = acl_str
+            headers[self.connection.provider_headers.acl_header] = acl_str
         else:
-            headers={'x-amz-acl': acl_str}
+            headers={self.connection.provider_headers.acl_header: acl_str}
 
         response = self.connection.make_request('PUT', self.name, key_name,
                 headers=headers, query_args='acl')

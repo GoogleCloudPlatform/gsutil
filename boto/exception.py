@@ -289,3 +289,10 @@ class InvalidUriError(Exception):
   def __init__(self, message):
     Exception.__init__(self)
     self.message = message
+
+class InvalidAclError(Exception):
+  """Exception raised when ACL XML is invalid."""
+
+  def __init__(self, message):
+    Exception.__init__(self)
+    self.message = message

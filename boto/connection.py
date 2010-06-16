@@ -50,7 +50,9 @@ import os
 import xml.sax
 import Queue
 import boto
+from boto.acl_classes import AclClasses
 from boto.exception import AWSConnectionError, BotoClientError, BotoServerError
+from boto.provider_headers import ProviderHeaders
 from boto.resultset import ResultSet
 import boto.utils
 from boto import config, UserAgent, handler
@@ -139,6 +141,10 @@ class AWSAuthConnection:
         :param port: The port to use to connect
         """
 
+        self.provider_headers = ProviderHeaders(provider)
+        acl_classes = AclClasses(provider)
+        self.acl_class = acl_classes.acl_class
+        self.canned_acls = acl_classes.canned_acls
         self.num_retries = 5
         # Override passed-in is_secure setting if value was defined in config.
         if config.has_option('Boto', 'is_secure'):
@@ -146,7 +152,8 @@ class AWSAuthConnection:
         self.is_secure = is_secure
         self.handle_proxy(proxy, proxy_port, proxy_user, proxy_pass)
         # define exceptions from httplib that we want to catch and retry
-        self.http_exceptions = (httplib.HTTPException, socket.error, socket.gaierror)
+        self.http_exceptions = (httplib.HTTPException, socket.error,
+                                socket.gaierror)
         # define values in socket exceptions we don't want to catch
         self.socket_exception_values = (errno.EINTR,)
         if https_connection_factory is not None:
@@ -187,7 +194,7 @@ class AWSAuthConnection:
                                       'gs_host')):
                     self.host = config.get('Credentials',
                                            'gs_host')
-            elif provider == "amazon":
+            elif provider == "aws":
                 if (config.has_option('Credentials',
                                       'aws_access_key_id') and
                    config.has_option('Credentials',
@@ -499,12 +506,16 @@ class AWSAuthConnection:
             headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT",
                                             time.gmtime())
 
-        c_string = boto.utils.canonical_string(method, path, headers)
+        c_string = boto.utils.canonical_string(method, path, headers,
+                                               None, self.provider_headers)
         boto.log.debug('Canonical: %s' % c_string)
         hmac = self.hmac.copy()
         hmac.update(c_string)
         b64_hmac = base64.encodestring(hmac.digest()).strip()
-        headers['Authorization'] = "AWS %s:%s" % (self.aws_access_key_id, b64_hmac)
+        auth_hdr = self.provider_headers.auth_header
+        headers['Authorization'] = ("%s %s:%s" %
+                                    (auth_hdr,
+                                     self.aws_access_key_id, b64_hmac))
 
     def close(self):
         """(Optional) Close any open HTTP connections.  This is non-destructive,
