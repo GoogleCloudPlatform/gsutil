@@ -310,7 +310,11 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     acl_file.close()
     acl_obj = acl_class()
     h = handler.XmlHandler(acl_obj, storage_uri.get_bucket())
-    xml.sax.parseString(acl_txt, h)
+    try:
+      xml.sax.parseString(acl_txt, h)
+    except xml.sax._exceptions.SAXParseException, e:
+      OutputAndExit('Requested ACL is invalid: %s at line %s, column %s' %
+                    (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
     acl_arg = acl_obj
   else:
     # No file exists, so expect a canned ACL string.
