@@ -20,6 +20,7 @@ import datetime
 import fnmatch
 import getopt
 import glob
+import gzip
 import mimetypes
 import os
 import platform
@@ -79,13 +80,14 @@ SYNOPSIS
   Commands:
     Concatenate object content to stdout:
       cat [-h] uri...
-        -h  Prints short header for each object.
+        -h Prints short header for each object.
     Copy objects:
-      cp [-a canned_acl] [-t] src_uri dst_uri
+      cp [-a canned_acl] [-t] [-z ext1,ext2,...] src_uri dst_uri
         - or -
-      cp [-a canned_acl] [-t] uri... dst_uri
+      cp [-a canned_acl] [-t] [-z extensions] uri... dst_uri
         -a Sets named canned_acl when uploaded objects created (list below).
         -t Sets MIME type based on file extension.
+        -z 'txt,html' Compresses file uploads with the given extensions.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     List buckets or objects:
@@ -551,6 +553,7 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
   # Make a copy of the input headers each time so we can set a different
   # MIME type for each object.
   metadata = headers.copy()
+  gzip_exts = []
   canned_acl = None
   for o, a in sub_opts:
     if o == "-a":
@@ -569,6 +572,8 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
         print '\t[Unknown content type -> using application/octet stream]'
       if content_encoding:
         metadata['Content-Encoding'] = content_encoding
+    elif o == "-z":
+      gzip_exts = a.split(',')
 
   src_key = src_uri.get_key(False, headers)
   if not src_key:
@@ -593,7 +598,19 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
   if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
     # File -> object:
     fname_parts = src_uri.object_name.split('.')
-    dst_key.set_contents_from_file(src_key.fp, metadata, policy=canned_acl)
+    if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
+      gzip_tmp = tempfile.mkstemp()
+      gzip_path = gzip_tmp[1]
+      the_gzip = gzip.open(gzip_path, 'wb')
+      the_gzip.writelines(src_key.fp)
+      the_gzip.close()
+      metadata['Content-Length'] = str(os.path.getsize(gzip_path))
+      metadata['Content-Encoding'] = 'gzip'
+      dst_key.set_contents_from_file(open(gzip_path, 'rb'), metadata,
+                                     policy=canned_acl)
+      os.unlink(gzip_path)
+    else:
+      dst_key.set_contents_from_file(src_key.fp, metadata, policy=canned_acl)
   elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
     # Object -> file:
     src_key.get_file(dst_key.fp, headers)
