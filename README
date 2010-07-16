@@ -6,8 +6,14 @@ Contents:
   - gsutil is the command line tool
   - cloudreader contains an example Google App Engine app that accesses Google
     storage
-  - both depend on a Google-modified version of the boto open source Python
-    library.
+  - both depend on the boto open source Python
+    library that includes Google modifications. At present these mods are
+    checked in on the boto "googlemerge" branch, which is mapped into the
+    gsutil svn tree using an svn:externals propset.  (So, if you browse at
+    http://code.google.com/p/gsutil/source/browse/#svn/branches/botomerge you
+    will not see this boto subtree, but if you do the svn checkout command
+    noted at http://code.google.com/p/gsutil/source/checkout it will fetch
+    boto as needed.)
 
 The cloudreader app is explained in
 cloud/bigstore/opensrc/gsutil/cloudreader/README.google.
