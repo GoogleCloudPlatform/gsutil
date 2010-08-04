@@ -305,6 +305,7 @@ def CatCommand(args, sub_opts, headers=None, debug=False):
       if data == '':
         break;
       sys.stdout.write(data)
+    tmp_file.close()
 
 
 def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
