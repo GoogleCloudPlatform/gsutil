@@ -37,6 +37,7 @@ import xml.dom.minidom
 
 # Regex used to check if a StorageUri contains any wildcard chars.
 WILDCARD_REGEX = '[*?\[\]]'
+BUFFER_SIZE = 8192
 
 def OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
@@ -49,7 +50,7 @@ def OutputAndExit(message):
 # to be used without explicitly adding it to the PYTHONPATH.
 # We use realpath() below to unwind symlinks if any were used in the gsutil
 # installation.
-gsutil_bin_dir = os.path.realpath(os.path.dirname(sys.argv[0]))
+gsutil_bin_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 if not gsutil_bin_dir:
   OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
                 'cannot run correctly without this.\n')
@@ -295,7 +296,15 @@ def CatCommand(args, sub_opts, headers=None, debug=False):
         print
       print '==> %s <==' % uri.__str__()
       printed_one = True
-    sys.stdout.write(uri.get_contents_as_string(False, headers))
+    tmp_file = tempfile.TemporaryFile()
+    key = uri.get_key(False, headers)
+    key.get_file(tmp_file, headers)
+    tmp_file.seek(0)
+    while(True):
+      data = tmp_file.read(BUFFER_SIZE)
+      if data == '':
+        break;
+      sys.stdout.write(data)
 
 
 def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
