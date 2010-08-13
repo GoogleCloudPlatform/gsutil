@@ -34,6 +34,7 @@ import sys
 import tarfile
 import tempfile
 import xml.dom.minidom
+import xml.sax.xmlreader
 
 # Regex used to check if a StorageUri contains any wildcard chars.
 WILDCARD_REGEX = '[*?\[\]]'
@@ -1130,6 +1131,20 @@ commands = {
     'update': [UpdateCommand, 0, 0, 'f', False, False, 0]
 }
 
+xml_parsing_commands = ['getacl', 'ls', 'setacl']
+
+
+def SanityCheckXmlParser(command):
+  # If the given command requires xml parsing, ensure we're
+  # not using the xmlplus parser, which works incorrectly (see
+  # http://code.google.com/p/gsutil/issues/detail?id=18 for details).
+  if command not in xml_parsing_commands:
+    return
+  code_file = xml.sax.xmlreader.__file__
+  if code_file.find('xmlplus') != -1:
+    OutputAndExit('The "%s" command requires XML parsing, and your Python '
+                  'installation includes an\nXML parser (%s)\nthat does '
+                  'not work correctly.' % (command, code_file))
 
 def main():
   if float('%d.%d%d'
@@ -1149,6 +1164,7 @@ def main():
       command = args[0]
     if command not in commands:
       OutputAndExit('Invalid command "%s".' % command)
+    SanityCheckXmlParser(command)
     command_info = commands[command]
     command_func = command_info[0]
     min_arg_count = command_info[1]
