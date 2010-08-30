@@ -34,9 +34,6 @@ import tempfile
 import xml.dom.minidom
 import xml.sax.xmlreader
 
-from gslib.wildcard_iterator import wildcard_iterator
-from gslib.wildcard_iterator import ResultType
-
 
 def OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
@@ -67,6 +64,9 @@ from boto.exception import BotoClientError
 from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
 from boto.exception import S3ResponseError
+
+from gslib.wildcard_iterator import wildcard_iterator
+from gslib.wildcard_iterator import ResultType
 
 usage_string = """
 SYNOPSIS
