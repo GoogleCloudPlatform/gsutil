@@ -18,9 +18,7 @@
 
 import datetime
 import errno
-import fnmatch
 import getopt
-import glob
 import gzip
 import mimetypes
 import os
@@ -36,9 +34,9 @@ import tempfile
 import xml.dom.minidom
 import xml.sax.xmlreader
 
-# Regex used to check if a StorageUri contains any wildcard chars.
-WILDCARD_REGEX = '[*?\[\]]'
-BUFFER_SIZE = 8192
+from gslib.wildcard_iterator import wildcard_iterator
+from gslib.wildcard_iterator import ResultType
+
 
 def OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
@@ -77,7 +75,7 @@ SYNOPSIS
   -d option shows HTTP protocol detail.
 
   -h option allows you to specify additional HTTP headers, for example:
-     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp * gs://bucket
+     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp ...
 
   Commands:
     Concatenate object content to stdout:
@@ -93,8 +91,8 @@ SYNOPSIS
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     List buckets or objects:
-      ls [-l] uri...
-        -l Prints long listing.
+      ls [-l] [-L] uri...
+         -l Prints long listing (owner, length); -L provides more detail.
     Make buckets:
       mb uri...
     Move/rename objects:
@@ -128,13 +126,13 @@ def OutputUsageAndExit():
   sys.exit(0)
 
 
-def StorageUri(uri_str, disallow_object_name=False, debug=False):
+def StorageUri(uri_str, debug=False, validate=True):
   """Instantiate boto.StorageUri with given debug flag with validity checks.
 
   Args:
     uri_str: StorageUri naming bucket + optional object.
-    disallow_object_name: Set to true to only allow object name-less buckets.
     debug: Whether to enable debugging on StorageUri method calls.
+    validate: Whether to check for bucket name validity.
 
   Returns:
     boto.StorageUri for given uri_str.
@@ -143,113 +141,8 @@ def StorageUri(uri_str, disallow_object_name=False, debug=False):
     InvalidUriError: if uri_str not valid.
   """
 
-  uri = boto.storage_uri(uri_str, 'file', debug)
-  if disallow_object_name and uri.object_name:
-    raise InvalidUriError('Command requires a URI with no object name')
-  if uri.bucket_name and re.search(WILDCARD_REGEX, uri.bucket_name):
-    raise InvalidUriError('Bucket names cannot contain wildcards')
+  uri = boto.storage_uri(uri_str, 'file', debug=debug, validate=validate)
   return uri
-
-
-def ListObjsInBucket(uri, headers=None, debug=False):
-  """Gets a list of objects in the bucket for the given StorageUri.
-
-  If the object level of the StorageUri contains a wildcard that can
-  use prefix matching, we do so to reduce server and network load.
-  For example, if uri='gs://bucket/abc*xyz' we can do an 'abc' prefix
-  lookup of gs://bucket instead of listing the entire bucket contents. The
-  caller can then do the remaining filtering to subset this list to the
-  actual wildcard matches.
-
-  Args:
-    uri: StorageUri to check
-    headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: flag indicating whether to include debug output
-
-  Returns:
-    An instance of a BucketListResultSet that handles paging, etc.
-  """
-
-  key_glob = uri.object_name
-  match = re.search(WILDCARD_REGEX, key_glob)
-  if match and match.start() > 0:
-    prefix = key_glob[:match.start()]
-  else:
-    prefix = None
-  return uri.get_bucket(False, headers).list(prefix=prefix, headers=headers)
-
-
-def ExpandStorageUriGlob(bucket_obj_glob, headers=None, debug=False):
-  """Expands globbing (if any) in bucket_obj_glob.
-
-  Args:
-    bucket_obj_glob: bucket+object name, possibly including glob chars.
-    headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: flag indicating whether to include debug output
-
-  Returns:
-    list of boto.StorageUri, after expanding any globbing.
-
-  For example, ExpandStorageUriGlob('gs://mybucket/*.txt', headers, debug)
-  might return [StorageUri('gs://mybucket/obj1.txt'),
-                StorageUri('gs://mybucket/obj2.txt')]
-  """
-
-  uri = StorageUri(bucket_obj_glob, False, debug)
-  key_glob = uri.object_name
-  result = []
-  # Avoid server round trip if input contains no glob chars.
-  if not re.search(WILDCARD_REGEX, key_glob):
-    result.append(uri)
-  elif uri.is_file_uri():
-    # FileStorageUri objects don't provide a way to return a list of all
-    # files in the 'bucket', so do our own wildcard expansion for that case.
-    filenames = glob.glob(uri.object_name)
-    for filename in filenames:
-      expanded_uri = uri.clone_replace_name(filename)
-      result.append(expanded_uri)
-  else:
-    # BucketStorageUri with wildcarding.
-    for obj in ListObjsInBucket(uri, headers=headers, debug=False):
-      if fnmatch.fnmatch(obj.name, key_glob):
-        # Replace wildcard name in URI with specific matched obj.name
-        expanded_uri = uri.clone_replace_name(obj.name)
-        result.append(expanded_uri)
-  return result
-
-
-def ExpandWildcardsAndContainers(uri_strs, headers=None, debug=False):
-  """Expands any URI globbing, object-less bucket names, or directory names.
-
-  Args:
-    uri_strs: URI strings needing expansion
-    headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: flag indicating whether to include debug output
-
-  Returns:
-    list of boto.StorageUri, after expanding any globbing and recursively
-    walking directories.
-  """
-
-  result = []
-  for uri_str in uri_strs:
-    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
-      if exp_uri.is_file_uri() and exp_uri.names_container():
-        # exp_uri is a file:// URI that names a directory, so include
-        # all its nested files.
-        for root, unused_dirs, files in os.walk(exp_uri.object_name):
-          for name in files:
-            result.append(StorageUri(os.path.join(root, name)))
-      elif exp_uri.is_cloud_uri() and exp_uri.names_container():
-        # exp_uri is an object-less bucket URI, so include
-        # all its nested objects.
-        bucket_wildcard = exp_uri.clone_replace_name('*').uri
-        uris = ExpandStorageUriGlob(bucket_wildcard, headers, debug)
-        for uri in uris:
-          result.append(uri)
-      else:
-        result.append(exp_uri)
-  return result
 
 
 def InsistUriNamesContainer(command, uri):
@@ -281,32 +174,28 @@ def CatCommand(args, sub_opts, headers=None, debug=False):
     if o == '-h':
       show_header = True
 
-  # Expand object name globs, if any.
-  exp_uris = []
-  for uri_str in args:
-    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
-      exp_uris.append(exp_uri)
-  if not exp_uris:
-    OutputAndExit('No objects matched.')
   printed_one = False
-  for uri in exp_uris:
-    if not uri.object_name:
-      OutputAndExit('"cat" command must specify objects.')
-    if show_header:
-      if printed_one:
-        print
-      print '==> %s <==' % uri.__str__()
-      printed_one = True
-    tmp_file = tempfile.TemporaryFile()
-    key = uri.get_key(False, headers)
-    key.get_file(tmp_file, headers)
-    tmp_file.seek(0)
-    while(True):
-      data = tmp_file.read(BUFFER_SIZE)
-      if data == '':
-        break;
-      sys.stdout.write(data)
-    tmp_file.close()
+  for uri_str in args:
+    for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
+                                 debug=debug):
+      if not uri.object_name:
+        OutputAndExit('"cat" command must specify objects.')
+      if show_header:
+        if printed_one:
+          print
+        print '==> %s <==' % uri.__str__()
+        printed_one = True
+      tmp_file = tempfile.TemporaryFile()
+      key = uri.get_key(False, headers)
+      key.get_file(tmp_file, headers)
+      tmp_file.seek(0)
+      while True:
+        # Use 8k buffer size.
+        data = tmp_file.read(8192)
+        if not data:
+          break
+        sys.stdout.write(data)
+      tmp_file.close()
 
 
 def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
@@ -320,25 +209,25 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
   """
 
   acl_arg = args[0]
-  # Expand object name globs, if any.
-  exp_uris = []
-  for uri_str in args[1:]:
-    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
-      exp_uris.append(exp_uri)
-
-  # Disallow setacl command spanning multiple providers because
-  # there are differences in the ACL models.
+  uri_args = args[1:]
   provider = None
-  for uri in exp_uris:
-    if not provider:
-      provider = uri.scheme
-    elif uri.scheme != provider:
-      OutputAndExit('"setacl" command spanning multiple providers not allowed.')
+  first_uri = None
+  # Do a first pass over all matched objects to disallow multi-provider
+  # setacl requests, because there are differences in the ACL models.
+  for uri_str in uri_args:
+    for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
+                                 debug=debug):
+      if not provider:
+        provider = uri.scheme
+      elif uri.scheme != provider:
+        OutputAndExit('"setacl" command spanning providers not allowed.')
+      if not first_uri:
+        first_uri = uri
 
   # Get ACL object from connection for the first URI, for interpreting the
-  # ACL.  This won't fail because the main startup code insists on 1 arg
+  # ACL. This won't fail because the main startup code insists on 1 arg
   # for this command.
-  storage_uri = exp_uris[0]
+  storage_uri = first_uri
   acl_class = storage_uri.acl_class()
   canned_acls = storage_uri.canned_acls()
 
@@ -362,11 +251,11 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
       OutputAndExit('Invalid canned ACL "%s".' % acl_arg)
 
   # Now iterate over URIs and set the ACL on each.
-  for uri in exp_uris:
-    if len(exp_uris) > 1:
-      # Progress indicator
+  for uri_str in uri_args:
+    for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
+                                 debug=debug):
       print 'Setting ACL on %s...' % uri
-    uri.set_acl(acl_arg, uri.object_name, False, headers)
+      uri.set_acl(acl_arg, uri.object_name, False, headers)
 
 
 def ExplainIfSudoNeeded(tf, dirs_to_remove):
@@ -542,18 +431,6 @@ def CheckForDirFileConflict(src_uri, dst_path):
                   (src_uri, dst_path))
 
 
-def ReportNoMatchesAndExit(uri):
-  """Reports no URI wildcard matches and exits.
-
-  Args:
-    uri: the StorageUri that didn't match.
-  """
-  if uri.is_file_uri():
-    OutputAndExit('"%s" matches no files.' % uri.uri)
-  else:
-    OutputAndExit('"%s" matches no objects.' % uri.uri)
-
-
 def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
   """Implementation of getacl command.
 
@@ -565,7 +442,8 @@ def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
   """
 
   # Wildcarding is allowed but must resolve to just one object.
-  uris = ExpandStorageUriGlob(args[0], headers, debug)
+  uris = list(wildcard_iterator(args[0], ResultType.URIS, headers=headers,
+                                debug=debug))
   if len(uris) != 1:
     OutputAndExit('Wildcards must resolve to exactly one object for "getacl" '
                   'command.')
@@ -663,6 +541,39 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
     dst_key.set_contents_from_file(tmp, metadata)
 
 
+def ExpandWildcardsAndContainers(uri_strs, headers=None, debug=False):
+  """Expands any URI wildcarding, object-less bucket names, or directory names.
+
+  Examples:
+    calling with uri_strs='file:///tmp' will enumerate all files under /tmp.
+    calling with uri_strs='file:///tmp/a*' will enumerate all matching files.
+    calling with uri_strs='gs://bucket' will enumerate all contained objects.
+
+  Args:
+    uri_strs: URI strings needing expansion
+    headers: dictionary containing optional HTTP headers to pass to boto.
+    debug: flag indicating whether to include debug output
+
+  Returns:
+    list (not generator, so caller can know result count) of boto.StorageUri.
+  """
+
+  result = []
+  # First expand all input URIs, e.g., so 'a*' will expand to 'abc'
+  # (which itself could be a directory needing expansion).
+  for uri_str in uri_strs:
+    uri = StorageUri(uri_str, debug=debug)
+    if uri.is_file_uri() and uri.names_container():
+      uri_to_iter = StorageUri('%s%s**' % (uri.uri, os.sep), debug=debug)
+    else:
+      uri_to_iter = uri
+    for exp_uri in wildcard_iterator(uri_to_iter,
+                                     ResultType.URIS,
+                                     headers=headers, debug=debug):
+      result.append(exp_uri)
+  return result
+
+
 def CopyObjsCommand(args, sub_opts, headers=None, debug=False):
   """Implementation of cp command.
 
@@ -674,15 +585,11 @@ def CopyObjsCommand(args, sub_opts, headers=None, debug=False):
   """
 
   src_uri_strs = args[0:len(args)-1]
-  dst_uri = StorageUri(args[-1], False, debug)
+  dst_uri = StorageUri(args[-1], debug=debug)
   multi_obj_copy = True
 
   # Expand wildcards and containers in source StorageUris.
   exp_src_uris = ExpandWildcardsAndContainers(src_uri_strs, headers, debug)
-
-  # Abort if wildcarding produced no matches.
-  if not exp_src_uris:
-    ReportNoMatchesAndExit(StorageUri(src_uri_strs[0]))
 
   # If there is 1 source arg after expansion, with src_uri naming an
   # object-less bucket and dst_uri naming a directory, handle two cases to
@@ -716,9 +623,7 @@ def CopyObjsCommand(args, sub_opts, headers=None, debug=False):
 
   # Now iterate over expanded src URIs, and perform copy operations.
   for src_uri in exp_src_uris:
-    if len(exp_src_uris) > 1:
-      # Progress indicator
-      print 'Copying %s...' % src_uri
+    print 'Copying %s...' % src_uri
     if dst_uri.names_container():
       if dst_uri.is_file_uri():
         # dest names a directory, so append src obj name to dst obj name
@@ -748,28 +653,111 @@ def HelpCommand(unused_args, unused_sub_opts, unused_headers=None,
   OutputUsageAndExit()
 
 
-def PrintObjectMetaData(uri, headers):
-  """Print object metadata.
+# Enum class for specifying listing style.
+class ListingStyle(object):
+  SHORT = 'SHORT'
+  LONG = 'LONG'
+  LONG_LONG = 'LONG_LONG'
+
+
+def PrintBucketInfo(bucket_uri, listing_style, headers):
+  """Print listing info for given bucket.
 
   Args:
-    uri: object-granularity StorageUri
+    bucket_uri: StorageUri being listed.
+    listing_style: ListingStyle enum describing type of output desired.
     headers: dictionary containing optional HTTP headers to pass to boto.
   """
-  print '%s:' % uri
-  key = uri.get_key(False, headers)
-  key.open_read()
-  print '\tObject size:\t%s' % key.size
-  print '\tLast mod:\t%s' % key.last_modified
-  if key.cache_control:
-    print '\tCache control:\t%s' % key.cache_control
-  print '\tMIME type:\t%s' % key.content_type
-  if key.content_encoding:
-    print '\tContent-Encoding:\t%s' % key.content_encoding
-  if key.metadata:
-    for name in key.metadata:
-      print '\tMetadata:\t%s = %s' % (name, key.metadata[name])
-  print '\tMD5:\t%s' % key.etag.strip('"\'')
-  print '\tACL:\t%s' % uri.get_acl(False, headers)
+  if listing_style == ListingStyle.SHORT:
+    print bucket_uri
+  else:
+    print '%s:\n\tACL:\t%s' % (bucket_uri, bucket_uri.get_acl(False, headers))
+
+
+def UriStrFor(iterated_uri, obj):
+  """Constructs a StorageUri string for the given iterated_uri and object.
+
+  For example if we were iterating gs://*, obj could be an object in one
+  of the user's buckets enumerated by the ls command.
+
+  Args:
+    iterated_uri: base StorageUri being iterated.
+    obj: object being listed.
+
+  Returns:
+    URI string.
+  """
+
+  return '%s://%s/%s' % (iterated_uri.scheme, obj.bucket.name, obj.name)
+
+
+def PrintObjectInfo(iterated_uri, obj, listing_style, headers, debug):
+  """Print listing info for given object.
+
+  Args:
+    iterated_uri: base StorageUri being listed (e.g., gs://abc/*).
+    obj: object to be listed (or None if no associated object).
+    listing_style: ListingStyle enum describing type of output desired.
+    headers: dictionary containing optional HTTP headers to pass to boto.
+    debug: flag indicating whether to include debug output
+
+  Returns:
+    Object length (if printed one of the long listing formats).
+  """
+
+  if listing_style == ListingStyle.SHORT:
+    print UriStrFor(iterated_uri, obj)
+    return 0
+  elif listing_style == ListingStyle.LONG:
+    print '%s %8s %s' % (obj.owner.id, obj.size, UriStrFor(iterated_uri, obj))
+    return obj.size
+  elif listing_style == ListingStyle.LONG_LONG:
+    uri_str = UriStrFor(iterated_uri, obj)
+    print '%s:' % uri_str
+    obj.open_read()
+    print '\tObject size:\t%s' % obj.size
+    print '\tLast mod:\t%s' % obj.last_modified
+    if obj.cache_control:
+      print '\tCache control:\t%s' % obj.cache_control
+    print '\tMIME type:\t%s' % obj.content_type
+    if obj.content_encoding:
+      print '\tContent-Encoding:\t%s' % obj.content_encoding
+    if obj.metadata:
+      for name in obj.metadata:
+        print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
+    print '\tMD5:\t%s' % obj.etag.strip('"\'')
+    print '\tACL:\t%s' % StorageUri(uri_str, debug=debug).get_acl(False,
+                                                                  headers)
+    return obj.size
+  else:
+    OutputAndExit('Unexpected ListingStyle(%s)' % listing_style)
+
+
+# Binary exponentiation strings.
+EXP_STRINGS = [
+    (0, 'B'),
+    (10, 'KB'),
+    (20, 'MB'),
+    (30, 'GB'),
+    (40, 'TB'),
+    (50, 'PB'),
+]
+
+
+def HumanFriendlySize(num):
+  """Converts a byte count to a human friendly form.
+
+  Args:
+    num: the number
+
+  Returns:
+    A string form of the number using size abbreviations (KB, MB, etc.)
+  """
+  i = 0
+  while i+1 < len(EXP_STRINGS) and num >= (2 ** EXP_STRINGS[i+1][0]):
+    i += 1
+  rounded_val = round(num / 2 ** EXP_STRINGS[i][0], 2)
+  return '%s %s' % (rounded_val, EXP_STRINGS[i][1])
 
 
 def ListCommand(args, sub_opts, headers=None, debug=False):
@@ -782,83 +770,37 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
     debug: flag indicating whether to include debug output
   """
 
-  long_listing = False
+  listing_style = ListingStyle.SHORT
   for o, unused_a in sub_opts:
     if o == '-l':
-      long_listing = True
+      listing_style = ListingStyle.LONG
+    if o == '-L':
+      listing_style = ListingStyle.LONG_LONG
   if not args:
     # default to listing all gs buckets
     args = ['gs://']
 
-  # First expand all URIs into URIs in exp_args, such that:
-  # a) provider-only URIs ('gs://') are left as-is.
-  # b) bucket-only URIs ('gs://bucket') with -l option are left as bucket-only
-  #    URIs.
-  # c) bucket-only URIs ('gs://bucket') without -l option are replaced by
-  #    the list of all the objects in the bucket.
-  # d) complete URIs ('gs://bucket/obj') are replaced by the list of all of
-  #    the matching objects names (handling URIs that contain wildcards,
-  #    as well as wildcard-less URIs).
-  exp_args = []
+  total_bytes = 0
   for uri_str in args:
-    uri = StorageUri(uri_str, False, debug)
+    uri = StorageUri(uri_str, debug=debug, validate=False)
     if not uri.bucket_name:
-      # case a: provider-only URI
-      exp_args.append(uri_str)
+      # Provider-only URI -> add bucket wildcard.
+      for uri in wildcard_iterator('%s://*' % uri.scheme, ResultType.URIS,
+                                   headers=headers, debug=debug):
+        PrintBucketInfo(uri, listing_style, headers)
     elif not uri.object_name:
-      if long_listing:
-        # case b: bucket-only URI with -l option
-        exp_args.append(uri.__str__())
-      else:
-        # case c: bucket-only URI without -l option
-        for obj in ListObjsInBucket(uri, headers=headers, debug=False):
-          exp_args.append(uri.clone_replace_name(obj.name).uri)
+      # Provider+bucket-only URI -> list info on the bucket(s).
+      for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
+                                   debug=debug):
+        PrintBucketInfo(uri, listing_style, headers)
     else:
-      # case d: complete URI
-      regex = fnmatch.translate(uri.object_name)
-      for obj in ListObjsInBucket(uri, headers=headers, debug=False):
-        if re.match(regex, obj.name):
-          exp_args.append(uri.clone_replace_name(obj.name).uri)
-
-  # Handle the case of a complete URI that didn't match anything
-  if uri.names_singleton() and not exp_args:
-    ReportNoMatchesAndExit(uri)
-
-  # Now iterate over all URIs in exp_args and print requested info for each
-  for uri_str in exp_args:
-    uri = StorageUri(uri_str, False, debug)
-    if not uri.bucket_name:
-      if long_listing:
-        # Provider long listing: print metadata for all buckets
-        buckets = uri.get_all_buckets()
-        for bucket in buckets:
-          bucket_uri = StorageUri(uri.scheme + '://' + bucket.name, False,
-                                  debug)
-          print '%s:\n\tACL:\t%s' % (bucket_uri,
-                                     bucket_uri.get_acl(False, headers))
-      else:
-        # Provider short listing: list all buckets
-        buckets = uri.get_all_buckets()
-        for bucket in buckets:
-          bucket_uri = StorageUri(uri.scheme + '://' + bucket.name, False,
-                                  debug)
-          print bucket_uri
-    elif not uri.object_name:
-      if long_listing:
-        # Bucket long listing
-        print '%s:\n\tACL:' % uri
-        print '\t\t%s' % uri.get_acl(False, headers)
-      else:
-        # Bucket short listing
-        for obj in ListObjsInBucket(uri, headers=headers, debug=False):
-          print '%s://%s/%s' % (uri.scheme, uri.bucket_name, obj.name)
-    else:
-      if long_listing:
-        # Object long listing
-        PrintObjectMetaData(uri, headers)
-      else:
-        # Object short listing
-        print uri
+      # Provider+bucket-object URI -> wildcard expand the URI.
+      for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
+                                   debug=debug):
+        total_bytes += PrintObjectInfo(uri, obj, listing_style, headers, debug)
+  if total_bytes != 0:
+    print 'TOTAL object bytes: %s (%s)' % (total_bytes,
+                                           HumanFriendlySize(total_bytes))
 
 
 def MakeBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
@@ -872,10 +814,8 @@ def MakeBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
   """
 
   for bucket_uri_str in args:
-    bucket_uri = StorageUri(bucket_uri_str, False, debug)
-    if len(args) > 1:
-      # Progress indicator
-      print 'Creating %s...' % bucket_uri
+    bucket_uri = StorageUri(bucket_uri_str, debug=debug)
+    print 'Creating %s...' % bucket_uri
     bucket_uri.create_bucket(headers)
 
 
@@ -916,12 +856,14 @@ def RemoveBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
     debug: flag indicating whether to include debug output
   """
 
-  for bucket_uri_str in args:
-    bucket_uri = StorageUri(bucket_uri_str, True, debug)
-    if len(args) > 1:
-      # Progress indicator
-      print 'Removing %s...' % bucket_uri
-    bucket_uri.delete_bucket(headers)
+  # Expand bucket name wildcards, if any.
+  for uri_str in args:
+    for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
+                                 debug=debug):
+      if uri.object_name:
+        OutputAndExit('"rb" command requires a URI with no object name')
+      print 'Removing %s...' % uri
+      uri.delete_bucket(headers)
 
 
 def RemoveObjsCommand(args, unused_sub_opts, headers=None, debug=False):
@@ -934,20 +876,16 @@ def RemoveObjsCommand(args, unused_sub_opts, headers=None, debug=False):
     debug: flag indicating whether to include debug output
   """
 
-  # Expand object name globs, if any.
-  exp_uris = []
+  # Expand object name wildcards, if any.
   for uri_str in args:
-    for exp_uri in ExpandStorageUriGlob(uri_str, headers, debug):
-      exp_uris.append(exp_uri)
-  for uri in exp_uris:
-    if uri.names_container():
-      OutputAndExit('"rm" command will not remove buckets.  To delete this '
-                    'bucket do:\n\tgsutil rm %s/*\n\tgsutil rb %s' %
-                    (uri.uri, uri.uri))
-    if len(exp_uris) > 1:
-      # Progress indicator
+    for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
+                                 debug=debug):
+      if uri.names_container():
+        OutputAndExit('"rm" command will not remove buckets.  To delete this/'
+                      'these bucket(s) do:\n\tgsutil rm %s/*\n\tgsutil rb %s' %
+                      (uri_str, uri_str))
       print 'Removing %s...' % uri
-    uri.delete_key(False, headers)
+      uri.delete_key(False, headers)
 
 
 def HaveFileUris(args):
@@ -1027,7 +965,8 @@ additional_config_content = """
 #debug = <0, 1, or 2>
 
 # 'num_retries' controls the number of retry attempts made when errors occur.
-# The default is 5.
+# The default is 5. Note: don't set this value to 0, as it will cause boto to
+# break when reusing HTTP connections.
 #num_retries = <integer value>
 """
 
@@ -1122,7 +1061,7 @@ commands = {
     'cp': [CopyObjsCommand, 2, NO_MAX, 'a:tz:', True, False, 0],
     'getacl': [GetAclCommand, 1, 1, '', False, False, 0],
     'help': [HelpCommand, 0, 0, '', False, False, 0],
-    'ls': [ListCommand, 0, NO_MAX, 'l', False, True, 0],
+    'ls': [ListCommand, 0, NO_MAX, 'lL', False, True, 0],
     'mb': [MakeBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'mv': [MoveObjsCommand, 2, NO_MAX, '', True, False, 0],
     'rb': [RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
@@ -1145,6 +1084,7 @@ def SanityCheckXmlParser(command):
     OutputAndExit('The "%s" command requires XML parsing, and your Python '
                   'installation includes an\nXML parser (%s)\nthat does '
                   'not work correctly.' % (command, code_file))
+
 
 def main():
   if float('%d.%d%d'
