@@ -16,6 +16,7 @@
 
 """Google Storage command line tool."""
 
+import copy
 import datetime
 import errno
 import getopt
@@ -520,13 +521,15 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
       the_gzip = gzip.open(gzip_path, 'wb')
       the_gzip.writelines(src_key.fp)
       the_gzip.close()
+      metadata = headers.copy()
       metadata['Content-Length'] = str(os.path.getsize(gzip_path))
       metadata['Content-Encoding'] = 'gzip'
-      dst_key.set_contents_from_file(open(gzip_path, 'rb'), metadata,
+      dst_key.set_contents_from_file(open(gzip_path, 'rb'), headers=metadata,
                                      policy=canned_acl)
       os.unlink(gzip_path)
     else:
-      dst_key.set_contents_from_file(src_key.fp, metadata, policy=canned_acl)
+      dst_key.set_contents_from_file(src_key.fp, headers=headers,
+                                     policy=canned_acl)
   elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
     # Object -> file:
     src_key.get_file(dst_key.fp, headers)
