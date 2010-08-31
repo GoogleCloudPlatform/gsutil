@@ -70,7 +70,7 @@ from gslib.wildcard_iterator import ResultType
 
 usage_string = """
 SYNOPSIS
-  gsutil [-d] [-h header]... command args
+  gsutil [-d] [-h header]... [command args...]
 
   -d option shows HTTP protocol detail.
 
@@ -660,7 +660,7 @@ class ListingStyle(object):
   LONG_LONG = 'LONG_LONG'
 
 
-def PrintBucketInfo(bucket_uri, listing_style, headers):
+def PrintBucketInfo(bucket_uri, listing_style, headers=None, debug=False):
   """Print listing info for given bucket.
 
   Args:
@@ -671,7 +671,19 @@ def PrintBucketInfo(bucket_uri, listing_style, headers):
   if listing_style == ListingStyle.SHORT:
     print bucket_uri
   else:
-    print '%s:\n\tACL:\t%s' % (bucket_uri, bucket_uri.get_acl(False, headers))
+    num_objs = 0
+    total_bytes = 0
+    for obj in wildcard_iterator(bucket_uri.clone_replace_name('*'),
+                                 ResultType.KEYS, headers=headers, debug=debug):
+      num_objs += 1
+      total_bytes += obj.size
+    if listing_style == ListingStyle.LONG:
+      print '%s : %s objects, %s' % (bucket_uri, num_objs,
+                                    HumanFriendlySize(total_bytes))
+    else: # listing_style == ListingStyle.LONG_LONG:
+      print '%s :\n\t%s objects, %s\n\tACL: %s' % (bucket_uri, num_objs,
+                                       HumanFriendlySize(total_bytes),
+                                       bucket_uri.get_acl(False, headers))
 
 
 def UriStrFor(iterated_uri, obj):
@@ -702,14 +714,16 @@ def PrintObjectInfo(iterated_uri, obj, listing_style, headers, debug):
     debug: flag indicating whether to include debug output
 
   Returns:
-    Object length (if printed one of the long listing formats).
+    Object length (if listing_style is one of the long listing formats).
   """
 
   if listing_style == ListingStyle.SHORT:
     print UriStrFor(iterated_uri, obj)
-    return 0
+    return None
   elif listing_style == ListingStyle.LONG:
-    print '%s %8s %s' % (obj.owner.id, obj.size, UriStrFor(iterated_uri, obj))
+    # Exclude timestamp fractional seconds (example: 2010-08-23T12:46:54.187Z).
+    timestamp = obj.last_modified[:19]
+    print '%10s  %s  %s' % (obj.size, timestamp, UriStrFor(iterated_uri, obj))
     return obj.size
   elif listing_style == ListingStyle.LONG_LONG:
     uri_str = UriStrFor(iterated_uri, obj)
@@ -787,20 +801,12 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
       # Provider-only URI -> add bucket wildcard.
       for uri in wildcard_iterator('%s://*' % uri.scheme, ResultType.URIS,
                                    headers=headers, debug=debug):
-        PrintBucketInfo(uri, listing_style, headers)
+        PrintBucketInfo(uri, listing_style, headers, debug)
     elif not uri.object_name:
-      # Provider+bucket-only URI. For short listing iterate bucket objects;
-      # otherwise list info about the bucket.
-      if listing_style == ListingStyle.SHORT:
-        for uri in wildcard_iterator(uri.clone_replace_name('*'),
-                                     ResultType.URIS, headers=headers,
-                                     debug=debug):
-          PrintBucketInfo(uri, listing_style, headers)
-      else:
-        # Print info on the bucket(s).
-        for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
-                                     debug=debug):
-          PrintBucketInfo(uri, listing_style, headers)
+      # Provider+bucket-only URI.
+      for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
+                                   debug=debug):
+        PrintBucketInfo(uri, listing_style, headers)
     else:
       # Provider+bucket-object URI -> wildcard expand the URI.
       for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
