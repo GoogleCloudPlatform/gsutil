@@ -370,7 +370,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
 
   print(('This command will update to the "%s" version of\ngsutil at %s') %
         (latest_version_string, gsutil_bin_dir))
-  ExplainIfSudoNeeded(tf, tmp_dir)
+  ExplainIfSudoNeeded(tf, dirs_to_remove)
 
   answer = raw_input('Proceed (Note: experimental command)? [y/N] ')
   if not answer or answer.lower()[0] != 'y':
