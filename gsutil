@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#
+# coding=utf8
 # Copyright 2010 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -452,7 +452,7 @@ def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     OutputAndExit('"getacl" command must specify a bucket or object.')
   acl = uri.get_acl(False, headers)
   # Pretty-print the XML to make it more easily human editable.
-  parsed_xml = xml.dom.minidom.parseString(acl.to_xml())
+  parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode("utf-8"))
   print parsed_xml.toprettyxml(indent='    ')
 
 
