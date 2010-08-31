@@ -14,7 +14,7 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
 # ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
@@ -160,7 +160,7 @@ class BucketWildcardIterator(WildcardIterator):
               yield expanded_uri
     if not some_matched:
       raise WildcardException('No matches for wildcard (%s)' % self.uri)
-  
+
   def __ListObjsInBucket(self, uri):
     """Helper function to get a list of objects in a bucket.  This function
     does not provide the complete wildcard match; instead it uses the
@@ -269,7 +269,10 @@ def wildcard_iterator(uri_or_str, result_type, headers=None, debug=False):
 
   # If the URI lacks regex chars wildcarding just iterates that single URI.
   if not ContainsWildcard(uri.uri):
-    return iter([uri])
+    if result_type == ResultType.KEYS:
+      return iter([uri.get_key()])
+    else:
+      return iter([uri])
   elif uri.is_cloud_uri():
     return BucketWildcardIterator(uri, result_type, headers=headers,
                                   debug=debug)
