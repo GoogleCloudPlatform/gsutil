@@ -92,9 +92,9 @@ class BucketIteratorTests(unittest.TestCase):
   def TestNoOpObjectIterator(self):
     """Tests that bucket-only URI iterates just that one URI."""
 
-    results = list(wildcard_iterator('gs://whatever/', ResultType.URIS))
+    results = list(wildcard_iterator(self.test_bucket0_uri, ResultType.URIS))
     self.assertEqual(1, len(results))
-    self.assertEqual('gs://whatever/', str(results[0]))
+    self.assertEqual(str(self.test_bucket0_uri), str(results[0]))
 
   def TestMatchingAllObjects(self):
     """Tests matching all objects, based on wildcard."""

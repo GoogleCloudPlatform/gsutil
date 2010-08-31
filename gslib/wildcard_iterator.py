@@ -119,10 +119,8 @@ class BucketWildcardIterator(WildcardIterator):
 
   def __iter__(self):
     some_matched = False
-    bucket_wildcard = False
     # First handle bucket wildcarding, if any.
     if ContainsWildcard(self.uri.bucket_name):
-      bucket_wildcard = True
       regex = fnmatch.translate(self.uri.bucket_name)
       bucket_uris = []
       for b in self.uri.get_all_buckets():
@@ -134,20 +132,26 @@ class BucketWildcardIterator(WildcardIterator):
 
     # Now iterate over bucket(s), and handle object wildcarding, if any.
     for bucket_uri in bucket_uris:
-      if not ContainsWildcard(self.uri.object_name) and bucket_wildcard:
-        # No object wildcard.
-        if self.result_type == ResultType.KEYS:
-            raise WildcardException('Got bucket-only wildcard (%s) with '
-                                    'ResultType.KEYS iteration' % self.uri)
-        some_matched = True
-        yield bucket_uri
+      if not self.uri.object_name:
+        # Bucket-only URI.
+        if self.result_type == ResultType.URIS:
+          some_matched = True
+          yield bucket_uri
+        else:
+          raise WildcardException('Bucket-only URI (%s) with ResultType.KEYS '
+                                  'iteration request' % self.uri)
       else:
-        # Add the input URI's object name part to the bucket we're currently
-        # listing. For example if the request was to iterate gs://*/*.txt,
-        # bucket_uris will contain a list of all the user's buckets, and for
-        # each we'll add *.txt to the end so we iterate the matching files
-        # from each bucket in turn.
+        # URI contains an object name. Add the input URI's object name part
+        # to the bucket we're currently listing. For example if the request
+        # was to iterate gs://*/*.txt, bucket_uris will contain a list of
+        # all the user's buckets, and for each we'll add *.txt to the end
+        # so we iterate the matching files from each bucket in turn.
+        # Note that we list objects from the bucket even if there's no wildcard
+        # (e.g., gs://bucket/obj.txt) rather than returning the URI or KEY
+        # directly for that case because the object does not currently contain
+        # the owner ID (needed by gsutil ls -l, for example).
         uri_to_list = bucket_uri.clone_replace_name(self.uri.object_name)
+        # URI contains an object wildcard.
         for obj in self.__ListObjsInBucket(uri_to_list):
           regex = fnmatch.translate(self.uri.object_name)
           if re.match(regex, obj.name):
@@ -267,13 +271,7 @@ def wildcard_iterator(uri_or_str, result_type, headers=None, debug=False):
     # wildcard chars.
     uri = boto.storage_uri(uri_or_str, debug=debug, validate=False)
 
-  # If the URI lacks regex chars wildcarding just iterates that single URI.
-  if not ContainsWildcard(uri.uri):
-    if result_type == ResultType.KEYS:
-      return iter([uri.get_key()])
-    else:
-      return iter([uri])
-  elif uri.is_cloud_uri():
+  if uri.is_cloud_uri():
     return BucketWildcardIterator(uri, result_type, headers=headers,
                                   debug=debug)
   elif uri.is_file_uri():

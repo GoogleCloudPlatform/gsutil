@@ -789,10 +789,18 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
                                    headers=headers, debug=debug):
         PrintBucketInfo(uri, listing_style, headers)
     elif not uri.object_name:
-      # Provider+bucket-only URI -> list info on the bucket(s).
-      for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
-                                   debug=debug):
-        PrintBucketInfo(uri, listing_style, headers)
+      # Provider+bucket-only URI. For short listing iterate bucket objects;
+      # otherwise list info about the bucket.
+      if listing_style == ListingStyle.SHORT:
+        for uri in wildcard_iterator(uri.clone_replace_name('*'),
+                                     ResultType.URIS, headers=headers,
+                                     debug=debug):
+          PrintBucketInfo(uri, listing_style, headers)
+      else:
+        # Print info on the bucket(s).
+        for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
+                                     debug=debug):
+          PrintBucketInfo(uri, listing_style, headers)
     else:
       # Provider+bucket-object URI -> wildcard expand the URI.
       for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
