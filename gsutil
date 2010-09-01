@@ -68,6 +68,7 @@ from boto.exception import S3ResponseError
 
 from gslib.wildcard_iterator import wildcard_iterator
 from gslib.wildcard_iterator import ResultType
+from gslib.wildcard_iterator import WildcardException
 
 usage_string = """
 SYNOPSIS
@@ -1167,6 +1168,8 @@ def main():
     OutputAndExit('InvalidAclError: %s.' % e.message)
   except InvalidUriError, e:
     OutputAndExit('InvalidUriError: %s.' % e.message)
+  except WildcardException, e:
+    OutputAndExit(e.reason)
   except S3ResponseError, e:
     detail_start = e.body.find('<Details>')
     detail_end = e.body.find('</Details>')

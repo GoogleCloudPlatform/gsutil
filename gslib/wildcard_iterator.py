@@ -163,7 +163,7 @@ class BucketWildcardIterator(WildcardIterator):
               expanded_uri = uri_to_list.clone_replace_name(obj.name)
               yield expanded_uri
     if not some_matched:
-      raise WildcardException('No matches for wildcard (%s)' % self.uri)
+      raise WildcardException('No matches for "%s"' % self.uri)
 
   def __ListObjsInBucket(self, uri):
     """Helper function to get a list of objects in a bucket.  This function
@@ -229,7 +229,7 @@ class FileWildcardIterator(WildcardIterator):
       # Not a recursive wildcarding request.
       filepaths = glob.glob(wildcard)
     if not filepaths:
-      raise WildcardException('No matches for wildcard (%s)' % wildcard)
+      raise WildcardException('No matches for "%s"' % wildcard)
     for filename in filepaths:
       expanded_uri = self.uri.clone_replace_name(filename)
       yield expanded_uri
