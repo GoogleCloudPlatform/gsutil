@@ -677,10 +677,16 @@ def PrintBucketInfo(bucket_uri, listing_style, headers=None, debug=False):
   else:
     num_objs = 0
     total_bytes = 0
-    for obj in wildcard_iterator(bucket_uri.clone_replace_name('*'),
-                                 ResultType.KEYS, headers=headers, debug=debug):
-      num_objs += 1
-      total_bytes += obj.size
+    try:
+      for obj in wildcard_iterator(bucket_uri.clone_replace_name('*'),
+                                   ResultType.KEYS, headers=headers,
+                                   debug=debug):
+        num_objs += 1
+        total_bytes += obj.size
+    except WildcardException, e:
+      # Do nothing about non-matching wildcards, to allow empty bucket listings.
+      if e.reason.find('No matches') == -1:
+        raise e
     if listing_style == ListingStyle.LONG:
       print '%s : %s objects, %s' % (bucket_uri, num_objs,
                                     HumanFriendlySize(total_bytes))
@@ -723,7 +729,7 @@ def PrintObjectInfo(iterated_uri, obj, listing_style, headers, debug):
 
   if listing_style == ListingStyle.SHORT:
     print UriStrFor(iterated_uri, obj)
-    return None
+    return 0
   elif listing_style == ListingStyle.LONG:
     # Exclude timestamp fractional seconds (example: 2010-08-23T12:46:54.187Z).
     timestamp = obj.last_modified[:19]
