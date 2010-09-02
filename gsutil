@@ -93,8 +93,9 @@ SYNOPSIS
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     List buckets or objects:
-      ls [-l] [-L] uri...
+      ls [-b] [-l] [-L] uri...
          -l Prints long listing (owner, length); -L provides more detail.
+         -b Prints info about the bucket when used with a bucket URI.
     Make buckets:
       mb uri...
     Move/rename objects:
@@ -295,6 +296,15 @@ def ExplainIfSudoNeeded(tf, dirs_to_remove):
                  '\tchmod 600 %s') % (config_file, config_file, config_file))
 
 
+unsafe_del_dirs = [
+  "applications", "auto", "bin", "boot", "desktop", "dev", "etc", "export",
+  "home", "kernel", "lib", "lib32", "library", "lost+found", "mach_kernel",
+  "media", "mnt", "net", "network", "opt", "private", "proc", "program",
+  "files", "python", "root", "sbin", "scripts", "srv", "sys", "system",
+  "tmp", "users", "usr", "var", "volumes", "win", "win32", "windows",
+  "winnt",
+]
+
 def CleanUpUpdateCommand(tf, dirs_to_remove):
   """Cleans up temp files etc. from running update command.
 
@@ -305,6 +315,14 @@ def CleanUpUpdateCommand(tf, dirs_to_remove):
   """
   tf.close()
   for directory in dirs_to_remove:
+    # Check lowercased slash-left-stripped 'directory' against a list
+    # of blacklisted directories, and raise an exception if it matches one.
+    # This should never happen but we check just to be extra-careful about
+    # recursive delete (e.g., in case the user for some reason installed
+    # gsutil and moved all the files into /bin).
+    if not directory or directory.lstrip(os.sep).lower() in unsafe_del_dirs:
+      raise Exception('CleanUpUpdateCommand: got unsafe directory to delete '
+                      '(%s); aborting' % directory)
     shutil.rmtree(directory)
 
 
@@ -671,29 +689,34 @@ def PrintBucketInfo(bucket_uri, listing_style, headers=None, debug=False):
     bucket_uri: StorageUri being listed.
     listing_style: ListingStyle enum describing type of output desired.
     headers: dictionary containing optional HTTP headers to pass to boto.
+    debug: flag indicating whether to include debug output
+
+  Returns:
+    Tuple (total objects, total bytes) in the bucket.
   """
+  bucket_objs = 0
+  bucket_bytes = 0
   if listing_style == ListingStyle.SHORT:
     print bucket_uri
   else:
-    num_objs = 0
-    total_bytes = 0
     try:
       for obj in wildcard_iterator(bucket_uri.clone_replace_name('*'),
                                    ResultType.KEYS, headers=headers,
                                    debug=debug):
-        num_objs += 1
-        total_bytes += obj.size
+        bucket_objs += 1
+        bucket_bytes += obj.size
     except WildcardException, e:
       # Do nothing about non-matching wildcards, to allow empty bucket listings.
       if e.reason.find('No matches') == -1:
         raise e
     if listing_style == ListingStyle.LONG:
-      print '%s : %s objects, %s' % (bucket_uri, num_objs,
-                                    HumanFriendlySize(total_bytes))
+      print '%s : %s objects, %s' % (bucket_uri, bucket_objs,
+                                    HumanFriendlySize(bucket_bytes))
     else: # listing_style == ListingStyle.LONG_LONG:
-      print '%s :\n\t%s objects, %s\n\tACL: %s' % (bucket_uri, num_objs,
-                                       HumanFriendlySize(total_bytes),
+      print '%s :\n\t%s objects, %s\n\tACL: %s' % (bucket_uri, bucket_objs,
+                                       HumanFriendlySize(bucket_bytes),
                                        bucket_uri.get_acl(False, headers))
+  return (bucket_objs, bucket_bytes)
 
 
 def UriStrFor(iterated_uri, obj):
@@ -795,7 +818,10 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
   """
 
   listing_style = ListingStyle.SHORT
+  get_bucket_info = False
   for o, unused_a in sub_opts:
+    if o == '-b':
+      get_bucket_info = True
     if o == '-l':
       listing_style = ListingStyle.LONG
     if o == '-L':
@@ -804,27 +830,51 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
     # default to listing all gs buckets
     args = ['gs://']
 
+  total_objs = 0
   total_bytes = 0
   for uri_str in args:
     uri = StorageUri(uri_str, debug=debug, validate=False)
+
     if not uri.bucket_name:
-      # Provider-only URI -> add bucket wildcard.
+      # Provider-only URI: add bucket wildcard to list buckets.
       for uri in wildcard_iterator('%s://*' % uri.scheme, ResultType.URIS,
                                    headers=headers, debug=debug):
-        PrintBucketInfo(uri, listing_style, headers, debug)
+        (bucket_objs, bucket_bytes) = PrintBucketInfo(uri, listing_style,
+                                                      headers=headers,
+                                                      debug=debug)
+        total_bytes += bucket_bytes
+        total_objs += bucket_objs
+
     elif not uri.object_name:
-      # Provider+bucket-only URI.
-      for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
-                                   debug=debug):
-        PrintBucketInfo(uri, listing_style, headers)
+      if get_bucket_info:
+        # ls -b request on provider+bucket-only URI: List info about bucket(s).
+        for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
+                                     debug=debug):
+          (bucket_objs, bucket_bytes) = PrintBucketInfo(uri, listing_style,
+                                                        headers=headers,
+                                                        debug=debug)
+          total_bytes += bucket_bytes
+          total_objs += bucket_objs
+      else:
+        # ls request on provider+bucket-only URI: List objects in the bucket(s).
+        for obj in wildcard_iterator(uri.clone_replace_name('*'),
+                                     ResultType.KEYS, headers=headers,
+                                     debug=debug):
+          total_bytes += PrintObjectInfo(uri, obj, listing_style, headers=headers,
+                                         debug=debug)
+          total_objs += 1
+
+
     else:
-      # Provider+bucket-object URI -> wildcard expand the URI.
+      # Provider+bucket+object URI -> list the object(s).
       for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
                                    debug=debug):
-        total_bytes += PrintObjectInfo(uri, obj, listing_style, headers, debug)
-  if total_bytes != 0:
-    print 'TOTAL object bytes: %s (%s)' % (total_bytes,
-                                           HumanFriendlySize(total_bytes))
+        total_bytes += PrintObjectInfo(uri, obj, listing_style, headers=headers, 
+                                       debug=debug)
+        total_objs += 1
+  if listing_style != ListingStyle.SHORT:
+    print 'TOTAL: %s objects, %s bytes (%s)' % (total_objs, total_bytes,
+                                                HumanFriendlySize(total_bytes))
 
 
 def MakeBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
@@ -1085,7 +1135,7 @@ commands = {
     'cp': [CopyObjsCommand, 2, NO_MAX, 'a:tz:', True, False, 0],
     'getacl': [GetAclCommand, 1, 1, '', False, False, 0],
     'help': [HelpCommand, 0, 0, '', False, False, 0],
-    'ls': [ListCommand, 0, NO_MAX, 'lL', False, True, 0],
+    'ls': [ListCommand, 0, NO_MAX, 'blL', False, True, 0],
     'mb': [MakeBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'mv': [MoveObjsCommand, 2, NO_MAX, '', True, False, 0],
     'rb': [RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
