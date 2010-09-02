@@ -299,8 +299,8 @@ def ExplainIfSudoNeeded(tf, dirs_to_remove):
 unsafe_del_dirs = [
   "applications", "auto", "bin", "boot", "desktop", "dev", "etc", "export",
   "home", "kernel", "lib", "lib32", "library", "lost+found", "mach_kernel",
-  "media", "mnt", "net", "network", "opt", "private", "proc", "program",
-  "files", "python", "root", "sbin", "scripts", "srv", "sys", "system",
+  "media", "mnt", "net", "network", "opt", "private", "proc",
+  "program files", "python", "root", "sbin", "scripts", "srv", "sys", "system",
   "tmp", "users", "usr", "var", "volumes", "win", "win32", "windows",
   "winnt",
 ]
@@ -321,8 +321,10 @@ def CleanUpUpdateCommand(tf, dirs_to_remove):
     # recursive delete (e.g., in case the user for some reason installed
     # gsutil and moved all the files into /bin).
     if not directory or directory.lstrip(os.sep).lower() in unsafe_del_dirs:
-      raise Exception('CleanUpUpdateCommand: got unsafe directory to delete '
-                      '(%s); aborting' % directory)
+      raise Exception('CleanUpUpdateCommand: encountered unsafe directory '
+                      '(%s) while performing cleanup from "update" command; '
+                      'aborting cleanup rather than risk deleting something '
+                      'important' % directory)
     shutil.rmtree(directory)
 
 
