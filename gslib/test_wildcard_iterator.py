@@ -220,9 +220,6 @@ class FileIteratorTests(unittest.TestCase):
   @classmethod
   def SetUpClass(cls):
     """Creates a test dir containing 3 files and one nested subdirectory + file.
-
-    Note that we use camelCase instead of CamelCase naming for this
-    function to match naming from Python 2.7 unittest module.
     """
 
     # Create the test directories.
@@ -254,11 +251,7 @@ class FileIteratorTests(unittest.TestCase):
 
   @classmethod
   def TearDownClass(cls):
-    """Cleans up test dir and file created by SetUpClass.
-
-    Note that we use camelCase instead of CamelCase naming for this
-    function to match naming from Python 2.7 unittest module.
-    """
+    """Cleans up test dir and file created by SetUpClass."""
 
     if hasattr(cls, 'test_dir'):
       shutil.rmtree(cls.test_dir)

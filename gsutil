@@ -16,7 +16,6 @@
 
 """Google Storage command line tool."""
 
-import copy
 import datetime
 import errno
 import getopt
@@ -66,8 +65,9 @@ from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
 from boto.exception import S3ResponseError
 
-from gslib.wildcard_iterator import wildcard_iterator
+from gslib.wildcard_iterator import ContainsWildcard
 from gslib.wildcard_iterator import ResultType
+from gslib.wildcard_iterator import wildcard_iterator
 from gslib.wildcard_iterator import WildcardException
 
 usage_string = """
@@ -143,7 +143,6 @@ def StorageUri(uri_str, debug=False, validate=True):
   Raises:
     InvalidUriError: if uri_str not valid.
   """
-
   uri = boto.storage_uri(uri_str, 'file', debug=debug, validate=validate)
   return uri
 
@@ -155,9 +154,8 @@ def InsistUriNamesContainer(command, uri):
     command: command being run
     uri: StorageUri to check
   """
-
   if uri.names_singleton():
-    OutputAndExit('destination StorageUri must name a bucket or directory '
+    OutputAndExit('Destination StorageUri must name a bucket or directory '
                   'for the multiple source\nform of the "%s" command.' %
                   command)
 
@@ -171,7 +169,6 @@ def CatCommand(args, sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   show_header = False
   for o, unused_a in sub_opts:
     if o == '-h':
@@ -210,7 +207,6 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   acl_arg = args[0]
   uri_args = args[1:]
   provider = None
@@ -271,7 +267,6 @@ def ExplainIfSudoNeeded(tf, dirs_to_remove):
     tf: opened TarFile.
     dirs_to_remove: list of directories to remove.
   """
-
   system = platform.system()
   # If running under Windows we don't need (or have) sudo.
   if system.lower().startswith('windows'):
@@ -296,14 +291,39 @@ def ExplainIfSudoNeeded(tf, dirs_to_remove):
                  '\tchmod 600 %s') % (config_file, config_file, config_file))
 
 
-unsafe_del_dirs = [
-  "applications", "auto", "bin", "boot", "desktop", "dev", "etc", "export",
-  "home", "kernel", "lib", "lib32", "library", "lost+found", "mach_kernel",
-  "media", "mnt", "net", "network", "opt", "private", "proc",
-  "program files", "python", "root", "sbin", "scripts", "srv", "sys", "system",
-  "tmp", "users", "usr", "var", "volumes", "win", "win32", "windows",
-  "winnt",
+# This list is checked during gsutil update by doing a lowercased
+# slash-left-stripped check. For example "/Dev" would match the "dev" entry.
+unsafe_update_dirs = [
+    'applications', 'auto', 'bin', 'boot', 'desktop', 'dev',
+    'documents and settings', 'etc', 'export', 'home', 'kernel', 'lib',
+    'lib32', 'library', 'lost+found', 'mach_kernel', 'media', 'mnt', 'net',
+    'null', 'network', 'opt', 'private', 'proc', 'program files', 'python',
+    'root', 'sbin', 'scripts', 'srv', 'sys', 'system', 'tmp', 'users', 'usr',
+    'var', 'volumes', 'win', 'win32', 'windows', 'winnt',
 ]
+
+
+def EnsureDirsSafeForUpdate(dirs):
+  """Throws Exception if any of dirs is known to be unsafe for gsutil update.
+
+  This provides a fail-safe check to ensure we don't try to overwrite
+  or delete any important directories. (That shouldn't happen given the
+  way we construct tmp dirs, etc., but since the gsutil update cleanup
+  use shutil.rmtree() it's prudent to add extra checks.)
+
+  Args:
+    dirs: list of directories to check.
+
+  Raises:
+    Exception: If unsafe directory encountered.
+  """
+  for d in dirs:
+    if not d:
+      d = 'null'
+    if d.lstrip(os.sep).lower() in unsafe_update_dirs:
+      raise Exception('EnsureDirsSafeForUpdate: encountered unsafe directory '
+                      '(%s); aborting update' % d)
+
 
 def CleanUpUpdateCommand(tf, dirs_to_remove):
   """Cleans up temp files etc. from running update command.
@@ -314,17 +334,8 @@ def CleanUpUpdateCommand(tf, dirs_to_remove):
 
   """
   tf.close()
+  EnsureDirsSafeForUpdate(dirs_to_remove)
   for directory in dirs_to_remove:
-    # Check lowercased slash-left-stripped 'directory' against a list
-    # of blacklisted directories, and raise an exception if it matches one.
-    # This should never happen but we check just to be extra-careful about
-    # recursive delete (e.g., in case the user for some reason installed
-    # gsutil and moved all the files into /bin).
-    if not directory or directory.lstrip(os.sep).lower() in unsafe_del_dirs:
-      raise Exception('CleanUpUpdateCommand: encountered unsafe directory '
-                      '(%s) while performing cleanup from "update" command; '
-                      'aborting cleanup rather than risk deleting something '
-                      'important' % directory)
     shutil.rmtree(directory)
 
 
@@ -334,7 +345,6 @@ def LoadVersionString():
   Returns:
     Version string.
   """
-
   ver_file_path = gsutil_bin_dir + os.sep + 'VERSION'
   if not os.path.isfile(ver_file_path):
     OutputAndExit('%s not found. Did you install the\ncomplete gsutil software '
@@ -355,7 +365,6 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   installed_version_string = LoadVersionString()
 
   dirs_to_remove = []
@@ -414,6 +423,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
   new_dir = tempfile.mkdtemp(dir=gsutil_bin_parent_dir)
   dirs_to_remove.append(old_dir)
   dirs_to_remove.append(new_dir)
+  EnsureDirsSafeForUpdate(dirs_to_remove)
   try:
     tf.extractall(path=new_dir)
   except Exception, e:
@@ -442,7 +452,6 @@ def CheckForDirFileConflict(src_uri, dst_path):
     src_uri: source StorageUri of copy
     dst_path: destination path.
   """
-
   final_dir = os.path.dirname(dst_path)
   if os.path.isfile(final_dir):
     OutputAndExit('Cannot retrieve %s because it a file exists where a '
@@ -462,7 +471,6 @@ def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   # Wildcarding is allowed but must resolve to just one object.
   uris = list(wildcard_iterator(args[0], ResultType.URIS, headers=headers,
                                 debug=debug))
@@ -474,7 +482,7 @@ def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     OutputAndExit('"getacl" command must specify a bucket or object.')
   acl = uri.get_acl(False, headers)
   # Pretty-print the XML to make it more easily human editable.
-  parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode("utf-8"))
+  parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
   print parsed_xml.toprettyxml(indent='    ')
 
 
@@ -487,7 +495,6 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
     sub_opts: command-specific options from getopt.
     headers: dictionary containing optional HTTP headers to pass to boto.
   """
-
   # Make a copy of the input headers each time so we can set a different
   # MIME type for each object.
   metadata = headers.copy()
@@ -673,7 +680,6 @@ def HelpCommand(unused_args, unused_sub_opts, unused_headers=None,
     unused_headers: dictionary containing optional HTTP headers to pass to boto.
     unused_debug: flag indicating whether to include debug output
   """
-
   OutputUsageAndExit()
 
 
@@ -734,7 +740,6 @@ def UriStrFor(iterated_uri, obj):
   Returns:
     URI string.
   """
-
   return '%s://%s/%s' % (iterated_uri.scheme, obj.bucket.name, obj.name)
 
 
@@ -751,7 +756,6 @@ def PrintObjectInfo(iterated_uri, obj, listing_style, headers, debug):
   Returns:
     Object length (if listing_style is one of the long listing formats).
   """
-
   if listing_style == ListingStyle.SHORT:
     print UriStrFor(iterated_uri, obj)
     return 0
@@ -818,7 +822,6 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   listing_style = ListingStyle.SHORT
   get_bucket_info = False
   for o, unused_a in sub_opts:
@@ -866,7 +869,6 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
                                          debug=debug)
           total_objs += 1
 
-
     else:
       # Provider+bucket+object URI -> list the object(s).
       for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
@@ -888,7 +890,6 @@ def MakeBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   for bucket_uri_str in args:
     bucket_uri = StorageUri(bucket_uri_str, debug=debug)
     print 'Creating %s...' % bucket_uri
@@ -907,7 +908,6 @@ def MoveObjsCommand(args, sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   # Refuse to delete a bucket or directory src URI (force users to explicitly
   # do that as a separate operation).
   src_uri_to_check = StorageUri(args[0])
@@ -931,7 +931,6 @@ def RemoveBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   # Expand bucket name wildcards, if any.
   for uri_str in args:
     for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
@@ -951,7 +950,6 @@ def RemoveObjsCommand(args, unused_sub_opts, headers=None, debug=False):
     headers: dictionary containing optional HTTP headers to pass to boto.
     debug: flag indicating whether to include debug output
   """
-
   # Expand object name wildcards, if any.
   for uri_str in args:
     for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,

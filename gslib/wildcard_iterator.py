@@ -125,8 +125,13 @@ class BucketWildcardIterator(WildcardIterator):
       bucket_uris = []
       for b in self.uri.get_all_buckets():
         if re.match(regex, b.name):
+          # Use str(b.name) because get_all_buckets() returns Unicode
+          # string, which when used to construct x-goog-copy-src metadata
+          # requests for object-to-object copies, causes pathname '/' chars
+          # to be entity-encoded (bucket%2Fdir instead of bucket/dir),
+          # which causes the request to fail.
           bucket_uris.append(boto.storage_uri('%s://%s' %
-                                              (self.uri.scheme, b.name)))
+                                              (self.uri.scheme, str(b.name))))
     else:
       bucket_uris = [self.uri.clone_replace_name('')]
 
@@ -280,14 +285,14 @@ def wildcard_iterator(uri_or_str, result_type, headers=None, debug=False):
     raise WildcardException('Unexpected type of StorageUri (%s)' % uri)
 
 
-def ContainsWildcard(str):
+def ContainsWildcard(uri_str):
   """Checks whether given URI contains a wildcard.
 
   Args:
-    str: string to check.
+    uri_str: string to check.
 
   Returns:
     True or False.
   """
 
-  return re.search('[*?\[\]]', str)
+  return re.search('[*?\[\]]', uri_str)
