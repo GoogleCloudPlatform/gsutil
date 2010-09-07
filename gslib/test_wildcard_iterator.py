@@ -371,7 +371,7 @@ if __name__ == '__main__':
     # don't assume the user has Python 2.7 (which supports classmethods
     # that do it, with camelCase versions of these names).
     try:
-      print 'Setting up for %s...' % test_class.GetSuiteDescription()
+      print 'Setting up %s...' % test_class.GetSuiteDescription()
       test_class.SetUpClass()
       print 'Running %s...' % test_class.GetSuiteDescription()
       unittest.TextTestRunner(verbosity=2).run(suite)

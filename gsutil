@@ -65,6 +65,7 @@ from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
 from boto.exception import S3ResponseError
 
+from gslib.exception import CommandException
 from gslib.wildcard_iterator import ContainsWildcard
 from gslib.wildcard_iterator import ResultType
 from gslib.wildcard_iterator import wildcard_iterator
@@ -155,9 +156,9 @@ def InsistUriNamesContainer(command, uri):
     uri: StorageUri to check
   """
   if uri.names_singleton():
-    OutputAndExit('Destination StorageUri must name a bucket or directory '
-                  'for the multiple source\nform of the "%s" command.' %
-                  command)
+    raise CommandException('Destination StorageUri must name a bucket or '
+                           'directory for the multiple source\nform of the '
+                           '"%s" command.' % command)
 
 
 def CatCommand(args, sub_opts, headers=None, debug=False):
@@ -179,7 +180,7 @@ def CatCommand(args, sub_opts, headers=None, debug=False):
     for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
                                  debug=debug):
       if not uri.object_name:
-        OutputAndExit('"cat" command must specify objects.')
+        raise CommandException('"cat" command must specify objects.')
       if show_header:
         if printed_one:
           print
@@ -219,7 +220,8 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
       if not provider:
         provider = uri.scheme
       elif uri.scheme != provider:
-        OutputAndExit('"setacl" command spanning providers not allowed.')
+        raise CommandException('"setacl" command spanning providers not '
+                               'allowed.')
       if not first_uri:
         first_uri = uri
 
@@ -241,13 +243,14 @@ def SetAclCommand(args, unused_sub_opts, headers=None, debug=False):
     try:
       xml.sax.parseString(acl_txt, h)
     except xml.sax._exceptions.SAXParseException, e:
-      OutputAndExit('Requested ACL is invalid: %s at line %s, column %s' %
-                    (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
+      raise CommandException('Requested ACL is invalid: %s at line %s, column '
+                             '%s' % (e.getMessage(), e.getLineNumber(),
+                             e.getColumnNumber()))
     acl_arg = acl_obj
   else:
     # No file exists, so expect a canned ACL string.
     if acl_arg not in canned_acls:
-      OutputAndExit('Invalid canned ACL "%s".' % acl_arg)
+      raise CommandException('Invalid canned ACL "%s".' % acl_arg)
 
   # Now iterate over URIs and set the ACL on each.
   for uri_str in uri_args:
@@ -281,14 +284,14 @@ def ExplainIfSudoNeeded(tf, dirs_to_remove):
   # having a config file.
   config_file = GetBotoConfigFileList()[0]
   CleanUpUpdateCommand(tf, dirs_to_remove)
-  OutputAndExit(('Since it was installed by a different user previously, '
-                 'you will need to update using the following commands.\n'
-                 'You will be prompted for your password, and the install '
-                 'will run as "root". If you\'re unsure what this means please '
-                 'ask your system administrator for help:\n'
-                 '\tchmod 644 %s\n'
-                 '\tsudo env BOTO_CONFIG=%s gsutil update\n'
-                 '\tchmod 600 %s') % (config_file, config_file, config_file))
+  raise CommandException((
+      'Since it was installed by a different user previously, you will need to '
+      'update using the following commands.\nYou will be prompted for your '
+      'password, and the install will run as "root". If you\'re unsure what '
+      'this means please ask your system administrator for help:'
+      '\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
+      '\n\tchmod 600 %s') % (config_file, config_file, config_file),
+      informational=True)
 
 
 # This list is checked during gsutil update by doing a lowercased
@@ -315,14 +318,14 @@ def EnsureDirsSafeForUpdate(dirs):
     dirs: list of directories to check.
 
   Raises:
-    Exception: If unsafe directory encountered.
+    CommandException: If unsafe directory encountered.
   """
   for d in dirs:
     if not d:
       d = 'null'
     if d.lstrip(os.sep).lower() in unsafe_update_dirs:
-      raise Exception('EnsureDirsSafeForUpdate: encountered unsafe directory '
-                      '(%s); aborting update' % d)
+      raise CommandException('EnsureDirsSafeForUpdate: encountered unsafe '
+                             'directory (%s); aborting update' % d)
 
 
 def CleanUpUpdateCommand(tf, dirs_to_remove):
@@ -347,9 +350,9 @@ def LoadVersionString():
   """
   ver_file_path = gsutil_bin_dir + os.sep + 'VERSION'
   if not os.path.isfile(ver_file_path):
-    OutputAndExit('%s not found. Did you install the\ncomplete gsutil software '
-                  'after the gsutil "update" command was implemented?' %
-                  ver_file_path)
+    raise CommandException('%s not found. Did you install the\ncomplete gsutil '
+        'software after the gsutil "update" command was implemented?' %
+        ver_file_path)
   ver_file = open(ver_file_path, 'r')
   installed_version_string = ver_file.read().rstrip('\n')
   ver_file.close()
@@ -387,7 +390,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
 
   # The force_update option works around a problem with the way the
   # first gsutil "update" command exploded the gsutil and boto directories,
-  # which didn't correctly install boto.  People running that older code can
+  # which didn't correctly install boto. People running that older code can
   # run "gsutil update" (to update to the newer gsutil update code) followed by
   # "gsutil update -f" (which will then update the boto code, even though the
   # VERSION is already the latest version).
@@ -397,7 +400,8 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
       force_update = True
   if not force_update and installed_version_string == latest_version_string:
     CleanUpUpdateCommand(tf, dirs_to_remove)
-    OutputAndExit('You have the latest version of gsutil installed.')
+    raise CommandException('You have the latest version of gsutil installed.',
+                           informational=True)
 
   print(('This command will update to the "%s" version of\ngsutil at %s') %
         (latest_version_string, gsutil_bin_dir))
@@ -406,7 +410,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
   answer = raw_input('Proceed (Note: experimental command)? [y/N] ')
   if not answer or answer.lower()[0] != 'y':
     CleanUpUpdateCommand(tf, dirs_to_remove)
-    OutputAndExit('Not running update.')
+    raise CommandException('Not running update.', informational=True)
 
   # Ignore keyboard interrupts during the update to reduce the chance someone
   # hitting ^C leaves gsutil in a broken state.
@@ -414,7 +418,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
 
   # gsutil_bin_dir lists the path where the code should end up (like
   # /usr/local/gsutil), which is one level down from the relative path in the
-  # tarball (since the latter creates files in ./gsutil).  So, we need to
+  # tarball (since the latter creates files in ./gsutil). So, we need to
   # extract at the parent directory level.
   gsutil_bin_parent_dir = os.path.dirname(gsutil_bin_dir)
 
@@ -428,7 +432,7 @@ def UpdateCommand(unused_args, sub_opts, headers=None, debug=False):
     tf.extractall(path=new_dir)
   except Exception, e:
     CleanUpUpdateCommand(tf, dirs_to_remove)
-    OutputAndExit('Update failed: %s.' % e)
+    raise CommandException('Update failed: %s.' % e)
 
   # Move old installation aside and new into place.
   os.rename(gsutil_bin_dir, old_dir + os.sep + 'old')
@@ -442,7 +446,7 @@ def CheckForDirFileConflict(src_uri, dst_path):
   """Checks whether copying src_uri into dst_path is not possible.
 
      This happens if a directory exists in local file system where a file needs
-     to go or vice versa.  In that case we print an error message and exits.
+     to go or vice versa. In that case we print an error message and exits.
      Example: if the file "./x" exists and you try to do:
        gsutil cp gs://mybucket/x/y .
      the request can't succeed because it requires a directory where
@@ -454,10 +458,10 @@ def CheckForDirFileConflict(src_uri, dst_path):
   """
   final_dir = os.path.dirname(dst_path)
   if os.path.isfile(final_dir):
-    OutputAndExit('Cannot retrieve %s because it a file exists where a '
-                  'directory needs to be created (%s).' % (src_uri, final_dir))
+    raise CommandException('Cannot retrieve %s because it a file exists where a'
+                  ' directory needs to be created (%s).' % (src_uri, final_dir))
   if os.path.isdir(dst_path):
-    OutputAndExit('Cannot retrieve %s because a directory exists '
+    raise CommandException('Cannot retrieve %s because a directory exists '
                   '(%s) where the file needs to be created.' %
                   (src_uri, dst_path))
 
@@ -475,11 +479,11 @@ def GetAclCommand(args, unused_sub_opts, headers=None, debug=False):
   uris = list(wildcard_iterator(args[0], ResultType.URIS, headers=headers,
                                 debug=debug))
   if len(uris) != 1:
-    OutputAndExit('Wildcards must resolve to exactly one object for "getacl" '
-                  'command.')
+    raise CommandException('Wildcards must resolve to exactly one object for '
+                           '"getacl" command.')
   uri = uris[0]
   if not uri.bucket_name:
-    OutputAndExit('"getacl" command must specify a bucket or object.')
+    raise CommandException('"getacl" command must specify a bucket or object.')
   acl = uri.get_acl(False, headers)
   # Pretty-print the XML to make it more easily human editable.
   parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
@@ -490,8 +494,8 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
   """Helper method for CopyObjsCommand.
 
   Args:
-    src_uri: source StorageUri for copy.
-    dst_uri: destination StorageUri for copy.
+    src_uri: source StorageUri.
+    dst_uri: destination StorageUri.
     sub_opts: command-specific options from getopt.
     headers: dictionary containing optional HTTP headers to pass to boto.
   """
@@ -504,7 +508,7 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
     if o == '-a':
       canned_acls = dst_uri.canned_acls()
       if a not in canned_acls:
-        OutputAndExit('Invalid canned ACL "%s".' % a)
+        raise CommandException('Invalid canned ACL "%s".' % a)
       canned_acl = a
     elif o == '-t':
       mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
@@ -522,7 +526,7 @@ def PerformCopy(src_uri, dst_uri, sub_opts, headers):
 
   src_key = src_uri.get_key(False, headers)
   if not src_key:
-    OutputAndExit('"%s" does not exist.' % src_uri)
+    raise CommandException('"%s" does not exist.' % src_uri)
 
   # Separately handle cases to avoid extra file and network copying of
   # potentially very large files/objects.
@@ -650,7 +654,7 @@ def CopyObjsCommand(args, sub_opts, headers=None, debug=False):
     if (src_uri.equals(dst_uri) or
         # Example case: gsutil cp gs://mybucket/a/bb mybucket
         (dst_uri.is_cloud_uri() and src_uri.uri.find(dst_uri.uri) != -1)):
-      OutputAndExit('Overlapping source and dest URIs not allowed.')
+      raise CommandException('Overlapping source and dest URIs not allowed.')
 
   # Now iterate over expanded src URIs, and perform copy operations.
   for src_uri in exp_src_uris:
@@ -718,12 +722,12 @@ def PrintBucketInfo(bucket_uri, listing_style, headers=None, debug=False):
       if e.reason.find('No matches') == -1:
         raise e
     if listing_style == ListingStyle.LONG:
-      print '%s : %s objects, %s' % (bucket_uri, bucket_objs,
-                                    HumanFriendlySize(bucket_bytes))
-    else: # listing_style == ListingStyle.LONG_LONG:
-      print '%s :\n\t%s objects, %s\n\tACL: %s' % (bucket_uri, bucket_objs,
-                                       HumanFriendlySize(bucket_bytes),
-                                       bucket_uri.get_acl(False, headers))
+      print '%s : %s objects, %s' % (
+          bucket_uri, bucket_objs, HumanFriendlySize(bucket_bytes))
+    else:  # listing_style == ListingStyle.LONG_LONG:
+      print '%s :\n\t%s objects, %s\n\tACL: %s' % (
+          bucket_uri, bucket_objs, HumanFriendlySize(bucket_bytes),
+          bucket_uri.get_acl(False, headers))
   return (bucket_objs, bucket_bytes)
 
 
@@ -783,7 +787,7 @@ def PrintObjectInfo(iterated_uri, obj, listing_style, headers, debug):
                                                                   headers)
     return obj.size
   else:
-    OutputAndExit('Unexpected ListingStyle(%s)' % listing_style)
+    raise CommandException('Unexpected ListingStyle(%s)' % listing_style)
 
 
 # Binary exponentiation strings.
@@ -865,15 +869,15 @@ def ListCommand(args, sub_opts, headers=None, debug=False):
         for obj in wildcard_iterator(uri.clone_replace_name('*'),
                                      ResultType.KEYS, headers=headers,
                                      debug=debug):
-          total_bytes += PrintObjectInfo(uri, obj, listing_style, headers=headers,
-                                         debug=debug)
+          total_bytes += PrintObjectInfo(uri, obj, listing_style,
+                                         headers=headers, debug=debug)
           total_objs += 1
 
     else:
       # Provider+bucket+object URI -> list the object(s).
       for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
                                    debug=debug):
-        total_bytes += PrintObjectInfo(uri, obj, listing_style, headers=headers, 
+        total_bytes += PrintObjectInfo(uri, obj, listing_style, headers=headers,
                                        debug=debug)
         total_objs += 1
   if listing_style != ListingStyle.SHORT:
@@ -912,8 +916,8 @@ def MoveObjsCommand(args, sub_opts, headers=None, debug=False):
   # do that as a separate operation).
   src_uri_to_check = StorageUri(args[0])
   if src_uri_to_check.names_container():
-    OutputAndExit('Will not remove source buckets or directories.  You should '
-                  'separately copy and remove for that purpose.')
+    raise CommandException('Will not remove source buckets or directories. You '
+                           'must separately copy and remove for that purpose.')
 
   if len(args) > 2:
     InsistUriNamesContainer('mv', StorageUri(args[-1]))
@@ -936,7 +940,8 @@ def RemoveBucketsCommand(args, unused_sub_opts, headers=None, debug=False):
     for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
                                  debug=debug):
       if uri.object_name:
-        OutputAndExit('"rb" command requires a URI with no object name')
+        raise CommandException('"rb" command requires a URI with no object '
+                               'name')
       print 'Removing %s...' % uri
       uri.delete_bucket(headers)
 
@@ -955,9 +960,10 @@ def RemoveObjsCommand(args, unused_sub_opts, headers=None, debug=False):
     for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
                                  debug=debug):
       if uri.names_container():
-        OutputAndExit('"rm" command will not remove buckets.  To delete this/'
-                      'these bucket(s) do:\n\tgsutil rm %s/*\n\tgsutil rb %s' %
-                      (uri_str, uri_str))
+        uri_str = uri_str.rstrip('/')
+        raise CommandException('"rm" command will not remove buckets. To '
+                               'delete this/these bucket(s) do:\n\tgsutil rm '
+                               '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
       print 'Removing %s...' % uri
       uri.delete_key(False, headers)
 
@@ -1021,7 +1027,7 @@ additional_config_content = """
 
 [Boto]
 
-# To use a proxy, edit and uncomment the proxy and proxy_port lines.  If you
+# To use a proxy, edit and uncomment the proxy and proxy_port lines. If you
 # need a user/password with this proxy, edit and uncomment those lines as well.
 #proxy = <proxy host>
 #proxy_port = <proxy port>
@@ -1029,7 +1035,7 @@ additional_config_content = """
 #proxy_pass = <your proxy password>
 
 # Set 'is_secure' to False to cause boto to connect using HTTP instead of the
-# default HTTPS.  This is useful if you want to capture/analyze traffic
+# default HTTPS. This is useful if you want to capture/analyze traffic
 # (e.g., with tcpdump).
 #is_secure = False
 
@@ -1052,7 +1058,7 @@ def CreateBotoConfigFile():
     config_path = ('%s%s.boto' % (os.environ['HOME'], os.sep))
   else:
     config_path = ('.%s.boto' % os.sep)
-  sys.stderr.write('You have no boto config file.  This script will create '
+  sys.stderr.write('You have no boto config file. This script will create '
                    'one at\n%s\ncontaining your credentials, based on your '
                    'responses to the following questions.\n\n' % config_path)
 
@@ -1069,12 +1075,13 @@ def CreateBotoConfigFile():
                                      provider)
       got_creds = True
       if not key_ids[provider] or not sec_keys[provider]:
-        OutputAndExit('Incomplete credentials provided.  Please try again.')
+        raise CommandException('Incomplete credentials provided. Please try '
+                               'again.')
   if not got_creds:
-    OutputAndExit('No credentials provided.  Please try again.')
+    raise CommandException('No credentials provided. Please try again.')
   cfp = open(config_path, 'w')
   if not cfp:
-    OutputAndExit('Unable to write "%s".' % config_path)
+    raise CommandException('Unable to write "%s".' % config_path)
   os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
   cfp.write(prelude_config_content)
   cfp.write('# This file was created by gsutil version "%s"\n# at %s.\n\n\n'
@@ -1117,11 +1124,10 @@ def SetupConfigIfNeeded():
   if not has_goog_creds and not has_amzn_creds:
     config_file_list = GetBotoConfigFileList()
     if config_file_list:
-      OutputAndExit('You have no storage service credentials in any of the '
-                    'following boto config\nfiles. Please add your credentials '
-                    'as described in the gsutil README file, or else\ndelete'
-                    'these files and re-run this script to re-create them:\n%s'
-                    % config_file_list)
+      raise CommandException('You have no storage service credentials in any '
+          'of the following boto config\nfiles. Please add your credentials as '
+          'described in the gsutil README file, or else\ndelete these files and'
+          're-run this script to re-create them:\n%s' % config_file_list)
     else:
       CreateBotoConfigFile()
 
@@ -1155,16 +1161,17 @@ def SanityCheckXmlParser(command):
     return
   code_file = xml.sax.xmlreader.__file__
   if code_file.find('xmlplus') != -1:
-    OutputAndExit('The "%s" command requires XML parsing, and your Python '
-                  'installation includes an\nXML parser (%s)\nthat does '
-                  'not work correctly.' % (command, code_file))
+    raise CommandException('The "%s" command requires XML parsing, and your '
+                           'Python installation includes an\nXML parser (%s)\n'
+                           'that does not work correctly.' %
+                           (command, code_file))
 
 
 def main():
   if float('%d.%d%d'
            %(sys.version_info[0], sys.version_info[1], sys.version_info[2])
           ) < 2.51:
-    OutputAndExit('This tool requires Python 2.5.1 or higher.')
+    raise CommandException('This tool requires Python 2.5.1 or higher.')
 
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
@@ -1177,7 +1184,7 @@ def main():
     else:
       command = args[0]
     if command not in commands:
-      OutputAndExit('Invalid command "%s".' % command)
+      raise CommandException('Invalid command "%s".' % command)
     SanityCheckXmlParser(command)
     command_info = commands[command]
     command_func = command_info[0]
@@ -1189,37 +1196,41 @@ def main():
     uris_start_arg = command_info[6]
     sub_opts, args = getopt.getopt(args[1:], supported_sub_args)
     if len(args) < min_arg_count or len(args) > max_arg_count:
-      OutputAndExit('Wrong number of arguments for "%s" command.' % command)
+      raise CommandException('Wrong number of arguments for "%s" command.' %
+                             command)
     if not file_uri_ok and HaveFileUris(args[uris_start_arg:]):
-      OutputAndExit('"%s" command does not support "file://" URIs.' % command)
+      raise CommandException('"%s" command does not support "file://" URIs.' %
+                             command)
     if not provider_uri_ok and HaveProviderUris(args[uris_start_arg:]):
-      OutputAndExit('"%s" command does not support provider-only URIs.' %
-                    command)
-  except InvalidUriError, e:
-    OutputAndExit(e.message)
-  except getopt.GetoptError, e:
-    OutputAndExit(e.msg)
+      raise CommandException('"%s" command does not support provider-only '
+                             'URIs.' % command)
 
-  SetupConfigIfNeeded()
+    SetupConfigIfNeeded()
 
-  debug = 0
-  headers = {}
-  for o, a in opts:
-    if o in ('-d', '--debug'):
-      # Debug level 2 causes httplib output plus boto debug output
-      debug = 2
-    if o in ('-?', '--help'):
-      OutputUsageAndExit()
-    if o in ('-h', '--header'):
-      (hdr_name, unused_ptn, hdr_val) = a.partition(':')
-      if not hdr_name or not hdr_val:
+    debug = 0
+    headers = {}
+    for o, a in opts:
+      if o in ('-d', '--debug'):
+        # Debug level 2 causes httplib output plus boto debug output
+        debug = 2
+      if o in ('-?', '--help'):
         OutputUsageAndExit()
-      headers[hdr_name] = hdr_val
+      if o in ('-h', '--header'):
+        (hdr_name, unused_ptn, hdr_val) = a.partition(':')
+        if not hdr_name or not hdr_val:
+          OutputUsageAndExit()
+        headers[hdr_name] = hdr_val
 
-  try:
     command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
-    OutputAndExit('BotoClientError,: %s.' % e.reason)
+    OutputAndExit('BotoClientError: %s.' % e.reason)
+  except CommandException, e:
+    if e.informational:
+      OutputAndExit(e.reason)
+    else:
+      OutputAndExit('CommandException: %s' % e.reason)
+  except getopt.GetoptError, e:
+    raise CommandException(e.msg)
   except InvalidAclError, e:
     OutputAndExit('InvalidAclError: %s.' % e.message)
   except InvalidUriError, e:
