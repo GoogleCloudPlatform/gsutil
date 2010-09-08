@@ -77,7 +77,7 @@ class ResultType:
   URIS = "URIS"
 
 
-class WildcardIterator():
+class WildcardIterator:
   # This class implements support for iterating over StorageUris that
   # contain wildcards, such as "gs://bucket/abc*" and "file://directory/abc*".
   #
