@@ -16,16 +16,8 @@
 
 """Implementation of gsutil commands."""
 
-import gzip
-import mimetypes
 import os
-import platform
-import shutil
-import signal
 import sys
-import tarfile
-import tempfile
-import xml.dom.minidom
 import boto
 
 from boto import handler
@@ -54,8 +46,8 @@ EXP_STRINGS = [
 ]
 
 
-def HumanFriendlySize(num):
-  """Converts a byte count to a human friendly form.
+def MakeHumanReadable(num):
+  """Generates human readable string for a number.
 
   Args:
     num: the number
@@ -137,7 +129,7 @@ class Command:
                              'directory for the multiple source\nform of the '
                              '"%s" command.' % command)
 
-  def CatCommand(self, args, sub_opts, headers=None, debug=False):
+  def CatCommand(self, args, sub_opts=None, headers=None, debug=False):
     """Implementation of cat command.
 
     Args:
@@ -341,7 +333,8 @@ class Command:
     ver_file.close()
     return installed_version_string
 
-  def UpdateCommand(self, unused_args, sub_opts, headers=None, debug=False):
+  def UpdateCommand(self, unused_args, sub_opts=None, headers=None,
+                    debug=False):
     """Implementation of experimental update command.
 
     Args:
@@ -376,9 +369,9 @@ class Command:
     # The force_update option works around a problem with the way the
     # first gsutil "update" command exploded the gsutil and boto directories,
     # which didn't correctly install boto. People running that older code can
-    # run "gsutil update" (to update to the newer gsutil update code) followed by
-    # "gsutil update -f" (which will then update the boto code, even though the
-    # VERSION is already the latest version).
+    # run "gsutil update" (to update to the newer gsutil update code) followed
+    # by "gsutil update -f" (which will then update the boto code, even though
+    # the VERSION is already the latest version).
     force_update = False
     for o, unused_a in sub_opts:
       if o == '-f':
@@ -429,9 +422,9 @@ class Command:
   def CheckForDirFileConflict(self, src_uri, dst_path):
     """Checks whether copying src_uri into dst_path is not possible.
 
-       This happens if a directory exists in local file system where a file needs
-       to go or vice versa. In that case we print an error message and exits.
-       Example: if the file "./x" exists and you try to do:
+       This happens if a directory exists in local file system where a file
+       needs to go or vice versa. In that case we print an error message and
+       exits. Example: if the file "./x" exists and you try to do:
          gsutil cp gs://mybucket/x/y .
        the request can't succeed because it requires a directory where
        the file x exists.
@@ -445,8 +438,8 @@ class Command:
     """
     final_dir = os.path.dirname(dst_path)
     if os.path.isfile(final_dir):
-      raise CommandException('Cannot retrieve %s because it a file exists where a'
-                             ' directory needs to be created (%s).' %
+      raise CommandException('Cannot retrieve %s because it a file exists '
+                             'where a directory needs to be created (%s).' %
                              (src_uri, final_dir))
     if os.path.isdir(dst_path):
       raise CommandException('Cannot retrieve %s because a directory exists '
@@ -473,13 +466,14 @@ class Command:
                              '"getacl" command.')
     uri = uris[0]
     if not uri.bucket_name:
-      raise CommandException('"getacl" command must specify a bucket or object.')
+      raise CommandException('"getacl" command must specify a bucket or '
+                             'object.')
     acl = uri.get_acl(False, headers)
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
 
-  def PerformCopy(self, src_uri, dst_uri, sub_opts, headers):
+  def PerformCopy(self, src_uri, dst_uri, sub_opts=None, headers=None):
     """Helper method for CopyObjsCommand.
 
     Args:
@@ -493,28 +487,32 @@ class Command:
     """
     # Make a copy of the input headers each time so we can set a different
     # MIME type for each object.
-    metadata = headers.copy()
+    if headers:
+      metadata = headers.copy()
+    else:
+      metadata = {}
     gzip_exts = []
     canned_acl = None
-    for o, a in sub_opts:
-      if o == '-a':
-        canned_acls = dst_uri.canned_acls()
-        if a not in canned_acls:
-          raise CommandException('Invalid canned ACL "%s".' % a)
-        canned_acl = a
-      elif o == '-t':
-        mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
-        mime_type = mimetype_tuple[0]
-        content_encoding = mimetype_tuple[1]
-        if mime_type:
-          metadata['Content-Type'] = mime_type
-          print '\t[Setting Content-Type=%s]' % mime_type
-        else:
-          print '\t[Unknown content type -> using application/octet stream]'
-        if content_encoding:
-          metadata['Content-Encoding'] = content_encoding
-      elif o == '-z':
-        gzip_exts = a.split(',')
+    if sub_opts:
+      for o, a in sub_opts:
+        if o == '-a':
+          canned_acls = dst_uri.canned_acls()
+          if a not in canned_acls:
+            raise CommandException('Invalid canned ACL "%s".' % a)
+          canned_acl = a
+        elif o == '-t':
+          mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
+          mime_type = mimetype_tuple[0]
+          content_encoding = mimetype_tuple[1]
+          if mime_type:
+            metadata['Content-Type'] = mime_type
+            print '\t[Setting Content-Type=%s]' % mime_type
+          else:
+            print '\t[Unknown content type -> using application/octet stream]'
+          if content_encoding:
+            metadata['Content-Encoding'] = content_encoding
+        elif o == '-z':
+          gzip_exts = a.split(',')
 
     src_key = src_uri.get_key(False, headers)
     if not src_key:
@@ -568,12 +566,14 @@ class Command:
       dst_key.set_contents_from_file(tmp, metadata)
 
   def ExpandWildcardsAndContainers(self, uri_strs, headers=None, debug=False):
-    """Expands any URI wildcarding, object-less bucket names, or directory names.
+    """Expands URI wildcarding, object-less bucket names, and directory names.
 
     Examples:
-      calling with uri_strs='file:///tmp' will enumerate all files under /tmp.
-      calling with uri_strs='file:///tmp/a*' will enumerate all matching files.
-      calling with uri_strs='gs://bucket' will enumerate all contained objects.
+      Calling with uri_strs='gs://bucket' will enumerate all contained objects.
+      Calling with uri_strs='file:///tmp' will enumerate all files under /tmp
+         (or under any subdirectory).
+      The previous example is equivalent to uri_strs='file:///tmp/*'
+         and to uri_strs='file:///tmp/**'
 
     Args:
       uri_strs: URI strings needing expansion
@@ -581,25 +581,136 @@ class Command:
       debug: flag indicating whether to include debug output
 
     Returns:
-      list (not generator, so caller can know result count) of boto.StorageUri.
-    """
+      dict mapping StorageUri(uri_str) -> list of StorageUri, for reach input.
 
-    result = []
-    # First expand all input URIs, e.g., so 'a*' will expand to 'abc'
-    # (which itself could be a directory needing expansion).
+      We build a dict of the expansion instead of using a generator to
+      iterate incrementally because caller needs to know count before
+      iterating and performing copy operations.
+    """
+    # The algorithm we use is:
+    # 1. Build a first level expanded list from uri_strs consisting of all
+    #    URIs that aren't file wildcards, plus expansions of the file wildcards.
+    # 2. Build dict from above expanded list.
+    #    We do so that we can properly handle the following example:
+    #      gsutil cp file0 dir0 gs://bucket
+    #    where dir0 contains file1 and dir1/file2.
+    # If we didn't do the first expansion, this cp command would end up
+    # with this expansion:
+    #   {file://file0:[file://file0],file://dir0:[file://dir0/file1,
+    #                                             file://dir0/dir1/file2]}
+    # instead of the (correct) expansion:
+    #   {file://file0:[file://file0],file://dir0/file1:[file://dir0/file1],
+    #                                file://dir0/dir1:[file://dir0/dir1/file2]}
+    # The latter expansion is needed so that in the "Copying..." loop of
+    # CopyObjsCommand we know that dir0 was being copied, so we create an
+    # object called gs://bucket/dir0/dir1/file2. (Otherwise it would look
+    # like a single file was being copied, so we'd create an object called
+    # gs://bucket/file2.)
+
+    # Step 1.
+    uris_to_expand = []
     for uri_str in uri_strs:
-      uri = StorageUri(uri_str, debug=debug)
-      if uri.is_file_uri() and uri.names_container():
-        uri_to_iter = StorageUri('%s%s**' % (uri.uri, os.sep), debug=debug)
+      uri = StorageUri(uri_str, debug=debug, validate=False)
+      if uri.is_file_uri() and ContainsWildcard(uri_str):
+        uris_to_expand.extend(list(wildcard_iterator(uri, ResultType.URIS,
+                                                     headers=headers,
+                                                     debug=debug)))
+      else:
+        uris_to_expand.append(uri)
+
+    # Step 2.
+    result = {}
+    for uri in uris_to_expand:
+      if uri.names_container():
+          if uri.is_file_uri():
+            # dir -> convert to implicit recursive wildcard.
+            uri_to_iter = '%s/**' % uri.uri
+          else:
+            # bucket -> convert to implicit wildcard.
+            uri_to_iter = uri.clone_replace_name('*')
       else:
         uri_to_iter = uri
-      for exp_uri in wildcard_iterator(uri_to_iter,
-                                       ResultType.URIS,
-                                       headers=headers, debug=debug):
-        result.append(exp_uri)
+      result[uri] = list(wildcard_iterator(uri_to_iter, ResultType.URIS,
+                         headers=headers, debug=debug))
     return result
 
-  def CopyObjsCommand(self, args, sub_opts, headers=None, debug=False):
+  def ErrorCheckCopyRequest(self, src_uri_expansion, dst_uri_str, headers,
+                            debug):
+    """Checks copy request for problems, and builds needed dst_uri.
+
+    Prints error message and exists if there's a problem.
+
+    Args:
+      src_uri_expansion: result from ExpandWildcardsAndContainers call.
+      dst_uri_str: string representation of destination StorageUri.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: flag indicating whether to include debug output
+
+    Returns:
+      (dst_uri to use for copy, bool indicator of multi-source request).
+
+    Raises:
+      CommandException if any errors found.
+    """
+    if ContainsWildcard(dst_uri_str):
+      matches = list(wildcard_iterator(dst_uri_str, ResultType.URIS,
+                                       headers=headers, debug=debug))
+      if len(matches) > 1:
+        raise CommandException('Destination (%s) matches more than 1 URI' %
+                               dst_uri_str)
+      dst_uri = matches[0]
+    else:
+      dst_uri = StorageUri(dst_uri_str, debug=debug)
+
+    for src_uri in src_uri_expansion:
+      for exp_src_uri in src_uri_expansion[src_uri]:
+        if (exp_src_uri.equals(dst_uri) or
+            # Example case: gsutil cp gs://mybucket/a/bb mybucket
+            (dst_uri.is_cloud_uri() and
+             exp_src_uri.uri.find(dst_uri.uri) != -1)):
+          raise CommandException('Overlapping source and dest URIs not '
+                                 'allowed.')
+
+    # If this is a multi-object copy request ensure dst_uri names a container.
+    multi_src_request = (len(src_uri_expansion) > 1 or
+                         len(src_uri_expansion.values()[0]) > 1)
+    if multi_src_request:
+      self.InsistUriNamesContainer('cp', dst_uri)
+
+    return (dst_uri, multi_src_request)
+
+  def HandleMultiSrcCopyRequst(self, src_uri_expansion, dst_uri):
+    """Rewrites dst_uri and creates dest dir as needed for multi-source copy.
+
+    Args:
+      src_uri_expansion: result from ExpandWildcardsAndContainers call.
+      dst_uri: destination StorageUri.
+
+    Returns:
+      dst_uri to use for copy.
+    """
+    # If src_uri and dst_uri both name containers, handle
+    # two cases to make copy command work like UNIX "cp -r" works:
+    #   a) if dst_uri names a non-existent directory, copy objects to a new
+    #      directory with the dst_uri name. In this case,
+    #        gsutil gs://bucket/a dir
+    #      should create dir/a.
+    #   b) if dst_uri names an existing directory, copy objects under that
+    #      directory. In this case,
+    #        gsutil gs://bucket/a dir
+    #      should create dir/bucket/a.
+    src_uri_to_check = src_uri_expansion.keys()[0]
+    if (src_uri_to_check.names_container() and dst_uri.names_container() and
+        os.path.exists(dst_uri.object_name)):
+        new_name = ('%s%s%s' % (dst_uri.object_name, os.sep,
+                                src_uri_to_check.bucket_name)).rstrip('/')
+        dst_uri = dst_uri.clone_replace_name(new_name)
+    # Create dest directory if needed.
+    if dst_uri.is_file_uri() and not os.path.exists(dst_uri.object_name):
+      os.makedirs(dst_uri.object_name)
+    return dst_uri
+
+  def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=False):
     """Implementation of cp command.
 
     Args:
@@ -607,61 +718,57 @@ class Command:
       sub_opts: command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
+
+    Raises:
+      CommandException: If any errors encountered.
     """
-
-    src_uri_strs = args[0:len(args)-1]
-    dst_uri = StorageUri(args[-1], debug=debug)
-    multi_obj_copy = True
-
     # Expand wildcards and containers in source StorageUris.
-    exp_src_uris = self.ExpandWildcardsAndContainers(src_uri_strs, headers, debug)
+    src_uri_expansion = self.ExpandWildcardsAndContainers(
+        args[0:len(args)-1], headers, debug)
 
-    # If there is 1 source arg after expansion, with src_uri naming an
-    # object-less bucket and dst_uri naming a directory, handle two cases to
-    # make copy command work like UNIX "cp -r" works:
-    #   a) if no directory exists for dst_uri copy objects to a new directory
-    #      with the dst_uri name, e.g., "bucket/a" -> "dir/a"
-    #   b) if a directory exists for dst_uri copy objects to a new directory
-    #      under that directory, e.g., "bucket/a" -> "dir/bucket/a"
-    if len(exp_src_uris) == 1:
-      src_uri_to_check = exp_src_uris[0]
-      if src_uri_to_check.names_container():
-        if dst_uri.names_container() and os.path.exists(dst_uri.object_name):
-          dst_uri = dst_uri.clone_replace_name(dst_uri.object_name + os.sep +
-                                               src_uri_to_check.bucket_name)
-      else:
-        multi_obj_copy = False
+    # Check for various problems, and determine dst_uri based on request.
+    (dst_uri, multi_src_request) = self.ErrorCheckCopyRequest(src_uri_expansion,
+                                                              args[-1], headers,
+                                                              debug)
 
-    if (multi_obj_copy and dst_uri.is_file_uri()
-        and not os.path.exists(dst_uri.object_name)):
-      os.makedirs(dst_uri.object_name)
-
-    if multi_obj_copy:
-      self.InsistUriNamesContainer('cp', dst_uri)
-
-    # Abort if any source overlaps with a dest.
-    for src_uri in exp_src_uris:
-      if (src_uri.equals(dst_uri) or
-          # Example case: gsutil cp gs://mybucket/a/bb mybucket
-          (dst_uri.is_cloud_uri() and src_uri.uri.find(dst_uri.uri) != -1)):
-        raise CommandException('Overlapping source and dest URIs not allowed.')
+    # Rewrite dst_uri and create dest dir as needed for multi-source copy.
+    if multi_src_request:
+      dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion, dst_uri)
 
     # Now iterate over expanded src URIs, and perform copy operations.
-    for src_uri in exp_src_uris:
-      print 'Copying %s...' % src_uri
-      if dst_uri.names_container():
-        if dst_uri.is_file_uri():
-          # dest names a directory, so append src obj name to dst obj name
-          dst_key_name = dst_uri.object_name + os.sep + src_uri.object_name
-          self.CheckForDirFileConflict(src_uri, dst_key_name)
+    for src_uri in iter(src_uri_expansion):
+      for exp_src_uri in src_uri_expansion[src_uri]:
+        print 'Copying %s...' % exp_src_uri
+        if dst_uri.names_container():
+          # To match naming semantics of UNIX 'cp' command, copying files
+          # to buckets/dirs should result in objects/files named by just the
+          # final filename component; while copying directories should result
+          # in objects/files mirroring the directory hierarchy. Example of the
+          # first case:
+          #   gsutil cp dir1/file1 gs://bucket
+          # should create object gs://bucket/file1
+          # Example of the second case:
+          #   gsutil cp dir1/dir2 gs://bucket
+          # should create object gs://bucket/dir2/file2 (assuming dir1/dir2
+          # contains file2).
+          if src_uri.names_container():
+            dst_path_start = (src_uri.object_name.rstrip(os.sep)
+                              .rpartition(os.sep)[-1])
+            start_pos = exp_src_uri.object_name.find(dst_path_start)
+            dst_key_name = exp_src_uri.object_name[start_pos:]
+          else:
+            # src is a file or object, so use final component of src name.
+            dst_key_name = os.path.basename(exp_src_uri.object_name)
+          if dst_uri.is_file_uri():
+            # dst names a directory, so append src obj name to dst obj name.
+            dst_key_name = '%s%s%s' % (dst_uri.object_name, os.sep,
+                                       dst_key_name)
+            self.CheckForDirFileConflict(exp_src_uri, dst_key_name)
         else:
-          # dest names a bucket: use src obj name for dst obj name.
-          dst_key_name = src_uri.object_name
-      else:
-        # dest is an object or file: use dst obj name
-        dst_key_name = dst_uri.object_name
-      new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-      self.PerformCopy(src_uri, new_dst_uri, sub_opts, headers)
+          # dest is an object or file: use dst obj name
+          dst_key_name = dst_uri.object_name
+        new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
+        self.PerformCopy(exp_src_uri, new_dst_uri, sub_opts, headers)
 
   def HelpCommand(self, unused_args, unused_sub_opts, unused_headers=None,
                   unused_debug=None):
@@ -670,8 +777,8 @@ class Command:
     Args:
       unused_args: command-line arguments
       unused_sub_opts: command-specific options from getopt.
-      unused_headers: dictionary containing optional HTTP headers to pass to boto.
-      unused_debug: flag indicating whether to include debug output
+      unused_headers: dictionary containing optional HTTP headers to send.
+      unused_debug: flag indicating whether to include debug output.
     """
     self.OutputUsageAndExit()
 
@@ -700,15 +807,15 @@ class Command:
           bucket_objs += 1
           bucket_bytes += obj.size
       except WildcardException, e:
-        # Do nothing about non-matching wildcards, to allow empty bucket listings.
+        # Ignore non-matching wildcards, to allow empty bucket listings.
         if e.reason.find('No matches') == -1:
           raise e
       if listing_style == ListingStyle.LONG:
         print '%s : %s objects, %s' % (
-            bucket_uri, bucket_objs, HumanFriendlySize(bucket_bytes))
+            bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes))
       else:  # listing_style == ListingStyle.LONG_LONG:
         print '%s :\n\t%s objects, %s\n\tACL: %s' % (
-            bucket_uri, bucket_objs, HumanFriendlySize(bucket_bytes),
+            bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
             bucket_uri.get_acl(False, headers))
     return (bucket_objs, bucket_bytes)
 
@@ -732,7 +839,7 @@ class Command:
       print UriStrFor(iterated_uri, obj)
       return 0
     elif listing_style == ListingStyle.LONG:
-      # Exclude timestamp fractional seconds (example: 2010-08-23T12:46:54.187Z).
+      # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19]
       print '%10s  %s  %s' % (obj.size, timestamp, UriStrFor(iterated_uri, obj))
       return obj.size
@@ -757,7 +864,7 @@ class Command:
     else:
       raise CommandException('Unexpected ListingStyle(%s)' % listing_style)
 
-  def ListCommand(self, args, sub_opts, headers=None, debug=False):
+  def ListCommand(self, args, sub_opts=None, headers=None, debug=False):
     """Implementation of ls command.
 
     Args:
@@ -785,7 +892,7 @@ class Command:
       uri = StorageUri(uri_str, debug=debug, validate=False)
 
       if not uri.bucket_name:
-        # Provider-only URI: add bucket wildcard to list buckets.
+        # Provider URI: add bucket wildcard to list buckets.
         for uri in wildcard_iterator('%s://*' % uri.scheme, ResultType.URIS,
                                      headers=headers, debug=debug):
           (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri, listing_style,
@@ -796,16 +903,17 @@ class Command:
 
       elif not uri.object_name:
         if get_bucket_info:
-          # ls -b request on provider+bucket-only URI: List info about bucket(s).
+          # ls -b request on provider+bucket URI: List info about bucket(s).
           for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
                                        debug=debug):
-            (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri, listing_style,
+            (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri,
+                                                               listing_style,
                                                                headers=headers,
                                                                debug=debug)
             total_bytes += bucket_bytes
             total_objs += bucket_objs
         else:
-          # ls request on provider+bucket-only URI: List objects in the bucket(s).
+          # ls request on provider+bucket URI: List objects in the bucket(s).
           for obj in wildcard_iterator(uri.clone_replace_name('*'),
                                        ResultType.KEYS, headers=headers,
                                        debug=debug):
@@ -817,12 +925,12 @@ class Command:
         # Provider+bucket+object URI -> list the object(s).
         for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
                                      debug=debug):
-          total_bytes += self.PrintObjectInfo(uri, obj, listing_style, headers=headers,
-                                              debug=debug)
+          total_bytes += self.PrintObjectInfo(uri, obj, listing_style,
+                                              headers=headers, debug=debug)
           total_objs += 1
     if listing_style != ListingStyle.SHORT:
-      print 'TOTAL: %s objects, %s bytes (%s)' % (total_objs, total_bytes,
-                                                  HumanFriendlySize(total_bytes))
+      print ('TOTAL: %s objects, %s bytes (%s)' %
+             (total_objs, total_bytes, MakeHumanReadable(total_bytes)))
 
   def MakeBucketsCommand(self, args, unused_sub_opts, headers=None,
                          debug=False):
@@ -842,7 +950,7 @@ class Command:
       print 'Creating %s...' % bucket_uri
       bucket_uri.create_bucket(headers)
 
-  def MoveObjsCommand(self, args, sub_opts, headers=None, debug=False):
+  def MoveObjsCommand(self, args, sub_opts=None, headers=None, debug=False):
     """Implementation of mv command.
 
        Note that there is no atomic rename operation - this command is simply
@@ -858,16 +966,35 @@ class Command:
     # do that as a separate operation).
     src_uri_to_check = StorageUri(args[0])
     if src_uri_to_check.names_container():
-      raise CommandException('Will not remove source buckets or directories. You '
-                             'must separately copy and remove for that purpose.')
+      raise CommandException('Will not remove source buckets or directories. '
+                             'You must separately copy and remove for that '
+                             'purpose.')
 
     if len(args) > 2:
       self.InsistUriNamesContainer('mv', StorageUri(args[-1]))
 
-    self.CopyObjsCommand(args, sub_opts, headers, debug)
-    self.RemoveObjsCommand(args[0:1], sub_opts, headers, debug)
+    # Expand wildcards before calling CopyObjsCommand and RemoveObjsCommand,
+    # to prevent the following problem: starting with a bucket containing
+    # only the object gs://bucket/obj, say the user does:
+    #   gsutil mv gs://bucket/* gs://bucket/d.txt
+    # If we didn't expand the wildcard first, the CopyObjsCommand would
+    # first copy gs://bucket/obj exists to gs://bucket/d.txt, and the
+    # RemoveObjsCommand would then remove that object.
+    exp_arg_list = []
+    for uri_str in args:
+      uri = StorageUri(uri_str, debug=debug, validate=False)
+      if ContainsWildcard(uri_str):
+        exp_arg_list.extend(str(u) for u in list(
+            wildcard_iterator(uri, ResultType.URIS, headers=headers,
+                              debug=debug)))
+      else:
+        exp_arg_list.append(uri.uri)
 
-  def RemoveBucketsCommand(self, args, unused_sub_opts, headers=None, debug=False):
+    self.CopyObjsCommand(exp_arg_list, sub_opts, headers, debug)
+    self.RemoveObjsCommand(exp_arg_list[0:1], sub_opts, headers, debug)
+
+  def RemoveBucketsCommand(self, args, unused_sub_opts, headers=None,
+                           debug=False):
     """Implementation of rb command.
 
     Args:
