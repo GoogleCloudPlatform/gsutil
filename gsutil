@@ -24,6 +24,7 @@ import re
 import socket
 import stat
 import sys
+import traceback
 import xml.sax.xmlreader
 
 
@@ -55,6 +56,7 @@ from boto.exception import BotoClientError
 from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
 from boto.exception import S3ResponseError
+from boto.provider import Provider
 
 from gslib.command import Command
 from gslib.exception import CommandException
@@ -62,7 +64,7 @@ from gslib.wildcard_iterator import WildcardException
 
 usage_string = """
 SYNOPSIS
-  gsutil [-d] [-h header]... [command args...]
+  gsutil [-d][-D] [-h header]... [command args...]
 
   -d option shows HTTP protocol detail.
 
@@ -98,6 +100,8 @@ SYNOPSIS
       rm uri...
     Set ACL on buckets and/or objects:
       setacl file-or-canned_acl_name uri...
+    Print version info:
+      ver
 
   Omitting URI scheme defaults to "file". For example, "dir/file.txt" is
   equivalent to "file://dir/file.txt"
@@ -112,8 +116,6 @@ SYNOPSIS
   canned_acl_name can be one of: "public-read", "public-read-write",
   "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"
 """
-
-command_inst = Command(gsutil_bin_dir, boto_lib_dir, usage_string)
 
 
 def HaveFileUris(args):
@@ -161,6 +163,9 @@ def GetBotoConfigFileList():
     cf_list.append(config_file)
   return cf_list
 
+config_file_list = GetBotoConfigFileList()
+command_inst = Command(gsutil_bin_dir, boto_lib_dir, usage_string,
+                       config_file_list)
 
 prelude_config_content = (
 """# This file contains credentials and other configuration information needed
@@ -194,7 +199,7 @@ additional_config_content = """
 
 # 'num_retries' controls the number of retry attempts made when errors occur.
 # The default is 5. Note: don't set this value to 0, as it will cause boto to
-# break when reusing HTTP connections.
+# fail when reusing HTTP connections.
 #num_retries = <integer value>
 """
 
@@ -210,13 +215,13 @@ def CreateBotoConfigFile():
                    'one at\n%s\ncontaining your credentials, based on your '
                    'responses to the following questions.\n\n' % config_path)
 
-  provider_map = {'Amazon': 'aws', 'Google': 'gs'}
-  uri_map = {'Amazon': 's3', 'Google': 'gs'}
+  provider_map = {'aws': 'aws', 'google': 'gs'}
+  uri_map = {'aws': 's3', 'google': 'gs'}
   key_ids = {}
   sec_keys = {}
   got_creds = False
   for provider in provider_map:
-    if provider == 'Google':
+    if provider == 'google':
       key_ids[provider] = raw_input('What is your %s access key ID? ' %
                                     provider)
       sec_keys[provider] = raw_input('What is your %s secret access key? ' %
@@ -237,22 +242,25 @@ def CreateBotoConfigFile():
                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
   cfp.write('[Credentials]\n\n')
   for provider in provider_map:
-    prefix = provider_map[provider]
+    key_prefix = provider_map[provider]
     uri_scheme = uri_map[provider]
     if provider in key_ids and provider in sec_keys:
       cfp.write('# %s credentials ("%s://" URIs):\n' %
                 (provider, uri_scheme))
-      cfp.write('%s_access_key_id = %s\n' % (prefix, key_ids[provider]))
-      cfp.write('%s_secret_access_key = %s\n' % (prefix, sec_keys[provider]))
+      cfp.write('%s_access_key_id = %s\n' % (key_prefix, key_ids[provider]))
+      cfp.write('%s_secret_access_key = %s\n' %
+                (key_prefix, sec_keys[provider]))
     else:
       cfp.write('# To add %s credentials ("%s://" URIs), edit and '
                 'uncomment the\n# following two lines:\n'
                 '#%s_access_key_id = <your %s access key ID>\n'
                 '#%s_secret_access_key = <your %s secret access key>\n' %
-                (provider, uri_scheme, prefix, provider, prefix, provider))
+                (provider, uri_scheme, key_prefix, provider, key_prefix,
+                 provider))
+    host_key = Provider.HostKeyMap[provider]
     cfp.write('# The ability to specify an alternate storage host is primarily '
-              'for developers.\n'
-              '#%s_host = <alternate storage host address>\n\n' % (prefix))
+              'for cloud\n# storage service developers.\n'
+              '#%s_host = <alternate storage host address>\n\n' % host_key)
   cfp.write(additional_config_content)
   cfp.close()
   OutputAndExit('\nConfiguration file "%s" created. If you need to use\na '
@@ -270,7 +278,6 @@ def SetupConfigIfNeeded():
   has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
                     config.has_option('Credentials', 'aws_secret_access_key'))
   if not has_goog_creds and not has_amzn_creds:
-    config_file_list = GetBotoConfigFileList()
     if config_file_list:
       raise CommandException('You have no storage service credentials in any '
                              'of the following boto config\nfiles. Please add '
@@ -297,7 +304,10 @@ commands = {
     'rb': [command_inst.RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, '', False, False, 0],
     'setacl': [command_inst.SetAclCommand, 2, NO_MAX, '', False, False, 1],
-    'update': [command_inst.UpdateCommand, 0, 0, 'f', False, False, 0]
+    'update': [command_inst.UpdateCommand, 0, 0, 'f', False, False, 0],
+    'ver': [command_inst.VerCommand, 0, 0, '', False, False, 0],
+    # Alias for ver command.
+    'version': [command_inst.VerCommand, 0, 0, '', False, False, 0],
 }
 
 xml_parsing_commands = ['getacl', 'ls', 'setacl']
@@ -326,9 +336,13 @@ def main():
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
     command_inst.OutputUsageAndExit()
+
+  debug = 0
+  detailed_debug = False
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'd?h:',
-                               ['debug', 'help', 'header'])
+    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:',
+                               ['debug', 'detailedDebug', 'version', 'help',
+                                'header'])
     if not args:
       cmd = 'help'
     else:
@@ -357,11 +371,13 @@ def main():
 
     SetupConfigIfNeeded()
 
-    debug = 0
     headers = {}
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Debug level 2 causes httplib output plus boto debug output
+        debug = 2
+      if o in ('-D', '--detailedDebug'):
+        detailed_debug = True
         debug = 2
       if o in ('-?', '--help'):
         command_inst.OutputUsageAndExit()
@@ -370,6 +386,12 @@ def main():
         if not hdr_name or not hdr_val:
           command_inst.OutputUsageAndExit()
         headers[hdr_name] = hdr_val
+      if o in ('-v', '--version'):
+        command_inst.VerCommand([], None)
+        sys.exit(0)
+    if detailed_debug:
+      command_inst.VerCommand(['DEBUG: '], None)
+      print 'DEBUG: Boto config: %s' % str(boto.config.items('Boto'))
     command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
@@ -397,7 +419,7 @@ def main():
       OutputAndExit('S3ResponseError:: status=%d, code=%s, reason=%s.' %
                     (e.status, e.code, e.reason))
   except AttributeError, e:
-    if e.message.find('aws_secret_access_key') != -1:
+    if e.message.find('secret_access_key') != -1:
       OutputAndExit('Missing credentials for the given URI(s). Does your '
                     'boto config file contain all needed credentials?')
     else:
@@ -420,7 +442,12 @@ a more specific error code.
       message = 'Failure: %s.' % e
     OutputAndExit(message)
   except Exception, e:
-    OutputAndExit('Failure: %s.' % e)
+    if detailed_debug:
+      stack_trace = traceback.format_exc()
+      print('DEBUG: Exception stack trace:\n    %s' %
+            re.sub('\\n', '\n    ', stack_trace))
+    else:
+      OutputAndExit('Failure: %s.' % e)
 
 if __name__ == '__main__':
   main()

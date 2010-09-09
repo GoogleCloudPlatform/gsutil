@@ -40,7 +40,7 @@ from wildcard_iterator import ResultType
 from wildcard_iterator import wildcard_iterator
 from wildcard_iterator import WildcardException
 
-command_inst = Command('.', '.', '')
+command_inst = Command('.', '.', '', '')
 
 
 class GsutilCpTests(unittest.TestCase):
@@ -360,6 +360,57 @@ class GsutilCpTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('new', actual[0].object_name)
 
+  # The remaining tests are pretty minimal - most just ensure a
+  # basic use of each command runs, without checking more detailed
+  # conditions/expectations.
+
+  def TestCatCommmandRuns(self):
+    """Test that the cat command basically runs."""
+    command_inst.CatCommand(['%sobj1' % self.src_bucket_uri.uri])
+
+  def TestGetAclCommmandRuns(self):
+    """Test that the GetAcl command basically runs."""
+    command_inst.GetAclCommand([self.src_bucket_uri.uri])
+
+  def TestListCommandRuns(self):
+    """Test that the ListCommand basically runs."""
+    command_inst.ListCommand([self.src_bucket_uri.uri])
+
+  def TestMakeBucketsCommand(self):
+    """Test MakeBucketsCommand on existing bucket."""
+    try:
+      command_inst.MakeBucketsCommand([self.dst_bucket_uri.uri])
+      self.fail('Did not get expected S3CreateError')
+    except boto.exception.S3CreateError, e:
+      self.assertEqual(e.status, 409)
+
+  def TestRemoveBucketsCommand(self):
+    """Test RemoveBucketsCommand on non-existent bucket."""
+    try:
+      command_inst.RemoveBucketsCommand(
+          ['gs://non_existent_%s' % self.dst_bucket_uri.bucket_name])
+      self.fail('Did not get expected S3ResponseError')
+    except boto.exception.S3ResponseError, e:
+      self.assertEqual(e.status, 404)
+
+  def TestRemoveObjsCommand(self):
+    """Test RemoveObjsCommand on non-existent object."""
+    try:
+      command_inst.RemoveObjsCommand(['%snon_existent' %
+                                      self.dst_bucket_uri.uri])
+      self.fail('Did not get expected WildcardException')
+    # For some reason if we catch this as "WildcardException" it doesn't
+    # work right. Python bug?
+    except Exception, e:
+      self.assertNotEqual(e.reason.find('No matches'), -1)
+
+  def TestSetAclCommmandRuns(self):
+    """Test that the SetAcl command basically runs."""
+    command_inst.SetAclCommand(['private', self.src_bucket_uri.uri])
+
+  def TestVerCommmandRuns(self):
+    """Test that the Ver command basically runs."""
+    command_inst.VerCommand([])
 
 if __name__ == '__main__':
   python_version = float('%d.%d%d' %(sys.version_info[0], sys.version_info[1],

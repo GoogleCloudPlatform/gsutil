@@ -16,11 +16,21 @@
 
 """Implementation of gsutil commands."""
 
+import gzip
+import mimetypes
 import os
+import platform
+import shutil
+import signal
 import sys
+import tarfile
+import tempfile
+import xml.dom.minidom
+import xml.sax.xmlreader
 import boto
 
 from boto import handler
+from boto.pyami.config import BotoConfigLocations
 from exception import CommandException
 from wildcard_iterator import ContainsWildcard
 from wildcard_iterator import ResultType
@@ -96,19 +106,23 @@ def UriStrFor(iterated_uri, obj):
   return '%s://%s/%s' % (iterated_uri.scheme, obj.bucket.name, obj.name)
 
 
-class Command:
+class Command(object):
+  """Class that contains all gsutil command code."""
 
-  def __init__(self, gsutil_bin_dir, boto_lib_dir, usage_string):
+  def __init__(self, gsutil_bin_dir, boto_lib_dir, usage_string,
+               config_file_list):
     """Instantiates Command class.
 
     Args:
       gsutil_bin_dir: bin dir from which gsutil is running.
       boto_lib_dir: lib dir where boto runs.
       usage_string: usage string to print when user makes command error.
+      config_file_list: config file list returned by GetBotoConfigFileList().
     """
     self.gsutil_bin_dir = gsutil_bin_dir
     self.usage_string = usage_string
     self.boto_lib_dir = boto_lib_dir
+    self.config_file_list = config_file_list
 
   def OutputUsageAndExit(self):
     sys.stderr.write(self.usage_string)
@@ -126,7 +140,7 @@ class Command:
     """
     if uri.names_singleton():
       raise CommandException('Destination StorageUri must name a bucket or '
-                             'directory for the multiple source\nform of the '
+                             'directory for the\nmultiple source form of the '
                              '"%s" command.' % command)
 
   def CatCommand(self, args, sub_opts=None, headers=None, debug=False):
@@ -142,9 +156,10 @@ class Command:
       CommandException if any errors encountered.
     """
     show_header = False
-    for o, unused_a in sub_opts:
-      if o == '-h':
-        show_header = True
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-h':
+          show_header = True
 
     printed_one = False
     for uri_str in args:
@@ -169,7 +184,8 @@ class Command:
           sys.stdout.write(data)
         tmp_file.close()
 
-  def SetAclCommand(self, args, unused_sub_opts, headers=None, debug=False):
+  def SetAclCommand(self, args, unused_sub_opts=None, headers=None,
+                    debug=False):
     """Implementation of setacl command.
 
     Args:
@@ -218,7 +234,7 @@ class Command:
       except xml.sax._exceptions.SAXParseException, e:
         raise CommandException('Requested ACL is invalid: %s at line %s, '
                                'column %s' % (e.getMessage(), e.getLineNumber(),
-                               e.getColumnNumber()))
+                                              e.getColumnNumber()))
       acl_arg = acl_obj
     else:
       # No file exists, so expect a canned ACL string.
@@ -257,17 +273,16 @@ class Command:
 
     # Won't fail - this command runs after main startup code that insists on
     # having a config file.
-    config_file = GetBotoConfigFileList()[0]
-    CleanUpUpdateCommand(tf, dirs_to_remove)
-    raise CommandException((
-        'Since it was installed by a different user previously, you will need '
-        'to update using the following commands.\nYou will be prompted for '
-        'your password, and the install will run as "root". If you\'re unsure '
-        'what this means please ask your system administrator for help:'
-        '\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
-        '\n\tchmod 600 %s') % (config_file, config_file, config_file),
+    config_file = self.config_file_list
+    self.CleanUpUpdateCommand(tf, dirs_to_remove)
+    raise CommandException(
+        ('Since it was installed by a different user previously, you will need '
+         'to update using the following commands.\nYou will be prompted for '
+         'your password, and the install will run as "root". If you\'re unsure '
+         'what this means please ask your system administrator for help:'
+         '\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
+         '\n\tchmod 600 %s') % (config_file, config_file, config_file),
         informational=True)
-
 
   # This list is checked during gsutil update by doing a lowercased
   # slash-left-stripped check. For example "/Dev" would match the "dev" entry.
@@ -325,9 +340,9 @@ class Command:
     """
     ver_file_path = self.gsutil_bin_dir + os.sep + 'VERSION'
     if not os.path.isfile(ver_file_path):
-      raise CommandException('%s not found. Did you install the\ncomplete '
-          'gsutil software after the gsutil "update" command was implemented?' %
-          ver_file_path)
+      raise CommandException(
+          '%s not found. Did you install the\ncomplete gsutil software after '
+          'the gsutil "update" command was implemented?' % ver_file_path)
     ver_file = open(ver_file_path, 'r')
     installed_version_string = ver_file.read().rstrip('\n')
     ver_file.close()
@@ -358,7 +373,7 @@ class Command:
     os.chdir(tmp_dir)
     print 'Checking for software update...'
     self.CopyObjsCommand(['gs://pub/gsutil.tar.gz', 'file://gsutil.tar.gz'], [],
-                    headers, debug)
+                         headers, debug)
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
     tf.extract('./gsutil/VERSION')
@@ -373,9 +388,10 @@ class Command:
     # by "gsutil update -f" (which will then update the boto code, even though
     # the VERSION is already the latest version).
     force_update = False
-    for o, unused_a in sub_opts:
-      if o == '-f':
-        force_update = True
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-f':
+          force_update = True
     if not force_update and installed_version_string == latest_version_string:
       self.CleanUpUpdateCommand(tf, dirs_to_remove)
       raise CommandException('You have the latest version of gsutil installed.',
@@ -446,7 +462,8 @@ class Command:
                              '(%s) where the file needs to be created.' %
                              (src_uri, dst_path))
 
-  def GetAclCommand(self, args, unused_sub_opts, headers=None, debug=False):
+  def GetAclCommand(self, args, unused_sub_opts=None, headers=None,
+                    debug=False):
     """Implementation of getacl command.
 
     Args:
@@ -622,20 +639,20 @@ class Command:
     result = {}
     for uri in uris_to_expand:
       if uri.names_container():
-          if uri.is_file_uri():
-            # dir -> convert to implicit recursive wildcard.
-            uri_to_iter = '%s/**' % uri.uri
-          else:
-            # bucket -> convert to implicit wildcard.
-            uri_to_iter = uri.clone_replace_name('*')
+        if uri.is_file_uri():
+          # dir -> convert to implicit recursive wildcard.
+          uri_to_iter = '%s/**' % uri.uri
+        else:
+          # bucket -> convert to implicit wildcard.
+          uri_to_iter = uri.clone_replace_name('*')
       else:
         uri_to_iter = uri
       result[uri] = list(wildcard_iterator(uri_to_iter, ResultType.URIS,
-                         headers=headers, debug=debug))
+                                           headers=headers, debug=debug))
     return result
 
   def ErrorCheckCopyRequest(self, src_uri_expansion, dst_uri_str, headers,
-                            debug):
+                            debug, command='cp'):
     """Checks copy request for problems, and builds needed dst_uri.
 
     Prints error message and exists if there's a problem.
@@ -645,6 +662,7 @@ class Command:
       dst_uri_str: string representation of destination StorageUri.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
+      command: name of command on behalf of which this call is running.
 
     Returns:
       (dst_uri to use for copy, bool indicator of multi-source request).
@@ -675,7 +693,7 @@ class Command:
     multi_src_request = (len(src_uri_expansion) > 1 or
                          len(src_uri_expansion.values()[0]) > 1)
     if multi_src_request:
-      self.InsistUriNamesContainer('cp', dst_uri)
+      self.InsistUriNamesContainer(command, dst_uri)
 
     return (dst_uri, multi_src_request)
 
@@ -702,15 +720,16 @@ class Command:
     src_uri_to_check = src_uri_expansion.keys()[0]
     if (src_uri_to_check.names_container() and dst_uri.names_container() and
         os.path.exists(dst_uri.object_name)):
-        new_name = ('%s%s%s' % (dst_uri.object_name, os.sep,
-                                src_uri_to_check.bucket_name)).rstrip('/')
-        dst_uri = dst_uri.clone_replace_name(new_name)
+      new_name = ('%s%s%s' % (dst_uri.object_name, os.sep,
+                              src_uri_to_check.bucket_name)).rstrip('/')
+      dst_uri = dst_uri.clone_replace_name(new_name)
     # Create dest directory if needed.
     if dst_uri.is_file_uri() and not os.path.exists(dst_uri.object_name):
       os.makedirs(dst_uri.object_name)
     return dst_uri
 
-  def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=False):
+  def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=False,
+                      command='cp'):
     """Implementation of cp command.
 
     Args:
@@ -718,6 +737,7 @@ class Command:
       sub_opts: command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
+      command: name of command on behalf of which this call is running.
 
     Raises:
       CommandException: If any errors encountered.
@@ -729,7 +749,7 @@ class Command:
     # Check for various problems, and determine dst_uri based on request.
     (dst_uri, multi_src_request) = self.ErrorCheckCopyRequest(src_uri_expansion,
                                                               args[-1], headers,
-                                                              debug)
+                                                              debug, command)
 
     # Rewrite dst_uri and create dest dir as needed for multi-source copy.
     if multi_src_request:
@@ -770,7 +790,7 @@ class Command:
         new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
         self.PerformCopy(exp_src_uri, new_dst_uri, sub_opts, headers)
 
-  def HelpCommand(self, unused_args, unused_sub_opts, unused_headers=None,
+  def HelpCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                   unused_debug=None):
     """Implementation of help command.
 
@@ -781,6 +801,39 @@ class Command:
       unused_debug: flag indicating whether to include debug output.
     """
     self.OutputUsageAndExit()
+
+  def VerCommand(self, args, unused_sub_opts=None, unused_headers=None,
+                 unused_debug=None):
+    """Implementation of ver command.
+
+    Args:
+      args: command-line arguments. Only used by detailedDebug option.
+      unused_sub_opts: command-specific options from getopt.
+      unused_headers: dictionary containing optional HTTP headers to send.
+      unused_debug: flag indicating whether to include debug output.
+    """
+    config_ver = ''
+    for path in BotoConfigLocations:
+      try:
+        f = open(path, 'r')
+        while True:
+          line = f.readline()
+          if not line:
+            break
+          if line.find('was created by gsutil version') != -1:
+            config_ver = ', config file version %s' % line.split('"')[-2]
+            break
+        # Only look at first first config file found in BotoConfigLocations.
+        break
+      except IOError:
+        pass
+
+    if args:
+      prefix = args[0]
+    else:
+      prefix = ''
+    print '%sgsutil version %s%s' % (prefix, self.LoadVersionString(),
+                                     config_ver)
 
   def PrintBucketInfo(self, bucket_uri, listing_style, headers=None,
                       debug=False):
@@ -875,13 +928,14 @@ class Command:
     """
     listing_style = ListingStyle.SHORT
     get_bucket_info = False
-    for o, unused_a in sub_opts:
-      if o == '-b':
-        get_bucket_info = True
-      if o == '-l':
-        listing_style = ListingStyle.LONG
-      if o == '-L':
-        listing_style = ListingStyle.LONG_LONG
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-b':
+          get_bucket_info = True
+        if o == '-l':
+          listing_style = ListingStyle.LONG
+        if o == '-L':
+          listing_style = ListingStyle.LONG_LONG
     if not args:
       # default to listing all gs buckets
       args = ['gs://']
@@ -932,7 +986,7 @@ class Command:
       print ('TOTAL: %s objects, %s bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(total_bytes)))
 
-  def MakeBucketsCommand(self, args, unused_sub_opts, headers=None,
+  def MakeBucketsCommand(self, args, unused_sub_opts=None, headers=None,
                          debug=False):
     """Implementation of mb command.
 
@@ -990,10 +1044,10 @@ class Command:
       else:
         exp_arg_list.append(uri.uri)
 
-    self.CopyObjsCommand(exp_arg_list, sub_opts, headers, debug)
+    self.CopyObjsCommand(exp_arg_list, sub_opts, headers, debug, 'mv')
     self.RemoveObjsCommand(exp_arg_list[0:1], sub_opts, headers, debug)
 
-  def RemoveBucketsCommand(self, args, unused_sub_opts, headers=None,
+  def RemoveBucketsCommand(self, args, unused_sub_opts=None, headers=None,
                            debug=False):
     """Implementation of rb command.
 
@@ -1016,7 +1070,8 @@ class Command:
         print 'Removing %s...' % uri
         uri.delete_bucket(headers)
 
-  def RemoveObjsCommand(self, args, unused_sub_opts, headers=None, debug=False):
+  def RemoveObjsCommand(self, args, unused_sub_opts=None, headers=None,
+                        debug=False):
     """Implementation of rm command.
 
     Args:
@@ -1026,7 +1081,7 @@ class Command:
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException or WildcardException if errors encountered.
     """
     # Expand object name wildcards, if any.
     for uri_str in args:
