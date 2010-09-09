@@ -147,8 +147,8 @@ class Command(object):
     """Implementation of cat command.
 
     Args:
-      args: command-line arguments
-      sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -188,8 +188,8 @@ class Command(object):
     """Implementation of setacl command.
 
     Args:
-      args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -350,8 +350,8 @@ class Command(object):
     """Implementation of experimental update command.
 
     Args:
-      unused_args: command-line arguments
-      sub_opts: command-specific options from getopt.
+      unused_args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -464,8 +464,8 @@ class Command(object):
     """Implementation of getacl command.
 
     Args:
-      args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -492,7 +492,7 @@ class Command(object):
     Args:
       src_uri: source StorageUri.
       dst_uri: destination StorageUri.
-      sub_opts: command-specific options from getopt.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
 
     Raises:
@@ -578,7 +578,8 @@ class Command(object):
       tmp.seek(0)
       dst_key.set_contents_from_file(tmp, metadata)
 
-  def ExpandWildcardsAndContainers(self, uri_strs, headers=None, debug=False):
+  def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
+                                   debug=False):
     """Expands URI wildcarding, object-less bucket names, and directory names.
 
     Examples:
@@ -590,6 +591,7 @@ class Command(object):
 
     Args:
       uri_strs: URI strings needing expansion
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -620,6 +622,12 @@ class Command(object):
     # like a single file was being copied, so we'd create an object called
     # gs://bucket/file2.)
 
+    should_recurse = False
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-r':
+          should_recurse = True
+
     # Step 1.
     uris_to_expand = []
     for uri_str in uri_strs:
@@ -634,6 +642,14 @@ class Command(object):
     result = {}
     for uri in uris_to_expand:
       if uri.names_container():
+        if not should_recurse:
+          if uri.is_file_uri():
+            desc = 'directory'
+          else:
+            desc = 'bucket'
+          print 'Omitting %s "%s".' % (desc, uri.uri)
+          result[uri] = []
+          continue
         if uri.is_file_uri():
           # dir -> convert to implicit recursive wildcard.
           uri_to_iter = '%s/**' % uri.uri
@@ -665,6 +681,10 @@ class Command(object):
     Raises:
       CommandException: if errors found.
     """
+    for src_uri in src_uri_expansion:
+      if src_uri.is_cloud_uri() and not src_uri.bucket_name:
+        raise CommandException('Provider-only src_uri (%s)')
+
     if ContainsWildcard(dst_uri_str):
       matches = list(wildcard_iterator(dst_uri_str, headers=headers,
                                        debug=debug))
@@ -689,6 +709,16 @@ class Command(object):
                          len(src_uri_expansion.values()[0]) > 1)
     if multi_src_request:
       self.InsistUriNamesContainer(command, dst_uri)
+
+    # Make sure entire expansion didn't result in nothing to copy. This can
+    # happen if user request copying a directory w/o -r option, for example.
+    have_work = False
+    for v in src_uri_expansion.values():
+      if v:
+        have_work = True
+        break
+    if not have_work:
+      raise CommandException('Nothing to copy')
 
     return (dst_uri, multi_src_request)
 
@@ -728,8 +758,8 @@ class Command(object):
     """Implementation of cp command.
 
     Args:
-      args: command-line arguments
-      sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
       command: name of command on behalf of which this call is running.
@@ -739,7 +769,7 @@ class Command(object):
     """
     # Expand wildcards and containers in source StorageUris.
     src_uri_expansion = self.ExpandWildcardsAndContainers(
-        args[0:len(args)-1], headers, debug)
+        args[0:len(args)-1], sub_opts, headers, debug)
 
     # Check for various problems, and determine dst_uri based on request.
     (dst_uri, multi_src_request) = self.ErrorCheckCopyRequest(src_uri_expansion,
@@ -790,8 +820,8 @@ class Command(object):
     """Implementation of help command.
 
     Args:
-      unused_args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      unused_args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       unused_headers: dictionary containing optional HTTP headers to send.
       unused_debug: flag indicating whether to include debug output.
     """
@@ -802,8 +832,8 @@ class Command(object):
     """Implementation of ver command.
 
     Args:
-      args: command-line arguments. Only used by detailedDebug option.
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list. Only used by detailedDebug option.
+      unused_sub_opts: list of command-specific options from getopt.
       unused_headers: dictionary containing optional HTTP headers to send.
       unused_debug: flag indicating whether to include debug output.
     """
@@ -916,8 +946,8 @@ class Command(object):
     """Implementation of ls command.
 
     Args:
-      args: command-line arguments
-      sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
     """
@@ -985,8 +1015,8 @@ class Command(object):
     """Implementation of mb command.
 
     Args:
-      args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -1005,8 +1035,8 @@ class Command(object):
        a shorthand for 'cp' followed by 'rm'.
 
     Args:
-      args: command-line arguments
-      sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -1048,8 +1078,8 @@ class Command(object):
     """Implementation of rb command.
 
     Args:
-      args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 
@@ -1070,8 +1100,8 @@ class Command(object):
     """Implementation of rm command.
 
     Args:
-      args: command-line arguments
-      unused_sub_opts: command-specific options from getopt.
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
 

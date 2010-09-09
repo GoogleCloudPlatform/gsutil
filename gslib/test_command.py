@@ -33,14 +33,15 @@ import boto
 
 sys.path.insert(0, '.')
 sys.path.insert(0, 'gslib')
-from boto.exception import InvalidUriError
 from gslib.command import Command
 from gslib.exception import CommandException
-from wildcard_iterator import ResultType
 from wildcard_iterator import wildcard_iterator
 from wildcard_iterator import WildcardException
 
 command_inst = Command('.', '.', '', '')
+
+# Constant option for specifying a recursive copy.
+RECURSIVE = [('-r', '')]
 
 
 class GsutilCpTests(unittest.TestCase):
@@ -109,9 +110,9 @@ class GsutilCpTests(unittest.TestCase):
     # Create the test files in src directory.
     cls.all_src_file_paths = []
     cls.nested_child_file_paths = ['f0', 'f1', 'f2', 'dir0/dir1/nested']
+    cls.non_nested_file_names = ['f0', 'f1', 'f2']
     file_names = ['f0', 'f1', 'f2', 'dir0%sdir1%snested' % (os.sep, os.sep)]
-    file_paths = ['%s%s' % (cls.src_dir_root, f)
-                  for f in file_names]
+    file_paths = ['%s%s' % (cls.src_dir_root, f) for f in file_names]
     for file_path in file_paths:
       open(file_path, 'w')
       cls.all_src_file_paths.append(file_path)
@@ -164,7 +165,8 @@ class GsutilCpTests(unittest.TestCase):
 
   def TestCopyingDirToBucket(self):
     """Tests copying top-level directory to a bucket."""
-    command_inst.CopyObjsCommand([self.src_dir_root, self.dst_bucket_uri.uri])
+    command_inst.CopyObjsCommand([self.src_dir_root, self.dst_bucket_uri.uri],
+                                 RECURSIVE)
     actual = set(str(u) for u in
                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
     expected = set()
@@ -181,7 +183,7 @@ class GsutilCpTests(unittest.TestCase):
     on the copy being treated as a multi-source copy.
     """
     command_inst.CopyObjsCommand(['%sdir0%sdir1' % (self.src_dir_root, os.sep),
-                                  self.dst_bucket_uri.uri])
+                                  self.dst_bucket_uri.uri], RECURSIVE)
     actual = list((str(u) for u in
                    wildcard_iterator('%s*' % self.dst_bucket_uri.uri)))
     self.assertEqual(1, len(actual))
@@ -191,7 +193,7 @@ class GsutilCpTests(unittest.TestCase):
   def TestCopyingBucketToDir(self):
     """Tests copying from a bucket to a directory."""
     command_inst.CopyObjsCommand([self.src_bucket_uri.uri,
-                                  self.dst_dir_root])
+                                  self.dst_dir_root], RECURSIVE)
     actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
     expected = set()
     for uri in self.all_src_obj_uris:
@@ -202,7 +204,7 @@ class GsutilCpTests(unittest.TestCase):
   def TestCopyingBucketToBucket(self):
     """Tests copying from a bucket-only URI to a bucket."""
     command_inst.CopyObjsCommand([self.src_bucket_uri.uri,
-                                  self.dst_bucket_uri.uri])
+                                  self.dst_bucket_uri.uri], RECURSIVE)
     actual = set(str(u) for u in
                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
     expected = set()
@@ -212,13 +214,22 @@ class GsutilCpTests(unittest.TestCase):
 
   def TestCopyingDirToDir(self):
     """Tests copying from a directory to a directory."""
-    command_inst.CopyObjsCommand([self.src_dir_root, self.dst_dir_root])
+    command_inst.CopyObjsCommand([self.src_dir_root, self.dst_dir_root],
+                                 RECURSIVE)
     actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
     expected = set()
     for file_path in self.all_src_file_paths:
       file_path_sans_top_tmp_dir = file_path[5:]
       expected.add('file://%s%s' % (self.dst_dir_root,
                                     file_path_sans_top_tmp_dir))
+    self.assertEqual(expected, actual)
+
+  def TestCopyingFilesAndDirNonRecursive(self):
+    """Tests copying containing files and a directory without -r."""
+    command_inst.CopyObjsCommand(['%s*' % self.src_dir_root, self.dst_dir_root])
+    actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
+    expected = set(['file://%s%s' % (self.dst_dir_root, f)
+                    for f in self.non_nested_file_names])
     self.assertEqual(expected, actual)
 
   def TestCopyingFileToDir(self):
@@ -242,7 +253,7 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying objects and files to a directory."""
     command_inst.CopyObjsCommand(['%s*' % self.src_bucket_uri.uri,
                                   '%s*' % self.src_dir_root,
-                                  self.dst_dir_root])
+                                  self.dst_dir_root], RECURSIVE)
     actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
     expected = set()
     for uri in self.all_src_obj_uris:
@@ -255,7 +266,7 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying objects and files to a bucket."""
     command_inst.CopyObjsCommand(['%s*' % self.src_bucket_uri.uri,
                                   '%s*' % self.src_dir_root,
-                                  self.dst_bucket_uri.uri])
+                                  self.dst_bucket_uri.uri], RECURSIVE)
     actual = set(str(u) for u in
                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
     expected = set()
@@ -265,13 +276,21 @@ class GsutilCpTests(unittest.TestCase):
       expected.add('%s%s' % (self.dst_bucket_uri.uri, file_path))
     self.assertEqual(expected, actual)
 
+  def TestAttemptDirCopyWithoutRecursion(self):
+    """Tests copying a directory without -r."""
+    try:
+      command_inst.CopyObjsCommand([self.src_dir_root, self.dst_dir_root])
+      self.fail('Did not get expected CommandException')
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('Nothing to copy'), -1)
+
   def TestAttemptCopyingProviderOnlySrc(self):
     """Attempts to copy a src specified as a provider-only URI."""
     try:
       command_inst.CopyObjsCommand(['gs://', self.src_bucket_uri.uri])
       self.fail('Did not get expected CommandException')
-    except InvalidUriError, e:
-      self.assertNotEqual(e.message.find('bucket-less URI'), -1)
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('Provider-only'), -1)
 
   def TestAttemptCopyingOverlappingSrcDst(self):
     """Attempts to copy a set of objects atop themselves."""
@@ -296,7 +315,7 @@ class GsutilCpTests(unittest.TestCase):
     # Use src_dir_root so we can point to an existing file for this test.
     try:
       command_inst.CopyObjsCommand(['%s*' % self.src_bucket_uri.uri,
-                                    '%sf0' % self.src_dir_root])
+                                    '%sf0' % self.src_dir_root], RECURSIVE)
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find('must name a bucket or '), -1)
@@ -309,7 +328,7 @@ class GsutilCpTests(unittest.TestCase):
     self.CreateEmptyObject(boto.storage_uri('%sa' % self.dst_bucket_uri))
     try:
       command_inst.CopyObjsCommand([self.dst_bucket_uri.uri,
-                                    self.dst_dir_root])
+                                    self.dst_dir_root], RECURSIVE)
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find(
@@ -324,7 +343,7 @@ class GsutilCpTests(unittest.TestCase):
     self.CreateEmptyObject(boto.storage_uri('%ssubdir' % self.dst_bucket_uri))
     try:
       command_inst.CopyObjsCommand([self.dst_bucket_uri.uri,
-                                    self.dst_dir_root])
+                                    self.dst_dir_root], RECURSIVE)
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find(

@@ -78,8 +78,9 @@ SYNOPSIS
     Copy objects:
       cp [-a canned_acl] [-t] [-z ext1,ext2,...] src_uri dst_uri
         - or -
-      cp [-a canned_acl] [-t] [-z extensions] uri... dst_uri
+      cp [-a canned_acl] [-r] [-t] [-z extensions] uri... dst_uri
         -a Sets named canned_acl when uploaded objects created (list below).
+        -r Causes directories and buckets to be copied recursively.
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
@@ -295,7 +296,7 @@ def SetupConfigIfNeeded():
 NO_MAX = sys.maxint
 commands = {
     'cat': [command_inst.CatCommand, 0, NO_MAX, 'h', False, True, 0],
-    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:tz:', True, False, 0],
+    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:rtz:', True, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blL', False, True, 0],
@@ -391,7 +392,8 @@ def main():
         sys.exit(0)
     if detailed_debug:
       command_inst.VerCommand(['DEBUG: '], None)
-      print 'DEBUG: Boto config: %s' % str(boto.config.items('Boto'))
+      sys.stderr.write('DEBUG: Boto config: %s\n' %
+                       str(boto.config.items('Boto')))
     command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
@@ -444,8 +446,8 @@ a more specific error code.
   except Exception, e:
     if detailed_debug:
       stack_trace = traceback.format_exc()
-      print('DEBUG: Exception stack trace:\n    %s' %
-            re.sub('\\n', '\n    ', stack_trace))
+      sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
+                       re.sub('\\n', '\n    ', stack_trace))
     else:
       OutputAndExit('Failure: %s.' % e)
 
