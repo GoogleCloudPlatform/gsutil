@@ -290,7 +290,8 @@ class WildcardException(StandardError):
     return 'WildcardException: %s' % self.reason
 
 
-def wildcard_iterator(uri_or_str, result_type, headers=None, debug=False):
+def wildcard_iterator(uri_or_str, result_type=ResultType.URIS, headers=None,
+                      debug=False):
   """Instantiate a WildCardIterator for the given StorageUri.
 
   Args:
