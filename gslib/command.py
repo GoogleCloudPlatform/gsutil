@@ -163,8 +163,7 @@ class Command(object):
 
     printed_one = False
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
-                                   debug=debug):
+      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
         if not uri.object_name:
           raise CommandException('"cat" command must specify objects.')
         if show_header:
@@ -204,8 +203,7 @@ class Command(object):
     # Do a first pass over all matched objects to disallow multi-provider
     # setacl requests, because there are differences in the ACL models.
     for uri_str in uri_args:
-      for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
-                                   debug=debug):
+      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
         if not provider:
           provider = uri.scheme
         elif uri.scheme != provider:
@@ -243,8 +241,7 @@ class Command(object):
 
     # Now iterate over URIs and set the ACL on each.
     for uri_str in uri_args:
-      for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
-                                   debug=debug):
+      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
         print 'Setting ACL on %s...' % uri
         uri.set_acl(acl_arg, uri.object_name, False, headers)
 
@@ -476,8 +473,7 @@ class Command(object):
       CommandException: if errors encountered.
     """
     # Wildcarding is allowed but must resolve to just one object.
-    uris = list(wildcard_iterator(args[0], ResultType.URIS, headers=headers,
-                                  debug=debug))
+    uris = list(wildcard_iterator(args[0], headers=headers, debug=debug))
     if len(uris) != 1:
       raise CommandException('Wildcards must resolve to exactly one object for '
                              '"getacl" command.')
@@ -629,8 +625,7 @@ class Command(object):
     for uri_str in uri_strs:
       uri = StorageUri(uri_str, debug=debug, validate=False)
       if uri.is_file_uri() and ContainsWildcard(uri_str):
-        uris_to_expand.extend(list(wildcard_iterator(uri, ResultType.URIS,
-                                                     headers=headers,
+        uris_to_expand.extend(list(wildcard_iterator(uri, headers=headers,
                                                      debug=debug)))
       else:
         uris_to_expand.append(uri)
@@ -647,8 +642,8 @@ class Command(object):
           uri_to_iter = uri.clone_replace_name('*')
       else:
         uri_to_iter = uri
-      result[uri] = list(wildcard_iterator(uri_to_iter, ResultType.URIS,
-                                           headers=headers, debug=debug))
+      result[uri] = list(wildcard_iterator(uri_to_iter, headers=headers,
+                                           debug=debug))
     return result
 
   def ErrorCheckCopyRequest(self, src_uri_expansion, dst_uri_str, headers,
@@ -671,8 +666,8 @@ class Command(object):
       CommandException: if errors found.
     """
     if ContainsWildcard(dst_uri_str):
-      matches = list(wildcard_iterator(dst_uri_str, ResultType.URIS,
-                                       headers=headers, debug=debug))
+      matches = list(wildcard_iterator(dst_uri_str, headers=headers,
+                                       debug=debug))
       if len(matches) > 1:
         raise CommandException('Destination (%s) matches more than 1 URI' %
                                dst_uri_str)
@@ -947,8 +942,8 @@ class Command(object):
 
       if not uri.bucket_name:
         # Provider URI: add bucket wildcard to list buckets.
-        for uri in wildcard_iterator('%s://*' % uri.scheme, ResultType.URIS,
-                                     headers=headers, debug=debug):
+        for uri in wildcard_iterator('%s://*' % uri.scheme, headers=headers,
+                                     debug=debug):
           (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri, listing_style,
                                                              headers=headers,
                                                              debug=debug)
@@ -958,8 +953,7 @@ class Command(object):
       elif not uri.object_name:
         if get_bucket_info:
           # ls -b request on provider+bucket URI: List info about bucket(s).
-          for uri in wildcard_iterator(uri, ResultType.URIS, headers=headers,
-                                       debug=debug):
+          for uri in wildcard_iterator(uri, headers=headers, debug=debug):
             (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri,
                                                                listing_style,
                                                                headers=headers,
@@ -1042,8 +1036,7 @@ class Command(object):
       uri = StorageUri(uri_str, debug=debug, validate=False)
       if ContainsWildcard(uri_str):
         exp_arg_list.extend(str(u) for u in list(
-            wildcard_iterator(uri, ResultType.URIS, headers=headers,
-                              debug=debug)))
+            wildcard_iterator(uri, headers=headers, debug=debug)))
       else:
         exp_arg_list.append(uri.uri)
 
@@ -1065,8 +1058,7 @@ class Command(object):
     """
     # Expand bucket name wildcards, if any.
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
-                                   debug=debug):
+      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
         if uri.object_name:
           raise CommandException('"rb" command requires a URI with no object '
                                  'name')
@@ -1088,8 +1080,7 @@ class Command(object):
     """
     # Expand object name wildcards, if any.
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, ResultType.URIS, headers=headers,
-                                   debug=debug):
+      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
         if uri.names_container():
           uri_str = uri_str.rstrip('/')
           raise CommandException('"rm" command will not remove buckets. To '
