@@ -402,7 +402,7 @@ class GsutilCpTests(unittest.TestCase):
     # For some reason if we catch this as "WildcardException" it doesn't
     # work right. Python bug?
     except Exception, e:
-      self.assertNotEqual(e.reason.find('No matches'), -1)
+      self.assertNotEqual(e.reason.find('Not Found'), -1)
 
   def TestSetAclCommmandRuns(self):
     """Test that the SetAcl command basically runs."""

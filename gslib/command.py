@@ -136,7 +136,7 @@ class Command(object):
       uri: StorageUri to check
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     if uri.names_singleton():
       raise CommandException('Destination StorageUri must name a bucket or '
@@ -153,7 +153,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     show_header = False
     if sub_opts:
@@ -195,7 +195,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     acl_arg = args[0]
     uri_args = args[1:]
@@ -259,7 +259,7 @@ class Command(object):
       dirs_to_remove: list of directories to remove.
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     system = platform.system()
     # If running under Windows we don't need (or have) sudo.
@@ -336,7 +336,7 @@ class Command(object):
       Version string.
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     ver_file_path = self.gsutil_bin_dir + os.sep + 'VERSION'
     if not os.path.isfile(ver_file_path):
@@ -359,7 +359,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     installed_version_string = self.LoadVersionString()
 
@@ -450,7 +450,7 @@ class Command(object):
       dst_path: destination path.
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     final_dir = os.path.dirname(dst_path)
     if os.path.isfile(final_dir):
@@ -473,7 +473,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     # Wildcarding is allowed but must resolve to just one object.
     uris = list(wildcard_iterator(args[0], ResultType.URIS, headers=headers,
@@ -500,7 +500,7 @@ class Command(object):
       headers: dictionary containing optional HTTP headers to pass to boto.
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     # Make a copy of the input headers each time so we can set a different
     # MIME type for each object.
@@ -668,7 +668,7 @@ class Command(object):
       (dst_uri to use for copy, bool indicator of multi-source request).
 
     Raises:
-      CommandException if any errors found.
+      CommandException: if errors found.
     """
     if ContainsWildcard(dst_uri_str):
       matches = list(wildcard_iterator(dst_uri_str, ResultType.URIS,
@@ -740,7 +740,7 @@ class Command(object):
       command: name of command on behalf of which this call is running.
 
     Raises:
-      CommandException: If any errors encountered.
+      CommandException: if errors encountered.
     """
     # Expand wildcards and containers in source StorageUris.
     src_uri_expansion = self.ExpandWildcardsAndContainers(
@@ -886,7 +886,7 @@ class Command(object):
       Object length (if listing_style is one of the long listing formats).
 
     Raises:
-      CommandException if any errors encountered.
+      Exception: if calling bug encountered.
     """
     if listing_style == ListingStyle.SHORT:
       print UriStrFor(iterated_uri, obj)
@@ -915,7 +915,7 @@ class Command(object):
                                                                     headers)
       return obj.size
     else:
-      raise CommandException('Unexpected ListingStyle(%s)' % listing_style)
+      raise Exception('Unexpected ListingStyle(%s)' % listing_style)
 
   def ListCommand(self, args, sub_opts=None, headers=None, debug=False):
     """Implementation of ls command.
@@ -997,7 +997,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     for bucket_uri_str in args:
       bucket_uri = StorageUri(bucket_uri_str, debug=debug)
@@ -1015,6 +1015,9 @@ class Command(object):
       sub_opts: command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: flag indicating whether to include debug output
+
+    Raises:
+      CommandException: if errors encountered.
     """
     # Refuse to delete a bucket or directory src URI (force users to explicitly
     # do that as a separate operation).
@@ -1058,7 +1061,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException if any errors encountered.
+      CommandException: if errors encountered.
     """
     # Expand bucket name wildcards, if any.
     for uri_str in args:
@@ -1081,7 +1084,7 @@ class Command(object):
       debug: flag indicating whether to include debug output
 
     Raises:
-      CommandException or WildcardException if errors encountered.
+      CommandException: if errors encountered.
     """
     # Expand object name wildcards, if any.
     for uri_str in args:
