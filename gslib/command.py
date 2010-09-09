@@ -1008,7 +1008,7 @@ class Command(object):
           total_objs += 1
     if listing_style != ListingStyle.SHORT:
       print ('TOTAL: %s objects, %s bytes (%s)' %
-             (total_objs, total_bytes, MakeHumanReadable(total_bytes)))
+             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
 
   def MakeBucketsCommand(self, args, unused_sub_opts=None, headers=None,
                          debug=False):
