@@ -125,19 +125,19 @@ class BucketWildcardIterator(WildcardIterator):
   an additional object GET request for each of the result URIs.
   """
 
-  def __NeededResultType(self, obj, uri):
+  def __NeededResultType(self, obj, uri, headers):
     """Helper function to generate needed ResultType, per constructor param.
 
     Args:
       obj: Key form of object to return, or None if not available.
       uri: StorageUri form of object to return.
+      headers: dictionary containing optional HTTP headers to pass to boto.
 
     Returns:
       StorageUri or subclass of boto.s3.key.Key, depending on constructor param.
 
     Raises:
       WildcardException: for bucket-only uri with ResultType.KEYS.
-      Exception: for object-level uri with ResultType.KEYS and obj=None.
     """
     if self.result_type == ResultType.KEYS:
       if not obj:
@@ -145,11 +145,11 @@ class BucketWildcardIterator(WildcardIterator):
           raise WildcardException('Bucket-only URI (%s) with ResultType.KEYS '
                                   'iteration request' % uri)
         else:
-          # Raise Exception (not CommandException) in this case because
-          # this represents a code bug and we want to be able to see a
-          # stack trace (using gsutil -D) in this case.
-          raise Exception('__NeededResultType: Got ResultType.KEYS '
-                          'iteration request with no obj for uri %s.' % uri)
+          # This case happens when we do gsutil ls -l on a object name-ful
+          # StorageUri with no object-name wildcard. Since the ListCommand
+          # implementation only reads bucket info we need to read the object
+          # for this case.
+          obj = uri.get_key(validate=False, headers=headers)
       return obj
     else:
       # ResultType.URIS:
@@ -179,13 +179,14 @@ class BucketWildcardIterator(WildcardIterator):
       if not self.uri.object_name:
         # Bucket-only URI.
         some_matched = True
-        yield self.__NeededResultType(None, bucket_uri)
+        yield self.__NeededResultType(None, bucket_uri, self.headers)
       else:
         # URI contains an object name. If there's no wildcard just yield
         # the needed URI.
         if not ContainsWildcard(self.uri.object_name):
           some_matched = True
-          yield self.__NeededResultType(None, self.uri)
+          uri_to_yield = bucket_uri.clone_replace_name(self.uri.object_name)
+          yield self.__NeededResultType(None, uri_to_yield, self.headers)
         else:
           # Add the input URI's object name part to the bucket we're
           # currently listing. For example if the request was to iterate
@@ -199,7 +200,7 @@ class BucketWildcardIterator(WildcardIterator):
             if re.match(regex, obj.name):
               some_matched = True
               expanded_uri = uri_to_list.clone_replace_name(obj.name)
-              yield self.__NeededResultType(obj, expanded_uri)
+              yield self.__NeededResultType(obj, expanded_uri, self.headers)
 
     if not some_matched:
       raise WildcardException('No matches for "%s"' % self.uri)

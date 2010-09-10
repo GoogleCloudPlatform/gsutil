@@ -25,6 +25,7 @@ import signal
 import sys
 import tarfile
 import tempfile
+import time
 import xml.dom.minidom
 import xml.sax.xmlreader
 import boto
@@ -492,6 +493,9 @@ class Command(object):
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
 
+    Returns:
+      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
+
     Raises:
       CommandException: if errors encountered.
     """
@@ -539,9 +543,11 @@ class Command(object):
       # object-to-object through x-<provider>-copy-source):
       src_bucket = src_uri.get_bucket(False, headers)
       dst_bucket = dst_uri.get_bucket(False, headers)
+      start_time = time.time()
       dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
                           src_uri.object_name, metadata)
-      return
+      end_time = time.time()
+      return (end_time - start_time, src_key.size)
 
     dst_key = dst_uri.new_key(False, headers)
     if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
@@ -556,24 +562,40 @@ class Command(object):
         metadata = headers.copy()
         metadata['Content-Length'] = str(os.path.getsize(gzip_path))
         metadata['Content-Encoding'] = 'gzip'
+        start_time = time.time()
         dst_key.set_contents_from_file(open(gzip_path, 'rb'), headers=metadata,
                                        policy=canned_acl)
+        end_time = time.time()
+        bytes_transferred = os.path.getsize(gzip_path)
         os.unlink(gzip_path)
       else:
+        start_time = time.time()
         dst_key.set_contents_from_file(src_key.fp, headers=headers,
                                        policy=canned_acl)
+        end_time = time.time()
+        bytes_transferred = os.path.getsize(src_key.fp.name)
+      return (end_time - start_time, bytes_transferred)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
       # Object -> file:
+      start_time = time.time()
       src_key.get_file(dst_key.fp, headers)
+      end_time = time.time()
+      return (end_time - start_time, src_key.size)
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
       # File -> file:
+      start_time = time.time()
       dst_key.set_contents_from_file(src_key.fp, metadata)
+      end_time = time.time()
+      return (end_time - start_time, os.path.getsize(src_key.fp.name))
     else:
       # We implement cross-provider object copy through a local temp file:
       tmp = tempfile.TemporaryFile()
+      start_time = time.time()
       src_key.get_file(tmp, headers)
       tmp.seek(0)
       dst_key.set_contents_from_file(tmp, metadata)
+      end_time = time.time()
+      return (end_time - start_time, src_key.size)
 
   def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
                                    debug=0):
@@ -778,6 +800,7 @@ class Command(object):
       dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion, dst_uri)
 
     # Now iterate over expanded src URIs, and perform copy operations.
+    total_elapsed_time = total_bytes_transferred = 0
     for src_uri in iter(src_uri_expansion):
       for exp_src_uri in src_uri_expansion[src_uri]:
         print 'Copying %s...' % exp_src_uri
@@ -810,7 +833,19 @@ class Command(object):
           # dest is an object or file: use dst obj name
           dst_key_name = dst_uri.object_name
         new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-        self.PerformCopy(exp_src_uri, new_dst_uri, sub_opts, headers)
+        (elapsed_time, bytes_transferred) = self.PerformCopy(exp_src_uri,
+                                                             new_dst_uri,
+                                                             sub_opts, headers)
+        total_elapsed_time += elapsed_time
+        total_bytes_transferred += bytes_transferred
+    if debug == 3:
+      # Note that this only counts the actual GET and PUT bytes for the copy
+      # - not any transfers for doing wildcard expansion, the initial HEAD
+      # request boto performs when doing a bucket.get_key() operation, etc.
+      print 'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)' % (
+          total_bytes_transferred, total_elapsed_time,
+          MakeHumanReadable(float(total_bytes_transferred) /
+                            float(total_elapsed_time)))
 
   def HelpCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                   unused_debug=None):
@@ -824,12 +859,12 @@ class Command(object):
     """
     self.OutputUsageAndExit()
 
-  def VerCommand(self, args, unused_sub_opts=None, unused_headers=None,
+  def VerCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                  unused_debug=None):
     """Implementation of ver command.
 
     Args:
-      args: command-line argument list. Only used by detailedDebug option.
+      unused_args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       unused_headers: dictionary containing optional HTTP headers to send.
       unused_debug: flag indicating whether to include debug output.
@@ -850,12 +885,7 @@ class Command(object):
       except IOError:
         pass
 
-    if args:
-      prefix = args[0]
-    else:
-      prefix = ''
-    print '%sgsutil version %s%s' % (prefix, self.LoadVersionString(),
-                                     config_ver)
+    print 'gsutil version %s%s' % (self.LoadVersionString(), config_ver)
 
   def PrintBucketInfo(self, bucket_uri, listing_style, headers=None, debug=0):
     """Print listing info for given bucket.
@@ -1003,7 +1033,7 @@ class Command(object):
                                               headers=headers, debug=debug)
           total_objs += 1
     if listing_style != ListingStyle.SHORT:
-      print ('TOTAL: %s objects, %s bytes (%s)' %
+      print ('TOTAL: %d objects, %d bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
 
   def MakeBucketsCommand(self, args, unused_sub_opts=None, headers=None,

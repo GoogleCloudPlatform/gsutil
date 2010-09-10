@@ -339,7 +339,6 @@ def main():
     command_inst.OutputUsageAndExit()
 
   debug = 0
-  detailed_debug = False
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'dDvh:',
                                ['debug', 'detailedDebug', 'version', 'help',
@@ -375,11 +374,13 @@ def main():
     headers = {}
     for o, a in opts:
       if o in ('-d', '--debug'):
-        # Debug level 2 causes httplib output plus boto debug output
+        # Passing debug=2 causes boto to include httplib header output.
         debug = 2
       if o in ('-D', '--detailedDebug'):
-        detailed_debug = True
-        debug = 2
+        # We use debug level 3 to ask gsutil code to output more detailed
+        # debug output. This is a bit of a hack since it overloads the same
+        # flag that was originally implemented for boto use.
+        debug = 3
       if o in ('-?', '--help'):
         command_inst.OutputUsageAndExit()
       if o in ('-h', '--header'):
@@ -390,10 +391,9 @@ def main():
       if o in ('-v', '--version'):
         command_inst.VerCommand([], None)
         sys.exit(0)
-    if detailed_debug:
-      command_inst.VerCommand(['DEBUG: '], None)
-      sys.stderr.write('DEBUG: Boto config: %s\n' %
-                       str(boto.config.items('Boto')))
+    if debug == 3:
+      command_inst.VerCommand([], None)
+      print 'boto config: %s' % str(boto.config.items('Boto'))
     command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
@@ -444,7 +444,7 @@ a more specific error code.
       message = 'Failure: %s.' % e
     OutputAndExit(message)
   except Exception, e:
-    if detailed_debug:
+    if debug == 3:
       stack_trace = traceback.format_exc()
       sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
                        re.sub('\\n', '\n    ', stack_trace))
