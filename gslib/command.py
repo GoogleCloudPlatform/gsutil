@@ -1041,7 +1041,7 @@ class Command(object):
     """
     # Refuse to delete a bucket or directory src URI (force users to explicitly
     # do that as a separate operation).
-    src_uri_to_check = StorageUri(args[0])
+    src_uri_to_check = StorageUri(args[0], debug=debug, validate=False)
     if src_uri_to_check.names_container():
       raise CommandException('Will not remove source buckets or directories. '
                              'You must separately copy and remove for that '

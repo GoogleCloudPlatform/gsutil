@@ -87,6 +87,9 @@ class GsutilCpTests(unittest.TestCase):
     and a destination bucket and directory.
     """
     cls.uri_base_str = 'gs://gsutil_test_%s' % int(time.time())
+    # Use a designated tmpdir prefix to make it easy to find the end of
+    # the tmp path.
+    cls.tmpdir_prefix = 'tmp_gstest'
 
     # Create the test buckets.
     cls.src_bucket_uri = boto.storage_uri('%s_src' % cls.uri_base_str)
@@ -102,10 +105,12 @@ class GsutilCpTests(unittest.TestCase):
       cls.all_src_obj_uris.append(obj_uri)
 
     # Create the test directories.
-    cls.src_dir_root = '%s%s' % (tempfile.mkdtemp(), os.sep)
+    cls.src_dir_root = '%s%s' % (tempfile.mkdtemp(prefix=cls.tmpdir_prefix),
+                                 os.sep)
     nested_subdir = '%sdir0%sdir1' % (cls.src_dir_root, os.sep)
     os.makedirs(nested_subdir)
-    cls.dst_dir_root = '%s%s' % (tempfile.mkdtemp(), os.sep)
+    cls.dst_dir_root = '%s%s' % (tempfile.mkdtemp(prefix=cls.tmpdir_prefix),
+                                 os.sep)
 
     # Create the test files in src directory.
     cls.all_src_file_paths = []
@@ -171,7 +176,8 @@ class GsutilCpTests(unittest.TestCase):
                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
     expected = set()
     for file_path in self.all_src_file_paths:
-      file_path_sans_top_tmp_dir = file_path[5:]
+      start_tmp_pos = file_path.find(self.tmpdir_prefix)
+      file_path_sans_top_tmp_dir = file_path[start_tmp_pos:]
       expected.add('%s%s' % (self.dst_bucket_uri.uri,
                              file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
@@ -219,7 +225,8 @@ class GsutilCpTests(unittest.TestCase):
     actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
     expected = set()
     for file_path in self.all_src_file_paths:
-      file_path_sans_top_tmp_dir = file_path[5:]
+      start_tmp_pos = file_path.find(self.tmpdir_prefix)
+      file_path_sans_top_tmp_dir = file_path[start_tmp_pos:]
       expected.add('file://%s%s' % (self.dst_dir_root,
                                     file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
