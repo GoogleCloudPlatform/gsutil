@@ -72,12 +72,12 @@ def MakeHumanReadable(num):
   return '%s %s' % (rounded_val, EXP_STRINGS[i][1])
 
 
-def StorageUri(uri_str, debug=False, validate=True):
+def StorageUri(uri_str, debug=0, validate=True):
   """Helper to instantiate boto.StorageUri with gsutil default flag values.
 
   Args:
     uri_str: StorageUri naming bucket + optional object.
-    debug: Whether to enable debugging on StorageUri method calls.
+    debug: debug level to pass in to boto connection (range 0..2).
     validate: Whether to check for bucket name validity.
 
   Returns:
@@ -143,14 +143,14 @@ class Command(object):
                              'directory for the\nmultiple source form of the '
                              '"%s" command.' % command)
 
-  def CatCommand(self, args, sub_opts=None, headers=None, debug=False):
+  def CatCommand(self, args, sub_opts=None, headers=None, debug=0):
     """Implementation of cat command.
 
     Args:
       args: command-line argument list.
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -183,15 +183,14 @@ class Command(object):
           sys.stdout.write(data)
         tmp_file.close()
 
-  def SetAclCommand(self, args, unused_sub_opts=None, headers=None,
-                    debug=False):
+  def SetAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
     """Implementation of setacl command.
 
     Args:
       args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -345,15 +344,14 @@ class Command(object):
     ver_file.close()
     return installed_version_string
 
-  def UpdateCommand(self, unused_args, sub_opts=None, headers=None,
-                    debug=False):
+  def UpdateCommand(self, unused_args, sub_opts=None, headers=None, debug=0):
     """Implementation of experimental update command.
 
     Args:
       unused_args: command-line argument list.
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -459,15 +457,14 @@ class Command(object):
                              '(%s) where the file needs to be created.' %
                              (src_uri, dst_path))
 
-  def GetAclCommand(self, args, unused_sub_opts=None, headers=None,
-                    debug=False):
+  def GetAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
     """Implementation of getacl command.
 
     Args:
       args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -579,7 +576,7 @@ class Command(object):
       dst_key.set_contents_from_file(tmp, metadata)
 
   def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
-                                   debug=False):
+                                   debug=0):
     """Expands URI wildcarding, object-less bucket names, and directory names.
 
     Examples:
@@ -593,7 +590,7 @@ class Command(object):
       uri_strs: URI strings needing expansion
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Returns:
       dict mapping StorageUri(uri_str) -> list of StorageUri, for reach input.
@@ -753,7 +750,7 @@ class Command(object):
       os.makedirs(dst_uri.object_name)
     return dst_uri
 
-  def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=False,
+  def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=0,
                       command='cp'):
     """Implementation of cp command.
 
@@ -761,7 +758,7 @@ class Command(object):
       args: command-line argument list.
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
       command: name of command on behalf of which this call is running.
 
     Raises:
@@ -860,15 +857,14 @@ class Command(object):
     print '%sgsutil version %s%s' % (prefix, self.LoadVersionString(),
                                      config_ver)
 
-  def PrintBucketInfo(self, bucket_uri, listing_style, headers=None,
-                      debug=False):
+  def PrintBucketInfo(self, bucket_uri, listing_style, headers=None, debug=0):
     """Print listing info for given bucket.
 
     Args:
       bucket_uri: StorageUri being listed.
       listing_style: ListingStyle enum describing type of output desired.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Returns:
       Tuple (total objects, total bytes) in the bucket.
@@ -942,14 +938,14 @@ class Command(object):
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
 
-  def ListCommand(self, args, sub_opts=None, headers=None, debug=False):
+  def ListCommand(self, args, sub_opts=None, headers=None, debug=0):
     """Implementation of ls command.
 
     Args:
       args: command-line argument list.
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
     """
     listing_style = ListingStyle.SHORT
     get_bucket_info = False
@@ -1011,14 +1007,14 @@ class Command(object):
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
 
   def MakeBucketsCommand(self, args, unused_sub_opts=None, headers=None,
-                         debug=False):
+                         debug=0):
     """Implementation of mb command.
 
     Args:
       args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -1028,7 +1024,7 @@ class Command(object):
       print 'Creating %s...' % bucket_uri
       bucket_uri.create_bucket(headers)
 
-  def MoveObjsCommand(self, args, sub_opts=None, headers=None, debug=False):
+  def MoveObjsCommand(self, args, sub_opts=None, headers=None, debug=0):
     """Implementation of mv command.
 
        Note that there is no atomic rename operation - this command is simply
@@ -1038,7 +1034,7 @@ class Command(object):
       args: command-line argument list.
       sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -1074,14 +1070,14 @@ class Command(object):
     self.RemoveObjsCommand(exp_arg_list[0:1], sub_opts, headers, debug)
 
   def RemoveBucketsCommand(self, args, unused_sub_opts=None, headers=None,
-                           debug=False):
+                           debug=0):
     """Implementation of rb command.
 
     Args:
       args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -1096,14 +1092,14 @@ class Command(object):
         uri.delete_bucket(headers)
 
   def RemoveObjsCommand(self, args, unused_sub_opts=None, headers=None,
-                        debug=False):
+                        debug=0):
     """Implementation of rm command.
 
     Args:
       args: command-line argument list.
       unused_sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
@@ -1117,4 +1113,4 @@ class Command(object):
                                  'delete this/these bucket(s) do:\n\tgsutil rm '
                                  '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
         print 'Removing %s...' % uri
-        uri.delete_key(False, headers)
+        uri.delete_key(validate=False, headers=headers)

@@ -89,14 +89,14 @@ class WildcardIterator(object):
   implementation depending on the StorageUri.
   """
 
-  def __init__(self, uri, result_type, headers=None, debug=False):
+  def __init__(self, uri, result_type, headers=None, debug=0):
     """Instantiate an iterator over keys matching given wildcard URI.
 
     Args:
       uri: StorageUri naming wildcard objects to iterate.
       result_type: ResultType object specifying what to iterate.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: flag indicating whether to include debug output.
+      debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       WildcardException: for invalid result_type.
@@ -169,7 +169,8 @@ class BucketWildcardIterator(WildcardIterator):
           # to be entity-encoded (bucket%2Fdir instead of bucket/dir),
           # which causes the request to fail.
           bucket_uris.append(boto.storage_uri('%s://%s' %
-                                              (self.uri.scheme, str(b.name))))
+                                              (self.uri.scheme, str(b.name)),
+                                              debug=self.debug))
     else:
       bucket_uris = [self.uri.clone_replace_name('')]
 
@@ -291,14 +292,14 @@ class WildcardException(StandardError):
 
 
 def wildcard_iterator(uri_or_str, result_type=ResultType.URIS, headers=None,
-                      debug=False):
+                      debug=0):
   """Instantiate a WildCardIterator for the given StorageUri.
 
   Args:
     uri_or_str: StorageUri or URI string naming wildcard objects to iterate.
     result_type: ResultType object specifying what to iterate.
     headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: flag indicating whether to include debug output.
+    debug: debug level to pass in to boto connection (range 0..2).
 
   Returns:
     A WildcardIterator that handles the requested iteration.
