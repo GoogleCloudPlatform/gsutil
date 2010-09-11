@@ -20,6 +20,7 @@ import gzip
 import mimetypes
 import os
 import platform
+import re
 import shutil
 import signal
 import sys
@@ -714,15 +715,6 @@ class Command(object):
     else:
       dst_uri = StorageUri(dst_uri_str, debug=debug)
 
-    for src_uri in src_uri_expansion:
-      for exp_src_uri in src_uri_expansion[src_uri]:
-        if (exp_src_uri.equals(dst_uri) or
-            # Example case: gsutil cp gs://mybucket/a/bb mybucket
-            (dst_uri.is_cloud_uri() and
-             exp_src_uri.uri.find(dst_uri.uri) != -1)):
-          raise CommandException('Overlapping source and dest URIs not '
-                                 'allowed.')
-
     # If this is a multi-object copy request ensure dst_uri names a container.
     multi_src_request = (len(src_uri_expansion) > 1 or
                          len(src_uri_expansion.values()[0]) > 1)
@@ -771,6 +763,31 @@ class Command(object):
     if dst_uri.is_file_uri() and not os.path.exists(dst_uri.object_name):
       os.makedirs(dst_uri.object_name)
     return dst_uri
+
+  def SrcDstSame(self, src_uri, dst_uri):
+    """Checks if src_uri and dst_uri represent same object.
+
+    We don't handle anything about hard or symbolic links.
+
+    Args:
+      src_uri: source StorageUri.
+      dst_uri: dest StorageUri.
+
+    Returns:
+      Bool indication.
+    """
+    if src_uri.is_file_uri() and dst_uri.is_file_uri():
+      # Translate a/b/./c to a/b/c, so src=dst comparison below works.
+      new_src_path = re.sub('%s+\.%s+' % (os.sep, os.sep), os.sep,
+                            src_uri.object_name)
+      new_src_path = re.sub('^.%s+' % os.sep, '', new_src_path)
+      new_dst_path = re.sub('%s+\.%s+' % (os.sep, os.sep), os.sep,
+                            dst_uri.object_name)
+      new_dst_path = re.sub('^.%s+' % os.sep, '', new_dst_path)
+      return (src_uri.clone_replace_name(new_src_path).uri ==
+              dst_uri.clone_replace_name(new_dst_path).uri)
+    else:
+      return src_uri.uri == dst_uri.uri
 
   def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=0,
                       command='cp'):
@@ -833,19 +850,23 @@ class Command(object):
           # dest is an object or file: use dst obj name
           dst_key_name = dst_uri.object_name
         new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-        (elapsed_time, bytes_transferred) = self.PerformCopy(exp_src_uri,
-                                                             new_dst_uri,
-                                                             sub_opts, headers)
-        total_elapsed_time += elapsed_time
-        total_bytes_transferred += bytes_transferred
+        if self.SrcDstSame(exp_src_uri, new_dst_uri):
+          print ('cp: "%s" and "%s" are the same object - skipping.' %
+                 (exp_src_uri.uri, new_dst_uri.uri))
+        else:
+          (elapsed_time, bytes_transferred) = self.PerformCopy(
+              exp_src_uri, new_dst_uri, sub_opts, headers)
+          total_elapsed_time += elapsed_time
+          total_bytes_transferred += bytes_transferred
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
-      print 'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)' % (
-          total_bytes_transferred, total_elapsed_time,
-          MakeHumanReadable(float(total_bytes_transferred) /
-                            float(total_elapsed_time)))
+      if total_bytes_transferred != 0:
+        print 'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)' % (
+            total_bytes_transferred, total_elapsed_time,
+            MakeHumanReadable(float(total_bytes_transferred) /
+                              float(total_elapsed_time)))
 
   def HelpCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                   unused_debug=None):

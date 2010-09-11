@@ -100,7 +100,7 @@ class GsutilCpTests(unittest.TestCase):
     # Create the test objects in src bucket.
     cls.all_src_obj_uris = []
     for i in range(3):
-      obj_uri = boto.storage_uri('%sobj%s' % (cls.src_bucket_uri, i))
+      obj_uri = boto.storage_uri('%sobj%d' % (cls.src_bucket_uri, i))
       cls.CreateEmptyObject(obj_uri)
       cls.all_src_obj_uris.append(obj_uri)
 
@@ -300,13 +300,14 @@ class GsutilCpTests(unittest.TestCase):
       self.assertNotEqual(e.reason.find('Provider-only'), -1)
 
   def TestAttemptCopyingOverlappingSrcDst(self):
-    """Attempts to copy a set of objects atop themselves."""
-    try:
-      command_inst.CopyObjsCommand(['%s*' % self.src_bucket_uri.uri,
-                                    self.src_bucket_uri.uri])
-      self.fail('Did not get expected CommandException')
-    except CommandException, e:
-      self.assertNotEqual(e.reason.find('Overlap'), -1)
+    """Attempts to an object atop itself."""
+    obj_uri = boto.storage_uri('%sobj' % self.dst_bucket_uri)
+    self.CreateEmptyObject(obj_uri)
+    command_inst.CopyObjsCommand(['%s*' % self.dst_bucket_uri.uri,
+                                  self.dst_bucket_uri.uri])
+    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    self.assertEqual(1, len(actual))
+    self.assertEqual('obj', actual[0].object_name)
 
   def TestAttemptCopyingToMultiMatchWildcard(self):
     """Attempts to copy where dst wildcard matches >1 obj."""
