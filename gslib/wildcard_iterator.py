@@ -68,6 +68,7 @@ import fnmatch
 import glob
 import os
 import re
+import time
 import boto
 from boto.storage_uri import StorageUri
 
@@ -150,6 +151,13 @@ class BucketWildcardIterator(WildcardIterator):
           # implementation only reads bucket info we need to read the object
           # for this case.
           obj = uri.get_key(validate=False, headers=headers)
+          # When we retrieve the object this way its last_modified timestamp
+          # is formatted differently than when we retrieve from the bucket
+          # listing, so convert to consistent format.
+          tuple_time = (
+              time.strptime(obj.last_modified, '%a, %d %b %Y %H:%M:%S %Z')
+          )
+          obj.last_modified = time.strftime('%Y-%m-%dT%H:%M:%S', tuple_time)
       return obj
     else:
       # ResultType.URIS:
