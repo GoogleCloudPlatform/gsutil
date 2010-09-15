@@ -55,7 +55,7 @@ boto.UserAgent += '/gsutil'
 from boto.exception import BotoClientError
 from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
-from boto.exception import S3ResponseError
+from boto.exception import StorageResponseError
 from boto.provider import Provider
 
 from gslib.command import Command
@@ -408,18 +408,21 @@ def main():
     OutputAndExit('InvalidAclError: %s.' % e.message)
   except InvalidUriError, e:
     OutputAndExit('InvalidUriError: %s.' % e.message)
+  except OSError, e:
+    OutputAndExit('OSError: %s.' % e.strerror)
   except WildcardException, e:
     OutputAndExit(e.reason)
-  except S3ResponseError, e:
+  except StorageResponseError, e:
     detail_start = e.body.find('<Details>')
     detail_end = e.body.find('</Details>')
+    exc_name = re.split("[\.']", str(type(e)))[-2]
     if detail_start != -1 and detail_end != -1:
       detail = e.body[detail_start+9:detail_end]
-      OutputAndExit('S3ResponseError: status=%d, code=%s, reason=%s, detail=%s.'
-                    % (e.status, e.code, e.reason, detail))
+      OutputAndExit('%s: status=%d, code=%s, reason=%s, detail=%s.' %
+                    (exc_name, e.status, e.code, e.reason, detail))
     else:
-      OutputAndExit('S3ResponseError:: status=%d, code=%s, reason=%s.' %
-                    (e.status, e.code, e.reason))
+      OutputAndExit('%s:: status=%d, code=%s, reason=%s.' %
+                    (exc_name, e.status, e.code, e.reason))
   except AttributeError, e:
     if e.message.find('secret_access_key') != -1:
       OutputAndExit('Missing credentials for the given URI(s). Does your '
