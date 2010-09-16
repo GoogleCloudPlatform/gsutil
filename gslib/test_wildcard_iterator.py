@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-"""Unit tests for gslib wildcard_iterator."""
+"""Unit tests for gslib wildcard_iterator"""
 
 import os
 import shutil
@@ -29,8 +29,10 @@ import sys
 import tempfile
 import time
 import unittest
-import boto
 
+sys.path.insert(0, '.')
+sys.path.insert(0, 'boto')
+import boto
 from boto import InvalidUriError
 from wildcard_iterator import ResultType
 from wildcard_iterator import wildcard_iterator
@@ -38,14 +40,14 @@ from wildcard_iterator import WildcardException
 
 
 class BucketIteratorTests(unittest.TestCase):
-  """BucketWildcardIterator test suite."""
+  """BucketWildcardIterator test suite"""
 
   def GetSuiteDescription(self):
     return 'BucketWildcardIterator test suite'
 
   @classmethod
   def SetUpClass(cls):
-    """Creates 2 test buckets, each containing 3 objects."""
+    """Creates 2 test buckets, each containing 3 objects"""
 
     cls.base_uri_str = 'gs://gslib_test_%s' % int(time.time())
     (cls.test_bucket0_uri, cls.test_bucket0_obj_uri_strs) = (
@@ -79,7 +81,7 @@ class BucketIteratorTests(unittest.TestCase):
 
   @classmethod
   def TearDownClass(cls):
-    """Cleans up bucket and objects created by SetUpClass."""
+    """Cleans up bucket and objects created by SetUpClass"""
 
     if hasattr(cls, 'created_test_data'):
       for test_obj_uri_str in cls.test_bucket0_obj_uri_strs:
@@ -90,21 +92,21 @@ class BucketIteratorTests(unittest.TestCase):
       cls.test_bucket1_uri.delete_bucket()
 
   def TestNoOpObjectIterator(self):
-    """Tests that bucket-only URI iterates just that one URI."""
+    """Tests that bucket-only URI iterates just that one URI"""
 
     results = list(wildcard_iterator(self.test_bucket0_uri, ResultType.URIS))
     self.assertEqual(1, len(results))
     self.assertEqual(str(self.test_bucket0_uri), str(results[0]))
 
   def TestMatchingAllObjects(self):
-    """Tests matching all objects, based on wildcard."""
+    """Tests matching all objects, based on wildcard"""
 
     actual_obj_uri_strs = set(str(u) for u in wildcard_iterator(
         self.test_bucket0_uri.clone_replace_name('*'), ResultType.URIS))
     self.assertEqual(self.test_bucket0_obj_uri_strs, actual_obj_uri_strs)
 
   def TestMatchingObjectSubset(self):
-    """Tests matching a subset of objects, based on wildcard."""
+    """Tests matching a subset of objects, based on wildcard"""
 
     exp_obj_uri_strs = set(
         [str(self.test_bucket0_uri.clone_replace_name('abcd')),
@@ -114,7 +116,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestMatchingNonWildcardedUri(self):
-    """Tests matching a single named object."""
+    """Tests matching a single named object"""
 
     exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name('abcd')
                                )])
@@ -123,7 +125,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestWildcardedObjectUriWithVsWithoutPrefix(self):
-    """Tests that server prefix gets same result as URI not using a prefix."""
+    """Tests that server prefix gets same result as URI not using a prefix"""
 
     with_prefix_uri_strs = set(str(u) for u in wildcard_iterator(
         self.test_bucket0_uri.clone_replace_name('abcd'), ResultType.URIS))
@@ -134,7 +136,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(with_prefix_uri_strs, no_prefix_uri_strs)
 
   def TestNoMatchingWildcardedObjectUri(self):
-    """Tests that we raise an exception for non-matching wildcarded URI."""
+    """Tests that we raise an exception for non-matching wildcarded URI"""
 
     try:
       for unused_ in wildcard_iterator(
@@ -145,7 +147,7 @@ class BucketIteratorTests(unittest.TestCase):
       self.assertTrue(str(e).find('No matches') != -1)
 
   def TestWildcardedInvalidObjectUri(self):
-    """Tests that we raise an exception for wildcarded invalid URI."""
+    """Tests that we raise an exception for wildcarded invalid URI"""
 
     try:
       for unused_ in wildcard_iterator('badscheme://asdf', ResultType.URIS):
@@ -155,7 +157,7 @@ class BucketIteratorTests(unittest.TestCase):
       self.assertTrue(e.message.find('Unrecognized scheme') != -1)
 
   def TestWildcardedInvalidResultType(self):
-    """Tests that we raise an exception for wildcard with invalid ResultType."""
+    """Tests that we raise an exception for wildcard with invalid ResultType"""
 
     try:
       wildcard_iterator('gs://asdf/*', 'invalid')
@@ -165,7 +167,7 @@ class BucketIteratorTests(unittest.TestCase):
       self.assertTrue(str(e).find('Invalid ResultType') != -1)
 
   def TestSingleMatchWildcardedBucketUri(self):
-    """Tests matching a single bucket based on a wildcarded bucket URI."""
+    """Tests matching a single bucket based on a wildcarded bucket URI"""
 
     exp_obj_uri_strs = set(['%s_1/' % self.base_uri_str])
     actual_obj_uri_strs = set(str(u) for u in
@@ -176,7 +178,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestMultiMatchWildcardedBucketUri(self):
-    """Tests matching a multiple buckets based on a wildcarded bucket URI."""
+    """Tests matching a multiple buckets based on a wildcarded bucket URI"""
 
     exp_obj_uri_strs = set(['%s_%s/' %
                             (self.base_uri_str, i) for i in range(2)])
@@ -188,7 +190,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestMultiLevelWildcardUri(self):
-    """Tests matching with both bucket and object wildcards."""
+    """Tests matching with both bucket and object wildcards"""
 
     exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name('abcd'
                                                                         ))])
@@ -200,7 +202,7 @@ class BucketIteratorTests(unittest.TestCase):
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestBucketOnlyWildcardedWithResultTypeKeys(self):
-    """Tests that bucket-only wildcard with ResultType.KEYS raises exception."""
+    """Tests that bucket-only wildcard with ResultType.KEYS raises exception"""
 
     try:
       for unused_ in wildcard_iterator('%s*1' % self.base_uri_str,
@@ -212,7 +214,7 @@ class BucketIteratorTests(unittest.TestCase):
 
 
 class FileIteratorTests(unittest.TestCase):
-  """FileWildcardIterator test suite."""
+  """FileWildcardIterator test suite"""
 
   def GetSuiteDescription(self):
     return 'FileWildcardIterator test suite'
@@ -251,20 +253,20 @@ class FileIteratorTests(unittest.TestCase):
 
   @classmethod
   def TearDownClass(cls):
-    """Cleans up test dir and file created by SetUpClass."""
+    """Cleans up test dir and file created by SetUpClass"""
 
     if hasattr(cls, 'test_dir'):
       shutil.rmtree(cls.test_dir)
 
   def TestNoOpDirectoryIterator(self):
-    """Tests that directory-only URI iterates just that one URI."""
+    """Tests that directory-only URI iterates just that one URI"""
 
     results = list(wildcard_iterator('file:///tmp/', ResultType.URIS))
     self.assertEqual(1, len(results))
     self.assertEqual('file:///tmp/', str(results[0]))
 
   def TestMatchingAllFiles(self):
-    """Tests matching all files, based on wildcard."""
+    """Tests matching all files, based on wildcard"""
 
     uri = boto.storage_uri('file://%s/*' % self.test_dir)
     actual_uri_strs = set(str(u) for u in
@@ -273,7 +275,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(self.immed_child_uri_strs, actual_uri_strs)
 
   def TestMatchingFileSubset(self):
-    """Tests matching a subset of files, based on wildcard."""
+    """Tests matching a subset of files, based on wildcard"""
 
     exp_uri_strs = set(
         ['file://%s/abcd' % self.test_dir, 'file://%s/abdd' % self.test_dir]
@@ -285,7 +287,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(exp_uri_strs, actual_uri_strs)
 
   def TestMatchingNonWildcardedUri(self):
-    """Tests matching a single named file."""
+    """Tests matching a single named file"""
 
     exp_uri_strs = set(['file://%s/abcd' % self.test_dir])
     uri = boto.storage_uri('file://%s/abcd' % self.test_dir)
@@ -295,7 +297,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(exp_uri_strs, actual_uri_strs)
 
   def TestMatchingFilesIgnoringOtherRegexChars(self):
-    """Tests ignoring non-wildcard regex chars (e.g., ^ and $)."""
+    """Tests ignoring non-wildcard regex chars (e.g., ^ and $)"""
 
     exp_uri_strs = set(['file://%s/ade$' % self.test_dir])
     uri = boto.storage_uri('file://%s/ad*$' % self.test_dir)
@@ -305,7 +307,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(exp_uri_strs, actual_uri_strs)
 
   def TestRecursiveDirectoryOnlyWildcarding(self):
-    """Tests recusive expansion of directory-only '**' wildcard."""
+    """Tests recusive expansion of directory-only '**' wildcard"""
 
     uri = boto.storage_uri('file://%s/**' % self.test_dir)
     actual_uri_strs = set(str(u) for u in
@@ -314,7 +316,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(self.all_file_uri_strs, actual_uri_strs)
 
   def TestRecursiveDirectoryPlusFileWildcarding(self):
-    """Tests recusive expansion of '**' directory plus '*' wildcard."""
+    """Tests recusive expansion of '**' directory plus '*' wildcard"""
 
     uri = boto.storage_uri('file://%s/**/*' % self.test_dir)
     actual_uri_strs = set(str(u) for u in
@@ -323,7 +325,7 @@ class FileIteratorTests(unittest.TestCase):
     self.assertEqual(self.all_file_uri_strs, actual_uri_strs)
 
   def TestInvalidRecursiveDirectoryWildcard(self):
-    """Tests that wildcard containing '***' raises exception."""
+    """Tests that wildcard containing '***' raises exception"""
 
     try:
       uri = boto.storage_uri('file://%s/***/abcd' % self.test_dir)
@@ -334,7 +336,7 @@ class FileIteratorTests(unittest.TestCase):
       self.assertTrue(str(e).find('more than 2 consecutive') != -1)
 
   def TestMissingDir(self):
-    """Tests that wildcard raises exception when directory doesn't exist."""
+    """Tests that wildcard raises exception when directory doesn't exist"""
 
     try:
       for unused_ in wildcard_iterator('file://no_such_dir/*', ResultType.KEYS):
@@ -344,7 +346,7 @@ class FileIteratorTests(unittest.TestCase):
       self.assertTrue(str(e).find('No matches') != -1)
 
   def TestExistingDirNoFileMatch(self):
-    """Tests that wildcard raises exception when there's no match."""
+    """Tests that wildcard raises exception when there's no match"""
 
     try:
       uri = boto.storage_uri('file://%s/non_existent*' % self.test_dir)
