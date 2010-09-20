@@ -327,6 +327,15 @@ def SanityCheckXmlParser(cmd):
                            'that does not work correctly.' %
                            (cmd, code_file))
 
+def HandleUnknownFailure(debug, e):
+  # Called if we fall through all known/handled exceptions. Allows us to
+  # print a stacktrace if -D option used.
+  if debug == 3:
+    stack_trace = traceback.format_exc()
+    sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
+                     re.sub('\\n', '\n    ', stack_trace))
+  else:
+    OutputAndExit('Failure: %s.' % e)
 
 def main():
   if float('%d.%d%d'
@@ -443,16 +452,11 @@ http://bugs.python.org/issue5542). If you are trying to upload a large
 object you might retry with a small (say 200k) object, and see if you get
 a more specific error code.
 """)
+      OutputAndExit(message)
     else:
-      message = 'Failure: %s.' % e
-    OutputAndExit(message)
+      HandleUnknownFailure(debug, e)
   except Exception, e:
-    if debug == 3:
-      stack_trace = traceback.format_exc()
-      sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
-                       re.sub('\\n', '\n    ', stack_trace))
-    else:
-      OutputAndExit('Failure: %s.' % e)
+    HandleUnknownFailure(debug, e)
 
 if __name__ == '__main__':
   main()
