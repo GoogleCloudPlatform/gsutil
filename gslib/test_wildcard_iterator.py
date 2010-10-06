@@ -358,11 +358,8 @@ class FileIteratorTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  python_version = float('%d.%d%d' %(sys.version_info[0], sys.version_info[1],
-                                     sys.version_info[2]))
-  if python_version < 2.51:
-    sys.stderr.write('These tests must be run on at least Python 2.5.1\n')
-    sys.exit(1)
+  if sys.version_info[:3] < (2, 5, 1):
+    sys.exit('These tests must be run on at least Python 2.5.1\n')
   test_loader = unittest.TestLoader()
   test_loader.testMethodPrefix = 'Test'
   for suite in (test_loader.loadTestsFromTestCase(BucketIteratorTests),

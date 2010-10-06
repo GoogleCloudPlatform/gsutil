@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding=utf8
 # Copyright 2010 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +14,7 @@
 
 """Implementation of gsutil commands."""
 
+import ctypes
 import gzip
 import mimetypes
 import os
@@ -32,7 +31,9 @@ import xml.sax.xmlreader
 import boto
 
 from boto import handler
+from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto.pyami.config import BotoConfigLocations
+from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from exception import CommandException
 from wildcard_iterator import ContainsWildcard
 from wildcard_iterator import ResultType
@@ -57,6 +58,7 @@ EXP_STRINGS = [
     (50, 'PB'),
 ]
 
+ONE_MB = 1024*1024
 
 def MakeHumanReadable(num):
   """Generates human readable string for a number.
@@ -485,27 +487,122 @@ class Command(object):
     parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
 
-  def PerformCopy(self, src_uri, dst_uri, sub_opts=None, headers=None):
-    """Helper method for CopyObjsCommand.
+  class FileCopyCallbackHandler(object):
+    """Outputs progress info for large copy requests."""
+    def __init__(self, upload):
+      if upload:
+        self.announce_text = 'Uploading'
+      else:
+        self.announce_text = 'Downloading'
 
-    Args:
-      src_uri: source StorageUri.
-      dst_uri: destination StorageUri.
-      sub_opts: list of command-specific options from getopt.
-      headers: dictionary containing optional HTTP headers to pass to boto.
+    def call(self, total_bytes_transferred, total_size):
+      sys.stderr.write('%s: %s/%s    \r' % (
+          self.announce_text,
+          MakeHumanReadable(total_bytes_transferred),
+          MakeHumanReadable(total_size)))
+      if total_bytes_transferred == total_size:
+        sys.stderr.write('\n')
 
-    Returns:
-      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
-
-    Raises:
-      CommandException: if errors encountered.
+  def GetTransferHandlers(self, uri, key, file_size, upload):
     """
-    # Make a copy of the input headers each time so we can set a different
-    # MIME type for each object.
-    if headers:
-      metadata = headers.copy()
+    Selects upload/download and callback handlers.
+
+    We use a callback handler that shows a simple textual progress indicator
+    if file_size is above the configurable threshold.
+
+    We use a resumable transfer handler if file_size is >= the configurable
+    threshold and resumable transfers are supported by the given provider.
+    boto supports resumable downloads for all providers, but resumable
+    uploads are currently only supported by GS.
+    """
+    config = boto.config
+    resumable_threshold = config.getint('GSUtil', 'resumable_threshold', ONE_MB)
+    if file_size >= resumable_threshold:
+      cb = self.FileCopyCallbackHandler(upload).call
+      num_cb = int(file_size / ONE_MB)
+      resumable_tracker_dir = config.get('GSUtil', 'resumable_tracker_dir',
+                                         '%s/.gsutil' % os.environ['HOME'])
+      if not os.path.exists(resumable_tracker_dir):
+        os.makedirs(resumable_tracker_dir)
+      if upload:
+          # Encode the src bucket and key into the tracker file name.
+          res_tracker_file_name = (
+              re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
+                     (key.bucket.name, key.name)))
+      else:
+          # Encode the fully-qualified src file name into the tracker file name.
+          res_tracker_file_name = (
+              re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
+                     (os.path.realpath(uri.object_name))))
+      tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
+                                 res_tracker_file_name)
+      if upload:
+        if uri.scheme == 'gs':
+          transfer_handler = ResumableUploadHandler(tracker_file)
+        else:
+          transfer_handler = None
+      else:
+        transfer_handler = ResumableDownloadHandler(tracker_file)
     else:
-      metadata = {}
+      transfer_handler = None
+      cb = None
+      num_cb = None
+    return (cb, num_cb, transfer_handler)
+
+  def CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
+    # Do Object -> object copy, within same provider (uses
+    # x-<provider>-copy-source metadata HTTP header to request copying at the
+    # server). (Note: boto does not currently provide a way to pass canned_acl
+    # when copying from object-to-object through x-<provider>-copy-source)
+    src_bucket = src_uri.get_bucket(False, headers)
+    dst_bucket = dst_uri.get_bucket(False, headers)
+    start_time = time.time()
+    dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
+                        src_uri.object_name, headers)
+    end_time = time.time()
+    return (end_time - start_time, src_key.size)
+
+  def CheckFreeSpace(self, path):
+    """Return path/drive free space (in bytes)."""
+    if platform.system() == 'Windows':
+      free_bytes = ctypes.c_ulonglong(0)
+      ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path), None,
+                                                 None,
+                                                 ctypes.pointer(free_bytes))
+      return free_bytes.value
+    else:
+      (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
+      return f_frsize * f_bavail
+
+  def PerformResumableUploadIfApplies(self, fp, dst_uri, headers, canned_acl):
+    """
+    Performs resumable upload if supported by provider and file is above
+    threshold, else performs non-resumable upload.
+
+    Returns (elapsed_time, bytes_transferred).
+    """
+    start_time = time.time()
+    file_size = os.path.getsize(fp.name)
+    dst_key = dst_uri.new_key(False, headers)
+    (cb, num_cb, res_upload_handler) = self.GetTransferHandlers(
+        dst_uri, dst_key, file_size, True)
+    if dst_uri.scheme == 'gs':
+      # Resumable upload protocol is Google Storage-specific.
+      dst_key.set_contents_from_file(fp, headers=headers, policy=canned_acl,
+                                     cb=cb, num_cb=num_cb,
+                                     res_upload_handler=res_upload_handler)
+    else:
+      dst_key.set_contents_from_file(fp, headers=headers, policy=canned_acl,
+                                     cb=cb, num_cb=num_cb)
+    if res_upload_handler:
+      bytes_transferred = file_size - res_upload_handler.upload_start_point
+    else:
+      bytes_transferred = file_size
+    end_time = time.time()
+    return (end_time - start_time, bytes_transferred)
+
+  def UploadFileToObject(self, sub_opts, src_key, src_uri, dst_uri, headers,
+                         debug):
     gzip_exts = []
     canned_acl = None
     if sub_opts:
@@ -520,14 +617,113 @@ class Command(object):
           mime_type = mimetype_tuple[0]
           content_encoding = mimetype_tuple[1]
           if mime_type:
-            metadata['Content-Type'] = mime_type
+            headers['Content-Type'] = mime_type
             print '\t[Setting Content-Type=%s]' % mime_type
           else:
             print '\t[Unknown content type -> using application/octet stream]'
           if content_encoding:
-            metadata['Content-Encoding'] = content_encoding
+            headers['Content-Encoding'] = content_encoding
         elif o == '-z':
           gzip_exts = a.split(',')
+    fname_parts = src_uri.object_name.split('.')
+    if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
+      if debug:
+        print 'Compressing %s (to tmp)...' % src_key
+      gzip_tmp = tempfile.mkstemp()
+      gzip_path = gzip_tmp[1]
+      # Check for temp space. Assume the compressed object is at most 2x
+      # the size of the object (normally should compress to smaller than
+      # the object)
+      if self.CheckFreeSpace(gzip_path) < 2*int(os.path.getsize(src_key.name)):
+        raise CommandException('Inadequate temp space available to compress '
+                               '%s' % src_key.name)
+      the_gzip = gzip.open(gzip_path, 'wb')
+      the_gzip.writelines(src_key.fp)
+      the_gzip.close()
+      headers['Content-Encoding'] = 'gzip'
+      (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
+          open(gzip_path, 'rb'), dst_uri, headers, canned_acl)
+      os.unlink(gzip_path)
+    else:
+      (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
+          src_key.fp, dst_uri, headers, canned_acl)
+    return (elapsed_time, bytes_transferred)
+
+  def DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers):
+    (cb, num_cb, res_download_handler) = self.GetTransferHandlers(
+        src_uri, src_key, src_key.size, False)
+    file_name = dst_uri.object_name
+    dir_name = os.path.dirname(file_name)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+    if res_download_handler:
+      fp = open(file_name, 'ab')
+    else:
+      fp = open(file_name, 'wb')
+    start_time = time.time()
+    src_key.get_contents_to_file(fp, headers=headers, cb=cb, num_cb=num_cb,
+                                 res_download_handler=res_download_handler)
+    end_time = time.time()
+    if res_download_handler:
+      bytes_transferred = (
+          src_key.size - res_download_handler.download_start_point)
+    else:
+      bytes_transferred = src_key.size
+    return (end_time - start_time, bytes_transferred)
+
+  def CopyFileToFile(self, src_key, dst_uri, headers):
+    dst_key = dst_uri.new_key(False, headers)
+    start_time = time.time()
+    dst_key.set_contents_from_file(src_key.fp, headers)
+    end_time = time.time()
+    return (end_time - start_time, os.path.getsize(src_key.fp.name))
+
+  def PerformCrossProviderObjectCopy(self, sub_opts, src_key, src_uri, dst_uri,
+                                     headers, debug):
+    # We implement cross-provider object copy through a local temp file.
+    # Note that a downside of this approach is that killing the gsutil
+    # process partway through and then restarting will always repeat the
+    # download and upload, because the temp file name is different for each
+    # incarnation. (If however you just leave the process running and failures
+    # happen along the way, they will continue to restart and make progress
+    # as long as not too many failures happen in a row with no progress.)
+    tmp = tempfile.NamedTemporaryFile()
+    if self.CheckFreeSpace(tempfile.tempdir) < src_key.size:
+      raise CommandException('Inadequate temp space available to perform the '
+                             'requested copy')
+    start_time = time.time()
+    file_uri = StorageUri('file://%s' % tmp.name, debug=debug, validate=False)
+    try:
+      self.DownloadObjectToFile(src_key, src_uri, file_uri, headers)
+      self.UploadFileToObject(sub_opts, file_uri.get_key(), file_uri, dst_uri,
+                              headers, debug)
+    finally:
+      tmp.close()
+    end_time = time.time()
+    return (end_time - start_time, src_key.size)
+
+  def PerformCopy(self, src_uri, dst_uri, sub_opts=None, headers=None, debug=0):
+    """Helper method for CopyObjsCommand.
+
+    Args:
+      src_uri: source StorageUri.
+      dst_uri: destination StorageUri.
+      sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..2).
+
+    Returns:
+      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    # Make a copy of the input headers each time so we can set a different
+    # MIME type for each object.
+    if headers:
+      headers = headers.copy()
+    else:
+      headers = {}
 
     src_key = src_uri.get_key(False, headers)
     if not src_key:
@@ -538,65 +734,17 @@ class Command(object):
 
     if (src_uri.is_cloud_uri() and dst_uri.is_cloud_uri() and
         src_uri.scheme == dst_uri.scheme):
-      # Object -> object, within same provider (uses x-<provider>-copy-source
-      # metadata HTTP header to request copying at the server). (Note: boto
-      # does not currently provide a way to pass canned_acl when copying from
-      # object-to-object through x-<provider>-copy-source):
-      src_bucket = src_uri.get_bucket(False, headers)
-      dst_bucket = dst_uri.get_bucket(False, headers)
-      start_time = time.time()
-      dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
-                          src_uri.object_name, metadata)
-      end_time = time.time()
-      return (end_time - start_time, src_key.size)
-
-    dst_key = dst_uri.new_key(False, headers)
+      return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri, headers)
     if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
-      # File -> object:
-      fname_parts = src_uri.object_name.split('.')
-      if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
-        gzip_tmp = tempfile.mkstemp()
-        gzip_path = gzip_tmp[1]
-        the_gzip = gzip.open(gzip_path, 'wb')
-        the_gzip.writelines(src_key.fp)
-        the_gzip.close()
-        metadata = headers.copy()
-        metadata['Content-Length'] = str(os.path.getsize(gzip_path))
-        metadata['Content-Encoding'] = 'gzip'
-        start_time = time.time()
-        dst_key.set_contents_from_file(open(gzip_path, 'rb'), headers=metadata,
-                                       policy=canned_acl)
-        end_time = time.time()
-        bytes_transferred = os.path.getsize(gzip_path)
-        os.unlink(gzip_path)
-      else:
-        start_time = time.time()
-        dst_key.set_contents_from_file(src_key.fp, headers=headers,
-                                       policy=canned_acl)
-        end_time = time.time()
-        bytes_transferred = os.path.getsize(src_key.fp.name)
-      return (end_time - start_time, bytes_transferred)
+      return self.UploadFileToObject(sub_opts, src_key, src_uri, dst_uri,
+                                     headers, debug)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
-      # Object -> file:
-      start_time = time.time()
-      src_key.get_file(dst_key.fp, headers)
-      end_time = time.time()
-      return (end_time - start_time, src_key.size)
+      return self.DownloadObjectToFile(src_key, src_uri, dst_uri, headers)
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
-      # File -> file:
-      start_time = time.time()
-      dst_key.set_contents_from_file(src_key.fp, metadata)
-      end_time = time.time()
-      return (end_time - start_time, os.path.getsize(src_key.fp.name))
+      return self.CopyFileToFile(src_key, dst_uri, headers)
     else:
-      # We implement cross-provider object copy through a local temp file:
-      tmp = tempfile.TemporaryFile()
-      start_time = time.time()
-      src_key.get_file(tmp, headers)
-      tmp.seek(0)
-      dst_key.set_contents_from_file(tmp, metadata)
-      end_time = time.time()
-      return (end_time - start_time, src_key.size)
+      return self.PerformCrossProviderObjectCopy(sub_opts, src_key, src_uri,
+                                                 dst_uri, headers, debug)
 
   def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
                                    debug=0):
@@ -645,7 +793,7 @@ class Command(object):
     should_recurse = False
     if sub_opts:
       for o, unused_a in sub_opts:
-        if o == '-r':
+        if o == '-r' or o == '-R':
           should_recurse = True
 
     # Step 1.
@@ -855,7 +1003,7 @@ class Command(object):
                  (exp_src_uri.uri, new_dst_uri.uri))
         else:
           (elapsed_time, bytes_transferred) = self.PerformCopy(
-              exp_src_uri, new_dst_uri, sub_opts, headers)
+              exp_src_uri, new_dst_uri, sub_opts, headers, debug)
           total_elapsed_time += elapsed_time
           total_bytes_transferred += bytes_transferred
     if debug == 3:
@@ -982,7 +1130,7 @@ class Command(object):
       if obj.metadata:
         for name in obj.metadata:
           print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
-      print '\tMD5:\t%s' % obj.etag.strip('"\'')
+      print '\tEtag:\t%s' % obj.etag.strip('"\'')
       print '\tACL:\t%s' % StorageUri(uri_str, debug=debug).get_acl(False,
                                                                     headers)
       return obj.size

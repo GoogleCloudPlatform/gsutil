@@ -115,9 +115,9 @@ class GsutilCpTests(unittest.TestCase):
 
     # Create the test files in src directory.
     cls.all_src_file_paths = []
-    cls.nested_child_file_paths = ['f0', 'f1', 'f2', 'dir0/dir1/nested']
-    cls.non_nested_file_names = ['f0', 'f1', 'f2']
-    file_names = ['f0', 'f1', 'f2', 'dir0%sdir1%snested' % (os.sep, os.sep)]
+    cls.nested_child_file_paths = ['f0', 'f1', 'f2.txt', 'dir0/dir1/nested']
+    cls.non_nested_file_names = ['f0', 'f1', 'f2.txt']
+    file_names = ['f0', 'f1', 'f2.txt', 'dir0%sdir1%snested' % (os.sep, os.sep)]
     file_paths = ['%s%s' % (cls.src_dir_root, f) for f in file_names]
     for file_path in file_paths:
       open(file_path, 'w')
@@ -248,6 +248,20 @@ class GsutilCpTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('file://%s%s' % (self.dst_dir_root, 'nested'),
                      actual[0].uri)
+
+  def TestCopyingCompressedFileToBucket(self):
+    """Tests copying one file with compression to a bucket"""
+    src_file = self.SrcFile('f2.txt')
+    command_inst.CopyObjsCommand([src_file, self.dst_bucket_uri.uri],
+                                 sub_opts=[('-z', 'txt')])
+    actual = list(str(u) for u in
+                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    self.assertEqual(1, len(actual))
+    expected_dst_uri = self.dst_bucket_uri.clone_replace_name('f2.txt')
+    self.assertEqual(expected_dst_uri.uri, actual[0])
+    dst_key = expected_dst_uri.get_key()
+    dst_key.open_read()
+    self.assertEqual('gzip', dst_key.content_encoding)
 
   def TestCopyingObjectToObject(self):
     """Tests copying an object to an object"""
@@ -427,11 +441,8 @@ class GsutilCpTests(unittest.TestCase):
     command_inst.VerCommand([])
 
 if __name__ == '__main__':
-  python_version = float('%d.%d%d' %(sys.version_info[0], sys.version_info[1],
-                                     sys.version_info[2]))
-  if python_version < 2.51:
-    sys.stderr.write('These tests must be run on at least Python 2.5.1\n')
-    sys.exit(1)
+  if sys.version_info[:3] < (2, 5, 1):
+    sys.exit('These tests must be run on at least Python 2.5.1\n')
   test_loader = unittest.TestLoader()
   test_loader.testMethodPrefix = 'Test'
   suite = test_loader.loadTestsFromTestCase(GsutilCpTests)

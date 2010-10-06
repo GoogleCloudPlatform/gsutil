@@ -16,6 +16,7 @@
 
 """Google Storage command line tool."""
 
+import ConfigParser
 import datetime
 import errno
 import getopt
@@ -55,6 +56,7 @@ boto.UserAgent += '/gsutil'
 from boto.exception import BotoClientError
 from boto.exception import InvalidAclError
 from boto.exception import InvalidUriError
+from boto.exception import ResumableUploadException
 from boto.exception import StorageResponseError
 from boto.provider import Provider
 
@@ -78,9 +80,9 @@ SYNOPSIS
     Copy objects:
       cp [-a canned_acl] [-t] [-z ext1,ext2,...] src_uri dst_uri
         - or -
-      cp [-a canned_acl] [-r] [-t] [-z extensions] uri... dst_uri
+      cp [-a canned_acl] [-R] [-t] [-z extensions] uri... dst_uri
         -a Sets named canned_acl when uploaded objects created (list below).
-        -r Causes directories and buckets to be copied recursively.
+        -R Causes directories and buckets to be copied recursively.
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
@@ -177,8 +179,11 @@ prelude_config_content = (
 #
 """)
 
-additional_config_content = """
+if 'HOME' not in os.environ:
+  OutputAndExit('No HOME environment variable set. gsutil requires this '
+                'variable to be set.')
 
+additional_config_content = """
 [Boto]
 
 # To use a proxy, edit and uncomment the proxy and proxy_port lines. If you
@@ -202,16 +207,25 @@ additional_config_content = """
 # The default is 5. Note: don't set this value to 0, as it will cause boto to
 # fail when reusing HTTP connections.
 #num_retries = <integer value>
+
+
+[GSUtil]
+
+# 'resumable_threshold' specifies the smallest file size [bytes] for which
+# resumable Google Storage transfers are attempted. The default is 1048576
+# (1MB).
+#resumable_threshold = 1048576
+
+# 'resumable_tracker_dir' specifies the base location where resumable
+# transfer tracker files are saved. By default they're in $HOME/.gsutil
+#resumable_tracker_dir = <file path>
 """
 
 
 def CreateBotoConfigFile():
   """Creates a boto config file interactively, containing needed credentials."""
 
-  if 'HOME' in os.environ:
-    config_path = ('%s%s.boto' % (os.environ['HOME'], os.sep))
-  else:
-    config_path = ('.%s.boto' % os.sep)
+  config_path = ('%s%s.boto' % (os.environ['HOME'], os.sep))
   sys.stderr.write('You have no boto config file. This script will create '
                    'one at\n%s\ncontaining your credentials, based on your '
                    'responses to the following questions.\n\n' % config_path)
@@ -296,7 +310,7 @@ def SetupConfigIfNeeded():
 NO_MAX = sys.maxint
 commands = {
     'cat': [command_inst.CatCommand, 0, NO_MAX, 'h', False, True, 0],
-    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:rtz:', True, False, 0],
+    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:rRtz:', True, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blL', False, True, 0],
@@ -337,10 +351,26 @@ def HandleUnknownFailure(debug, e):
   else:
     OutputAndExit('Failure: %s.' % e)
 
+def HandleUnknownFailure(debug, e):
+  # Called if we fall through all known/handled exceptions. Allows us to
+  # print a stacktrace if -D option used.
+  if debug == 3:
+    stack_trace = traceback.format_exc()
+    sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
+                     re.sub('\\n', '\n    ', stack_trace))
+  else:
+    OutputAndExit('Failure: %s.' % e)
+
+
+def HandleCommandException(e):
+  if e.informational:
+    OutputAndExit(e.reason)
+  else:
+    OutputAndExit('CommandException: %s' % e.reason)
+
+
 def main():
-  if float('%d.%d%d'
-           %(sys.version_info[0], sys.version_info[1], sys.version_info[2])
-          ) < 2.51:
+  if sys.version_info[:3] < (2, 5, 1):
     raise CommandException('This tool requires Python 2.5.1 or higher.')
 
   # If user enters no commands just print the usage info.
@@ -402,17 +432,20 @@ def main():
         sys.exit(0)
     if debug == 3:
       command_inst.VerCommand([], None)
-      print 'boto config: %s' % str(boto.config.items('Boto'))
+      config_items = []
+      try:
+        config_items.extend(boto.config.items('Boto'))
+        config_items.extend(boto.config.items('GSUtil'))
+      except ConfigParser.NoSectionError:
+        pass
+      print 'config: %s' % str(config_items)
     command_func(args, sub_opts, headers, debug)
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
   except CommandException, e:
-    if e.informational:
-      OutputAndExit(e.reason)
-    else:
-      OutputAndExit('CommandException: %s' % e.reason)
+    HandleCommandException(e)
   except getopt.GetoptError, e:
-    raise CommandException(e.msg)
+    HandleCommandException(CommandException(e.msg))
   except InvalidAclError, e:
     OutputAndExit('InvalidAclError: %s.' % e.message)
   except InvalidUriError, e:
@@ -432,6 +465,8 @@ def main():
     else:
       OutputAndExit('%s:: status=%d, code=%s, reason=%s.' %
                     (exc_name, e.status, e.code, e.reason))
+  except ResumableUploadException, e:
+    OutputAndExit('ResumableUploadException: %s.' % e.message)
   except AttributeError, e:
     if e.message.find('secret_access_key') != -1:
       OutputAndExit('Missing credentials for the given URI(s). Does your '
