@@ -550,7 +550,7 @@ class Command(object):
     return (cb, num_cb, transfer_handler)
 
   def CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
-    # Do Object -> object copy, within same provider (uses
+    # Do Object -> object copy within same provider (uses
     # x-<provider>-copy-source metadata HTTP header to request copying at the
     # server). (Note: boto does not currently provide a way to pass canned_acl
     # when copying from object-to-object through x-<provider>-copy-source)
@@ -732,10 +732,14 @@ class Command(object):
     # Separately handle cases to avoid extra file and network copying of
     # potentially very large files/objects.
 
-    if (src_uri.is_cloud_uri() and dst_uri.is_cloud_uri() and
-        src_uri.scheme == dst_uri.scheme):
-      return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri, headers)
-    if src_uri.is_file_uri() and dst_uri.is_cloud_uri():
+    if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
+        if src_uri.scheme == dst_uri.scheme:
+          return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
+                                               headers)
+        else:
+          return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
+                                               dst_uri, headers, debug)
+    elif src_uri.is_file_uri() and dst_uri.is_cloud_uri():
       return self.UploadFileToObject(sub_opts, src_key, src_uri, dst_uri,
                                      headers, debug)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
@@ -743,8 +747,7 @@ class Command(object):
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
       return self.CopyFileToFile(src_key, dst_uri, headers)
     else:
-      return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
-                                           dst_uri, headers, debug)
+      raise CommandException('Unexpected src/dest case')
 
   def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
                                    debug=0):
