@@ -318,11 +318,12 @@ class GsutilCpTests(unittest.TestCase):
     """Attempts to an object atop itself"""
     obj_uri = boto.storage_uri('%sobj' % self.dst_bucket_uri)
     self.CreateEmptyObject(obj_uri)
-    command_inst.CopyObjsCommand(['%s*' % self.dst_bucket_uri.uri,
-                                  self.dst_bucket_uri.uri])
-    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
-    self.assertEqual(1, len(actual))
-    self.assertEqual('obj', actual[0].object_name)
+    try:
+      command_inst.CopyObjsCommand(['%s*' % self.dst_bucket_uri.uri,
+                                    self.dst_bucket_uri.uri])
+      self.fail('Did not get expected CommandException')
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('are the same object - abort'), -1)
 
   def TestAttemptCopyingToMultiMatchWildcard(self):
     """Attempts to copy where dst wildcard matches >1 obj"""

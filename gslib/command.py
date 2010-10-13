@@ -133,7 +133,7 @@ class Command(object):
     sys.exit(0)
 
   def InsistUriNamesContainer(self, command, uri):
-    """Prints error and exists if URI doesn't name a directory or bucket.
+    """Checks that URI names a directory or bucket.
 
     Args:
       command: command being run
@@ -678,8 +678,8 @@ class Command(object):
     end_time = time.time()
     return (end_time - start_time, os.path.getsize(src_key.fp.name))
 
-  def PerformCrossProviderObjectCopy(self, sub_opts, src_key, src_uri, dst_uri,
-                                     headers, debug):
+  def CopyObjToObjDiffProvider(self, sub_opts, src_key, src_uri, dst_uri,
+                               headers, debug):
     # We implement cross-provider object copy through a local temp file.
     # Note that a downside of this approach is that killing the gsutil
     # process partway through and then restarting will always repeat the
@@ -743,8 +743,8 @@ class Command(object):
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
       return self.CopyFileToFile(src_key, dst_uri, headers)
     else:
-      return self.PerformCrossProviderObjectCopy(sub_opts, src_key, src_uri,
-                                                 dst_uri, headers, debug)
+      return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
+                                           dst_uri, headers, debug)
 
   def ExpandWildcardsAndContainers(self, uri_strs, sub_opts=None, headers=None,
                                    debug=0):
@@ -832,9 +832,11 @@ class Command(object):
 
   def ErrorCheckCopyRequest(self, src_uri_expansion, dst_uri_str, headers,
                             debug, command='cp'):
-    """Checks copy request for problems, and builds needed dst_uri.
-
-    Prints error message and exists if there's a problem.
+    """Checks copy request for problems, and builds needed base_dst_uri.
+    
+    base_dst_uri is the base uri to be used if it's a multi-object copy, e.g.,
+    the URI for the destination bucket. The actual dst_uri can then be
+    constructed from the src_uri and this base_dst_uri.
 
     Args:
       src_uri_expansion: result from ExpandWildcardsAndContainers call.
@@ -844,7 +846,7 @@ class Command(object):
       command: name of command on behalf of which this call is running.
 
     Returns:
-      (dst_uri to use for copy, bool indicator of multi-source request).
+      (base_dst_uri to use for copy, bool indicator of multi-source request).
 
     Raises:
       CommandException: if errors found.
@@ -859,15 +861,15 @@ class Command(object):
       if len(matches) > 1:
         raise CommandException('Destination (%s) matches more than 1 URI' %
                                dst_uri_str)
-      dst_uri = matches[0]
+      base_dst_uri = matches[0]
     else:
-      dst_uri = StorageUri(dst_uri_str, debug=debug)
+      base_dst_uri = StorageUri(dst_uri_str, debug=debug)
 
-    # If this is a multi-object copy request ensure dst_uri names a container.
+    # If this is a multi-object copy request ensure base_dst_uri names a container.
     multi_src_request = (len(src_uri_expansion) > 1 or
                          len(src_uri_expansion.values()[0]) > 1)
     if multi_src_request:
-      self.InsistUriNamesContainer(command, dst_uri)
+      self.InsistUriNamesContainer(command, base_dst_uri)
 
     # Make sure entire expansion didn't result in nothing to copy. This can
     # happen if user request copying a directory w/o -r option, for example.
@@ -879,14 +881,25 @@ class Command(object):
     if not have_work:
       raise CommandException('Nothing to copy')
 
-    return (dst_uri, multi_src_request)
+    # Ensure no src/dest pairs would overwrite src. Note that this is
+    # more restrictive than the UNIX 'cp' command (which would, for example,
+    # allow "mv * dir" and just skip the implied move dir dir). We consider it
+    # more risky to allow such partial completion operations in cloud copies.
+    for src_uri in iter(src_uri_expansion):
+      for exp_src_uri in src_uri_expansion[src_uri]:
+        new_dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
+        if self.SrcDstSame(exp_src_uri, new_dst_uri):
+          raise CommandException('cp: "%s" and "%s" are the same object - '
+                                 'abort.' % (exp_src_uri.uri, new_dst_uri.uri))
+
+    return (base_dst_uri, multi_src_request)
 
   def HandleMultiSrcCopyRequst(self, src_uri_expansion, dst_uri):
     """Rewrites dst_uri and creates dest dir as needed for multi-source copy.
 
     Args:
       src_uri_expansion: result from ExpandWildcardsAndContainers call.
-      dst_uri: destination StorageUri.
+      base_dst_uri: uri constructed by ErrorCheckCopyRequest() call.
 
     Returns:
       dst_uri to use for copy.
@@ -937,6 +950,47 @@ class Command(object):
     else:
       return src_uri.uri == dst_uri.uri
 
+  def ConstructDstUri(self, src_uri, exp_src_uri, base_dst_uri):
+    """Constructs a destination URI for CopyObjsCommand.
+
+    Args:
+      src_uri: src_uri to be copied.
+      exp_src_uri: single URI from wildcard expansion of src_uri.
+      base_dst_uri: uri constructed by ErrorCheckCopyRequest() call.
+
+    Returns:
+      dst_uri to use for copy.
+    """
+    if base_dst_uri.names_container():
+      # To match naming semantics of UNIX 'cp' command, copying files
+      # to buckets/dirs should result in objects/files named by just the
+      # final filename component; while copying directories should result
+      # in objects/files mirroring the directory hierarchy. Example of the
+      # first case:
+      #   gsutil cp dir1/file1 gs://bucket
+      # should create object gs://bucket/file1
+      # Example of the second case:
+      #   gsutil cp dir1/dir2 gs://bucket
+      # should create object gs://bucket/dir2/file2 (assuming dir1/dir2
+      # contains file2).
+      if src_uri.names_container():
+        dst_path_start = (src_uri.object_name.rstrip(os.sep)
+                          .rpartition(os.sep)[-1])
+        start_pos = exp_src_uri.object_name.find(dst_path_start)
+        dst_key_name = exp_src_uri.object_name[start_pos:]
+      else:
+        # src is a file or object, so use final component of src name.
+        dst_key_name = os.path.basename(exp_src_uri.object_name)
+      if base_dst_uri.is_file_uri():
+        # dst names a directory, so append src obj name to dst obj name.
+        dst_key_name = '%s%s%s' % (base_dst_uri.object_name, os.sep,
+                                   dst_key_name)
+        self.CheckForDirFileConflict(exp_src_uri, dst_key_name)
+    else:
+      # dest is an object or file: use dst obj name
+      dst_key_name = base_dst_uri.object_name
+    return base_dst_uri.clone_replace_name(dst_key_name)
+
   def CopyObjsCommand(self, args, sub_opts=None, headers=None, debug=0,
                       command='cp'):
     """Implementation of cp command.
@@ -955,57 +1009,23 @@ class Command(object):
     src_uri_expansion = self.ExpandWildcardsAndContainers(
         args[0:len(args)-1], sub_opts, headers, debug)
 
-    # Check for various problems, and determine dst_uri based on request.
-    (dst_uri, multi_src_request) = self.ErrorCheckCopyRequest(src_uri_expansion,
-                                                              args[-1], headers,
-                                                              debug, command)
-
-    # Rewrite dst_uri and create dest dir as needed for multi-source copy.
+    # Check for various problems and determine base_dst_uri based for request.
+    (base_dst_uri, multi_src_request) = self.ErrorCheckCopyRequest(
+        src_uri_expansion, args[-1], headers, debug, command)
+    # Rewrite base_dst_uri and create dest dir as needed for multi-source copy.
     if multi_src_request:
-      dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion, dst_uri)
+      base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion, base_dst_uri)
 
     # Now iterate over expanded src URIs, and perform copy operations.
     total_elapsed_time = total_bytes_transferred = 0
     for src_uri in iter(src_uri_expansion):
       for exp_src_uri in src_uri_expansion[src_uri]:
         print 'Copying %s...' % exp_src_uri
-        if dst_uri.names_container():
-          # To match naming semantics of UNIX 'cp' command, copying files
-          # to buckets/dirs should result in objects/files named by just the
-          # final filename component; while copying directories should result
-          # in objects/files mirroring the directory hierarchy. Example of the
-          # first case:
-          #   gsutil cp dir1/file1 gs://bucket
-          # should create object gs://bucket/file1
-          # Example of the second case:
-          #   gsutil cp dir1/dir2 gs://bucket
-          # should create object gs://bucket/dir2/file2 (assuming dir1/dir2
-          # contains file2).
-          if src_uri.names_container():
-            dst_path_start = (src_uri.object_name.rstrip(os.sep)
-                              .rpartition(os.sep)[-1])
-            start_pos = exp_src_uri.object_name.find(dst_path_start)
-            dst_key_name = exp_src_uri.object_name[start_pos:]
-          else:
-            # src is a file or object, so use final component of src name.
-            dst_key_name = os.path.basename(exp_src_uri.object_name)
-          if dst_uri.is_file_uri():
-            # dst names a directory, so append src obj name to dst obj name.
-            dst_key_name = '%s%s%s' % (dst_uri.object_name, os.sep,
-                                       dst_key_name)
-            self.CheckForDirFileConflict(exp_src_uri, dst_key_name)
-        else:
-          # dest is an object or file: use dst obj name
-          dst_key_name = dst_uri.object_name
-        new_dst_uri = dst_uri.clone_replace_name(dst_key_name)
-        if self.SrcDstSame(exp_src_uri, new_dst_uri):
-          print ('cp: "%s" and "%s" are the same object - skipping.' %
-                 (exp_src_uri.uri, new_dst_uri.uri))
-        else:
-          (elapsed_time, bytes_transferred) = self.PerformCopy(
-              exp_src_uri, new_dst_uri, sub_opts, headers, debug)
-          total_elapsed_time += elapsed_time
-          total_bytes_transferred += bytes_transferred
+        dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
+        (elapsed_time, bytes_transferred) = self.PerformCopy(
+            exp_src_uri, dst_uri, sub_opts, headers, debug)
+        total_elapsed_time += elapsed_time
+        total_bytes_transferred += bytes_transferred
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
@@ -1266,7 +1286,7 @@ class Command(object):
         exp_arg_list.append(uri.uri)
 
     self.CopyObjsCommand(exp_arg_list, sub_opts, headers, debug, 'mv')
-    self.RemoveObjsCommand(exp_arg_list[0:1], sub_opts, headers, debug)
+    self.RemoveObjsCommand(exp_arg_list[0:-1], sub_opts, headers, debug)
 
   def RemoveBucketsCommand(self, args, unused_sub_opts=None, headers=None,
                            debug=0):
