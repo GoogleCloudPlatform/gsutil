@@ -30,16 +30,16 @@ import tempfile
 import time
 import unittest
 
-sys.path.insert(0, '.')
-sys.path.insert(0, 'boto')
-sys.path.insert(0, 'gslib')
 import boto
+from boto.tests import mock_storage_service
+from gslib import test_util
 from gslib.command import Command
 from gslib.exception import CommandException
-from wildcard_iterator import wildcard_iterator
-from wildcard_iterator import WildcardException
+import wildcard_iterator
 
-command_inst = Command('.', '.', '', '')
+command_inst = Command(
+    '.', '.', '', '',
+    bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri)
 
 # Constant option for specifying a recursive copy.
 RECURSIVE = [('-r', '')]
@@ -55,9 +55,12 @@ class GsutilCpTests(unittest.TestCase):
   def tearDown(cls):
     """Deletes any objects or files created by last test run"""
     try:
-      for key_uri in wildcard_iterator('%s*' % cls.dst_bucket_uri):
+      for key_uri in test_util.test_wildcard_iterator('%s*' %
+                                                      cls.dst_bucket_uri):
         key_uri.delete_key()
-    except WildcardException:
+    # For some reason trying to catch except
+    # wildcard_iterator.WildcardException doesn't work here.
+    except Exception:
       # Ignore cleanup failures.
       pass
     # Recursively delete dst dir and then re-create it, so in effect we
@@ -93,15 +96,15 @@ class GsutilCpTests(unittest.TestCase):
     cls.tmpdir_prefix = 'tmp_gstest'
 
     # Create the test buckets.
-    cls.src_bucket_uri = boto.storage_uri('%s_src' % cls.uri_base_str)
-    cls.dst_bucket_uri = boto.storage_uri('%s_dst' % cls.uri_base_str)
+    cls.src_bucket_uri = test_util.test_storage_uri('%s_src' % cls.uri_base_str)
+    cls.dst_bucket_uri = test_util.test_storage_uri('%s_dst' % cls.uri_base_str)
     cls.src_bucket_uri.create_bucket()
     cls.dst_bucket_uri.create_bucket()
 
     # Create the test objects in src bucket.
     cls.all_src_obj_uris = []
     for i in range(3):
-      obj_uri = boto.storage_uri('%sobj%d' % (cls.src_bucket_uri, i))
+      obj_uri = test_util.test_storage_uri('%sobj%d' % (cls.src_bucket_uri, i))
       cls.CreateEmptyObject(obj_uri)
       cls.all_src_obj_uris.append(obj_uri)
 
@@ -136,15 +139,17 @@ class GsutilCpTests(unittest.TestCase):
     cls.tearDown()
     # Now delete src objects and files, and all buckets and dirs.
     try:
-      for key_uri in wildcard_iterator('%s*' % cls.src_bucket_uri):
+      for key_uri in test_util.test_wildcard_iterator('%s*' %
+                                                      cls.src_bucket_uri):
         key_uri.delete_key()
-    except WildcardException:
+    except wildcard_iterator.WildcardException:
       # Ignore cleanup failures.
       pass
     try:
-      for key_uri in wildcard_iterator('%s**' % cls.src_dir_root):
+      for key_uri in test_util.test_wildcard_iterator('%s**' %
+                                                      cls.src_dir_root):
         key_uri.delete_key()
-    except WildcardException:
+    except wildcard_iterator.WildcardException:
       # Ignore cleanup failures.
       pass
     cls.src_bucket_uri.delete_bucket()
@@ -156,7 +161,8 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying one top-level file to a bucket"""
     src_file = self.SrcFile('f0')
     command_inst.CopyObjsCommand([src_file, self.dst_bucket_uri.uri])
-    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    actual = list(test_util.test_wildcard_iterator('%s*' %
+                                                   self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
@@ -164,7 +170,8 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying one nested file to a bucket"""
     src_file = self.SrcFile('nested')
     command_inst.CopyObjsCommand([src_file, self.dst_bucket_uri.uri])
-    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    actual = list(test_util.test_wildcard_iterator('%s*' %
+                                                   self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     # File should be final comp ('nested'), w/o nested path (dir0/...).
     self.assertEqual('nested', actual[0].object_name)
@@ -174,7 +181,8 @@ class GsutilCpTests(unittest.TestCase):
     command_inst.CopyObjsCommand([self.src_dir_root, self.dst_bucket_uri.uri],
                                  RECURSIVE)
     actual = set(str(u) for u in
-                 wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+                 test_util.test_wildcard_iterator('%s*' %
+                                                  self.dst_bucket_uri.uri))
     expected = set()
     for file_path in self.all_src_file_paths:
       start_tmp_pos = file_path.find(self.tmpdir_prefix)
@@ -192,7 +200,8 @@ class GsutilCpTests(unittest.TestCase):
     command_inst.CopyObjsCommand(['%sdir0%sdir1' % (self.src_dir_root, os.sep),
                                   self.dst_bucket_uri.uri], RECURSIVE)
     actual = list((str(u) for u in
-                   wildcard_iterator('%s*' % self.dst_bucket_uri.uri)))
+                   test_util.test_wildcard_iterator('%s*' %
+                                                    self.dst_bucket_uri.uri)))
     self.assertEqual(1, len(actual))
     self.assertEqual('%sdir1%snested' % (self.dst_bucket_uri.uri, os.sep),
                      actual[0])
@@ -201,7 +210,9 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying from a bucket to a directory"""
     command_inst.CopyObjsCommand([self.src_bucket_uri.uri,
                                   self.dst_dir_root], RECURSIVE)
-    actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
+    actual = set(
+        str(u) for u in test_util.test_wildcard_iterator('%s**' %
+                                                         self.dst_dir_root))
     expected = set()
     for uri in self.all_src_obj_uris:
       expected.add('file://%s%s/%s' % (self.dst_dir_root, uri.bucket_name,
@@ -213,7 +224,8 @@ class GsutilCpTests(unittest.TestCase):
     command_inst.CopyObjsCommand([self.src_bucket_uri.uri,
                                   self.dst_bucket_uri.uri], RECURSIVE)
     actual = set(str(u) for u in
-                 wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+                 test_util.test_wildcard_iterator('%s*' %
+                                                  self.dst_bucket_uri.uri))
     expected = set()
     for uri in self.all_src_obj_uris:
       expected.add('%s%s' % (self.dst_bucket_uri.uri, uri.object_name))
@@ -223,7 +235,9 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying from a directory to a directory"""
     command_inst.CopyObjsCommand([self.src_dir_root, self.dst_dir_root],
                                  RECURSIVE)
-    actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
+    actual = set(
+        str(u) for u in test_util.test_wildcard_iterator('%s**' %
+                                                         self.dst_dir_root))
     expected = set()
     for file_path in self.all_src_file_paths:
       start_tmp_pos = file_path.find(self.tmpdir_prefix)
@@ -235,7 +249,9 @@ class GsutilCpTests(unittest.TestCase):
   def TestCopyingFilesAndDirNonRecursive(self):
     """Tests copying containing files and a directory without -r"""
     command_inst.CopyObjsCommand(['%s*' % self.src_dir_root, self.dst_dir_root])
-    actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
+    actual = set(
+        str(u) for u in test_util.test_wildcard_iterator('%s**' %
+                                                         self.dst_dir_root))
     expected = set(['file://%s%s' % (self.dst_dir_root, f)
                     for f in self.non_nested_file_names])
     self.assertEqual(expected, actual)
@@ -244,7 +260,7 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying one file to a directory"""
     src_file = self.SrcFile('nested')
     command_inst.CopyObjsCommand([src_file, self.dst_dir_root])
-    actual = list(wildcard_iterator('%s*' % self.dst_dir_root))
+    actual = list(test_util.test_wildcard_iterator('%s*' % self.dst_dir_root))
     self.assertEqual(1, len(actual))
     self.assertEqual('file://%s%s' % (self.dst_dir_root, 'nested'),
                      actual[0].uri)
@@ -254,8 +270,9 @@ class GsutilCpTests(unittest.TestCase):
     src_file = self.SrcFile('f2.txt')
     command_inst.CopyObjsCommand([src_file, self.dst_bucket_uri.uri],
                                  sub_opts=[('-z', 'txt')])
-    actual = list(str(u) for u in
-                  wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    actual = list(
+        str(u) for u in test_util.test_wildcard_iterator(
+            '%s*' % self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     expected_dst_uri = self.dst_bucket_uri.clone_replace_name('f2.txt')
     self.assertEqual(expected_dst_uri.uri, actual[0])
@@ -267,7 +284,8 @@ class GsutilCpTests(unittest.TestCase):
     """Tests copying an object to an object"""
     command_inst.CopyObjsCommand(['%sobj1' % self.src_bucket_uri.uri,
                                   self.dst_bucket_uri.uri])
-    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    actual = list(test_util.test_wildcard_iterator('%s*' %
+                                                   self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     self.assertEqual('obj1', actual[0].object_name)
 
@@ -276,7 +294,8 @@ class GsutilCpTests(unittest.TestCase):
     command_inst.CopyObjsCommand(['%s*' % self.src_bucket_uri.uri,
                                   '%s*' % self.src_dir_root,
                                   self.dst_dir_root], RECURSIVE)
-    actual = set(str(u) for u in wildcard_iterator('%s**' % self.dst_dir_root))
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_dir_root))
     expected = set()
     for uri in self.all_src_obj_uris:
       expected.add('file://%s%s' % (self.dst_dir_root, uri.object_name))
@@ -290,7 +309,8 @@ class GsutilCpTests(unittest.TestCase):
                                   '%s*' % self.src_dir_root,
                                   self.dst_bucket_uri.uri], RECURSIVE)
     actual = set(str(u) for u in
-                 wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+                 test_util.test_wildcard_iterator(
+                     '%s*' % self.dst_bucket_uri.uri))
     expected = set()
     for uri in self.all_src_obj_uris:
       expected.add('%s%s' % (self.dst_bucket_uri.uri, uri.object_name))
@@ -316,7 +336,7 @@ class GsutilCpTests(unittest.TestCase):
 
   def TestAttemptCopyingOverlappingSrcDst(self):
     """Attempts to an object atop itself"""
-    obj_uri = boto.storage_uri('%sobj' % self.dst_bucket_uri)
+    obj_uri = test_util.test_storage_uri('%sobj' % self.dst_bucket_uri)
     self.CreateEmptyObject(obj_uri)
     try:
       command_inst.CopyObjsCommand(['%s*' % self.dst_bucket_uri.uri,
@@ -348,8 +368,10 @@ class GsutilCpTests(unittest.TestCase):
     """Attempts to copy objects that cause a file/directory conflict"""
     # Create objects with name conflicts (a/b and a). Use 'dst' bucket because
     # it gets cleared after each test.
-    self.CreateEmptyObject(boto.storage_uri('%sa/b' % self.dst_bucket_uri))
-    self.CreateEmptyObject(boto.storage_uri('%sa' % self.dst_bucket_uri))
+    self.CreateEmptyObject(test_util.test_storage_uri(
+        '%sa/b' % self.dst_bucket_uri))
+    self.CreateEmptyObject(test_util.test_storage_uri(
+        '%sa' % self.dst_bucket_uri))
     try:
       command_inst.CopyObjsCommand([self.dst_bucket_uri.uri,
                                     self.dst_dir_root], RECURSIVE)
@@ -364,7 +386,8 @@ class GsutilCpTests(unittest.TestCase):
     os.mkdir('%ssubdir' % self.dst_dir_root)
     # Create an object that conflicts with this dest subdir. Use 'dst' bucket
     # because it gets cleared after each test.
-    self.CreateEmptyObject(boto.storage_uri('%ssubdir' % self.dst_bucket_uri))
+    self.CreateEmptyObject(test_util.test_storage_uri(
+        '%ssubdir' % self.dst_bucket_uri))
     try:
       command_inst.CopyObjsCommand([self.dst_bucket_uri.uri,
                                     self.dst_dir_root], RECURSIVE)
@@ -382,10 +405,12 @@ class GsutilCpTests(unittest.TestCase):
     """
     # Create a single object; use 'dst' bucket because it gets cleared after
     # each test.
-    self.CreateEmptyObject(boto.storage_uri('%sold' % self.dst_bucket_uri))
+    self.CreateEmptyObject(
+        test_util.test_storage_uri('%sold' % self.dst_bucket_uri))
     command_inst.MoveObjsCommand(['%s*' % self.dst_bucket_uri.uri,
                                   '%snew' % self.dst_bucket_uri.uri])
-    actual = list(wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+    actual = list(
+        test_util.test_wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     self.assertEqual('new', actual[0].object_name)
 
@@ -409,8 +434,8 @@ class GsutilCpTests(unittest.TestCase):
     """Test MakeBucketsCommand on existing bucket"""
     try:
       command_inst.MakeBucketsCommand([self.dst_bucket_uri.uri])
-      self.fail('Did not get expected GSCreateError')
-    except boto.exception.GSCreateError, e:
+      self.fail('Did not get expected StorageCreateError')
+    except boto.exception.StorageCreateError, e:
       self.assertEqual(e.status, 409)
 
   def TestRemoveBucketsCommand(self):
@@ -418,8 +443,8 @@ class GsutilCpTests(unittest.TestCase):
     try:
       command_inst.RemoveBucketsCommand(
           ['gs://non_existent_%s' % self.dst_bucket_uri.bucket_name])
-      self.fail('Did not get expected GSResponseError')
-    except boto.exception.GSResponseError, e:
+      self.fail('Did not get expected StorageResponseError')
+    except boto.exception.StorageResponseError, e:
       self.assertEqual(e.status, 404)
 
   def TestRemoveObjsCommand(self):

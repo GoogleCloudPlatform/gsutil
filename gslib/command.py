@@ -34,10 +34,11 @@ from boto import handler
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto.pyami.config import BotoConfigLocations
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
+from boto.storage_uri import BucketStorageUri
 from exception import CommandException
+import wildcard_iterator
 from wildcard_iterator import ContainsWildcard
 from wildcard_iterator import ResultType
-from wildcard_iterator import wildcard_iterator
 from wildcard_iterator import WildcardException
 
 
@@ -60,6 +61,7 @@ EXP_STRINGS = [
 
 ONE_MB = 1024*1024
 
+
 def MakeHumanReadable(num):
   """Generates human readable string for a number.
 
@@ -74,24 +76,6 @@ def MakeHumanReadable(num):
     i += 1
   rounded_val = round(num / 2 ** EXP_STRINGS[i][0], 2)
   return '%s %s' % (rounded_val, EXP_STRINGS[i][1])
-
-
-def StorageUri(uri_str, debug=0, validate=True):
-  """Helper to instantiate boto.StorageUri with gsutil default flag values.
-
-  Args:
-    uri_str: StorageUri naming bucket + optional object.
-    debug: debug level to pass in to boto connection (range 0..2).
-    validate: Whether to check for bucket name validity.
-
-  Returns:
-    boto.StorageUri for given uri_str.
-
-  Raises:
-    InvalidUriError: if uri_str not valid.
-  """
-  uri = boto.storage_uri(uri_str, 'file', debug=debug, validate=validate)
-  return uri
 
 
 def UriStrFor(iterated_uri, obj):
@@ -114,7 +98,7 @@ class Command(object):
   """Class that contains all gsutil command code."""
 
   def __init__(self, gsutil_bin_dir, boto_lib_dir, usage_string,
-               config_file_list):
+               config_file_list, bucket_storage_uri_class=BucketStorageUri):
     """Instantiates Command class.
 
     Args:
@@ -122,15 +106,51 @@ class Command(object):
       boto_lib_dir: lib dir where boto runs.
       usage_string: usage string to print when user makes command error.
       config_file_list: config file list returned by GetBotoConfigFileList().
+      bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
+                                Settable for testing/mocking.
     """
     self.gsutil_bin_dir = gsutil_bin_dir
     self.usage_string = usage_string
     self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
+    self.bucket_storage_uri_class = bucket_storage_uri_class
 
   def OutputUsageAndExit(self):
     sys.stderr.write(self.usage_string)
     sys.exit(0)
+
+  def StorageUri(self, uri_str, debug=0, validate=True):
+    """
+    Helper to instantiate boto.StorageUri with gsutil default flag values.
+    Uses self.bucket_storage_uri_class to support mocking/testing.
+
+    Args:
+      uri_str: StorageUri naming bucket + optional object.
+      debug: debug level to pass in to boto connection (range 0..2).
+      validate: Whether to check for bucket name validity.
+
+    Returns:
+      boto.StorageUri for given uri_str.
+
+    Raises:
+      InvalidUriError: if uri_str not valid.
+    """
+    return boto.storage_uri(
+        uri_str, 'file', debug=debug, validate=validate,
+        bucket_storage_uri_class=self.bucket_storage_uri_class)
+
+  def CmdWildcardIterator(self, uri_or_str, result_type=ResultType.URIS,
+                          headers=None, debug=0):
+    """
+    Helper to instantiate gslib.WildcardIterator, passing
+    self.bucket_storage_uri_class to support mocking/testing.
+    Args are same as gslib.WildcardIterator interface, but without the
+    bucket_storage_uri_class param (which is instead filled in from Command
+    class state).
+    """
+    return wildcard_iterator.wildcard_iterator(
+        uri_or_str, result_type=result_type, headers=headers, debug=debug,
+        bucket_storage_uri_class=self.bucket_storage_uri_class)
 
   def InsistUriNamesContainer(self, command, uri):
     """Checks that URI names a directory or bucket.
@@ -167,7 +187,8 @@ class Command(object):
 
     printed_one = False
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
         if not uri.object_name:
           raise CommandException('"cat" command must specify objects.')
         if show_header:
@@ -206,7 +227,8 @@ class Command(object):
     # Do a first pass over all matched objects to disallow multi-provider
     # setacl requests, because there are differences in the ACL models.
     for uri_str in uri_args:
-      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
         if not provider:
           provider = uri.scheme
         elif uri.scheme != provider:
@@ -244,7 +266,8 @@ class Command(object):
 
     # Now iterate over URIs and set the ACL on each.
     for uri_str in uri_args:
-      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
         print 'Setting ACL on %s...' % uri
         uri.set_acl(acl_arg, uri.object_name, False, headers)
 
@@ -474,7 +497,8 @@ class Command(object):
       CommandException: if errors encountered.
     """
     # Wildcarding is allowed but must resolve to just one object.
-    uris = list(wildcard_iterator(args[0], headers=headers, debug=debug))
+    uris = list(self.CmdWildcardIterator(args[0], headers=headers,
+                                         debug=debug))
     if len(uris) != 1:
       raise CommandException('Wildcards must resolve to exactly one object for '
                              '"getacl" command.')
@@ -489,6 +513,7 @@ class Command(object):
 
   class FileCopyCallbackHandler(object):
     """Outputs progress info for large copy requests."""
+
     def __init__(self, upload):
       if upload:
         self.announce_text = 'Uploading'
@@ -525,15 +550,15 @@ class Command(object):
       if not os.path.exists(resumable_tracker_dir):
         os.makedirs(resumable_tracker_dir)
       if upload:
-          # Encode the src bucket and key into the tracker file name.
-          res_tracker_file_name = (
-              re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
-                     (key.bucket.name, key.name)))
+        # Encode the src bucket and key into the tracker file name.
+        res_tracker_file_name = (
+            re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
+                   (key.bucket.name, key.name)))
       else:
-          # Encode the fully-qualified src file name into the tracker file name.
-          res_tracker_file_name = (
-              re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
-                     (os.path.realpath(uri.object_name))))
+        # Encode the fully-qualified src file name into the tracker file name.
+        res_tracker_file_name = (
+            re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
+                   (os.path.realpath(uri.object_name))))
       tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
                                  res_tracker_file_name)
       if upload:
@@ -655,7 +680,7 @@ class Command(object):
     file_name = dst_uri.object_name
     dir_name = os.path.dirname(file_name)
     if dir_name and not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+      os.makedirs(dir_name)
     if res_download_handler:
       fp = open(file_name, 'ab')
     else:
@@ -692,7 +717,8 @@ class Command(object):
       raise CommandException('Inadequate temp space available to perform the '
                              'requested copy')
     start_time = time.time()
-    file_uri = StorageUri('file://%s' % tmp.name, debug=debug, validate=False)
+    file_uri = self.StorageUri('file://%s' % tmp.name, debug=debug,
+                               validate=False)
     try:
       self.DownloadObjectToFile(src_key, src_uri, file_uri, headers)
       self.UploadFileToObject(sub_opts, file_uri.get_key(), file_uri, dst_uri,
@@ -733,12 +759,12 @@ class Command(object):
     # potentially very large files/objects.
 
     if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
-        if src_uri.scheme == dst_uri.scheme:
-          return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
-                                               headers)
-        else:
-          return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
-                                               dst_uri, headers, debug)
+      if src_uri.scheme == dst_uri.scheme:
+        return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
+                                             headers)
+      else:
+        return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
+                                             dst_uri, headers, debug)
     elif src_uri.is_file_uri() and dst_uri.is_cloud_uri():
       return self.UploadFileToObject(sub_opts, src_key, src_uri, dst_uri,
                                      headers, debug)
@@ -767,7 +793,7 @@ class Command(object):
       debug: debug level to pass in to boto connection (range 0..2).
 
     Returns:
-      dict mapping StorageUri(uri_str) -> list of StorageUri, for reach input.
+      dict mapping StorageUri -> list of StorageUri, for each input uri_str.
 
       We build a dict of the expansion instead of using a generator to
       iterate incrementally because caller needs to know count before
@@ -802,10 +828,10 @@ class Command(object):
     # Step 1.
     uris_to_expand = []
     for uri_str in uri_strs:
-      uri = StorageUri(uri_str, debug=debug, validate=False)
+      uri = self.StorageUri(uri_str, debug=debug, validate=False)
       if uri.is_file_uri() and ContainsWildcard(uri_str):
-        uris_to_expand.extend(list(wildcard_iterator(uri, headers=headers,
-                                                     debug=debug)))
+        uris_to_expand.extend(list(
+            self.CmdWildcardIterator(uri, headers=headers, debug=debug)))
       else:
         uris_to_expand.append(uri)
 
@@ -829,14 +855,14 @@ class Command(object):
           uri_to_iter = uri.clone_replace_name('*')
       else:
         uri_to_iter = uri
-      result[uri] = list(wildcard_iterator(uri_to_iter, headers=headers,
-                                           debug=debug))
+      result[uri] = list(self.CmdWildcardIterator(
+          uri_to_iter, headers=headers, debug=debug))
     return result
 
   def ErrorCheckCopyRequest(self, src_uri_expansion, dst_uri_str, headers,
                             debug, command='cp'):
     """Checks copy request for problems, and builds needed base_dst_uri.
-    
+
     base_dst_uri is the base uri to be used if it's a multi-object copy, e.g.,
     the URI for the destination bucket. The actual dst_uri can then be
     constructed from the src_uri and this base_dst_uri.
@@ -859,16 +885,16 @@ class Command(object):
         raise CommandException('Provider-only src_uri (%s)')
 
     if ContainsWildcard(dst_uri_str):
-      matches = list(wildcard_iterator(dst_uri_str, headers=headers,
-                                       debug=debug))
+      matches = list(self.CmdWildcardIterator(dst_uri_str, headers=headers,
+                                              debug=debug))
       if len(matches) > 1:
         raise CommandException('Destination (%s) matches more than 1 URI' %
                                dst_uri_str)
       base_dst_uri = matches[0]
     else:
-      base_dst_uri = StorageUri(dst_uri_str, debug=debug)
+      base_dst_uri = self.StorageUri(dst_uri_str, debug=debug)
 
-    # If this is a multi-object copy request ensure base_dst_uri names a container.
+    # If multi-object copy request ensure base_dst_uri names a container.
     multi_src_request = (len(src_uri_expansion) > 1 or
                          len(src_uri_expansion.values()[0]) > 1)
     if multi_src_request:
@@ -902,7 +928,7 @@ class Command(object):
 
     Args:
       src_uri_expansion: result from ExpandWildcardsAndContainers call.
-      base_dst_uri: uri constructed by ErrorCheckCopyRequest() call.
+      dst_uri: uri constructed by ErrorCheckCopyRequest() call.
 
     Returns:
       dst_uri to use for copy.
@@ -1017,7 +1043,8 @@ class Command(object):
         src_uri_expansion, args[-1], headers, debug, command)
     # Rewrite base_dst_uri and create dest dir as needed for multi-source copy.
     if multi_src_request:
-      base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion, base_dst_uri)
+      base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion,
+                                                   base_dst_uri)
 
     # Now iterate over expanded src URIs, and perform copy operations.
     total_elapsed_time = total_bytes_transferred = 0
@@ -1097,9 +1124,9 @@ class Command(object):
       print bucket_uri
     else:
       try:
-        for obj in wildcard_iterator(bucket_uri.clone_replace_name('*'),
-                                     ResultType.KEYS, headers=headers,
-                                     debug=debug):
+        for obj in self.CmdWildcardIterator(
+            bucket_uri.clone_replace_name('*'), ResultType.KEYS,
+            headers=headers, debug=debug):
           bucket_objs += 1
           bucket_bytes += obj.size
       except WildcardException, e:
@@ -1154,8 +1181,8 @@ class Command(object):
         for name in obj.metadata:
           print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
       print '\tEtag:\t%s' % obj.etag.strip('"\'')
-      print '\tACL:\t%s' % StorageUri(uri_str, debug=debug).get_acl(False,
-                                                                    headers)
+      print '\tACL:\t%s' % (
+          self.StorageUri(uri_str, debug=debug).get_acl(False, headers))
       return obj.size
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
@@ -1186,12 +1213,12 @@ class Command(object):
     total_objs = 0
     total_bytes = 0
     for uri_str in args:
-      uri = StorageUri(uri_str, debug=debug, validate=False)
+      uri = self.StorageUri(uri_str, debug=debug, validate=False)
 
       if not uri.bucket_name:
         # Provider URI: add bucket wildcard to list buckets.
-        for uri in wildcard_iterator('%s://*' % uri.scheme, headers=headers,
-                                     debug=debug):
+        for uri in self.CmdWildcardIterator('%s://*' % uri.scheme,
+                                            headers=headers, debug=debug):
           (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri, listing_style,
                                                              headers=headers,
                                                              debug=debug)
@@ -1201,7 +1228,8 @@ class Command(object):
       elif not uri.object_name:
         if get_bucket_info:
           # ls -b request on provider+bucket URI: List info about bucket(s).
-          for uri in wildcard_iterator(uri, headers=headers, debug=debug):
+          for uri in self.CmdWildcardIterator(uri, headers=headers,
+                                              debug=debug):
             (bucket_objs, bucket_bytes) = self.PrintBucketInfo(uri,
                                                                listing_style,
                                                                headers=headers,
@@ -1210,17 +1238,17 @@ class Command(object):
             total_objs += bucket_objs
         else:
           # ls request on provider+bucket URI: List objects in the bucket(s).
-          for obj in wildcard_iterator(uri.clone_replace_name('*'),
-                                       ResultType.KEYS, headers=headers,
-                                       debug=debug):
+          for obj in self.CmdWildcardIterator(uri.clone_replace_name('*'),
+                                              ResultType.KEYS,
+                                              headers=headers, debug=debug):
             total_bytes += self.PrintObjectInfo(uri, obj, listing_style,
                                                 headers=headers, debug=debug)
             total_objs += 1
 
       else:
         # Provider+bucket+object URI -> list the object(s).
-        for obj in wildcard_iterator(uri, ResultType.KEYS, headers=headers,
-                                     debug=debug):
+        for obj in self.CmdWildcardIterator(uri, ResultType.KEYS,
+                                            headers=headers, debug=debug):
           total_bytes += self.PrintObjectInfo(uri, obj, listing_style,
                                               headers=headers, debug=debug)
           total_objs += 1
@@ -1242,7 +1270,7 @@ class Command(object):
       CommandException: if errors encountered.
     """
     for bucket_uri_str in args:
-      bucket_uri = StorageUri(bucket_uri_str, debug=debug)
+      bucket_uri = self.StorageUri(bucket_uri_str, debug=debug)
       print 'Creating %s...' % bucket_uri
       bucket_uri.create_bucket(headers)
 
@@ -1263,14 +1291,14 @@ class Command(object):
     """
     # Refuse to delete a bucket or directory src URI (force users to explicitly
     # do that as a separate operation).
-    src_uri_to_check = StorageUri(args[0], debug=debug, validate=False)
+    src_uri_to_check = self.StorageUri(args[0], debug=debug, validate=False)
     if src_uri_to_check.names_container():
       raise CommandException('Will not remove source buckets or directories. '
                              'You must separately copy and remove for that '
                              'purpose.')
 
     if len(args) > 2:
-      self.InsistUriNamesContainer('mv', StorageUri(args[-1]))
+      self.InsistUriNamesContainer('mv', self.StorageUri(args[-1]))
 
     # Expand wildcards before calling CopyObjsCommand and RemoveObjsCommand,
     # to prevent the following problem: starting with a bucket containing
@@ -1281,10 +1309,10 @@ class Command(object):
     # RemoveObjsCommand would then remove that object.
     exp_arg_list = []
     for uri_str in args:
-      uri = StorageUri(uri_str, debug=debug, validate=False)
+      uri = self.StorageUri(uri_str, debug=debug, validate=False)
       if ContainsWildcard(uri_str):
         exp_arg_list.extend(str(u) for u in list(
-            wildcard_iterator(uri, headers=headers, debug=debug)))
+            self.CmdWildcardIterator(uri, headers=headers, debug=debug)))
       else:
         exp_arg_list.append(uri.uri)
 
@@ -1306,7 +1334,8 @@ class Command(object):
     """
     # Expand bucket name wildcards, if any.
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
         if uri.object_name:
           raise CommandException('"rb" command requires a URI with no object '
                                  'name')
@@ -1328,7 +1357,8 @@ class Command(object):
     """
     # Expand object name wildcards, if any.
     for uri_str in args:
-      for uri in wildcard_iterator(uri_str, headers=headers, debug=debug):
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
         if uri.names_container():
           uri_str = uri_str.rstrip('/')
           raise CommandException('"rm" command will not remove buckets. To '
