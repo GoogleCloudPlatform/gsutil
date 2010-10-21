@@ -30,6 +30,7 @@ import tempfile
 import time
 import unittest
 
+sys.path.insert(0, '.')
 import boto
 from boto.tests import mock_storage_service
 from gslib import test_util

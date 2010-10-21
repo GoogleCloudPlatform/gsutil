@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+#
+# Copyright 2010 Google Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+"""Utility class for gslib unit tests"""
+
+import boto
+from boto.tests import mock_storage_service
+import wildcard_iterator
+
+
+def test_wildcard_iterator(uri_or_str,
+                           result_type=wildcard_iterator.ResultType.URIS,
+                           headers=None, debug=0):
+  """
+  Convenience method for instantiating a testing
+  instance of WildCardIterator, without having to specify
+  bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri.
+  Also naming the factory method this way makes it clearer in the test
+  code that WildcardIterator needs to be set up for testing.
+
+  Args, Returns, and Raises are same as for
+  wildcard_iterator.wildcard_iterator(), except there's no
+  bucket_storage_uri_class arg.
+  """
+  return wildcard_iterator.wildcard_iterator(
+      uri_or_str, result_type, headers, debug,
+      mock_storage_service.MockBucketStorageUri)
+
+
+def test_storage_uri(uri_str, default_scheme='file', debug=0, validate=True):
+  """
+  Convenience method for instantiating a testing
+  instance of StorageUri, without having to specify
+  bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri.
+  Also naming the factory method this way makes it clearer in the test
+  code that StorageUri needs to be set up for testing.
+
+  Args, Returns, and Raises are same as for
+  boto.storage_uri(), except there's no bucket_storage_uri_class arg.
+  """
+
+  return boto.storage_uri(uri_str, default_scheme, debug, validate,
+                          mock_storage_service.MockBucketStorageUri)

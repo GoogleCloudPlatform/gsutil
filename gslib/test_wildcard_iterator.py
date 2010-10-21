@@ -30,6 +30,7 @@ import tempfile
 import time
 import unittest
 
+sys.path.insert(0, '.')
 from boto import InvalidUriError
 from gslib import test_util
 from gslib import wildcard_iterator
