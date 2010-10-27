@@ -74,7 +74,7 @@ def MakeHumanReadable(num):
   i = 0
   while i+1 < len(EXP_STRINGS) and num >= (2 ** EXP_STRINGS[i+1][0]):
     i += 1
-  rounded_val = round(num / 2 ** EXP_STRINGS[i][0], 2)
+  rounded_val = round(float(num) / 2 ** EXP_STRINGS[i][0], 2)
   return '%s %s' % (rounded_val, EXP_STRINGS[i][1])
 
 
