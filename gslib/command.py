@@ -912,8 +912,8 @@ class Command(object):
 
     # Ensure no src/dest pairs would overwrite src. Note that this is
     # more restrictive than the UNIX 'cp' command (which would, for example,
-    # allow "mv * dir" and just skip the implied move dir dir). We consider it
-    # more risky to allow such partial completion operations in cloud copies.
+    # allow "mv * dir" and just skip the implied mv dir dir). We disallow such
+    # partial completion operations in cloud copies because they are risky.
     for src_uri in iter(src_uri_expansion):
       for exp_src_uri in src_uri_expansion[src_uri]:
         new_dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
@@ -924,7 +924,9 @@ class Command(object):
     return (base_dst_uri, multi_src_request)
 
   def HandleMultiSrcCopyRequst(self, src_uri_expansion, dst_uri):
-    """Rewrites dst_uri and creates dest dir as needed for multi-source copy.
+    """
+    Rewrites dst_uri and creates dest dir as needed, if this is a
+    multi-source copy.
 
     Args:
       src_uri_expansion: result from ExpandWildcardsAndContainers call.
@@ -1305,7 +1307,7 @@ class Command(object):
     # only the object gs://bucket/obj, say the user does:
     #   gsutil mv gs://bucket/* gs://bucket/d.txt
     # If we didn't expand the wildcard first, the CopyObjsCommand would
-    # first copy gs://bucket/obj exists to gs://bucket/d.txt, and the
+    # first copy gs://bucket/obj to gs://bucket/d.txt, and the
     # RemoveObjsCommand would then remove that object.
     exp_arg_list = []
     for uri_str in args:
@@ -1360,7 +1362,7 @@ class Command(object):
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
         if uri.names_container():
-          uri_str = uri_str.rstrip('/')
+          uri_str = uri_str.rstrip('/\\')
           raise CommandException('"rm" command will not remove buckets. To '
                                  'delete this/these bucket(s) do:\n\tgsutil rm '
                                  '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))

@@ -23,6 +23,10 @@
 
 """Utility class for gslib unit tests"""
 
+import sys
+# Put local libs at front of path so tests will run latest lib code rather
+# than whatever code is found on user's PYTHONPATH.
+sys.path.insert(0, 'boto')
 import boto
 from boto.tests import mock_storage_service
 import wildcard_iterator

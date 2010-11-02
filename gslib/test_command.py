@@ -30,7 +30,10 @@ import tempfile
 import time
 import unittest
 
+# Put local libs at front of path so tests will run latest lib code rather
+# than whatever code is found on user's PYTHONPATH.
 sys.path.insert(0, '.')
+sys.path.insert(0, 'boto')
 import boto
 from boto.tests import mock_storage_service
 from gslib import test_util
