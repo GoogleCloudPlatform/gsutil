@@ -29,6 +29,7 @@ import time
 import xml.dom.minidom
 import xml.sax.xmlreader
 import boto
+import boto.s3.connection
 
 from boto import handler
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
@@ -1362,6 +1363,10 @@ class Command(object):
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
         if uri.names_container():
+          if uri.is_cloud_uri():
+            # Before offering advice about how to do rm + rb, ensure those
+            # commands won't fail because of bucket naming problems.
+            boto.s3.connection.check_lowercase_bucketname(uri.bucket_name)
           uri_str = uri_str.rstrip('/\\')
           raise CommandException('"rm" command will not remove buckets. To '
                                  'delete this/these bucket(s) do:\n\tgsutil rm '
