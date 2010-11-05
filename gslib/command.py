@@ -675,26 +675,48 @@ class Command(object):
           src_key.fp, dst_uri, headers, canned_acl)
     return (elapsed_time, bytes_transferred)
 
-  def DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers):
+  def DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers, debug):
     (cb, num_cb, res_download_handler) = self.GetTransferHandlers(
         src_uri, src_key, src_key.size, False)
     file_name = dst_uri.object_name
     dir_name = os.path.dirname(file_name)
     if dir_name and not os.path.exists(dir_name):
       os.makedirs(dir_name)
-    if res_download_handler:
-      fp = open(file_name, 'ab')
+    # For gzipped objects not named *.gz download to a temp file and unzip.
+    if (hasattr(src_key, 'content_encoding') and
+        src_key.content_encoding == 'gzip' and
+        not file_name.endswith('.gz')):
+        # We can't use tempfile.mkstemp() here because we need a predictable
+        # filename for resumable downloads.
+        download_file_name = '%s_.gztmp' % file_name
+        need_to_unzip = False
     else:
-      fp = open(file_name, 'wb')
+        download_file_name = file_name
+        need_to_unzip = True
+    if res_download_handler:
+      fp = open(download_file_name, 'ab')
+    else:
+      fp = open(download_file_name, 'wb')
     start_time = time.time()
     src_key.get_contents_to_file(fp, headers=headers, cb=cb, num_cb=num_cb,
                                  res_download_handler=res_download_handler)
+    fp.close()
     end_time = time.time()
     if res_download_handler:
       bytes_transferred = (
           src_key.size - res_download_handler.download_start_point)
     else:
       bytes_transferred = src_key.size
+    if need_to_unzip:
+      if debug:
+        print 'Uncompressing tmp to %s...' % file_name
+      # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
+      f_in = gzip.open(download_file_name, 'rb')
+      f_out = open(file_name, 'wb')
+      f_out.writelines(f_in)
+      f_out.close();
+      f_in.close();
+      os.unlink(download_file_name)
     return (end_time - start_time, bytes_transferred)
 
   def CopyFileToFile(self, src_key, dst_uri, headers):
@@ -721,7 +743,7 @@ class Command(object):
     file_uri = self.StorageUri('file://%s' % tmp.name, debug=debug,
                                validate=False)
     try:
-      self.DownloadObjectToFile(src_key, src_uri, file_uri, headers)
+      self.DownloadObjectToFile(src_key, src_uri, file_uri, headers, debug)
       self.UploadFileToObject(sub_opts, file_uri.get_key(), file_uri, dst_uri,
                               headers, debug)
     finally:
@@ -770,7 +792,8 @@ class Command(object):
       return self.UploadFileToObject(sub_opts, src_key, src_uri, dst_uri,
                                      headers, debug)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
-      return self.DownloadObjectToFile(src_key, src_uri, dst_uri, headers)
+      return self.DownloadObjectToFile(src_key, src_uri, dst_uri, headers,
+                                       debug)
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
       return self.CopyFileToFile(src_key, dst_uri, headers)
     else:
