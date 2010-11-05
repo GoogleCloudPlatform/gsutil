@@ -689,10 +689,10 @@ class Command(object):
         # We can't use tempfile.mkstemp() here because we need a predictable
         # filename for resumable downloads.
         download_file_name = '%s_.gztmp' % file_name
-        need_to_unzip = False
+        need_to_unzip = True
     else:
         download_file_name = file_name
-        need_to_unzip = True
+        need_to_unzip = False
     if res_download_handler:
       fp = open(download_file_name, 'ab')
     else:
