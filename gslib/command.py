@@ -918,12 +918,6 @@ class Command(object):
     else:
       base_dst_uri = self.StorageUri(dst_uri_str, debug=debug)
 
-    # If multi-object copy request ensure base_dst_uri names a container.
-    multi_src_request = (len(src_uri_expansion) > 1 or
-                         len(src_uri_expansion.values()[0]) > 1)
-    if multi_src_request:
-      self.InsistUriNamesContainer(command, base_dst_uri)
-
     # Make sure entire expansion didn't result in nothing to copy. This can
     # happen if user request copying a directory w/o -r option, for example.
     have_work = False
@@ -933,6 +927,12 @@ class Command(object):
         break
     if not have_work:
       raise CommandException('Nothing to copy')
+
+    # If multi-object copy request ensure base_dst_uri names a container.
+    multi_src_request = (len(src_uri_expansion) > 1 or
+                         len(src_uri_expansion.values()[0]) > 1)
+    if multi_src_request:
+      self.InsistUriNamesContainer(command, base_dst_uri)
 
     # Ensure no src/dest pairs would overwrite src. Note that this is
     # more restrictive than the UNIX 'cp' command (which would, for example,

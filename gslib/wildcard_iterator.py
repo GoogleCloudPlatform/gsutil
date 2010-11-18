@@ -324,8 +324,6 @@ class FileWildcardIterator(WildcardIterator):
     else:
       # Not a recursive wildcarding request.
       filepaths = glob.glob(wildcard)
-    if not filepaths:
-      raise WildcardException('No matches for "%s"' % wildcard)
     for filepath in filepaths:
       expanded_uri = self.wildcard_uri.clone_replace_name(filepath)
       yield expanded_uri
