@@ -182,7 +182,7 @@ class CloudWildcardIterator(WildcardIterator):
       regex = fnmatch.translate(self.wildcard_uri.bucket_name)
       bucket_uris = []
       prog = re.compile(regex)
-      for b in self.wildcard_uri.get_all_buckets():
+      for b in self.wildcard_uri.get_all_buckets(self.headers):
         if prog.match(b.name):
           # Use str(b.name) because get_all_buckets() returns Unicode
           # string, which when used to construct x-goog-copy-src metadata
