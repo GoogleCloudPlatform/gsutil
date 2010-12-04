@@ -100,7 +100,8 @@ SYNOPSIS
     Remove buckets:
       rb uri...
     Remove objects:
-      rm uri...
+      rm [-f] uri...
+         -f Continues despite errors when removing by wildcard.
     Set ACL on buckets and/or objects:
       setacl file-or-canned_acl_name uri...
     Print version info:
@@ -317,7 +318,7 @@ commands = {
     'mb': [command_inst.MakeBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'mv': [command_inst.MoveObjsCommand, 2, NO_MAX, '', True, False, 0],
     'rb': [command_inst.RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
-    'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, '', False, False, 0],
+    'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, 'f', False, False, 0],
     'setacl': [command_inst.SetAclCommand, 2, NO_MAX, '', False, False, 1],
     'update': [command_inst.UpdateCommand, 0, 0, 'f', False, False, 0],
     'ver': [command_inst.VerCommand, 0, 0, '', False, False, 0],

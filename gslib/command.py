@@ -1368,19 +1368,24 @@ class Command(object):
         print 'Removing %s...' % uri
         uri.delete_bucket(headers)
 
-  def RemoveObjsCommand(self, args, unused_sub_opts=None, headers=None,
+  def RemoveObjsCommand(self, args, sub_opts=None, headers=None,
                         debug=0):
     """Implementation of rm command.
 
     Args:
       args: command-line argument list.
-      unused_sub_opts: list of command-specific options from getopt.
+      sub_opts: list of command-specific options from getopt.
       headers: dictionary containing optional HTTP headers to pass to boto.
       debug: debug level to pass in to boto connection (range 0..2).
 
     Raises:
       CommandException: if errors encountered.
     """
+    continue_on_error = False
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-f':
+          continue_on_error = True
     # Expand object name wildcards, if any.
     for uri_str in args:
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
@@ -1395,4 +1400,8 @@ class Command(object):
                                  'delete this/these bucket(s) do:\n\tgsutil rm '
                                  '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
         print 'Removing %s...' % uri
-        uri.delete_key(validate=False, headers=headers)
+        try:
+          uri.delete_key(validate=False, headers=headers)
+        except Exception, e:
+          if not continue_on_error:
+            raise

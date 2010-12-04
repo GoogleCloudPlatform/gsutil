@@ -154,17 +154,17 @@ class CloudWildcardIterator(WildcardIterator):
       if not uri.object_name:
         raise WildcardException('Bucket-only URI (%s) with ResultType.KEYS '
                                 'iteration request' % uri)
-    # This case happens when we do gsutil ls -l on a object name-ful
-    # StorageUri with no object-name wildcard. Since the ListCommand
-    # implementation only reads bucket info we need to read the object
-    # for this case.
-    obj = uri.get_key(validate=False, headers=headers)
-    # When we retrieve the object this way its last_modified timestamp
-    # is formatted in RFC 1123 format, which is different from when we
-    # retrieve from the bucket listing (which uses ISO 8601 format), so
-    # convert so we consistently return ISO 8601 format.
-    tuple_time = (time.strptime(obj.last_modified, '%a, %d %b %Y %H:%M:%S %Z'))
-    obj.last_modified = time.strftime('%Y-%m-%dT%H:%M:%S', tuple_time)
+      # This case happens when we do gsutil ls -l on a object name-ful
+      # StorageUri with no object-name wildcard. Since the ListCommand
+      # implementation only reads bucket info we need to read the object
+      # for this case.
+      obj = uri.get_key(validate=False, headers=headers)
+      # When we retrieve the object this way its last_modified timestamp
+      # is formatted in RFC 1123 format, which is different from when we
+      # retrieve from the bucket listing (which uses ISO 8601 format), so
+      # convert so we consistently return ISO 8601 format.
+      tuple_time = (time.strptime(obj.last_modified, '%a, %d %b %Y %H:%M:%S %Z'))
+      obj.last_modified = time.strftime('%Y-%m-%dT%H:%M:%S', tuple_time)
     return obj
 
   def __iter__(self):
