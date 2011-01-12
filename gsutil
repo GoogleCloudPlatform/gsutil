@@ -293,7 +293,8 @@ def SetupConfigIfNeeded():
                     config.has_option('Credentials', 'gs_secret_access_key'))
   has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
                     config.has_option('Credentials', 'aws_secret_access_key'))
-  if not has_goog_creds and not has_amzn_creds:
+  has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
+  if not has_goog_creds and not has_amzn_creds and not has_auth_plugins:
     if config_file_list:
       raise CommandException('You have no storage service credentials in any '
                              'of the following boto config\nfiles. Please add '
@@ -441,6 +442,12 @@ def main():
         pass
       print 'config: %s' % str(config_items)
     command_func(args, sub_opts, headers, debug)
+  except AttributeError, e:
+    if e.message.find('secret_access_key') != -1:
+      OutputAndExit('Missing credentials for the given URI(s). Does your '
+                    'boto config file contain all needed credentials?')
+    else:
+      OutputAndExit(e.message)
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
   except CommandException, e:
@@ -451,6 +458,8 @@ def main():
     OutputAndExit('InvalidAclError: %s.' % e.message)
   except InvalidUriError, e:
     OutputAndExit('InvalidUriError: %s.' % e.message)
+  except boto.auth_handler.NotReadyToAuthenticate:
+    OutputAndExit('NotReadyToAuthenticate')
   except OSError, e:
     OutputAndExit('OSError: %s.' % e.strerror)
   except WildcardException, e:
@@ -468,12 +477,8 @@ def main():
                     (exc_name, e.status, e.code, e.reason))
   except ResumableUploadException, e:
     OutputAndExit('ResumableUploadException: %s.' % e.message)
-  except AttributeError, e:
-    if e.message.find('secret_access_key') != -1:
-      OutputAndExit('Missing credentials for the given URI(s). Does your '
-                    'boto config file contain all needed credentials?')
-    else:
-      OutputAndExit(e.message)
+  except boto.exception.TooManyAuthHandlerReadyToAuthenticate:
+    OutputAndExit('TooManyAuthHandlerReadyToAuthenticate: %s' % str(e))
   except socket.error, e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because
