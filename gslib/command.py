@@ -1189,7 +1189,7 @@ class Command(object):
       return 0
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
-      timestamp = obj.last_modified[:19]
+      timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
       print '%10s  %s  %s' % (obj.size, timestamp, UriStrFor(iterated_uri, obj))
       return obj.size
     elif listing_style == ListingStyle.LONG_LONG:
