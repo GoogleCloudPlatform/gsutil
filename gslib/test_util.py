@@ -29,7 +29,7 @@ import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'boto')
 import boto
-from boto.tests import mock_storage_service
+from tests.s3 import mock_storage_service
 import wildcard_iterator
 
 

@@ -35,7 +35,7 @@ import unittest
 sys.path.insert(0, '.')
 sys.path.insert(0, 'boto')
 import boto
-from boto.tests import mock_storage_service
+from tests.s3 import mock_storage_service
 from gslib import test_util
 from gslib.command import Command
 from gslib.exception import CommandException
