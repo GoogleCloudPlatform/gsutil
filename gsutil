@@ -443,11 +443,11 @@ def main():
       print 'config: %s' % str(config_items)
     command_func(args, sub_opts, headers, debug)
   except AttributeError, e:
-    if e.message.find('secret_access_key') != -1:
+    if str(e).find('secret_access_key') != -1:
       OutputAndExit('Missing credentials for the given URI(s). Does your '
                     'boto config file contain all needed credentials?')
     else:
-      OutputAndExit(e.message)
+      OutputAndExit(str(e))
   except BotoClientError, e:
     OutputAndExit('BotoClientError: %s.' % e.reason)
   except CommandException, e:
@@ -455,9 +455,9 @@ def main():
   except getopt.GetoptError, e:
     HandleCommandException(CommandException(e.msg))
   except InvalidAclError, e:
-    OutputAndExit('InvalidAclError: %s.' % e.message)
+    OutputAndExit('InvalidAclError: %s.' % str(e))
   except InvalidUriError, e:
-    OutputAndExit('InvalidUriError: %s.' % e.message)
+    OutputAndExit('InvalidUriError: %s.' % str(e))
   except boto.auth_handler.NotReadyToAuthenticate:
     OutputAndExit('NotReadyToAuthenticate')
   except OSError, e:
@@ -476,7 +476,7 @@ def main():
       OutputAndExit('%s:: status=%d, code=%s, reason=%s.' %
                     (exc_name, e.status, e.code, e.reason))
   except ResumableUploadException, e:
-    OutputAndExit('ResumableUploadException: %s.' % e.message)
+    OutputAndExit('ResumableUploadException: %s.' % str(e))
   except boto.exception.TooManyAuthHandlerReadyToAuthenticate:
     OutputAndExit('TooManyAuthHandlerReadyToAuthenticate: %s' % str(e))
   except socket.error, e:
