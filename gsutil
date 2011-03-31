@@ -180,10 +180,6 @@ prelude_config_content = (
 #
 """)
 
-if 'HOME' not in os.environ:
-  OutputAndExit('No HOME environment variable set. gsutil requires this '
-                'variable to be set.')
-
 additional_config_content = """
 [Boto]
 
@@ -218,7 +214,7 @@ additional_config_content = """
 #resumable_threshold = 1048576
 
 # 'resumable_tracker_dir' specifies the base location where resumable
-# transfer tracker files are saved. By default they're in $HOME/.gsutil
+# transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
 """
 
@@ -226,7 +222,7 @@ additional_config_content = """
 def CreateBotoConfigFile():
   """Creates a boto config file interactively, containing needed credentials."""
 
-  config_path = ('%s%s.boto' % (os.environ['HOME'], os.sep))
+  config_path = os.path.expanduser('~' + os.sep + '.boto')
   sys.stderr.write('You have no boto config file. This script will create '
                    'one at\n%s\ncontaining your credentials, based on your '
                    'responses to the following questions.\n\n' % config_path)
