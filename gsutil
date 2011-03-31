@@ -117,7 +117,7 @@ SYNOPSIS
     gsutil cp localdir gs://mybucket
   will recursively copy localdir.
 
-  canned_acl_name can be one of: "public-read", "public-read-write",
+  canned_acl_name can be one of: "private", "public-read", "public-read-write",
   "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"
 """
 
