@@ -69,6 +69,7 @@ SYNOPSIS
   gsutil [-d][-D] [-h header]... [command args...]
 
   -d option shows HTTP protocol detail.
+  -D option shows detailed debug output, and -DD even more detailed.
 
   -h option allows you to specify additional HTTP headers, for example:
      gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp ...
@@ -342,7 +343,7 @@ def SanityCheckXmlParser(cmd):
 def HandleUnknownFailure(debug, e):
   # Called if we fall through all known/handled exceptions. Allows us to
   # print a stacktrace if -D option used.
-  if debug == 3:
+  if debug > 2:
     stack_trace = traceback.format_exc()
     sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
                      re.sub('\\n', '\n    ', stack_trace))
@@ -352,7 +353,7 @@ def HandleUnknownFailure(debug, e):
 def HandleUnknownFailure(debug, e):
   # Called if we fall through all known/handled exceptions. Allows us to
   # print a stacktrace if -D option used.
-  if debug == 3:
+  if debug > 2:
     stack_trace = traceback.format_exc()
     sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
                      re.sub('\\n', '\n    ', stack_trace))
@@ -416,8 +417,13 @@ def main():
       if o in ('-D', '--detailedDebug'):
         # We use debug level 3 to ask gsutil code to output more detailed
         # debug output. This is a bit of a hack since it overloads the same
-        # flag that was originally implemented for boto use.
-        debug = 3
+        # flag that was originally implemented for boto use. And we use -DD
+        # to ask for really detailed debugging (i.e., including HTTP payload).
+        import pdb; pdb.set_trace() #todo now remove before checkin
+        if debug == 3:
+            debug = 4
+        else:
+            debug = 3
       if o in ('-?', '--help'):
         command_inst.OutputUsageAndExit()
       if o in ('-h', '--header'):
@@ -428,7 +434,7 @@ def main():
       if o in ('-v', '--version'):
         command_inst.VerCommand([], None)
         sys.exit(0)
-    if debug == 3:
+    if debug > 2:
       command_inst.VerCommand([], None)
       config_items = []
       try:
