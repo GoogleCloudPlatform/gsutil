@@ -6,17 +6,18 @@ Contents:
   - gsutil is the command line tool
   - cloudreader contains an example Google App Engine app that accesses Google
     storage
-  - both depend on the boto open source Python
-    library that includes Google modifications. At present these mods are
-    checked in on the boto "googlemerge" branch, which is mapped into the
-    gsutil svn tree using an svn:externals propset.  (So, if you browse at
-    http://code.google.com/p/gsutil/source/browse/#svn/branches/botomerge you
-    will not see this boto subtree, but if you do the svn checkout command
-    noted at http://code.google.com/p/gsutil/source/checkout it will fetch
-    boto as needed.)
+  - both depend on the boto open source Python library, version 2.0b4 or
+    later.  The boto repository is mapped into the gsutil svn tree using an
+    svn:externals propset and is distributed with the gsutil tar ball.
 
 The cloudreader app is explained in
 cloud/bigstore/opensrc/gsutil/cloudreader/README.google.
+
+Prerequisites:
+
+Gsutil requires either
+ - Python 2.6 or later, or
+ - Python 2.5 or later, with the 'simplejson' library installed.
 
 To install gsutil take the following steps:
 
@@ -36,13 +37,15 @@ To install gsutil take the following steps:
    the command line.
 
 3. To install gsutil on Windows, install cygwin (http://www.cygwin.com/),
-   with at least version 2.5.1 of Python. Once you have that, start a shell
+   with at least version 2.6.5 of Python. Once you have that, start a shell
    and follow the Linux instructions above for unpacking and installing gsutil.
 
 4. The first time you try to run gsutil, it will detect that you have no
    configuration file containing your credentials, interactively prompt you,
-   and create the file.  For this you will need the key IDs and secret access
-   keys provided by your cloud storage provider(s).
+   and create the file.  
 
    After this you can use the tool.  Running gsutil with with no arguments
    will print a help summary.
+
+For more information on installing and using gsutil, see
+<http://code.google.com/apis/storage/docs/gsutil.html>.

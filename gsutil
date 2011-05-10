@@ -17,16 +17,21 @@
 """Google Storage command line tool."""
 
 import ConfigParser
-import datetime
 import errno
 import getopt
+import logging
 import os
 import re
 import socket
+import signal
 import stat
 import sys
 import traceback
 import xml.sax.xmlreader
+
+GOOG_API_VERSION_HDR = 'x-goog-api-version'
+
+debug = 0
 
 
 def OutputAndExit(message):
@@ -44,7 +49,7 @@ gsutil_bin_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 if not gsutil_bin_dir:
   OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
                 'cannot run correctly without this.\n')
-boto_lib_dir = gsutil_bin_dir + os.sep + 'boto'
+boto_lib_dir = os.path.join(gsutil_bin_dir, 'boto')
 if not os.path.isdir(boto_lib_dir):
   OutputAndExit('There is no boto library under the gsutil install directory '
                 '(%s).\nThe gsutil command cannot work properly when installed '
@@ -62,7 +67,17 @@ from boto.provider import Provider
 
 from gslib.command import Command
 from gslib.exception import CommandException
+from gslib.exception import ProjectIdException
 from gslib.wildcard_iterator import WildcardException
+
+# We don't use the oauth2 authentication plugin directly; importing it here
+# ensures that it's loaded and available by default.
+_HAVE_OAUTH2 = False
+try:
+  from oauth2_plugin import oauth2_plugin
+  _HAVE_OAUTH2 = True
+except ImportError:
+  pass
 
 usage_string = """
 SYNOPSIS
@@ -89,11 +104,14 @@ SYNOPSIS
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     List buckets or objects:
-      ls [-b] [-l] [-L] uri...
+      ls [-b] [-l] [-L] [-p proj_id] uri...
          -l Prints long listing (owner, length); -L provides more detail.
          -b Prints info about the bucket when used with a bucket URI.
+         -p proj_id Specifies the project ID to use for listing buckets.
     Make buckets:
-      mb uri...
+      mb [-l LocationConstraint] [-p proj_id] uri...
+         -l can be us or eu. Default is us
+         -p proj_id Specifies the project ID under which to create the bucket.
     Move/rename objects:
       mv src_uri dst_uri
         - or -
@@ -107,6 +125,9 @@ SYNOPSIS
       setacl file-or-canned_acl_name uri...
     Print version info:
       ver
+    Obtain credentials and create configuration file:
+      config [options] [-o <config file>]
+         Run 'gsutil config -h' for detailed help on this command.
 
   Omitting URI scheme defaults to "file". For example, "dir/file.txt" is
   equivalent to "file://dir/file.txt"
@@ -118,8 +139,9 @@ SYNOPSIS
     gsutil cp localdir gs://mybucket
   will recursively copy localdir.
 
-  canned_acl_name can be one of: "private", "public-read", "public-read-write",
-  "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"
+  canned_acl_name can be one of: "private", "project-private",
+  "public-read", "public-read-write", "authenticated-read",
+  "bucket-owner-read", "bucket-owner-full-control"
 """
 
 
@@ -172,116 +194,6 @@ config_file_list = GetBotoConfigFileList()
 command_inst = Command(gsutil_bin_dir, boto_lib_dir, usage_string,
                        config_file_list)
 
-prelude_config_content = (
-"""# This file contains credentials and other configuration information needed
-# by the boto library, used by gsutil. You can edit this file (e.g., to add
-# credentials) but be careful not to mis-edit any of the variable names (like
-# "gs_access_key_id") or remove important markers (like the "[Credentials]" and
-# "[Boto]" section delimeters).
-#
-""")
-
-additional_config_content = """
-[Boto]
-
-# To use a proxy, edit and uncomment the proxy and proxy_port lines. If you
-# need a user/password with this proxy, edit and uncomment those lines as well.
-#proxy = <proxy host>
-#proxy_port = <proxy port>
-#proxy_user = <your proxy user name>
-#proxy_pass = <your proxy password>
-
-# Set 'is_secure' to False to cause boto to connect using HTTP instead of the
-# default HTTPS. This is useful if you want to capture/analyze traffic
-# (e.g., with tcpdump).
-#is_secure = False
-
-# 'debug' controls the level of debug messages printed: 0 for none, 1
-# for basic boto debug, 2 for all boto debug plus HTTP requests/responses.
-# Note: 'gsutil -d' sets debug to 2 for that one command run.
-#debug = <0, 1, or 2>
-
-# 'num_retries' controls the number of retry attempts made when errors occur.
-# The default is 5. Note: don't set this value to 0, as it will cause boto to
-# fail when reusing HTTP connections.
-#num_retries = <integer value>
-
-
-[GSUtil]
-
-# 'resumable_threshold' specifies the smallest file size [bytes] for which
-# resumable Google Storage transfers are attempted. The default is 1048576
-# (1MB).
-#resumable_threshold = 1048576
-
-# 'resumable_tracker_dir' specifies the base location where resumable
-# transfer tracker files are saved. By default they're in ~/.gsutil
-#resumable_tracker_dir = <file path>
-"""
-
-
-def CreateBotoConfigFile():
-  """Creates a boto config file interactively, containing needed credentials."""
-
-  config_path = os.path.expanduser('~' + os.sep + '.boto')
-  sys.stderr.write('You have no boto config file. This script will create '
-                   'one at\n%s\ncontaining your credentials, based on your '
-                   'responses to the following questions.\n\n' % config_path)
-
-  provider_map = {'aws': 'aws', 'google': 'gs'}
-  uri_map = {'aws': 's3', 'google': 'gs'}
-  key_ids = {}
-  sec_keys = {}
-  got_creds = False
-  for provider in provider_map:
-    if provider == 'google':
-      key_ids[provider] = raw_input('What is your %s access key ID? ' %
-                                    provider)
-      sec_keys[provider] = raw_input('What is your %s secret access key? ' %
-                                     provider)
-      got_creds = True
-      if not key_ids[provider] or not sec_keys[provider]:
-        raise CommandException('Incomplete credentials provided. Please try '
-                               'again.')
-  if not got_creds:
-    raise CommandException('No credentials provided. Please try again.')
-  cfp = open(config_path, 'w')
-  if not cfp:
-    raise CommandException('Unable to write "%s".' % config_path)
-  os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
-  cfp.write(prelude_config_content)
-  cfp.write('# This file was created by gsutil version "%s"\n# at %s.\n\n\n'
-            % (command_inst.LoadVersionString(),
-               datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-  cfp.write('[Credentials]\n\n')
-  for provider in provider_map:
-    key_prefix = provider_map[provider]
-    uri_scheme = uri_map[provider]
-    if provider in key_ids and provider in sec_keys:
-      cfp.write('# %s credentials ("%s://" URIs):\n' %
-                (provider, uri_scheme))
-      cfp.write('%s_access_key_id = %s\n' % (key_prefix, key_ids[provider]))
-      cfp.write('%s_secret_access_key = %s\n' %
-                (key_prefix, sec_keys[provider]))
-    else:
-      cfp.write('# To add %s credentials ("%s://" URIs), edit and '
-                'uncomment the\n# following two lines:\n'
-                '#%s_access_key_id = <your %s access key ID>\n'
-                '#%s_secret_access_key = <your %s secret access key>\n' %
-                (provider, uri_scheme, key_prefix, provider, key_prefix,
-                 provider))
-    host_key = Provider.HostKeyMap[provider]
-    cfp.write('# The ability to specify an alternate storage host is primarily '
-              'for cloud\n# storage service developers.\n'
-              '#%s_host = <alternate storage host address>\n\n' % host_key)
-  cfp.write(additional_config_content)
-  cfp.close()
-  OutputAndExit('\nConfiguration file "%s" created. If you need to use\na '
-                'proxy to access the Internet please see the instructions in '
-                'that file.\nPlease try running gsutil again now.' %
-                config_path)
-
-
 def SetupConfigIfNeeded():
   """Interactively creates boto credential/config file if needed."""
 
@@ -290,18 +202,30 @@ def SetupConfigIfNeeded():
                     config.has_option('Credentials', 'gs_secret_access_key'))
   has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
                     config.has_option('Credentials', 'aws_secret_access_key'))
+  has_refresh_token = (_HAVE_OAUTH2 and
+      config.has_option('Credentials', 'gs_oauth2_refresh_token'))
   has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
-  if not has_goog_creds and not has_amzn_creds and not has_auth_plugins:
+  if (not has_goog_creds and not has_amzn_creds and not has_refresh_token
+      and not has_auth_plugins):
     if config_file_list:
+      if (config.has_option('Credentials', 'gs_oauth2_refresh_token')
+          and not _HAVE_OAUTH2):
+        raise CommandException(
+            "Your configuration is set up with OAuth2 authentication "
+            "credentials.\nHowever, OAuth2 is only supported when running "
+            "under Python 2.6 or later\n(unless additional dependencies are "
+            "installed, see README for details); you are running Python %s." %
+            sys.version)
       raise CommandException('You have no storage service credentials in any '
                              'of the following boto config\nfiles. Please add '
                              'your credentials as described in the gsutil '
-                             'README file, or else\ndelete these files and'
-                             're-run this script to re-create them:\n%s' %
+                             "README file, or else\nre-run 'gsutil config' "
+                             'to re-create a config file:\n%s' %
                              config_file_list)
     else:
-      CreateBotoConfigFile()
-
+      sys.stderr.write('You have no boto config file.\n')
+      command_inst.CreateConfigCommand()
+      OutputAndExit('Please try running gsutil again now.')
 
 # Maps command name to
 # [function, min_args, max_args, supported_sub_args, file_uri_ok,
@@ -309,11 +233,13 @@ def SetupConfigIfNeeded():
 NO_MAX = sys.maxint
 commands = {
     'cat': [command_inst.CatCommand, 0, NO_MAX, 'h', False, True, 0],
+    'config': [command_inst.CreateConfigCommand,
+        0, 0, 'habfwrs:o:', False, False, 0],
     'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:rRtz:', True, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
-    'ls': [command_inst.ListCommand, 0, NO_MAX, 'blL', False, True, 0],
-    'mb': [command_inst.MakeBucketsCommand, 1, NO_MAX, '', False, False, 0],
+    'ls': [command_inst.ListCommand, 0, NO_MAX, 'blLp:', False, True, 0],
+    'mb': [command_inst.MakeBucketsCommand, 1, NO_MAX, 'l:p:', False, False, 0],
     'mv': [command_inst.MoveObjsCommand, 2, NO_MAX, '', True, False, 0],
     'rb': [command_inst.RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, 'f', False, False, 0],
@@ -325,6 +251,7 @@ commands = {
 }
 
 xml_parsing_commands = ['getacl', 'ls', 'setacl']
+no_config_required_commands = ['help', 'ver', 'version', 'config']
 
 
 def SanityCheckXmlParser(cmd):
@@ -350,23 +277,22 @@ def HandleUnknownFailure(debug, e):
   else:
     OutputAndExit('Failure: %s.' % e)
 
-def HandleUnknownFailure(debug, e):
-  # Called if we fall through all known/handled exceptions. Allows us to
-  # print a stacktrace if -D option used.
-  if debug > 2:
-    stack_trace = traceback.format_exc()
-    sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
-                     re.sub('\\n', '\n    ', stack_trace))
-  else:
-    OutputAndExit('Failure: %s.' % e)
-
-
 def HandleCommandException(e):
   if e.informational:
     OutputAndExit(e.reason)
   else:
     OutputAndExit('CommandException: %s' % e.reason)
 
+def HandleControlC(signal_num, cur_stack_frame):
+  # Called when user hits ^C so we can print a brief message instead of
+  # the normal Python stack trace (unless -D option is used).
+  global debug
+  if debug > 2:
+    stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
+    OutputAndExit('DEBUG: Caught signal %d - Exception stack trace:\n'
+                  '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)))
+  else:
+    OutputAndExit('Caught signal %d - exiting' % signal_num)
 
 def main():
   if sys.version_info[:3] < (2, 5, 1):
@@ -376,7 +302,7 @@ def main():
   if len(sys.argv) == 1:
     command_inst.OutputUsageAndExit()
 
-  debug = 0
+  global debug
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'dDvh:',
                                ['debug', 'detailedDebug', 'version', 'help',
@@ -407,9 +333,20 @@ def main():
       raise CommandException('"%s" command does not support provider-only '
                              'URIs.' % cmd)
 
-    SetupConfigIfNeeded()
+    if cmd not in no_config_required_commands:
+      SetupConfigIfNeeded()
 
-    headers = {}
+    # Include api_version header in all commands.
+    api_version = boto.config.get_value('GSUtil', 'default_api_version', '1')
+    headers = { GOOG_API_VERSION_HDR : api_version }
+
+    # Change the default of the 'https_validate_certificates' boto option to
+    # True (it is currently False in boto).
+    if not boto.config.has_option('Boto', 'https_validate_certificates'):
+      if not boto.config.has_section('Boto'):
+        boto.config.add_section('Boto')
+      boto.config.setbool('Boto', 'https_validate_certificates', True)
+
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Passing debug=2 causes boto to include httplib header output.
@@ -420,9 +357,9 @@ def main():
         # flag that was originally implemented for boto use. And we use -DD
         # to ask for really detailed debugging (i.e., including HTTP payload).
         if debug == 3:
-            debug = 4
+          debug = 4
         else:
-            debug = 3
+          debug = 3
       if o in ('-?', '--help'):
         command_inst.OutputUsageAndExit()
       if o in ('-h', '--header'):
@@ -433,7 +370,20 @@ def main():
       if o in ('-v', '--version'):
         command_inst.VerCommand([], None)
         sys.exit(0)
-    if debug > 2:
+    if debug > 1:
+      sys.stderr.write(
+          '***************************** WARNING *****************************\n'
+          '*** You are running gsutil with debug output enabled.\n'
+          '*** Be aware that debug output includes authentication '
+          'credentials.\n'
+          '*** Do not share (e.g., post to support forums) debug output\n'
+          '*** unless you have sanitized authentication tokens in the\n'
+          '*** output, or have revoked your credentials.\n'
+          '***************************** WARNING *****************************\n')
+    if debug == 2:
+      logging.basicConfig(level=logging.INFO)
+    elif debug > 2:
+      logging.basicConfig(level=logging.DEBUG)
       command_inst.VerCommand([], None)
       config_items = []
       try:
@@ -441,7 +391,13 @@ def main():
         config_items.extend(boto.config.items('GSUtil'))
       except ConfigParser.NoSectionError:
         pass
+      print 'config_file_list: %s' % config_file_list
       print 'config: %s' % str(config_items)
+    else:
+      logging.basicConfig()
+    # Catch ^C so we can print a brief message instead of the normal Python
+    # stack trace.
+    signal.signal(signal.SIGINT, HandleControlC)
     command_func(args, sub_opts, headers, debug)
   except AttributeError, e:
     if str(e).find('secret_access_key') != -1:
@@ -459,6 +415,8 @@ def main():
     OutputAndExit('InvalidAclError: %s.' % str(e))
   except InvalidUriError, e:
     OutputAndExit('InvalidUriError: %s.' % e.message)
+  except ProjectIdException, e:
+    OutputAndExit('ProjectIdException: %s.' % e.reason)
   except boto.auth_handler.NotReadyToAuthenticate:
     OutputAndExit('NotReadyToAuthenticate')
   except OSError, e:
@@ -478,8 +436,12 @@ def main():
                     (exc_name, e.status, e.code, e.reason))
   except ResumableUploadException, e:
     OutputAndExit('ResumableUploadException: %s.' % e.message)
-  except boto.exception.TooManyAuthHandlerReadyToAuthenticate:
-    OutputAndExit('TooManyAuthHandlerReadyToAuthenticate: %s' % e.message)
+  except boto.exception.TooManyAuthHandlerReadyToAuthenticate, e:
+    OutputAndExit(
+        'You have credentials for more than one authentication handler \n'
+        'configured in your boto configuration file and/or environment \n'
+        'variables (for example, both an OAuth2 token and Developer Access \n'
+        'keys/secret):\n%s' % e)
   except socket.error, e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because

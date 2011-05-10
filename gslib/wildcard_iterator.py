@@ -74,6 +74,7 @@ import boto
 from boto.storage_uri import BucketStorageUri
 
 WILDCARD_REGEX = re.compile('[*?\[\]]')
+WILDCARD_BUCKET_ITERATOR = 'wildcard_bucket_iterator'
 
 
 # Enum class for specifying what to return from each iteration.
@@ -110,17 +111,19 @@ class CloudWildcardIterator(WildcardIterator):
   an additional object GET request for each of the result URIs.
   """
 
-  def __init__(self, wildcard_uri, result_type, headers=None, debug=0,
-               bucket_storage_uri_class=BucketStorageUri):
+  def __init__(self, wildcard_uri, proj_id_handler, result_type,
+               bucket_storage_uri_class=BucketStorageUri,
+               headers=None, debug=0):
     """Instantiate an iterator over keys matching given wildcard URI.
 
     Args:
       wildcard_uri: StorageUri that contains the wildcard to iterate.
+      proj_id_handler: ProjectIdHandler to use for current command.
       result_type: ResultType object specifying what to iterate.
-      headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: debug level to pass in to boto connection (range 0..2).
       bucket_storage_uri_class: BucketStorageUri interface.
                                 Settable for testing/mocking.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
 
     Raises:
       WildcardException: for invalid result_type.
@@ -130,6 +133,7 @@ class CloudWildcardIterator(WildcardIterator):
     if result_type != ResultType.KEYS and result_type != ResultType.URIS:
       raise WildcardException('Invalid ResultType (%s)' % result_type)
     self.headers = headers
+    self.proj_id_handler = proj_id_handler
     self.debug = debug
     self.bucket_storage_uri_class = bucket_storage_uri_class
 
@@ -182,7 +186,10 @@ class CloudWildcardIterator(WildcardIterator):
       regex = fnmatch.translate(self.wildcard_uri.bucket_name)
       bucket_uris = []
       prog = re.compile(regex)
-      for b in self.wildcard_uri.get_all_buckets(self.headers):
+      self.proj_id_handler.FillInProjectHeaderIfNeeded(WILDCARD_BUCKET_ITERATOR,
+                                                       self.wildcard_uri,
+                                                       self.headers)
+      for b in self.wildcard_uri.get_all_buckets(headers=self.headers):
         if prog.match(b.name):
           # Use str(b.name) because get_all_buckets() returns Unicode
           # string, which when used to construct x-goog-copy-src metadata
@@ -261,9 +268,8 @@ class CloudWildcardIterator(WildcardIterator):
       prefix = uri.object_name[:match.start()]
     else:
       prefix = None
-    return uri.get_bucket(validate=False,
-                          headers=self.headers).list(prefix=prefix,
-                                                     headers=self.headers)
+    return uri.get_bucket(validate=False, headers=self.headers).list(
+        prefix=prefix, headers=self.headers)
 
 
 class FileWildcardIterator(WildcardIterator):
@@ -283,7 +289,7 @@ class FileWildcardIterator(WildcardIterator):
       wildcard_uri: StorageUri that contains the wildcard to iterate.
       result_type: ResultType object specifying what to iterate.
       headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: debug level to pass in to boto connection (range 0..2).
+      debug: debug level to pass in to boto connection (range 0..3).
 
     Raises:
       WildcardException: for invalid result_type.
@@ -343,17 +349,20 @@ class WildcardException(StandardError):
     return 'WildcardException: %s' % self.reason
 
 
-def wildcard_iterator(uri_or_str, result_type=ResultType.URIS, headers=None,
-                      debug=0, bucket_storage_uri_class=BucketStorageUri):
+def wildcard_iterator(uri_or_str, proj_id_handler,
+                      result_type=ResultType.URIS,
+                      bucket_storage_uri_class=BucketStorageUri,
+                      headers=None, debug=0):
   """Instantiate a WildCardIterator for the given StorageUri.
 
   Args:
     uri_or_str: StorageUri or URI string naming wildcard objects to iterate.
+    proj_id_handler: ProjectIdHandler to use for current command.
     result_type: ResultType object specifying what to iterate.
-    headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: debug level to pass in to boto connection (range 0..2).
     bucket_storage_uri_class: BucketStorageUri interface.
-                              Settable for testing/mocking.
+        Settable for testing/mocking.
+    headers: dictionary containing optional HTTP headers to pass to boto.
+    debug: debug level to pass in to boto connection (range 0..3).
 
   Returns:
     A WildcardIterator that handles the requested iteration.
@@ -372,8 +381,8 @@ def wildcard_iterator(uri_or_str, result_type=ResultType.URIS, headers=None,
     uri = uri_or_str
 
   if uri.is_cloud_uri():
-    return CloudWildcardIterator(uri, result_type, headers, debug,
-                                 bucket_storage_uri_class)
+    return CloudWildcardIterator(uri, proj_id_handler, result_type, 
+                                 bucket_storage_uri_class, headers, debug)
   elif uri.is_file_uri():
     return FileWildcardIterator(uri, result_type, headers=headers, debug=debug)
   else:

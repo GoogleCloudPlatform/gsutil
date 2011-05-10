@@ -29,17 +29,21 @@ import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'boto')
 import boto
+from gslib.project_id import ProjectIdHandler
 from tests.s3 import mock_storage_service
 import wildcard_iterator
+
+proj_id_handler = ProjectIdHandler()
 
 
 def test_wildcard_iterator(uri_or_str,
                            result_type=wildcard_iterator.ResultType.URIS,
-                           headers=None, debug=0):
+                           debug=0):
   """
   Convenience method for instantiating a testing
   instance of WildCardIterator, without having to specify
-  bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri.
+  all the params of that class (like
+  bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri).
   Also naming the factory method this way makes it clearer in the test
   code that WildcardIterator needs to be set up for testing.
 
@@ -48,8 +52,8 @@ def test_wildcard_iterator(uri_or_str,
   bucket_storage_uri_class arg.
   """
   return wildcard_iterator.wildcard_iterator(
-      uri_or_str, result_type, headers, debug,
-      mock_storage_service.MockBucketStorageUri)
+      uri_or_str, proj_id_handler, result_type,
+      mock_storage_service.MockBucketStorageUri, headers={}, debug=debug)
 
 
 def test_storage_uri(uri_str, default_scheme='file', debug=0, validate=True):
