@@ -132,7 +132,12 @@ class CloudWildcardIterator(WildcardIterator):
     self.result_type = result_type
     if result_type != ResultType.KEYS and result_type != ResultType.URIS:
       raise WildcardException('Invalid ResultType (%s)' % result_type)
-    self.headers = headers
+    # Make a copy of the headers so any updates we make during wildcard
+    # expansion aren't left in the input params (specifically, so we don't
+    # include the x-goog-project-id header needed by a subset of cases, in
+    # the data returned to caller, which could then be used in other cases
+    # where that header must not be passed).
+    self.headers = headers.copy()
     self.proj_id_handler = proj_id_handler
     self.debug = debug
     self.bucket_storage_uri_class = bucket_storage_uri_class
