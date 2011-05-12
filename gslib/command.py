@@ -1765,7 +1765,8 @@ class Command(object):
       time.sleep(2)
     else:
       sys.stdout.write(
-          'Please navigate your browser to the following URL:\n%s\n' %
+          '\nPlease navigate your browser to %s,\nthen click "Storage" on the '
+          'left side panel and find the "x-goog-project-id" on that page.\n' %
           GOOG_API_CONSOLE_URI)
     default_project_id = raw_input('What is your project-id? ')
     project_id_section_prelude = """
