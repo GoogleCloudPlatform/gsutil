@@ -327,7 +327,8 @@ def main():
       raise CommandException('Wrong number of arguments for "%s" command.' %
                              cmd)
     if not file_uri_ok and HaveFileUris(args[uris_start_arg:]):
-      raise CommandException('"%s" command does not support "file://" URIs.' %
+      raise CommandException('"%s" command does not support "file://" URIs. '
+                             'Did you mean to use a gs:// URI?' %
                              cmd)
     if not provider_uri_ok and HaveProviderUris(args[uris_start_arg:]):
       raise CommandException('"%s" command does not support provider-only '
