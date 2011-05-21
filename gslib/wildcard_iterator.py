@@ -74,6 +74,7 @@ import boto
 from boto.storage_uri import BucketStorageUri
 
 WILDCARD_REGEX = re.compile('[*?\[\]]')
+WILDCARD_OBJECT_ITERATOR = 'wildcard_object_iterator'
 WILDCARD_BUCKET_ITERATOR = 'wildcard_bucket_iterator'
 
 
@@ -211,6 +212,9 @@ class CloudWildcardIterator(WildcardIterator):
       bucket_uris = [self.wildcard_uri.clone_replace_name('')]
 
     # Now iterate over bucket(s), and handle object wildcarding, if any.
+    self.proj_id_handler.FillInProjectHeaderIfNeeded(WILDCARD_OBJECT_ITERATOR,
+                                                     self.wildcard_uri,
+                                                     self.headers)
     for bucket_uri in bucket_uris:
       if not self.wildcard_uri.object_name:
         # Bucket-only URI.
