@@ -47,7 +47,7 @@ class ProjectIdHandler(object):
 
     # We only include the project ID header if it's a GS URI and a project_id
     # was specified and
-    # (it's a 'mb' command or
+    # (it's an 'mb' command or
     #  (an 'ls' command that doesn't specify a bucket or a wildcard bucket iterator)).
     if (uri.scheme.lower() == 'gs' and self.project_id and
         (command == 'mb' or

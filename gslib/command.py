@@ -1389,6 +1389,8 @@ class Command(object):
         location_output = ''
         if location_constraint:
             location_output = '\n\tLocationConstraint: %s' % location_constraint
+        self.proj_id_handler.FillInProjectHeaderIfNeeded(
+            'get_acl', bucket_uri, headers)
         print '%s :\n\t%d objects, %s%s\n\tACL: %s' % (
             bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
             location_output, bucket_uri.get_acl(False, headers))
