@@ -1632,23 +1632,23 @@ class Command(object):
           continue_on_error = True
     # Expand object name wildcards, if any.
     for uri_str in args:
-      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
-                                          debug=debug):
-        if uri.names_container():
-          if uri.is_cloud_uri():
-            # Before offering advice about how to do rm + rb, ensure those
-            # commands won't fail because of bucket naming problems.
-            boto.s3.connection.check_lowercase_bucketname(uri.bucket_name)
-          uri_str = uri_str.rstrip('/\\')
-          raise CommandException('"rm" command will not remove buckets. To '
-                                 'delete this/these bucket(s) do:\n\tgsutil rm '
-                                 '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
-        print 'Removing %s...' % uri
-        try:
+      try:
+        for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                            debug=debug):
+          if uri.names_container():
+            if uri.is_cloud_uri():
+              # Before offering advice about how to do rm + rb, ensure those
+              # commands won't fail because of bucket naming problems.
+              boto.s3.connection.check_lowercase_bucketname(uri.bucket_name)
+            uri_str = uri_str.rstrip('/\\')
+            raise CommandException('"rm" command will not remove buckets. To '
+                                   'delete this/these bucket(s) do:\n\tgsutil rm '
+                                   '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
+          print 'Removing %s...' % uri
           uri.delete_key(validate=False, headers=headers)
-        except Exception, e:
-          if not continue_on_error:
-            raise
+      except Exception, e:
+        if not continue_on_error:
+          raise
 
   def WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):
