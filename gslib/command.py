@@ -140,10 +140,6 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'resumable_tracker_dir' specifies the base location where resumable
 # transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
-
-# 'default_api_version' specifies the default Google Storage API version to
-# use use. If not set below gsutil defaults to API version 1.
-default_api_version = 2
 """
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
@@ -1717,7 +1713,7 @@ class Command(object):
       config_file.write('# To add Google OAuth2 credentials ("gs://" URIs), '
           'edit and uncomment the\n# following line:\n'
           '#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n')
-    
+
     for provider in provider_map:
       key_prefix = provider_map[provider]
       uri_scheme = uri_map[provider]
@@ -1745,6 +1741,17 @@ class Command(object):
 
     # Write the config file GSUtil section that doesn't depend on user input.
     config_file.write(CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT)
+
+    # Write the default API version.
+    config_file.write("""
+# 'default_api_version' specifies the default Google Storage API version to
+# use use. If not set below gsutil defaults to API version 1.
+""")
+    api_version = 2
+    if not use_oauth2: api_version = 1
+
+    config_file.write('default_api_version = %d\n' % api_version)
+
 
     # Write the config file GSUtil section that includes the default
     # project ID input from the user.
