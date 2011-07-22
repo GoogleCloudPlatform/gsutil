@@ -1,4 +1,5 @@
 # Copyright 2010 Google Inc.
+# Copyright 2011, Nexenta Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -402,6 +403,10 @@ class Command(object):
           show_header = True
 
     printed_one = False
+    # We manipulate the stdout so that all other data other than the Object
+    # contents go to stderr.
+    cat_outfd = sys.stdout
+    sys.stdout = sys.stderr
     for uri_str in args:
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
@@ -412,17 +417,9 @@ class Command(object):
             print
           print '==> %s <==' % uri.__str__()
           printed_one = True
-        tmp_file = tempfile.TemporaryFile()
         key = uri.get_key(False, headers)
-        key.get_file(tmp_file, headers)
-        tmp_file.seek(0)
-        while True:
-          # Use 8k buffer size.
-          data = tmp_file.read(8192)
-          if not data:
-            break
-          sys.stdout.write(data)
-        tmp_file.close()
+        key.get_file(cat_outfd, headers)
+    sys.stdout = cat_outfd
 
   def SetAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
     """Implementation of setacl command.
@@ -443,7 +440,7 @@ class Command(object):
     # Do a first pass over all matched objects to disallow multi-provider
     # setacl requests, because there are differences in the ACL models.
     for uri_str in uri_args:
-      for uri in self.CmdWildcardIterator(uri_str, headers=headers, 
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
         if not provider:
           provider = uri.scheme
@@ -744,6 +741,17 @@ class Command(object):
       if total_bytes_transferred == total_size:
         sys.stderr.write('\n')
 
+  class StreamCopyCallbackHandler(object):
+    """Outputs progress info for Stream copy to cloud.
+       Total Size of the stream is not known, so we output
+       only the bytes transferred.
+    """
+    def call(self, total_bytes_transferred, total_size):
+      sys.stderr.write('Uploading: %s    \r' % (
+          MakeHumanReadable(total_bytes_transferred)))
+      if total_size and total_bytes_transferred == total_size:
+        sys.stderr.write('\n')
+
   def GetTransferHandlers(self, uri, key, file_size, upload):
     """
     Selects upload/download and callback handlers.
@@ -843,6 +851,25 @@ class Command(object):
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
+  def PerformStreamUpload(self, fp, dst_uri, headers, canned_acl=None):
+    """
+    Performs Stream upload to cloud.
+
+    Returns (elapsed_time, bytes_transferred).
+    """
+    start_time = time.time()
+    dst_key = dst_uri.new_key(False, headers)
+
+    cb = self.StreamCopyCallbackHandler().call
+    dst_key.set_contents_from_stream(fp, headers, policy=canned_acl, cb=cb)
+    try:
+        bytes_transferred = fp.tell()
+    except:
+        bytes_transferred = 0;
+
+    end_time = time.time()
+    return (end_time - start_time, bytes_transferred)
+
   def UploadFileToObject(self, sub_opts, src_key, src_uri, dst_uri, headers,
                          debug):
     gzip_exts = []
@@ -887,8 +914,24 @@ class Command(object):
           open(gzip_path, 'rb'), dst_uri, headers, canned_acl)
       os.unlink(gzip_path)
     else:
-      (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
-          src_key.fp, dst_uri, headers, canned_acl)
+      if (src_key.is_stream() and
+            dst_uri.get_provider().supports_chunked_transfer()):
+        (elapsed_time, bytes_transferred) = self.PerformStreamUpload(
+            src_key.fp, dst_uri, headers, canned_acl)
+      else:
+        if src_key.is_stream():
+          # For Providers that doesn't support chunked Transfers
+          tmp = tempfile.NamedTemporaryFile()
+          file_uri = self.StorageUri('file://%s' % tmp.name, debug=debug,
+                               validate=False)
+          file_uri.new_key(False, headers).set_contents_from_file(src_key.fp,
+                                                                    headers)
+          src_key = file_uri.get_key()
+        (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
+            src_key.fp, dst_uri, headers, canned_acl)
+        if src_key.is_stream():
+          tmp.close()
+
     return (elapsed_time, bytes_transferred)
 
   def DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers, debug):
@@ -925,7 +968,7 @@ class Command(object):
       bytes_transferred = src_key.size
     if need_to_unzip:
       if debug:
-        print 'Uncompressing tmp to %s...' % file_name
+        sys.stderr.write('Uncompressing tmp to %s...\n' % file_name)
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
       f_in = gzip.open(download_file_name, 'rb')
       f_out = open(file_name, 'wb')
@@ -933,6 +976,16 @@ class Command(object):
       f_out.close();
       f_in.close();
       os.unlink(download_file_name)
+    return (end_time - start_time, bytes_transferred)
+
+  def PerformDownloadToStream(self, src_key, src_uri, str_fp, headers, debug):
+    (cb, num_cb, res_download_handler) = self.GetTransferHandlers(
+                                src_uri, src_key, src_key.size, False)
+    start_time = time.time()
+    src_key.get_contents_to_file(str_fp, headers, cb=cb, num_cb=num_cb)
+    end_time = time.time()
+    bytes_transferred = src_key.size
+    end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
   def CopyFileToFile(self, src_key, dst_uri, headers):
@@ -944,9 +997,34 @@ class Command(object):
 
   def CopyObjToObjDiffProvider(self, sub_opts, src_key, src_uri, dst_uri,
                                headers, debug):
-    # We implement cross-provider object copy through a local temp file.
-    # Note that a downside of this approach is that killing the gsutil
-    # process partway through and then restarting will always repeat the
+    # If Destination is GS, We can avoid the local copying through a local file
+    # as GS supports chunked transfer.
+    if dst_uri.scheme == 'gs':
+      canned_acls = None
+      if sub_opts:
+        for o, a in sub_opts:
+          if o == '-a':
+            canned_acls = dst_uri.canned_acls()
+            if a not in canned_acls:
+              raise CommandException('Invalid canned ACL "%s".' % a)
+            canned_acl = a
+          elif o == '-t':
+            mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
+            mime_type = mimetype_tuple[0]
+            content_encoding = mimetype_tuple[1]
+            if mime_type:
+              headers['Content-Type'] = mime_type
+              print '\t[Setting Content-Type=%s]' % mime_type
+            else:
+              print '\t[Unknown content type -> using application/octet stream]'
+            if content_encoding:
+              headers['Content-Encoding'] = content_encoding
+
+      return self.PerformStreamUpload(src_key, dst_uri, headers, canned_acls)
+
+    # If destination is not GS, We implement object copy through a local
+    # temp file. Note that a downside of this approach is that killing the
+    # gsutil process partway through and then restarting will always repeat the
     # download and upload, because the temp file name is different for each
     # incarnation. (If however you just leave the process running and failures
     # happen along the way, they will continue to restart and make progress
@@ -1072,6 +1150,11 @@ class Command(object):
       if uri.is_file_uri() and ContainsWildcard(uri_str):
         uris_to_expand.extend(list(
             self.CmdWildcardIterator(uri, headers=headers, debug=debug)))
+      elif uri.is_file_uri() and uri.is_stream():
+        # Special case for Streams
+        uri_dict = {}
+        uri_dict[uri] = [uri]
+        return uri_dict
       else:
         uris_to_expand.append(uri)
 
@@ -1231,6 +1314,10 @@ class Command(object):
 
     Returns:
       dst_uri to use for copy.
+
+    Raises:
+      CommandException if destination object name not specified for
+      source is stream.
     """
     if base_dst_uri.names_container():
       # To match naming semantics of UNIX 'cp' command, copying files
@@ -1250,6 +1337,9 @@ class Command(object):
         start_pos = exp_src_uri.object_name.find(dst_path_start)
         dst_key_name = exp_src_uri.object_name[start_pos:]
       else:
+        if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
+          raise CommandException('Destination Object name needed if '
+                            'source is stream')
         # src is a file or object, so use final component of src name.
         dst_key_name = os.path.basename(exp_src_uri.object_name)
       if base_dst_uri.is_file_uri():
@@ -1276,6 +1366,33 @@ class Command(object):
     Raises:
       CommandException: if errors encountered.
     """
+    total_elapsed_time = total_bytes_transferred = 0
+
+    if args[-1] == '-' or args[-1] == 'file://-':
+      # Destination is <STDOUT>. manipulate sys.stdout so as to redirect all
+      # debug messages to <STDERR>
+      stdout_fp = sys.stdout
+      sys.stdout = sys.stderr
+      for uri_str in args[0:len(args)-1]:
+        for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                                        debug=debug):
+          if not uri.object_name:
+            raise CommandException('Destination Stream requires that '
+                    'source URI %s should represent an object!')
+          key = uri.get_key(False, headers)
+          (elapsed_time, bytes_transferred) = self.PerformDownloadToStream(
+                            key, uri, stdout_fp, headers, debug)
+          total_elapsed_time += elapsed_time
+          total_bytes_transferred += bytes_transferred
+      if debug == 3:
+        if total_bytes_transferred != 0:
+          sys.stderr.write(
+            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
+              total_bytes_transferred, total_elapsed_time,
+              MakeHumanReadable(float(total_bytes_transferred) /
+                              float(total_elapsed_time))))
+      return
+
     # Expand wildcards and containers in source StorageUris.
     src_uri_expansion = self.ExpandWildcardsAndContainers(
         args[0:len(args)-1], sub_opts, headers, debug)
@@ -1289,10 +1406,12 @@ class Command(object):
                                                    base_dst_uri)
 
     # Now iterate over expanded src URIs, and perform copy operations.
-    total_elapsed_time = total_bytes_transferred = 0
     for src_uri in iter(src_uri_expansion):
       for exp_src_uri in src_uri_expansion[src_uri]:
-        print 'Copying %s...' % exp_src_uri
+        if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
+          sys.stderr.write("Copying from <STDIN>...\n")
+        else:
+          sys.stderr.write('Copying %s...\n' % exp_src_uri)
         dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
         (elapsed_time, bytes_transferred) = self.PerformCopy(
             exp_src_uri, dst_uri, sub_opts, headers, debug)
@@ -1303,10 +1422,10 @@ class Command(object):
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
       if total_bytes_transferred != 0:
-        print 'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)' % (
+        sys.stderr.write('Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
             total_bytes_transferred, total_elapsed_time,
             MakeHumanReadable(float(total_bytes_transferred) /
-                              float(total_elapsed_time)))
+                              float(total_elapsed_time))))
 
   def HelpCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                   unused_debug=None):
@@ -1346,8 +1465,8 @@ class Command(object):
       except IOError:
         pass
 
-    print 'gsutil version %s%s, python version %s' % (
-        self.LoadVersionString(), config_ver, sys.version)
+    sys.stderr.write('gsutil version %s%s, python version %s\n' % (
+        self.LoadVersionString(), config_ver, sys.version))
 
   def PrintBucketInfo(self, bucket_uri, listing_style, headers=None, debug=0):
     """Print listing info for given bucket.
@@ -1368,7 +1487,7 @@ class Command(object):
     else:
       try:
         for obj in self.CmdWildcardIterator(
-            bucket_uri.clone_replace_name('*'), 
+            bucket_uri.clone_replace_name('*'),
             ResultType.KEYS, headers=headers, debug=debug):
           bucket_objs += 1
           bucket_bytes += obj.size
@@ -1649,7 +1768,7 @@ class Command(object):
   def WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):
     """Creates a boto config file interactively.
-    
+
     Needed credentials are obtained interactively, either by asking the user for
     access key and secret, or by walking the user through the OAuth2 approval
     flow.
@@ -1758,7 +1877,7 @@ class Command(object):
     if launch_browser:
       sys.stdout.write(
           'Attempting to launch a browser to open the Google API console at '
-          'URL: %s\n\n' 
+          'URL: %s\n\n'
           '[Note: due to a Python bug, you may see a spurious error message '
           '"object is not\n callable [...] in [...] Popen.__del__" which can '
           'be ignored.]\n\n' % GOOG_API_CONSOLE_URI)

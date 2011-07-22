@@ -101,6 +101,7 @@ SYNOPSIS
         -R Causes directories and buckets to be copied recursively.
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
+      Use '-' in place of src_uri or dst_uri to perform streaming transfer.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     List buckets or objects:
@@ -392,8 +393,8 @@ def main():
         config_items.extend(boto.config.items('GSUtil'))
       except ConfigParser.NoSectionError:
         pass
-      print 'config_file_list: %s' % config_file_list
-      print 'config: %s' % str(config_items)
+      sys.stderr.write('config_file_list: %s\n' % config_file_list)
+      sys.stderr.write('config: %s\n' % str(config_items))
     else:
       logging.basicConfig()
     # Catch ^C so we can print a brief message instead of the normal Python
