@@ -1450,7 +1450,10 @@ class Command(object):
 
     def _CopyFunc(src_uri, exp_src_uri):
       """Worker function for performing the actual copy."""
-      copy_logger.info('Copying %s...', exp_src_uri)
+      if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
+        sys.stderr.write("Copying from <STDIN>...\n")
+      else:
+        copy_logger.info('Copying %s...', exp_src_uri)
       dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
       (elapsed_time, bytes_transferred) = self.PerformCopy(
           exp_src_uri, dst_uri, sub_opts, headers, debug)
@@ -1477,20 +1480,17 @@ class Command(object):
     else:
       for src_uri in iter(src_uri_expansion):
         for exp_src_uri in src_uri_expansion[src_uri]:
-          if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
-            sys.stderr.write("Copying from <STDIN>...\n")
-          else:
-            sys.stderr.write('Copying %s...\n' % exp_src_uri)
           _CopyFunc(src_uri, exp_src_uri)
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
       if self.total_bytes_transferred != 0:
-        sys.stderr.write('Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
-            total_bytes_transferred, total_elapsed_time,
-            MakeHumanReadable(float(self.total_bytes_transferred) /
-                              float(self.total_elapsed_time))))
+        sys.stderr.write(
+            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
+                total_bytes_transferred, total_elapsed_time,
+                MakeHumanReadable(float(self.total_bytes_transferred) /
+                                  float(self.total_elapsed_time))))
     if not self.everything_copied_okay:
       raise CommandException('Some files could not be transferred.')
 
