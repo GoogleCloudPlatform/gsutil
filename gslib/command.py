@@ -18,6 +18,7 @@
 import ctypes
 import datetime
 import gzip
+import logging
 import mimetypes
 import os
 import platform
@@ -27,6 +28,7 @@ import signal
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import webbrowser
 import xml.dom.minidom
@@ -42,6 +44,7 @@ from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from boto.storage_uri import BucketStorageUri
 from exception import CommandException
 from gslib.project_id import ProjectIdHandler
+from gslib.thread_pool import ThreadPool, Worker
 import wildcard_iterator
 from wildcard_iterator import ContainsWildcard
 from wildcard_iterator import ResultType
@@ -72,6 +75,9 @@ EXP_STRINGS = [
     (40, 'TB'),
     (50, 'PB'),
 ]
+
+# Default number of threads to use for parallel operations.
+PARALLEL_THREAD_COUNT = 24
 
 ONE_MB = 1024*1024
 
@@ -136,12 +142,17 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'resumable_threshold' specifies the smallest file size [bytes] for which
 # resumable Google Storage transfers are attempted. The default is 1048576
 # (1MB).
-#resumable_threshold = 1048576
+#resumable_threshold = %(resumable_threshold)d
 
 # 'resumable_tracker_dir' specifies the base location where resumable
 # transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
-"""
+
+# 'parallel_thread_count' specifies the number of threads to use when executing
+# operations in parallel. Currently only used for multithreaded copy (cp -m).
+#parallel_thread_count = %(parallel_thread_count)d
+""" % {'resumable_threshold': ONE_MB,
+       'parallel_thread_count': PARALLEL_THREAD_COUNT}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]
@@ -305,6 +316,24 @@ def OpenConfigFile(file_path):
     raise CommandException("Failed to open %s for writing: %s" %
         (file_path, e))
   return os.fdopen(fd, "w")
+
+
+def ThreadedLogger():
+  """Creates a logger which resembles 'print' output, but is thread safe.
+
+  The logger will display all messages logged with level INFO or above. Log
+  propagation is disabled.
+
+  Returns:
+    A logger object.
+  """
+  log = logging.getLogger('threaded-logging')
+  log.propagate = False
+  log.setLevel(logging.INFO)
+  log_handler = logging.StreamHandler()
+  log_handler.setFormatter(logging.Formatter('%(message)s'))
+  log.addHandler(log_handler)
+  return log
 
 
 class Command(object):
@@ -913,24 +942,23 @@ class Command(object):
       (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
           open(gzip_path, 'rb'), dst_uri, headers, canned_acl)
       os.unlink(gzip_path)
+    elif (src_key.is_stream() and
+          dst_uri.get_provider().supports_chunked_transfer()):
+      (elapsed_time, bytes_transferred) = self.PerformStreamUpload(
+          src_key.fp, dst_uri, headers, canned_acl)
     else:
-      if (src_key.is_stream() and
-            dst_uri.get_provider().supports_chunked_transfer()):
-        (elapsed_time, bytes_transferred) = self.PerformStreamUpload(
-            src_key.fp, dst_uri, headers, canned_acl)
-      else:
-        if src_key.is_stream():
-          # For Providers that doesn't support chunked Transfers
-          tmp = tempfile.NamedTemporaryFile()
-          file_uri = self.StorageUri('file://%s' % tmp.name, debug=debug,
-                               validate=False)
-          file_uri.new_key(False, headers).set_contents_from_file(src_key.fp,
-                                                                    headers)
-          src_key = file_uri.get_key()
-        (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
-            src_key.fp, dst_uri, headers, canned_acl)
-        if src_key.is_stream():
-          tmp.close()
+      if src_key.is_stream():
+        # For Providers that doesn't support chunked Transfers
+        tmp = tempfile.NamedTemporaryFile()
+        file_uri = self.StorageUri('file://%s' % tmp.name, debug=debug,
+                             validate=False)
+        file_uri.new_key(False, headers).set_contents_from_file(src_key.fp,
+                                                                  headers)
+        src_key = file_uri.get_key()
+      (elapsed_time, bytes_transferred) = self.PerformResumableUploadIfApplies(
+          src_key.fp, dst_uri, headers, canned_acl)
+      if src_key.is_stream():
+        tmp.close()
 
     return (elapsed_time, bytes_transferred)
 
@@ -997,7 +1025,7 @@ class Command(object):
 
   def CopyObjToObjDiffProvider(self, sub_opts, src_key, src_uri, dst_uri,
                                headers, debug):
-    # If Destination is GS, We can avoid the local copying through a local file
+    # If destination is GS, We can avoid the local copying through a local file
     # as GS supports chunked transfer.
     if dst_uri.scheme == 'gs':
       canned_acls = None
@@ -1317,7 +1345,7 @@ class Command(object):
 
     Raises:
       CommandException if destination object name not specified for
-      source is stream.
+      source and source is a stream.
     """
     if base_dst_uri.names_container():
       # To match naming semantics of UNIX 'cp' command, copying files
@@ -1405,27 +1433,66 @@ class Command(object):
       base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion,
                                                    base_dst_uri)
 
+    # Acquire a logging instance since print isn't thread safe.
+    copy_logger = ThreadedLogger()
+
+    # To ensure statistics are accurate with threads we need to use a lock.
+    stats_lock = threading.Lock()
+    self.total_elapsed_time = self.total_bytes_transferred = 0
+
+    # Used to track if any files failed to copy over.
+    self.everything_copied_okay = True
+
+    def _CopyExceptionHandler(e):
+      """Simple exception handler to allow post-completion status."""
+      copy_logger.error(str(e))
+      self.everything_copied_okay = False
+
+    def _CopyFunc(src_uri, exp_src_uri):
+      """Worker function for performing the actual copy."""
+      copy_logger.info('Copying %s...', exp_src_uri)
+      dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
+      (elapsed_time, bytes_transferred) = self.PerformCopy(
+          exp_src_uri, dst_uri, sub_opts, headers, debug)
+      with stats_lock:
+        self.total_elapsed_time += elapsed_time
+        self.total_bytes_transferred += bytes_transferred
+
+    parallel_copy = False
+    if sub_opts:
+      for o, a in sub_opts:
+        if o == '-m':
+          parallel_copy = True
+
     # Now iterate over expanded src URIs, and perform copy operations.
-    for src_uri in iter(src_uri_expansion):
-      for exp_src_uri in src_uri_expansion[src_uri]:
-        if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
-          sys.stderr.write("Copying from <STDIN>...\n")
-        else:
-          sys.stderr.write('Copying %s...\n' % exp_src_uri)
-        dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
-        (elapsed_time, bytes_transferred) = self.PerformCopy(
-            exp_src_uri, dst_uri, sub_opts, headers, debug)
-        total_elapsed_time += elapsed_time
-        total_bytes_transferred += bytes_transferred
+    if parallel_copy:
+      thread_count = boto.config.getint(
+          'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
+      thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
+      for src_uri in iter(src_uri_expansion):
+        for exp_src_uri in src_uri_expansion[src_uri]:
+          thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
+
+      thread_pool.WaitCompletion()
+    else:
+      for src_uri in iter(src_uri_expansion):
+        for exp_src_uri in src_uri_expansion[src_uri]:
+          if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
+            sys.stderr.write("Copying from <STDIN>...\n")
+          else:
+            sys.stderr.write('Copying %s...\n' % exp_src_uri)
+          _CopyFunc(src_uri, exp_src_uri)
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
-      if total_bytes_transferred != 0:
+      if self.total_bytes_transferred != 0:
         sys.stderr.write('Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
             total_bytes_transferred, total_elapsed_time,
-            MakeHumanReadable(float(total_bytes_transferred) /
-                              float(total_elapsed_time))))
+            MakeHumanReadable(float(self.total_bytes_transferred) /
+                              float(self.total_elapsed_time))))
+    if not self.everything_copied_okay:
+      raise CommandException('Some files could not be transferred.')
 
   def HelpCommand(self, unused_args, unused_sub_opts=None, unused_headers=None,
                   unused_debug=None):
