@@ -81,7 +81,7 @@ except ImportError:
 
 usage_string = """
 SYNOPSIS
-  gsutil [-d][-D] [-h header]... [command args...]
+  gsutil [-d][-D] [-h header]... [-m] [command args...]
 
   -d option shows HTTP protocol detail.
   -D option shows detailed debug output, and -DD even more detailed.
@@ -89,16 +89,17 @@ SYNOPSIS
   -h option allows you to specify additional HTTP headers, for example:
      gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp ...
 
+  -m option causes supported operations (cp, rm) to be executed in parallel.
+
   Commands:
     Concatenate object content to stdout:
       cat [-h] uri...
         -h  Prints short header for each object.
     Copy objects:
-      cp [-a canned_acl] [-m] [-t] [-z ext1,ext2,...] src_uri dst_uri
+      cp [-a canned_acl] [-t] [-z ext1,ext2,...] src_uri dst_uri
         - or -
-      cp [-a canned_acl] [-m] [-R] [-t] [-z extensions] uri... dst_uri
+      cp [-a canned_acl] [-R] [-t] [-z extensions] uri... dst_uri
         -a Sets named canned_acl when uploaded objects created (list below).
-        -m Multithreaded copy; copies multiple files in parallel.
         -R Causes directories and buckets to be copied recursively.
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
@@ -237,7 +238,7 @@ commands = {
     'cat': [command_inst.CatCommand, 0, NO_MAX, 'h', False, True, 0],
     'config': [command_inst.CreateConfigCommand,
         0, 0, 'habfwrs:o:', False, False, 0],
-    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:mrRtz:', True, False, 0],
+    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:rRtz:', True, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blLp:', False, True, 0],
@@ -306,9 +307,9 @@ def main():
 
   global debug
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:',
+    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:m',
                                ['debug', 'detailedDebug', 'version', 'help',
-                                'header'])
+                                'header', 'multithreaded'])
     if not args:
       cmd = 'help'
     else:
@@ -373,6 +374,8 @@ def main():
       if o in ('-v', '--version'):
         command_inst.VerCommand([], None)
         sys.exit(0)
+      if o in ('-m', '--multithreaded'):
+        command_inst.SetParallelOperations(True)
     if debug > 1:
       sys.stderr.write(
           '***************************** WARNING *****************************\n'

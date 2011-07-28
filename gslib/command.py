@@ -336,11 +336,16 @@ def ThreadedLogger():
   return log
 
 
+# Global instance of a threaded logger object.
+THREADED_LOGGER = ThreadedLogger()
+
+
 class Command(object):
   """Class that contains all gsutil command code."""
 
   def __init__(self, gsutil_bin_dir, boto_lib_dir, usage_string,
-               config_file_list, bucket_storage_uri_class=BucketStorageUri):
+               config_file_list, bucket_storage_uri_class=BucketStorageUri,
+               parallel_operations=False):
     """Instantiates Command class.
 
     Args:
@@ -350,12 +355,14 @@ class Command(object):
       config_file_list: config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
+      parallel_operations: Should command operations be executed in parallel?
     """
     self.gsutil_bin_dir = gsutil_bin_dir
     self.usage_string = usage_string
     self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
+    self.parallel_operations = parallel_operations
 
     config = boto.config
     self.proj_id_handler = ProjectIdHandler()
@@ -1433,9 +1440,6 @@ class Command(object):
       base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion,
                                                    base_dst_uri)
 
-    # Acquire a logging instance since print isn't thread safe.
-    copy_logger = ThreadedLogger()
-
     # To ensure statistics are accurate with threads we need to use a lock.
     stats_lock = threading.Lock()
     self.total_elapsed_time = self.total_bytes_transferred = 0
@@ -1445,7 +1449,7 @@ class Command(object):
 
     def _CopyExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      copy_logger.error(str(e))
+      THREADED_LOGGER.error(str(e))
       self.everything_copied_okay = False
 
     def _CopyFunc(src_uri, exp_src_uri):
@@ -1453,7 +1457,7 @@ class Command(object):
       if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
         sys.stderr.write("Copying from <STDIN>...\n")
       else:
-        copy_logger.info('Copying %s...', exp_src_uri)
+        THREADED_LOGGER.info('Copying %s...', exp_src_uri)
       dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
       (elapsed_time, bytes_transferred) = self.PerformCopy(
           exp_src_uri, dst_uri, sub_opts, headers, debug)
@@ -1461,26 +1465,18 @@ class Command(object):
         self.total_elapsed_time += elapsed_time
         self.total_bytes_transferred += bytes_transferred
 
-    parallel_copy = False
-    if sub_opts:
-      for o, a in sub_opts:
-        if o == '-m':
-          parallel_copy = True
-
-    # Now iterate over expanded src URIs, and perform copy operations.
-    if parallel_copy:
+    thread_count = 1
+    if self.parallel_operations:
       thread_count = boto.config.getint(
           'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
-      thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
-      for src_uri in iter(src_uri_expansion):
-        for exp_src_uri in src_uri_expansion[src_uri]:
-          thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
 
-      thread_pool.WaitCompletion()
-    else:
-      for src_uri in iter(src_uri_expansion):
-        for exp_src_uri in src_uri_expansion[src_uri]:
-          _CopyFunc(src_uri, exp_src_uri)
+    # Now iterate over expanded src URIs, and perform copy operations.
+    thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
+    for src_uri in iter(src_uri_expansion):
+      for exp_src_uri in src_uri_expansion[src_uri]:
+        thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
+
+    thread_pool.WaitCompletion()
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
@@ -1812,25 +1808,42 @@ class Command(object):
       for o, unused_a in sub_opts:
         if o == '-f':
           continue_on_error = True
+
+    # Used to track if any files failed to be removed.
+    self.everything_removed_okay = True
+
+    def _RemoveExceptionHandler(e):
+      """Simple exception handler to allow post-completion status."""
+      if not self.parallel_operations and not continue_on_error:
+        raise e
+      THREADED_LOGGER.error(str(e))
+      self.everything_removed_okay = False
+
+    def _RemoveFunc(uri):
+      if uri.names_container():
+        if uri.is_cloud_uri():
+          # Before offering advice about how to do rm + rb, ensure those
+          # commands won't fail because of bucket naming problems.
+          boto.s3.connection.check_lowercase_bucketname(uri.bucket_name)
+        uri_str = uri_str.rstrip('/\\')
+        raise CommandException('"rm" command will not remove buckets. To '
+                               'delete this/these bucket(s) do:\n\tgsutil rm '
+                               '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
+      THREADED_LOGGER.info('Removing %s...', uri)
+      uri.delete_key(validate=False, headers=headers)
+
+    thread_count = 1
+    if self.parallel_operations:
+      thread_count = boto.config.getint(
+          'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
+    thread_pool = ThreadPool(thread_count, _RemoveExceptionHandler)
+
     # Expand object name wildcards, if any.
     for uri_str in args:
-      try:
-        for uri in self.CmdWildcardIterator(uri_str, headers=headers,
-                                            debug=debug):
-          if uri.names_container():
-            if uri.is_cloud_uri():
-              # Before offering advice about how to do rm + rb, ensure those
-              # commands won't fail because of bucket naming problems.
-              boto.s3.connection.check_lowercase_bucketname(uri.bucket_name)
-            uri_str = uri_str.rstrip('/\\')
-            raise CommandException('"rm" command will not remove buckets. To '
-                                   'delete this/these bucket(s) do:\n\tgsutil rm '
-                                   '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
-          print 'Removing %s...' % uri
-          uri.delete_key(validate=False, headers=headers)
-      except Exception, e:
-        if not continue_on_error:
-          raise
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
+        thread_pool.AddTask(_RemoveFunc, uri)
+    thread_pool.WaitCompletion()
 
   def WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):
@@ -2081,3 +2094,7 @@ class Command(object):
           '\nBoto config file "%s" created. If you need to use\na proxy to '
           'access the Internet please see the instructions in that file.\n'
           % output_file_name)
+
+  def SetParallelOperations(self, enabled=True):
+    """Enables parallel command operations where supported."""
+    self.parallel_operations = enabled
