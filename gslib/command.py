@@ -1401,7 +1401,7 @@ class Command(object):
     Raises:
       CommandException: if errors encountered.
     """
-    total_elapsed_time = total_bytes_transferred = 0
+    self.total_elapsed_time = self.total_bytes_transferred = 0
 
     if args[-1] == '-' or args[-1] == 'file://-':
       # Destination is <STDOUT>. manipulate sys.stdout so as to redirect all
@@ -1410,22 +1410,22 @@ class Command(object):
       sys.stdout = sys.stderr
       for uri_str in args[0:len(args)-1]:
         for uri in self.CmdWildcardIterator(uri_str, headers=headers,
-                                                        debug=debug):
+                                            debug=debug):
           if not uri.object_name:
             raise CommandException('Destination Stream requires that '
-                    'source URI %s should represent an object!')
+                                   'source URI %s should represent an object!')
           key = uri.get_key(False, headers)
           (elapsed_time, bytes_transferred) = self.PerformDownloadToStream(
-                            key, uri, stdout_fp, headers, debug)
-          total_elapsed_time += elapsed_time
-          total_bytes_transferred += bytes_transferred
+              key, uri, stdout_fp, headers, debug)
+          self.total_elapsed_time += elapsed_time
+          self.total_bytes_transferred += bytes_transferred
       if debug == 3:
-        if total_bytes_transferred != 0:
+        if self.total_bytes_transferred != 0:
           sys.stderr.write(
-            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
-              total_bytes_transferred, total_elapsed_time,
-              MakeHumanReadable(float(total_bytes_transferred) /
-                              float(total_elapsed_time))))
+              'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' %
+                  (self.total_bytes_transferred, self.total_elapsed_time,
+                   MakeHumanReadable(float(self.total_bytes_transferred) /
+                                     float(self.total_elapsed_time))))
       return
 
     # Expand wildcards and containers in source StorageUris.
@@ -1440,9 +1440,15 @@ class Command(object):
       base_dst_uri = self.HandleMultiSrcCopyRequst(src_uri_expansion,
                                                    base_dst_uri)
 
+    # Should symbolic links be skipped?
+    ignore_symlinks = False
+    if sub_opts:
+      for o, unused_a in sub_opts:
+        if o == '-e':
+          ignore_symlinks = True
+
     # To ensure statistics are accurate with threads we need to use a lock.
     stats_lock = threading.Lock()
-    self.total_elapsed_time = self.total_bytes_transferred = 0
 
     # Used to track if any files failed to copy over.
     self.everything_copied_okay = True
@@ -1465,18 +1471,24 @@ class Command(object):
         self.total_elapsed_time += elapsed_time
         self.total_bytes_transferred += bytes_transferred
 
-    thread_count = 1
     if self.parallel_operations:
       thread_count = boto.config.getint(
           'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
+      thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
 
     # Now iterate over expanded src URIs, and perform copy operations.
-    thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
     for src_uri in iter(src_uri_expansion):
       for exp_src_uri in src_uri_expansion[src_uri]:
-        thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
+        if (ignore_symlinks and exp_src_uri.is_file_uri()
+            and os.path.islink(exp_src_uri.object_name)):
+          THREADED_LOGGER.info('Skipping symbolic link %s...', exp_src_uri)
+        elif self.parallel_operations:
+          thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
+        else:
+          _CopyFunc(src_uri, exp_src_uri)
 
-    thread_pool.WaitCompletion()
+    if self.parallel_operations:
+      thread_pool.WaitCompletion()
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
@@ -1814,12 +1826,10 @@ class Command(object):
 
     def _RemoveExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      if not self.parallel_operations and not continue_on_error:
-        raise e
       THREADED_LOGGER.error(str(e))
       self.everything_removed_okay = False
 
-    def _RemoveFunc(uri):
+    def _RemoveFunc(uri, uri_str):
       if uri.names_container():
         if uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those
@@ -1832,18 +1842,27 @@ class Command(object):
       THREADED_LOGGER.info('Removing %s...', uri)
       uri.delete_key(validate=False, headers=headers)
 
-    thread_count = 1
     if self.parallel_operations:
       thread_count = boto.config.getint(
           'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
-    thread_pool = ThreadPool(thread_count, _RemoveExceptionHandler)
+      thread_pool = ThreadPool(thread_count, _RemoveExceptionHandler)
 
     # Expand object name wildcards, if any.
     for uri_str in args:
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
-        thread_pool.AddTask(_RemoveFunc, uri)
-    thread_pool.WaitCompletion()
+        if self.parallel_operations:
+          thread_pool.AddTask(_RemoveFunc, uri, uri_str)
+        else:
+          try:
+            _RemoveFunc(uri, uri_str)
+          except Exception, e:
+            if continue_on_error:
+              THREADED_LOGGER.error(str(e))
+            else:
+              raise e
+    if self.parallel_operations:
+      thread_pool.WaitCompletion()
 
   def WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):

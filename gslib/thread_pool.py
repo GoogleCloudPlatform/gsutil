@@ -40,7 +40,8 @@ class Worker(threading.Thread):
         func(*args, **kargs)
       except Exception, e:
         self.exception_handler(e)
-      self.tasks.task_done()
+      finally:
+        self.tasks.task_done()
 
 
 class ThreadPool(object):
