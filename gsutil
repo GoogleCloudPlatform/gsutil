@@ -198,8 +198,8 @@ config_file_list = GetBotoConfigFileList()
 command_inst = Command(gsutil_bin_dir, boto_lib_dir, usage_string,
                        config_file_list)
 
-def SetupConfigIfNeeded():
-  """Interactively creates boto credential/config file if needed."""
+def HasConfiguredCredentials():
+  """Determines if boto credential/config file exists."""
 
   config = boto.config
   has_goog_creds = (config.has_option('Credentials', 'gs_access_key_id') and
@@ -209,8 +209,14 @@ def SetupConfigIfNeeded():
   has_refresh_token = (_HAVE_OAUTH2 and
       config.has_option('Credentials', 'gs_oauth2_refresh_token'))
   has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
-  if (not has_goog_creds and not has_amzn_creds and not has_refresh_token
-      and not has_auth_plugins):
+  return (has_goog_creds or has_amzn_creds or has_refresh_token
+          or has_auth_plugins)
+
+def ConfigureNoOpAuthIfNeeded():
+  """Sets up no-op auth handler if no boto credential/config file available."""
+
+  config = boto.config
+  if not HasConfiguredCredentials():
     if config_file_list:
       if (config.has_option('Credentials', 'gs_oauth2_refresh_token')
           and not _HAVE_OAUTH2):
@@ -227,9 +233,9 @@ def SetupConfigIfNeeded():
                              'to re-create a config file:\n%s' %
                              config_file_list)
     else:
-      sys.stderr.write('You have no boto config file.\n')
-      command_inst.CreateConfigCommand()
-      OutputAndExit('Please try running gsutil again now.')
+      # With no boto config file the user can still access publicly readable
+      # buckets and objects.
+      from gslib import no_op_auth_plugin
 
 # Maps command name to
 # [function, min_args, max_args, supported_sub_args, file_uri_ok,
@@ -339,7 +345,7 @@ def main():
                              'URIs.' % cmd)
 
     if cmd not in no_config_required_commands:
-      SetupConfigIfNeeded()
+      ConfigureNoOpAuthIfNeeded()
 
     # Include api_version header in all commands.
     api_version = boto.config.get_value('GSUtil', 'default_api_version', '1')
@@ -431,6 +437,16 @@ def main():
   except WildcardException, e:
     OutputAndExit(e.reason)
   except StorageResponseError, e:
+    # Check for access denied, and provide detail to users who have no boto
+    # config file (who have been using gsutil only for accessing publicly
+    # readable buckets and objects).
+    if e.status == 403 and not HasConfiguredCredentials():
+      OutputAndExit(
+          'You are attempting to access protected data with no configured '
+          'credentials.\nPlease see '
+          'http://code.google.com/apis/storage/docs/signup.html for\ndetails '
+          'about activating the Google Storage service and then run the\n'
+          '"gsutil config" command to configure gsutil to use these credentials.')
     detail_start = e.body.find('<Details>')
     detail_end = e.body.find('</Details>')
     exc_name = re.split("[\.']", str(type(e)))[-2]
