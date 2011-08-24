@@ -1467,9 +1467,10 @@ class Command(object):
       dst_uri = self.ConstructDstUri(src_uri, exp_src_uri, base_dst_uri)
       (elapsed_time, bytes_transferred) = self.PerformCopy(
           exp_src_uri, dst_uri, sub_opts, headers, debug)
-      with stats_lock:
-        self.total_elapsed_time += elapsed_time
-        self.total_bytes_transferred += bytes_transferred
+      stats_lock.acquire()
+      self.total_elapsed_time += elapsed_time
+      self.total_bytes_transferred += bytes_transferred
+      stats_lock.release()
 
     if self.parallel_operations:
       thread_count = boto.config.getint(
