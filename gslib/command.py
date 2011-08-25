@@ -1497,7 +1497,7 @@ class Command(object):
       if self.total_bytes_transferred != 0:
         sys.stderr.write(
             'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
-                total_bytes_transferred, total_elapsed_time,
+                self.total_bytes_transferred, self.total_elapsed_time,
                 MakeHumanReadable(float(self.total_bytes_transferred) /
                                   float(self.total_elapsed_time))))
     if not self.everything_copied_okay:
