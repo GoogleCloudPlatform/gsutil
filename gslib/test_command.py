@@ -127,7 +127,9 @@ class GsutilCpTests(unittest.TestCase):
     file_names = ['f0', 'f1', 'f2.txt', 'dir0%sdir1%snested' % (os.sep, os.sep)]
     file_paths = ['%s%s' % (cls.src_dir_root, f) for f in file_names]
     for file_path in file_paths:
-      open(file_path, 'w')
+      f = open(file_path, 'w')
+      f.write('test data')
+      f.close()
       cls.all_src_file_paths.append(file_path)
 
     cls.created_test_data = True
@@ -484,6 +486,16 @@ class GsutilCpTests(unittest.TestCase):
   def TestVerCommmandRuns(self):
     """Test that the Ver command basically runs"""
     command_inst.VerCommand([])
+
+  def TestMinusDOptionWorks(self):
+    """Tests using gsutil -D option"""
+    src_file = self.SrcFile('f0')
+    command_inst.CopyObjsCommand([src_file, self.dst_bucket_uri.uri],
+                                 headers={}, debug=3)
+    actual = list(test_util.test_wildcard_iterator('%s*' %
+                                                   self.dst_bucket_uri.uri))
+    self.assertEqual(1, len(actual))
+    self.assertEqual('f0', actual[0].object_name)
 
 if __name__ == '__main__':
   if sys.version_info[:3] < (2, 5, 1):
