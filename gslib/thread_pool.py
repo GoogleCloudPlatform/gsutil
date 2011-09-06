@@ -19,6 +19,10 @@ import Queue
 import threading
 
 
+# Magic values used to cleanly bring down threads.
+_THREAD_EXIT_MAGIC = ('Clean', 'Thread', 'Exit')
+
+
 def _DefaultExceptionHandler(e):
   logging.exception(e)
 
@@ -36,6 +40,11 @@ class Worker(threading.Thread):
   def run(self):
     while True:
       func, args, kargs = self.tasks.get()
+
+      # Listen for magic value indicating thread exit.
+      if (func, args, kargs) == _THREAD_EXIT_MAGIC:
+        break
+
       try:
         func(*args, **kargs)
       except Exception, e:
@@ -49,8 +58,9 @@ class ThreadPool(object):
 
   def __init__(self, num_threads, exception_handler=_DefaultExceptionHandler):
     self.tasks = Queue.Queue(num_threads)
+    self.threads = []
     for _ in range(num_threads):
-      Worker(self.tasks, exception_handler)
+      self.threads.append(Worker(self.tasks, exception_handler))
 
   def AddTask(self, func, *args, **kargs):
     """Add a task to the queue."""
@@ -59,3 +69,11 @@ class ThreadPool(object):
   def WaitCompletion(self):
     """Wait for completion of all the tasks in the queue."""
     self.tasks.join()
+
+  def Shutdown(self):
+    """Shutdown the thread pool."""
+    for thread in self.threads:
+      self.tasks.put(_THREAD_EXIT_MAGIC)
+
+    for thread in self.threads:
+      thread.join()

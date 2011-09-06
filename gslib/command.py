@@ -1477,19 +1477,23 @@ class Command(object):
           'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
       thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
 
-    # Now iterate over expanded src URIs, and perform copy operations.
-    for src_uri in iter(src_uri_expansion):
-      for exp_src_uri in src_uri_expansion[src_uri]:
-        if (ignore_symlinks and exp_src_uri.is_file_uri()
-            and os.path.islink(exp_src_uri.object_name)):
-          THREADED_LOGGER.info('Skipping symbolic link %s...', exp_src_uri)
-        elif self.parallel_operations:
-          thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
-        else:
-          _CopyFunc(src_uri, exp_src_uri)
+    try:
+      # Now iterate over expanded src URIs, and perform copy operations.
+      for src_uri in iter(src_uri_expansion):
+        for exp_src_uri in src_uri_expansion[src_uri]:
+          if (ignore_symlinks and exp_src_uri.is_file_uri()
+              and os.path.islink(exp_src_uri.object_name)):
+            THREADED_LOGGER.info('Skipping symbolic link %s...', exp_src_uri)
+          elif self.parallel_operations:
+            thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
+          else:
+            _CopyFunc(src_uri, exp_src_uri)
 
-    if self.parallel_operations:
-      thread_pool.WaitCompletion()
+      if self.parallel_operations:
+        thread_pool.WaitCompletion()
+    finally:
+      if self.parallel_operations:
+        thread_pool.Shutdown()
     if debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
@@ -1848,22 +1852,26 @@ class Command(object):
           'GSUtil', 'parallel_thread_count', PARALLEL_THREAD_COUNT)
       thread_pool = ThreadPool(thread_count, _RemoveExceptionHandler)
 
-    # Expand object name wildcards, if any.
-    for uri_str in args:
-      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
-                                          debug=debug):
-        if self.parallel_operations:
-          thread_pool.AddTask(_RemoveFunc, uri, uri_str)
-        else:
-          try:
-            _RemoveFunc(uri, uri_str)
-          except Exception, e:
-            if continue_on_error:
-              THREADED_LOGGER.error(str(e))
-            else:
-              raise e
-    if self.parallel_operations:
-      thread_pool.WaitCompletion()
+    try:
+      # Expand object name wildcards, if any.
+      for uri_str in args:
+        for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                            debug=debug):
+          if self.parallel_operations:
+            thread_pool.AddTask(_RemoveFunc, uri, uri_str)
+          else:
+            try:
+              _RemoveFunc(uri, uri_str)
+            except Exception, e:
+              if continue_on_error:
+                THREADED_LOGGER.error(str(e))
+              else:
+                raise e
+      if self.parallel_operations:
+        thread_pool.WaitCompletion()
+    finally:
+      if self.parallel_operations:
+        thread_pool.Shutdown()
 
   def WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):
