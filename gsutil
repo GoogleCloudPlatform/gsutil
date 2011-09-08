@@ -83,8 +83,10 @@ usage_string = """
 SYNOPSIS
   gsutil [-d][-D] [-h header]... [-m] [command args...]
 
-  -d option shows HTTP protocol detail.
-  -D option shows detailed debug output, and -DD even more detailed.
+  -d option shows HTTP requests/headers.
+  -D option includes additional debug info needed when posting support
+     requests to gs-discussion@googlegroups.com.
+  -DD includes HTTP upstream payload.
 
   -h option allows you to specify additional HTTP headers, for example:
      gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp ...
