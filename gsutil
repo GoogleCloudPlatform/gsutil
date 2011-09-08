@@ -449,6 +449,8 @@ def main():
           'http://code.google.com/apis/storage/docs/signup.html for\ndetails '
           'about activating the Google Storage service and then run the\n'
           '"gsutil config" command to configure gsutil to use these credentials.')
+    if not e.body:
+      e.body = ''
     detail_start = e.body.find('<Details>')
     detail_end = e.body.find('</Details>')
     exc_name = re.split("[\.']", str(type(e)))[-2]
