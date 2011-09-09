@@ -404,14 +404,14 @@ class OAuth2Client(object):
     if error:
       oauth2_error = ''
       if response and response['error']:
-        oauth2_error = '; OAuth2 error: %s', response['error']
+        oauth2_error = '; OAuth2 error: %s' % response['error']
       raise AccessTokenRefreshError(
           'Failed to exchange refresh token into access token; '
-          'request failed: %s%s', error, oauth2_error)
+          'request failed: %s%s' % (error, oauth2_error))
 
     if 'access_token' not in response:
       raise AccessTokenRefreshError(
-          'Failed to exchange refresh token into access token; response: %s',
+          'Failed to exchange refresh token into access token; response: %s' %
           response)
 
     token_expiry = None
@@ -502,15 +502,15 @@ class OAuth2Client(object):
     if error:
       oauth2_error = ''
       if response and response['error']:
-        oauth2_error = '; OAuth2 error: %s', response['error']
+        oauth2_error = '; OAuth2 error: %s' % response['error']
       raise AuthorizationCodeExchangeError(
           'Failed to exchange refresh token into access token; '
-          'request failed: %s%s', error, oauth2_error)
+          'request failed: %s%s' (error, oauth2_error))
 
     if not 'access_token' in response:
       raise AuthorizationCodeExchangeError(
           'Failed to exchange authorization code into access token; '
-          'response: %s', response)
+          'response: %s' % response)
 
     token_expiry = None
     if 'expires_in' in response:
