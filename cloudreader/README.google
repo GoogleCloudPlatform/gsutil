@@ -13,7 +13,7 @@ in /usr/local/gsutil, and Google App Engine installed at /usr/local/google_appen
 
 2. Copy the boto and cloudreader code into the google_appengine directory:
      % cp -pr /usr/local/gsutil/cloudreader /usr/local/google_appengine
-     % cp -pr /usr/local/gsutil/boto /usr/local/google_appengine/cloudreader
+     % cp -pr /usr/local/gsutil/boto/boto /usr/local/google_appengine/cloudreader
 
 3. Edit cloudreader/boto.cfg to contain the keys you received from Google
    (and Amazon, if you also want to use those keys):
