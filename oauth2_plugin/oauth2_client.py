@@ -505,7 +505,7 @@ class OAuth2Client(object):
         oauth2_error = '; OAuth2 error: %s' % response['error']
       raise AuthorizationCodeExchangeError(
           'Failed to exchange refresh token into access token; '
-          'request failed: %s%s' (error, oauth2_error))
+          'request failed: %s%s' % (str(error), oauth2_error))
 
     if not 'access_token' in response:
       raise AuthorizationCodeExchangeError(
