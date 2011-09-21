@@ -42,6 +42,7 @@ from hashlib import sha1
 import logging
 import os
 import tempfile
+import threading
 import urllib
 import urllib2
 import urlparse
@@ -60,6 +61,9 @@ except ImportError:
     import simplejson as json
 
 LOG = logging.getLogger('oauth2_client')
+# Lock used for checking/exchanging refresh token, so multithreaded
+# operation doesn't attempt concurrent refreshes.
+token_exchange_lock = threading.Lock()
 
 # SHA1 sum of the CA certificates file imported from boto.
 CACERTS_FILE_SHA1SUM = 'ed024a78d9327f8669b3b117d9eac9e3c9460e9b'
@@ -365,16 +369,24 @@ class OAuth2Client(object):
     Raises:
       AccessTokenRefreshError if an error occurs.
     """
-    cache_key = refresh_token.CacheKey()
-    LOG.info('GetAccessToken: checking cache for key %s', cache_key)
-    access_token = self.access_token_cache.GetToken(cache_key)
-    LOG.debug('GetAccessToken: token from cache: %s', access_token)
-    if access_token is None or access_token.ShouldRefresh():
-      LOG.info('GetAccessToken: fetching fresh access token...')
-      access_token = self.FetchAccessToken(refresh_token)
-      LOG.debug('GetAccessToken: fresh access token: %s', access_token)
-      self.access_token_cache.PutToken(cache_key, access_token)
-    return access_token
+    # Ensure only one thread at a time attempts to get (and possibly refresh)
+    # the access token. This doesn't prevent concurrent refresh attempts across
+    # multiple gsutil instances, but at least protects against multiple threads
+    # simultaneously attempting to refresh when gsutil -m is used.
+    token_exchange_lock.acquire()
+    try:
+      cache_key = refresh_token.CacheKey()
+      LOG.info('GetAccessToken: checking cache for key %s', cache_key)
+      access_token = self.access_token_cache.GetToken(cache_key)
+      LOG.debug('GetAccessToken: token from cache: %s', access_token)
+      if access_token is None or access_token.ShouldRefresh():
+        LOG.info('GetAccessToken: fetching fresh access token...')
+        access_token = self.FetchAccessToken(refresh_token)
+        LOG.debug('GetAccessToken: fresh access token: %s', access_token)
+        self.access_token_cache.PutToken(cache_key, access_token)
+      return access_token
+    finally:
+      token_exchange_lock.release()
 
   def FetchAccessToken(self, refresh_token):
     """Fetches an access token from the provider's token endpoint.
