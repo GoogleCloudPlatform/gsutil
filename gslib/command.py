@@ -105,9 +105,9 @@ CONFIG_BOTO_SECTION_CONTENT = """
 #proxy_pass = <your proxy password>
 
 # The following two options control the use of a secure transport for requests
-# to S3 and Google Storage. It is highly recommended to set both options to
+# to S3 and Google Cloud Storage. It is highly recommended to set both options to
 # True in production environments, especially when using OAuth2 bearer token
-# authentication with Google Storage.
+# authentication with Google Cloud Storage.
 
 # Set 'is_secure' to False to cause boto to connect using HTTP instead of the
 # default HTTPS. This is useful if you want to capture/analyze traffic
@@ -140,7 +140,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 [GSUtil]
 
 # 'resumable_threshold' specifies the smallest file size [bytes] for which
-# resumable Google Storage transfers are attempted. The default is 1048576
+# resumable Google Cloud Storage transfers are attempted. The default is 1048576
 # (1MB).
 #resumable_threshold = %(resumable_threshold)d
 
@@ -202,8 +202,8 @@ CONFIG_COMMAND_HELP = """
 Help on the gsutil config command:
   gsutil [-D] config [OPTION]
 
-  The gsutil config command obtains access credentials for Google Storage, and
-  writes a boto/gsutil configuration file with the obtained credentials.
+  The gsutil config command obtains access credentials for Google Cloud Storage,
+  and writes a boto/gsutil configuration file with the obtained credentials.
 
   Unless specified otherwise, the configuration file is written to the default
   config file path '%s'. If the default config file already exists, an attempt
@@ -219,7 +219,7 @@ Help on the gsutil config command:
   The command asks the user to open a web broswer to a URL for Google's
   OAuth2 authorization page. In the browser, the user will be asked to sign
   into the user's Google Account, unless already signed in. The user is then
-  prompted to authorize gsutil to access the user's Google Storage account
+  prompted to authorize gsutil to access the user's Google Cloud Storage account
   on the user's behalf. If the user approves the request, a verification
   code is shown. The gsutil config command prompts for this verification
   code, which is used to obtain an OAuth2 token that is written to the
@@ -238,12 +238,12 @@ Help on the gsutil config command:
 
   If no explicit scope option is given, -f (full control) is assumed by default.
 
-  The -a option can be used to prompt for Google Storage access key and secret
-  instead.
+  The -a option can be used to prompt for Google Cloud Storage access key and
+  secret instead.
 
   Options:
     -h          Print this help.
-    -a          Prompt for Google Storage access key and secret instead of
+    -a          Prompt for Google Cloud Storage access key and secret instead of
                 obtaining an OAuth2 token.
     -b          Launch browser to obtain OAuth2 approval and project ID instead
                 of showing the URL and asking user to open the browser.
@@ -873,7 +873,7 @@ class Command(object):
     (cb, num_cb, res_upload_handler) = self.GetTransferHandlers(
         dst_uri, dst_key, file_size, True)
     if dst_uri.scheme == 'gs':
-      # Resumable upload protocol is Google Storage-specific.
+      # Resumable upload protocol is Google Cloud Storage-specific.
       dst_key.set_contents_from_file(fp, headers, policy=canned_acl,
                                      cb=cb, num_cb=num_cb,
                                      res_upload_handler=res_upload_handler)
@@ -1971,8 +1971,8 @@ class Command(object):
 
     # Write the default API version.
     config_file.write("""
-# 'default_api_version' specifies the default Google Storage API version to
-# use use. If not set below gsutil defaults to API version 1.
+# 'default_api_version' specifies the default Google Cloud Storage API
+# version to use. If not set below gsutil defaults to API version 1.
 """)
     api_version = 2
     if not use_oauth2: api_version = 1
@@ -2008,8 +2008,8 @@ class Command(object):
           GOOG_API_CONSOLE_URI)
     default_project_id = raw_input('What is your project-id? ')
     project_id_section_prelude = """
-# 'default_project_id' specifies the default Google Storage project ID to use
-# with the 'mb' and 'ls' commands. If defined it overrides the default value
+# 'default_project_id' specifies the default Google Cloud Storage project ID to
+# use with the 'mb' and 'ls' commands. If defined it overrides the default value
 # you set in the API Console. Either of these defaults can be overridden
 # by specifying the -p option to the 'mb' and 'ls' commands.
 """

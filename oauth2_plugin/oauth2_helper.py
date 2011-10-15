@@ -91,8 +91,8 @@ def OAuth2ApprovalFlow(oauth2_client, scopes, launch_browser=False):
 
   sys.stdout.write(
       'In your browser you should see a page that requests you to authorize '
-      'gsutil to access\nGoogle Storage on your behalf. After you approve, an '
-      'authorization code will be displayed.\n\n')
+      'gsutil to access\nGoogle Cloud Storage on your behalf. After you '
+      'approve, an authorization code will be displayed.\n\n')
   if (launch_browser and
       not webbrowser.open(approval_url, new=1, autoraise=True)):
     sys.stdout.write(

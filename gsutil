@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google Storage command line tool."""
+"""Google Cloud Storage command line tool."""
 
 import ConfigParser
 import errno
@@ -447,7 +447,7 @@ def main():
           'You are attempting to access protected data with no configured '
           'credentials.\nPlease see '
           'http://code.google.com/apis/storage/docs/signup.html for\ndetails '
-          'about activating the Google Storage service and then run the\n'
+          'about activating the Google Cloud Storage service and then run the\n'
           '"gsutil config" command to configure gsutil to use these credentials.')
     if not e.body:
       e.body = ''
