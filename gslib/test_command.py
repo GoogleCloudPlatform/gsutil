@@ -445,6 +445,10 @@ class GsutilCpTests(unittest.TestCase):
     """Test that the GetAcl command basically runs"""
     command_inst.GetAclCommand([self.src_bucket_uri.uri], headers={})
 
+  def TestGetLoggingCommmandRuns(self):
+    """Test that the GetLogging command basically runs"""
+    command_inst.GetLoggingCommand([self.src_bucket_uri.uri], headers={})
+
   def TestListCommandRuns(self):
     """Test that the ListCommand basically runs"""
     command_inst.ListCommand([self.src_bucket_uri.uri], headers={})
@@ -482,6 +486,16 @@ class GsutilCpTests(unittest.TestCase):
   def TestSetAclCommmandRuns(self):
     """Test that the SetAcl command basically runs"""
     command_inst.SetAclCommand(['private', self.src_bucket_uri.uri], headers={})
+
+  def TestDisableLoggingCommmandRuns(self):
+    """Test that the DisableLogging command basically runs"""
+    command_inst.DisableLoggingCommand(
+        [self.src_bucket_uri.uri], headers={})
+
+  def TestEnableLoggingCommmandRuns(self):
+    """Test that the EnableLogging command basically runs"""
+    command_inst.EnableLoggingCommand(
+        [self.src_bucket_uri.uri], [('-b', 'log_bucket')], headers={})
 
   def TestVerCommmandRuns(self):
     """Test that the Ver command basically runs"""

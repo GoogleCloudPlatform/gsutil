@@ -107,8 +107,17 @@ SYNOPSIS
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
       Use '-' in place of src_uri or dst_uri to perform streaming transfer.
+    Disable logging on buckets:
+      disablelogging uri...
+    Enable logging on buckets:
+      enablelogging -b log_bucket [-o log_object_prefix] [-a canned_acl] uri...
+        -b Log bucket.
+        -o Prefix for log object names. Default value is the bucket name.
+        -a Canned acl to apply to log objects.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
+    Get logging XML for a bucket:
+      getlogging uri
     List buckets or objects:
       ls [-b] [-l] [-L] [-p proj_id] uri...
          -l Prints long listing (owner, length); -L provides more detail.
@@ -248,7 +257,12 @@ commands = {
     'config': [command_inst.CreateConfigCommand,
         0, 0, 'habfwrs:o:', False, False, 0],
     'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:erRtz:', True, False, 0],
+    'disablelogging' : [command_inst.DisableLoggingCommand,
+        1, NO_MAX, '', False, False, 0],
+    'enablelogging' : [command_inst.EnableLoggingCommand,
+        1, NO_MAX, 'b:o:a:', False, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
+    'getlogging': [command_inst.GetLoggingCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blLp:', False, True, 0],
     'mb': [command_inst.MakeBucketsCommand, 1, NO_MAX, 'l:p:', False, False, 0],
@@ -262,7 +276,7 @@ commands = {
     'version': [command_inst.VerCommand, 0, 0, '', False, False, 0],
 }
 
-xml_parsing_commands = ['getacl', 'ls', 'setacl']
+xml_parsing_commands = ['getacl', 'getlogging', 'ls', 'setacl']
 no_config_required_commands = ['help', 'ver', 'version', 'config']
 
 

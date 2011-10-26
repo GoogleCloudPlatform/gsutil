@@ -232,9 +232,9 @@ Help on the gsutil config command:
 
   The -r, -w, -f options cause gsutil config to request a token with restricted
   scope; the resulting token will be restricted to read-only operations,
-  read-write operation, or all operations (including getacl/setacl operations).
-  In addition, -s <scope> can be used to request additional (non-Google-Storage)
-  scopes.
+  read-write operation, or all operations (including getacl/setacl/
+  disablelogging/enablelogging/getlogging operations).  In addition, -s <scope>
+  can be used to request additional (non-Google-Storage) scopes.
 
   If no explicit scope option is given, -f (full control) is assumed by default.
 
@@ -457,6 +457,22 @@ class Command(object):
         key.get_file(cat_outfd, headers)
     sys.stdout = cat_outfd
 
+  def SingleProvider(self, uri_args, debug=0):
+    """Tests whether the uris are all for a single provider.
+
+    Returns a StorageUri for one of the uris on success, None on failure.
+    """
+    provider = None
+    for uri_str in uri_args:
+      # validate=False because we allow wildcard uris.
+      uri = boto.storage_uri(uri_str, debug=debug, validate=False,
+          bucket_storage_uri_class=self.bucket_storage_uri_class)
+      if not provider:
+        provider = uri.scheme
+      elif uri.scheme != provider:
+        return None
+    return uri
+
   def SetAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
     """Implementation of setacl command.
 
@@ -471,25 +487,15 @@ class Command(object):
     """
     acl_arg = args[0]
     uri_args = args[1:]
-    provider = None
-    first_uri = None
-    # Do a first pass over all matched objects to disallow multi-provider
-    # setacl requests, because there are differences in the ACL models.
-    for uri_str in uri_args:
-      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
-                                          debug=debug):
-        if not provider:
-          provider = uri.scheme
-        elif uri.scheme != provider:
-          raise CommandException('"setacl" command spanning providers not '
-                                 'allowed.')
-        if not first_uri:
-          first_uri = uri
+    # Disallow multi-provider setacl requests, because there are differences in
+    # the ACL models.
+    storage_uri = self.SingleProvider(uri_args, debug=debug)
+    if not storage_uri:
+      raise CommandException('"setacl" command spanning providers not allowed.')
 
-    # Get ACL object from connection for the first URI, for interpreting the
-    # ACL. This won't fail because the main startup code insists on 1 arg
-    # for this command.
-    storage_uri = first_uri
+    # Get ACL object from connection for one URI, for interpreting the ACL. This
+    # won't fail because the main startup code insists on at least 1 arg for
+    # this command.
     acl_class = storage_uri.acl_class()
     canned_acls = storage_uri.canned_acls()
 
@@ -519,6 +525,87 @@ class Command(object):
                                           debug=debug):
         print 'Setting ACL on %s...' % uri
         uri.set_acl(acl_arg, uri.object_name, False, headers)
+
+  def DisableLoggingCommand(self, args, unused_sub_opts=None, headers=None,
+                            debug=0):
+    """Implementation of disablelogging command.
+
+    Args:
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    for uri_str in args:
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
+        if uri.object_name:
+          raise CommandException('disablelogging cannot be applied to objects')
+        print 'Disabling logging on %s...' % uri
+        self.proj_id_handler.FillInProjectHeaderIfNeeded('disablelogging',
+                                                         uri, headers)
+        uri.disable_logging(False, headers)
+
+
+  def EnableLoggingCommand(self, args, sub_opts=None, headers=None,
+                           debug=0):
+    """Implementation of enablelogging command.
+
+    Args:
+      args: command-line argument list.
+      sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    # Disallow multi-provider enablelogging calls, because the schemas
+    # differ.
+    storage_uri = self.SingleProvider(args, debug=debug)
+    if not storage_uri:
+      raise CommandException('enablelogging command spanning providers not '
+                             'allowed.')
+    target_bucket = None
+    target_prefix = None
+    acl_arg = None
+    for opt, opt_arg in sub_opts:
+      if opt == '-b':
+        target_bucket = opt_arg
+      if opt == '-o':
+        target_prefix = opt_arg
+      if opt == '-a':
+        acl_arg = opt_arg
+
+    if storage_uri.scheme != 'gs' and acl_arg:
+      raise CommandException('enablelogging -a <acl> only supported for '
+                             'gs:// URIs')
+    if not target_bucket:
+      raise CommandException('enablelogging requires \'-b <log_bucket>\' '
+                             'option')
+
+    canned_acl = None
+    if acl_arg:
+      if os.path.isfile(acl_arg):
+        raise CommandException('enablelogging doesn\'t support setting '
+                               'arbitrary ACLs')
+      if acl_arg not in storage_uri.canned_acls():
+        raise CommandException('Invalid canned ACL "%s".' % acl_arg)
+      canned_acl = acl_arg
+
+    for uri_str in args:
+      for uri in self.CmdWildcardIterator(uri_str, headers=headers,
+                                          debug=debug):
+        if uri.object_name:
+          raise CommandException('enablelogging cannot be applied to objects')
+        print 'Enabling logging on %s...' % uri
+        self.proj_id_handler.FillInProjectHeaderIfNeeded('enablelogging',
+                                                         storage_uri, headers)
+        uri.enable_logging(target_bucket, target_prefix, canned_acl,
+                           False, headers)
 
   def ExplainIfSudoNeeded(self, tf, dirs_to_remove):
     """Explains what to do if sudo needed to update gsutil software.
@@ -759,6 +846,44 @@ class Command(object):
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
+
+  def GetXmlSubresource(self, subresource, uri_arg, headers=None, debug=0):
+    """Print an xml subresource, e.g. logging, for a bucket/object.
+
+    Args:
+      subresource: the subresource name
+      uri_arg: uri for the bucket/object.  Wildcards will be expanded.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    # Wildcarding is allowed but must resolve to just one bucket.
+    uris = list(self.CmdWildcardIterator(uri_arg, headers=headers, debug=debug))
+    if len(uris) != 1:
+      raise CommandException('Wildcards must resolve to exactly one item for '
+                             'get %s' % subresource)
+    uri = uris[0]
+    xml_str = uri.get_subresource(subresource, False, headers)
+    # Pretty-print the XML to make it more easily human editable.
+    parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
+    print parsed_xml.toprettyxml(indent='    ')
+
+  def GetLoggingCommand(self, args, unused_sub_opts=None, headers=None,
+                        debug=0):
+    """Implementation of getlogging command.
+
+    Args:
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    self.GetXmlSubresource('logging', args[0], headers, debug)
 
   class FileCopyCallbackHandler(object):
     """Outputs progress info for large copy requests."""

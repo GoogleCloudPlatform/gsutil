@@ -47,10 +47,11 @@ class ProjectIdHandler(object):
 
     # We only include the project ID header if it's a GS URI and a project_id
     # was specified and
-    # (it's an 'mb' command or
+    # (it's an 'mb', 'disablelogging, or 'enablelogging' command
     #  (an 'ls' command that doesn't specify a bucket or a wildcard bucket iterator)).
     if (uri.scheme.lower() == 'gs' and self.project_id and
-        (command == 'mb' or
+        (command == 'mb' or command == 'disablelogging' or
+         command == 'enablelogging' or
          (command == 'ls' and not uri.bucket_name) or
          (command == WILDCARD_BUCKET_ITERATOR))):
       if headers is None:
