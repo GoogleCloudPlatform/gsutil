@@ -131,7 +131,7 @@ https_validate_certificates = True
 #debug = <0, 1, or 2>
 
 # 'num_retries' controls the number of retry attempts made when errors occur.
-# The default is 5. Note: don't set this value to 0, as it will cause boto to
+# The default is 6. Note: don't set this value to 0, as it will cause boto to
 # fail when reusing HTTP connections.
 #num_retries = <integer value>
 """
