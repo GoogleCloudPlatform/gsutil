@@ -89,7 +89,7 @@ SYNOPSIS
   -DD includes HTTP upstream payload.
 
   -h option allows you to specify additional HTTP headers, for example:
-     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:gzip" cp ...
+     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:text/html" cp ...
 
   -m option causes supported operations (cp, rm) to be executed in parallel.
 
