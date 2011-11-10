@@ -116,6 +116,8 @@ SYNOPSIS
         -a Canned acl to apply to log objects.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
+    Get default ACL XML for a bucket (save and edit for "setdefacl" command):
+      getdefacl uri
     Get logging XML for a bucket:
       getlogging uri
     List buckets or objects:
@@ -138,6 +140,8 @@ SYNOPSIS
          -f Continues despite errors when removing by wildcard.
     Set ACL on buckets and/or objects:
       setacl file-or-canned_acl_name uri...
+    Set default ACL on buckets:
+      setdefacl file-or-canned_acl_name uri...
     Print version info:
       ver
     Obtain credentials and create configuration file:
@@ -262,6 +266,7 @@ commands = {
     'enablelogging' : [command_inst.EnableLoggingCommand,
         1, NO_MAX, 'b:o:a:', False, False, 0],
     'getacl': [command_inst.GetAclCommand, 1, 1, '', False, False, 0],
+    'getdefacl': [command_inst.GetDefAclCommand, 1, 1, '', False, False, 0],
     'getlogging': [command_inst.GetLoggingCommand, 1, 1, '', False, False, 0],
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blLp:', False, True, 0],
@@ -270,13 +275,16 @@ commands = {
     'rb': [command_inst.RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, 'f', False, False, 0],
     'setacl': [command_inst.SetAclCommand, 2, NO_MAX, '', False, False, 1],
+    'setdefacl': [command_inst.SetDefAclCommand, 2, NO_MAX, '', False, False, 
+                  1],
     'update': [command_inst.UpdateCommand, 0, 0, 'f', False, False, 0],
     'ver': [command_inst.VerCommand, 0, 0, '', False, False, 0],
     # Alias for ver command.
     'version': [command_inst.VerCommand, 0, 0, '', False, False, 0],
 }
 
-xml_parsing_commands = ['getacl', 'getlogging', 'ls', 'setacl']
+xml_parsing_commands = ['getacl', 'getdefacl', 'getlogging', 'ls', 
+                        'setacl', 'setdefacl']
 no_config_required_commands = ['help', 'ver', 'version', 'config']
 
 

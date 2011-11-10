@@ -233,8 +233,9 @@ Help on the gsutil config command:
   The -r, -w, -f options cause gsutil config to request a token with restricted
   scope; the resulting token will be restricted to read-only operations,
   read-write operation, or all operations (including getacl/setacl/
-  disablelogging/enablelogging/getlogging operations).  In addition, -s <scope>
-  can be used to request additional (non-Google-Storage) scopes.
+  getdefacl/setdefacl/disablelogging/enablelogging/getlogging operations).  
+  In addition, -s <scope> can be used to request additional 
+  (non-Google-Storage) scopes.
 
   If no explicit scope option is given, -f (full control) is assumed by default.
 
@@ -405,7 +406,10 @@ class Command(object):
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         headers=headers, debug=debug)
 
-  def InsistUriNamesContainer(self, command, uri):
+  def InsistUriNamesContainer(self, command, uri, 
+                              msg='Destination StorageUri must name a bucket '
+                                  'or directory for the\nmultiple source form' 
+                                  ' of the "%s" command.'):
     """Checks that URI names a directory or bucket.
 
     Args:
@@ -416,9 +420,7 @@ class Command(object):
       CommandException: if errors encountered.
     """
     if uri.names_singleton():
-      raise CommandException('Destination StorageUri must name a bucket or '
-                             'directory for the\nmultiple source form of the '
-                             '"%s" command.' % command)
+      raise CommandException(msg % command)
 
   def CatCommand(self, args, sub_opts=None, headers=None, debug=0):
     """Implementation of cat command.
@@ -485,13 +487,41 @@ class Command(object):
     Raises:
       CommandException: if errors encountered.
     """
+    self.SetAclCommandHelper(args, unused_sub_opts, headers, debug, False)
+
+  def SetDefAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
+    """Implementation of setdefacl command.
+
+    Args:
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    self.InsistUriNamesContainer('setdefacl', self.StorageUri(args[-1]),
+                                 'uri must name a bucket for the %s command')
+    self.SetAclCommandHelper(args, unused_sub_opts, headers, debug, True)
+
+  def SetAclCommandHelper(self, args, unused_sub_opts, headers, debug, 
+                          def_obj_acl=False):
+    """Common logic for setting ACLs, variable behavior dictated by
+       setting of def_obj_acl arg, which indicates whether to set
+       the standard ACL or the default object ACL."""
+    if def_obj_acl:
+      command_name = 'setdefacl'
+    else:
+      command_name = 'setacl'
     acl_arg = args[0]
     uri_args = args[1:]
     # Disallow multi-provider setacl requests, because there are differences in
     # the ACL models.
     storage_uri = self.SingleProvider(uri_args, debug=debug)
     if not storage_uri:
-      raise CommandException('"setacl" command spanning providers not allowed.')
+      raise CommandException('"%s" command spanning providers not allowed.' %
+                             command_name)
 
     # Get ACL object from connection for one URI, for interpreting the ACL. This
     # won't fail because the main startup code insists on at least 1 arg for
@@ -523,8 +553,12 @@ class Command(object):
     for uri_str in uri_args:
       for uri in self.CmdWildcardIterator(uri_str, headers=headers,
                                           debug=debug):
-        print 'Setting ACL on %s...' % uri
-        uri.set_acl(acl_arg, uri.object_name, False, headers)
+        if def_obj_acl:
+          print 'Setting default object ACL on %s...' % uri
+          uri.set_def_acl(acl_arg, uri.object_name, False, headers)
+        else:
+          print 'Setting ACL on %s...' % uri
+          uri.set_acl(acl_arg, uri.object_name, False, headers)
 
   def DisableLoggingCommand(self, args, unused_sub_opts=None, headers=None,
                             debug=0):
@@ -832,17 +866,47 @@ class Command(object):
     Raises:
       CommandException: if errors encountered.
     """
+    self.GetAclCommandHelper(args, unused_sub_opts, headers, debug, False)
+
+  def GetDefAclCommand(self, args, unused_sub_opts=None, headers=None, debug=0):
+    """Implementation of getdefacl command.
+
+    Args:
+      args: command-line argument list.
+      unused_sub_opts: list of command-specific options from getopt.
+      headers: dictionary containing optional HTTP headers to pass to boto.
+      debug: debug level to pass in to boto connection (range 0..3).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
+    self.InsistUriNamesContainer('getdefacl', self.StorageUri(args[-1]),
+                                 'uri must name a bucket for the %s command')
+    self.GetAclCommandHelper(args, unused_sub_opts, headers, debug, True)
+
+  def GetAclCommandHelper(self, args, unused_sub_opts=None, headers=None, 
+                          debug=0, def_obj_acl=False):
+    """Common logic for getting ACLs, variable behavior dictated by
+       setting of def_obj_acl arg, which indicates whether to set
+       the standard ACL or the default object ACL."""
+    if def_obj_acl:
+      command_name = 'getdefacl'
+    else:
+      command_name = 'getacl'
     # Wildcarding is allowed but must resolve to just one object.
     uris = list(self.CmdWildcardIterator(args[0], headers=headers,
                                         debug=debug))
     if len(uris) != 1:
       raise CommandException('Wildcards must resolve to exactly one object for '
-                             '"getacl" command.')
+                             '"%s" command.' % command_name)
     uri = uris[0]
     if not uri.bucket_name:
-      raise CommandException('"getacl" command must specify a bucket or '
-                             'object.')
-    acl = uri.get_acl(False, headers)
+      raise CommandException('"%s" command must specify a bucket or '
+                             'object.' % command_name)
+    if def_obj_acl:
+      acl = uri.get_def_acl(False, headers)
+    else:
+      acl = uri.get_acl(False, headers)
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
@@ -1711,9 +1775,10 @@ class Command(object):
             location_output = '\n\tLocationConstraint: %s' % location_constraint
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'get_acl', bucket_uri, headers)
-        print '%s :\n\t%d objects, %s%s\n\tACL: %s' % (
+        print '%s :\n\t%d objects, %s%s\n\tACL: %s\n\tDefault ACL: %s' % (
             bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
-            location_output, bucket_uri.get_acl(False, headers))
+            location_output, bucket_uri.get_acl(False, headers),
+            bucket_uri.get_def_acl(False, headers))
     return (bucket_objs, bucket_bytes)
 
   def PrintObjectInfo(self, iterated_uri, obj, listing_style, headers, debug):
