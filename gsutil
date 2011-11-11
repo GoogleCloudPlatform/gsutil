@@ -131,9 +131,11 @@ SYNOPSIS
          -l can be us or eu. Default is us
          -p proj_id Specifies the project ID under which to create the bucket.
     Move/rename objects:
-      mv src_uri dst_uri
+      mv [-p] src_uri dst_uri
         - or -
-      mv uri... dst_uri
+      mv [-p] uri... dst_uri
+      The -p option causes ACL to be preserved when copying in the
+      cloud. Causes extra API calls.
     Remove buckets:
       rb uri...
     Remove objects:
@@ -273,7 +275,7 @@ commands = {
     'help': [command_inst.HelpCommand, 0, 0, '', False, False, 0],
     'ls': [command_inst.ListCommand, 0, NO_MAX, 'blLp:', False, True, 0],
     'mb': [command_inst.MakeBucketsCommand, 1, NO_MAX, 'l:p:', False, False, 0],
-    'mv': [command_inst.MoveObjsCommand, 2, NO_MAX, '', True, False, 0],
+    'mv': [command_inst.MoveObjsCommand, 2, NO_MAX, 'p', True, False, 0],
     'rb': [command_inst.RemoveBucketsCommand, 1, NO_MAX, '', False, False, 0],
     'rm': [command_inst.RemoveObjsCommand, 1, NO_MAX, 'f', False, False, 0],
     'setacl': [command_inst.SetAclCommand, 2, NO_MAX, '', False, False, 1],
