@@ -1024,16 +1024,22 @@ class Command(object):
       num_cb = None
     return (cb, num_cb, transfer_handler)
 
-  def CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
+  def CopyObjToObjSameProvider(self, sub_opts,  src_key, src_uri, dst_uri,
+                               headers):
     # Do Object -> object copy within same provider (uses
     # x-<provider>-copy-source metadata HTTP header to request copying at the
     # server). (Note: boto does not currently provide a way to pass canned_acl
     # when copying from object-to-object through x-<provider>-copy-source)
     src_bucket = src_uri.get_bucket(False, headers)
     dst_bucket = dst_uri.get_bucket(False, headers)
+    preserve_acl = False
+    if sub_opts:
+      for o, a in sub_opts:
+        if o == '-p':
+          preserve_acl = True
     start_time = time.time()
     dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
-                        src_uri.object_name, headers)
+                        src_uri.object_name, headers, preserve_acl=preserve_acl)
     end_time = time.time()
     return (end_time - start_time, src_key.size)
 
@@ -1232,6 +1238,10 @@ class Command(object):
             if a not in canned_acls:
               raise CommandException('Invalid canned ACL "%s".' % a)
             canned_acl = a
+          elif o == '-p':
+            raise NotImplementedError(
+              'Cross-provider ACL-preserving cp not supported')
+
           elif o == '-t':
             mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
             mime_type = mimetype_tuple[0]
@@ -1301,8 +1311,8 @@ class Command(object):
 
     if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
       if src_uri.scheme == dst_uri.scheme:
-        return self.CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
-                                             headers)
+        return self.CopyObjToObjSameProvider(sub_opts, src_key, src_uri,
+                                             dst_uri, headers)
       else:
         return self.CopyObjToObjDiffProvider(sub_opts, src_key, src_uri,
                                              dst_uri, headers, debug)

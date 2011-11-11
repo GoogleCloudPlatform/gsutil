@@ -98,11 +98,12 @@ SYNOPSIS
       cat [-h] uri...
         -h  Prints short header for each object.
     Copy objects:
-      cp [-a canned_acl] [-e] [-t] [-z ext1,ext2,...] src_uri dst_uri
+      cp [-a canned_acl] [-e] [-p] [-t] [-z ext1,ext2,...] src_uri dst_uri
         - or -
-      cp [-a canned_acl] [-e] [-R] [-t] [-z extensions] uri... dst_uri
+      cp [-a canned_acl] [-e] [-p] [-R] [-t] [-z extensions] uri... dst_uri
         -a Sets named canned_acl when uploaded objects created (list below).
         -e Exclude symlinks. When specified, symbolic links will not be copied.
+        -p Causes ACL to be preserved when copying in the cloud. Causes extra API calls.
         -R Causes directories and buckets to be copied recursively.
         -t Sets MIME type based on file extension.
         -z 'txt,html' Compresses file uploads with the given extensions.
@@ -260,7 +261,8 @@ commands = {
     'cat': [command_inst.CatCommand, 0, NO_MAX, 'h', False, True, 0],
     'config': [command_inst.CreateConfigCommand,
         0, 0, 'habfwrs:o:', False, False, 0],
-    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:erRtz:', True, False, 0],
+    'cp': [command_inst.CopyObjsCommand, 2, NO_MAX, 'a:eprRtz:', True, False,
+           0],
     'disablelogging' : [command_inst.DisableLoggingCommand,
         1, NO_MAX, '', False, False, 0],
     'enablelogging' : [command_inst.EnableLoggingCommand,
