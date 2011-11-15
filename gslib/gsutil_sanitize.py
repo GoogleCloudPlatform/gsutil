@@ -35,7 +35,7 @@ repstr = 'REDACTED'
 # used as input for a sequence of regular expression replacements.
 patterns = {
   '^send: ' : [
-    (r'(Authorization: OAuth ).*(\\r\\nU)', r'\1%s\2'),
+    (r'(Authorization: OAuth ).*(\\r\\n)', r'\1%s\2'),
   ],
   '^DEBUG:oauth2_client:' : [
     (r'(token=)\S+(,)',                r'\1%s\2'),
