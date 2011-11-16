@@ -56,30 +56,24 @@ if NO_SANITIZE_ARG in cmd_args_set:
   sanitize = False
 
 # assemble command lines 
-args = ''
-for i in cmd_args:
-  if re.search('\s', i):
-    # arguments containing whitespace need to be quoted
-    args += '"' + i + '" '
-  else:
-    args += i + ' ' 
+cmd1 = [py_cmd, os.path.join(cmd_path, cmd_name)] + cmd_args
+cmd2 = [py_cmd, os.path.join(cmd_path, san_cmd)]
 
-cmd1 = py_cmd + ' ' + os.path.join(cmd_path, cmd_name) + ' ' + args
-cmd2 = py_cmd + ' ' + os.path.join(cmd_path, san_cmd)
-
-if sanitize and cmd_args_set.intersection(gsutil_debug_args):
-  # If gsutil debugging args present, build cmd to sanitize credentials.
-  # Use 2>&1 to make sure the sanitize tool sees both stdout and stderr.
-  cmd = cmd1 + ' 2>&1 | ' + cmd2
-else:
-  cmd = cmd1
-
-# Display subprocess command, if requested.
+# Display subprocess commands, if requested.
 if debug_frontend:
-  print 'cmd: ', cmd 
+  print 'cmd1: ', cmd1
+  print 'cmd2: ', cmd2
   sys.stdout.flush()
 
-# Finally, run the command in a subprocess, with shell interpretation.
-ret = subprocess.call(cmd, shell=True)
+if sanitize and cmd_args_set.intersection(gsutil_debug_args):
+  # If gsutil debugging args present, build cmds to sanitize credentials.
+  p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  p2 = subprocess.Popen(cmd2, stdin=p1.stdout)
+  ret = subprocess.Popen.wait(p1)
+  subprocess.Popen.wait(p2)
+else:
+  p1 = subprocess.Popen(cmd1)
+  ret = subprocess.Popen.wait(p1)
+
 exit(ret)
 

@@ -46,7 +46,7 @@ def OutputAndExit(message):
 # to be used without explicitly adding it to the PYTHONPATH.
 # We use realpath() below to unwind symlinks if any were used in the gsutil
 # installation.
-gsutil_bin_dir = os.path.dirname(os.path.realpath(sys.argv[0])) + '/..'
+gsutil_bin_dir = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
 if not gsutil_bin_dir:
   OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
                 'cannot run correctly without this.\n')
