@@ -26,6 +26,7 @@
 import sys
 import os
 import subprocess
+import re
 
 # For debugging the front end itself, primarily for gsutil developer use.
 DEBUG_FRONTEND_ARG = '-x'
@@ -55,8 +56,15 @@ if NO_SANITIZE_ARG in cmd_args_set:
   sanitize = False
 
 # assemble command lines 
-cmd1 = py_cmd + ' ' + os.path.join(cmd_path, cmd_name) + ' ' + \
-       ' '.join(cmd_args)
+args = ''
+for i in cmd_args:
+  if re.search('\s', i):
+    # arguments containing whitespace need to be quoted
+    args += '"' + i + '" '
+  else:
+    args += i + ' ' 
+
+cmd1 = py_cmd + ' ' + os.path.join(cmd_path, cmd_name) + ' ' + args
 cmd2 = py_cmd + ' ' + os.path.join(cmd_path, san_cmd)
 
 if sanitize and cmd_args_set.intersection(gsutil_debug_args):
@@ -72,5 +80,6 @@ if debug_frontend:
   sys.stdout.flush()
 
 # Finally, run the command in a subprocess, with shell interpretation.
-subprocess.call(cmd, shell=True)
+ret = subprocess.call(cmd, shell=True)
+exit(ret)
 
