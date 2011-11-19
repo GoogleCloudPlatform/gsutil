@@ -25,8 +25,8 @@
 
 import sys
 import threading
-import unittest
 import thread_pool
+import unittest
 
 
 class GsutilThreadPoolTests(unittest.TestCase):

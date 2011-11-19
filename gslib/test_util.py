@@ -24,6 +24,7 @@
 """Utility class for gslib unit tests"""
 
 import sys
+import wildcard_iterator
 # Put local libs at front of path so tests will run latest lib code rather
 # than whatever code is found on user's PYTHONPATH.
 sys.path.insert(0, '.')
@@ -31,7 +32,6 @@ sys.path.insert(0, 'boto')
 import boto
 from gslib.project_id import ProjectIdHandler
 from tests.s3 import mock_storage_service
-import wildcard_iterator
 
 proj_id_handler = ProjectIdHandler()
 

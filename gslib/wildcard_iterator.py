@@ -64,13 +64,14 @@ gsutil (at which point gsutil will perform the wildcarding expansion):
   % gsutil cp '/opt/eclipse/**/*.html' gs://bucket/eclipse
 """
 
+import boto
 import fnmatch
 import glob
 import os
 import re
 import time
 import urllib
-import boto
+
 from boto.storage_uri import BucketStorageUri
 
 WILDCARD_REGEX = re.compile('[*?\[\]]')

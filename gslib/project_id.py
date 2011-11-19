@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import boto
+
 from gslib.exception import ProjectIdException
 from gslib.wildcard_iterator import WILDCARD_BUCKET_ITERATOR
 
@@ -54,7 +55,7 @@ class ProjectIdHandler(object):
          command == 'enablelogging' or
          (command == 'ls' and not uri.bucket_name) or
          (command == WILDCARD_BUCKET_ITERATOR))):
-      if headers is None:
+      if not headers:
         raise ProjectIdException(
             'FillInProjectHeaderIfNeeded called with headers=None')
       headers[GOOG_PROJ_ID_HDR] = self.project_id
