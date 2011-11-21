@@ -111,11 +111,11 @@ def main():
       else:
         debug = 3
     if o in ('-?', '--help'):
-      OutputUsageAndExit()
+      _OutputUsageAndExit(command_runner)
     if o in ('-h', '--header'):
       (hdr_name, unused_ptn, hdr_val) = a.partition(':')
       if not hdr_name or not hdr_val:
-        OutputUsageAndExit()
+        _OutputUsageAndExit(command_runner)
       headers[hdr_name] = hdr_val
     if o in ('-m', '--multithreaded'):
       parallel_operations = True
@@ -153,6 +153,10 @@ def main():
   _RunNamedCommandAndHandleExceptions(command_runner, command_name, args[1:],
                                       headers, debug, parallel_operations)
 
+
+def _OutputUsageAndExit(command_runner):
+  command_runner.RunNamedCommand('help')
+  sys.exit(1)
 
 def _OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
