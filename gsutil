@@ -27,9 +27,18 @@ import socket
 import sys
 import traceback
 
+
+def _OutputAndExit(message):
+  sys.stderr.write('%s\n' % message)
+  sys.exit(1)
+
+
+def _OutputUsageAndExit(command_runner):
+  command_runner.RunNamedCommand('help')
+  sys.exit(1)
+
+
 debug = 0
-
-
 # Before importing boto, find where gsutil is installed and include its
 # boto sub-directory at the start of the PYTHONPATH, to ensure the versions of
 # gsutil and boto stay in sync after software updates. This also allows gsutil
@@ -153,14 +162,6 @@ def main():
   _RunNamedCommandAndHandleExceptions(command_runner, command_name, args[1:],
                                       headers, debug, parallel_operations)
 
-
-def _OutputUsageAndExit(command_runner):
-  command_runner.RunNamedCommand('help')
-  sys.exit(1)
-
-def _OutputAndExit(message):
-  sys.stderr.write('%s\n' % message)
-  sys.exit(1)
 
 def _GetBotoConfigFileList():
   """Returns list of boto config files that exist."""
