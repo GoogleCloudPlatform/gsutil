@@ -156,12 +156,15 @@ class UpdateCommand(Command):
     self.command_runner.RunNamedCommand('cp', ['gs://pub/gsutil.tar.gz',
                                           'file://gsutil.tar.gz'],
                                            self.headers, self.debug)
+    # Note: tf is closed in _CleanUpUpdateCommand.
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
     tf.extract('./gsutil/VERSION')
     ver_file = open('gsutil/VERSION', 'r')
-    latest_version_string = ver_file.read().rstrip('\n')
-    ver_file.close()
+    try:
+      latest_version_string = ver_file.read().rstrip('\n')
+    finally:
+      ver_file.close()
 
     # The force_update option works around a problem with the way the
     # first gsutil "update" command exploded the gsutil and boto directories,
@@ -192,7 +195,7 @@ class UpdateCommand(Command):
     # hitting ^C leaves gsutil in a broken state.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    # gsutil_bin_dir lists the path where the code should end up (like
+    # self.gsutil_bin_dir lists the path where the code should end up (like
     # /usr/local/gsutil), which is one level down from the relative path in the
     # tarball (since the latter creates files in ./gsutil). So, we need to
     # extract at the parent directory level.

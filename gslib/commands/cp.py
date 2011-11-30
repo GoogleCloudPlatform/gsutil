@@ -242,6 +242,11 @@ class CpCommand(Command):
     """
     Performs Stream upload to cloud.
 
+    Args:
+      fp: the file whose contents to upload
+      dst_uri: destination StorageUri.
+      canned_acl: optional canned ACL to set on the object
+
     Returns (elapsed_time, bytes_transferred).
     """
     start_time = time.time()
@@ -258,6 +263,19 @@ class CpCommand(Command):
     return (end_time - start_time, bytes_transferred)
 
   def _UploadFileToObject(self, src_key, src_uri, dst_uri):
+    """Helper method for uploading a local file to an object.
+
+    Args:
+      src_key: source StorageUri. Must be a file URI.
+      src_uri: source StorageUri.
+      dst_uri: destination StorageUri.
+
+    Returns:
+      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     gzip_exts = []
     canned_acl = None
     if self.sub_opts:
@@ -292,12 +310,19 @@ class CpCommand(Command):
       if self._CheckFreeSpace(gzip_path) < 2*int(os.path.getsize(src_key.name)):
         raise CommandException('Inadequate temp space available to compress '
                                '%s' % src_key.name)
-      the_gzip = gzip.open(gzip_path, 'wb')
-      the_gzip.writelines(src_key.fp)
-      the_gzip.close()
+      gzip_fp = gzip.open(gzip_path, 'wb')
+      try:
+        gzip_fp.writelines(src_key.fp)
+      finally:
+        gzip_fp.close()
       self.headers['Content-Encoding'] = 'gzip'
-      (elapsed_time, bytes_transferred) = self._PerformResumableUploadIfApplies(
-          open(gzip_path, 'rb'), dst_uri, canned_acl)
+      gzip_fp = open(gzip_path, 'rb')
+      try:
+        (elapsed_time, bytes_transferred) = (
+            self._PerformResumableUploadIfApplies(gzip_fp, dst_uri,
+                                                  canned_acl))
+      finally:
+        gzip_fp.close()
       os.unlink(gzip_path)
     elif (src_key.is_stream() and
           dst_uri.get_provider().supports_chunked_transfer()):
@@ -308,13 +333,21 @@ class CpCommand(Command):
         # For Providers that doesn't support chunked Transfers
         tmp = tempfile.NamedTemporaryFile()
         file_uri = self.StorageUri('file://%s' % tmp.name)
-        file_uri.new_key(False, self.headers).set_contents_from_file(
-            src_key.fp, self.headers)
-        src_key = file_uri.get_key()
-      (elapsed_time, bytes_transferred) = self._PerformResumableUploadIfApplies(
-          src_key.fp, dst_uri, canned_acl)
-      if src_key.is_stream():
-        tmp.close()
+        try:
+          file_uri.new_key(False, self.headers).set_contents_from_file(
+              src_key.fp, self.headers)
+          src_key = file_uri.get_key()
+        finally:
+          file_uri.close()
+      try:
+        (elapsed_time, bytes_transferred) = (
+            self._PerformResumableUploadIfApplies(src_key.fp, dst_uri,
+                                                  canned_acl))
+      finally:
+        if src_key.is_stream():
+          tmp.close()
+        else:
+          src_key.close()
 
     return (elapsed_time, bytes_transferred)
 
@@ -336,15 +369,19 @@ class CpCommand(Command):
     else:
         download_file_name = file_name
         need_to_unzip = False
-    if res_download_handler:
-      fp = open(download_file_name, 'ab')
-    else:
-      fp = open(download_file_name, 'wb')
-    start_time = time.time()
-    src_key.get_contents_to_file(fp, self.headers, cb=cb, num_cb=num_cb,
-                                 res_download_handler=res_download_handler)
-    fp.close()
-    end_time = time.time()
+    fp = None
+    try:
+      if res_download_handler:
+        fp = open(download_file_name, 'ab')
+      else:
+        fp = open(download_file_name, 'wb')
+      start_time = time.time()
+      src_key.get_contents_to_file(fp, self.headers, cb=cb, num_cb=num_cb,
+                                   res_download_handler=res_download_handler)
+      end_time = time.time()
+    finally:
+      if fp:
+        fp.close()
     if res_download_handler:
       bytes_transferred = (
           src_key.size - res_download_handler.download_start_point)
@@ -356,10 +393,12 @@ class CpCommand(Command):
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
       f_in = gzip.open(download_file_name, 'rb')
       f_out = open(file_name, 'wb')
-      f_out.writelines(f_in)
-      f_out.close();
-      f_in.close();
-      os.unlink(download_file_name)
+      try:
+        f_out.writelines(f_in)
+      finally:
+        f_out.close();
+        f_in.close();
+        os.unlink(download_file_name)
     return (end_time - start_time, bytes_transferred)
 
   def _PerformDownloadToStream(self, src_key, src_uri, str_fp):
@@ -407,6 +446,13 @@ class CpCommand(Command):
             if content_encoding:
               self.headers['Content-Encoding'] = content_encoding
 
+      # TODO: This _PerformStreamUpload call passes in a Key for fp
+      # param, relying on Python "duck typing" (the fact that the lower-level
+      # methods that expect an fp only happen to call fp methods that are
+      # defined and semantically equivalent to those defined on src_key). This
+      # should be replaced by a class that wraps an fp interface around the
+      # Key, throwing 'not implemented' for methods (like seek) that aren't
+      # implemented by non-file Keys.
       return self._PerformStreamUpload(src_key, dst_uri, canned_acls)
 
     # If destination is not GS, We implement object copy through a local
@@ -490,7 +536,9 @@ class CpCommand(Command):
 
       We build a dict of the expansion instead of using a generator to
       iterate incrementally because caller needs to know count before
-      iterating and performing copy operations.
+      iterating and performing copy operations (in order to determine if
+      this is a multi-source copy request). That limits the scalability of
+      wildcard iteration, since the entire list needs to fit in memory.
     """
     # The algorithm we use is:
     # 1. Build a first level expanded list from uri_strs consisting of all
@@ -725,8 +773,8 @@ class CpCommand(Command):
     self.total_elapsed_time = self.total_bytes_transferred = 0
 
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
-      # Destination is <STDOUT>. manipulate sys.stdout so as to redirect all
-      # debug messages to <STDERR>
+      # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all
+      # debug messages to <STDERR>.
       stdout_fp = sys.stdout
       sys.stdout = sys.stderr
       for uri_str in self.args[0:len(self.args)-1]:
@@ -758,7 +806,7 @@ class CpCommand(Command):
     # Rewrite base_dst_uri and create dest dir as needed for multi-source copy.
     if multi_src_request:
       base_dst_uri = self._HandleMultiSrcCopyRequst(src_uri_expansion,
-                                                   base_dst_uri)
+                                                    base_dst_uri)
 
     # Should symbolic links be skipped?
     ignore_symlinks = False

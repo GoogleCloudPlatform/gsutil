@@ -58,6 +58,7 @@ class VersionCommand(Command):
   def RunCommand(self):
     config_ver = ''
     for path in BotoConfigLocations:
+      f = None
       try:
         f = open(path, 'r')
         while True:
@@ -71,6 +72,9 @@ class VersionCommand(Command):
         break
       except IOError:
         pass
+      finally:
+        if f:
+          f.close()
 
     sys.stderr.write('gsutil version %s%s, python version %s\n' % (
         self.LoadVersionString(), config_ver, sys.version))
