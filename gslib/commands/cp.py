@@ -77,6 +77,30 @@ class CpCommand(Command):
     XML_PARSE_REQUIRED : False
   }
   
+  def check_final_md5(self, key, file_name):
+    """
+    Checks that etag from server agrees with md5 computed after the
+    download completes. This is important, since the download could
+    have spanned a number of hours and multiple processes (e.g.,
+    gsutil runs), and the user could change some of the file and not
+    realize they have inconsistent data.
+    """
+    # Open file in binary mode to avoid surprises in Windows.
+    fp = open(file_name, 'rb')
+    try:
+      file_md5 = key.compute_md5(fp)[0]
+    finally:
+      fp.close()
+    obj_md5 = key.etag.strip('"\'')
+    if self.debug:
+      print 'Checking file md5 against etag. (%s/%s)' % (file_md5, obj_md5)
+    if file_md5 != obj_md5:
+      # Checksums don't match - remove file and raise exception.
+      os.unlink(file_name)
+      raise CommandException(
+        'File changed during download: md5 signature doesn\'t match '
+        'etag (incorrect downloaded file deleted)')
+
   def _CheckForDirFileConflict(self, src_uri, dst_path):
     """Checks whether copying src_uri into dst_path is not possible.
 
@@ -382,6 +406,10 @@ class CpCommand(Command):
     finally:
       if fp:
         fp.close()
+
+    # Verify downloaded file checksum matches source object's checksum.
+    self.check_final_md5(src_key, download_file_name)
+
     if res_download_handler:
       bytes_transferred = (
           src_key.size - res_download_handler.download_start_point)
