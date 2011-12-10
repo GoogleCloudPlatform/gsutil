@@ -66,7 +66,7 @@ class CommandRunner:
     return map
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
-                      parallel_operations=False):
+                      parallel_operations=False, test_method=None):
     """Runs the named command. Used by gsutil main, commands built atop
       other commands, and tests .
 
@@ -76,6 +76,9 @@ class CommandRunner:
         headers: dictionary containing optional HTTP headers to pass to boto.
         debug: debug level to pass in to boto connection (range 0..3).
         parallel_operations: Should command operations be executed in parallel?
+        test_method: Optional general purpose method for testing purposes. 
+                     Application and semantics of this method will vary by
+                     command and test type. 
 
       Raises:
         CommandException: if errors encountered.
@@ -95,5 +98,5 @@ class CommandRunner:
     command_inst = command_class(self, args, headers, debug,
                                  parallel_operations, self.gsutil_bin_dir,
                                  self.boto_lib_dir, self.config_file_list,
-                                 self.bucket_storage_uri_class)
+                                 self.bucket_storage_uri_class, test_method)
     command_inst.RunCommand()

@@ -135,6 +135,7 @@ class GsutilCommandTests(unittest.TestCase):
       f.write('test data')
       f.close()
       cls.all_src_file_paths.append(file_path)
+    cls.tmp_path = '%s%s' % (cls.src_dir_root, 'tmp0')
 
     cls.created_test_data = True
 
@@ -526,6 +527,45 @@ class GsutilCommandTests(unittest.TestCase):
                                                    self.dst_bucket_uri.uri))
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
+
+  def DownloadTestHelper(self, func):
+    """
+    Test resumable download with custom test function to distort downloaded 
+    data. We expect an exception to be raised and the dest file to be removed.
+    """
+    object_uri = self.all_src_obj_uris[0].uri
+    try:
+      self.command_runner.RunNamedCommand('cp', [object_uri, self.tmp_path], 
+                                          test_method=func)
+      self.fail('Did not get expected CommandException')
+    except CommandException:
+      self.assertFalse(os.path.exists(self.tmp_path))
+    except:
+      self.fail('Unexpected exception raised')
+
+  def TestDownloadWithObjectSizeShange(self):
+    """
+    Test resumable download on an object that changes size before the 
+    downloaded file's checksum is validated.
+    """
+    def append(fp):
+      """Append a byte at end of an open file and flush contents."""
+      fp.seek(0,2)
+      fp.write('x')
+      fp.flush()
+    self.DownloadTestHelper(append)
+
+  def TestDownloadWithFileContentChange(self):
+    """
+    Tests resumable download on an object where the file content changes
+    before the downloaded file's checksum is validated.
+    """
+    def overwrite(fp):
+      """Overwrite first byte in an open file and flush contents."""
+      fp.seek(0)
+      fp.write('x')
+      fp.flush()
+    self.DownloadTestHelper(overwrite)
 
 if __name__ == '__main__':
   if sys.version_info[:3] < (2, 5, 1):

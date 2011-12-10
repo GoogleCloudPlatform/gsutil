@@ -117,7 +117,7 @@ class Command(object):
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
                gsutil_bin_dir, boto_lib_dir, config_file_list,
-               bucket_storage_uri_class):
+               bucket_storage_uri_class, test_method=None):
     """
     Args:
       command_runner: CommandRunner (for commands built atop other commands).
@@ -130,6 +130,9 @@ class Command(object):
       config_file_list: config file list returned by _GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
+      test_method: Optional general purpose method for testing purposes. 
+                   Application and semantics of this method will vary by
+                   command and test type. 
     """
     
     # Save class values from constructor params.
@@ -142,6 +145,7 @@ class Command(object):
     self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
+    self.test_method = test_method
     
     # Process sub-command instance specifications.
     # First, ensure subclass implementation sets all required keys.

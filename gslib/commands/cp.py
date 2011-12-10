@@ -402,6 +402,12 @@ class CpCommand(Command):
       start_time = time.time()
       src_key.get_contents_to_file(fp, self.headers, cb=cb, num_cb=num_cb,
                                    res_download_handler=res_download_handler)
+      # If a custom test method is defined, call it here. For the copy command,
+      # test methods are expected to take one argument: an open file pointer,
+      # and are used to perturb the open file during download to exercise
+      # download error detection.
+      if self.test_method:
+        self.test_method(fp)
       end_time = time.time()
     finally:
       if fp:
@@ -799,7 +805,6 @@ class CpCommand(Command):
   # Command entry point.
   def RunCommand(self):
     self.total_elapsed_time = self.total_bytes_transferred = 0
-
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all
       # debug messages to <STDERR>.
