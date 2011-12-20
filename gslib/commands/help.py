@@ -58,10 +58,9 @@ SYNOPSIS
     Disable logging on buckets:
       disablelogging uri...
     Enable logging on buckets:
-      enablelogging -b log_bucket [-o log_object_prefix] [-a canned_acl] uri...
+      enablelogging -b log_bucket [-o log_object_prefix] uri...
         -b Log bucket.
         -o Prefix for log object names. Default value is the bucket name.
-        -a Canned acl to apply to log objects.
     Get ACL XML for a bucket or object (save and edit for "setacl" command):
       getacl uri
     Get default ACL XML for a bucket (save and edit for "setdefacl" command):
