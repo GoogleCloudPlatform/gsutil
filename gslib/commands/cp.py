@@ -42,9 +42,6 @@ from gslib.exception import CommandException
 from gslib.exception import ProjectIdException
 from gslib import wildcard_iterator
 from gslib.project_id import ProjectIdHandler
-from gslib.thread_pool import ThreadPool
-from gslib.thread_pool import Worker
-from gslib.util import DEFAULT_PARALLEL_THREAD_COUNT
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import ONE_MB
@@ -842,11 +839,10 @@ class CpCommand(Command):
                                                     base_dst_uri)
 
     # Should symbolic links be skipped?
-    ignore_symlinks = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-e':
-          ignore_symlinks = True
+          self.ignore_symlinks = True
 
     # To ensure statistics are accurate with threads we need to use a lock.
     stats_lock = threading.Lock()
@@ -873,29 +869,18 @@ class CpCommand(Command):
       self.total_bytes_transferred += bytes_transferred
       stats_lock.release()
 
-    if self.parallel_operations:
-      thread_count = boto.config.getint(
-          'GSUtil', 'parallel_thread_count', DEFAULT_PARALLEL_THREAD_COUNT)
-      thread_pool = ThreadPool(thread_count, _CopyExceptionHandler)
+    
+    # Start the clock.
+    start_time = time.time()
 
-    try:
-      # Now iterate over expanded src URIs, and perform copy operations.
-      for src_uri in iter(src_uri_expansion):
-        for exp_src_uri in src_uri_expansion[src_uri]:
-          if (ignore_symlinks and exp_src_uri.is_file_uri()
-              and os.path.islink(exp_src_uri.object_name)):
-            self.THREADED_LOGGER.info('Skipping symbolic link %s...',
-                                      exp_src_uri)
-          elif self.parallel_operations:
-            thread_pool.AddTask(_CopyFunc, src_uri, exp_src_uri)
-          else:
-            _CopyFunc(src_uri, exp_src_uri)
+    # Perform copy requests in parallel (-m) mode, if requested, using    
+    # configured number of parallel processes and threads. Otherwise,
+    # perform request with sequential function calls in current process.
+    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler)
 
-      if self.parallel_operations:
-        thread_pool.WaitCompletion()
-    finally:
-      if self.parallel_operations:
-        thread_pool.Shutdown()
+    end_time = time.time()
+    self.total_elapsed_time = end_time - start_time
+
     if self.debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD

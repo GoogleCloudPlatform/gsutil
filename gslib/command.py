@@ -26,7 +26,9 @@ import boto
 import getopt
 import gslib
 import logging
+import multiprocessing
 import os
+import platform
 import re
 import sys
 import wildcard_iterator
@@ -34,10 +36,13 @@ import xml.dom.minidom
 import xml.sax.xmlreader
 
 from boto import handler
+from boto.storage_uri import StorageUri
 from exception import CommandException
 from getopt import GetoptError
 from gslib import util
 from gslib.project_id import ProjectIdHandler
+from gslib.thread_pool import ThreadPool
+from gslib.thread_pool import Worker
 from gslib.util import HAVE_OAUTH2
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ResultType
@@ -146,6 +151,7 @@ class Command(object):
     self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.test_method = test_method
+    self.ignore_symlinks = False
     
     # Process sub-command instance specifications.
     # First, ensure subclass implementation sets all required keys.
@@ -437,3 +443,135 @@ class Command(object):
         # With no boto config file the user can still access publicly readable
         # buckets and objects.
         from gslib import no_op_auth_plugin
+
+  def Apply(self, func, src_uri_expansion, thr_exc_handler):    
+    """Dispatch input URI assignments across a pool of parallel OS
+       processes and/or Python threads, based on options (-m or not) 
+       and settings in the user's config file. If non-parallel mode 
+       or only one OS process requested, execute requests sequentially 
+       in the current OS process. 
+
+    Args:
+      func: function to call to process each URI.
+      src_uri_expansion: dictionary of groups of URIs to process.
+      thr_exc_handler: exception handler for ThreadPool class.
+    """
+    # Set OS process and python thread count as a function of options 
+    # and config.
+    if self.parallel_operations:
+      process_count = boto.config.getint(
+          'GSUtil', 'parallel_process_count',
+          gslib.commands.config.DEFAULT_PARALLEL_PROCESS_COUNT)
+      if process_count < 1:
+        raise CommandException('Invalid parallel_process_count "%d".' % 
+                               process_count)
+      thread_count = boto.config.getint(
+          'GSUtil', 'parallel_thread_count', 
+          gslib.commands.config.DEFAULT_PARALLEL_THREAD_COUNT)
+      if thread_count < 1:
+        raise CommandException('Invalid parallel_thread_count "%d".' % 
+                               thread_count)
+    else:
+      # If -m not specified, then assume 1 OS process and 1 Python thread.
+      process_count = 1
+      thread_count = 1
+
+    if self.debug:
+      self.THREADED_LOGGER.info('process count: %d', process_count)
+      self.THREADED_LOGGER.info('thread count: %d', thread_count)
+
+    # Construct dictionary of assigned URIs containing one list per 
+    # OS process/shard. Assignments are stored as tuples containing 
+    # original source URI and expanded source URI.
+    shard = 0
+    assigned_uris = {}
+    for src_uri in iter(src_uri_expansion):
+      for exp_src_uri in src_uri_expansion[src_uri]:
+        if shard not in assigned_uris:
+          assigned_uris[shard] = []
+        assigned_uris[shard].append((src_uri, exp_src_uri))
+        shard = (shard + 1) % process_count
+
+    if self.parallel_operations and (process_count > 1):
+      procs = []
+      byte_count = None
+      # If the command calling this method keeps track of bytes transferred,
+      # arrange to manage a global count across multiple OS processes.
+      # TODO: The logic that manages the global byte_count is specific 
+      # to the cp command and should be refactored to be generic.
+      if hasattr(self, 'total_bytes_transferred'):
+        byte_count = multiprocessing.Value('i', 0)
+      for shard in assigned_uris:
+        # Spawn a separate OS process for each shard.
+        if self.debug:
+          self.THREADED_LOGGER.info('spawning process for shard %d', shard)
+        p = multiprocessing.Process(target=self.ApplyThreads,
+              args=(func, assigned_uris[shard], shard, thread_count, 
+              byte_count, thr_exc_handler))
+        procs.append(p)
+        p.start()
+      # Wait for all spawned OS processes to finish.
+      for p in procs:
+        p.join()
+      # If tracking bytes processed, update the master process' count from 
+      # the global counter. 
+      if hasattr(self, 'total_bytes_transferred'):
+        self.total_bytes_transferred = byte_count.value
+    else:
+      # Only one OS process requested so perform request in current
+      # OS process, in shard zero with thread_count threads.
+      self.ApplyThreads(func, assigned_uris[0], 0, thread_count, None, 
+                        thr_exc_handler)
+
+  def ApplyThreads(self, func, assigned_uris, shard, num_threads, 
+                       count=None, thr_exc_handler=None):
+    """Perform subset of required requests across a caller specified 
+       number of parallel Python threads, which may be one, in which
+       case the requests are processed in the current thread. 
+    
+    Args:
+      func: function to call for each request.
+      assigned_uris: list of URIs to process.
+      shard: assigned subset (shard number) for this function.
+      num_threads: number of Python threads to spawn to process this shard.
+      count: shared integer for tracking total bytes transferred.
+             (only relevant, and non-None, if this function is
+             run in a separate OS process)
+      thr_exc_handler: exception handler for ThreadPool class.
+    """ 
+    # Each OS process needs to establish its own set of connections to
+    # the server to avoid writes from different OS processes interleaving
+    # onto the same socket (and messing up the underlying SSL session). 
+    # We ensure each process gets its own set of connections here by 
+    # closing all connections in the storage provider connection pool. 
+    connection_pool = StorageUri.provider_pool
+    if connection_pool:
+      for i in connection_pool:
+        connection_pool[i].connection.close()
+
+    if num_threads > 1:
+      thread_pool = ThreadPool(num_threads, thr_exc_handler)
+    try:
+      # Iterate over assigned URIs and perform copy operations for each.
+      for (src_uri, exp_src_uri) in assigned_uris:
+        if self.debug:
+          self.THREADED_LOGGER.info('process %d shard %d is handling uri %s', 
+                                    os.getpid(), shard, exp_src_uri)
+        if (self.ignore_symlinks and exp_src_uri.is_file_uri()
+            and os.path.islink(exp_src_uri.object_name)):
+          self.THREADED_LOGGER.info('Skipping symbolic link %s...',
+                                    exp_src_uri)
+        elif num_threads > 1:
+          thread_pool.AddTask(func, src_uri, exp_src_uri)
+        else:
+          func(src_uri, exp_src_uri)
+      # If any Python threads created, wait here for them to finish.
+      if num_threads > 1:
+        thread_pool.WaitCompletion()
+    finally:
+      if num_threads > 1:
+        thread_pool.Shutdown()
+    # If this call was spawned in a separate OS process, update shared
+    # memory count of bytes transferred.
+    if count:
+      count.value += self.total_bytes_transferred

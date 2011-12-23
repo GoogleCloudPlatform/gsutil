@@ -178,6 +178,12 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
+  def TestCopyingTopLevelFileToBucketMulti(self):
+    """Tests copying one top-level file to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingTopLevelFileToBucket()
+    self.parallel_operations = False
+    
   def TestCopyingNestedFileToBucket(self):
     """Tests copying one nested file to a bucket"""
     src_file = self.SrcFile('nested')
@@ -188,6 +194,12 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     # File should be final comp ('nested'), w/o nested path (dir0/...).
     self.assertEqual('nested', actual[0].object_name)
+
+  def TestCopyingNestedFileToBucketMulti(self):
+    """Tests copying one nested file to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingNestedFileToBucket()
+    self.parallel_operations = False
 
   def TestCopyingDirToBucket(self):
     """Tests copying top-level directory to a bucket"""
@@ -203,6 +215,12 @@ class GsutilCommandTests(unittest.TestCase):
       expected.add('%s%s' % (self.dst_bucket_uri.uri,
                              file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
+
+  def TestCopyingDirToBucketMulti(self):
+    """Tests copying top-level directory to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingDirToBucket()
+    self.parallel_operations = False
 
   def TestCopyingDirContainingOneFileToBucket(self):
     """Tests copying a directory containing 1 file to a bucket
@@ -220,6 +238,12 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual('%sdir1%snested' % (self.dst_bucket_uri.uri, os.sep),
                      actual[0])
 
+  def TestCopyingDirContainingOneFileToBucketMulti(self):
+    """Tests copying a directory containing 1 file to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingDirContainingOneFileToBucket()
+    self.parallel_operations = False
+
   def TestCopyingBucketToDir(self):
     """Tests copying from a bucket to a directory"""
     self.command_runner.RunNamedCommand('cp', ['-r', self.src_bucket_uri.uri,
@@ -233,6 +257,12 @@ class GsutilCommandTests(unittest.TestCase):
                                        uri.object_name))
     self.assertEqual(expected, actual)
 
+  def TestCopyingBucketToDirMulti(self):
+    """Tests copying from a bucket to a directory with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingBucketToDir()
+    self.parallel_operations = False
+
   def TestCopyingBucketToBucket(self):
     """Tests copying from a bucket-only URI to a bucket"""
     self.command_runner.RunNamedCommand('cp', ['-r', self.src_bucket_uri.uri,
@@ -244,6 +274,12 @@ class GsutilCommandTests(unittest.TestCase):
     for uri in self.all_src_obj_uris:
       expected.add('%s%s' % (self.dst_bucket_uri.uri, uri.object_name))
     self.assertEqual(expected, actual)
+
+  def TestCopyingBucketToBucketMulti(self):
+    """Tests copying from a bucket-only URI to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingBucketToDir()
+    self.parallel_operations = False
 
   def TestCopyingDirToDir(self):
     """Tests copying from a directory to a directory"""
@@ -260,6 +296,12 @@ class GsutilCommandTests(unittest.TestCase):
                                     file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
 
+  def TestCopyingDirToDirMulti(self):
+    """Tests copying from a directory to a directory with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingDirToDir()
+    self.parallel_operations = False
+
   def TestCopyingFilesAndDirNonRecursive(self):
     """Tests copying containing files and a directory without -r"""
     self.command_runner.RunNamedCommand('cp', ['%s*' % self.src_dir_root,
@@ -271,6 +313,12 @@ class GsutilCommandTests(unittest.TestCase):
                     for f in self.non_nested_file_names])
     self.assertEqual(expected, actual)
 
+  def TestCopyingFilesAndDirNonRecursiveMulti(self):
+    """Tests copying containing files and a directory without -r, with -m opt"""
+    self.parallel_operations = True
+    self.TestCopyingFilesAndDirNonRecursive()
+    self.parallel_operations = False
+
   def TestCopyingFileToDir(self):
     """Tests copying one file to a directory"""
     src_file = self.SrcFile('nested')
@@ -279,6 +327,12 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('file://%s%s' % (self.dst_dir_root, 'nested'),
                      actual[0].uri)
+
+  def TestCopyingFileToDirMulti(self):
+    """Tests copying one file to a directory with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingFileToDir()
+    self.parallel_operations = False
 
   def TestCopyingCompressedFileToBucket(self):
     """Tests copying one file with compression to a bucket"""
@@ -320,6 +374,12 @@ class GsutilCommandTests(unittest.TestCase):
       expected.add('file://%s%s' % (self.dst_dir_root, file_path))
     self.assertEqual(expected, actual)
 
+  def TestCopyingObjsAndFilesToDirMulti(self):
+    """Tests copying objects and files to a directory with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingObjsAndFilesToDir()
+    self.parallel_operations = False
+
   def TestCopyingObjsAndFilesToBucket(self):
     """Tests copying objects and files to a bucket"""
     self.command_runner.RunNamedCommand('cp',
@@ -335,6 +395,12 @@ class GsutilCommandTests(unittest.TestCase):
     for file_path in self.nested_child_file_paths:
       expected.add('%s%s' % (self.dst_bucket_uri.uri, file_path))
     self.assertEqual(expected, actual)
+
+  def TestCopyingObjsAndFilesToBucketMulti(self):
+    """Tests copying objects and files to a bucket with -m option"""
+    self.parallel_operations = True
+    self.TestCopyingObjsAndFilesToBucket()
+    self.parallel_operations = False
 
   def TestAttemptDirCopyWithoutRecursion(self):
     """Tests copying a directory without -r"""
@@ -491,6 +557,12 @@ class GsutilCommandTests(unittest.TestCase):
     # work right. Python bug?
     except Exception, e:
       self.assertNotEqual(e.reason.find('Not Found'), -1)
+
+  def TestRemoveObjsCommandMulti(self):
+    """Test RemoveObjsCommand on non-existent object with -m option"""
+    self.parallel_operations = True
+    self.TestRemoveObjsCommand()
+    self.parallel_operations = False
 
   def TestSetAclCommmandRuns(self):
     """Test that the SetAcl command basically runs"""

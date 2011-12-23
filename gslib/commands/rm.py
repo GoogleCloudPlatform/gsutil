@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import boto
+import os
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -26,9 +27,7 @@ from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.command import XML_PARSE_REQUIRED
 from gslib.exception import CommandException
-from gslib import wildcard_iterator
 from gslib.thread_pool import ThreadPool
-from gslib.util import DEFAULT_PARALLEL_THREAD_COUNT
 from gslib.util import NO_MAX
 
 class RmCommand(Command):
@@ -74,7 +73,7 @@ class RmCommand(Command):
       self.THREADED_LOGGER.error(str(e))
       self.everything_removed_okay = False
 
-    def _RemoveFunc(uri, uri_str):
+    def _RemoveFunc(uri_str, uri):
       if uri.names_container():
         if uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those
@@ -87,27 +86,15 @@ class RmCommand(Command):
       self.THREADED_LOGGER.info('Removing %s...', uri)
       uri.delete_key(validate=False, headers=self.headers)
 
-    if self.parallel_operations:
-      thread_count = boto.config.getint(
-          'GSUtil', 'parallel_thread_count', DEFAULT_PARALLEL_THREAD_COUNT)
-      thread_pool = ThreadPool(thread_count, _RemoveExceptionHandler)
+    uris_to_rm = {}
+    for uri_str in self.args:
+      uris_to_rm[uri_str] = list(self.CmdWildcardIterator(uri_str))
+    
+    # Perform remove requests in parallel (-m) mode, if requested, using
+    # configured number of parallel processes and threads. Otherwise,
+    # perform request with sequential function calls in current process.
+    self.Apply(_RemoveFunc, uris_to_rm, _RemoveExceptionHandler)
 
-    try:
-      # Expand object name wildcards, if any.
-      for uri_str in self.args:
-        for uri in self.CmdWildcardIterator(uri_str):
-          if self.parallel_operations:
-            thread_pool.AddTask(_RemoveFunc, uri, uri_str)
-          else:
-            try:
-              _RemoveFunc(uri, uri_str)
-            except Exception, e:
-              if continue_on_error:
-                self.THREADED_LOGGER.error(str(e))
-              else:
-                raise e
-      if self.parallel_operations:
-        thread_pool.WaitCompletion()
-    finally:
-      if self.parallel_operations:
-        thread_pool.Shutdown()
+    if not self.everything_removed_okay:
+      raise CommandException('Some files could not be removed.')
+

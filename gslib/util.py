@@ -32,9 +32,6 @@ try:
 except ImportError:
   pass
 
-# Default number of threads to use for parallel operations.
-DEFAULT_PARALLEL_THREAD_COUNT = 24
-
 ONE_MB = 1024*1024
 
 NO_MAX = sys.maxint

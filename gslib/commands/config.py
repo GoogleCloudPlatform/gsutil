@@ -14,6 +14,8 @@
 
 import boto
 import datetime
+import multiprocessing
+import platform
 import os
 import sys
 import time
@@ -34,7 +36,6 @@ from gslib.command import XML_PARSE_REQUIRED
 from gslib.exception import CommandException
 from gslib import command
 from gslib import wildcard_iterator
-from gslib.util import DEFAULT_PARALLEL_THREAD_COUNT
 from gslib.util import HAVE_OAUTH2
 from gslib.util import ONE_MB
 
@@ -57,6 +58,22 @@ CONFIG_PRELUDE_CONTENT = """
 # "[Boto]" section delimeters).
 #
 """
+
+# Default number of OS processes and Python threads for parallel operations.
+# On Linux systems we automatically scale the number of processes to match 
+# the underlying CPU/core count. Given we'll be running multiple concurrent 
+# processes on a typical multi-core Linux computer, to avoid being too 
+# aggresive with resources, the default number of threads is reduced from 
+# the previous value of 24 to 10.
+# On Windows and Mac systems parallel multiprocessing and multithreading
+# in Python presents various challenges so we retain compaibility with 
+# the established parallel mode operation, i.e. one process and 24 threads.
+if platform.system() == 'Linux':
+  DEFAULT_PARALLEL_PROCESS_COUNT = multiprocessing.cpu_count()
+  DEFAULT_PARALLEL_THREAD_COUNT = 10
+else:
+  DEFAULT_PARALLEL_PROCESS_COUNT = 1
+  DEFAULT_PARALLEL_THREAD_COUNT = 24
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
@@ -112,10 +129,19 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
 
-# 'parallel_thread_count' specifies the number of threads to use when executing
-# operations in parallel. Currently only used for multithreaded copy (cp -m).
+# 'parallel_process_count' and 'parallel_thread_count' specify the number 
+# of OS processes and Python threads, respectively, to use when executing 
+# operations in parallel. The default settings should work well as configured, 
+# however, to enhance performance for transfers involving large numbers of 
+# files, you may experiment with hand tuning these values to optimize 
+# performance for your particular system configuration. 
+# MacOS and Windows users should see
+# http://code.google.com/p/gsutil/issues/detail?id=78 before attempting
+# to experiment with these values.
+#parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d
 """ % {'resumable_threshold': ONE_MB,
+       'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
