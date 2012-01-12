@@ -22,7 +22,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 from gslib import wildcard_iterator
 from gslib.util import NO_MAX
 
@@ -49,8 +48,6 @@ class SetDefAclCommand(Command):
     URIS_START_ARG : 1,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : True
   }
 
   # Command entry point.

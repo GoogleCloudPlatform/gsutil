@@ -24,7 +24,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
@@ -55,8 +54,6 @@ class LsCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : True
   }
 
   def _PrintBucketInfo(self, bucket_uri, listing_style):

@@ -32,7 +32,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 from gslib.exception import CommandException
 from gslib import command
 from gslib import wildcard_iterator
@@ -269,8 +268,6 @@ class ConfigCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : False,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : False
   }
 
   def _OpenConfigFile(self, file_path):

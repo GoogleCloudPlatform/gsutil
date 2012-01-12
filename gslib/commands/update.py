@@ -29,7 +29,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 from gslib.exception import CommandException
 
 class UpdateCommand(Command):
@@ -55,8 +54,6 @@ class UpdateCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : False
   }
 
   def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):
@@ -160,6 +157,7 @@ class UpdateCommand(Command):
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
     tf.extract('./gsutil/VERSION')
+
     ver_file = open('gsutil/VERSION', 'r')
     try:
       latest_version_string = ver_file.read().rstrip('\n')
@@ -212,6 +210,22 @@ class UpdateCommand(Command):
     except Exception, e:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       raise CommandException('Update failed: %s.' % e)
+
+    # For enterprise mode (shared/central) installation, users with
+    # different user/group than the installation user/group must be 
+    # able to run gsutil so we need to do some permissions adjustments
+    # here. Since enterprise mode is not not supported for Windows 
+    # users, we can skip this step when running on Windows, which 
+    # avoids the problem that Windows has no find or xargs command.
+    system = platform.system()
+    if not system.lower().startswith('windows'):
+      # Make all files and dirs in updated area readable by other
+      # and make all directories executable by other. These steps
+      os.system('chmod -R o+r ' + new_dir)
+      os.system('find ' + new_dir + ' -type d | xargs chmod o+x')
+
+      # Make main gsutil script readable and executable by other.
+      os.system('chmod o+rx ' + os.path.join(new_dir, 'gsutil'))
 
     # Move old installation aside and new into place.
     os.rename(self.gsutil_bin_dir, old_dir + os.sep + 'old')

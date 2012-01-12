@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/env python
 #
 # Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007 Python Software
 # Foundation; All Rights Reserved

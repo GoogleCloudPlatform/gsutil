@@ -74,19 +74,12 @@ FILE_URIS_OK = 'file_uri_ok'
 PROVIDER_URIS_OK = 'provider_uri_ok'
 URIS_START_ARG = 'uris_start_arg'
 CONFIG_REQUIRED = 'config_required'
-XML_PARSE_REQUIRED = 'xml_parse_required'
 
 class Command(object):
   # Global instance of a threaded logger object.
   THREADED_LOGGER = _ThreadedLogger()
 
-  # We include XML_PARSE_REQUIRED in the required spec keys to reduce
-  # the chances a new command implementation overlooks this (relying on the
-  # default). If we didn't do this and an implementor works on a machine with a
-  # working XML parser the default (False) setting would seem to work, but then
-  # a user running with a broken parser (xmlplus) running the new code would
-  # get a mysterious error because the XML parser check would be bypassed.
-  REQUIRED_SPEC_KEYS = [COMMAND_NAME, XML_PARSE_REQUIRED]
+  REQUIRED_SPEC_KEYS = [COMMAND_NAME]
 
   # Each subclass must define the following map, minimally including the
   # keys in REQUIRED_SPEC_KEYS; other values below will be used as defaults,
@@ -110,8 +103,6 @@ class Command(object):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : False
   }
   _default_command_spec = command_spec
 
@@ -185,8 +176,6 @@ class Command(object):
         self._HaveProviderUris(self.args[self.command_spec[URIS_START_ARG]:])):
       raise CommandException('"%s" command does not support provider-only '
                              'URIs.' % self.command_name)
-    if self.command_spec[XML_PARSE_REQUIRED]:
-      self._SanityCheckXmlParser()
     if self.command_spec[CONFIG_REQUIRED]:
       self._ConfigureNoOpAuthIfNeeded()
 
@@ -407,18 +396,6 @@ class Command(object):
       if re.match('^[a-z]+://$', uri_str):
         return True
     return False
-
-  def _SanityCheckXmlParser(self):
-    # The given command requires xml parsing, so ensure we're
-    # not using the xmlplus parser, which works incorrectly (see
-    # http://code.google.com/p/gsutil/issues/detail?id=18 for details).
-    code_file = xml.sax.xmlreader.__file__
-    if code_file.find('xmlplus') != -1:
-      raise CommandException('The "%s" command requires XML parsing, and your '
-                             'Python installation includes an\nXML parser '
-                             '(%s)\nthat does not work correctly.' %
-                             (self.command_name, code_file))
-
 
   def _ConfigureNoOpAuthIfNeeded(self):
     """Sets up no-op auth handler if no boto credentials are configured."""

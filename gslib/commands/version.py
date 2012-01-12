@@ -25,7 +25,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 
 class VersionCommand(Command):
   """Implementation of gsutil version command."""
@@ -50,8 +49,6 @@ class VersionCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : False,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : False
   }
 
   # Command entry point.

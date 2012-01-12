@@ -22,7 +22,6 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command import XML_PARSE_REQUIRED
 
 class GetAclCommand(Command):
   """Implementation of gsutil getacl command."""
@@ -47,8 +46,6 @@ class GetAclCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
-    # True if this command requires XML parsing.
-    XML_PARSE_REQUIRED : True
   }
 
   # Command entry point.

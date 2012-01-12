@@ -1,0 +1,7 @@
+include gsutil COPYING VERSION LICENSE.third_party README setup.py pkg_util.py
+recursive-include gslib *
+recursive-include cloudauth *
+recursive-include cloudreader *
+recursive-include oauth2_plugin *
+recursive-include third_party *
+recursive-include boto *
