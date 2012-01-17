@@ -635,4 +635,4 @@ class RefreshToken(object):
       The value of an Authorization HTTP header that authenticates
       requests with an OAuth2 access token based on this refresh token.
     """
-    return 'OAuth %s' % self.oauth2_client.GetAccessToken(self).token
+    return 'Bearer %s' % self.oauth2_client.GetAccessToken(self).token

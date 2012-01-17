@@ -55,7 +55,9 @@ class ProjectIdHandler(object):
          command == 'enablelogging' or
          (command == 'ls' and not uri.bucket_name) or
          (command == WILDCARD_BUCKET_ITERATOR))):
-      if not headers:
+      # Note: check for None (as opposed to "not headers") here beause
+      # it's ok to pass empty headers.
+      if headers is None:
         raise ProjectIdException(
             'FillInProjectHeaderIfNeeded called with headers=None')
       headers[GOOG_PROJ_ID_HDR] = self.project_id

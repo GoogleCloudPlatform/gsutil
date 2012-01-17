@@ -42,4 +42,4 @@ class OAuth2Auth(AuthHandler):
     if not credentials or credentials.invalid:
       raise NotReadyToAuthenticate()
     http_request.headers['Authorization'] = (
-        'OAuth %s' % str(credentials.access_token))
+        'Bearer %s' % str(credentials.access_token))

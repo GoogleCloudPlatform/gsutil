@@ -311,7 +311,7 @@ class RefreshTokenTest(unittest.TestCase):
     self.opener.open_result = (
         '{"access_token":"%s","expires_in":3600}' % access_token)
 
-    self.assertEquals('OAuth %s' % access_token,
+    self.assertEquals('Bearer %s' % access_token,
                       self.cred.GetAuthorizationHeader())
 
 
