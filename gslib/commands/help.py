@@ -38,6 +38,7 @@ SYNOPSIS
      gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:text/html" cp ...
 
   -m option causes supported operations (cp, mv, rm) to run in parallel.
+  -s option causes gsutil to use a simulated storage provider (for testing).
 
   Commands:
     Concatenate object content to stdout:

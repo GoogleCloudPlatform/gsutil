@@ -106,6 +106,52 @@ class Command(object):
   }
   _default_command_spec = command_spec
 
+  """Define an empty test specification, which derived classes must populate.
+
+  This is a list of tuples containing the following values:
+
+    step_name - mnemonic name for test, displayed when test is run
+    cmd_line - shell command line to run test
+    expect_ret or None - expected return code from test (None means ignore)
+    (result_file, expect_file) or None - tuple of result file and expected 
+                                         file to diff for additional test 
+                                         verification beyond the return code
+                                         (None means no diff requested)
+  Notes:
+
+  - Setting expected_ret to None means there is no expectation and, 
+    hence, any returned value will pass.
+
+  - Any occurrences of the string 'gsutil' in the cmd_line parameter
+    are expanded to the full path to the gsutil command under test.
+
+  - The cmd_line, result_file and expect_file parameters may 
+    contain the following special substrings:
+
+    $Bn - converted to one of 10 unique-for-testing bucket names (n=0..9)
+    $On - converted to one of 10 unique-for-testing object names (n=0..9)
+    $Fn - converted to one of 10 unique-for-testing file names (n=0..9)
+
+  - The generated file names are full pathnames, whereas the generated
+    bucket and object names are simple relative names.
+
+  - Tests with a non-None result_file and expect_file automatically
+    trigger an implicit diff of the two files.
+
+  - These test specifications, in combination with the conversion strings
+    allow tests to be constructed parametrically. For example, here's an
+    annotated subset of a test_steps for the cp command:
+
+    # Copy local file to object, verify 0 return code.
+    ('simple cp', 'gsutil cp $F1 gs://$B1/$O1', 0, None, None),
+    # Copy uploaded object back to local file and diff vs. orig file.
+    ('verify cp', 'gsutil cp gs://$B1/$O1 $F2', 0, '$F2', '$F1'),
+
+  - After pattern substitution, the specs are run sequentially, in the 
+    order in which they appear in the test_steps list.
+  """
+  test_steps = []
+
   # Define a convenience property for command name, since it's used many places.
   def _get_command_name(self):
     return self.command_spec[COMMAND_NAME]
@@ -155,6 +201,13 @@ class Command(object):
     tmp.update(self.command_spec)
     self.command_spec = tmp
     del tmp
+
+    # Make sure command provides a test specification.
+    if not self.test_steps:
+      # TODO: Uncomment following lines when test feature is ready.
+      #raise CommandException('"%s" command implementation is missing test '
+                             #'specification' % self.command_name)
+      pass
 
     # Parse and validate args.
     try:

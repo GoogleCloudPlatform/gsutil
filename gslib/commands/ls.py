@@ -214,3 +214,17 @@ class LsCommand(Command):
       print ('TOTAL: %d objects, %d bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
 
+  # test specification, see definition of test_steps in base class for
+  # details on how to populate these fields
+  test_steps = [
+    # (test name, cmd line, ret code, (result_file, expect_file))
+    ('gen bucket expect', 'echo gs://$B0/ >$F9', 0, None),
+    ('gen obj expect', 'echo gs://$B1/$O0 >$F8', 0, None),
+    ('simple ls', 'gsutil ls', 0, None),
+    ('list empty bucket', 'gsutil ls gs://$B0', 1, None),
+    ('list empty bucket w/ -b', 'gsutil ls -b gs://$B0 >$F7', 0, 
+                                                        ('$F7', '$F9')),
+    ('list bucket contents', 'gsutil ls gs://$B1 >$F7', 0, ('$F7', '$F8')),
+    ('list object', 'gsutil ls gs://$B1/$O0 >$F7', 0, ('$F7', '$F8')),
+  ]
+

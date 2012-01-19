@@ -890,3 +890,13 @@ class CpCommand(Command):
                                   float(self.total_elapsed_time))))
     if not self.everything_copied_okay:
       raise CommandException('Some files could not be transferred.')
+
+  # test specification, see definition of test_steps in base class for
+  # details on how to populate these fields
+  test_steps = [
+    # (test name, cmd line, ret code, (result_file, expect_file))
+    ('upload', 'gsutil cp $F1 gs://$B1/$O1', 0, None),
+    ('download', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
+    ('stream upload', 'cat $F1 | gsutil cp - gs://$B1/$O1', 0, None),
+    ('check stream upload', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
+  ]
