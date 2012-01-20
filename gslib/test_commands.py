@@ -334,6 +334,16 @@ class GsutilCommandTests(unittest.TestCase):
     self.TestCopyingFileToDir()
     self.parallel_operations = False
 
+  def TestCopyingFileToObjectWithConsecutiveSlashes(self):
+    """Tests copying a file to an object containing consecutive slashes"""
+    src_file = self.SrcFile('f0')
+    self.command_runner.RunNamedCommand(
+        'cp', [src_file, '%s/obj' % self.dst_bucket_uri.uri])
+    actual = list(test_util.test_wildcard_iterator('%s*' %
+                                                   self.dst_bucket_uri.uri))
+    self.assertEqual(1, len(actual))
+    self.assertEqual('/obj', actual[0].object_name)
+
   def TestCopyingCompressedFileToBucket(self):
     """Tests copying one file with compression to a bucket"""
     src_file = self.SrcFile('f2.txt')

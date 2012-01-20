@@ -259,7 +259,8 @@ class Command(object):
     """
     return boto.storage_uri(
         uri_str, 'file', debug=self.debug, validate=False,
-        bucket_storage_uri_class=self.bucket_storage_uri_class)
+        bucket_storage_uri_class=self.bucket_storage_uri_class,
+        suppress_consec_slashes=False)
 
   def CmdWildcardIterator(self, uri_or_str, result_type=ResultType.URIS):
     """

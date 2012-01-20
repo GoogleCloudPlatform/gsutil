@@ -208,7 +208,8 @@ class CloudWildcardIterator(WildcardIterator):
           bucket_uris.append(
               boto.storage_uri(
                   uri_str, debug=self.debug,
-                  bucket_storage_uri_class=self.bucket_storage_uri_class))
+                  bucket_storage_uri_class=self.bucket_storage_uri_class,
+                  suppress_consec_slashes=False))
     else:
       bucket_uris = [self.wildcard_uri.clone_replace_name('')]
 
@@ -386,7 +387,8 @@ def wildcard_iterator(uri_or_str, proj_id_handler,
     # wildcard chars.
     uri = boto.storage_uri(
         uri_or_str, debug=debug, validate=False,
-        bucket_storage_uri_class=bucket_storage_uri_class)
+        bucket_storage_uri_class=bucket_storage_uri_class,
+        suppress_consec_slashes=False)
   else:
     uri = uri_or_str
 
