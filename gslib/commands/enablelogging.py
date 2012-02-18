@@ -72,11 +72,15 @@ class EnableLoggingCommand(Command):
       raise CommandException('enablelogging requires \'-b <log_bucket>\' '
                              'option')
 
+    did_some_work = False
     for uri_str in self.args:
-      for uri in self.CmdWildcardIterator(uri_str):
+      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
         if uri.object_name:
           raise CommandException('enablelogging cannot be applied to objects')
+        did_some_work = True
         print 'Enabling logging on %s...' % uri
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'enablelogging', storage_uri, self.headers)
         uri.enable_logging(target_bucket, target_prefix, False, self.headers)
+    if not did_some_work:
+      raise CommandException('No URIs matched')

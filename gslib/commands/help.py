@@ -77,16 +77,18 @@ SYNOPSIS
          -l can be us or eu. Default is us
          -p proj_id Specifies the project ID under which to create the bucket.
     Move/rename objects:
-      mv [-p] src_uri dst_uri
+      mv [-p] [-R] src_uri dst_uri
         - or -
-      mv [-p] uri... dst_uri
+      mv [-p] [-R] uri... dst_uri
+        -R Causes directories, buckets, and bucket subdirs to be moved recursively.
       The -p option causes ACL to be preserved when copying in the
       cloud. Causes extra API calls.
     Remove buckets:
       rb uri...
     Remove objects:
-      rm [-f] uri...
+      rm [-f] [-R] uri...
          -f Continues despite errors when removing by wildcard.
+         -R Causes buckets and bucket subdirs to be removed recursively.
     Set ACL on buckets and/or objects:
       setacl file-or-canned_acl_name uri...
     Set default ACL on buckets:

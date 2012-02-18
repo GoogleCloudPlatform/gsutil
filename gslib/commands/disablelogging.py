@@ -52,11 +52,15 @@ class DisableLoggingCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    did_some_work = False
     for uri_str in self.args:
-      for uri in self.CmdWildcardIterator(uri_str):
+      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
         if uri.object_name:
           raise CommandException('disablelogging cannot be applied to objects')
+        did_some_work = True
         print 'Disabling logging on %s...' % uri
         self.proj_id_handler.FillInProjectHeaderIfNeeded('disablelogging',
                                                          uri, self.headers)
         uri.disable_logging(False, self.headers)
+    if not did_some_work:
+      raise CommandException('No URIs matched')

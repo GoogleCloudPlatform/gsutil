@@ -308,14 +308,14 @@ class ConfigCommand(Command):
     flow.
 
     Args:
-      config_file: file object to which the resulting config file will be
+      config_file: File object to which the resulting config file will be
           written.
-      use_oauth2: if True, walk user through OAuth2 approval flow and produce a
+      use_oauth2: If True, walk user through OAuth2 approval flow and produce a
           config with an oauth2_refresh_token credential. If false, ask the
           user for access key and secret.
-      launch_browser: in the OAuth2 approval flow, attempt to open a browser
+      launch_browser: In the OAuth2 approval flow, attempt to open a browser
           window and navigate to the approval URL.
-      oauth2_scopes: a list of OAuth2 scopes to request authorization for, when
+      oauth2_scopes: A list of OAuth2 scopes to request authorization for, when
           using OAuth2.
     """
 

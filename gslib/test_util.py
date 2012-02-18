@@ -36,24 +36,23 @@ from tests.s3 import mock_storage_service
 proj_id_handler = ProjectIdHandler()
 
 
-def test_wildcard_iterator(uri_or_str,
-                           result_type=wildcard_iterator.ResultType.URIS,
-                           debug=0):
+def test_wildcard_iterator(uri_or_str, debug=0):
   """
-  Convenience method for instantiating a testing
-  instance of WildCardIterator, without having to specify
-  all the params of that class (like
-  bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri).
-  Also naming the factory method this way makes it clearer in the test
-  code that WildcardIterator needs to be set up for testing.
+  Convenience method for instantiating a testing instance of
+  WildCardIterator, without having to specify all the params of that class
+  (like bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri).
+  Also naming the factory method this way makes it clearer in the test code
+  that WildcardIterator needs to be set up for testing.
 
-  Args, Returns, and Raises are same as for
-  wildcard_iterator.wildcard_iterator(), except there's no
-  bucket_storage_uri_class arg.
+  Args are same as for wildcard_iterator.wildcard_iterator(), except there's
+  no bucket_storage_uri_class arg.
+
+  Returns:
+    WildcardIterator.IterUris(), over which caller can iterate.
   """
   return wildcard_iterator.wildcard_iterator(
-      uri_or_str, proj_id_handler, result_type,
-      mock_storage_service.MockBucketStorageUri, headers={}, debug=debug)
+      uri_or_str, proj_id_handler,
+      mock_storage_service.MockBucketStorageUri, debug=debug)
 
 
 def test_storage_uri(uri_str, default_scheme='file', debug=0, validate=True):
@@ -64,9 +63,8 @@ def test_storage_uri(uri_str, default_scheme='file', debug=0, validate=True):
   Also naming the factory method this way makes it clearer in the test
   code that StorageUri needs to be set up for testing.
 
-  Args, Returns, and Raises are same as for
-  boto.storage_uri(), except there's no bucket_storage_uri_class arg.
+  Args, Returns, and Raises are same as for boto.storage_uri(), except there's
+  no bucket_storage_uri_class arg.
   """
-
   return boto.storage_uri(uri_str, default_scheme, debug, validate,
                           mock_storage_service.MockBucketStorageUri)

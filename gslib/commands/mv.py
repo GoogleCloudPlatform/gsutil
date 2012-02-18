@@ -45,7 +45,7 @@ class MvCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'p',
+    SUPPORTED_SUB_ARGS : 'prR',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -58,35 +58,60 @@ class MvCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    # Refuse to delete a bucket or directory src URI (force users to explicitly
-    # do that as a separate operation).
-    src_uri_to_check = self.StorageUri(self.args[0])
-    if src_uri_to_check.names_container():
-      raise CommandException('Will not remove source buckets or directories. '
-                             'You must separately copy and remove for that '
-                             'purpose.')
+    # self.recursion_requested initialized in command.py (so can be checked
+    # in parent class for all commands).
+    if self.sub_opts:
+      for o, unused_a in self.sub_opts:
+        if o == '-r' or o == '-R':
+          self.recursion_requested = True
 
-    if len(self.args) > 2:
-      self.InsistUriNamesContainer(self.StorageUri(self.args[-1]),
-                                   self.command_name)
+    # Check each source arg up, refusing to delete a bucket or directory src
+    # URI (force users to explicitly do that as a separate operation).
+    for arg_to_check in self.args[0:-1]:
+      if self.StorageUri(arg_to_check).names_container():
+        raise CommandException('Will not remove source buckets or directories '
+                               '(%s).\nYou must separately copy and remove for '
+                               'that purpose.' % arg_to_check)
 
-    # Expand wildcards before calling CopyObjsCommand and RemoveObjsCommand,
-    # to prevent the following problem: starting with a bucket containing
-    # only the object gs://bucket/obj, say the user does:
+    # Disallow recursive request (-r) with a wildcard src URI. Allowing
+    # this would make the name transformation too hairy and is too dangerous
+    # (e.g., someone could accidentally move many objects to the wrong name,
+    # or accidentally overwrite many objects).
+    if self.recursion_requested:
+      for src_uri in self.args[0:len(self.args)-1]:
+        if ContainsWildcard(src_uri):
+          raise CommandException('source URI cannot contain wildcards with mv -r')
+
+    # Expand wildcards, dirs, buckets, and bucket subdirs in StorageUris
+    # before running cp and rm commands, to prevent the
+    # following problem: starting with a bucket containing only the object
+    # gs://bucket/obj, say the user does:
     #   gsutil mv gs://bucket/* gs://bucket/d.txt
-    # If we didn't expand the wildcard first, the CopyObjsCommand would
+    # If we didn't expand the wildcard first, the cp command would
     # first copy gs://bucket/obj to gs://bucket/d.txt, and the
-    # RemoveObjsCommand would then remove that object.
-    exp_arg_list = []
-    for uri_str in self.args:
-      uri = self.StorageUri(uri_str)
-      if ContainsWildcard(uri_str):
-        exp_arg_list.extend(str(u) for u in list(self.CmdWildcardIterator(uri)))
-      else:
-        exp_arg_list.append(uri.uri)
+    # rm command would then remove that object.
+    # Note that this makes for somewhat less efficient operation, since we first
+    # do bucket listing operations here, then again in the underlying cp
+    # command.
+    # TODO: consider adding an internal interface to cp command to allow this
+    # expansion to be passed in.
+    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
+        self.args[0:len(self.args)-1])
+    exp_arg_list = list(src_uri_expansion.IterExpandedUriStrings())
 
-    self.command_runner.RunNamedCommand('cp', exp_arg_list, self.headers,
-                                          self.debug, self.parallel_operations)
-    self.command_runner.RunNamedCommand('rm', exp_arg_list[0:-1],
-                                          self.headers, self.debug,
-                                          self.parallel_operations)
+    if src_uri_expansion.IsEmpty():
+      raise CommandException('No URIs matched')
+
+    # Add command-line opts back in front of args so they'll be picked
+    # up by cp and rm commands (e.g., for -r option). Use undocumented
+    # (for internal use) -m option to request move naming semantics (see
+    # _ConstructDstUri in cp.py).
+    unparsed_args = ['-M']
+    unparsed_args.extend(self.unparsed_args)
+    self.command_runner.RunNamedCommand('cp', unparsed_args, self.headers,
+                                        self.debug, self.parallel_operations)
+    # See comment above about why we're passing exp_arg_list instead of
+    # unparsed_args here.
+    self.command_runner.RunNamedCommand('rm', exp_arg_list,
+                                        self.headers, self.debug,
+                                        self.parallel_operations)

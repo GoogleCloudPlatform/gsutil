@@ -17,8 +17,6 @@
 """Class that runs a named gsutil command."""
 
 import boto
-import gslib
-import gslib.commands
 import os
 
 from boto.storage_uri import BucketStorageUri
@@ -26,8 +24,6 @@ from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.exception import CommandException
-from gslib.exception import ProjectIdException
-from gslib.wildcard_iterator import WildcardException
 
 
 class CommandRunner:
@@ -36,9 +32,9 @@ class CommandRunner:
                bucket_storage_uri_class=BucketStorageUri):
     """
     Args:
-      gsutil_bin_dir: bin dir from which gsutil is running.
-      boto_lib_dir: lib dir where boto runs.
-      config_file_list: config file list returned by _GetBotoConfigFileList().
+      gsutil_bin_dir: Bin dir from which gsutil is running.
+      boto_lib_dir: Lib dir where boto runs.
+      config_file_list: Config file list returned by _GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
     """
@@ -71,10 +67,10 @@ class CommandRunner:
       other commands, and tests .
 
       Args:
-        command_name: the name of the command being run.
-        args: command-line args (arg0 = actual arg, not command name ala bash).
-        headers: dictionary containing optional HTTP headers to pass to boto.
-        debug: debug level to pass in to boto connection (range 0..3).
+        command_name: The name of the command being run.
+        args: Command-line args (arg0 = actual arg, not command name ala bash).
+        headers: Dictionary containing optional HTTP headers to pass to boto.
+        debug: Debug level to pass in to boto connection (range 0..3).
         parallel_operations: Should command operations be executed in parallel?
         test_method: Optional general purpose method for testing purposes. 
                      Application and semantics of this method will vary by

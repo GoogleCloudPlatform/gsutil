@@ -35,8 +35,8 @@ class CommandException(StandardError):
     """Instantiate a CommandException.
 
     Args:
-      reason: text describing the problem.
-      informational: indicates reason should be printed as FYI, not a failure.
+      reason: Text describing the problem.
+      informational: Indicates reason should be printed as FYI, not a failure.
     """
     StandardError.__init__(self)
     self.reason = reason

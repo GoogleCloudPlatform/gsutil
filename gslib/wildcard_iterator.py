@@ -34,22 +34,13 @@ We provide wildcarding support as part of gsutil rather than as part
 of boto because wildcarding is really part of shell command-like
 functionality.
 
-A comment about wildcard semantics: In a hierarchical file system it's common
-to distinguish recursive from single path component wildcards (e.g., using
-'**' for the former and '*' for the latter). For example,
-  /opt/eclipse/*/*.html
-would enumerate HTML files one directory down from /opt/eclipse, while
-  /opt/eclipse/**/*.html
-would enumerate HTML files in all subdirectories of /opt/eclipse. We provide
-'**' wildcarding support for file system directories but '*' and '**' behave
-the same for bucket URIs because the bucket namespace is flat (i.e.,
-there's no meaningful distinction between '*' and '**' for buckets).
-Thus, for example, if you were to upload data using the following command:
-  % gsutil cp -r /opt/eclipse gs://bucket/eclipse
-it would create a set of objects mirroring the filename hierarchy, and
-the following two commands would yield identical results:
-  % gsutil ls gs://bucket/eclipse/*/*.html
-  % gsutil ls gs://bucket/eclipse/**/*.html
+A comment about wildcard semantics: We support both single path component
+wildcards (e.g., using '*') and recursive wildcards (using '**'), for both
+file and cloud URIs. For example,
+  gs://bucket/doc/*/*.html
+would enumerate HTML files one directory down from gs://bucket/doc, while
+  gs://bucket/**/*.html
+would enumerate HTML files in all objects contained in the bucket.
 
 Note also that if you use file system wildcards it's likely your shell
 interprets the wildcarding before passing the command to gsutil. For example:
@@ -57,10 +48,10 @@ interprets the wildcarding before passing the command to gsutil. For example:
 would likely be expanded by the shell into the following before running gsutil:
   % gsutil cp /opt/eclipse/RUNNING.html gs://bucket/eclipse
 
-Note also that some shells (e.g., bash) don't support '**' wildcarding. If
-you want to use '**' wildcarding with such a shell you can single quote
-each wildcarded string, so it gets passed uninterpreted by the shell to
-gsutil (at which point gsutil will perform the wildcarding expansion):
+Note also that most shells don't support '**' wildcarding (I think only
+zsh does). If you want to use '**' wildcarding with such a shell you can
+single quote each wildcarded string, so it gets passed uninterpreted by the
+shell to gsutil (at which point gsutil will perform the wildcarding expansion):
   % gsutil cp '/opt/eclipse/**/*.html' gs://bucket/eclipse
 """
 
@@ -69,27 +60,24 @@ import fnmatch
 import glob
 import os
 import re
-import time
+import sys
 import urllib
 
+from boto.s3.prefix import Prefix
 from boto.storage_uri import BucketStorageUri
+from bucket_listing_ref import BucketListingRef
 
+# Regex to determine if a string contains any wildcards.
 WILDCARD_REGEX = re.compile('[*?\[\]]')
+
 WILDCARD_OBJECT_ITERATOR = 'wildcard_object_iterator'
 WILDCARD_BUCKET_ITERATOR = 'wildcard_bucket_iterator'
-
-
-# Enum class for specifying what to return from each iteration.
-class ResultType(object):
-  KEYS = 'KEYS'
-  URIS = 'URIS'
-
 
 class WildcardIterator(object):
   """Base class for wildcarding over StorageUris.
 
   This class implements support for iterating over StorageUris that
-  contain wildcards, such as 'gs://bucket/abc*' and 'file://directory/abc*'.
+  contain wildcards.
 
   The base class is abstract; you should instantiate using the
   wildcard_iterator() static factory method, which chooses the right
@@ -98,96 +86,57 @@ class WildcardIterator(object):
 
   def __repr__(self):
     """Returns string representation of WildcardIterator."""
-    return 'WildcardIterator(%s, %s)' % (self.wildcard_uri, self.result_type)
+    return 'WildcardIterator(%s)' % self.wildcard_uri
 
 
 class CloudWildcardIterator(WildcardIterator):
   """WildcardIterator subclass for buckets and objects.
 
-  Iterates over Keys or URIs matching the StorageUri wildcard. It's more
-  efficient to use this method to iterate keys if you want to get metadata
-  that's available in the Bucket (for example to get the name and size of
+  Iterates over BucketListingRef matching the StorageUri wildcard. It's
+  much more efficient to request the Key from the BucketListingRef (via
+  GetKey()) than to request the StorageUri and then call uri.get_key()
+  to retrieve the key, for cases where you want to get metadata that's
+  available in the Bucket (for example to get the name and size of
   each object), because that information is available in the bucket GET
   results. If you were to iterate over URIs for such cases and then get
   the name and size info from each resulting StorageUri, it would cause
   an additional object GET request for each of the result URIs.
   """
 
-  def __init__(self, wildcard_uri, proj_id_handler, result_type,
+  def __init__(self, wildcard_uri, proj_id_handler,
                bucket_storage_uri_class=BucketStorageUri,
                headers=None, debug=0):
-    """Instantiate an iterator over keys matching given wildcard URI.
+    """
+    Instantiates an iterator over BucketListingRef matching given wildcard URI.
 
     Args:
       wildcard_uri: StorageUri that contains the wildcard to iterate.
       proj_id_handler: ProjectIdHandler to use for current command.
-      result_type: ResultType object specifying what to iterate.
       bucket_storage_uri_class: BucketStorageUri interface.
                                 Settable for testing/mocking.
-      headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: debug level to pass in to boto connection (range 0..3).
-
-    Raises:
-      WildcardException: for invalid result_type.
+      headers: Dictionary containing optional HTTP headers to pass to boto.
+      debug: Debug level to pass in to boto connection (range 0..3).
     """
     self.wildcard_uri = wildcard_uri
-    self.result_type = result_type
-    if result_type != ResultType.KEYS and result_type != ResultType.URIS:
-      raise WildcardException('Invalid ResultType (%s)' % result_type)
     # Make a copy of the headers so any updates we make during wildcard
     # expansion aren't left in the input params (specifically, so we don't
     # include the x-goog-project-id header needed by a subset of cases, in
     # the data returned to caller, which could then be used in other cases
     # where that header must not be passed).
-    self.headers = headers.copy()
+    if headers is None:
+      self.headers = {}
+    else:
+      self.headers = headers.copy()
     self.proj_id_handler = proj_id_handler
-    self.debug = debug
     self.bucket_storage_uri_class = bucket_storage_uri_class
-
-  def __NeededResultType(self, obj, uri, headers):
-    """Helper function to generate needed ResultType, per constructor param.
-
-    Args:
-      obj: Key form of object to return, or None if not available.
-      uri: StorageUri form of object to return.
-      headers: dictionary containing optional HTTP headers to pass to boto.
-
-    Returns:
-      StorageUri or subclass of boto.s3.key.Key, depending on constructor param.
-
-    Raises:
-      WildcardException: for bucket-only uri with ResultType.KEYS.
-    """
-    if self.result_type == ResultType.URIS:
-      return uri
-    # Else ResultType.KEYS.
-    if not obj:
-      if not uri.object_name:
-        raise WildcardException('Bucket-only URI (%s) with ResultType.KEYS '
-                                'iteration request' % uri)
-      # This case happens when we do gsutil ls -l on a object name-ful
-      # StorageUri with no object-name wildcard. Since the ListCommand
-      # implementation only reads bucket info we need to read the object
-      # for this case.
-      obj = uri.get_key(validate=False, headers=headers)
-      # When we retrieve the object this way its last_modified timestamp
-      # is formatted in RFC 1123 format, which is different from when we
-      # retrieve from the bucket listing (which uses ISO 8601 format), so
-      # convert so we consistently return ISO 8601 format.
-      tuple_time = (time.strptime(obj.last_modified, '%a, %d %b %Y %H:%M:%S %Z'))
-      obj.last_modified = time.strftime('%Y-%m-%dT%H:%M:%S', tuple_time)
-    return obj
+    self.debug = debug
 
   def __iter__(self):
     """Python iterator that gets called when iterating over cloud wildcard.
 
     Yields:
-      StorageUri or Key, per constructor param.
-
-    Raises:
-      WildcardException: If there were no matches for the given wildcard.
+      BucketListingRef, or empty iterator if no matches.
     """
-    some_matched = False
     # First handle bucket wildcarding, if any.
     if ContainsWildcard(self.wildcard_uri.bucket_name):
       regex = fnmatch.translate(self.wildcard_uri.bucket_name)
@@ -200,7 +149,7 @@ class CloudWildcardIterator(WildcardIterator):
         if prog.match(b.name):
           # Use str(b.name) because get_all_buckets() returns Unicode
           # string, which when used to construct x-goog-copy-src metadata
-          # requests for object-to-object copies, causes pathname '/' chars
+          # requests for object-to-object copies causes pathname '/' chars
           # to be entity-encoded (bucket%2Fdir instead of bucket/dir),
           # which causes the request to fail.
           uri_str = '%s://%s' % (self.wildcard_uri.scheme,
@@ -218,69 +167,163 @@ class CloudWildcardIterator(WildcardIterator):
                                                      self.wildcard_uri,
                                                      self.headers)
     for bucket_uri in bucket_uris:
-      if not self.wildcard_uri.object_name:
+      if self.wildcard_uri.names_bucket():
         # Bucket-only URI.
-        some_matched = True
-        yield self.__NeededResultType(None, bucket_uri, self.headers)
+        yield BucketListingRef(bucket_uri, key=None, prefix=None,
+                               headers=self.headers)
       else:
         # URI contains an object name. If there's no wildcard just yield
         # the needed URI.
         if not ContainsWildcard(self.wildcard_uri.object_name):
-          some_matched = True
           uri_to_yield = bucket_uri.clone_replace_name(
               self.wildcard_uri.object_name)
-          yield self.__NeededResultType(None, uri_to_yield, self.headers)
+          yield BucketListingRef(uri_to_yield, key=None, prefix=None,
+                          headers=self.headers)
         else:
-          # Add the input URI's object name part to the bucket we're
-          # currently listing. For example if the request was to iterate
-          # gs://*/*.txt, bucket_uris will contain a list of all the user's
-          # buckets, and for each we'll add *.txt to the end so we iterate
-          # the matching files from each bucket in turn.
-          uri_to_list = bucket_uri.clone_replace_name(
-              self.wildcard_uri.object_name)
-          # URI contains an object wildcard.
-          for obj in self.__ListObjsInBucket(uri_to_list):
-            regex = fnmatch.translate(self.wildcard_uri.object_name)
-            prog = re.compile(regex)
-            if prog.match(obj.name):
-              some_matched = True
-              expanded_uri = uri_to_list.clone_replace_name(obj.name)
-              yield self.__NeededResultType(obj, expanded_uri, self.headers)
+          # URI contains a wildcard. Expand iteratively by making a prefix
+          # query of the string preceding the first wildcard char, setting
+          # delimiter=/ (unless the wildcard is **), then filtering the results
+          # by the wildcard at that level. For example given the wildcard:
+          #   gs://bucket/abc/d*e/f*.txt
+          # we would:
+          #   - get a bucket listing with prefix=abc/d, delimiter=/
+          #   - filter each result for those that start with the result + *e
+          # Assuming gs://bucket/abc/dxyze is a result from this iteration, the
+          # next iteration would:
+          #   - get a bucket listing with prefix= abc/dxyze, delimiter=/
+          #   - filter each result for those that start with the result + f.txt
+          #
+          # Initialize the iteration with bucket name from bucket_uri but
+          # object name from self.wildcard_uri. This is needed to handle cases
+          # where both the bucket and object names contain wildcards.
+          uris_needing_expansion = [
+              bucket_uri.clone_replace_name(self.wildcard_uri.object_name)]
+          while len(uris_needing_expansion) > 0:
+            uri = uris_needing_expansion.pop(0)
+            (prefix, delimiter, prefix_wildcard, suffix) = (
+                self._BuildBucketFilterStrings(uri.object_name))
+            prog = re.compile(fnmatch.translate(prefix_wildcard))
+            # List bucket for objects matching prefix up to delimiter.
+            for key in bucket_uri.get_bucket(
+                validate=False, headers=self.headers).list(
+                    prefix=prefix, delimiter=delimiter, headers=self.headers):
+              # Check that the prefix regex matches.
+              # Match rstripped key.name, to correspond with the rstripped
+              # prefix_wildcard from _BuildBucketFilterStrings.
+              if prog.match(key.name.rstrip('/')):
+                if suffix and WILDCARD_REGEX.search(suffix):
+                  # There's more wildcard left to expand.
+                  uris_needing_expansion.append(
+                      uri.clone_replace_name(key.name + suffix))
+                else:
+                  # Done expanding.
+                  expanded_uri = uri.clone_replace_name(key.name)
+                  if isinstance(key, Prefix):
+                    yield BucketListingRef(expanded_uri, key=None, prefix=key,
+                                    headers=self.headers)
+                  else:
+                    yield BucketListingRef(expanded_uri, key=key, prefix=None,
+                                    headers=self.headers)
 
-    if not some_matched:
-      raise WildcardException('No matches for "%s"' % self.wildcard_uri)
-
-  def __ListObjsInBucket(self, uri):
-    """Helper function to get a list of objects in a bucket.
-
-    This function does not provide the complete wildcard match; instead
-    it uses the server request prefix (if applicable) to reduce server
-    and network load and returns the underlying boto bucket iterator,
-    against which remaining wildcard filtering must be applied by the
-    caller. For example, for StorageUri('gs://bucket/abc*xyz') this
-    method returns the iterator from doing a prefix='abc' bucket GET
-    request; and subsequently a regex needs to be applied to subset the
-    'abc'-prefix matches down to the subset matching 'abc*xyz'.
+  def _BuildBucketFilterStrings(self, wildcard):
+    """
+    Builds strings needed for querying a bucket and filtering results to
+    implement wildcard object name matching.
 
     Args:
-      uri: StorageUri to list.
+      wildcard: The wildcard string to match to objects.
 
     Returns:
-      An instance of a boto.s3.BucketListResultSet that handles paging, etc.
-    """
+      (prefix, delimiter, prefix_wildcard, suffix)
+      where:
+        prefix is the prefix to be sent in bucket GET request.
+        delimiter is the delimiter to be sent in bucket GET request.
+        prefix_wildcard is the wildcard to be used to filter GET results.
+        suffix is string to be appended to filtered GET results for next
+          wildcard expansion iteration.
 
-    # Generate a request prefix if the object name part of the
-    # wildcard starts with a non-regex string (e.g., that's true for
-    # 'gs://bucket/abc*xyz').
-    match = WILDCARD_REGEX.search(uri.object_name)
-    if match and match.start() > 0:
-      # Glob occurs at beginning of object name, so construct a prefix
-      # string to send to server.
-      prefix = uri.object_name[:match.start()]
+    Raises:
+      AssertionError if wildcard doesn't contain any wildcard chars.
+    """
+    # Generate a request prefix if the object name part of the wildcard starts
+    # with a non-regex string (e.g., that's true for 'gs://bucket/abc*xyz').
+    match = WILDCARD_REGEX.search(wildcard)
+    assert match
+    if match.start() > 0:
+      # Wildcard does not occur at beginning of object name, so construct a
+      # prefix string to send to server.
+      prefix = wildcard[:match.start()]
     else:
       prefix = None
-    return uri.get_bucket(validate=False, headers=self.headers).list(
-        prefix=prefix, headers=self.headers)
+    # Construct a sub-wildcard for the current path component. For
+    # example, while iterating the first prefix match result (with
+    # prefix abc/d), prefix_wildcard will be d*e and suffix would be
+    # f*.txt.
+    wildcard_part = wildcard[match.start():]
+    end = wildcard_part.find('/')
+    if end != -1:
+      wildcard_part = wildcard_part[:end+1]
+    # Remove trailing '/' so we will match gs://bucket/abc* as well as
+    # gs://bucket/abc*/ with the same wildcard regex.
+    prefix_wildcard = ((prefix or '') + wildcard_part).rstrip('/')
+    suffix = wildcard[match.end():]
+    end = suffix.find('/')
+    if end == -1:
+      suffix = ''
+    else:
+      suffix = suffix[end+1:]
+    # If prefix_wildcard suffix starts with '**' don't send a delimiter,
+    # to implement recursive wildcarding semantics.
+    if prefix_wildcard.find('**') != -1:
+      delimiter = None
+    else:
+      delimiter = '/'
+    # The following debug output is useful for tracing how the algorithm
+    # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
+    if self.debug > 2:
+      sys.stderr.write(
+          'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
+          'prefix_wildcard=%s, suffix=%s\n' %
+          (wildcard, prefix, delimiter, prefix_wildcard, suffix))
+    return (prefix, delimiter, prefix_wildcard, suffix)
+
+  def IterKeys(self):
+    """
+    Convenience iterator that runs underlying iterator and returns Key for each
+    iteration.
+
+    Yields:
+      Subclass of boto.s3.key.Key, or empty iterator if no matches.
+
+    Raises:
+      WildcardException: for bucket-only uri.
+    """
+    for bucket_listing_ref in self. __iter__():
+      if bucket_listing_ref.HasKey():
+        yield bucket_listing_ref.GetKey()
+
+  def IterUris(self):
+    """
+    Convenience iterator that runs underlying iterator and returns StorageUri
+    for each iteration.
+
+    Yields:
+      StorageUri, or empty iterator if no matches.
+    """
+    for bucket_listing_ref in self. __iter__():
+      yield bucket_listing_ref.GetUri()
+
+  def IterUrisForKeys(self):
+    """
+    Convenience iterator that runs underlying iterator and returns the
+    StorageUri for each iterated BucketListingRef that has a Key.
+
+    Yields:
+      StorageUri, or empty iterator if no matches.
+    """
+    for bucket_listing_ref in self. __iter__():
+      if bucket_listing_ref.HasKey():
+        yield bucket_listing_ref.GetUri()
 
 
 class FileWildcardIterator(WildcardIterator):
@@ -293,22 +336,16 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_uri, result_type, headers=None, debug=0):
-    """Instantiate an iterator over keys matching given wildcard URI.
+  def __init__(self, wildcard_uri, headers=None, debug=0):
+    """
+    Instantiate an iterator over BucketListingRefs matching given wildcard URI.
 
     Args:
       wildcard_uri: StorageUri that contains the wildcard to iterate.
-      result_type: ResultType object specifying what to iterate.
-      headers: dictionary containing optional HTTP headers to pass to boto.
-      debug: debug level to pass in to boto connection (range 0..3).
-
-    Raises:
-      WildcardException: for invalid result_type.
+      headers: Dictionary containing optional HTTP headers to pass to boto.
+      debug: Debug level to pass in to boto connection (range 0..3).
     """
     self.wildcard_uri = wildcard_uri
-    self.result_type = result_type
-    if result_type != ResultType.KEYS and result_type != ResultType.URIS:
-      raise WildcardException('Invalid ResultType (%s)' % result_type)
     self.headers = headers
     self.debug = debug
 
@@ -343,7 +380,28 @@ class FileWildcardIterator(WildcardIterator):
       filepaths = glob.glob(wildcard)
     for filepath in filepaths:
       expanded_uri = self.wildcard_uri.clone_replace_name(filepath)
-      yield expanded_uri
+      yield BucketListingRef(expanded_uri)
+
+  def IterKeys(self):
+    """
+    Placeholder to allow polymorphic use of WildcardIterator.
+
+    Raises:
+      WildcardException: in all cases.
+    """
+    raise WildcardException(
+        'Iterating over Keys not possible for file wildcards')
+
+  def IterUris(self):
+    """
+    Convenience iterator that runs underlying iterator and returns StorageUri
+    for each iteration.
+
+    Yields:
+      StorageUri, or empty iterator if no matches.
+    """
+    for bucket_listing_ref in self. __iter__():
+      yield bucket_listing_ref.GetUri()
 
 
 class WildcardException(StandardError):
@@ -361,25 +419,22 @@ class WildcardException(StandardError):
 
 
 def wildcard_iterator(uri_or_str, proj_id_handler,
-                      result_type=ResultType.URIS,
                       bucket_storage_uri_class=BucketStorageUri,
-                      headers=None, debug=0):
+                      headers=None, debug=0, delimiter=None):
   """Instantiate a WildCardIterator for the given StorageUri.
 
   Args:
     uri_or_str: StorageUri or URI string naming wildcard objects to iterate.
     proj_id_handler: ProjectIdHandler to use for current command.
-    result_type: ResultType object specifying what to iterate.
     bucket_storage_uri_class: BucketStorageUri interface.
         Settable for testing/mocking.
-    headers: dictionary containing optional HTTP headers to pass to boto.
-    debug: debug level to pass in to boto connection (range 0..3).
+    headers: Dictionary containing optional HTTP headers to pass to boto.
+    debug: Debug level to pass in to boto connection (range 0..3).
+    delimiter: Delimiter character to send to server (see
+        https://developers.google.com/storage/docs/reference-headers#delimiter)
 
   Returns:
     A WildcardIterator that handles the requested iteration.
-
-  Raises:
-    WildcardException: if invalid result_type.
   """
 
   if isinstance(uri_or_str, basestring):
@@ -393,22 +448,26 @@ def wildcard_iterator(uri_or_str, proj_id_handler,
     uri = uri_or_str
 
   if uri.is_cloud_uri():
-    return CloudWildcardIterator(uri, proj_id_handler, result_type, 
-                                 bucket_storage_uri_class, headers, debug)
+    return CloudWildcardIterator(
+        uri, proj_id_handler,
+        bucket_storage_uri_class=bucket_storage_uri_class, headers=headers,
+        debug=debug)
   elif uri.is_file_uri():
-    return FileWildcardIterator(uri, result_type, headers=headers, debug=debug)
+    return FileWildcardIterator(uri, headers=headers, debug=debug)
   else:
     raise WildcardException('Unexpected type of StorageUri (%s)' % uri)
 
 
-def ContainsWildcard(uri_str):
-  """Checks whether given URI contains a wildcard.
+def ContainsWildcard(uri_or_str):
+  """Checks whether uri_or_str contains a wildcard.
 
   Args:
-    uri_str: string to check.
+    uri_or_str: StorageUri or URI string to check.
 
   Returns:
-    True or False.
+    bool indicator.
   """
-
-  return WILDCARD_REGEX.search(uri_str) is not None
+  if isinstance(uri_or_str, basestring):
+    return WILDCARD_REGEX.search(uri_or_str)
+  else:
+    return WILDCARD_REGEX.search(uri_or_str.uri)

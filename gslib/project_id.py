@@ -26,13 +26,13 @@ class ProjectIdHandler(object):
   def __init__(self):
     """Instantiates Project ID handler. Call after boto config file loaded."""
     config = boto.config
-    self.project_id = config.get_value('GSUtil', 'default_project_id', None)
+    self.project_id = config.get_value('GSUtil', 'default_project_id')
 
   def SetProjectId(self, project_id):
     """Overrides project ID value from config file default.
 
     Args:
-      project_id: project_id to use
+      project_id: Project ID to use.
     """
     self.project_id = project_id
 
@@ -42,19 +42,19 @@ class ProjectIdHandler(object):
     Args:
       command: The command being run.
       uri: The URI against which this command is being run.
-      headers: dictionary containing optional HTTP headers to pass to boto.
+      headers: Dictionary containing optional HTTP headers to pass to boto.
           Must not be None.
     """
 
     # We only include the project ID header if it's a GS URI and a project_id
     # was specified and
     # (it's an 'mb', 'disablelogging, or 'enablelogging' command
-    #  (an 'ls' command that doesn't specify a bucket or a wildcard bucket iterator)).
-    if (uri.scheme.lower() == 'gs' and self.project_id and
-        (command == 'mb' or command == 'disablelogging' or
-         command == 'enablelogging' or
-         (command == 'ls' and not uri.bucket_name) or
-         (command == WILDCARD_BUCKET_ITERATOR))):
+    #  (an 'ls' command that doesn't specify a bucket or wildcarded bucket)).
+    if (uri.scheme.lower() == 'gs' and self.project_id
+        and (command == 'mb' or command == 'disablelogging'
+             or command == 'enablelogging'
+             or (command == 'ls' and not uri.names_bucket())
+             or (command == WILDCARD_BUCKET_ITERATOR))):
       # Note: check for None (as opposed to "not headers") here beause
       # it's ok to pass empty headers.
       if headers is None:

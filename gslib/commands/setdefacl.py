@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gslib.command import Command
+from gslib import wildcard_iterator
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
+from gslib.command import Command
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib import wildcard_iterator
+from gslib.exception import CommandException
 from gslib.util import NO_MAX
 
 class SetDefAclCommand(Command):
@@ -52,7 +53,7 @@ class SetDefAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    self.InsistUriNamesContainer(self.StorageUri(self.args[-1]),
-                                 self.command_name,
-                                 'uri must name a bucket for the %s command')
+    if not self.StorageUri(self.args[-1]).names_bucket():
+      raise CommandException('URI must name a bucket for the %s command' %
+                             self.command_name)
     self.SetAclCommandHelper()

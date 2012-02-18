@@ -63,8 +63,8 @@ class UpdateCommand(Command):
     someone originally installed in a shared file system location, using sudo).
 
     Args:
-      tf: opened TarFile.
-      dirs_to_remove: list of directories to remove.
+      tf: Opened TarFile.
+      dirs_to_remove: List of directories to remove.
 
     Raises:
       CommandException: if errors encountered.
@@ -75,8 +75,8 @@ class UpdateCommand(Command):
       return
 
     user_id = os.getuid()
-    if (os.stat(self.gsutil_bin_dir).st_uid == user_id and
-        os.stat(self.boto_lib_dir).st_uid == user_id):
+    if (os.stat(self.gsutil_bin_dir).st_uid == user_id
+        and os.stat(self.boto_lib_dir).st_uid == user_id):
       return
 
     # Won't fail - this command runs after main startup code that insists on
@@ -112,7 +112,7 @@ class UpdateCommand(Command):
     use shutil.rmtree() it's prudent to add extra checks.)
 
     Args:
-      dirs: list of directories to check.
+      dirs: List of directories to check.
 
     Raises:
       CommandException: If unsafe directory encountered.
@@ -128,8 +128,8 @@ class UpdateCommand(Command):
     """Cleans up temp files etc. from running update command.
 
     Args:
-      tf: opened TarFile.
-      dirs_to_remove: list of directories to remove.
+      tf: Opened TarFile.
+      dirs_to_remove: List of directories to remove.
 
     """
     tf.close()

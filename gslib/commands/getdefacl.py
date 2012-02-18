@@ -50,7 +50,7 @@ class GetDefAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    self.InsistUriNamesContainer(self.StorageUri(self.args[-1]),
-                                 self.command_name,
-                                 'uri must name a bucket for the %s command')
+    if not self.StorageUri(self.args[-1]).names_bucket():
+      raise CommandException('URI must name a bucket for the %s command' %
+                             self.command_name)
     self.GetAclCommandHelper()

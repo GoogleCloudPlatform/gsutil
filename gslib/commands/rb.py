@@ -53,11 +53,15 @@ class RbCommand(Command):
   # Command entry point.
   def RunCommand(self):
     # Expand bucket name wildcards, if any.
+    did_some_work = False
     for uri_str in self.args:
-      for uri in self.CmdWildcardIterator(uri_str):
+      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
         if uri.object_name:
           raise CommandException('"rb" command requires a URI with no object '
                                  'name')
         print 'Removing %s...' % uri
         uri.delete_bucket(self.headers)
+        did_some_work = True
+    if not did_some_work:
+      raise CommandException('No URIs matched')
 

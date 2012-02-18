@@ -66,11 +66,13 @@ class CatCommand(Command):
     # contents go to stderr.
     cat_outfd = sys.stdout
     sys.stdout = sys.stderr
+    did_some_work = False
     for uri_str in self.args:
-      for uri in self.CmdWildcardIterator(uri_str):
-        if not uri.object_name:
+      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
+        if not uri.names_object():
           raise CommandException('"%s" command must specify objects.' %
                                  self.command_name)
+        did_some_work = True
         if show_header:
           if printed_one:
             print
@@ -79,3 +81,5 @@ class CatCommand(Command):
         key = uri.get_key(False, self.headers)
         key.get_file(cat_outfd, self.headers)
     sys.stdout = cat_outfd
+    if not did_some_work:
+      raise CommandException('No URIs matched')

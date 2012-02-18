@@ -103,9 +103,12 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  opts, args = getopt.getopt(sys.argv[1:], 'dDvh:m',
-                             ['debug', 'detailedDebug', 'version', 'help',
-                              'header', 'multithreaded'])
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:m',
+                               ['debug', 'detailedDebug', 'version', 'help',
+                                'header', 'multithreaded'])
+  except getopt.GetoptError, e:
+    _HandleCommandException(CommandException(e.msg))
   for o, a in opts:
     if o in ('-d', '--debug'):
       # Passing debug=2 causes boto to include httplib header output.

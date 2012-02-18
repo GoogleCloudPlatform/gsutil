@@ -15,11 +15,7 @@
 """Static data and helper functions."""
 
 import boto
-import gslib
 import sys
-
-from gslib.project_id import ProjectIdHandler
-from gslib.wildcard_iterator import ResultType
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default. Note: we made this static
@@ -72,13 +68,37 @@ def MakeHumanReadable(num):
   """Generates human readable string for a number.
 
   Args:
-    num: the number
+    num: The number.
 
   Returns:
-    A string form of the number using size abbreviations (KB, MB, etc.)
+    A string form of the number using size abbreviations (KB, MB, etc.).
   """
   i = 0
   while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
     i += 1
   rounded_val = round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
   return '%s %s' % (rounded_val, _EXP_STRINGS[i][1])
+
+
+def StorageUri(uri_str, bucket_storage_uri_class, debug):
+  """
+  Helper to instantiate boto.StorageUri with gsutil default flag values.
+  (There's another StorageUri method defined in command.py, that uses
+  class state to fill in the 2nd and 3rd params.)
+
+  Args:
+    uri_str: StorageUri naming bucket + optional object.
+    bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
+                              Settable for testing/mocking.
+    debug: Debug level to pass in to boto connection (range 0..3).
+
+  Returns:
+    boto.StorageUri for given uri_str.
+
+  Raises:
+    InvalidUriError: if uri_str not valid.
+  """
+  return boto.storage_uri(
+      uri_str, 'file', debug=debug, validate=False,
+      bucket_storage_uri_class=bucket_storage_uri_class,
+      suppress_consec_slashes=False)

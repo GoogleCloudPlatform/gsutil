@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#
 # Copyright 2010 Google Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-"""Unit tests for gsutil command code"""
+"""Tests for gsutil commands"""
 
 import os
 import shutil
@@ -37,12 +36,14 @@ sys.path.insert(0, '.')
 sys.path.insert(0, 'boto')
 import boto
 
+from boto.exception import StorageResponseError
+from boto import storage_uri
+from commands import cp
 from gslib.command import Command
 from gslib.command_runner import CommandRunner
 from gslib.exception import CommandException
 from gslib import test_util
 from tests.s3.mock_storage_service import MockBucketStorageUri
-
 
 class GsutilCommandTests(unittest.TestCase):
   """gsutil command method test suite"""
@@ -63,8 +64,8 @@ class GsutilCommandTests(unittest.TestCase):
   def tearDown(cls):
     """Deletes any objects or files created by last test run"""
     try:
-      for key_uri in test_util.test_wildcard_iterator('%s*' %
-                                                      cls.dst_bucket_uri):
+      for key_uri in test_util.test_wildcard_iterator(
+          '%s**' % cls.dst_bucket_uri).IterUris():
         key_uri.delete_key()
     # For some reason trying to catch except
     # wildcard_iterator.WildcardException doesn't work here.
@@ -94,9 +95,9 @@ class GsutilCommandTests(unittest.TestCase):
   def SetUpClass(cls):
     """Initializes test suite.
 
-    Creates a source bucket containing 3 objects;
-    a source directory containing a subdirectory and file;
-    and a destination bucket and directory.
+    Creates a source bucket containing 9 objects, 3 of which live under a
+    subdir, 3 of which lives under a nested subdir; a source directory
+    containing a subdirectory and file; and a destination bucket and directory.
     """
     cls.uri_base_str = 'gs://gsutil_test_%s' % int(time.time())
     # Use a designated tmpdir prefix to make it easy to find the end of
@@ -107,14 +108,44 @@ class GsutilCommandTests(unittest.TestCase):
     cls.src_bucket_uri = test_util.test_storage_uri('%s_src' % cls.uri_base_str)
     cls.dst_bucket_uri = test_util.test_storage_uri('%s_dst' % cls.uri_base_str)
     cls.src_bucket_uri.create_bucket()
+
+    # Define the src and dest bucket subdir paths. Note that they exclude
+    # a slash on the end so we can test handling of bucket subdirs specified
+    # both with and without terminating slashes.
+    cls.src_bucket_subdir_uri = test_util.test_storage_uri(
+        '%s_src/src_subdir' % cls.uri_base_str)
+    cls.src_bucket_subdir_uri_wildcard = test_util.test_storage_uri(
+        '%s_src/src_sub*' % cls.uri_base_str)
+    cls.dst_bucket_subdir_uri = test_util.test_storage_uri(
+        '%s_dst/dst_subdir' % cls.uri_base_str)
     cls.dst_bucket_uri.create_bucket()
 
-    # Create the test objects in src bucket.
+    # Create the test objects in the src bucket.
     cls.all_src_obj_uris = []
+    cls.all_src_top_level_obj_uris = []
+    cls.all_src_subdir_obj_uris = []
+    cls.all_src_subdir_and_below_obj_uris = []
     for i in range(3):
       obj_uri = test_util.test_storage_uri('%sobj%d' % (cls.src_bucket_uri, i))
       cls.CreateEmptyObject(obj_uri)
       cls.all_src_obj_uris.append(obj_uri)
+      cls.all_src_top_level_obj_uris.append(obj_uri)
+    # Subdir objects
+    for i in range(4, 6):
+      obj_uri = test_util.test_storage_uri(
+          '%s/obj%d' % (cls.src_bucket_subdir_uri, i))
+      cls.CreateEmptyObject(obj_uri)
+      cls.all_src_obj_uris.append(obj_uri)
+      cls.all_src_subdir_obj_uris.append(obj_uri)
+      cls.all_src_subdir_and_below_obj_uris.append(obj_uri)
+    # Nested subdir objects
+    for i in range(7, 9):
+      obj_uri = test_util.test_storage_uri(
+          '%s/nested/obj%d' % (cls.src_bucket_subdir_uri, i))
+      cls.CreateEmptyObject(obj_uri)
+      cls.all_src_obj_uris.append(obj_uri)
+      cls.all_src_subdir_and_below_obj_uris.append(obj_uri)
+
 
     # Create the test directories.
     cls.src_dir_root = '%s%s' % (tempfile.mkdtemp(prefix=cls.tmpdir_prefix),
@@ -124,7 +155,7 @@ class GsutilCommandTests(unittest.TestCase):
     cls.dst_dir_root = '%s%s' % (tempfile.mkdtemp(prefix=cls.tmpdir_prefix),
                                  os.sep)
 
-    # Create the test files in src directory.
+    # Create the test files in the src directory.
     cls.all_src_file_paths = []
     cls.nested_child_file_paths = ['f0', 'f1', 'f2.txt', 'dir0/dir1/nested']
     cls.non_nested_file_names = ['f0', 'f1', 'f2.txt']
@@ -150,15 +181,15 @@ class GsutilCommandTests(unittest.TestCase):
     cls.tearDown()
     # Now delete src objects and files, and all buckets and dirs.
     try:
-      for key_uri in test_util.test_wildcard_iterator('%s*' %
-                                                      cls.src_bucket_uri):
+      for key_uri in test_util.test_wildcard_iterator(
+          '%s**' % cls.src_bucket_uri).IterUris():
         key_uri.delete_key()
     except wildcard_iterator.WildcardException:
       # Ignore cleanup failures.
       pass
     try:
-      for key_uri in test_util.test_wildcard_iterator('%s**' %
-                                                      cls.src_dir_root):
+      for key_uri in test_util.test_wildcard_iterator(
+          '%s**' % cls.src_dir_root).IterUris():
         key_uri.delete_key()
     except wildcard_iterator.WildcardException:
       # Ignore cleanup failures.
@@ -168,46 +199,80 @@ class GsutilCommandTests(unittest.TestCase):
     shutil.rmtree(cls.src_dir_root)
     shutil.rmtree(cls.dst_dir_root)
 
+
+  def RunCommand(self, command_name, args=None, headers=None, debug=0,
+                 test_method=None, return_stdout=False):
+    """
+    Method for calling gslib.command_runner.CommandRunner, passing
+    parallel_operations=False for all tests, optionally saving/returning stdout
+    output. We run all tests multi-threaded, to exercise those more complicated
+    code paths.
+    TODO: change to run with parallel_operations=True for all tests. At
+    present when you do this it causes many test failures.
+
+    Args:
+      command_name: The name of the command being run.
+      args: Command-line args (arg0 = actual arg, not command name ala bash).
+      headers: Dictionary containing optional HTTP headers to pass to boto.
+      debug: Debug level to pass in to boto connection (range 0..3).
+      parallel_operations: Should command operations be executed in parallel?
+      test_method: Optional general purpose method for testing purposes. 
+                   Application and semantics of this method will vary by
+                   command and test type. 
+      return_stdout: If true will save and return stdout produced by command.
+    """
+    sys.stderr.write('\nRunning test of %s %s\n' %
+                     (command_name, " ".join(args)))
+    if return_stdout:
+      # Redirect stdout temporarily, to save output to a file.
+      tmpfile = tempfile.mkstemp()[1]
+      stdout_sav = sys.stdout
+      try:
+        fp = open(tmpfile, 'w')
+        sys.stdout = fp
+        self.command_runner.RunNamedCommand(
+            command_name, args=args, headers=headers, debug=debug,
+            parallel_operations=False, test_method=test_method)
+      finally:
+        fp.close()
+        sys.stdout = stdout_sav
+        output = open(tmpfile, 'r').read()
+        os.unlink(tmpfile)
+      return output
+    else:
+      self.command_runner.RunNamedCommand(
+          command_name, args=args, headers=headers, debug=debug,
+          parallel_operations=False, test_method=test_method)
+
+  def TestGetPathBeforeFinalDir(self):
+    """Tests _GetPathBeforeFinalDir() (unit test)"""
+    self.assertEqual("gs://",
+                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/")))
+    self.assertEqual("gs://bucket",
+                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/dir/")))
+    self.assertEqual("gs://bucket",
+                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/dir"))) 
+    self.assertEqual("gs://bucket/dir",
+                     cp._GetPathBeforeFinalDir(
+                         storage_uri("gs://bucket/dir/obj"))) 
+    self.assertEqual('file://%s' % self.src_dir_root.rstrip('/'),
+                     cp._GetPathBeforeFinalDir(storage_uri(
+                         "file://%sdir0/" % self.src_dir_root))) 
+
   def TestCopyingTopLevelFileToBucket(self):
     """Tests copying one top-level file to a bucket"""
     src_file = self.SrcFile('f0')
-    self.command_runner.RunNamedCommand('cp',
-                                        [src_file, self.dst_bucket_uri.uri])
-    actual = list(test_util.test_wildcard_iterator('%s*' %
-                                                   self.dst_bucket_uri.uri))
+    self.RunCommand('cp', [src_file, self.dst_bucket_uri.uri])
+    actual = list(test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
-  def TestCopyingTopLevelFileToBucketMulti(self):
-    """Tests copying one top-level file to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingTopLevelFileToBucket()
-    self.parallel_operations = False
-    
-  def TestCopyingNestedFileToBucket(self):
-    """Tests copying one nested file to a bucket"""
-    src_file = self.SrcFile('nested')
-    self.command_runner.RunNamedCommand('cp', [src_file,
-                                               self.dst_bucket_uri.uri])
-    actual = list(test_util.test_wildcard_iterator('%s*' %
-                                                   self.dst_bucket_uri.uri))
-    self.assertEqual(1, len(actual))
-    # File should be final comp ('nested'), w/o nested path (dir0/...).
-    self.assertEqual('nested', actual[0].object_name)
-
-  def TestCopyingNestedFileToBucketMulti(self):
-    """Tests copying one nested file to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingNestedFileToBucket()
-    self.parallel_operations = False
-
   def TestCopyingDirToBucket(self):
     """Tests copying top-level directory to a bucket"""
-    self.command_runner.RunNamedCommand('cp', ['-r', self.src_dir_root,
-                                               self.dst_bucket_uri.uri])
-    actual = set(str(u) for u in
-                 test_util.test_wildcard_iterator('%s*' %
-                                                  self.dst_bucket_uri.uri))
+    self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_bucket_uri.uri])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
     expected = set()
     for file_path in self.all_src_file_paths:
       start_tmp_pos = file_path.find(self.tmpdir_prefix)
@@ -216,78 +281,48 @@ class GsutilCommandTests(unittest.TestCase):
                              file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
 
-  def TestCopyingDirToBucketMulti(self):
-    """Tests copying top-level directory to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingDirToBucket()
-    self.parallel_operations = False
-
   def TestCopyingDirContainingOneFileToBucket(self):
     """Tests copying a directory containing 1 file to a bucket
-
     We test this case to ensure that correct bucket handling isn't dependent
     on the copy being treated as a multi-source copy.
     """
-    self.command_runner.RunNamedCommand('cp', ['-r', '%sdir0%sdir1' %
-                                        (self.src_dir_root, os.sep),
-                                        self.dst_bucket_uri.uri])
-    actual = list((str(u) for u in
-                   test_util.test_wildcard_iterator('%s*' %
-                                                    self.dst_bucket_uri.uri)))
+    self.RunCommand('cp', ['-R', '%sdir0%sdir1' %
+                    (self.src_dir_root, os.sep),
+                    self.dst_bucket_uri.uri])
+    actual = list((str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris()))
     self.assertEqual(1, len(actual))
     self.assertEqual('%sdir1%snested' % (self.dst_bucket_uri.uri, os.sep),
                      actual[0])
 
-  def TestCopyingDirContainingOneFileToBucketMulti(self):
-    """Tests copying a directory containing 1 file to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingDirContainingOneFileToBucket()
-    self.parallel_operations = False
-
   def TestCopyingBucketToDir(self):
     """Tests copying from a bucket to a directory"""
-    self.command_runner.RunNamedCommand('cp', ['-r', self.src_bucket_uri.uri,
-                                  self.dst_dir_root])
-    actual = set(
-        str(u) for u in test_util.test_wildcard_iterator('%s**' %
-                                                         self.dst_dir_root))
+    self.RunCommand('cp', ['-R', self.src_bucket_uri.uri, self.dst_dir_root])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_dir_root).IterUris())
     expected = set()
     for uri in self.all_src_obj_uris:
       expected.add('file://%s%s/%s' % (self.dst_dir_root, uri.bucket_name,
                                        uri.object_name))
     self.assertEqual(expected, actual)
 
-  def TestCopyingBucketToDirMulti(self):
-    """Tests copying from a bucket to a directory with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingBucketToDir()
-    self.parallel_operations = False
-
   def TestCopyingBucketToBucket(self):
     """Tests copying from a bucket-only URI to a bucket"""
-    self.command_runner.RunNamedCommand('cp', ['-r', self.src_bucket_uri.uri,
-                                  self.dst_bucket_uri.uri])
-    actual = set(str(u) for u in
-                 test_util.test_wildcard_iterator('%s*' %
-                                                  self.dst_bucket_uri.uri))
+    self.RunCommand('cp', ['-R', self.src_bucket_uri.uri,
+                    self.dst_bucket_uri.uri])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
     expected = set()
     for uri in self.all_src_obj_uris:
-      expected.add('%s%s' % (self.dst_bucket_uri.uri, uri.object_name))
+      expected.add('%s%s/%s' % (self.dst_bucket_uri.uri, uri.bucket_name,
+                                uri.object_name))
     self.assertEqual(expected, actual)
-
-  def TestCopyingBucketToBucketMulti(self):
-    """Tests copying from a bucket-only URI to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingBucketToDir()
-    self.parallel_operations = False
 
   def TestCopyingDirToDir(self):
     """Tests copying from a directory to a directory"""
-    self.command_runner.RunNamedCommand('cp', ['-r', self.src_dir_root,
-                                               self.dst_dir_root])
-    actual = set(
-        str(u) for u in test_util.test_wildcard_iterator('%s**' %
-                                                         self.dst_dir_root))
+    self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_dir_root])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_dir_root).IterUris())
     expected = set()
     for file_path in self.all_src_file_paths:
       start_tmp_pos = file_path.find(self.tmpdir_prefix)
@@ -296,62 +331,41 @@ class GsutilCommandTests(unittest.TestCase):
                                     file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
 
-  def TestCopyingDirToDirMulti(self):
-    """Tests copying from a directory to a directory with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingDirToDir()
-    self.parallel_operations = False
-
   def TestCopyingFilesAndDirNonRecursive(self):
-    """Tests copying containing files and a directory without -r"""
-    self.command_runner.RunNamedCommand('cp', ['%s*' % self.src_dir_root,
-                                               self.dst_dir_root])
-    actual = set(
-        str(u) for u in test_util.test_wildcard_iterator('%s**' %
-                                                         self.dst_dir_root))
+    """Tests copying containing files and a directory without -R"""
+    self.RunCommand('cp', ['%s*' % self.src_dir_root, self.dst_dir_root])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_dir_root).IterUris())
     expected = set(['file://%s%s' % (self.dst_dir_root, f)
                     for f in self.non_nested_file_names])
     self.assertEqual(expected, actual)
 
-  def TestCopyingFilesAndDirNonRecursiveMulti(self):
-    """Tests copying containing files and a directory without -r, with -m opt"""
-    self.parallel_operations = True
-    self.TestCopyingFilesAndDirNonRecursive()
-    self.parallel_operations = False
-
   def TestCopyingFileToDir(self):
     """Tests copying one file to a directory"""
     src_file = self.SrcFile('nested')
-    self.command_runner.RunNamedCommand('cp', [src_file, self.dst_dir_root])
-    actual = list(test_util.test_wildcard_iterator('%s*' % self.dst_dir_root))
+    self.RunCommand('cp', [src_file, self.dst_dir_root])
+    actual = list(test_util.test_wildcard_iterator(
+        '%s*' % self.dst_dir_root).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('file://%s%s' % (self.dst_dir_root, 'nested'),
                      actual[0].uri)
 
-  def TestCopyingFileToDirMulti(self):
-    """Tests copying one file to a directory with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingFileToDir()
-    self.parallel_operations = False
-
   def TestCopyingFileToObjectWithConsecutiveSlashes(self):
     """Tests copying a file to an object containing consecutive slashes"""
     src_file = self.SrcFile('f0')
-    self.command_runner.RunNamedCommand(
-        'cp', [src_file, '%s/obj' % self.dst_bucket_uri.uri])
-    actual = list(test_util.test_wildcard_iterator('%s*' %
-                                                   self.dst_bucket_uri.uri))
+    self.RunCommand('cp', [src_file, '%s/obj' % self.dst_bucket_uri.uri])
+    actual = list(test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('/obj', actual[0].object_name)
 
   def TestCopyingCompressedFileToBucket(self):
     """Tests copying one file with compression to a bucket"""
     src_file = self.SrcFile('f2.txt')
-    self.command_runner.RunNamedCommand('cp', ['-z', 'txt', src_file,
-                                               self.dst_bucket_uri.uri],)
+    self.RunCommand('cp', ['-z', 'txt', src_file, self.dst_bucket_uri.uri],)
     actual = list(
         str(u) for u in test_util.test_wildcard_iterator(
-            '%s*' % self.dst_bucket_uri.uri))
+            '%s*' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     expected_dst_uri = self.dst_bucket_uri.clone_replace_name('f2.txt')
     self.assertEqual(expected_dst_uri.uri, actual[0])
@@ -361,108 +375,117 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestCopyingObjectToObject(self):
     """Tests copying an object to an object"""
-    self.command_runner.RunNamedCommand('cp',
-                                        ['%sobj1' % self.src_bucket_uri.uri,
-                                         self.dst_bucket_uri.uri])
-    actual = list(test_util.test_wildcard_iterator('%s*' %
-                                                   self.dst_bucket_uri.uri))
+    self.RunCommand('cp', ['%sobj1' % self.src_bucket_uri.uri,
+                           self.dst_bucket_uri.uri])
+    actual = list(test_util.test_wildcard_iterator(
+        '%s*' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('obj1', actual[0].object_name)
 
   def TestCopyingObjsAndFilesToDir(self):
     """Tests copying objects and files to a directory"""
-    self.command_runner.RunNamedCommand('cp',
-                                        ['-r', '%s*' % self.src_bucket_uri.uri,
-                                         '%s*' % self.src_dir_root,
-                                         self.dst_dir_root])
+    self.RunCommand('cp', ['-R', '%s**' % self.src_bucket_uri.uri,
+                           '%s**' % self.src_dir_root, self.dst_dir_root])
     actual = set(str(u) for u in test_util.test_wildcard_iterator(
-        '%s**' % self.dst_dir_root))
+        '%s**' % self.dst_dir_root).IterUris())
     expected = set()
     for uri in self.all_src_obj_uris:
-      expected.add('file://%s%s' % (self.dst_dir_root, uri.object_name))
+      # Use FinalObjNameComponent here because we expect names to be flattened
+      # when using wildcard copy semantics.
+      expected.add('file://%s%s' % (self.dst_dir_root,
+                                    self.FinalObjNameComponent(uri)))
     for file_path in self.nested_child_file_paths:
-      expected.add('file://%s%s' % (self.dst_dir_root, file_path))
+      # Use os.path.basename here because we expect names to be flattened when
+      # using wildcard copy semantics.
+      expected.add('file://%s%s' % (self.dst_dir_root,
+                                    os.path.basename(file_path)))
     self.assertEqual(expected, actual)
 
-  def TestCopyingObjsAndFilesToDirMulti(self):
-    """Tests copying objects and files to a directory with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingObjsAndFilesToDir()
-    self.parallel_operations = False
+  def TestCopyingObjToDot(self):
+    """Tests that copying an object to . or ./ downloads to correct name"""
+    for final_char in ('/', ''):
+      prev_dir = os.getcwd()
+      os.chdir(self.dst_dir_root)
+      self.RunCommand('cp',
+                      ['%sobj1' % self.src_bucket_uri.uri, '.%s' % final_char])
+      actual = set()
+      for dirname, dirnames, filenames in os.walk('.'):
+        for subdirname in dirnames:
+          actual.add(os.path.join(dirname, subdirname))
+        for filename in filenames:
+          actual.add(os.path.join(dirname, filename))
+      expected = set(['./obj1'])
+      self.assertEqual(expected, actual)
+      os.chdir(prev_dir)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
 
   def TestCopyingObjsAndFilesToBucket(self):
     """Tests copying objects and files to a bucket"""
-    self.command_runner.RunNamedCommand('cp',
-                                        ['-r', '%s*' % self.src_bucket_uri.uri,
-                                         '%s*' % self.src_dir_root,
-                                         self.dst_bucket_uri.uri])
-    actual = set(str(u) for u in
-                 test_util.test_wildcard_iterator(
-                     '%s*' % self.dst_bucket_uri.uri))
+    self.RunCommand('cp', ['-R', '%s**' % self.src_bucket_uri.uri,
+                           '%s**' % self.src_dir_root, self.dst_bucket_uri.uri])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s*' % self.dst_bucket_uri.uri).IterUris())
     expected = set()
     for uri in self.all_src_obj_uris:
-      expected.add('%s%s' % (self.dst_bucket_uri.uri, uri.object_name))
+      # Use FinalObjNameComponent here because we expect names to be flattened
+      # when using wildcard copy semantics.
+      expected.add('%s%s' % (self.dst_bucket_uri.uri,
+                             self.FinalObjNameComponent(uri)))
     for file_path in self.nested_child_file_paths:
-      expected.add('%s%s' % (self.dst_bucket_uri.uri, file_path))
+      # Use os.path.basename here because we expect names to be flattened when
+      # using wildcard copy semantics.
+      expected.add('%s%s' % (self.dst_bucket_uri.uri,
+                             os.path.basename(file_path)))
     self.assertEqual(expected, actual)
 
-  def TestCopyingObjsAndFilesToBucketMulti(self):
-    """Tests copying objects and files to a bucket with -m option"""
-    self.parallel_operations = True
-    self.TestCopyingObjsAndFilesToBucket()
-    self.parallel_operations = False
-
   def TestAttemptDirCopyWithoutRecursion(self):
-    """Tests copying a directory without -r"""
+    """Tests copying a directory without -R"""
     try:
-      self.command_runner.RunNamedCommand('cp', [self.src_dir_root,
-                                                 self.dst_dir_root])
+      self.RunCommand('cp', [self.src_dir_root,
+                                            self.dst_dir_root])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(e.reason.find('Nothing to copy'), -1)
+      self.assertNotEqual(e.reason.find('No URIs matched'), -1)
 
   def TestAttemptCopyingProviderOnlySrc(self):
     """Attempts to copy a src specified as a provider-only URI"""
     try:
-      self.command_runner.RunNamedCommand('cp',
-                                          ['gs://', self.src_bucket_uri.uri])
+      self.RunCommand('cp', ['gs://', self.src_bucket_uri.uri])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find('provider-only'), -1)
 
-  def TestAttemptCopyingOverlappingSrcDst(self):
+  def TestAttemptCopyingOverlappingSrcDstFile(self):
     """Attempts to an object atop itself"""
     obj_uri = test_util.test_storage_uri('%sobj' % self.dst_bucket_uri)
     self.CreateEmptyObject(obj_uri)
     try:
-      self.command_runner.RunNamedCommand('cp',
-                                          ['%s*' % self.dst_bucket_uri.uri,
-                                           self.dst_bucket_uri.uri])
+      self.RunCommand('cp', ['%s/f0' % self.src_dir_root,
+                             '%s/f0' % self.src_dir_root])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(e.reason.find('are the same object - abort'), -1)
+      self.assertNotEqual(e.reason.find('are the same file - abort'), -1)
 
   def TestAttemptCopyingToMultiMatchWildcard(self):
     """Attempts to copy where dst wildcard matches >1 obj"""
     try:
-      self.command_runner.RunNamedCommand('cp',
-                                          ['%sobj0' % self.src_bucket_uri.uri,
-                                           '%s*' % self.src_bucket_uri.uri])
+      self.RunCommand('cp', ['%sobj0' % self.src_bucket_uri.uri,
+                             '%s*' % self.src_bucket_uri.uri])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(e.reason.find('matches more than 1'), -1)
+      self.assertNotEqual(e.reason.find('must match exactly 1 URI'), -1)
 
   def TestAttemptCopyingMultiObjsToFile(self):
     """Attempts to copy multiple objects to a file"""
     # Use src_dir_root so we can point to an existing file for this test.
     try:
-      self.command_runner.RunNamedCommand('cp',
-                                          ['-r', '%s*'
-                                           % self.src_bucket_uri.uri,
-                                           '%sf0' % self.src_dir_root])
+      self.RunCommand('cp', ['-R', '%s*' % self.src_bucket_uri.uri,
+                             '%sf0' % self.src_dir_root])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(e.reason.find('must name a bucket or '), -1)
+      self.assertNotEqual(e.reason.find('must name a cloud path or '), -2)
 
   def TestAttemptCopyingWithFileDirConflict(self):
     """Attempts to copy objects that cause a file/directory conflict"""
@@ -473,24 +496,23 @@ class GsutilCommandTests(unittest.TestCase):
     self.CreateEmptyObject(test_util.test_storage_uri(
         '%sa' % self.dst_bucket_uri))
     try:
-      self.command_runner.RunNamedCommand('cp', ['-r', self.dst_bucket_uri.uri,
-                                                 self.dst_dir_root])
+      self.RunCommand('cp', ['-R', self.dst_bucket_uri.uri,
+                             self.dst_dir_root])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find(
           'exists where a directory needs to be created'), -1)
 
   def TestAttemptCopyingWithDirFileConflict(self):
-    """Attempts to copy objects that cause a directory/file conflict"""
-    # Create subdir in dest dir.
-    os.mkdir('%ssubdir' % self.dst_dir_root)
+    """Attempts to copy an object that causes a directory/file conflict"""
+    # Create abc in dest dir.
+    os.mkdir('%sabc' % self.dst_dir_root)
     # Create an object that conflicts with this dest subdir. Use 'dst' bucket
-    # because it gets cleared after each test.
-    self.CreateEmptyObject(test_util.test_storage_uri(
-        '%ssubdir' % self.dst_bucket_uri))
+    # as source because it gets cleared after each test.
+    obj_name = '%sabc' % self.dst_bucket_uri
+    self.CreateEmptyObject(test_util.test_storage_uri(obj_name))
     try:
-      self.command_runner.RunNamedCommand('cp', ['-r', self.dst_bucket_uri.uri,
-                                                 self.dst_dir_root])
+      self.RunCommand('cp', [obj_name, self.dst_dir_root])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertNotEqual(e.reason.find(
@@ -498,115 +520,143 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestWildcardMoveWithinBucket(self):
     """Attempts to move using src wildcard that overlaps dest object.
-
     We want to ensure that this doesn't stomp the result data. See the
-    comment starting with "Expand wildcards before" in MoveObjsCommand
+    comment starting with "Expand wildcards before" in commands/mv.py
     for details.
     """
     # Create a single object; use 'dst' bucket because it gets cleared after
     # each test.
     self.CreateEmptyObject(
         test_util.test_storage_uri('%sold' % self.dst_bucket_uri))
-    self.command_runner.RunNamedCommand('mv', ['%s*' % self.dst_bucket_uri.uri,
-                                  '%snew' % self.dst_bucket_uri.uri])
+    self.RunCommand('mv', ['%s*' % self.dst_bucket_uri.uri,
+                           '%snew' % self.dst_bucket_uri.uri])
     actual = list(
-        test_util.test_wildcard_iterator('%s*' % self.dst_bucket_uri.uri))
+        test_util.test_wildcard_iterator(
+            '%s*' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('new', actual[0].object_name)
 
-  # The remaining tests are pretty minimal - most just ensure a
-  # basic use of each command runs, without checking more detailed
-  # conditions/expectations.
-
   def TestCatCommmandRuns(self):
     """Test that the cat command basically runs"""
-    self.command_runner.RunNamedCommand('cat',
-                                        ['%sobj1' % self.src_bucket_uri.uri])
+    self.RunCommand('cat', ['%sobj1' % self.src_bucket_uri.uri])
 
   def TestGetAclCommmandRuns(self):
-    """Test that the GetAcl command basically runs"""
-    self.command_runner.RunNamedCommand('getacl', [self.src_bucket_uri.uri])
+    """Test that the getacl command basically runs"""
+    self.RunCommand('getacl', [self.src_bucket_uri.uri])
 
   def TestGetDefAclCommmandRuns(self):
-    """Test that the GetDefAcl command basically runs"""
-    self.command_runner.RunNamedCommand('getacl', [self.src_bucket_uri.uri])
+    """Test that the getdefacl command basically runs"""
+    self.RunCommand('getacl', [self.src_bucket_uri.uri])
 
   def TestGetLoggingCommmandRuns(self):
-    """Test that the GetLogging command basically runs"""
-    self.command_runner.RunNamedCommand('getlogging', [self.src_bucket_uri.uri])
+    """Test that the getlogging command basically runs"""
+    self.RunCommand('getlogging', [self.src_bucket_uri.uri])
 
-  def TestListCommandRuns(self):
-    """Test that the ListCommand basically runs"""
-    self.command_runner.RunNamedCommand('ls', [self.src_bucket_uri.uri])
+  def TestLsBucketNonRecursive(self):
+    """Test that ls of a bucket returns expected results"""
+    output = self.RunCommand('ls', ['%s*' % self.src_bucket_uri.uri],
+                             return_stdout=True)
+    for uri in self.all_src_top_level_obj_uris:
+      self.assertNotEqual(output.find(uri.uri), -1)
+
+  def TestLsBucketRecursive(self):
+    """Test that ls -R of a bucket returns expected results"""
+    output = self.RunCommand('ls', ['-R', '%s*' % self.src_bucket_uri.uri],
+                             return_stdout=True)
+    for uri in self.all_src_obj_uris:
+      self.assertNotEqual(output.find(uri.uri), -1)
+
+  def TestLsBucketSubdirNonRecursive(self):
+    """Test that ls of a bucket subdir returns expected results"""
+    output = self.RunCommand('ls', ['%ssrc_subdir' % self.src_bucket_uri.uri],
+                             return_stdout=True)
+    for uri in self.all_src_subdir_obj_uris:
+      self.assertNotEqual(output.find(uri.uri), -1)
+    self.assertNotEqual(
+        output.find('%ssrc_subdir' % self.src_bucket_uri.uri), -1)
+
+  def TestLsBucketSubdirRecursive(self):
+    """Test that ls -R of a bucket subdir returns expected results"""
+    output = self.RunCommand('ls',
+                             ['-R', '%ssrc_subdir' % self.src_bucket_uri.uri],
+                             return_stdout=True)
+    for uri in self.all_src_subdir_and_below_obj_uris:
+      self.assertNotEqual(output.find(uri.uri), -1)
 
   def TestMakeBucketsCommand(self):
-    """Test MakeBucketsCommand on existing bucket"""
+    """Test mb on existing bucket"""
     try:
-      self.command_runner.RunNamedCommand('mb', [self.dst_bucket_uri.uri])
+      self.RunCommand('mb', [self.dst_bucket_uri.uri])
       self.fail('Did not get expected StorageCreateError')
     except boto.exception.StorageCreateError, e:
       self.assertEqual(e.status, 409)
 
   def TestRemoveBucketsCommand(self):
-    """Test RemoveBucketsCommand on non-existent bucket"""
+    """Test rb on non-existent bucket"""
     try:
-      self.command_runner.RunNamedCommand('rb',
-                                          ['gs://non_existent_%s' %
-                                           self.dst_bucket_uri.bucket_name])
+      self.RunCommand('rb', ['gs://non_existent_%s' %
+                      self.dst_bucket_uri.bucket_name])
       self.fail('Did not get expected StorageResponseError')
     except boto.exception.StorageResponseError, e:
       self.assertEqual(e.status, 404)
 
   def TestRemoveObjsCommand(self):
-    """Test RemoveObjsCommand on non-existent object"""
+    """Test rm command on non-existent object"""
     try:
-      self.command_runner.RunNamedCommand('rm', ['%snon_existent' %
-                                      self.dst_bucket_uri.uri])
+      self.RunCommand('rm', ['%snon_existent' %
+                             self.dst_bucket_uri.uri])
       self.fail('Did not get expected WildcardException')
-    # For some reason if we catch this as "WildcardException" it doesn't
-    # work right. Python bug?
-    except Exception, e:
+    except StorageResponseError, e:
       self.assertNotEqual(e.reason.find('Not Found'), -1)
 
-  def TestRemoveObjsCommandMulti(self):
-    """Test RemoveObjsCommand on non-existent object with -m option"""
-    self.parallel_operations = True
-    self.TestRemoveObjsCommand()
-    self.parallel_operations = False
+  def TestSetAclOnBucketRuns(self):
+    """Test that the setacl command basically runs"""
+    # We don't test reading back the acl (via getacl command) because at present
+    # MockStorageService doesn't translate canned ACLs into actual ACL XML.
+    self.RunCommand('setacl', ['private', self.src_bucket_uri.uri])
 
-  def TestSetAclCommmandRuns(self):
-    """Test that the SetAcl command basically runs"""
-    self.command_runner.RunNamedCommand('setacl', ['private',
-                                                   self.src_bucket_uri.uri])
+  def TestSetAclOnWildcardNamedBucketRuns(self):
+    """Test that setacl basically runs against wildcard-named bucket"""
+    # We don't test reading back the acl (via getacl command) because at present
+    # MockStorageService doesn't translate canned ACLs into actual ACL XML.
+    uri_str = '%s_s*c' % self.uri_base_str
+    self.RunCommand('setacl', ['private', uri_str])
 
-  def TestSetDefAclCommmandRuns(self):
-    """Test that the SetDefAcl command basically runs"""
-    self.command_runner.RunNamedCommand('setdefacl', ['private',
-                                                      self.src_bucket_uri.uri])
+  def TestSetAclOnObjectRuns(self):
+    """Test that the setacl command basically runs"""
+    self.RunCommand('setacl', ['private', '%s*' % self.src_bucket_uri.uri])
+
+  def TestSetDefAclOnBucketRuns(self):
+    """Test that the setdefacl command basically runs"""
+    self.RunCommand('setdefacl', ['private', self.src_bucket_uri.uri])
+
+  def TestSetDefAclOnObjectFails(self):
+    """Test that the setdefacl command fails when run against an object"""
+    try:
+      self.RunCommand('setdefacl', ['private', '%s*' % self.src_bucket_uri.uri])
+      self.fail('Did not get expected CommandException')
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('URI must name a bucket'), -1)
 
   def TestDisableLoggingCommmandRuns(self):
-    """Test that the DisableLogging command basically runs"""
-    self.command_runner.RunNamedCommand('disablelogging',
-                                        [self.src_bucket_uri.uri])
+    """Test that the disablelogging command basically runs"""
+    self.RunCommand('disablelogging', [self.src_bucket_uri.uri])
 
   def TestEnableLoggingCommmandRuns(self):
-    """Test that the EnableLogging command basically runs"""
-    self.command_runner.RunNamedCommand('enablelogging',
-                                        ['-b', 'log_bucket',
-                                         self.src_bucket_uri.uri])
+    """Test that the enablelogging command basically runs"""
+    self.RunCommand('enablelogging', ['-b', 'log_bucket',
+                                      self.src_bucket_uri.uri])
 
   def TestVerCommmandRuns(self):
     """Test that the Ver command basically runs"""
-    self.command_runner.RunNamedCommand('ver')
+    self.RunCommand('ver', [])
 
   def TestMinusDOptionWorks(self):
     """Tests using gsutil -D option"""
     src_file = self.SrcFile('f0')
-    self.command_runner.RunNamedCommand('cp',
-                                        [src_file, self.dst_bucket_uri.uri],
-                                        debug=3)
-    actual = list(test_util.test_wildcard_iterator('%s*' %
-                                                   self.dst_bucket_uri.uri))
+    self.RunCommand('cp', [src_file, self.dst_bucket_uri.uri], debug=3)
+    actual = list(test_util.test_wildcard_iterator(
+        '%s*' % self.dst_bucket_uri.uri).IterUris())
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
@@ -617,8 +667,7 @@ class GsutilCommandTests(unittest.TestCase):
     """
     object_uri = self.all_src_obj_uris[0].uri
     try:
-      self.command_runner.RunNamedCommand('cp', [object_uri, self.tmp_path], 
-                                          test_method=func)
+      self.RunCommand('cp', [object_uri, self.tmp_path], test_method=func)
       self.fail('Did not get expected CommandException')
     except CommandException:
       self.assertFalse(os.path.exists(self.tmp_path))
@@ -648,6 +697,194 @@ class GsutilCommandTests(unittest.TestCase):
       fp.write('x')
       fp.flush()
     self.DownloadTestHelper(overwrite)
+
+  def TestCopyingObjsAndFilesToBucketSubDir(self):
+    """Tests copying objects and files to bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for final_char in ('/', ''):
+      self.RunCommand(
+          'cp', ['-R', '%s**' % self.src_bucket_uri.uri,
+                 '%s**' % self.src_dir_root,
+                 '%sdst_subdir%s' % (self.dst_bucket_uri.uri, final_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_uri.uri).IterUris())
+      expected = set()
+      for uri in self.all_src_obj_uris:
+        # Use FinalObjNameComponent here because we expect names to be flattened
+        # when using wildcard copy semantics.
+        expected.add('%sdst_subdir/%s' % (self.dst_bucket_uri.uri,
+                                         self.FinalObjNameComponent(uri)))
+      for file_path in self.nested_child_file_paths:
+        # Use os.path.basename here because we expect names to be flattened when
+        # using wildcard copy semantics.
+        expected.add('%sdst_subdir/%s' % (self.dst_bucket_uri.uri,
+                                         os.path.basename(file_path)))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestCopyingBucketSubDirToDir(self):
+    """Tests copying a bucket subdir to a directory"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'cp', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+                 '%s%s' % (self.dst_dir_root, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s/**' % self.dst_dir_root).IterUris())
+      expected = set()
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        expected.add('file://%s%s' % (self.dst_dir_root, uri.uri.partition(
+            self.src_bucket_uri.uri)[-1]))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestCopyingWildcardSpecifiedBucketSubDirToDir(self):
+    """Tests copying a wilcard-specified bucket subdir to a directory"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'cp', ['-R',
+                 '%s%s' % (self.src_bucket_subdir_uri_wildcard, final_src_char),
+                 '%s%s' % (self.dst_dir_root, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s/**' % self.dst_dir_root).IterUris())
+      expected = set()
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        expected.add('file://%s%s' % (
+            self.dst_dir_root, uri.uri.partition(self.src_bucket_uri.uri)[-1]))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestCopyingBucketSubDirToDirFailsWithoutMinusR(self):
+    """Tests for failure when attempting bucket subdir copy without -R"""
+    try:
+      self.RunCommand(
+          'cp', ['%s' % self.src_bucket_subdir_uri,
+                 '%s' % self.dst_dir_root])
+      self.fail('Did not get expected CommandException')
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('does not exist'), -1)
+
+  def TestCopyingBucketSubDirToBucketSubDir(self):
+    """Tests copying a bucket subdir to another bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'cp', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set()
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        expected.add(
+            '%s/%s' % (self.dst_bucket_subdir_uri.uri, uri.object_name))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestMovingBucketSubDirToBucketSubDir(self):
+    """Tests moving a bucket subdir to another bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set()
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        # Unlike the case with copying, with mv we expect renaming to occur
+        # at the level of the src subdir, vs appending that subdir beneath the
+        # dst subdir like is done for copying.
+        expected_name = uri.object_name.replace("src_", "dst_")
+        expected.add('%s%s' % (self.dst_bucket_uri.uri, expected_name))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestWildcardSrcSubDirMoveDisallowed(self):
+    """Tests moving a bucket subdir specified by wildcard is disallowed"""
+    try:
+      self.RunCommand(
+          'mv', ['-R', '%s*' % self.src_bucket_subdir_uri,
+                 '%s' % self.dst_bucket_subdir_uri.uri])
+      self.fail('Did not get expected CommandException')
+    except CommandException, e:
+      self.assertNotEqual(
+          e.reason.find('source URI cannot contain wildcards'), -1)
+
+  def TestMovingBucketNestedSubDirToBucketNestedSubDir(self):
+    """Tests moving a bucket nested subdir to another bucket nested subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set()
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        # Unlike the case with copying, with mv we expect renaming to occur
+        # at the level of the src subdir, vs appending that subdir beneath the
+        # dst subdir like is done for copying.
+        expected_name = uri.object_name.replace("src_", "dst_")
+        expected.add('%s%s' % (self.dst_bucket_uri, expected_name))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+  def TestRemovingBucketSubDir(self):
+    """Tests removing a bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for final_src_char in ('', '/'):
+      # Setup: Copy a directory, including subdir, to bucket.
+      self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_bucket_uri.uri])
+      src_subdir = self.src_dir_root.split(os.path.sep)[-2]
+      # Test removing bucket subdir.
+      self.RunCommand(
+          'rm', ['-R', '%s%s/dir0%s' % (self.dst_bucket_uri, src_subdir, final_src_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_uri.uri).IterUris())
+      expected = set()
+      for fname in self.non_nested_file_names:
+        expected.add('%s%s/%s' % (self.dst_bucket_uri.uri, src_subdir, fname))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestRecursiveRemoveObjsInBucket(self):
+    """Tests removing all objects in bucket via rm -R gs://bucket"""
+    # Test with and without final slash on dest subdir.
+    for final_src_char in ('', '/'):
+      # Setup: Copy a directory, including subdir, to bucket.
+      self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_bucket_uri.uri])
+      # Test removing all objects via rm -R.
+      self.RunCommand('rm', ['-R', '%s%s' % (self.dst_bucket_uri,
+                                             final_src_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s*' % self.dst_bucket_uri.uri).IterUris())
+      self.assertEqual(0, len(actual))
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def FinalObjNameComponent(self, uri):
+    """For gs://bucket/abc/def/ghi returns ghi."""
+    return uri.uri.rpartition('/')[-1]
 
 if __name__ == '__main__':
   if sys.version_info[:3] < (2, 5, 1):
