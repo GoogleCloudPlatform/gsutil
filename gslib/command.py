@@ -255,8 +255,8 @@ class Command(object):
           break
 
     self.exp_handler = NameExpansionHandler(
-        self.recursion_requested, self.proj_id_handler, self.headers,
-        self.debug, self.bucket_storage_uri_class)
+        self.command_name, self.recursion_requested, self.proj_id_handler,
+        self.headers, self.debug, self.bucket_storage_uri_class)
 
   def RunCommand(self):
     """Abstract function in base class. Subclasses must implement this."""

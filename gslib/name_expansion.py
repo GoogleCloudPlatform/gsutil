@@ -175,10 +175,11 @@ class NameExpansionResult(object):
 
 class NameExpansionHandler(object):
 
-  def __init__(self, recursion_requested, proj_id_handler, headers, debug,
-               bucket_storage_uri_class):
+  def __init__(self, command_name, recursion_requested, proj_id_handler,
+               headers, debug, bucket_storage_uri_class):
     """
     Args:
+      command_name: name of command being run.
       recursion_requested: True if -R specified on command-line.
       proj_id_handler: ProjectIdHandler to use for current command.
       headers: Dictionary containing optional HTTP headers to pass to boto.
@@ -186,6 +187,7 @@ class NameExpansionHandler(object):
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
           Settable for testing/mocking.
     """
+    self.command_name = command_name
     self.recursion_requested = recursion_requested
     self.proj_id_handler = proj_id_handler
     self.headers = headers
@@ -303,8 +305,8 @@ class NameExpansionHandler(object):
             desc = 'directory'
           else:
             desc = 'bucket'
-          print 'Omitting %s "%s. (Did you mean to do cp -R?)"' % (
-              desc, bucket_listing_ref.GetUri())
+          print 'Omitting %s "%s. (Did you mean to do %s -R?)"' % (
+              desc, bucket_listing_ref.GetUri(), self.command_name)
           continue
         uri_names_container = True
         if bucket_listing_ref.GetUri().is_file_uri():
