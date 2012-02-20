@@ -23,10 +23,9 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
-from gslib.exception import ProjectIdException
-from gslib import wildcard_iterator
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
+
 
 class MvCommand(Command):
   """Implementation of gsutil mv command.
@@ -68,7 +67,7 @@ class MvCommand(Command):
     # Check each source arg up, refusing to delete a bucket or directory src
     # URI (force users to explicitly do that as a separate operation).
     for arg_to_check in self.args[0:-1]:
-      if self.StorageUri(arg_to_check).names_container():
+      if self.suri_builder.StorageUri(arg_to_check).names_container():
         raise CommandException('Will not remove source buckets or directories '
                                '(%s).\nYou must separately copy and remove for '
                                'that purpose.' % arg_to_check)

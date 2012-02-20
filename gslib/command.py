@@ -41,10 +41,13 @@ from getopt import GetoptError
 from gslib import util
 from gslib.name_expansion import NameExpansionHandler
 from gslib.project_id import ProjectIdHandler
+from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.thread_pool import ThreadPool
 from gslib.util import HAVE_OAUTH2
 from gslib.util import NO_MAX
+
 from gslib.wildcard_iterator import ContainsWildcard
+
 
 def _ThreadedLogger():
   """Creates a logger that resembles 'print' output, but is thread safe.
@@ -73,6 +76,7 @@ FILE_URIS_OK = 'file_uri_ok'
 PROVIDER_URIS_OK = 'provider_uri_ok'
 URIS_START_ARG = 'uris_start_arg'
 CONFIG_REQUIRED = 'config_required'
+
 
 class Command(object):
   # Global instance of a threaded logger object.
@@ -181,7 +185,6 @@ class Command(object):
     explicitly call super().__init__(). But you're encouraged not to do this,
     because it will make changing the __init__ interface more painful.
     """
-
     # Save class values from constructor params.
     self.command_runner = command_runner
     self.args = args
@@ -241,6 +244,7 @@ class Command(object):
       self._ConfigureNoOpAuthIfNeeded()
 
     self.proj_id_handler = ProjectIdHandler()
+    self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
     # We're treating recursion_requested like it's used by all commands, but
     # only some of the commands accept the -r option.
@@ -263,25 +267,6 @@ class Command(object):
   # Shared helper functions that depend on base class state. #
   ############################################################
 
-  def StorageUri(self, uri_str):
-    """
-    Helper to instantiate boto.StorageUri with gsutil default flag values.
-    Uses self.bucket_storage_uri_class to support mocking/testing.
-    (Identical to the same-named function in command.py; that and this
-    copy make it convenient to call StorageUri() with a single argument,
-    from the respective classes.)
-
-    Args:
-      uri_str: StorageUri naming bucket + optional object.
-
-    Returns:
-      boto.StorageUri for given uri_str.
-
-    Raises:
-      InvalidUriError: if uri_str not valid.
-    """
-    return util.StorageUri(uri_str, self.bucket_storage_uri_class, self.debug)
-
   def UrisAreForSingleProvider(self, uri_args):
     """Tests whether the uris are all for a single provider.
 
@@ -291,7 +276,8 @@ class Command(object):
     uri = None
     for uri_str in uri_args:
       # validate=False because we allow wildcard uris.
-      uri = boto.storage_uri(uri_str, debug=self.debug, validate=False,
+      uri = boto.storage_uri(
+          uri_str, debug=self.debug, validate=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class)
       if not provider:
         provider = uri.scheme
@@ -353,13 +339,13 @@ class Command(object):
     for uri_str in uri_args:
       for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
         if uri.names_bucket():
-            did_some_work = True
-            if self.command_name == 'setdefacl':
-              print 'Setting default object ACL on %s...' % uri
-              uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
-            else:
-              print 'Setting ACL on %s...' % uri
-              uri.set_acl(acl_arg, uri.object_name, False, self.headers)
+          did_some_work = True
+          if self.command_name == 'setdefacl':
+            print 'Setting default object ACL on %s...' % uri
+            uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
+          else:
+            print 'Setting ACL on %s...' % uri
+            uri.set_acl(acl_arg, uri.object_name, False, self.headers)
         else:
           for uri in (self.exp_handler.WildcardIterator(uri_str)
                       .IterUrisForKeys()):
@@ -443,6 +429,9 @@ class Command(object):
       func: Function to call to process each URI.
       src_uri_expansion: gslib.name_expansion.NameExpansionResult.
       thr_exc_handler: Exception handler for ThreadPool class.
+
+    Raises:
+        CommandException if invalid config encountered.
     """
     # Set OS process and python thread count as a function of options
     # and config.
@@ -505,8 +494,8 @@ class Command(object):
         if self.debug:
           self.THREADED_LOGGER.info('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
-              args=(func, assigned_uris[shard], shard, thread_count, byte_count,
-                    thr_exc_handler))
+            args=(func, assigned_uris[shard], shard, thread_count, byte_count,
+                  thr_exc_handler))
         procs.append(p)
         p.start()
       # Wait for all spawned OS processes to finish.
@@ -562,10 +551,10 @@ class Command(object):
         if (config.has_option('Credentials', 'gs_oauth2_refresh_token')
             and not HAVE_OAUTH2):
           raise CommandException(
-              "Your gsutil is configured with OAuth2 authentication "
-              "credentials.\nHowever, OAuth2 is only supported when running "
-              "under Python 2.6 or later\n(unless additional dependencies are "
-              "installed, see README for details); you are running Python %s." %
+              'Your gsutil is configured with OAuth2 authentication '
+              'credentials.\nHowever, OAuth2 is only supported when running '
+              'under Python 2.6 or later\n(unless additional dependencies are '
+              'installed, see README for details); you are running Python %s.' %
               sys.version)
         raise CommandException('You have no storage service credentials in any '
                                'of the following boto config\nfiles. Please '
@@ -580,9 +569,10 @@ class Command(object):
 
   def _ApplyThreads(self, func, assigned_uris, shard, num_threads,
                     count=None, thr_exc_handler=None):
-    """Perform subset of required requests across a caller specified
-       number of parallel Python threads, which may be one, in which
-       case the requests are processed in the current thread.
+    """
+    Perform subset of required requests across a caller specified
+    number of parallel Python threads, which may be one, in which
+    case the requests are processed in the current thread.
 
     Args:
       func: Function to call for each request.

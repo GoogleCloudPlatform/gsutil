@@ -39,13 +39,11 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
-from gslib.exception import ProjectIdException
-from gslib import wildcard_iterator
-from gslib.project_id import ProjectIdHandler
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import ONE_MB
 from gslib.wildcard_iterator import ContainsWildcard
+
 
 class CpCommand(Command):
   """Implementation of gsutil cp command."""
@@ -307,9 +305,9 @@ class CpCommand(Command):
     cb = self._StreamCopyCallbackHandler().call
     dst_key.set_contents_from_stream(fp, self.headers, policy=canned_acl, cb=cb)
     try:
-        bytes_transferred = fp.tell()
+      bytes_transferred = fp.tell()
     except:
-        bytes_transferred = 0
+      bytes_transferred = 0
 
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
@@ -384,7 +382,7 @@ class CpCommand(Command):
       if src_key.is_stream():
         # For Providers that doesn't support chunked Transfers
         tmp = tempfile.NamedTemporaryFile()
-        file_uri = self.StorageUri('file://%s' % tmp.name)
+        file_uri = self.suri_builder.StorageUri('file://%s' % tmp.name)
         try:
           file_uri.new_key(False, self.headers).set_contents_from_file(
               src_key.fp, self.headers)
@@ -421,13 +419,13 @@ class CpCommand(Command):
     if (hasattr(src_key, 'content_encoding')
         and src_key.content_encoding == 'gzip'
         and not file_name.endswith('.gz')):
-        # We can't use tempfile.mkstemp() here because we need a predictable
-        # filename for resumable downloads.
-        download_file_name = '%s_.gztmp' % file_name
-        need_to_unzip = True
+      # We can't use tempfile.mkstemp() here because we need a predictable
+      # filename for resumable downloads.
+      download_file_name = '%s_.gztmp' % file_name
+      need_to_unzip = True
     else:
-        download_file_name = file_name
-        need_to_unzip = False
+      download_file_name = file_name
+      need_to_unzip = False
     fp = None
     try:
       if res_download_handler:
@@ -536,7 +534,7 @@ class CpCommand(Command):
       raise CommandException('Inadequate temp space available to perform the '
                              'requested copy')
     start_time = time.time()
-    file_uri = self.StorageUri('file://%s' % tmp.name)
+    file_uri = self.suri_builder.StorageUri('file://%s' % tmp.name)
     try:
       self._DownloadObjectToFile(src_key, src_uri, file_uri)
       self._UploadFileToObject(file_uri.get_key(), file_uri, dst_uri)
@@ -612,7 +610,7 @@ class CpCommand(Command):
                                dst_uri_str)
       return matched_uris[0]
     else:
-      return self.StorageUri(dst_uri_str)
+      return self.suri_builder.StorageUri(dst_uri_str)
 
   def _ConstructDstUri(self, src_uri, exp_src_uri,
                        src_uri_names_container, src_uri_expands_to_multi,
@@ -669,7 +667,7 @@ class CpCommand(Command):
 
     # There are 3 cases for copying multiple sources to a dir/bucket/bucket
     # subdir needed to match the naming semantics of the UNIX cp command:
-    # 1. For the "mv -r" command, people expect renaming to occur at the 
+    # 1. For the "mv -r" command, people expect renaming to occur at the
     #    level of the src subdir, vs appending that subdir beneath
     #    the dst subdir like is done for copying. For example:
     #      gsutil -m rm -r gs://bucket
@@ -694,7 +692,7 @@ class CpCommand(Command):
 
     if (self.mv_naming_semantics and self.recursion_requested
         and src_uri_expands_to_multi):
-      # Case 1. Handle naming semantics for recursive bucket subdir mv. 
+      # Case 1. Handle naming semantics for recursive bucket subdir mv.
       # Here we want to line up the src_uri against its expansion, to find
       # the base to build the new name. For example, starting with:
       #   gsutil mv -r gs://bucket/abcd gs://bucket/xyz
@@ -706,7 +704,7 @@ class CpCommand(Command):
                                 exp_src_uri_tail.strip('/'))
       return exp_dst_uri.clone_replace_name(dst_key_name)
 
-    if (src_uri_names_container and not exp_dst_uri.names_file()):
+    if src_uri_names_container and not exp_dst_uri.names_file():
         #and (exp_dst_uri.names_directory() or exp_dst_uri.is_cloud_uri())):
       # Case 2. Build dst_key_name from subpath of exp_src_uri past
       # where src_uri ends. For example for src_uri=gs://bucket/ and
@@ -915,7 +913,7 @@ class CpCommand(Command):
     gs://bucket/abc names an object; in contrast, when running the command
     gsutil cp file1 file2 gs://bucket/abc
     gs://bucket/abc names a bucket "sub-directory".
-    
+   
     Note that we don't disallow naming a bucket "sub-directory" where there's
     already an object at that URI. For example it's legitimate (albeit
     confusing) to have an object called gs://bucket/dir and
@@ -961,6 +959,7 @@ class CpCommand(Command):
       return dst_uri.names_file()
     else:
       return dst_uri.names_singleton()
+
 
 def _GetPathBeforeFinalDir(uri):
   """

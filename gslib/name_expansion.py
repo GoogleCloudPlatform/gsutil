@@ -16,6 +16,7 @@ import gslib
 import itertools
 import wildcard_iterator
 
+from gslib.storage_uri_builder import StorageUriBuilder
 from wildcard_iterator import ContainsWildcard
 from bucket_listing_ref import BucketListingRef
 
@@ -47,7 +48,7 @@ class NameExpansionResult(object):
   # materializing the list.
 
   def __init__(self):
-    # dict {StorageUri: [BucketListingRefs to which it expands]}   
+    # dict {StorageUri: [BucketListingRefs to which it expands]}
     # Note: in the future we'll change RHS to be an iterator from the
     # underlying generator supported by WildcardIterator, for scalabilty.
     self._expansion_map = {}
@@ -190,12 +191,13 @@ class NameExpansionHandler(object):
     self.headers = headers
     self.debug = debug
     self.bucket_storage_uri_class = bucket_storage_uri_class
+    self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
-    # Map holding wildcard strings to use for flat vs subdir-by-subdir
-    # listings. (A flat listing means show all objects expanded all the way down.)
+    # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
+    # (A flat listing means show all objects expanded all the way down.)
     self._flatness_wildcard = {True: '**', False: '*'}
 
-  def WildcardIterator(self, uri_or_str, delimiter=None):
+  def WildcardIterator(self, uri_or_str):
     """
     Helper to instantiate gslib.WildcardIterator. Args are same as
     gslib.WildcardIterator interface, but this method fills in most of the
@@ -203,13 +205,11 @@ class NameExpansionHandler(object):
 
     Args:
       uri_or_str: StorageUri or URI string naming wildcard objects to iterate.
-      delimiter: Delimiter character to send to server (see
-          https://developers.google.com/storage/docs/reference-headers#delimiter)
     """
     return wildcard_iterator.wildcard_iterator(
         uri_or_str, self.proj_id_handler,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
-        headers=self.headers, debug=self.debug, delimiter=delimiter)
+        headers=self.headers, debug=self.debug)
 
   def ExpandWildcardsAndContainers(self, uri_strs, flat=True):
     """
@@ -265,7 +265,7 @@ class NameExpansionHandler(object):
         post_step1_bucket_listing_refs = list(self.WildcardIterator(uri_str))
       else:
         post_step1_bucket_listing_refs = [
-            BucketListingRef(self.StorageUri(uri_str))]
+            BucketListingRef(self.suri_builder.StorageUri(uri_str))]
 
       # Step 2: Expand subdirs.
       # Starting with gs://bucket/abcd this step would expand to:
@@ -317,7 +317,8 @@ class NameExpansionHandler(object):
         if len(wildcard_result) > 0:
           exp_src_bucket_listing_refs.extend(wildcard_result)
 
-      result._AddExpansion(self.StorageUri(uri_str), uri_names_container,
+      result._AddExpansion(self.suri_builder.StorageUri(uri_str),
+                           uri_names_container,
                            exp_src_bucket_listing_refs)
 
     return result
@@ -327,7 +328,7 @@ class NameExpansionHandler(object):
     Checks whether uri could be an implicit bucket subdir, based on command
     line options and its syntax. For example, gs://abc could be an implicit
     bucket subdir if the -r option was specified. The complete determination
-    depends on whether (in addition to the current check) uri contains 
+    depends on whether (in addition to the current check) uri contains
     a wildcard not confined to a subdir (i.e., '*').
 
     Args:
@@ -363,8 +364,8 @@ class NameExpansionHandler(object):
     result_list = []
     if self._UriCouldBeBucketSubdir(uri):
       implicit_subdir_matches = list(self.WildcardIterator(
-          self.StorageUri('%s/%s' % (uri.uri.rstrip('/'),
-                                     self._flatness_wildcard[flat]))))
+          self.suri_builder.StorageUri('%s/%s' % (uri.uri.rstrip('/'),
+                                       self._flatness_wildcard[flat]))))
       if len(implicit_subdir_matches) > 0:
         names_container = True
         result_list.extend(implicit_subdir_matches)

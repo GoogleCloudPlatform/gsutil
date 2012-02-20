@@ -21,6 +21,7 @@
 
 import time
 
+
 class BucketListingRef(object):
   """
   Container that holds a reference to one result from a bucket listing, allowing
@@ -37,7 +38,6 @@ class BucketListingRef(object):
   (basically, the info listed by gsutil ls -l), but does not include information
   like ACL and location (which require separate server requests, which is why
   there's a separate gsutil ls -L option to get this more detailed info).
-  
   """
 
   def __init__(self, uri, key=None, prefix=None, headers=None):
@@ -128,7 +128,7 @@ class BucketListingRef(object):
       # retrieve from the bucket listing (which uses ISO 8601 format), so
       # convert so we consistently return ISO 8601 format.
       tuple_time = (time.strptime(self.key.last_modified,
-          '%a, %d %b %Y %H:%M:%S %Z'))
+                                  '%a, %d %b %Y %H:%M:%S %Z'))
       self.key.last_modified = time.strftime('%Y-%m-%dT%H:%M:%S', tuple_time)
     return self.key
 

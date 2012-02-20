@@ -26,7 +26,7 @@ from gslib.command import COMMAND_NAME_ALIASES
 from gslib.exception import CommandException
 
 
-class CommandRunner:
+class CommandRunner(object):
 
   def __init__(self, gsutil_bin_dir, boto_lib_dir, config_file_list,
                bucket_storage_uri_class=BucketStorageUri):
@@ -53,13 +53,13 @@ class CommandRunner:
       (module_name, ext) = os.path.splitext(f)
       if ext == '.py':
         __import__('gslib.commands.%s' % module_name)
-    map = {}
+    command_map = {}
     # Only include Command subclasses in the dict.
     for command in Command.__subclasses__():
-        map[command.command_spec[COMMAND_NAME]] = command
-        for command_name_aliases in command.command_spec[COMMAND_NAME_ALIASES]:
-            map[command_name_aliases] = command
-    return map
+      command_map[command.command_spec[COMMAND_NAME]] = command
+      for command_name_aliases in command.command_spec[COMMAND_NAME_ALIASES]:
+        command_map[command_name_aliases] = command
+    return command_map
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None):
@@ -72,9 +72,9 @@ class CommandRunner:
         headers: Dictionary containing optional HTTP headers to pass to boto.
         debug: Debug level to pass in to boto connection (range 0..3).
         parallel_operations: Should command operations be executed in parallel?
-        test_method: Optional general purpose method for testing purposes. 
+        test_method: Optional general purpose method for testing purposes.
                      Application and semantics of this method will vary by
-                     command and test type. 
+                     command and test type.
 
       Raises:
         CommandException: if errors encountered.

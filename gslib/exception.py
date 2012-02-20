@@ -52,11 +52,11 @@ class CommandException(StandardError):
 class ProjectIdException(StandardError):
 
     def __init__(self, reason):
-        StandardError.__init__(self)
-        self.reason = reason
+      StandardError.__init__(self)
+      self.reason = reason
 
     def __repr__(self):
-        return 'ProjectIdException: %s' % self.reason
+      return 'ProjectIdException: %s' % self.reason
 
     def __str__(self):
-        return 'ProjectIdException: %s' % self.reason
+      return 'ProjectIdException: %s' % self.reason

@@ -22,8 +22,8 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib import wildcard_iterator
 from gslib.util import NO_MAX
+
 
 class SetAclCommand(Command):
   """Implementation of gsutil setacl command."""

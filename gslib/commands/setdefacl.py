@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gslib import wildcard_iterator
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
@@ -25,6 +24,7 @@ from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
 from gslib.util import NO_MAX
+
 
 class SetDefAclCommand(Command):
   """Implementation of gsutil setdefacl command."""
@@ -53,7 +53,7 @@ class SetDefAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    if not self.StorageUri(self.args[-1]).names_bucket():
+    if not self.suri_builder.StorageUri(self.args[-1]).names_bucket():
       raise CommandException('URI must name a bucket for the %s command' %
                              self.command_name)
     self.SetAclCommandHelper()

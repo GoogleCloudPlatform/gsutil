@@ -33,6 +33,7 @@ from gslib.exception import CommandException
 from gslib.util import NO_MAX
 from tests.s3.mock_storage_service import MockBucketStorageUri
 
+
 class TestCommand(Command):
   """Implementation of gsutil test command."""
 
@@ -58,7 +59,7 @@ class TestCommand(Command):
     CONFIG_REQUIRED : True,
   }
 
-  
+
   # Define constants & class attributes for command testing.
   username = getpass.getuser().lower()
   _test_prefix_file = 'gsutil_test_file_' + username + '_'
@@ -72,8 +73,8 @@ class TestCommand(Command):
   }
 
   def _TestRunner(self, cmd, debug):
-    """Run a test command in a subprocess and return result. If debugging 
-       requested, display the command, otherwise redirect stdout & stderr 
+    """Run a test command in a subprocess and return result. If debugging
+       requested, display the command, otherwise redirect stdout & stderr
        to /dev/null.
     """
     if not debug:
@@ -85,10 +86,10 @@ class TestCommand(Command):
   def global_setup(self, debug):
     """General test setup.
 
-    For general testing use create three buckets, one empty, one 
-    containing one object and one containing two objects. Also create 
+    For general testing use create three buckets, one empty, one
+    containing one object and one containing two objects. Also create
     three files for general use.
-    """ 
+    """
     print 'Global setup started...'
 
     # Build lists of buckets and files.
@@ -107,7 +108,7 @@ class TestCommand(Command):
                      ' cp - gs://$B%d/$O%d' % (i, j)
         object_cmd = self.sub_format_specs(object_cmd)
         self._TestRunner(object_cmd, debug)
-    
+
     # Create three test files of size 10MB each.
     for file in file_list:
       file = self.sub_format_specs(file)
@@ -121,7 +122,7 @@ class TestCommand(Command):
     """General test cleanup.
 
     Remove all buckets, objects and files used by this test facility.
-    """ 
+    """
     print 'Global teardown started...'
     # Build commands to remove objects, buckets and files.
     bucket_list = ['gs://$B%d' % i for i in range(0, 10)]
@@ -134,14 +135,14 @@ class TestCommand(Command):
       if os.path.exists(f):
         os.unlink(f)
 
-    # Substitute format specifiers ($Bn, $On, $Fn). 
+    # Substitute format specifiers ($Bn, $On, $Fn).
     bucket_cmd = self.sub_format_specs(bucket_cmd)
     if not debug:
       bucket_cmd += ' >/dev/null 2>&1'
     object_cmd = self.sub_format_specs(object_cmd)
     if not debug:
       object_cmd += ' >/dev/null 2>&1'
-    
+
     # Run the commands.
     self._TestRunner(object_cmd, debug)
     self._TestRunner(bucket_cmd, debug)
@@ -195,7 +196,7 @@ class TestCommand(Command):
         continue
 
       # Skip aliases for commands we've already tested.
-      if (cmd in already_tested): 
+      if cmd in already_tested:
         continue
       already_tested[cmd] = 1
 
@@ -209,7 +210,7 @@ class TestCommand(Command):
       # Iterate over the entries in this command's test specification.
       for (cmdname, cmdline, expect_ret, diff) in cmd.test_steps:
         cmdline = cmdline.replace('gsutil ', self.gsutil_cmd + ' ')
-        if platform.system() == "Windows":
+        if platform.system() == 'Windows':
           cmdline = cmdline.replace('cat ', 'type ')
 
         # Store file names requested for diff.
@@ -218,13 +219,13 @@ class TestCommand(Command):
         if diff:
           (result_file, expect_file) = diff
 
-        # Substitute format specifiers ($Bn, $On, $Fn). 
+        # Substitute format specifiers ($Bn, $On, $Fn).
         cmdline = self.sub_format_specs(cmdline)
         result_file = self.sub_format_specs(result_file)
         expect_file = self.sub_format_specs(expect_file)
 
         # Generate test function, wrap in a test case and add to test suite.
-        func = gen.gen_test(self._TestRunner, cmdline, expect_ret, 
+        func = gen.genTest(self._TestRunner, cmdline, expect_ret,
                             result_file, expect_file, self.debug)
         test_case = unittest.FunctionTestCase(func, description=cmdname)
         suite.addTest(test_case)
@@ -243,7 +244,7 @@ class TestCommand(Command):
   def sub_format_specs(self, s):
     """Perform iterative regexp substitutions on passed string.
 
-    This method iteratively substitutes values in a passed string, 
+    This method iteratively substitutes values in a passed string,
     returning the modified string when done.
     """
     # Don't bother if the passed string is empty or None.
@@ -254,6 +255,7 @@ class TestCommand(Command):
           s = re.sub(template, repl_str, s)
     return s
 
+
 class test_generator(unittest.TestCase):
   """Dynamic test generator for use with unittest module.
 
@@ -261,17 +263,19 @@ class test_generator(unittest.TestCase):
   inherits from unittest.TestCase so that it has access to
   all the TestCase componentry (e.g. self.assertEqual, etc.).
   """
+
   def runTest():
     """Required method to instantiate unittest.TestCase derived class."""
     pass
 
-  def gen_test(self, runner, cmd, expect_ret, result_file, expect_file, debug):
+  def genTest(self, runner, cmd, expect_ret, result_file, expect_file, debug):
     """Create and return a function to execute unittest module test cases.
 
-    This method generates a test function based on the passed 
+    This method generates a test function based on the passed
     input and some inherited methods and returns the generated
     function to the caller.
-    """ 
+    """
+
     def test_func():
       # Run the test command and capture the result in ret.
       ret = runner(cmd, debug)
@@ -280,7 +284,7 @@ class test_generator(unittest.TestCase):
         self.assertEqual(ret, expect_ret)
       if result_file and expect_file:
         # If cmd generated output, diff it against expected output.
-        if platform.system() == "Windows":
+        if platform.system() == 'Windows':
           diff_cmd = 'echo n | comp '
         else:
           diff_cmd = 'diff '

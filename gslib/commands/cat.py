@@ -28,6 +28,7 @@ from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
 from gslib.util import NO_MAX
 
+
 class CatCommand(Command):
   """Implementation of gsutil cat command."""
 

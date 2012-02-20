@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import boto
-import os
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -26,8 +25,8 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
-from gslib.thread_pool import ThreadPool
 from gslib.util import NO_MAX
+
 
 class RmCommand(Command):
   """Implementation of gsutil rm command."""

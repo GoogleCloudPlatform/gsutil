@@ -33,8 +33,6 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
-from gslib import command
-from gslib import wildcard_iterator
 from gslib.util import HAVE_OAUTH2
 from gslib.util import ONE_MB
 
@@ -43,7 +41,7 @@ try:
 except ImportError:
   pass
 
-GOOG_API_CONSOLE_URI = "http://code.google.com/apis/console"
+GOOG_API_CONSOLE_URI = 'http://code.google.com/apis/console'
 
 SCOPE_FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
 SCOPE_READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
@@ -295,9 +293,9 @@ class ConfigCommand(Command):
     try:
       fd = os.open(file_path, flags, 0600)
     except (OSError, IOError), e:
-      raise CommandException("Failed to open %s for writing: %s" %
+      raise CommandException('Failed to open %s for writing: %s' %
                              (file_path, e))
-    return os.fdopen(fd, "w")
+    return os.fdopen(fd, 'w')
 
   def _WriteBotoConfigFile(self, config_file, use_oauth2=True,
       launch_browser=True, oauth2_scopes=[SCOPE_FULL_CONTROL]):
@@ -479,11 +477,11 @@ class ConfigCommand(Command):
 
     if use_oauth2 and not HAVE_OAUTH2:
       raise CommandException(
-          "OAuth2 is only supported when running under Python 2.6 or later\n"
-          "(unless additional dependencies are installed, "
-          "see README for details);\n"
-          "you are running Python %s.\nUse 'gsutil config -a' to create a "
-          "config with Developer Key authentication credentials." % sys.version)
+          'OAuth2 is only supported when running under Python 2.6 or later\n'
+          '(unless additional dependencies are installed, '
+          'see README for details);\n'
+          'you are running Python %s.\nUse "gsutil config -a" to create a '
+          'config with Developer Key authentication credentials.' % sys.version)
 
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
@@ -495,20 +493,20 @@ class ConfigCommand(Command):
       if not os.path.exists(default_config_path):
         output_file_name = default_config_path
       else:
-        default_config_path_bak = default_config_path + ".bak"
+        default_config_path_bak = default_config_path + '.bak'
         if os.path.exists(default_config_path_bak):
-          raise CommandException("Cannot back up existing config "
-              "file '%s': backup file exists ('%s')."
+          raise CommandException('Cannot back up existing config '
+              'file "%s": backup file exists ("%s").'
               % (default_config_path, default_config_path_bak))
         else:
           try:
             sys.stderr.write(
-                "Backing up existing config file '%s' to '%s'...\n"
+                'Backing up existing config file "%s" to "%s"...\n'
                 % (default_config_path, default_config_path_bak))
             os.rename(default_config_path, default_config_path_bak)
           except e:
-            raise CommandException("Failed to back up existing config "
-                "file ('%s' -> '%s'): %s."
+            raise CommandException('Failed to back up existing config '
+                'file ("%s" -> "%s"): %s.'
                 % (default_config_path, default_config_path_bak, e))
           output_file_name = default_config_path
 

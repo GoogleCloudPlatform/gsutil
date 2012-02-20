@@ -167,8 +167,6 @@ class CloudWildcardIteratorTests(unittest.TestCase):
           prefixes.add(blr.GetPrefix().name)
         else:
           uri_strs.add(blr.GetUri().uri)
-      exp_obj_uri_strs = set(['%s_0/%s' % (self.base_uri_str, x)
-          for x in self.immed_child_obj_names])
       self.assertEqual(0, len(uri_strs))
       self.assertEqual(1, len(prefixes))
       self.assertTrue('nested1/nested2/' in prefixes)
@@ -218,7 +216,6 @@ class CloudWildcardIteratorTests(unittest.TestCase):
   def TestCallingGetKeyOnProviderOnlyWildcardIteration(self):
     """Tests that attempting iterating provider-only wildcard raises"""
     try:
-      import gslib
       from gslib.bucket_listing_ref import BucketListingRefException
       for iter_result in wildcard_iterator.wildcard_iterator(
           'gs://', ProjectIdHandler(),

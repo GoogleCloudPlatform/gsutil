@@ -73,6 +73,7 @@ WILDCARD_REGEX = re.compile('[*?\[\]]')
 WILDCARD_OBJECT_ITERATOR = 'wildcard_object_iterator'
 WILDCARD_BUCKET_ITERATOR = 'wildcard_bucket_iterator'
 
+
 class WildcardIterator(object):
   """Base class for wildcarding over StorageUris.
 
@@ -220,10 +221,10 @@ class CloudWildcardIterator(WildcardIterator):
                   expanded_uri = uri.clone_replace_name(key.name)
                   if isinstance(key, Prefix):
                     yield BucketListingRef(expanded_uri, key=None, prefix=key,
-                                    headers=self.headers)
+                                           headers=self.headers)
                   else:
                     yield BucketListingRef(expanded_uri, key=key, prefix=None,
-                                    headers=self.headers)
+                                           headers=self.headers)
 
   def _BuildBucketFilterStrings(self, wildcard):
     """
@@ -420,7 +421,7 @@ class WildcardException(StandardError):
 
 def wildcard_iterator(uri_or_str, proj_id_handler,
                       bucket_storage_uri_class=BucketStorageUri,
-                      headers=None, debug=0, delimiter=None):
+                      headers=None, debug=0):
   """Instantiate a WildCardIterator for the given StorageUri.
 
   Args:
@@ -430,8 +431,6 @@ def wildcard_iterator(uri_or_str, proj_id_handler,
         Settable for testing/mocking.
     headers: Dictionary containing optional HTTP headers to pass to boto.
     debug: Debug level to pass in to boto connection (range 0..3).
-    delimiter: Delimiter character to send to server (see
-        https://developers.google.com/storage/docs/reference-headers#delimiter)
 
   Returns:
     A WildcardIterator that handles the requested iteration.

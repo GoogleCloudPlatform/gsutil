@@ -39,11 +39,11 @@ import boto
 from boto.exception import StorageResponseError
 from boto import storage_uri
 from commands import cp
-from gslib.command import Command
 from gslib.command_runner import CommandRunner
 from gslib.exception import CommandException
 from gslib import test_util
 from tests.s3.mock_storage_service import MockBucketStorageUri
+
 
 class GsutilCommandTests(unittest.TestCase):
   """gsutil command method test suite"""
@@ -146,7 +146,6 @@ class GsutilCommandTests(unittest.TestCase):
       cls.all_src_obj_uris.append(obj_uri)
       cls.all_src_subdir_and_below_obj_uris.append(obj_uri)
 
-
     # Create the test directories.
     cls.src_dir_root = '%s%s' % (tempfile.mkdtemp(prefix=cls.tmpdir_prefix),
                                  os.sep)
@@ -216,13 +215,13 @@ class GsutilCommandTests(unittest.TestCase):
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
       parallel_operations: Should command operations be executed in parallel?
-      test_method: Optional general purpose method for testing purposes. 
+      test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
-                   command and test type. 
+                   command and test type.
       return_stdout: If true will save and return stdout produced by command.
     """
     sys.stderr.write('\nRunning test of %s %s\n' %
-                     (command_name, " ".join(args)))
+                     (command_name, ' '.join(args)))
     if return_stdout:
       # Redirect stdout temporarily, to save output to a file.
       tmpfile = tempfile.mkstemp()[1]
@@ -246,18 +245,18 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestGetPathBeforeFinalDir(self):
     """Tests _GetPathBeforeFinalDir() (unit test)"""
-    self.assertEqual("gs://",
-                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/")))
-    self.assertEqual("gs://bucket",
-                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/dir/")))
-    self.assertEqual("gs://bucket",
-                     cp._GetPathBeforeFinalDir(storage_uri("gs://bucket/dir"))) 
-    self.assertEqual("gs://bucket/dir",
+    self.assertEqual('gs://',
+                     cp._GetPathBeforeFinalDir(storage_uri('gs://bucket/')))
+    self.assertEqual('gs://bucket',
+                     cp._GetPathBeforeFinalDir(storage_uri('gs://bucket/dir/')))
+    self.assertEqual('gs://bucket',
+                     cp._GetPathBeforeFinalDir(storage_uri('gs://bucket/dir')))
+    self.assertEqual('gs://bucket/dir',
                      cp._GetPathBeforeFinalDir(
-                         storage_uri("gs://bucket/dir/obj"))) 
+                         storage_uri('gs://bucket/dir/obj')))
     self.assertEqual('file://%s' % self.src_dir_root.rstrip('/'),
                      cp._GetPathBeforeFinalDir(storage_uri(
-                         "file://%sdir0/" % self.src_dir_root))) 
+                         'file://%sdir0/' % self.src_dir_root)))
 
   def TestCopyingTopLevelFileToBucket(self):
     """Tests copying one top-level file to a bucket"""
@@ -521,7 +520,7 @@ class GsutilCommandTests(unittest.TestCase):
   def TestWildcardMoveWithinBucket(self):
     """Attempts to move using src wildcard that overlaps dest object.
     We want to ensure that this doesn't stomp the result data. See the
-    comment starting with "Expand wildcards before" in commands/mv.py
+    comment starting with 'Expand wildcards before' in commands/mv.py
     for details.
     """
     # Create a single object; use 'dst' bucket because it gets cleared after
@@ -662,7 +661,7 @@ class GsutilCommandTests(unittest.TestCase):
 
   def DownloadTestHelper(self, func):
     """
-    Test resumable download with custom test function to distort downloaded 
+    Test resumable download with custom test function to distort downloaded
     data. We expect an exception to be raised and the dest file to be removed.
     """
     object_uri = self.all_src_obj_uris[0].uri
@@ -676,7 +675,7 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestDownloadWithObjectSizeShange(self):
     """
-    Test resumable download on an object that changes size before the 
+    Test resumable download on an object that changes size before the
     downloaded file's checksum is validated.
     """
     def append(fp):
@@ -807,7 +806,7 @@ class GsutilCommandTests(unittest.TestCase):
         # Unlike the case with copying, with mv we expect renaming to occur
         # at the level of the src subdir, vs appending that subdir beneath the
         # dst subdir like is done for copying.
-        expected_name = uri.object_name.replace("src_", "dst_")
+        expected_name = uri.object_name.replace('src_', 'dst_')
         expected.add('%s%s' % (self.dst_bucket_uri.uri, expected_name))
       self.assertEqual(expected, actual)
       # Clean up/re-set up for next variant iteration.
@@ -840,12 +839,13 @@ class GsutilCommandTests(unittest.TestCase):
         # Unlike the case with copying, with mv we expect renaming to occur
         # at the level of the src subdir, vs appending that subdir beneath the
         # dst subdir like is done for copying.
-        expected_name = uri.object_name.replace("src_", "dst_")
+        expected_name = uri.object_name.replace('src_', 'dst_')
         expected.add('%s%s' % (self.dst_bucket_uri, expected_name))
       self.assertEqual(expected, actual)
       # Clean up/re-set up for next variant iteration.
       self.TearDownClass()
       self.SetUpClass()
+
   def TestRemovingBucketSubDir(self):
     """Tests removing a bucket subdir"""
     # Test with and without final slash on dest subdir.
@@ -855,7 +855,8 @@ class GsutilCommandTests(unittest.TestCase):
       src_subdir = self.src_dir_root.split(os.path.sep)[-2]
       # Test removing bucket subdir.
       self.RunCommand(
-          'rm', ['-R', '%s%s/dir0%s' % (self.dst_bucket_uri, src_subdir, final_src_char)])
+          'rm', ['-R', '%s%s/dir0%s' %
+              (self.dst_bucket_uri, src_subdir, final_src_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_uri.uri).IterUris())
       expected = set()

@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gslib
-
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
@@ -24,13 +22,12 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.exception import CommandException
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
-from gslib.wildcard_iterator import WildcardException
+
 
 class LsCommand(Command):
   """Implementation of gsutil ls command."""
@@ -84,7 +81,7 @@ class LsCommand(Command):
                                                       headers=self.headers)
         location_output = ''
         if location_constraint:
-            location_output = '\n\tLocationConstraint: %s' % location_constraint
+          location_output = '\n\tLocationConstraint: %s' % location_constraint
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'get_acl', bucket_uri, self.headers)
         print '%s :\n\t%d objects, %s%s\n\tACL: %s\n\tDefault ACL: %s' % (
@@ -113,7 +110,6 @@ class LsCommand(Command):
 
     Args:
       bucket_listing_ref: BucketListing being listed.
-      obj: object to be listed (or None if no associated object).
       listing_style: ListingStyle enum describing type of output desired.
 
     Returns:
@@ -149,7 +145,7 @@ class LsCommand(Command):
           print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
       print '\tEtag:\t%s' % obj.etag.strip('"\'')
       print '\tACL:\t%s' % (
-          self.StorageUri(uri_str).get_acl(False, self.headers))
+          self.suri_builder.StorageUri(uri_str).get_acl(False, self.headers))
       return (1, obj.size)
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
@@ -176,7 +172,7 @@ class LsCommand(Command):
     num_bytes = 0
     expanding_top_level = True
     printed_one = False
-    while len(blrs_to_expand) > 0:
+    while len(blrs_to_expand):
       if printed_one:
         print
       blr = blrs_to_expand.pop(0)
@@ -204,7 +200,7 @@ class LsCommand(Command):
         if not ContainsWildcard(wildcard_to_expand):
           wildcard_to_expand = '%s*' % wildcard_to_expand
         blr_expansion = list(self.exp_handler.WildcardIterator(
-            wildcard_to_expand, delimiter='/'))
+            wildcard_to_expand))
       for cur_blr in blr_expansion:
         if cur_blr.HasKey():
           # Object listing.
@@ -249,7 +245,7 @@ class LsCommand(Command):
     total_objs = 0
     total_bytes = 0
     for uri_str in self.args:
-      uri = self.StorageUri(uri_str)
+      uri = self.suri_builder.StorageUri(uri_str)
       self.proj_id_handler.FillInProjectHeaderIfNeeded('ls', uri, self.headers)
 
       if uri.names_provider():

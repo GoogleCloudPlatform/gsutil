@@ -24,6 +24,7 @@ from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.util import NO_MAX
 
+
 class MbCommand(Command):
   """Implementation of gsutil mb command."""
 
@@ -65,7 +66,7 @@ class MbCommand(Command):
       headers = self.headers.copy()
 
     for bucket_uri_str in self.args:
-      bucket_uri = self.StorageUri(bucket_uri_str)
+      bucket_uri = self.suri_builder.StorageUri(bucket_uri_str)
       self.proj_id_handler.FillInProjectHeaderIfNeeded('mb', bucket_uri,
                                                        headers)
       print 'Creating %s...' % bucket_uri

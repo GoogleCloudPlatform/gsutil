@@ -23,6 +23,7 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 
+
 class GetLoggingCommand(Command):
   """Implementation of gsutil getlogging command."""
 

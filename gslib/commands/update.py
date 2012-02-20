@@ -31,6 +31,7 @@ from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
 
+
 class UpdateCommand(Command):
   """Implementation of gsutil update command."""
 
@@ -212,10 +213,10 @@ class UpdateCommand(Command):
       raise CommandException('Update failed: %s.' % e)
 
     # For enterprise mode (shared/central) installation, users with
-    # different user/group than the installation user/group must be 
+    # different user/group than the installation user/group must be
     # able to run gsutil so we need to do some permissions adjustments
-    # here. Since enterprise mode is not not supported for Windows 
-    # users, we can skip this step when running on Windows, which 
+    # here. Since enterprise mode is not not supported for Windows
+    # users, we can skip this step when running on Windows, which
     # avoids the problem that Windows has no find or xargs command.
     system = platform.system()
     if not system.lower().startswith('windows'):

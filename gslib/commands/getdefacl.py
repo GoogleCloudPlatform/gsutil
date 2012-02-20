@@ -22,6 +22,8 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import CommandException
+
 
 class GetDefAclCommand(Command):
   """Implementation of gsutil getdefacl command."""
@@ -50,7 +52,7 @@ class GetDefAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    if not self.StorageUri(self.args[-1]).names_bucket():
+    if not self.suri_builder.StorageUri(self.args[-1]).names_bucket():
       raise CommandException('URI must name a bucket for the %s command' %
                              self.command_name)
     self.GetAclCommandHelper()
