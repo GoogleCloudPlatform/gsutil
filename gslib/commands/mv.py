@@ -98,12 +98,23 @@ class MvCommand(Command):
         self.args[0:len(self.args)-1])
     exp_arg_list = list(src_uri_expansion.IterExpandedUriStrings())
 
+    # Check whether exp_arg_list has any file:// URIs, and disallow it. Note
+    # that we can't simply set FILE_URIS_OK to False in command_spec because
+    # we *do* allow a file URI for the dest URI. (We allow users to move data
+    # out of the cloud to the local disk, but we disallow commands that would
+    # delete data off the local disk, and instead require the user to delete
+    # data separately, using local commands/tools.)
+    if self.HaveFileUris(exp_arg_list):
+      raise CommandException('"mv" command does not support "file://" URIs for '
+                             'source arguments.\nDid you mean to use a '
+                             'gs:// URI?')
+
     if src_uri_expansion.IsEmpty():
       raise CommandException('No URIs matched')
 
-    # Add command-line opts back in front of args so they'll be picked
-    # up by cp and rm commands (e.g., for -r option). Use undocumented
-    # (for internal use) -m option to request move naming semantics (see
+    # Add command-line opts back in front of args so they'll be picked up by cp
+    # and rm commands (e.g., for -r option). Use undocumented (internal
+    # use-only) cp -M option to request move naming semantics (see
     # _ConstructDstUri in cp.py).
     unparsed_args = ['-M']
     unparsed_args.extend(self.unparsed_args)

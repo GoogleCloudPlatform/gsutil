@@ -231,7 +231,7 @@ class Command(object):
       raise CommandException('Wrong number of arguments for "%s" command.' %
                              self.command_name)
     if (not self.command_spec[FILE_URIS_OK]
-        and self._HaveFileUris(self.args[self.command_spec[URIS_START_ARG]:])):
+        and self.HaveFileUris(self.args[self.command_spec[URIS_START_ARG]:])):
       raise CommandException('"%s" command does not support "file://" URIs. '
                              'Did you mean to use a gs:// URI?' %
                              self.command_name)
@@ -518,11 +518,7 @@ class Command(object):
       self._ApplyThreads(func, assigned_uris[0], 0, thread_count, 
                          thr_exc_handler, None)
 
-  ######################
-  # Private functions. #
-  ######################
-
-  def _HaveFileUris(self, args_to_check):
+  def HaveFileUris(self, args_to_check):
     """Checks whether args_to_check contain any file URIs.
 
     Args:
@@ -535,6 +531,10 @@ class Command(object):
       if uri_str.lower().startswith('file://') or uri_str.find(':') == -1:
         return True
     return False
+
+  ######################
+  # Private functions. #
+  ######################
 
   def _HaveProviderUris(self, args_to_check):
     """Checks whether args_to_check contains any provider URIs (like 'gs://').
