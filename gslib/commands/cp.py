@@ -244,8 +244,15 @@ class CpCommand(Command):
         if o == '-p':
           preserve_acl = True
     start_time = time.time()
+    # Pass headers in headers param not metadata param, so boto will copy
+    # existing key's metadata and just set the additional headers specified
+    # in the headers param (rather than using the headers to override existing
+    # metadata). In particular this allows us to copy the existing key's
+    # Content-Type and other metadata users need while still being able to
+    # set headers the API needs (like x-goog-project-id).
     dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
-                        src_uri.object_name, headers, preserve_acl=preserve_acl)
+                        src_uri.object_name, preserve_acl=preserve_acl,
+                        headers=headers)
     end_time = time.time()
     return (end_time - start_time, src_key.size)
 
@@ -498,9 +505,9 @@ class CpCommand(Command):
               raise CommandException('Invalid canned ACL "%s".' % a)
             canned_acl = a
           elif o == '-p':
-            raise NotImplementedError(
-              'Cross-provider ACL-preserving cp not supported')
-
+            # We don't attempt to preserve ACLs across providers because
+            # GCS and S3 support different ACLs.
+            raise NotImplementedError('Cross-provider cp -p not supported')
           elif o == '-t':
             mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
             mime_type = mimetype_tuple[0]
