@@ -114,3 +114,24 @@ class MvCommand(Command):
     self.command_runner.RunNamedCommand('rm', exp_arg_list,
                                         self.headers, self.debug,
                                         self.parallel_operations)
+
+  # test specification, see definition of test_steps in base class for
+  # details on how to populate these fields
+  test_steps = [
+    # (test name, cmd line, ret code, (result_file, expect_file))
+    ('gen expect files', 'echo 0 >$F0; echo 1 >$F1; echo 2 >$F2', 0, None),
+    ('verify 2 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F2')),
+    ('verify 0 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F0')),
+    ('mv 2 objects', 
+       'gsutil -m mv gs://$B2/$O0 gs://$B2/$O1 gs://$B0 2>&1 | grep Removing', 
+       0, None),
+    ('verify 0 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
+    ('verify 2 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F2')),
+    ('rm 1 src object', 'gsutil rm gs://$B0/$O0', 0, None),
+    ('verify 1 src obj', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F1')),
+    ('verify 0 dst objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
+    ('mv 2 objects', 
+       'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2 2>&1 | grep Removing', 
+       1, None),
+  ]
+

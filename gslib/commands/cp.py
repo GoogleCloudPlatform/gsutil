@@ -742,7 +742,7 @@ class CpCommand(Command):
     def _CopyExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
       self.THREADED_LOGGER.error(str(e))
-      self.everything_copied_okay = False
+      self.copy_failure_count += 1
 
     def _CopyFunc(src_uri, exp_src_uri, src_uri_names_container,
                   src_uri_expands_to_multi, have_multiple_srcs):
@@ -786,15 +786,22 @@ class CpCommand(Command):
     stats_lock = threading.Lock()
 
     # Tracks if any copies failed.
-    self.everything_copied_okay = True
+    self.copy_failure_count = 0
 
     # Start the clock.
     start_time = time.time()
 
+    # Tuple of attributes to share/manage across multiple processes in
+    # parallel (-m) mode.
+    shared_attrs = ('copy_failure_count', 'total_bytes_transferred') 
+
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform request with sequential function calls in current process.
-    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler)
+    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler, 
+               shared_attrs)
+    if self.debug:
+      print 'total_bytes_transferred:' + str(self.total_bytes_transferred)
 
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time
@@ -809,8 +816,12 @@ class CpCommand(Command):
                 self.total_bytes_transferred, self.total_elapsed_time,
                 MakeHumanReadable(float(self.total_bytes_transferred) /
                                   float(self.total_elapsed_time))))
-    if not self.everything_copied_okay:
-      raise CommandException('Some files could not be transferred.')
+    if self.copy_failure_count:
+      plural_str = ''
+      if self.copy_failure_count > 1:
+        plural_str = 's'
+      raise CommandException('%d file%s/object%s could not be transferred.' % (
+                             self.copy_failure_count, plural_str, plural_str))
 
   # test specification, see definition of test_steps in base class for
   # details on how to populate these fields

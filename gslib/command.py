@@ -418,7 +418,7 @@ class Command(object):
     ver_file.close()
     return installed_version_string
 
-  def Apply(self, func, src_uri_expansion, thr_exc_handler):
+  def Apply(self, func, src_uri_expansion, thr_exc_handler, shared_attrs=None):
     """Dispatch input URI assignments across a pool of parallel OS
        processes and/or Python threads, based on options (-m or not)
        and settings in the user's config file. If non-parallel mode
@@ -482,13 +482,15 @@ class Command(object):
 
     if self.parallel_operations and (process_count > 1):
       procs = []
-      byte_count = None
-      # If the command calling this method keeps track of bytes transferred,
-      # arrange to manage a global count across multiple OS processes.
-      # TODO: The logic that manages the global byte_count is specific
-      # to the cp command and should be refactored to be generic.
-      if hasattr(self, 'total_bytes_transferred'):
-        byte_count = multiprocessing.Value('i', 0)
+      # If any shared attributes passed by caller, create a dictionary of
+      # shared memory variables for every element in the list of shared
+      # attributes.
+      shared_vars = None
+      if shared_attrs:
+        for name in shared_attrs:
+          if not shared_vars:
+            shared_vars = {}
+          shared_vars[name] = multiprocessing.Value('i', 0)
       for shard in assigned_uris:
         # Spawn a separate OS process for each shard.
         if self.debug:
@@ -499,17 +501,28 @@ class Command(object):
         procs.append(p)
         p.start()
       # Wait for all spawned OS processes to finish.
+      failed_process_count = 0
       for p in procs:
         p.join()
-      # If tracking bytes processed, update the master process' count from
-      # the global counter.
-      if hasattr(self, 'total_bytes_transferred'):
-        self.total_bytes_transferred = byte_count.value
+        # Count number of procs that returned non-zero exit code.
+        if p.exitcode != 0:
+          failed_process_count += 1
+      # Abort main process if one or more sub-processes failed.
+      if failed_process_count:
+        plural_str = ''
+        if failed_process_count > 1:
+          plural_str = 'es'
+        raise Exception('unexpected failure in %d sub-process%s, '
+                        'aborting...' % (failed_process_count, plural_str))
+      # Propagate shared variables back to caller's attributes.
+      if shared_vars:
+        for (name, var) in shared_vars.items():
+          setattr(self, name, var.value)
     else:
       # Only one OS process requested so perform request in current
       # OS process, in shard zero with thread_count threads.
-      self._ApplyThreads(func, assigned_uris[0], 0, thread_count, None,
-                         thr_exc_handler)
+      self._ApplyThreads(func, assigned_uris[0], 0, thread_count, 
+                         thr_exc_handler, None)
 
   ######################
   # Private functions. #
@@ -568,7 +581,7 @@ class Command(object):
         from gslib import no_op_auth_plugin
 
   def _ApplyThreads(self, func, assigned_uris, shard, num_threads,
-                    count=None, thr_exc_handler=None):
+                    thr_exc_handler=None, shared_vars=None):
     """
     Perform subset of required requests across a caller specified
     number of parallel Python threads, which may be one, in which
@@ -581,10 +594,10 @@ class Command(object):
            src_uri_expands_to_multi, have_multiple_srcs).
       shard: Assigned subset (shard number) for this function.
       num_threads: Number of Python threads to spawn to process this shard.
-      count: Shared integer for tracking total bytes transferred.
-             (only relevant, and non-None, if this function is
-             run in a separate OS process).
       thr_exc_handler: Exception handler for ThreadPool class.
+      shared_vars: Dict of shared memory variables to be managed.
+                   (only relevant, and non-None, if this function is	
+                   run in a separate OS process).
     """
     # Each OS process needs to establish its own set of connections to
     # the server to avoid writes from different OS processes interleaving
@@ -621,7 +634,8 @@ class Command(object):
     finally:
       if num_threads > 1:
         thread_pool.Shutdown()
-    # If this call was spawned in a separate OS process, update shared
-    # memory count of bytes transferred.
-    if count:
-      count.value += self.total_bytes_transferred
+    # If any shared variables (which means we are running in a separate OS
+    # process), increment value for each shared variable.
+    if shared_vars:
+      for (name, var) in shared_vars.items():
+        var.value += getattr(self, name)

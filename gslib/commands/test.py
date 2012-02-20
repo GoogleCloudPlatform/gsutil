@@ -77,7 +77,7 @@ class TestCommand(Command):
        requested, display the command, otherwise redirect stdout & stderr
        to /dev/null.
     """
-    if not debug:
+    if not debug and '>' not in cmd:
       cmd += ' >/dev/null 2>&1'
     if debug:
       print 'cmd:', cmd
@@ -93,7 +93,7 @@ class TestCommand(Command):
     print 'Global setup started...'
 
     # Build lists of buckets and files.
-    bucket_list = ['gs://$B%d' % i for i in range(0, 3)]
+    bucket_list = ['gs://$B%d' % i for i in range(0, 10)]
     file_list = ['$F%d' % i for i in range(0, 3)]
 
     # Create test buckets.
@@ -129,7 +129,7 @@ class TestCommand(Command):
     object_list = ['gs://$B%d/*' % i for i in range(0, 10)]
     file_list = ['$F%d' % i for i in range(0, 10)]
     bucket_cmd = self.gsutil_cmd + ' rb ' + ' '.join(bucket_list)
-    object_cmd = self.gsutil_cmd + ' rm ' + ' '.join(object_list)
+    object_cmd = self.gsutil_cmd + ' rm -f ' + ' '.join(object_list)
     for f in file_list:
       f = self.sub_format_specs(f)
       if os.path.exists(f):
@@ -279,7 +279,7 @@ class test_generator(unittest.TestCase):
     def test_func():
       # Run the test command and capture the result in ret.
       ret = runner(cmd, debug)
-      if expect_ret:
+      if expect_ret is not None:
         # If an expected return code was passed, make sure we got it.
         self.assertEqual(ret, expect_ret)
       if result_file and expect_file:
