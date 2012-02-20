@@ -335,26 +335,20 @@ class Command(object):
         raise CommandException('Invalid canned ACL "%s".' % acl_arg)
 
     # Now iterate over URIs and set the ACL on each.
-    did_some_work = False
+    some_matched = False
     for uri_str in uri_args:
-      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
-        if uri.names_bucket():
-          did_some_work = True
-          if self.command_name == 'setdefacl':
-            print 'Setting default object ACL on %s...' % uri
-            uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
-          else:
-            print 'Setting ACL on %s...' % uri
-            uri.set_acl(acl_arg, uri.object_name, False, self.headers)
+      for blr in self.exp_handler.WildcardIterator(uri_str):
+        if blr.HasPrefix():
+          continue
+        some_matched = True
+        uri = blr.GetUri()
+        if self.command_name == 'setdefacl':
+          print 'Setting default object ACL on %s...' % uri
+          uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
         else:
-          for uri in (self.exp_handler.WildcardIterator(uri_str)
-                      .IterUrisForKeys()):
-            did_some_work = True
-            # setdefacl command is only allowed against buckets.
-            assert self.command_name != 'setdefacl'
-            print 'Setting ACL on %s...' % uri
-            uri.set_acl(acl_arg, uri.object_name, False, self.headers)
-    if not did_some_work:
+          print 'Setting ACL on %s...' % uri
+          uri.set_acl(acl_arg, uri.object_name, False, self.headers)
+    if not some_matched:
       raise CommandException('No URIs matched')
 
   def GetAclCommandHelper(self):
