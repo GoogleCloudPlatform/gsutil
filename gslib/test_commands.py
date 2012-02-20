@@ -551,36 +551,62 @@ class GsutilCommandTests(unittest.TestCase):
     """Test that the getlogging command basically runs"""
     self.RunCommand('getlogging', [self.src_bucket_uri.uri])
 
+  def TestLsNonExistentObjectWithPrefixName(self):
+    """Test ls of non-existent obj that matches prefix of existing objs"""
+    # Use an object name that matches a prefix of other names at that level, to
+    # ensure the ls subdir handling logic doesn't pick up anything extra.
+    output = self.RunCommand('ls', ['%sobj' % self.src_bucket_uri.uri],
+                             return_stdout=True)
+    self.assertEqual('', output)
+
   def TestLsBucketNonRecursive(self):
     """Test that ls of a bucket returns expected results"""
     output = self.RunCommand('ls', ['%s*' % self.src_bucket_uri.uri],
                              return_stdout=True)
-    for uri in self.all_src_top_level_obj_uris:
-      self.assertNotEqual(output.find(uri.uri), -1)
+    expected = set(x.uri for x in self.all_src_top_level_obj_uris)
+    expected = expected.union(x.uri for x in self.all_src_subdir_obj_uris)
+    expected.add('%ssrc_subdir/:' % self.src_bucket_uri.uri)
+    expected.add('%ssrc_subdir/nested/' % self.src_bucket_uri.uri)
+    expected.add('') # Blank line between subdir listings.
+    actual = set(output.split('\n'))
+    self.assertEqual(expected, actual)
 
   def TestLsBucketRecursive(self):
     """Test that ls -R of a bucket returns expected results"""
     output = self.RunCommand('ls', ['-R', '%s*' % self.src_bucket_uri.uri],
                              return_stdout=True)
-    for uri in self.all_src_obj_uris:
-      self.assertNotEqual(output.find(uri.uri), -1)
+    expected = set(x.uri for x in self.all_src_obj_uris)
+    expected = expected.union(x.uri for x in self.all_src_subdir_obj_uris)
+    expected.add('%ssrc_subdir/:' % self.src_bucket_uri.uri)
+    expected.add('%ssrc_subdir/nested/:' % self.src_bucket_uri.uri)
+    expected.add('') # Blank line between subdir listings.
+    actual = set(output.split('\n'))
+    self.assertEqual(expected, actual)
 
   def TestLsBucketSubdirNonRecursive(self):
     """Test that ls of a bucket subdir returns expected results"""
     output = self.RunCommand('ls', ['%ssrc_subdir' % self.src_bucket_uri.uri],
                              return_stdout=True)
-    for uri in self.all_src_subdir_obj_uris:
-      self.assertNotEqual(output.find(uri.uri), -1)
-    self.assertNotEqual(
-        output.find('%ssrc_subdir' % self.src_bucket_uri.uri), -1)
+    expected = set(x.uri for x in self.all_src_subdir_obj_uris)
+    expected = expected.union(x.uri for x in self.all_src_subdir_obj_uris)
+    expected.add('%ssrc_subdir/:' % self.src_bucket_uri.uri)
+    expected.add('%ssrc_subdir/nested/' % self.src_bucket_uri.uri)
+    expected.add('') # Blank line between subdir listings.
+    actual = set(output.split('\n'))
+    self.assertEqual(expected, actual)
 
   def TestLsBucketSubdirRecursive(self):
     """Test that ls -R of a bucket subdir returns expected results"""
     output = self.RunCommand('ls',
                              ['-R', '%ssrc_subdir' % self.src_bucket_uri.uri],
                              return_stdout=True)
-    for uri in self.all_src_subdir_and_below_obj_uris:
-      self.assertNotEqual(output.find(uri.uri), -1)
+    expected = set(x.uri for x in self.all_src_subdir_and_below_obj_uris)
+    expected = expected.union(x.uri for x in self.all_src_subdir_obj_uris)
+    expected.add('%ssrc_subdir/:' % self.src_bucket_uri.uri)
+    expected.add('%ssrc_subdir/nested/:' % self.src_bucket_uri.uri)
+    expected.add('') # Blank line between subdir listings.
+    actual = set(output.split('\n'))
+    self.assertEqual(expected, actual)
 
   def TestMakeBucketsCommand(self):
     """Test mb on existing bucket"""
@@ -856,7 +882,7 @@ class GsutilCommandTests(unittest.TestCase):
       # Test removing bucket subdir.
       self.RunCommand(
           'rm', ['-R', '%s%s/dir0%s' %
-              (self.dst_bucket_uri, src_subdir, final_src_char)])
+                       (self.dst_bucket_uri, src_subdir, final_src_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_uri.uri).IterUris())
       expected = set()

@@ -150,6 +150,43 @@ class LsCommand(Command):
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
 
+  def _BuildBlrExpansionForUriOnlyBlr(self, blr):
+    """
+    Builds BucketListingRef expansion from BucketListingRef that contains only a
+    URI (i.e., didn't come from a bucket listing). This case happens for BLR's
+    instantiated from a user-provided URI.
+
+    Args:
+      blr: BucketListingRef to expand
+
+    Returns:
+      List of BucketListingRef to which it expands.
+    """
+    # Do a delimited wildcard expansion so we get any matches along with
+    # whether they are keys or prefixes. That way if bucket contains a key
+    # 'abcd' and another key 'abce/x.txt' the expansion will return two BLRs,
+    # the first with HasKey()=True and the second with HasPrefix()=True.
+    rstripped_blr = blr.GetRStrippedUriString()
+    if ContainsWildcard(rstripped_blr):
+      return list(self.exp_handler.WildcardIterator(rstripped_blr))
+    # Build a wildcard to expand so CloudWildcardIterator will not just treat it
+    # as a key and yield the result without doing a bucket listing.
+    blr_expansion = list(
+        self.exp_handler.WildcardIterator(rstripped_blr + '*'))
+    if (len(blr_expansion) == 1 and blr_expansion[0].HasPrefix()
+        and blr_expansion[0].GetRStrippedUriString() == rstripped_blr):
+      # The bucket listing returned a single Prefix matching the specified
+      # name, so use it for the expansion, to handle the case that the
+      # user was requesting a bucket subdir listing.
+      return blr_expansion
+    # Find the originally specified blr in the expanded list (if present). Don't
+    # just use the expanded list, since it would also include objects whose name
+    # prefix matches the blr name (because of the wildcard match we did above).
+    for cur_blr in blr_expansion:
+      if cur_blr.GetRStrippedUriString() == rstripped_blr:
+        return [cur_blr]
+    return []
+
   def _ExpandUriAndPrintInfo(self, uri, listing_style, should_recurse=False):
     """
     Expands wildcards and directories/buckets for uri as needed, and
@@ -189,18 +226,9 @@ class LsCommand(Command):
             '%s*' % blr.GetUriString()))
         printed_one = True
       else:
-        # Do a delimited wildcard expansion so we get any matches along with
-        # whether they are keys or prefixes. That way if bucket contains a key
-        # 'abcd' and another key 'abce/x.txt' the expansion will return two
-        # BLRs, the first with HasKey()=True and the second with
-        # HasPrefix()=True. Note that we need to ensure there's a wildcard so
-        # CloudWildcardIterator will not just treat it as a key and yield the
-        # result without doing a bucket listing.
-        wildcard_to_expand = blr.GetRStrippedUriString()
-        if not ContainsWildcard(wildcard_to_expand):
-          wildcard_to_expand = '%s*' % wildcard_to_expand
-        blr_expansion = list(self.exp_handler.WildcardIterator(
-            wildcard_to_expand))
+        # This BLR didn't come from a bucket listing. This case happens for
+        # BLR's instantiated from a user-provided URI.
+        blr_expansion = self._BuildBlrExpansionForUriOnlyBlr(blr)
       for cur_blr in blr_expansion:
         if cur_blr.HasKey():
           # Object listing.
@@ -266,7 +294,7 @@ class LsCommand(Command):
             total_bytes += bucket_bytes
             total_objs += bucket_objs
         else:
-          # ls request on provider+bucket URI: List objects in the bucket(s).
+          # Not -b request: List objects in the bucket(s).
           (no, nb) = self._ExpandUriAndPrintInfo(uri, listing_style,
               should_recurse=self.recursion_requested)
           total_objs += no

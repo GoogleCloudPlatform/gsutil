@@ -467,6 +467,6 @@ def ContainsWildcard(uri_or_str):
     bool indicator.
   """
   if isinstance(uri_or_str, basestring):
-    return WILDCARD_REGEX.search(uri_or_str)
+    return bool(WILDCARD_REGEX.search(uri_or_str))
   else:
-    return WILDCARD_REGEX.search(uri_or_str.uri)
+    return bool(WILDCARD_REGEX.search(uri_or_str.uri))
