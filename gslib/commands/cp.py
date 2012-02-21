@@ -898,6 +898,8 @@ class CpCommand(Command):
     ('verify foo/-h gif', 
       'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
       0, ('$F1', 'test.gif')),
+    ('remove test files', 'rm test.mp3 test.gif test.app test.bin test.foo', 
+      0, None),
   ]
 
   def _ParseArgs(self):

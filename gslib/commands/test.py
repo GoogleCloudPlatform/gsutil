@@ -183,9 +183,6 @@ class TestCommand(Command):
       # No commands specified so test all commands.
       commands_to_test = self.command_runner.command_map.keys()
 
-    # Run global test setup.
-    self.global_setup(self.debug)
-
     for name in commands_to_test:
       cmd = self.command_runner.command_map[name]
 
@@ -199,6 +196,9 @@ class TestCommand(Command):
       if cmd in already_tested:
         continue
       already_tested[cmd] = 1
+
+      # Run global test setup.
+      self.global_setup(self.debug)
 
       # If command has a test_setup method, run per command setup here.
       if hasattr(cmd, 'test_setup'):
@@ -238,8 +238,8 @@ class TestCommand(Command):
       if hasattr(cmd, 'test_teardown'):
         cmd.test_teardown(self.debug)
 
-    # Run global test teardown.
-    self.global_teardown(self.debug)
+      # Run global test teardown.
+      self.global_teardown(self.debug)
 
   def sub_format_specs(self, s):
     """Perform iterative regexp substitutions on passed string.
