@@ -52,7 +52,7 @@ SYNOPSIS
         -e Exclude symlinks. When specified, symbolic links will not be copied.
         -p Causes ACL to be preserved when copying in the cloud. Causes extra API calls.
         -R Causes directories and buckets to be copied recursively.
-        -t Sets MIME type based on file extension.
+        -t Sets MIME type based on file extension. (DEPRECATED)
         -z 'txt,html' Compresses file uploads with the given extensions.
       Use '-' in place of src_uri or dst_uri to perform streaming transfer.
     Disable logging on buckets:

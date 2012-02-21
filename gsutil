@@ -126,7 +126,7 @@ def main():
       _OutputUsageAndExit(command_runner)
     if o in ('-h', '--header'):
       (hdr_name, unused_ptn, hdr_val) = a.partition(':')
-      if not hdr_name or not hdr_val:
+      if not hdr_name:
         _OutputUsageAndExit(command_runner)
       headers[hdr_name] = hdr_val
     if o in ('-m', '--multithreaded'):

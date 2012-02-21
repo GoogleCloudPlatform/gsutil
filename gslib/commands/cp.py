@@ -48,6 +48,9 @@ from gslib.wildcard_iterator import ContainsWildcard
 class CpCommand(Command):
   """Implementation of gsutil cp command."""
 
+  # Set default MIME type.
+  DEFAULT_CONTENT_TYPE = 'application/octet-stream'
+
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
@@ -59,6 +62,7 @@ class CpCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
+    # -t is deprecated but leave intact for now to avoid breakage.
     SUPPORTED_SUB_ARGS : 'a:eMprRtz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
@@ -335,6 +339,12 @@ class CpCommand(Command):
     """
     gzip_exts = []
     canned_acl = None
+    # Previously, the -t option was used to request automatic content 
+    # type detection, however, whether -t was specified for not, content
+    # detection was being done. To repair this problem while preserving
+    # backward compatibilty, the -t option has been deprecated and content
+    # type detection is now enabled by default unless the Content-Type 
+    # header is explicitly specified via the -h option.
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
@@ -343,18 +353,34 @@ class CpCommand(Command):
             raise CommandException('Invalid canned ACL "%s".' % a)
           canned_acl = a
         elif o == '-t':
-          mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
-          mime_type = mimetype_tuple[0]
-          content_encoding = mimetype_tuple[1]
-          if mime_type:
-            self.headers['Content-Type'] = mime_type
-            print '\t[Setting Content-Type=%s]' % mime_type
-          else:
-            print '\t[Unknown content type -> using application/octet stream]'
-          if content_encoding:
-            self.headers['Content-Encoding'] = content_encoding
+          print 'Warning: -t is deprecated. Content type detection is ' + (
+                'enabled by default,\nunless inhibited by specifying ') + (
+                'a Content-Type header via the -h option.')
         elif o == '-z':
           gzip_exts = a.split(',')
+    
+    if 'Content-Type' in self.headers:
+      # Process Content-Type header. If specified via -h option with empty
+      # string (i.e. -h "Content-Type:") set header to None, which will 
+      # inhibit boto from sending the CT header. Otherwise, boto will pass 
+      # through the user specified CT header. 
+      if not self.headers['Content-Type']: 
+        self.headers['Content-Type'] = None
+    else:
+      # If no CT header was specified via the -h option, we do auto-content
+      # detection and use the results to formulate the Content-Type and
+      # Content-Encoding headers.
+      mimetype_tuple = mimetypes.guess_type(src_uri.object_name)
+      mime_type = mimetype_tuple[0]
+      content_encoding = mimetype_tuple[1]
+      if mime_type:
+        self.headers['Content-Type'] = mime_type
+        print '\t[Setting Content-Type=%s]' % mime_type
+      else:
+        print '\t[Unknown content type -> using %s]' % self.DEFAULT_CONTENT_TYPE
+      if content_encoding:
+        self.headers['Content-Encoding'] = content_encoding
+
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
       if self.debug:
@@ -831,6 +857,47 @@ class CpCommand(Command):
     ('download', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
     ('stream upload', 'cat $F1 | gsutil cp - gs://$B1/$O1', 0, None),
     ('check stream upload', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
+    ('setup mp3 file', 'echo audio/mpeg >test.mp3', 0, None),
+    ('setup gif file', 'echo image/gif >test.gif', 0, None),
+    ('setup app file', 'echo application/octet-stream >test.app', 0, None),
+    ('setup bin file', 'echo binary/octet-stream >test.bin', 0, None),
+    ('setup foo file', 'echo foo/bar >test.foo', 0, None),
+    ('upload mp3', 'gsutil cp test.mp3 gs://$B1/$O1', 0, None),
+    ('verify mp3', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.mp3')),
+    ('upload gif', 'gsutil cp test.gif gs://$B1/$O1', 0, None),
+    ('verify gif', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.gif')),
+    ('upload foo', 'gsutil cp test.foo gs://$B1/$O1', 0, None),
+    ('verify foo', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.app')),
+    ('upload mp3/noCT', 
+      'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
+    ('verify mp3/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
+      0, ('$F1', 'test.bin')),
+    ('upload gif/noCT', 
+      'gsutil -h "Content-Type:" cp test.gif gs://$B1/$O1', 0, None),
+    ('verify gif/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
+      0, ('$F1', 'test.bin')),
+    ('upload foo/noCT', 'gsutil -h "Content-Type:" cp test.foo gs://$B1/$O1', 
+      0, None),
+    ('verify foo/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
+      0, ('$F1', 'test.bin')),
+    ('upload mp3/-h gif', 
+      'gsutil -h "Content-Type:image/gif" cp test.mp3 gs://$B1/$O1', 0, None),
+    ('verify mp3/-h gif', 
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.gif')),
+    ('upload gif/-h gif', 
+      'gsutil -h "Content-Type:image/gif" cp test.gif gs://$B1/$O1', 0, None),
+    ('verify mp3/-h gif', 
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.gif')),
+    ('upload foo/-h gif', 
+      'gsutil -h "Content-Type: image/gif" cp test.foo gs://$B1/$O1', 0, None),
+    ('verify foo/-h gif', 
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+      0, ('$F1', 'test.gif')),
   ]
 
   def _ParseArgs(self):
