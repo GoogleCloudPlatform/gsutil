@@ -423,6 +423,7 @@ class Command(object):
       func: Function to call to process each URI.
       src_uri_expansion: gslib.name_expansion.NameExpansionResult.
       thr_exc_handler: Exception handler for ThreadPool class.
+      shared_attrs: List of attributes to manage across sub-processes.
 
     Raises:
         CommandException if invalid config encountered.
@@ -490,8 +491,9 @@ class Command(object):
         if self.debug:
           self.THREADED_LOGGER.info('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
-            args=(func, assigned_uris[shard], shard, thread_count, byte_count,
-                  thr_exc_handler))
+                                    args=(func, assigned_uris[shard], shard, 
+                                          thread_count, thr_exc_handler, 
+                                          shared_vars))
         procs.append(p)
         p.start()
       # Wait for all spawned OS processes to finish.
