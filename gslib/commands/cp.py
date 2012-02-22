@@ -39,10 +39,32 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import ONE_MB
 from gslib.wildcard_iterator import ContainsWildcard
+
+_detailed_help_text = ("""
+gsutil cp [-a canned_acl] [-e] [-p] [-t] [-z ext1,ext2,...] src_uri dst_uri
+  - or -
+gsutil cp [-a canned_acl] [-e] [-p] [-R] [-t] [-z extensions] uri... dst_uri
+
+  -a Sets named canned_acl when uploaded objects created (list below).
+  -e Exclude symlinks. When specified, symbolic links will not be copied.
+  -p Causes ACL to be preserved when copying in the cloud.
+     Causes extra API calls.
+  -R Causes directories and buckets to be copied recursively.
+  -t Sets MIME type based on file extension. (DEPRECATED)
+  -z 'txt,html' Compresses file uploads with the given extensions.
+
+Use '-' in place of src_uri or dst_uri to perform streaming transfer.
+""")
 
 
 class CpCommand(Command):
@@ -72,6 +94,18 @@ class CpCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'cp',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['copy'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Copy files/objects to/from the cloud',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   def _CheckFinalMd5(self, key, file_name):
@@ -339,11 +373,11 @@ class CpCommand(Command):
     """
     gzip_exts = []
     canned_acl = None
-    # Previously, the -t option was used to request automatic content 
+    # Previously, the -t option was used to request automatic content
     # type detection, however, whether -t was specified for not, content
     # detection was being done. To repair this problem while preserving
     # backward compatibilty, the -t option has been deprecated and content
-    # type detection is now enabled by default unless the Content-Type 
+    # type detection is now enabled by default unless the Content-Type
     # header is explicitly specified via the -h option.
     if self.sub_opts:
       for o, a in self.sub_opts:
@@ -358,13 +392,13 @@ class CpCommand(Command):
                 'a Content-Type header via the -h option.')
         elif o == '-z':
           gzip_exts = a.split(',')
-    
+
     if 'Content-Type' in self.headers:
       # Process Content-Type header. If specified via -h option with empty
-      # string (i.e. -h "Content-Type:") set header to None, which will 
-      # inhibit boto from sending the CT header. Otherwise, boto will pass 
-      # through the user specified CT header. 
-      if not self.headers['Content-Type']: 
+      # string (i.e. -h "Content-Type:") set header to None, which will
+      # inhibit boto from sending the CT header. Otherwise, boto will pass
+      # through the user specified CT header.
+      if not self.headers['Content-Type']:
         self.headers['Content-Type'] = None
     else:
       # If no CT header was specified via the -h option, we do auto-content
@@ -819,12 +853,12 @@ class CpCommand(Command):
 
     # Tuple of attributes to share/manage across multiple processes in
     # parallel (-m) mode.
-    shared_attrs = ('copy_failure_count', 'total_bytes_transferred') 
+    shared_attrs = ('copy_failure_count', 'total_bytes_transferred')
 
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform request with sequential function calls in current process.
-    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler, 
+    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler,
                shared_attrs)
     if self.debug:
       print 'total_bytes_transferred:' + str(self.total_bytes_transferred)
@@ -863,40 +897,40 @@ class CpCommand(Command):
     ('setup bin file', 'echo binary/octet-stream >test.bin', 0, None),
     ('setup foo file', 'echo foo/bar >test.foo', 0, None),
     ('upload mp3', 'gsutil cp test.mp3 gs://$B1/$O1', 0, None),
-    ('verify mp3', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify mp3', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.mp3')),
     ('upload gif', 'gsutil cp test.gif gs://$B1/$O1', 0, None),
-    ('verify gif', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify gif', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.gif')),
     ('upload foo', 'gsutil cp test.foo gs://$B1/$O1', 0, None),
-    ('verify foo', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify foo', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.app')),
-    ('upload mp3/noCT', 
+    ('upload mp3/noCT',
       'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
     ('verify mp3/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.bin')),
-    ('upload gif/noCT', 
+    ('upload gif/noCT',
       'gsutil -h "Content-Type:" cp test.gif gs://$B1/$O1', 0, None),
     ('verify gif/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.bin')),
-    ('upload foo/noCT', 'gsutil -h "Content-Type:" cp test.foo gs://$B1/$O1', 
+    ('upload foo/noCT', 'gsutil -h "Content-Type:" cp test.foo gs://$B1/$O1',
       0, None),
     ('verify foo/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.bin')),
-    ('upload mp3/-h gif', 
+    ('upload mp3/-h gif',
       'gsutil -h "Content-Type:image/gif" cp test.mp3 gs://$B1/$O1', 0, None),
-    ('verify mp3/-h gif', 
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify mp3/-h gif',
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.gif')),
-    ('upload gif/-h gif', 
+    ('upload gif/-h gif',
       'gsutil -h "Content-Type:image/gif" cp test.gif gs://$B1/$O1', 0, None),
-    ('verify mp3/-h gif', 
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify mp3/-h gif',
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.gif')),
-    ('upload foo/-h gif', 
+    ('upload foo/-h gif',
       'gsutil -h "Content-Type: image/gif" cp test.foo gs://$B1/$O1', 0, None),
-    ('verify foo/-h gif', 
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1', 
+    ('verify foo/-h gif',
+      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test.gif')),
     ('remove test files', 'rm test.mp3 test.gif test.app test.bin test.foo', 
       0, None),
@@ -1000,7 +1034,7 @@ class CpCommand(Command):
     gs://bucket/abc names an object; in contrast, when running the command
     gsutil cp file1 file2 gs://bucket/abc
     gs://bucket/abc names a bucket "sub-directory".
-   
+
     Note that we don't disallow naming a bucket "sub-directory" where there's
     already an object at that URI. For example it's legitimate (albeit
     confusing) to have an object called gs://bucket/dir and

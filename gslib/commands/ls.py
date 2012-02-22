@@ -12,21 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from gslib.bucket_listing_ref import BucketListingRef
+from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
-from gslib.command import Command
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.bucket_listing_ref import BucketListingRef
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
+
+_detailed_help_text = ("""
+gsutil ls [-b] [-l] [-L] [-p proj_id] uri...
+   -l Prints long listing (owner, length); -L provides more detail.
+   -b Prints info about the bucket when used with a bucket URI.
+   -p proj_id Specifies the project ID to use for listing buckets.
+""")
 
 
 class LsCommand(Command):
@@ -52,6 +65,18 @@ class LsCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'ls',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['dir', 'list'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'List buckets or objects',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   def _PrintBucketInfo(self, bucket_uri, listing_style):
@@ -319,7 +344,7 @@ class LsCommand(Command):
     ('gen obj expect', 'echo gs://$B1/$O0 >$F8', 0, None),
     ('simple ls', 'gsutil ls', 0, None),
     ('list empty bucket', 'gsutil ls gs://$B0', 0, None),
-    ('list empty bucket w/ -b', 'gsutil ls -b gs://$B0 >$F7', 0, 
+    ('list empty bucket w/ -b', 'gsutil ls -b gs://$B0 >$F7', 0,
                                                         ('$F7', '$F9')),
     ('list bucket contents', 'gsutil ls gs://$B1 >$F7', 0, ('$F7', '$F8')),
     ('list object', 'gsutil ls gs://$B1/$O0 >$F7', 0, ('$F7', '$F8')),

@@ -33,8 +33,70 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import HAVE_OAUTH2
 from gslib.util import ONE_MB
+
+_detailed_help_text = ("""
+gsutil [-D] config [-a] [-b] [-f] [-o <file>] [-r] [-s <scope>] [-w]
+
+The gsutil config command obtains access credentials for Google Cloud Storage,
+and writes a boto/gsutil configuration file with the obtained credentials.
+
+Unless specified otherwise, the configuration file is written to the default
+config file path '%s'. If the default config file already exists, an attempt
+is made to rename the existing file to a backup file '%s'; if that attempt
+fails the command will exit.
+
+A different destination file can be specified with the -o <file> option (use
+'-o -' to write the config to standard output). If the specified file already
+exists, the command will fail.
+
+By default, gsutil config obtains OAuth2 tokens as follows (for background
+on OAuth2, see http://code.google.com/apis/accounts/docs/OAuth2.html):
+The command asks the user to open a web broswer to a URL for Google's
+OAuth2 authorization page. In the browser, the user will be asked to sign
+into the user's Google Account, unless already signed in. The user is then
+prompted to authorize gsutil to access the user's Google Cloud Storage account
+on the user's behalf. If the user approves the request, a verification
+code is shown. The gsutil config command prompts for this verification
+code, which is used to obtain an OAuth2 token that is written to the
+configuration file.
+
+The -b option can be used to instruct gsutil config to launch a browser,
+(using python's webbrowser module) to navigate to Google's OAuth2
+authorization page.  Note that this will probably not work as expected
+if you are running gsutil from an ssh window, or using gsutil on Windows.
+
+The -r, -w, -f options cause gsutil config to request a token with restricted
+scope; the resulting token will be restricted to read-only operations,
+read-write operation, or all operations (including getacl/setacl/
+getdefacl/setdefacl/disablelogging/enablelogging/getlogging operations).
+In addition, -s <scope> can be used to request additional
+(non-Google-Storage) scopes.
+
+If no explicit scope option is given, -f (full control) is assumed by default.
+
+The -a option can be used to prompt for Google Cloud Storage access key and
+secret (the older authentication method before OAuth2 was supported) instead.
+
+Options:
+  -a          Prompt for Google Cloud Storage access key and secret instead of
+              obtaining an OAuth2 token.
+  -b          Launch browser to obtain OAuth2 approval and project ID instead
+              of showing the URL and asking user to open the browser.
+  -f          Request token with full-control access (default).
+  -o <file>   Write the configuration to <file> (use '-' for stdout)
+  -r          Request token restricted to read-only access.
+  -s <scope>  Request additional OAuth2 <scope>.
+  -w          Request token restricted to read-write access.
+""")
+
 
 try:
   from oauth2_plugin import oauth2_helper
@@ -57,13 +119,13 @@ CONFIG_PRELUDE_CONTENT = """
 """
 
 # Default number of OS processes and Python threads for parallel operations.
-# On Linux systems we automatically scale the number of processes to match 
-# the underlying CPU/core count. Given we'll be running multiple concurrent 
-# processes on a typical multi-core Linux computer, to avoid being too 
-# aggresive with resources, the default number of threads is reduced from 
+# On Linux systems we automatically scale the number of processes to match
+# the underlying CPU/core count. Given we'll be running multiple concurrent
+# processes on a typical multi-core Linux computer, to avoid being too
+# aggresive with resources, the default number of threads is reduced from
 # the previous value of 24 to 10.
 # On Windows and Mac systems parallel multiprocessing and multithreading
-# in Python presents various challenges so we retain compaibility with 
+# in Python presents various challenges so we retain compaibility with
 # the established parallel mode operation, i.e. one process and 24 threads.
 if platform.system() == 'Linux':
   DEFAULT_PARALLEL_PROCESS_COUNT = multiprocessing.cpu_count()
@@ -126,12 +188,12 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
 
-# 'parallel_process_count' and 'parallel_thread_count' specify the number 
-# of OS processes and Python threads, respectively, to use when executing 
-# operations in parallel. The default settings should work well as configured, 
-# however, to enhance performance for transfers involving large numbers of 
-# files, you may experiment with hand tuning these values to optimize 
-# performance for your particular system configuration. 
+# 'parallel_process_count' and 'parallel_thread_count' specify the number
+# of OS processes and Python threads, respectively, to use when executing
+# operations in parallel. The default settings should work well as configured,
+# however, to enhance performance for transfers involving large numbers of
+# files, you may experiment with hand tuning these values to optimize
+# performance for your particular system configuration.
 # MacOS and Windows users should see
 # http://code.google.com/p/gsutil/issues/detail?id=78 before attempting
 # to experiment with these values.
@@ -185,64 +247,6 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 #provider_token_uri = https://accounts.google.com/o/oauth2/token
 """
 
-CONFIG_COMMAND_HELP = """
-Help on the gsutil config command:
-  gsutil [-D] config [OPTION]
-
-  The gsutil config command obtains access credentials for Google Cloud Storage,
-  and writes a boto/gsutil configuration file with the obtained credentials.
-
-  Unless specified otherwise, the configuration file is written to the default
-  config file path '%s'. If the default config file already exists, an attempt
-  is made to rename the existing file to a backup file '%s'; if that attempt
-  fails the command will exit.
-
-  A different destination file can be specified with the -o <file> option (use
-  '-o -' to write the config to standard output). If the specified file already
-  exists, the command will fail.
-
-  By default, gsutil config obtains OAuth2 tokens as follows (for background
-  on OAuth2, see http://code.google.com/apis/accounts/docs/OAuth2.html):
-  The command asks the user to open a web broswer to a URL for Google's
-  OAuth2 authorization page. In the browser, the user will be asked to sign
-  into the user's Google Account, unless already signed in. The user is then
-  prompted to authorize gsutil to access the user's Google Cloud Storage account
-  on the user's behalf. If the user approves the request, a verification
-  code is shown. The gsutil config command prompts for this verification
-  code, which is used to obtain an OAuth2 token that is written to the
-  configuration file.
-
-  The -b option can be used to instruct gsutil config to launch a browser,
-  (using python's webbrowser module) to navigate to Google's OAuth2
-  authorization page.  Note that this will probably not work as expected
-  if you are running gsutil from an ssh window, or using gsutil on Windows.
-
-  The -r, -w, -f options cause gsutil config to request a token with restricted
-  scope; the resulting token will be restricted to read-only operations,
-  read-write operation, or all operations (including getacl/setacl/
-  getdefacl/setdefacl/disablelogging/enablelogging/getlogging operations).  
-  In addition, -s <scope> can be used to request additional 
-  (non-Google-Storage) scopes.
-
-  If no explicit scope option is given, -f (full control) is assumed by default.
-
-  The -a option can be used to prompt for Google Cloud Storage access key and
-  secret instead.
-
-  Options:
-    -h          Print this help.
-    -a          Prompt for Google Cloud Storage access key and secret instead of
-                obtaining an OAuth2 token.
-    -b          Launch browser to obtain OAuth2 approval and project ID instead
-                of showing the URL and asking user to open the browser.
-    -f          Request token with full-control access (default).
-    -o <file>   Write the configuration to <file> (use '-' for stdout)
-    -r          Request token restricted to read-only access.
-    -s <scope>  Request additional OAuth2 <scope>.
-    -w          Request token restricted to read-write access.
-
-"""
-
 class ConfigCommand(Command):
   """Implementation of gsutil config command."""
 
@@ -266,6 +270,18 @@ class ConfigCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : False,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'config',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['cfg', 'conf', 'configure'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Obtain credentials and create configuration file',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   def _OpenConfigFile(self, file_path):
@@ -463,9 +479,6 @@ class ConfigCommand(Command):
         launch_browser = True
       elif opt == '-f':
         scopes.append(SCOPE_FULL_CONTROL)
-      elif opt == '-h':
-        sys.stderr.write(CONFIG_COMMAND_HELP)
-        sys.exit(0)
       elif opt == '-o':
         output_file_name = opt_arg
       elif opt == '-r':

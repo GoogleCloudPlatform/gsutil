@@ -30,6 +30,16 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
+
+_detailed_help_text = ("""
+gsutil update
+""")
 
 
 class UpdateCommand(Command):
@@ -40,7 +50,7 @@ class UpdateCommand(Command):
     # Name of command.
     COMMAND_NAME : 'update',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : [],
+    COMMAND_NAME_ALIASES : ['refresh'],
     # Min number of args required by this command.
     MIN_ARGS : 0,
     # Max number of args required by this command, or NO_MAX.
@@ -55,6 +65,18 @@ class UpdateCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'update',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['refresh'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Update to latest version of gsutil',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):

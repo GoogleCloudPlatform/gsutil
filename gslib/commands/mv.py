@@ -23,8 +23,25 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
+
+_detailed_help_text = ("""
+gsutil mv [-p] [-R] src_uri dst_uri
+  - or -
+gsutil mv [-p] [-R] uri... dst_uri
+
+  -R Causes directories, buckets, and bucket subdirs to be moved recursively.
+
+  -p option causes ACL to be preserved when copying in the cloud. Causes
+  extra API calls.
+""")
 
 
 class MvCommand(Command):
@@ -54,6 +71,18 @@ class MvCommand(Command):
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
   }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'mv',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['move', 'rename'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Move/rename objects',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
+  }
 
   # Command entry point.
   def RunCommand(self):
@@ -79,7 +108,8 @@ class MvCommand(Command):
     if self.recursion_requested:
       for src_uri in self.args[0:len(self.args)-1]:
         if ContainsWildcard(src_uri):
-          raise CommandException('source URI cannot contain wildcards with mv -r')
+          raise CommandException(
+              'source URI cannot contain wildcards with mv -r')
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in StorageUris
     # before running cp and rm commands, to prevent the
@@ -133,16 +163,16 @@ class MvCommand(Command):
     ('gen expect files', 'echo 0 >$F0; echo 1 >$F1; echo 2 >$F2', 0, None),
     ('verify 2 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F2')),
     ('verify 0 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('mv 2 objects', 
-       'gsutil -m mv gs://$B2/$O0 gs://$B2/$O1 gs://$B0 2>&1 | grep Removing', 
+    ('mv 2 objects',
+       'gsutil -m mv gs://$B2/$O0 gs://$B2/$O1 gs://$B0 2>&1 | grep Removing',
        0, None),
     ('verify 0 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
     ('verify 2 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F2')),
     ('rm 1 src object', 'gsutil rm gs://$B0/$O0', 0, None),
     ('verify 1 src obj', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F1')),
     ('verify 0 dst objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('mv 2 objects', 
-       'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2 2>&1 | grep Removing', 
+    ('mv 2 objects',
+       'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2 2>&1 | grep Removing',
        1, None),
   ]
 

@@ -26,7 +26,18 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
+
+_detailed_help_text = ("""
+gsutil cat [-h] uri...
+  -h  Prints short header for each object.
+""")
 
 
 class CatCommand(Command):
@@ -52,6 +63,18 @@ class CatCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'cat',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : [],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Concatenate object content to stdout',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   # Command entry point.

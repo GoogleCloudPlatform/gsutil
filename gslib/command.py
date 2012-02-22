@@ -38,6 +38,7 @@ from boto import handler
 from boto.storage_uri import StorageUri
 from exception import CommandException
 from getopt import GetoptError
+from gslib.help_provider import HelpProvider
 from gslib import util
 from gslib.name_expansion import NameExpansionHandler
 from gslib.project_id import ProjectIdHandler
@@ -108,6 +109,7 @@ class Command(object):
     CONFIG_REQUIRED : True,
   }
   _default_command_spec = command_spec
+  help_spec = HelpProvider.help_spec
 
   """Define an empty test specification, which derived classes must populate.
 
@@ -491,8 +493,8 @@ class Command(object):
         if self.debug:
           self.THREADED_LOGGER.info('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
-                                    args=(func, assigned_uris[shard], shard, 
-                                          thread_count, thr_exc_handler, 
+                                    args=(func, assigned_uris[shard], shard,
+                                          thread_count, thr_exc_handler,
                                           shared_vars))
         procs.append(p)
         p.start()
@@ -517,7 +519,7 @@ class Command(object):
     else:
       # Only one OS process requested so perform request in current
       # OS process, in shard zero with thread_count threads.
-      self._ApplyThreads(func, assigned_uris[0], 0, thread_count, 
+      self._ApplyThreads(func, assigned_uris[0], 0, thread_count,
                          thr_exc_handler, None)
 
   def HaveFileUris(self, args_to_check):

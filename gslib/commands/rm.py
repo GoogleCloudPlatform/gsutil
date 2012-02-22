@@ -25,7 +25,19 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
+
+_detailed_help_text = ("""
+gsutil rm [-f] [-R] uri...
+   -f Continues despite errors when removing by wildcard.
+   -R Causes buckets and bucket subdirs to be removed recursively.
+""")
 
 
 class RmCommand(Command):
@@ -51,6 +63,18 @@ class RmCommand(Command):
     URIS_START_ARG : 0,
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : True,
+  }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'rm',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['del', 'delete', 'remove'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Remove objects',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
   }
 
   # Command entry point.
@@ -87,7 +111,7 @@ class RmCommand(Command):
                                '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
       self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
       exp_src_uri.delete_key(validate=False, headers=self.headers)
-    
+
     # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
         self.args, flat=self.recursion_requested)

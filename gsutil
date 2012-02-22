@@ -94,7 +94,7 @@ def main():
 
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
-    command_runner.RunNamedCommand('help')
+    sys.argv.append('help')
 
   # Change the default of the 'https_validate_certificates' boto option to
   # True (it is currently False in boto).

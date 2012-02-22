@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import fcntl
+import gslib
+import itertools
+import os
+import struct
 import sys
+import termios
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -24,96 +30,25 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.help_provider import ALL_HELP_TYPES
+from gslib.help_provider import HELP_NAME
+from gslib.help_provider import HELP_NAME_ALIASES
+from gslib.help_provider import HELP_ONE_LINE_SUMMARY
+from gslib.help_provider import HelpProvider
+from gslib.help_provider import HELP_TEXT
+from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import MAX_HELP_NAME_LEN
+from subprocess import PIPE
+from subprocess import Popen
 
-usage_string = """
-SYNOPSIS
-  gsutil [-d][-D] [-h header]... [-m] [command args...]
+_detailed_help_text = ("""
+gsutil help [command or topic]
+""")
 
-  -d option shows HTTP requests/headers.
-  -D option includes additional debug info needed when posting support
-     requests to gs-discussion@googlegroups.com.
-  -DD includes HTTP upstream payload.
-
-  -h option allows you to specify additional HTTP headers, for example:
-     gsutil -h "Cache-Control:public,max-age=3600" -h "Content-Type:text/html" cp ...
-
-  -m option causes supported operations (cp, mv, rm) to run in parallel.
-  -s option causes gsutil to use a simulated storage provider (for testing).
-
-  Commands:
-    Concatenate object content to stdout:
-      cat [-h] uri...
-        -h  Prints short header for each object.
-    Copy objects:
-      cp [-a canned_acl] [-e] [-p] [-t] [-z ext1,ext2,...] src_uri dst_uri
-        - or -
-      cp [-a canned_acl] [-e] [-p] [-R] [-t] [-z extensions] uri... dst_uri
-        -a Sets named canned_acl when uploaded objects created (list below).
-        -e Exclude symlinks. When specified, symbolic links will not be copied.
-        -p Causes ACL to be preserved when copying in the cloud. Causes extra API calls.
-        -R Causes directories and buckets to be copied recursively.
-        -t Sets MIME type based on file extension. (DEPRECATED)
-        -z 'txt,html' Compresses file uploads with the given extensions.
-      Use '-' in place of src_uri or dst_uri to perform streaming transfer.
-    Disable logging on buckets:
-      disablelogging uri...
-    Enable logging on buckets:
-      enablelogging -b log_bucket [-o log_object_prefix] uri...
-        -b Log bucket.
-        -o Prefix for log object names. Default value is the bucket name.
-    Get ACL XML for a bucket or object (save and edit for "setacl" command):
-      getacl uri
-    Get default ACL XML for a bucket (save and edit for "setdefacl" command):
-      getdefacl uri
-    Get logging XML for a bucket:
-      getlogging uri
-    List buckets or objects:
-      ls [-b] [-l] [-L] [-p proj_id] uri...
-         -l Prints long listing (owner, length); -L provides more detail.
-         -b Prints info about the bucket when used with a bucket URI.
-         -p proj_id Specifies the project ID to use for listing buckets.
-    Make buckets:
-      mb [-l LocationConstraint] [-p proj_id] uri...
-         -l can be us or eu. Default is us
-         -p proj_id Specifies the project ID under which to create the bucket.
-    Move/rename objects:
-      mv [-p] [-R] src_uri dst_uri
-        - or -
-      mv [-p] [-R] uri... dst_uri
-        -R Causes directories, buckets, and bucket subdirs to be moved recursively.
-      The -p option causes ACL to be preserved when copying in the
-      cloud. Causes extra API calls.
-    Remove buckets:
-      rb uri...
-    Remove objects:
-      rm [-f] [-R] uri...
-         -f Continues despite errors when removing by wildcard.
-         -R Causes buckets and bucket subdirs to be removed recursively.
-    Set ACL on buckets and/or objects:
-      setacl file-or-canned_acl_name uri...
-    Set default ACL on buckets:
-      setdefacl file-or-canned_acl_name uri...
-    Print version info:
-      ver
-    Obtain credentials and create configuration file:
-      config [options] [-o <config file>]
-         Run 'gsutil config -h' for detailed help on this command.
-
-  Omitting URI scheme defaults to "file". For example, "dir/file.txt" is
-  equivalent to "file://dir/file.txt"
-
-  URIs support object name wildcards, for example:
-    gsutil cp gs://mybucket/[a-f]*.doc localdir
-
-  Source directory or bucket names are implicitly wildcarded, so
-    gsutil cp localdir gs://mybucket
-  will recursively copy localdir.
-
-  canned_acl_name can be one of: "private", "project-private",
-  "public-read", "public-read-write", "authenticated-read",
-  "bucket-owner-read", "bucket-owner-full-control"
-"""
-
+top_level_usage_string = (
+    "Usage: gsutil [-d][-D] [-h header]... [-m] [command [opts...] args...]"
+)
 
 class HelpCommand(Command):
   """Implementation of gsutil help command."""
@@ -127,11 +62,11 @@ class HelpCommand(Command):
     # Min number of args required by this command.
     MIN_ARGS : 0,
     # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 0,
+    MAX_ARGS : 1,
     # Getopt-style string specifying acceptable sub args.
     SUPPORTED_SUB_ARGS : '',
     # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
+    FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
     PROVIDER_URIS_OK : False,
     # Index in args of first URI arg.
@@ -139,8 +74,105 @@ class HelpCommand(Command):
     # True if must configure gsutil before running command.
     CONFIG_REQUIRED : False,
   }
+  help_spec = {
+    # Name of command or auxiliary help info for which this help applies.
+    HELP_NAME : 'help',
+    # List of help name aliases.
+    HELP_NAME_ALIASES : ['?'],
+    # Type of help)
+    HELP_TYPE : HelpType.COMMAND_HELP,
+    # One line summary of this help.
+    HELP_ONE_LINE_SUMMARY : 'Get help about commands and topics',
+    # The full help text.
+    HELP_TEXT : _detailed_help_text,
+  }
 
   # Command entry point.
   def RunCommand(self):
-    sys.stderr.write(usage_string)
-    sys.exit(0)
+    (help_type_map, help_name_map) = self._LoadHelpMaps()
+    output = []
+    if not len(self.args):
+      format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
+      output.append('%s\nAvailable commands:\n' % top_level_usage_string)
+      for help_prov in sorted(help_type_map[HelpType.COMMAND_HELP],
+                              key=lambda hp: hp.help_spec[HELP_NAME]):
+        output.append(format_str % (help_prov.help_spec[HELP_NAME],
+                                    help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+      output.append('\nAdditional help topics:\n')
+      for help_prov in sorted(help_type_map[HelpType.ADDITIONAL_HELP],
+                              key=lambda hp: hp.help_spec[HELP_NAME]):
+        output.append(format_str % (help_prov.help_spec[HELP_NAME],
+                                    help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+      output.append('\nUse gsutil help <command or topic> for detailed help')
+    else:
+      arg = self.args[0]
+      if arg not in help_name_map:
+        output.append('No help available for "%s"' % arg)
+      else:
+        help_prov = help_name_map[self.args[0]]
+        output.append(help_prov.help_spec[HELP_TEXT].strip('\n'))
+    self._OutputHelp(''.join(output))
+
+  def _OutputHelp(self, str):
+    """Outputs string, paginating if long and PAGER env var defined"""
+    num_lines = len(str.split('\n'))
+    if 'PAGER' in os.environ and num_lines > self.getTerminalSize()[1]:
+      Popen(os.environ['PAGER'], stdin=PIPE).communicate(input=str)
+    else:
+      print str
+
+  def getTerminalSize(self):
+    """Returns terminal (width, height)"""
+    def ioctl_GWINSZ(fd):
+      try:
+        cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+      except:
+        return (0, 0)
+      return cr
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+      try:
+        fd = os.open(os.ctermid(), os.O_RDONLY)
+        cr = ioctl_GWINSZ(fd)
+        os.close(fd)
+      except:
+        pass
+    if not cr:
+      try:
+        cr = (env['LINES'], env['COLUMNS'])
+      except:
+        cr = (25, 80)
+    return int(cr[1]), int(cr[0])
+
+  def _LoadHelpMaps(self):
+    """Returns tuple (help type -> [HelpProviders],
+                      help name->HelpProvider dict,
+                     )."""
+    # Walk gslib/commands and gslib/addlhelp to find all HelpProviders.
+    for f in os.listdir(os.path.join(self.gsutil_bin_dir, 'gslib', 'commands')):
+      # Handles no-extension files, etc.
+      (module_name, ext) = os.path.splitext(f)
+      if ext == '.py':
+        __import__('gslib.commands.%s' % module_name)
+    for f in os.listdir(os.path.join(self.gsutil_bin_dir, 'gslib', 'addlhelp')):
+      (module_name, ext) = os.path.splitext(f)
+      if ext == '.py':
+        __import__('gslib.addlhelp.%s' % module_name)
+    help_type_map = {}
+    help_name_map = {}
+    for s in gslib.help_provider.ALL_HELP_TYPES:
+      help_type_map[s] = []
+    # Only include HelpProvider subclasses in the dict.
+    for help_prov in itertools.chain(
+        HelpProvider.__subclasses__(), Command.__subclasses__()):
+      if help_prov is Command:
+        # Skip the Command base class itself; we just want its subclasses,
+        # where the help command text lives (in addition to non-Command
+        # HelpProviders, like naming.py).
+        continue
+      gslib.help_provider.SanityCheck(help_prov)
+      help_name_map[help_prov.help_spec[HELP_NAME]] = help_prov
+      for help_name_aliases in help_prov.help_spec[HELP_NAME_ALIASES]:
+        help_name_map[help_name_aliases] = help_prov
+      help_type_map[help_prov.help_spec[HELP_TYPE]].append(help_prov)
+    return (help_type_map, help_name_map)
