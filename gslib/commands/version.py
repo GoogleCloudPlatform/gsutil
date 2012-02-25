@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import boto
+import os
 import sys
 
 from boto.pyami.config import BotoConfigLocations
@@ -31,6 +33,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from hashlib import md5
 
 _detailed_help_text = ("""
 gsutil version
@@ -86,7 +89,7 @@ class VersionCommand(Command):
           if not line:
             break
           if line.find('was created by gsutil version') != -1:
-            config_ver = ', config file version %s' % line.split('"')[-2]
+            config_ver = line.split('"')[-2]
             break
         # Only look at first config file found in BotoConfigLocations.
         break
@@ -96,5 +99,41 @@ class VersionCommand(Command):
         if f:
           f.close()
 
-    sys.stderr.write('gsutil version %s%s, python version %s\n' % (
-        self.LoadVersionString(), config_ver, sys.version))
+    f = open(os.path.join(self.gsutil_bin_dir, 'CHECKSUM'))
+    shipped_checksum = f.read().strip()
+    f.close()
+    cur_checksum = self._ComputeCodeChecksum()
+    if shipped_checksum == cur_checksum:
+      checksum_ok_str = 'OK'
+    else:
+      checksum_ok_str = '!= %s' % shipped_checksum
+    sys.stderr.write(
+        'gsutil version %s\nchecksum %s (%s)\nconfig file version %s\n'
+        'boto version %s\npython version %s\n' % (
+        self.LoadVersionString(), cur_checksum, checksum_ok_str, config_ver,
+        boto.__version__, sys.version))
+
+  def _ComputeCodeChecksum(self):
+    """
+    Computes a checksum of gsutil code so we can see if users locally modified
+    gsutil when requesting support. (It's fine for users to make local mods,
+    but when users ask for support we ask them to run a stock version of
+    gsutil so we can reduce possible variables.)
+    """
+    m = md5()
+    # Checksum gsutil and all .py files under gsutil bin (including bundled
+    # libs).  Although we will eventually make gsutil allow use of a centrally
+    # installed boto (once boto shifts to more frequent releases), in that case
+    # the local copies still should not have any user modifications.
+    files_to_checksum = [os.path.join(self.gsutil_bin_dir, 'gsutil')]
+    for root, sub_folders, files in os.walk(self.gsutil_bin_dir):
+      for file in files:
+        if file[-3:] == '.py':
+          files_to_checksum.append(os.path.join(root, file))
+    # Sort to ensure consistent checksum build, no matter how os.walk
+    # orders the list.
+    for file in sorted(files_to_checksum):
+      f = open(file, 'r')
+      m.update(f.read())
+      f.close()
+    return m.hexdigest()
