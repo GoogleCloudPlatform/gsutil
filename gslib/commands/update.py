@@ -54,7 +54,7 @@ class UpdateCommand(Command):
     # Min number of args required by this command.
     MIN_ARGS : 0,
     # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 0,
+    MAX_ARGS : 1,
     # Getopt-style string specifying acceptable sub args.
     SUPPORTED_SUB_ARGS : 'f',
     # True if file URIs acceptable for this command.
@@ -173,7 +173,11 @@ class UpdateCommand(Command):
     dirs_to_remove.append(tmp_dir)
     os.chdir(tmp_dir)
     print 'Checking for software update...'
-    self.command_runner.RunNamedCommand('cp', ['gs://pub/gsutil.tar.gz',
+    if len(self.args):
+      update_from_uri_str = self.args[0]
+    else:
+      update_from_uri_str = 'gs://pub/gsutil.tar.gz'
+    self.command_runner.RunNamedCommand('cp', [update_from_uri_str,
                                           'file://gsutil.tar.gz'],
                                            self.headers, self.debug)
     # Note: tf is closed in _CleanUpUpdateCommand.
