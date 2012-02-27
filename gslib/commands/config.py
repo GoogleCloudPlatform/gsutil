@@ -199,6 +199,15 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # to experiment with these values.
 #parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d
+
+# 'use_magicfile' specifies if the 'file --mime-type <filename>' command should
+# be used to guess MIME types instead of the default filename extension-based
+# mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
+# running Cygwin or some other package that provides implementations of
+# UNIX-like commands). When available and enabled use_magicfile should be more
+# robust because it analyzes file contents in addition to extensions.
+#use_magicfile = False
+
 """ % {'resumable_threshold': ONE_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}
@@ -358,7 +367,7 @@ class ConfigCommand(Command):
         raise CommandException('No credentials provided. Please try again.')
 
     # Write the config file prelude.
-    config_file.write(CONFIG_PRELUDE_CONTENT)
+    config_file.write(CONFIG_PRELUDE_CONTENT.lstrip())
     config_file.write(
         '# This file was created by gsutil version "%s"\n# at %s.\n'
         % (self.LoadVersionString(),
