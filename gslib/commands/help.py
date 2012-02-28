@@ -30,6 +30,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import CommandException
 from gslib.help_provider import ALL_HELP_TYPES
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -116,33 +117,43 @@ class HelpCommand(Command):
   def _OutputHelp(self, str):
     """Outputs string, paginating if long and PAGER env var defined"""
     num_lines = len(str.split('\n'))
-    if 'PAGER' in os.environ and num_lines > self.getTerminalSize()[1]:
-      Popen(os.environ['PAGER'], stdin=PIPE).communicate(input=str)
+    if 'PAGER' in os.environ and num_lines >= self.getTermLines():
+      # Use -r option for less to make bolding work right.
+      pager = os.environ['PAGER'].split(' ')
+      if pager[0].endswith('less'):
+        pager.append('-r')
+      try:
+        Popen(pager, stdin=PIPE).communicate(input=str)
+      except OSError, e:
+        raise CommandException('Unable to open pager (%s): %s' %
+            (' '.join(pager), e))
     else:
       print str
 
-  def getTerminalSize(self):
-    """Returns terminal (width, height)"""
+  def getTermLines(self):
+    """Returns number of terminal lines"""
     def ioctl_GWINSZ(fd):
       try:
-        cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+        return struct.unpack(
+            'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
       except:
-        return (0, 0)
-      return cr
-    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-    if not cr:
+        return 0 # Failure (so will retry on different file descriptor below).
+    # Try to find a valid number of lines from termio for stdin, stdout,
+    # or stderr, in that order.
+    ioc = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not ioc:
       try:
         fd = os.open(os.ctermid(), os.O_RDONLY)
-        cr = ioctl_GWINSZ(fd)
+        ioc = ioctl_GWINSZ(fd)
         os.close(fd)
       except:
         pass
-    if not cr:
-      try:
-        cr = (env['LINES'], env['COLUMNS'])
-      except:
-        cr = (25, 80)
-    return int(cr[1]), int(cr[0])
+    if not ioc:
+      if 'LINES' in os.environ:
+        ioc = env['LINES']
+      else:
+        ioc = 25 # Default.
+    return int(ioc)
 
   def _LoadHelpMaps(self):
     """Returns tuple (help type -> [HelpProviders],
