@@ -52,7 +52,8 @@ class CloudWildcardIteratorTests(unittest.TestCase):
   def SetUpClass(cls):
     """Creates 2 mock buckets, each containing 4 objects, including 1 nested."""
     cls.immed_child_obj_names = ['abcd', 'abdd', 'ade$']
-    cls.all_obj_names = ['abcd', 'abdd', 'ade$', 'nested1/nested2/xyz']
+    cls.all_obj_names = ['abcd', 'abdd', 'ade$', 'nested1/nested2/xyz1',
+                         'nested1/nested2/xyz2']
     cls.base_uri_str = 'gs://gslib_test_%d' % int(time.time())
     cls.test_bucket0_uri, cls.test_bucket0_obj_uri_strs = (
         cls.__SetUpOneMockBucket(0)
@@ -212,6 +213,26 @@ class CloudWildcardIteratorTests(unittest.TestCase):
         str(u) for u in test_util.test_wildcard_iterator(
             '%s_0*/abc*' % self.base_uri_str).IterUris())
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
+
+  def TestWildcardUpToFinalCharSubdirPlusObjectName(self):
+    """Tests wildcard subd*r/obj name"""
+    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
+        'nested1/nested2/xyz1'))])
+    x=list(test_util.test_wildcard_iterator(
+        '%s**' % self.test_bucket0_uri.uri).IterUris())
+    actual_obj_uri_strs = set(
+        str(u) for u in test_util.test_wildcard_iterator(
+            '%snested1/nest*2/xyz1' % self.test_bucket0_uri.uri).IterUris())
+    self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
+
+  def TestInvalidPostRecursiveWildcard(self):
+    """Tests that wildcard containing wildcard past ** is rejected"""
+    try:
+      test_util.test_wildcard_iterator('gs://bucket/**/*.txt')
+      self.fail('Expected WildcardException not raised.')
+    except wildcard_iterator.WildcardException, e:
+      self.assertNotEquals(
+          e.reason.find('URIs cannot contain any additional'), -1)
 
   def TestCallingGetKeyOnProviderOnlyWildcardIteration(self):
     """Tests that attempting iterating provider-only wildcard raises"""

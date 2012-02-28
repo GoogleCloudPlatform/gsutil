@@ -672,9 +672,12 @@ class GsutilCommandTests(unittest.TestCase):
     self.RunCommand('enablelogging', ['-b', 'log_bucket',
                                       self.src_bucket_uri.uri])
 
-  def TestVerCommmandRuns(self):
-    """Test that the Ver command basically runs"""
-    self.RunCommand('ver', [])
+  # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run
+  # time (for in memory mocked tests that otherwise take ~ 0.1 seconds). Since
+  # it provides very little test value, we're leaving this test commented out.
+  #def TestVerCommmandRuns(self):
+  #  """Test that the Ver command basically runs"""
+  #  self.RunCommand('ver', [])
 
   def TestMinusDOptionWorks(self):
     """Tests using gsutil -D option"""
