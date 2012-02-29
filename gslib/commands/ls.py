@@ -157,7 +157,7 @@ class LsCommand(Command):
     elif listing_style == ListingStyle.LONG_LONG:
       uri_str = self._UriStrForObj(uri, obj)
       print '%s:' % uri_str
-      obj.open_read()
+      obj = self.suri_builder.StorageUri(uri_str).get_key(False)
       print '\tObject size:\t%s' % obj.size
       print '\tLast mod:\t%s' % obj.last_modified
       if obj.cache_control:
