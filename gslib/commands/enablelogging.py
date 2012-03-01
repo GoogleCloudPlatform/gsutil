@@ -32,9 +32,36 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil enablelogging -b log_bucket [-o log_object_prefix] uri...
-  -b Log bucket.
-  -o Prefix for log object names. Default value is the bucket name.
+<B>SYNOPSIS</B>
+  gsutil enablelogging -b log_bucket [-o log_object_prefix] uri...
+
+<B>DESCRIPTION</B>
+  Google Cloud Storage offers access logs and storage data in the form of
+  CSV files that you can download and view. Access logs provide information
+  for all of the requests made on a specified bucket in the last 24 hours,
+  while the storage logs provide information about the storage consumption of
+  that bucket for the last 24 hour period. The logs and storage data files
+  are automatically created as new objects in a bucket that you specify,
+  in 24 hour intervals.
+
+  The gsutil enablelogging command will enable access logging of the
+  buckets named by the specified uris, outputting log files in the specified
+  log_bucket.  log_bucket must already exist, and all URIs must name buckets
+  (e.g., gs://bucket).
+
+  Note that log data may contain sensitive information, so you should make
+  sure to set an appropriate default bucket ACL to protect that data. (See
+  "gsutil help setdefacl".)
+
+  You can check logging status using the gsutil getlogging command.  For log
+  format details see "gsutil help getlogging".
+
+
+<B>OPTIONS</B>
+  -b bucket   Specifies the log bucket.
+
+  -o prefix   Specifies the prefix for log object names. Default value
+              is the bucket name.
 """)
 
 
@@ -66,8 +93,8 @@ class EnableLoggingCommand(Command):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'enablelogging',
     # List of help name aliases.
-    HELP_NAME_ALIASES : [],
-    # Type of help)
+    HELP_NAME_ALIASES : ['logging', 'logs', 'log'],
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Enable logging on buckets:',
@@ -98,7 +125,7 @@ class EnableLoggingCommand(Command):
     did_some_work = False
     for uri_str in self.args:
       for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
-        if uri.object_name:
+        if uri.names_object():
           raise CommandException('enablelogging cannot be applied to objects')
         did_some_work = True
         print 'Enabling logging on %s...' % uri

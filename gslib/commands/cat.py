@@ -35,8 +35,22 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil cat [-h] uri...
-  -h  Prints short header for each object.
+<B>SYNOPSIS</B>
+  gsutil cat [-h] uri...
+
+
+<B>DESCRIPTION</B>
+  The cat command outputs the contents of one or more URIs to stdout.
+  It is equivalent to doing:
+
+    gsutil cp uri... -
+
+  (The final '-' causes gsutil to stream the output to stdout.)
+
+
+<B>OPTIONS</B>
+  -h          Prints short header for each object. For example:
+                gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
 """)
 
 
@@ -69,7 +83,7 @@ class CatCommand(Command):
     HELP_NAME : 'cat',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Concatenate object content to stdout',

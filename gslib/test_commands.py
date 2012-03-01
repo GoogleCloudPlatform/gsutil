@@ -535,19 +535,19 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('new', actual[0].object_name)
 
-  def TestCatCommmandRuns(self):
+  def TestCatCommandRuns(self):
     """Test that the cat command basically runs"""
     self.RunCommand('cat', ['%sobj1' % self.src_bucket_uri.uri])
 
-  def TestGetAclCommmandRuns(self):
+  def TestGetAclCommandRuns(self):
     """Test that the getacl command basically runs"""
     self.RunCommand('getacl', [self.src_bucket_uri.uri])
 
-  def TestGetDefAclCommmandRuns(self):
+  def TestGetDefAclCommandRuns(self):
     """Test that the getdefacl command basically runs"""
     self.RunCommand('getacl', [self.src_bucket_uri.uri])
 
-  def TestGetLoggingCommmandRuns(self):
+  def TestGetLoggingCommandRuns(self):
     """Test that the getlogging command basically runs"""
     self.RunCommand('getlogging', [self.src_bucket_uri.uri])
 
@@ -663,11 +663,11 @@ class GsutilCommandTests(unittest.TestCase):
     except CommandException, e:
       self.assertNotEqual(e.reason.find('URI must name a bucket'), -1)
 
-  def TestDisableLoggingCommmandRuns(self):
+  def TestDisableLoggingCommandRuns(self):
     """Test that the disablelogging command basically runs"""
     self.RunCommand('disablelogging', [self.src_bucket_uri.uri])
 
-  def TestEnableLoggingCommmandRuns(self):
+  def TestEnableLoggingCommandRuns(self):
     """Test that the enablelogging command basically runs"""
     self.RunCommand('enablelogging', ['-b', 'log_bucket',
                                       self.src_bucket_uri.uri])

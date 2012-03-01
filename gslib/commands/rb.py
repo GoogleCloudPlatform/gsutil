@@ -32,7 +32,17 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil rb uri...
+<B>SYNOPSIS</B>
+  gsutil rb uri...
+
+<B>DESCRIPTION</B>
+  The rb command deletes new bucket. Buckets must be empty before you can delete
+  them.
+
+  Be certain you want to delete a bucket before you do so, as once it is
+  deleted the name becomes available and another user may create a bucket with
+  that name. (But see also "DOMAIN NAMED BUCKETS" under "gsutil help naming"
+  for help carving out parts of the bucket name space.)
 """)
 
 
@@ -67,7 +77,7 @@ class RbCommand(Command):
     # List of help name aliases.
     HELP_NAME_ALIASES :
         ['deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Remove buckets',

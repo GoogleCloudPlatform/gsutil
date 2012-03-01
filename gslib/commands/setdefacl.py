@@ -32,7 +32,30 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil setdefacl file-or-canned_acl_name uri...
+<B>SYNOPSIS</B>
+  gsutil setdefacl file-or-canned_acl_name uri...
+
+
+<B>DESCRIPTION</B>
+
+  The setdefacl command sets default object ACLs for the specified buckets. If
+  you specify a default object ACL for a certain bucket, Google Cloud Storage
+  applies the default object ACL to all new objects uploaded to that bucket.
+
+  Similar to the setacl command, the file-or-canned_acl_name names either a
+  canned ACL or the path to a file that contains ACL XML. (See "gsutil
+  help setacl" for examples of editing and setting ACLs via the
+  getacl/setacl commands.)
+
+  If you don't set a default object ACL on a bucket, the bucket's default
+  object ACL will be project-private.
+
+  Setting a default object ACL on a bucket provides a convenient way
+  to ensure newly uploaded objects have a specific ACL, and avoids the
+  need to back after the fact and set ACLs on a large number of objects
+  for which you forgot to set the ACL at object upload time (which can
+  happen if you don't set a default object ACL on a bucket, and get the
+  default project-private ACL).
 """)
 
 
@@ -64,8 +87,8 @@ class SetDefAclCommand(Command):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'setdefacl',
     # List of help name aliases.
-    HELP_NAME_ALIASES : [],
-    # Type of help)
+    HELP_NAME_ALIASES : ['default acl'],
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Set default ACL on buckets',

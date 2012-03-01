@@ -31,7 +31,40 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil setacl file-or-canned_acl_name uri...
+<B>SYNOPSIS</B>
+  gsutil setacl file-or-canned_acl_name uri...
+
+
+<B>DESCRIPTION</B>
+  The setacl command allows you to set an Access Control List on one or
+  more buckets and objects. The simplest way to use it is to specify one of
+  the canned ACLs, e.g.,:
+
+    gsutil setacl private gs://bucket
+
+  or:
+
+    gsutil setacl public-read gs://bucket/object
+
+  See "gsutil help acls" for a list of all canned ACLs.
+
+  If you want to define more fine-grained control over your data, you can
+  retrieve an ACL using the getacl command (see "gsutil help getacl"),
+  save the output to a file, edit the file, and then use the gsutil setacl
+  command to set that ACL on the buckets and/or objects. For example:
+
+    gsutil getacl gs://bucket/file.txt > acl.txt
+    (Make changes to acl.txt such as adding an additional grant.)
+    gsutil setacl acl.txt gs://cats/file.txt
+
+  Note that you can set an ACL on multiple buckets or objects at once,
+  for example:
+
+    gsutil setacl acl.txt gs://bucket/*.jpg
+
+  At present there is no multi-threading/multi-processing support for the
+  setacl command, so running the above command against large numbers of
+  objects can take a long time.
 """)
 
 
@@ -64,7 +97,7 @@ class SetAclCommand(Command):
     HELP_NAME : 'setacl',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Set ACL on buckets and/or objects',

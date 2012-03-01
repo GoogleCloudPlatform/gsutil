@@ -30,10 +30,12 @@ from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
-gsutil getacl uri
+<B>SYNOPSIS</B>
+  gsutil getacl uri
 
-Gets ACL XML for a bucket or object, which you can save and edit for the
-setacl command.
+<B>DESCRIPTION</B>
+  Gets ACL XML for a bucket or object, which you can save and edit for the
+  setacl command.
 """)
 
 
@@ -66,7 +68,7 @@ class GetAclCommand(Command):
     HELP_NAME : 'getacl',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Get ACL XML for a bucket or object',

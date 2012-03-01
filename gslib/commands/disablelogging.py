@@ -32,7 +32,16 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil disablelogging uri...
+<B>SYNOPSIS</B>
+  gsutil disablelogging uri...
+
+<B>DESCRIPTION</B>
+  This command will disable access logging of the buckets named by the
+  specified uris. All URIs must name buckets (e.g., gs://bucket).
+
+  No logging data is removed from the log buckets when you disable logging,
+  but Google Cloud Storage will stop delivering new logs once you have
+  run this command.
 """)
 
 
@@ -65,7 +74,7 @@ class DisableLoggingCommand(Command):
     HELP_NAME : 'disablelogging',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Disable logging on buckets',
@@ -78,7 +87,7 @@ class DisableLoggingCommand(Command):
     did_some_work = False
     for uri_str in self.args:
       for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
-        if uri.object_name:
+        if uri.names_object():
           raise CommandException('disablelogging cannot be applied to objects')
         did_some_work = True
         print 'Disabling logging on %s...' % uri

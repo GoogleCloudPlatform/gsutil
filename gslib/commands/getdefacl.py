@@ -31,10 +31,12 @@ from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
-gsutil getdefacl uri
+<B>SYNOPSIS</B>
+  gsutil getdefacl uri
 
-Gets the default ACL XML for a bucket, which you can save and edit for the
-setdefacl command.
+<B>DESCRIPTION</B>
+  Gets the default ACL XML for a bucket, which you can save and edit
+  for use with the setdefacl command.
 """)
 
 
@@ -67,7 +69,7 @@ class GetDefAclCommand(Command):
     HELP_NAME : 'getdefacl',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Get default ACL XML for a bucket',

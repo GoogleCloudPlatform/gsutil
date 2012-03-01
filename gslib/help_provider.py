@@ -36,7 +36,7 @@ REQUIRED_SPEC_KEYS = [HELP_NAME, HELP_NAME_ALIASES, HELP_TYPE,
                       HELP_ONE_LINE_SUMMARY, HELP_TEXT]
 
 class HelpProvider(object):
-  """Interface for providing inline help."""
+  """Interface for providing help."""
 
   # Each subclass must define the following map.
   help_spec = {

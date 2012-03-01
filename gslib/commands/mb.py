@@ -31,9 +31,32 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil mb [-l LocationConstraint] [-p proj_id] uri...
-   -l can be us or eu. Default is us
-   -p proj_id Specifies the project ID under which to create the bucket.
+<B>SYNOPSIS</B>
+  gsutil mb [-l location] [-p proj_id] uri...
+
+
+<B>DESCRIPTION</B>
+  The mb command creates a new bucket. Google Cloud Storage has a single
+  namespace, so you will not be allowed to create a bucket with a name already
+  in use by another user. You can, however, carve out parts of the bucket name
+  space corresponding to your company's domain name (see "gsutil help naming").
+
+  If you specify a location for the bucket (using the -l option), the
+  bucket will be created in the named geographic location. Once created in
+  a location, a bucket cannot be moved to a different location; you would
+  instead need to create a new bucket and move the data over and then delete
+  the original bucket.
+
+  If you don't specify a project ID using the -p option, the bucket
+  will be created using the default project ID specified in your gsutil
+  configuration file (see "gsutil help config"). For more details about
+  projects see "gsutil help projects".
+
+
+<B>OPTIONS</B>
+  -l location Can be us or eu. Default is us.
+
+  -p proj_id  Specifies the project ID under which to create the bucket.
 """)
 
 
@@ -45,7 +68,7 @@ class MbCommand(Command):
     # Name of command.
     COMMAND_NAME : 'mb',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['makebucket', 'createbucket', 'mkdir'],
+    COMMAND_NAME_ALIASES : ['makebucket', 'createbucket', 'md', 'mkdir'],
     # Min number of args required by this command.
     MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
@@ -65,8 +88,8 @@ class MbCommand(Command):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'mb',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['makebucket', 'createbucket', 'mkdir'],
-    # Type of help)
+    HELP_NAME_ALIASES : ['makebucket', 'createbucket', 'md', 'mkdir'],
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Make buckets',

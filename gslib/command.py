@@ -249,7 +249,7 @@ class Command(object):
     self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
     # We're treating recursion_requested like it's used by all commands, but
-    # only some of the commands accept the -r option.
+    # only some of the commands accept the -R option.
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-r' or o == '-R':

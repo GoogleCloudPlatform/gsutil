@@ -33,14 +33,68 @@ from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
-gsutil mv [-p] [-R] src_uri dst_uri
-  - or -
-gsutil mv [-p] [-R] uri... dst_uri
+<B>SYNOPSIS</B>
+  gsutil mv [-p] [-R] src_uri dst_uri
+    - or -
+  gsutil mv [-p] [-R] uri... dst_uri
 
-  -R Causes directories, buckets, and bucket subdirs to be moved recursively.
 
-  -p option causes ACL to be preserved when copying in the cloud. Causes
-  extra API calls.
+<B>DESCRIPTION</B>
+  The gsutil mv command allows you to move data between your local file
+  system and the cloud, move data within the cloud, and move data between
+  cloud storage providers. For example, to move all objects from a
+  bucket to a local directory you could use:
+
+    gsutil mv -R gs://my_bucket dir
+
+  The mv command, like the rm command, will refuse to remove data from
+  the local disk. Thus, for example, this command will not be allowed:
+
+    gsutil mv *.txt gs://my_bucket
+
+
+<B>RENAMING BUCKET SUBDIRECTORIES</B>
+  You can use the gsutil mv command to rename subdirectories, by specifying
+  the -R option. For example, the command:
+
+    gsutil mv -R gs://my_bucket/olddir gsutil mv -R gs://my_bucket/newdir
+
+  would rename all objects and subdirectories under gs://my_bucket/olddir to be
+  under gs://my_bucket/newdir, otherwise preserving the subdirectory structure.
+
+  If you do a rename as specified above and you want to preserve ACLs, you
+  should use the -p option (see OPTIONS).
+
+  Note that the mv -R option does not allow specifying either source or
+  destination URI using a wildcard. You need to spell out the complete
+  name for source and destination:
+
+    gsutil mv -R gs://my_bucket/olddir gs://my_bucket/newdir
+
+  If you have a large number of files to move you might want to use the
+  gsutil -m option, to perform a multi-threaded/multi-processing move:
+
+    gsutil -m mv -R gs://my_bucket/olddir gs://my_bucket/newdir
+
+  As an aside, although most gsutil commands strive to make the command line
+  options work as closely as possible to their UNIX command line counterparts,
+  in this case we chose to require the user to specify -R to force the user to
+  be explicit that they really intended to rename an entire subdirectory. Unlike
+  the case in a file system (where a directory move is typically implemented
+  with a single operation), a bucket subdirectory move involves running many
+  cp and rm commands.
+
+
+<B>OPTIONS</B>
+  -p          Causes ACL to be preserved when moving in the cloud. Note that
+              this option has performance and cost implications, because it
+              is essentially performing three requests (getacl, cp, setacl).
+              (The performance issue can be mitigated to some degree by
+              using gsutil -m cp to cause multi-threaded/multi-processing
+              copying.)
+
+  -R          Causes directories, buckets, and bucket subdirectories to be moved
+              recursively.
 """)
 
 
@@ -76,10 +130,10 @@ class MvCommand(Command):
     HELP_NAME : 'mv',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['move', 'rename'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Move/rename objects',
+    HELP_ONE_LINE_SUMMARY : 'Move/rename objects and/or subdirectories',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
@@ -109,7 +163,7 @@ class MvCommand(Command):
       for src_uri in self.args[0:len(self.args)-1]:
         if ContainsWildcard(src_uri):
           raise CommandException(
-              'source URI cannot contain wildcards with mv -r')
+              'source URI cannot contain wildcards with mv -R')
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in StorageUris
     # before running cp and rm commands, to prevent the
@@ -143,7 +197,7 @@ class MvCommand(Command):
       raise CommandException('No URIs matched')
 
     # Add command-line opts back in front of args so they'll be picked up by cp
-    # and rm commands (e.g., for -r option). Use undocumented (internal
+    # and rm commands (e.g., for -R option). Use undocumented (internal
     # use-only) cp -M option to request move naming semantics (see
     # _ConstructDstUri in cp.py).
     unparsed_args = ['-M']

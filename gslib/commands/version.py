@@ -36,7 +36,13 @@ from gslib.help_provider import HELP_TYPE
 from hashlib import md5
 
 _detailed_help_text = ("""
-gsutil version
+<B>SYNOPSIS</B>
+  gsutil version
+
+
+<B>DESCRIPTION</B>
+  Prints information about the version of gsutil, boto, and Python being
+  run on your system.
 """)
 
 
@@ -69,7 +75,7 @@ class VersionCommand(Command):
     HELP_NAME : 'version',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['ver'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Print version info about gsutil',

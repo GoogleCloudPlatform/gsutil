@@ -16,6 +16,7 @@ import fcntl
 import gslib
 import itertools
 import os
+import re
 import struct
 import sys
 import termios
@@ -44,7 +45,23 @@ from subprocess import PIPE
 from subprocess import Popen
 
 _detailed_help_text = ("""
-gsutil help [command or topic]
+<B>SYNOPSIS</B>
+  gsutil help [command or topic]
+
+
+<B>DESCRIPTION</B>
+  Running:
+    gsutil help
+  will provide a summary of all commands and additional topics on which
+  help is available.
+
+  Running:
+    gsutil help command or topic
+  will provide help about the specified command or topic.
+
+  If you set the PAGER environment variable to the path to a pager program
+  (such as /bin/less on Linux), long help sections will be piped through
+  the specified pager.
 """)
 
 top_level_usage_string = (
@@ -80,7 +97,7 @@ class HelpCommand(Command):
     HELP_NAME : 'help',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['?'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Get help about commands and topics',
@@ -93,8 +110,8 @@ class HelpCommand(Command):
     (help_type_map, help_name_map) = self._LoadHelpMaps()
     output = []
     if not len(self.args):
-      format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
       output.append('%s\nAvailable commands:\n' % top_level_usage_string)
+      format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
       for help_prov in sorted(help_type_map[HelpType.COMMAND_HELP],
                               key=lambda hp: hp.help_spec[HELP_NAME]):
         output.append(format_str % (help_prov.help_spec[HELP_NAME],
@@ -104,18 +121,25 @@ class HelpCommand(Command):
                               key=lambda hp: hp.help_spec[HELP_NAME]):
         output.append(format_str % (help_prov.help_spec[HELP_NAME],
                                     help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
-      output.append('\nUse gsutil help <command or topic> for detailed help')
+      output.append('\nUse gsutil help <command or topic> for detailed help.')
     else:
       arg = self.args[0]
       if arg not in help_name_map:
         output.append('No help available for "%s"' % arg)
       else:
         help_prov = help_name_map[self.args[0]]
+        output.append('<B>NAME</B>\n')
+        output.append('  %s - %s\n' % (help_prov.help_spec[HELP_NAME],
+                                       help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+        output.append('\n\n')
         output.append(help_prov.help_spec[HELP_TEXT].strip('\n'))
     self._OutputHelp(''.join(output))
 
   def _OutputHelp(self, str):
-    """Outputs string, paginating if long and PAGER env var defined"""
+    """Outputs simply formatted string, paginating if long and PAGER defined"""
+    # Replace <B> and </B> with terminal formatting strings.
+    str = re.sub('<B>', '\033[1m', str)
+    str = re.sub('</B>', '\033[0;0m', str)
     num_lines = len(str.split('\n'))
     if 'PAGER' in os.environ and num_lines >= self.getTermLines():
       # Use -r option for less to make bolding work right.

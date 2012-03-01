@@ -40,7 +40,34 @@ from gslib.util import NO_MAX
 from tests.s3.mock_storage_service import MockBucketStorageUri
 
 _detailed_help_text = ("""
-gsutil test [command]
+<B>SYNOPSIS</B>
+  gsutil test [command command...]
+
+
+<B>DESCRIPTION</B>
+  The gsutil test command runs end-to-end tests of gsutil commands (i.e.,
+  tests that send requests to the production service.  This stands in contrast
+  to tests that use an in-memory mock storage service implementation (see
+  "gsutil help dev" for more details on the latter).
+
+  To run all end-to-end tests run the command with no arguments:
+
+    gsutil test
+
+  To see additional details for test failures:
+
+    gsutil -d test
+
+  To run tests for one or more individual commands add those commands as
+  arguments. For example:
+
+    gsutil test cp mv
+
+  will run the cp and mv command tests.
+
+  Note: the end-to-end tests are defined in the code for each command (e.g.,
+  cp end-to-end tests are in gslib/commands/cp.py). See the comments around
+  'test_steps' in each of the Command subclasses.
 """)
 
 
@@ -73,7 +100,7 @@ class TestCommand(Command):
     HELP_NAME : 'test',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Run end to end gsutil tests',

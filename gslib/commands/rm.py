@@ -34,9 +34,43 @@ from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
-gsutil rm [-f] [-R] uri...
-   -f Continues despite errors when removing by wildcard.
-   -R Causes buckets and bucket subdirs to be removed recursively.
+<B>SYNOPSIS</B>
+  gsutil rm [-f] [-R] uri...
+
+
+<B>DESCRIPTION</B>
+  The gsutil rm command removes objects.
+  For example, the command:
+
+    gsutil rm gs://bucket/subdir/*
+
+  will remove all objects in gs://bucket/subdir, but not in any of its
+  sub-directories. In contrast:
+
+    gsutil rm gs://bucket/subdir/**
+
+  will remove all objects under gs://bucket/subdir or any of its
+  subdirectories.
+
+  You can also use the -R option to specify recursive object deletion. Thus, for
+  example, the following two commands will both remove all objects in a bucket:
+
+    gsutil rm gs://bucket/**
+    gsutil rm -R gs://bucket
+
+  Note that gsutil rm will refuse to remove files from the local
+  file system. For example this will fail:
+
+    gsutil rm *.txt
+
+
+<B>OPTIONS</B>
+  -f          Continues despite errors when removing multiple objects.
+
+  -R          Causes bucket contents to be removed recursively (i.e., including
+              all objects and subdirectories). Will not delete the bucket
+              itself; you need to run the gsutil rb command separately to do
+              that.
 """)
 
 
@@ -69,7 +103,7 @@ class RmCommand(Command):
     HELP_NAME : 'rm',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['del', 'delete', 'remove'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Remove objects',

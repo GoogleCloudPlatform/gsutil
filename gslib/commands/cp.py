@@ -52,26 +52,212 @@ from gslib.util import ONE_MB
 from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
-gsutil cp [-a canned_acl] [-e] [-p] [-t] [-z ext1,ext2,...] src_uri dst_uri
-  - or -
-gsutil cp [-a canned_acl] [-e] [-p] [-R] [-t] [-z extensions] uri... dst_uri
+<B>SYNOPSIS</B>
+  gsutil cp [-a canned_acl] [-e] [-p] [-z ext1,ext2,...] src_uri dst_uri
+    - or -
+  gsutil cp [-a canned_acl] [-e] [-p] [-R] [-z extensions] uri... dst_uri
 
-  -a Sets named canned_acl when uploaded objects created (list below).
-  -e Exclude symlinks. When specified, symbolic links will not be copied.
-  -p Causes ACL to be preserved when copying in the cloud.
-     Causes extra API calls.
-  -R Causes directories and buckets to be copied recursively.
-  -t Sets MIME type based on file extension. (DEPRECATED)
-  -z 'txt,html' Compresses file uploads with the given extensions.
 
-Use '-' in place of src_uri or dst_uri to perform streaming transfer.
+<B>DESCRIPTION</B>
+  The gsutil cp command allows you to copy data between your local file
+  system and the cloud, copy data within the cloud, and copy data between
+  cloud storage providers. For example, to copy all text files from the
+  local directory to a bucket you could do:
+
+    gsutil cp *.txt gs://my_bucket
+
+
+  Similarly, you can download text files from a bucket by doing:
+
+    gsutil cp gs://my_bucket/*.txt .
+
+
+  If you want to copy an entire directory tree you need to use the -R option:
+
+    gsutil cp -R dir gs://my_bucket
+
+
+  If you have a large number of files to upload you might want to use the
+  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
+  copy:
+
+    gsutil -m cp -R dir gs://my_bucket
+
+
+<B>HOW NAMES ARE CONSTRUCTED</B>
+  When performing recursive directory copies, object names are constructed
+  that mirror the source directory structure starting at the point of
+  recursive processing. For example, the command:
+
+    gsutil cp -R dir1/dir2 gs://my_bucket
+
+  will create objects named like gs://my_bucket/dir2/a/b/c, assuming
+  dir1/dir2 contains the file a/b/c.
+
+  In contrast, copying individually named files will result in objects named
+  by the final path component of the source files. For example, the command:
+
+    gsutil cp dir1/dir2/** gs://my_bucket
+
+  will create objects named like gs://my_bucket/c.
+
+  The same rules apply for downloads: recursive copies of buckets and
+  bucket subdirectories produce mirrored filename structure, while copying
+  individually (or wildcard) named objects produce flatly named files.
+
+  Note that in the above example the '**' wildcard matches all names
+  anywhere under dir. The wildcard '*' will match just one level deep
+  names. For more details see 'gsutil help wildcards'.
+
+
+<B>COPYING TO/FROM SUBDIRECTORIES; DISTRIBUTING TRANSFERS ACROSS MACHINES</B>
+  You can use gsutil to copy to and from subdirectories by using a command like:
+
+    gsutil cp -R dir gs://my_bucket/data
+
+  This will cause dir and all of its files and nested subdirectories to be
+  copied under the specified destination, resulting in objects with names like
+  gs://my_bucket/data/dir/a/b/c. Similarly you can download from bucket
+  subdirectories by using a command like:
+
+    gsutil cp -R gs://my_bucket/data dir
+
+  This will cause everything nested under gs://my_bucket/data dir to be
+  downloaded to files, resulting in files with names like dir/data/a/b/c.
+
+  Copying subdirectories is useful if you want to add data to an existing
+  bucket directory structure over time. It's also useful if you want
+  to parallelize uploads and downloads across multiple machines (often
+  reducing overall transfer time compared with simply running gsutil -m
+  cp on one machine). For example, if your bucket contains this structure:
+
+    gs://my_bucket/data/result_set_01/
+    gs://my_bucket/data/result_set_02/
+    ...
+    gs://my_bucket/data/result_set_99/
+
+  you could perform concurrent downloads across 3 machines by running these
+  commands on each machine, respectively:
+
+    gsutil cp -R gs://my_bucket/data/result_set_[0-3]* dir
+    gsutil cp -R gs://my_bucket/data/result_set_[4-6]* dir
+    gsutil cp -R gs://my_bucket/data/result_set_[7-9]* dir
+
+  Note that dir could be a local directory on each machine, or it could
+  be a directory mounted off of a shared file server; whether the latter
+  performs acceptably may depend on a number of things, so we recommend
+  you experiment and find out what works best for you.
+
+
+<B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
+  If both the source and destination URI are cloud URIs from the same
+  provider, gsutil copies data "in the cloud" (i.e., without downloading
+  to and uploading from the machine where you run gsutil). In addition to
+  the performance and cost advantages of doing this, copying in the cloud
+  preserves metadata (like Content-Type and Cache-Control).  In contrast,
+  when you download data from the cloud it ends up in a file, which has
+  no associated metadata. Thus, unless you have some way to hold on to
+  or re-create that metadata, downloading to a file will not retain the
+  metadata.
+
+  Note that by default, the gsutil cp command does not copy the object
+  ACL to the new object, and instead will use the default bucket ACL (see
+  "gsutil help setdefacl").  You can override this behavior with the -p
+  option (see OPTIONS below).
+
+
+<B>RESUMABLE TRANSFERS</B>
+  gsutil automatically uses the Google Cloud Storage resumable upload
+  feature whenever you use the cp command to upload an object that is larger
+  than 1 MB. You do not need to specify any special command line options
+  to make this happen. If your upload is interrupted you can restart the
+  upload by running the same cp command that you ran to start the upload.
+
+  Similarly, gsutil automatically performs resumable downloads (using HTTP
+  standard Range GET operations) whenever you use the cp command to download an
+  object larger than 1 MB.
+
+  Resumable uploads and downloads store some state information in a file named
+  by the file being uploaded (or object being downloaded) in ~/.gsutil. If you
+  attempt to resume a transfer from a machine with a different directory, the
+  transfer will start over from scratch.
+
+  See also "gsutil help prod" for details on using resumable transfers
+  in production.
+
+
+<B>STREAMING TRANSFERS</B>
+  Use '-' in place of src_uri or dst_uri to perform a streaming
+  transfer. For example:
+    long_running_computation | gsutil cp - gs://my_bucket/obj
+
+  Streaming transfers do not support resumable uploads/downloads.
+
+
+<B>OPTIONS</B>
+  -a          Sets named canned_acl when uploaded objects created. See
+              'gsutil help acls' for further details.
+
+  -e          Exclude symlinks. When specified, symbolic links will not be
+              copied.
+
+  -p          Causes ACL to be preserved when copying in the cloud. Note that
+              this option has performance and cost implications, because it
+              is essentially performing three requests (getacl, cp, setacl).
+              (The performance issue can be mitigated to some degree by
+              using gsutil -m cp to cause parallel copying.)
+
+  -R          Causes directories, buckets, and bucket subdirectories to be
+              copied recursively. If you neglect to use this option for
+              an upload, gsutil will copy any files it finds and skip any
+              directories. Similarly, neglecting to specify -R for a download
+              will cause gsutil to copy any objects at the current bucket
+              directory level, and skip any subdirectories.
+
+  -t          DEPRECATED. This option used to be used to request setting
+              Content-Type based on file extension and/or content, which is
+              now the default behavior.  The -t option is left in place for
+              now to avoid breaking existing scripts. It will be removed at
+              a future date.
+
+  -z          'txt,html' Compresses file uploads with the given extensions.
+              If you are uploading a large file with compressible content,
+              such as a .js, .css, or .html file, you can gzip-compress the
+              file during the upload process by specifying the -z <extensions>
+              option. Compressing data before upload saves on usage charges
+              because you are uploading a smaller amount of data.
+
+              When you specify the -z option, the data from your files is
+              compressed before it is uploaded, but your actual files are left
+              uncompressed on the local disk. The uploaded objects retain the
+              original content type and name as the original files but are given
+              a Content-Encoding header with the value "gzip" to indicate that
+              the object data stored compressed on the Google Cloud Storage
+              servers.
+
+              The -z option is most useful in combination with Content-Type
+              recognition (see "gsutil help metadata").  For example, the
+              following command:
+
+                gsutil cp -z html -a public-read cattypes.html gs://mycats
+
+              will do all of the following:
+                - Upload as the object gs://mycats/cattypes.html (cp command)
+                - Set the Content-Type to text/html (based on file extension)
+                - Compress the data in the file cattypes.html (-z option)
+                - Set the Content-Encoding to gzip (-z option)
+                - Set the ACL to public-read (-a option)
+                - If a user tries to view cattypes.html in a browser, the
+                  browser will know to uncompress the data based on the
+                  Content-Encoding header, and to render it as HTML based on
+                  the Content-Type header.
 """)
 
 
 class CpCommand(Command):
   """Implementation of gsutil cp command."""
 
-  # Set default MIME type.
+  # Set default Content-Type type.
   DEFAULT_CONTENT_TYPE = 'application/octet-stream'
   DEFAULT_CONTENT_ENCODING = None
   USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
@@ -103,7 +289,7 @@ class CpCommand(Command):
     HELP_NAME : 'cp',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['copy'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Copy files/objects to/from the cloud',
@@ -272,7 +458,7 @@ class CpCommand(Command):
     return (cb, num_cb, transfer_handler)
 
   # We pass the headers explicitly to this call instead of using self.headers
-  # so we can set different metadata (like MIME type) for each object.
+  # so we can set different metadata (like Content-Type type) for each object.
   def _CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
     # Do Object -> object copy within same provider (uses
     # x-<provider>-copy-source metadata HTTP header to request copying at the
@@ -757,13 +943,13 @@ class CpCommand(Command):
 
     # There are 3 cases for copying multiple sources to a dir/bucket/bucket
     # subdir needed to match the naming semantics of the UNIX cp command:
-    # 1. For the "mv -r" command, people expect renaming to occur at the
+    # 1. For the "mv -R" command, people expect renaming to occur at the
     #    level of the src subdir, vs appending that subdir beneath
     #    the dst subdir like is done for copying. For example:
-    #      gsutil -m rm -r gs://bucket
-    #      gsutil -m cp -r cloudreader gs://bucket
-    #      gsutil -m cp -r cloudauth gs://bucket/subdir1
-    #      gsutil -m mv -r gs://bucket/subdir1 gs://bucket/subdir2
+    #      gsutil -m rm -R gs://bucket
+    #      gsutil -m cp -R cloudreader gs://bucket
+    #      gsutil -m cp -R cloudauth gs://bucket/subdir1
+    #      gsutil -m mv -R gs://bucket/subdir1 gs://bucket/subdir2
     #    would (if using cp semantics) end up with paths like:
     #      gs://bucket/subdir2/subdir1/cloudauth/.svn/all-wcprops
     #    whereas people expect:
@@ -785,7 +971,7 @@ class CpCommand(Command):
       # Case 1. Handle naming semantics for recursive bucket subdir mv.
       # Here we want to line up the src_uri against its expansion, to find
       # the base to build the new name. For example, starting with:
-      #   gsutil mv -r gs://bucket/abcd gs://bucket/xyz
+      #   gsutil mv -R gs://bucket/abcd gs://bucket/xyz
       # and exp_src_uri being gs://bucket/abcd/123
       # we want exp_src_uri_tail to be /123
       # Note: mv.py code disallows wildcard specification of source URI.
@@ -865,7 +1051,8 @@ class CpCommand(Command):
 
     self._SanityCheckRequest(src_uri_expansion, exp_dst_uri)
 
-    # Use a lock to ensure accurate statistics in the face of multi-threading.
+    # Use a lock to ensure accurate statistics in the face of
+    # multi-threading/multi-processing.
     stats_lock = threading.Lock()
 
     # Tracks if any copies failed.
@@ -979,7 +1166,7 @@ class CpCommand(Command):
           # Note that we signal to the cp command to use the alternate naming
           # semantics by passing the undocumented (for internal use) -m option
           # when running the cp command from mv.py. These semantics only apply
-          # for mv -r applied to bucket subdirs.
+          # for mv -R applied to bucket subdirs.
           self.mv_naming_semantics = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
@@ -1052,7 +1239,7 @@ class CpCommand(Command):
       # function to allow this check to be overridden. Note that we want this
       # check to prevent a user from blowing away data using the mv command,
       # with a command like:
-      #   gsutil mv -r gs://bucket/abc/* gs://bucket/abc
+      #   gsutil mv -R gs://bucket/abc/* gs://bucket/abc
       return src_uri.uri == dst_uri.uri
 
   def _ShouldTreatDstUriAsBucketSubDir(self, have_multiple_srcs, dst_uri):

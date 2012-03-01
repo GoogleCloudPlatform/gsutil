@@ -160,7 +160,7 @@ class NameExpansionResult(object):
     src_uri.names_singleton()) because of the possibility that an object path
     might name a bucket "sub-directory", which in turn depends on whether
     src_uri expanded to multiple URIs.  For example, when running the command:
-      gsutil cp -r gs://bucket/abc ./dir
+      gsutil cp -R gs://bucket/abc ./dir
     gs://bucket/abc would be an object if nothing matches gs://bucket/abc/*;
     but would be a bucket subdir otherwise.
 
@@ -329,7 +329,7 @@ class NameExpansionHandler(object):
     """
     Checks whether uri could be an implicit bucket subdir, based on command
     line options and its syntax. For example, gs://abc could be an implicit
-    bucket subdir if the -r option was specified. The complete determination
+    bucket subdir if the -R option was specified. The complete determination
     depends on whether (in addition to the current check) uri contains
     a wildcard not confined to a subdir (i.e., '*').
 
@@ -346,9 +346,9 @@ class NameExpansionHandler(object):
     """
     Checks whether uri could be an implicit bucket subdir, and expands if so;
     else returns list containing uri. For example gs://abc would be an implicit
-    bucket subdir if the -r option was specified and gs://abc/* matches
+    bucket subdir if the -R option was specified and gs://abc/* matches
     anything.
-    Can only be called for -r (recursion requested).
+    Can only be called for -R (recursion requested).
 
     Args:
       uri: StorageUri.

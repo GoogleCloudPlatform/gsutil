@@ -43,57 +43,153 @@ from gslib.util import HAVE_OAUTH2
 from gslib.util import ONE_MB
 
 _detailed_help_text = ("""
-gsutil [-D] config [-a] [-b] [-f] [-o <file>] [-r] [-s <scope>] [-w]
+<B>SYNOPSIS</B>
+  gsutil [-D] config [-a] [-b] [-f] [-o <file>] [-r] [-s <scope>] [-w]
 
-The gsutil config command obtains access credentials for Google Cloud Storage,
-and writes a boto/gsutil configuration file with the obtained credentials.
 
-Unless specified otherwise, the configuration file is written to the default
-config file path '%s'. If the default config file already exists, an attempt
-is made to rename the existing file to a backup file '%s'; if that attempt
-fails the command will exit.
+<B>DESCRIPTION</B>
+  The gsutil config command obtains access credentials for Google
+  Cloud Storage and writes a boto/gsutil configuration file
+  containing the obtained credentials along with a number of other
+  configuration-controllable values.
 
-A different destination file can be specified with the -o <file> option (use
-'-o -' to write the config to standard output). If the specified file already
-exists, the command will fail.
+  Unless specified otherwise (see OPTIONS), the configuration file
+  is written to ~/.boto (i.e., the file .boto under the user's home
+  directory). If the default file already exists, an attempt is made
+  to rename the existing file to ~/.boto.bak; if that attempt fails the
+  command will exit. A different destination file can be specified with
+  the -o option (see OPTIONS).
 
-By default, gsutil config obtains OAuth2 tokens as follows (for background
-on OAuth2, see http://code.google.com/apis/accounts/docs/OAuth2.html):
-The command asks the user to open a web broswer to a URL for Google's
-OAuth2 authorization page. In the browser, the user will be asked to sign
-into the user's Google Account, unless already signed in. The user is then
-prompted to authorize gsutil to access the user's Google Cloud Storage account
-on the user's behalf. If the user approves the request, a verification
-code is shown. The gsutil config command prompts for this verification
-code, which is used to obtain an OAuth2 token that is written to the
-configuration file.
+  Because the boto configuration file contains your credentials you should
+  keep its file permissions set so no one but you has read access. (The
+  file is created read-only when you run gsutil config.)
 
-The -b option can be used to instruct gsutil config to launch a browser,
-(using python's webbrowser module) to navigate to Google's OAuth2
-authorization page.  Note that this will probably not work as expected
-if you are running gsutil from an ssh window, or using gsutil on Windows.
 
-The -r, -w, -f options cause gsutil config to request a token with restricted
-scope; the resulting token will be restricted to read-only operations,
-read-write operation, or all operations (including getacl/setacl/
-getdefacl/setdefacl/disablelogging/enablelogging/getlogging operations).
-In addition, -s <scope> can be used to request additional
-(non-Google-Storage) scopes.
+<B>CREDENTIALS</B>
+  By default gsutil config obtains OAuth2 credentials, and writes them
+  to the [Credentials] section of the configuration file.  The -r,
+  -w, -f options (see OPTIONS below) cause gsutil config to request a
+  token with restricted scope; the resulting token will be restricted to
+  read-only operations, read-write operation, or all operations (including
+  getacl/setacl/ getdefacl/setdefacl/disablelogging/enablelogging/getlogging
+  operations).  In addition, -s <scope> can be used to request additional
+  (non-Google-Storage) scopes.
 
-If no explicit scope option is given, -f (full control) is assumed by default.
+  If you want to use credentials based on access key and secret (the older
+  authentication method before OAuth2 was supported) instead of OAuth2,
+  see help about the -a option in the OPTIONS section.
 
-The -a option can be used to prompt for Google Cloud Storage access key and
-secret (the older authentication method before OAuth2 was supported) instead.
+  If you wish to use gsutil with other providers (or to copy data back and
+  forth between multiple providers) you can edit their credentials into the
+  [Credentials] section after creating the initial configuration file.
 
-Options:
-  -a          Prompt for Google Cloud Storage access key and secret instead of
+
+<B>CONFIGURATION FILE SELECTION PROCEDURE</B>
+  By default, gsutil will look for the configuration file in /etc/boto.cfg
+  and ~/.boto. You can override this choice by setting the BOTO_CONFIG
+  environment variable. This is also useful if you have several different
+  identities or cloud storage environments: By setting up the credentials
+  and any additional configuration in separate files for each, you can
+  switch environments by changing environment variables.
+
+  You can also set up a path of configuration files, by setting the BOTO_PATH
+  environment variable to contain a ":" delimited path. For example setting
+  the BOTO_PATH environment variable to:
+    /etc/projects/my_group_project.boto.cfg:/home/mylogin/.boto
+  will cause gsutil to load each configuration file found in the path
+  in order. This is useful if you want to set up some shared configuration
+  state among many users: The shared state can go in the central shared
+  file ( /etc/projects/my_group_project.boto.cfg) and each user's
+  individual credentials can be placed in the configuration file in each
+  of their home directories. (For security reasons users should never
+  share credentials via a shared configuration file.)
+
+
+<B>CONFIGURATION FILE STRUCTURE</B>
+  The configuration file contains a number of sections: [Credentials],
+  [Boto], [GSUtil], and [OAuth2]. If you edit the file make sure to edit
+  the appropriate section (discussed below), and to be careful not to
+  mis-edit any of the setting names (like "gs_access_key_id") and not to
+  remove the section delimiters (like "[Credentials]").
+
+
+<B>ADDITIONAL CONFIGURATION-CONTROLLABLE FEATURES</B>
+  With the exception of setting up gsutil to work through a proxy (see
+  below), most users won't need to edit values in the boto configuration
+  file; values found in there tend to be of more specialized use than
+  command line option-controllable features.
+
+  The following are the currently defined configuration settings, broken
+  down by section. Their use is documented in comments preceding each, in
+  the configuration file. If you see a setting you want to change that's
+  not listed in your current file, see the section below on Updating to
+  the Latest Configuration File.
+
+  The currently supported settings, are, by section:
+  [Boto]
+    proxy
+    proxy_port
+    proxy_user
+    proxy_pass
+    is_secure
+    https_validate_certificates
+    debug
+    num_retries
+
+  [GSUtil]
+    resumable_threshold
+    resumable_tracker_dir
+    parallel_process_count
+    parallel_thread_count
+    default_api_version
+    default_project_id
+    use_magicfile
+
+  [OAuth2]
+    token_cache
+    token_cache
+    client_id
+    client_secret
+    provider_label
+    provider_authorization_uri
+    provider_token_uri
+
+
+<B>UPDATING TO THE LATEST CONFIGURATION FILE</B>
+  We add new configuration controllable features to the boto configuration
+  file over time, but most gsutil users create a configuration file once
+  and then keep it for a long time, so new features aren't apparent when
+  you update to a newer version of gsutil. If you want to get the
+  latest configuration file (which includes all the latest settings and
+  brief comments about each) you can rename your current file (e.g., to
+  '.boto_old), run gsutil config, and then edit any configuration settings
+  you wanted from your old file into the newly created file. Note, however,
+  that if you're using OAuth2 credentials and you go back through the OAuth2
+  configuration dialog it will invalidate your previous OAuth2 credentials.
+
+  If no explicit scope option is given, -f (full control) is assumed by default.
+
+
+<B>OPTIONS</B>
+  -a          Prompt for Google Cloud Storage access key and secret (the older
+              authentication method before OAuth2 was supported) instead of
               obtaining an OAuth2 token.
-  -b          Launch browser to obtain OAuth2 approval and project ID instead
-              of showing the URL and asking user to open the browser.
+
+  -b          Causes gsutil config to launch a browser to obtain OAuth2 approval
+              and the project ID instead of showing the URL for each and asking
+              the user to open the browser. This will probably not work as
+              expected if you are running gsutil from an ssh window, or using
+              gsutil on Windows.
+
   -f          Request token with full-control access (default).
-  -o <file>   Write the configuration to <file> (use '-' for stdout)
+
+  -o <file>   Write the configuration to <file> instead of ~/.boto.
+              Use '-' for stdout.
+
   -r          Request token restricted to read-only access.
+
   -s <scope>  Request additional OAuth2 <scope>.
+
   -w          Request token restricted to read-write access.
 """)
 
@@ -114,7 +210,7 @@ CONFIG_PRELUDE_CONTENT = """
 # by the boto library, used by gsutil. You can edit this file (e.g., to add
 # credentials) but be careful not to mis-edit any of the variable names (like
 # "gs_access_key_id") or remove important markers (like the "[Credentials]" and
-# "[Boto]" section delimeters).
+# "[Boto]" section delimiters).
 #
 """
 
@@ -122,10 +218,10 @@ CONFIG_PRELUDE_CONTENT = """
 # On Linux systems we automatically scale the number of processes to match
 # the underlying CPU/core count. Given we'll be running multiple concurrent
 # processes on a typical multi-core Linux computer, to avoid being too
-# aggresive with resources, the default number of threads is reduced from
+# aggressive with resources, the default number of threads is reduced from
 # the previous value of 24 to 10.
-# On Windows and Mac systems parallel multiprocessing and multithreading
-# in Python presents various challenges so we retain compaibility with
+# On Windows and Mac systems parallel multi-processing and multi-threading
+# in Python presents various challenges so we retain compatibility with
 # the established parallel mode operation, i.e. one process and 24 threads.
 if platform.system() == 'Linux':
   DEFAULT_PARALLEL_PROCESS_COUNT = multiprocessing.cpu_count()
@@ -264,7 +360,7 @@ class ConfigCommand(Command):
     # Name of command.
     COMMAND_NAME : 'config',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['configure'],
+    COMMAND_NAME_ALIASES : ['cfg', 'conf', 'configure'],
     # Min number of args required by this command.
     MIN_ARGS : 0,
     # Max number of args required by this command, or NO_MAX.
@@ -284,8 +380,8 @@ class ConfigCommand(Command):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'config',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['cfg', 'conf', 'configure'],
-    # Type of help)
+    HELP_NAME_ALIASES : ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
     HELP_ONE_LINE_SUMMARY : 'Obtain credentials and create configuration file',

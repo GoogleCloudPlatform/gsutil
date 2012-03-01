@@ -35,10 +35,102 @@ from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
-gsutil ls [-b] [-l] [-L] [-p proj_id] uri...
-   -l Prints long listing (owner, length); -L provides more detail.
-   -b Prints info about the bucket when used with a bucket URI.
-   -p proj_id Specifies the project ID to use for listing buckets.
+<B>SYNOPSIS</B>
+  gsutil ls [-b] [-l] [-L] [-R] [-p proj_id] uri...
+
+
+<B>LISTING PROVIDERS, BUCKETS, AND OBJECTS</B>
+  The ls command prints information about storage providers, buckets,
+  and objects.
+
+  If you run gsutil ls without URIs, it lists all of your buckets:
+
+    gsutil ls
+
+  If you specify provider URIs, gsutil ls will list buckets at each provider:
+
+    gsutil ls gs://
+
+  If you specify bucket URIs, gsutil ls will list objects at the top
+  level of each bucket. For example:
+
+    gsutil ls gs://bucket
+
+  will list the names of all objects and subdirectories under gs://bucket,
+  but will not descend into any of the subdirectories.
+
+  If you specify object URIs, gsutil ls will list objects in each bucket. For
+  example:
+
+    gsutil ls gs://bucket/*.txt
+
+  will list all text files at the top level of the bucket; and:
+
+    gsutil ls gs://bucket/**.txt
+
+  will list all text files anywhere in the bucket.
+
+<B>DIRECTORY BY DIRECTORY AND FLAT LISTINGS</B>
+  As noted above, listing a bucket or bucket subdirectory shows only
+  the names of contained objects and subdirectories.  If you want to list
+  further, you can manually list individual (or groups of, using wildcards)
+  subdirectories. For example, if the result of listing a bucket shows there
+  are subdirectories gs://bucket/dir1, gs://bucket/dir2, and gs://bucket/dir3,
+  you can list the contents of the last two using:
+
+    gsutil ls gs://bucket/dir[23]
+
+  If you want to see all objects and subdirectories under a bucket or bucket
+  subdirectory, use the -R option. For example:
+
+    gsutil ls -R gs://bucket
+
+  will list the top-level objects and buckets, then the objects and
+  buckets under gs://bucket/dir1, then those under gs://bucket/dir2, etc.
+
+  If you want to see all objects in the bucket use a recursive wildcard. For
+  example:
+
+    gsutil ls -R gs://bucket/**
+
+  will list all objects in the bucket, while:
+
+    gsutil ls -R gs://bucket/dir1/**
+
+  will list all objects under gs://bucket/dir1 or any of its subdirectories.
+
+  If you want to see the complete contents of a bucket you can use gsutil ls -R:
+
+    gsutil ls -R gs://bucket
+
+  This will show a level by level recursive bucket listing.
+  Alternatively you can use a recursive wildcard:
+
+    gsutil ls gs://bucket/**
+
+  This will show a flat listing of all bucket contents:
+
+  If you specify the -l option, gsutil will output information about
+  each matching object. For example,
+
+    gsutil ls -l gs://bucket/*.txt
+
+  will print the object size, creation time stamp, and name of each
+  matching object, along with total count and size of all matching
+  objects.
+
+  If you run gsutil ls with no options, it simply lists all matching buckets
+  or objects.
+
+
+<B>OPTIONS</B>
+  -l          Prints long listing (owner, length); -L provides more detail.
+
+  -b          Prints info about the bucket when used with a bucket URI.
+
+  -p proj_id  Specifies the project ID to use for listing buckets.
+
+  -R          Requests a recursive listing.
 """)
 
 
@@ -71,10 +163,10 @@ class LsCommand(Command):
     HELP_NAME : 'ls',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['dir', 'list'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'List buckets or objects',
+    HELP_ONE_LINE_SUMMARY : 'List providers, buckets, or objects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

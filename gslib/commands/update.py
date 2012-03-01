@@ -38,7 +38,34 @@ from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
-gsutil update
+<B>SYNOPSIS</B>
+gsutil update [-f] [uri]
+
+
+<B>DESCRIPTION</B>
+  The gsutil update command downloads the latest copy of gsutil, checks its
+  version, and offers to let you update to it if it differs from the
+  version you're currently running.
+
+  Once you say "Y" to the prompt of whether to install the update, the gsutil
+  update command locates where the running copy of gsutil is installed,
+  unpacks the new version, moves the previous version aside, moves the new
+  version to where the previous version was installed, and removes the
+  moved-aside old version. Because of this, users are cautioned not to store
+  data in the gsutil directory, since that data will be lost when you update
+  gsutil. (Some users change directories into the gsutil directory to run
+  the command. We advise against doing that, for this reason.)
+
+  By default gsutil update will retrieve the new code from
+  gs://pub/gsutil.tar.gz, but you can optionally specify a URI to use
+  instead. This is primarily used for distributing pre-release versions of
+  the code to a small group of early test users.
+
+
+<B>OPTIONS</B>
+  -f          Forces the update command to offer to let you update, even if you
+              have the most current copy already. This can be useful if you have
+              a corrupted local copy.
 """)
 
 
@@ -71,10 +98,10 @@ class UpdateCommand(Command):
     HELP_NAME : 'update',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['refresh'],
-    # Type of help)
+    # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Update to latest version of gsutil',
+    HELP_ONE_LINE_SUMMARY : 'Update to the latest version of gsutil',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
@@ -191,12 +218,6 @@ class UpdateCommand(Command):
     finally:
       ver_file.close()
 
-    # The force_update option works around a problem with the way the
-    # first gsutil "update" command exploded the gsutil and boto directories,
-    # which didn't correctly install boto. People running that older code can
-    # run "gsutil update" (to update to the newer gsutil update code) followed
-    # by "gsutil update -f" (which will then update the boto code, even though
-    # the VERSION is already the latest version).
     force_update = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
@@ -211,7 +232,7 @@ class UpdateCommand(Command):
           (latest_version_string, self.gsutil_bin_dir))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove)
 
-    answer = raw_input('Proceed (Note: experimental command)? [y/N] ')
+    answer = raw_input('Proceed? [y/N] ')
     if not answer or answer.lower()[0] != 'y':
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       raise CommandException('Not running update.', informational=True)
