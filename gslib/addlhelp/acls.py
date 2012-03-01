@@ -57,21 +57,21 @@ _detailed_help_text = ("""
      permission for an object will result in an error.
 
   2. The bucket ACL plays no role in determining who can read objects; only the
-     object ACL matters for that purpose. This is different from, for example,
-     the case in the UNIX file system, where both the file and directory
-     permission control file read access. It also means, for example, that
-     someoone with FULL_CONTROL over the bucket may not have read access to
-     objects in the bucket. This is by design, and supports useful cases. For
-     example, you might want to set up bucket ownership so that a small group
-     of administrators have FULL_CONTROL on the bucket (with the ability to
+     object ACL matters for that purpose. This is different from how things
+     work in Linux file systems, where both the file and directory permission
+     control file read access. It also means, for example, that someone with
+     FULL_CONTROL over the bucket may not have read access to objects in
+     the bucket.  This is by design, and supports useful cases. For example,
+     you might want to set up bucket ownership so that a small group of
+     administrators have FULL_CONTROL on the bucket (with the ability to
      delete data to control storage costs), but not grant those users read
      access to the object data (which might be sensitive data that should
      only be accessed by a different specific group of users).
 
 
 <B>CANNED ACLS</B>
-  As noted in "gsutil help setacl", the simplest way to set an ACL is
-  using a canned ACL. The available canned ACLs are:
+  The simplest way to set an ACL on a bucket or object is using a "canned
+  ACL". The available canned ACLs are:
 
   project-private            Gives permission to the project team based on their
                              roles. Anyone who is part of the team has READ
@@ -142,10 +142,10 @@ _detailed_help_text = ("""
   The IDs shown here are "canonical IDs", which uniquely identify individuals
   and groups.
 
-  The ACL consists of an Owner element and a collection of <Entry> elements,
-  each of which specifies a Scope and a Permission. Scopes are the way you
-  specify an individual or group of individuals, and Permissions specify what
-  access they're permitted.
+  The ACL consists of an Owner element and a collection of Entry elements, each
+  of which specifies a Scope and a Permission. Scopes are the way you specify
+  an individual or group of individuals, and Permissions specify what access
+  they're permitted.
 
   This particular ACL grants a single user (the person who uploaded the
   object in this case) FULL_CONTROL over the object, which just means
@@ -156,13 +156,17 @@ _detailed_help_text = ("""
   <AccessControlList>
     <Entries>
       <Entry>
-        <Permission>FULL_CONTROL</Permission>
+        <Permission>
+          FULL_CONTROL
+        </Permission>
         <Scope type="GroupByEmail">
           <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
         </Scope>
       </Entry>
       <Entry>
-        <Permission>READ</Permission>
+        <Permission>
+          READ
+        </Permission>
         <Scope type="GroupByEmail">
           <EmailAddress>travel-companion-readers@googlegroups.com</EmailAddress>
         </Scope>
@@ -180,26 +184,30 @@ _detailed_help_text = ("""
 
 
 <B>CANONICAL IDS VS. HUMAN READABLE IDENTIFIERS</B>
-  The first ACL in the previous section contained canonical IDs,
-  while the second contained email address-based identifiers. The reason for
-  canonical IDs is to guard user privacy, so that by default the names and
-  email addresses of sharees aren't visible (even to those individuals who are
-  allowed to view and edit the ACL). If hiding user identities is not needed
-  for your case and you'd like to have the ACLs contain human-readable addresses
-  you can add a <DisplayName> element to each Scope you put in the ACL. For
-  example, the second ACL above could be edited to contain this information:
+  The first ACL in the previous section contained canonical IDs, while the
+  second contained email address-based identifiers. The reason for canonical IDs
+  is to guard user privacy, so that by default the names and email addresses
+  of sharees aren't visible (even to those users who are allowed to view
+  and edit the ACL). If hiding user identities is not needed for your case
+  and you'd like to have the ACLs contain human-readable addresses you can
+  add a DisplayName element to each Scope you put in the ACL. For example,
+  the second ACL above could be edited to contain this information:
 
   <AccessControlList>
     <Entries>
       <Entry>
-        <Permission>FULL_CONTROL</Permission>
+        <Permission>
+          FULL_CONTROL
+        </Permission>
         <Scope type="GroupByEmail">
           <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
           <DisplayName>travel-companion-owners@googlegroups.com</DisplayName>
         </Scope>
       </Entry>
       <Entry>
-        <Permission>READ</Permission>
+        <Permission>
+          READ
+        </Permission>
         <Scope type="GroupByEmail">
           <EmailAddress>travel-companion-readers@googlegroups.com</EmailAddress>
           <DisplayName>travel-companion-readers@googlegroups.com</DisplayName>
@@ -209,8 +217,9 @@ _detailed_help_text = ("""
   </AccessControlList>
 
   When written this way, even though the original identity will be translated
-  to a canonical ID when retrieved later, the DisplayName field will be left
-  with whatever content you wrote (the email address in the above case).
+  by the Google Cloud Storage service into a canonical ID when retrieved later,
+  the DisplayName field will be left with whatever content you wrote (the
+  email address in the above case).
 
 
 <B>PROJECT GROUPS</B>

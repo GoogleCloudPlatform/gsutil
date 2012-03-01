@@ -48,32 +48,30 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil config command obtains access credentials for Google
-  Cloud Storage and writes a boto/gsutil configuration file
-  containing the obtained credentials along with a number of other
-  configuration-controllable values.
+  The gsutil config command obtains access credentials for Google Cloud
+  Storage and writes a boto/gsutil configuration file containing the obtained
+  credentials along with a number of other configuration-controllable values.
 
-  Unless specified otherwise (see OPTIONS), the configuration file
-  is written to ~/.boto (i.e., the file .boto under the user's home
-  directory). If the default file already exists, an attempt is made
-  to rename the existing file to ~/.boto.bak; if that attempt fails the
-  command will exit. A different destination file can be specified with
-  the -o option (see OPTIONS).
+  Unless specified otherwise (see OPTIONS), the configuration file is written
+  to ~/.boto (i.e., the file .boto under the user's home directory). If the
+  default file already exists, an attempt is made to rename the existing file
+  to ~/.boto.bak; if that attempt fails the command will exit. A different
+  destination file can be specified with the -o option (see OPTIONS).
 
   Because the boto configuration file contains your credentials you should
-  keep its file permissions set so no one but you has read access. (The
-  file is created read-only when you run gsutil config.)
+  keep its file permissions set so no one but you has read access. (The file
+  is created read-only when you run gsutil config.)
 
 
 <B>CREDENTIALS</B>
   By default gsutil config obtains OAuth2 credentials, and writes them
-  to the [Credentials] section of the configuration file.  The -r,
-  -w, -f options (see OPTIONS below) cause gsutil config to request a
-  token with restricted scope; the resulting token will be restricted to
-  read-only operations, read-write operation, or all operations (including
-  getacl/setacl/ getdefacl/setdefacl/disablelogging/enablelogging/getlogging
-  operations).  In addition, -s <scope> can be used to request additional
-  (non-Google-Storage) scopes.
+  to the [Credentials] section of the configuration file. The -r, -w,
+  -f options (see OPTIONS below) cause gsutil config to request a token
+  with restricted scope; the resulting token will be restricted to read-only
+  operations, read-write operation, or all operations (including getacl/setacl/
+  getdefacl/setdefacl/disablelogging/enablelogging/getlogging operations). In
+  addition, -s <scope> can be used to request additional (non-Google-Storage)
+  scopes.
 
   If you want to use credentials based on access key and secret (the older
   authentication method before OAuth2 was supported) instead of OAuth2,
@@ -85,45 +83,47 @@ _detailed_help_text = ("""
 
 
 <B>CONFIGURATION FILE SELECTION PROCEDURE</B>
-  By default, gsutil will look for the configuration file in /etc/boto.cfg
-  and ~/.boto. You can override this choice by setting the BOTO_CONFIG
-  environment variable. This is also useful if you have several different
-  identities or cloud storage environments: By setting up the credentials
-  and any additional configuration in separate files for each, you can
-  switch environments by changing environment variables.
+  By default, gsutil will look for the configuration file in /etc/boto.cfg and
+  ~/.boto. You can override this choice by setting the BOTO_CONFIG environment
+  variable. This is also useful if you have several different identities or
+  cloud storage environments: By setting up the credentials and any additional
+  configuration in separate files for each, you can switch environments by
+  changing environment variables.
 
   You can also set up a path of configuration files, by setting the BOTO_PATH
   environment variable to contain a ":" delimited path. For example setting
   the BOTO_PATH environment variable to:
+
     /etc/projects/my_group_project.boto.cfg:/home/mylogin/.boto
-  will cause gsutil to load each configuration file found in the path
-  in order. This is useful if you want to set up some shared configuration
-  state among many users: The shared state can go in the central shared
-  file ( /etc/projects/my_group_project.boto.cfg) and each user's
-  individual credentials can be placed in the configuration file in each
-  of their home directories. (For security reasons users should never
-  share credentials via a shared configuration file.)
+
+  will cause gsutil to load each configuration file found in the path in
+  order. This is useful if you want to set up some shared configuration
+  state among many users: The shared state can go in the central shared file
+  ( /etc/projects/my_group_project.boto.cfg) and each user's individual
+  credentials can be placed in the configuration file in each of their home
+  directories. (For security reasons users should never share credentials
+  via a shared configuration file.)
 
 
 <B>CONFIGURATION FILE STRUCTURE</B>
   The configuration file contains a number of sections: [Credentials],
-  [Boto], [GSUtil], and [OAuth2]. If you edit the file make sure to edit
-  the appropriate section (discussed below), and to be careful not to
-  mis-edit any of the setting names (like "gs_access_key_id") and not to
-  remove the section delimiters (like "[Credentials]").
+  [Boto], [GSUtil], and [OAuth2]. If you edit the file make sure to edit the
+  appropriate section (discussed below), and to be careful not to mis-edit
+  any of the setting names (like "gs_access_key_id") and not to remove the
+  section delimiters (like "[Credentials]").
 
 
 <B>ADDITIONAL CONFIGURATION-CONTROLLABLE FEATURES</B>
   With the exception of setting up gsutil to work through a proxy (see
-  below), most users won't need to edit values in the boto configuration
-  file; values found in there tend to be of more specialized use than
-  command line option-controllable features.
+  below), most users won't need to edit values in the boto configuration file;
+  values found in there tend to be of more specialized use than command line
+  option-controllable features.
 
   The following are the currently defined configuration settings, broken
   down by section. Their use is documented in comments preceding each, in
-  the configuration file. If you see a setting you want to change that's
-  not listed in your current file, see the section below on Updating to
-  the Latest Configuration File.
+  the configuration file. If you see a setting you want to change that's not
+  listed in your current file, see the section below on Updating to the Latest
+  Configuration File.
 
   The currently supported settings, are, by section:
   [Boto]
@@ -156,16 +156,16 @@ _detailed_help_text = ("""
 
 
 <B>UPDATING TO THE LATEST CONFIGURATION FILE</B>
-  We add new configuration controllable features to the boto configuration
-  file over time, but most gsutil users create a configuration file once
-  and then keep it for a long time, so new features aren't apparent when
-  you update to a newer version of gsutil. If you want to get the
-  latest configuration file (which includes all the latest settings and
-  brief comments about each) you can rename your current file (e.g., to
-  '.boto_old), run gsutil config, and then edit any configuration settings
-  you wanted from your old file into the newly created file. Note, however,
-  that if you're using OAuth2 credentials and you go back through the OAuth2
-  configuration dialog it will invalidate your previous OAuth2 credentials.
+  We add new configuration controllable features to the boto configuration file
+  over time, but most gsutil users create a configuration file once and then
+  keep it for a long time, so new features aren't apparent when you update
+  to a newer version of gsutil. If you want to get the latest configuration
+  file (which includes all the latest settings and documentation about each)
+  you can rename your current file (e.g., to '.boto_old'), run gsutil config,
+  and then edit any configuration settings you wanted from your old file
+  into the newly created file. Note, however, that if you're using OAuth2
+  credentials and you go back through the OAuth2 configuration dialog it will
+  invalidate your previous OAuth2 credentials.
 
   If no explicit scope option is given, -f (full control) is assumed by default.
 

@@ -22,18 +22,17 @@ from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
-  If you have a set of users who want to access data with ACLs marked as
-  publicly readable (see "gsutil help acls"), they can use gsutil to access
-  the data without obtaining credentials. For example, the gs://uspto-pair
-  bucket contains a number of publicly readable objcets, so any user can run
-  the following command without first obtaining credentials:
+  Users can access publicly data (see "gsutil help acls") without obtaining
+  credentials. For example, the gs://uspto-pair bucket contains a number
+  of publicly readable objects, so any user can run the following command
+  without first obtaining credentials:
 
     gsutil ls gs://uspto-pair/applications/0800401*
 
-  They can similarly download objects they find via the above gsutil ls command.
+  Users can similarly download objects they find via the above gsutil ls command.
 
   If a user without credentials attempts to access protected data using gsutil,
-  they will be prompted to run gsutil config to obtain credentials.
+  they will be prompted to run "gsutil config" to obtain credentials.
 """)
 
 
