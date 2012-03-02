@@ -84,6 +84,23 @@ _detailed_help_text = ("""
   with a single operation), a bucket subdirectory move involves running many
   cp and rm commands.
 
+  One additional way that the gsutil mv command doesn't work the same as the
+  UNIX mv command is if you attempt to move a single object to a
+  subdirectory. For example if you have a subdirectory called gs://my_bucket/dir
+  and you run the command:
+
+    gsutil mv gs://my_bucket/abc gs://my_bucket/dir
+
+  you will end up with both an object and a subdirectory called
+  gs://my_bucket/dir.  This happens because the Google Cloud Storage name
+  space is actually flat, with gsutil imposing directory-like interpretation
+  where it finds / in path names. It is best never to name an object with
+  the same name as a subdirectory.
+
+  You can achieve the desired rename by instead running the command:
+
+    gsutil mv gs://my_bucket/abc gs://my_bucket/dir/abc
+
 
 <B>OPTIONS</B>
   -p          Causes ACL to be preserved when moving in the cloud. Note that

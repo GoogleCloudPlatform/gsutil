@@ -290,19 +290,16 @@ class LsCommand(Command):
     # as a key and yield the result without doing a bucket listing.
     blr_expansion = list(
         self.exp_handler.WildcardIterator(rstripped_blr + '*'))
-    if (len(blr_expansion) == 1 and blr_expansion[0].HasPrefix()
-        and blr_expansion[0].GetRStrippedUriString() == rstripped_blr):
-      # The bucket listing returned a single Prefix matching the specified
-      # name, so use it for the expansion, to handle the case that the
-      # user was requesting a bucket subdir listing.
-      return blr_expansion
     # Find the originally specified blr in the expanded list (if present). Don't
     # just use the expanded list, since it would also include objects whose name
     # prefix matches the blr name (because of the wildcard match we did above).
+    # Note that there can be multiple matches, for the case where there's
+    # both an object and a subdirectory with the same name.
+    exp_result = []
     for cur_blr in blr_expansion:
       if cur_blr.GetRStrippedUriString() == rstripped_blr:
-        return [cur_blr]
-    return []
+        exp_result.append(cur_blr)
+    return exp_result
 
   def _ExpandUriAndPrintInfo(self, uri, listing_style, should_recurse=False):
     """

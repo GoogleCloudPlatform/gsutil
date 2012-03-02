@@ -66,16 +66,13 @@ _detailed_help_text = ("""
 
     gsutil cp *.txt gs://my_bucket
 
-
   Similarly, you can download text files from a bucket by doing:
 
     gsutil cp gs://my_bucket/*.txt .
 
-
   If you want to copy an entire directory tree you need to use the -R option:
 
     gsutil cp -R dir gs://my_bucket
-
 
   If you have a large number of files to upload you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
