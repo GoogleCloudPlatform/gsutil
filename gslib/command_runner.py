@@ -29,18 +29,20 @@ from gslib.exception import CommandException
 class CommandRunner(object):
 
   def __init__(self, gsutil_bin_dir, boto_lib_dir, config_file_list,
-               bucket_storage_uri_class=BucketStorageUri):
+               gsutil_ver, bucket_storage_uri_class=BucketStorageUri):
     """
     Args:
       gsutil_bin_dir: Bin dir from which gsutil is running.
       boto_lib_dir: Lib dir where boto runs.
       config_file_list: Config file list returned by _GetBotoConfigFileList().
+      gsutil_ver: Version string of currently running gsutil command.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
     """
     self.gsutil_bin_dir = gsutil_bin_dir
     self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
+    self.gsutil_ver = gsutil_ver
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.command_map = self._LoadCommandMap()
 
@@ -94,5 +96,6 @@ class CommandRunner(object):
     command_inst = command_class(self, args, headers, debug,
                                  parallel_operations, self.gsutil_bin_dir,
                                  self.boto_lib_dir, self.config_file_list,
-                                 self.bucket_storage_uri_class, test_method)
+                                 self.gsutil_ver, self.bucket_storage_uri_class,
+                                 test_method)
     command_inst.RunCommand()

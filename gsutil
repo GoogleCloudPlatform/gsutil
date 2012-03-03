@@ -69,7 +69,18 @@ from gslib import util
 from gslib.util import HasConfiguredCredentials
 from gslib.wildcard_iterator import WildcardException
 
-boto.UserAgent += '/gsutil'
+# Load the gsutil version number and append it to boto.UserAgent so the value
+# is set before anything instantiates boto. (If parts of boto were instantiated
+# first those parts would have the old value of boto.UserAgent, so we wouldn't
+# be guaranteed that all code paths send the correct user agent.)
+ver_file_path = os.path.join(gsutil_bin_dir, 'VERSION')
+if not os.path.isfile(ver_file_path):
+  raise CommandException(
+      '%s not found. Please reinstall gsutil from scratch' % ver_file_path)
+ver_file = open(ver_file_path, 'r')
+gsutil_ver = ver_file.read().rstrip()
+ver_file.close()
+boto.UserAgent += ' gsutil/%s (%s)' % (gsutil_ver, os.name)
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
@@ -87,7 +98,8 @@ def main():
     raise CommandException('gsutil requires Python 2.5.1 or higher.')
 
   config_file_list = _GetBotoConfigFileList()
-  command_runner = CommandRunner(gsutil_bin_dir, boto_lib_dir, config_file_list)
+  command_runner = CommandRunner(gsutil_bin_dir, boto_lib_dir, config_file_list,
+                                 gsutil_ver)
   headers = {}
   parallel_operations = False
   debug = 0

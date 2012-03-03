@@ -54,8 +54,10 @@ class GsutilCommandTests(unittest.TestCase):
   gsutil_bin_dir = '.'
   boto_lib_dir = os.path.join(gsutil_bin_dir, 'boto')
   config_file_list = boto.pyami.config.BotoConfigLocations
+  # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
+  # sent via HTTP because we're using MockStorageService here.
   command_runner = CommandRunner(gsutil_bin_dir, boto_lib_dir, config_file_list,
-                                 MockBucketStorageUri)
+                                 "gsutil_test_commands", MockBucketStorageUri)
 
   def GetSuiteDescription(self):
     return 'gsutil command method test suite'

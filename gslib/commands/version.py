@@ -116,7 +116,7 @@ class VersionCommand(Command):
     sys.stderr.write(
         'gsutil version %s\nchecksum %s (%s)\nconfig file version %s\n'
         'boto version %s\npython version %s\n' % (
-        self.LoadVersionString(), cur_checksum, checksum_ok_str, config_ver,
+        self.gsutil_ver, cur_checksum, checksum_ok_str, config_ver,
         boto.__version__, sys.version))
 
   def _ComputeCodeChecksum(self):

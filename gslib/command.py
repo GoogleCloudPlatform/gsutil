@@ -163,7 +163,7 @@ class Command(object):
   command_name = property(_GetDefaultCommandName)
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               gsutil_bin_dir, boto_lib_dir, config_file_list,
+               gsutil_bin_dir, boto_lib_dir, config_file_list, gsutil_ver,
                bucket_storage_uri_class, test_method=None):
     """
     Args:
@@ -175,6 +175,7 @@ class Command(object):
       gsutil_bin_dir: Bin dir from which gsutil is running.
       boto_lib_dir: Lib dir where boto runs.
       config_file_list: Config file list returned by _GetBotoConfigFileList().
+      gsutil_ver: Version string of currently running gsutil command.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       test_method: Optional general purpose method for testing purposes.
@@ -197,6 +198,7 @@ class Command(object):
     self.gsutil_bin_dir = gsutil_bin_dir
     self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
+    self.gsutil_ver = gsutil_ver
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.test_method = test_method
     self.exclude_symlinks = False
@@ -395,24 +397,6 @@ class Command(object):
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
-
-  def LoadVersionString(self):
-    """Loads version string for currently installed gsutil command.
-
-    Returns:
-      Version string.
-
-    Raises:
-      CommandException: if errors encountered.
-    """
-    ver_file_path = self.gsutil_bin_dir + os.sep + 'VERSION'
-    if not os.path.isfile(ver_file_path):
-      raise CommandException(
-          '%s not found. Please reinstall gsutil from scratch' % ver_file_path)
-    ver_file = open(ver_file_path, 'r')
-    installed_version_string = ver_file.read().rstrip('\n')
-    ver_file.close()
-    return installed_version_string
 
   def Apply(self, func, src_uri_expansion, thr_exc_handler, shared_attrs=None):
     """Dispatch input URI assignments across a pool of parallel OS

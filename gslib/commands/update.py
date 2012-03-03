@@ -189,8 +189,6 @@ class UpdateCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    installed_version_string = self.LoadVersionString()
-
     dirs_to_remove = []
     # Retrieve gsutil tarball and check if it's newer than installed code.
     # TODO: Store this version info as metadata on the tarball object and
@@ -223,7 +221,7 @@ class UpdateCommand(Command):
       for o, unused_a in self.sub_opts:
         if o == '-f':
           force_update = True
-    if not force_update and installed_version_string == latest_version_string:
+    if not force_update and self.gsutil_ver == latest_version_string:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       raise CommandException('You have the latest version of gsutil installed.',
                              informational=True)

@@ -465,8 +465,8 @@ class ConfigCommand(Command):
     # Write the config file prelude.
     config_file.write(CONFIG_PRELUDE_CONTENT.lstrip())
     config_file.write(
-        '# This file was created by gsutil version "%s"\n# at %s.\n'
-        % (self.LoadVersionString(),
+        '# This file was created by gsutil version %s at %s.\n'
+        % (self.gsutil_ver,
            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     config_file.write('#\n# You can create additional configuration files by '
         'running\n# gsutil config [options] [-o <config-file>]\n\n\n')
