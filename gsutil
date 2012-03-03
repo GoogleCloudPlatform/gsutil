@@ -80,7 +80,7 @@ if not os.path.isfile(ver_file_path):
 ver_file = open(ver_file_path, 'r')
 gsutil_ver = ver_file.read().rstrip()
 ver_file.close()
-boto.UserAgent += ' gsutil/%s (%s)' % (gsutil_ver, os.name)
+boto.UserAgent += ' gsutil/%s (%s)' % (gsutil_ver, sys.platform)
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
