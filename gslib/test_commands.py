@@ -589,7 +589,6 @@ class GsutilCommandTests(unittest.TestCase):
                              return_stdout=True)
     expected = set(x.uri for x in self.all_src_subdir_obj_uris)
     expected = expected.union(x.uri for x in self.all_src_subdir_obj_uris)
-    expected.add('%ssrc_subdir/:' % self.src_bucket_uri.uri)
     expected.add('%ssrc_subdir/nested/' % self.src_bucket_uri.uri)
     expected.add('') # Blank line between subdir listings.
     actual = set(output.split('\n'))

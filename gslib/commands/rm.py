@@ -67,7 +67,7 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -f          Continues despite errors when removing multiple objects.
 
-  -R          Causes bucket contents to be removed recursively (i.e., including
+  -R, -r      Causes bucket contents to be removed recursively (i.e., including
               all objects and subdirectories). Will not delete the bucket
               itself; you need to run the gsutil rb command separately to do
               that.

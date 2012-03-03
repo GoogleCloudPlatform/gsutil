@@ -39,98 +39,140 @@ _detailed_help_text = ("""
   gsutil ls [-b] [-l] [-L] [-R] [-p proj_id] uri...
 
 
-<B>LISTING PROVIDERS, BUCKETS, AND OBJECTS</B>
-  The ls command prints information about storage providers, buckets,
+<B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
+  The gsutil ls command prints information about storage providers, buckets,
   and objects.
 
-  If you run gsutil ls without URIs, it lists all of your buckets:
+  If you run gsutil ls without URIs, it lists all of the Google Cloud Storage
+  buckets under your default project ID:
 
     gsutil ls
 
-  If you specify provider URIs, gsutil ls will list buckets at each provider:
+  (For details about projects, see "gsutil help projects" and also the -p
+  option in the OPTIONS section below.)
+
+  If you specify one ore more provider URIs, gsutil ls will list buckets at
+  each listed provider:
 
     gsutil ls gs://
 
-  If you specify bucket URIs, gsutil ls will list objects at the top
-  level of each bucket. For example:
+  If you specify bucket URIs, gsutil ls will list objects at the top level of
+  each bucket, along with the names of each subdirectory. For example:
 
     gsutil ls gs://bucket
 
-  will list the names of all objects and subdirectories under gs://bucket,
-  but will not descend into any of the subdirectories.
+  might produce output like:
 
-  If you specify object URIs, gsutil ls will list objects in each bucket. For
+    gs://bucket/obj1.htm
+    gs://bucket/obj2.htm
+    gs://bucket/images1/
+    gs://bucket/images2/
+
+  The "/" at the end of the last 2 URIs tells you they are subdirectories,
+  which you can list using:
+
+    gsutil ls gs://bucket/images*
+
+  If you specify object URIs, gsutil ls will list the specified objects. For
   example:
 
     gsutil ls gs://bucket/*.txt
 
-  will list all text files at the top level of the bucket; and:
+  will list all files whose name matches the above wildcard at the top level
+  of the bucket.
 
-    gsutil ls gs://bucket/**.txt
+  See "gsutil help wildcards" for more details on working with wildcards.
 
-  will list all text files anywhere in the bucket.
 
-<B>DIRECTORY BY DIRECTORY AND FLAT LISTINGS</B>
-  As noted above, listing a bucket or bucket subdirectory shows only
-  the names of contained objects and subdirectories.  If you want to list
-  further, you can manually list individual (or groups of, using wildcards)
-  subdirectories. For example, if the result of listing a bucket shows there
-  are subdirectories gs://bucket/dir1, gs://bucket/dir2, and gs://bucket/dir3,
-  you can list the contents of the last two using:
-
-    gsutil ls gs://bucket/dir[23]
-
-  If you want to see all objects and subdirectories under a bucket or bucket
-  subdirectory, use the -R option. For example:
+<B>DIRECTORY BY DIRECTORY, FLAT, and RECURSIVE LISTINGS</B>
+  Listing a bucket or subdirectory (as illustrated near the end of the previous
+  section) only shows the objects and names of subdirectories it contains. You
+  can list all objects in a bucket by using the -R option. For example:
 
     gsutil ls -R gs://bucket
 
   will list the top-level objects and buckets, then the objects and
-  buckets under gs://bucket/dir1, then those under gs://bucket/dir2, etc.
+  buckets under gs://bucket/images1, then those under gs://bucket/images2, etc.
 
-  If you want to see all objects in the bucket use a recursive wildcard. For
-  example:
+  If you want to see all objects in the bucket in one "flat" listing use the
+  recursive ("**") wildcard, like:
 
     gsutil ls -R gs://bucket/**
 
-  will list all objects in the bucket, while:
+  or, for a flat listing of a subdirectory:
 
-    gsutil ls -R gs://bucket/dir1/**
+    gsutil ls -R gs://bucket/dir/**
 
-  will list all objects under gs://bucket/dir1 or any of its subdirectories.
 
-  If you want to see the complete contents of a bucket you can use gsutil ls -R:
-
-    gsutil ls -R gs://bucket
-
-  This will show a level by level recursive bucket listing.
-  Alternatively you can use a recursive wildcard:
-
-    gsutil ls gs://bucket/**
-
-  This will show a flat listing of all bucket contents:
-
-  If you specify the -l option, gsutil will output information about
-  each matching object. For example,
+<B>LISTING OBJECT DETAILS</B>
+  If you specify the -l option, gsutil will output additional information
+  about each matching provider, bucket, subdirectory, or object. For example,
 
     gsutil ls -l gs://bucket/*.txt
 
-  will print the object size, creation time stamp, and name of each
-  matching object, along with total count and size of all matching
-  objects.
+  will print the object size, creation time stamp, and name of each matching
+  object, along with the total count and sum of sizes of all matching objects:
+       2276224  2012-03-02T19:25:17  gs://bucket/obj1
+       3914624  2012-03-02T19:30:27  gs://bucket/obj2
+    TOTAL: 2 objects, 6190848 bytes (5.9 MB)
 
-  If you run gsutil ls with no options, it simply lists all matching buckets
-  or objects.
+  You can get a listing of all the objects in the top-level bucket directory
+  (along with the total count and sum of sizes) using a command like:
+
+    gsutil ls -l gs://bucket
+
+  To print additional detail about objects and buckets use the gsutil ls -L
+  option. For example:
+
+    gsutil ls -L gs://bucket/obj1
+
+  will print something like:
+
+    gs://bucket/obj1:
+            Object size:	2276224
+            Last mod:	Fri, 02 Mar 2012 19:25:17 GMT
+            Cache control:	private, max-age=0
+            MIME type:	application/x-executable
+            Etag:	5ca6796417570a586723b7344afffc81
+            ACL:	<Owner:00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70, <<UserById: 00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70>: u'FULL_CONTROL'>>
+    TOTAL: 1 objects, 2276224 bytes (2.17 MB)
+
+  Note that the -L option is slower and more costly to use than the -l option,
+  because it makes a bucket listing request followed by a HEAD request for
+  each individual object (rather than just parsing the information it needs
+  out of a single bucket listing, the way the -l option does).
+
+  See also "gsutil help getacl" for getting a more readable version of the ACL.
+
+
+<B>LISTING BUCKET DETAILS</B>
+  If you want to see information about the bucket itself, use the -b
+  option. For example:
+
+    gsutil ls -L -b gs://bucket
+
+  will print something like:
+
+    gs://bucket/ :
+            24 objects, 29.83 KB
+            LocationConstraint: US
+            ACL: <Owner:00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7, <<GroupById: 00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7>: u'FULL_CONTROL'>>
+            Default ACL: <>
+    TOTAL: 24 objects, 30544 bytes (29.83 KB)
 
 
 <B>OPTIONS</B>
-  -l          Prints long listing (owner, length); -L provides more detail.
+  -l          Prints long listing (owner, length).
+
+  -L          Prints even more detail than -L. This is a separate option because
+              it makes additional service requests (so, takes longer and adds
+              requests costs).
 
   -b          Prints info about the bucket when used with a bucket URI.
 
   -p proj_id  Specifies the project ID to use for listing buckets.
 
-  -R          Requests a recursive listing.
+  -R, -r      Requests a recursive listing.
 """)
 
 
@@ -323,6 +365,7 @@ class LsCommand(Command):
     num_bytes = 0
     expanding_top_level = True
     printed_one = False
+    num_expanded_blrs = 0
     while len(blrs_to_expand):
       if printed_one:
         print
@@ -330,8 +373,11 @@ class LsCommand(Command):
       if blr.HasKey():
         blr_expansion = [blr]
       elif blr.HasPrefix():
-        # Bucket subdir from a previous iteration. Print "header" line.
-        print '%s:' % blr.GetUriString()
+        # Bucket subdir from a previous iteration. Print "header" line only if
+        # we're listing more than one subdir (or if it's a recursive listing),
+        # to be consistent with the way UNIX ls works.
+        if num_expanded_blrs > 1 or should_recurse:
+          print '%s:' % blr.GetUriString()
         blr_expansion = list(self.exp_handler.WildcardIterator(
             '%s/*' % blr.GetRStrippedUriString()))
         printed_one = True
@@ -343,6 +389,7 @@ class LsCommand(Command):
         # This BLR didn't come from a bucket listing. This case happens for
         # BLR's instantiated from a user-provided URI.
         blr_expansion = self._BuildBlrExpansionForUriOnlyBlr(blr)
+        num_expanded_blrs += len(blr_expansion)
       for cur_blr in blr_expansion:
         if cur_blr.HasKey():
           # Object listing.
@@ -357,6 +404,9 @@ class LsCommand(Command):
           # contents).
           if (expanding_top_level and not uri.names_bucket()) or should_recurse:
             blrs_to_expand.append(cur_blr)
+          # Don't include the subdir name in the output if we're doing a
+          # recursive listing, as it will be printed as 'subdir:' when we get
+          # to the prefix expansion, the next iteration of the main loop.
           else:
             print cur_blr.GetUriString()
       expanding_top_level = False

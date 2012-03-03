@@ -204,7 +204,7 @@ _detailed_help_text = ("""
               (The performance issue can be mitigated to some degree by
               using gsutil -m cp to cause parallel copying.)
 
-  -R          Causes directories, buckets, and bucket subdirectories to be
+  -R, -r      Causes directories, buckets, and bucket subdirectories to be
               copied recursively. If you neglect to use this option for
               an upload, gsutil will copy any files it finds and skip any
               directories. Similarly, neglecting to specify -R for a download

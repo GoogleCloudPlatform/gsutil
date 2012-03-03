@@ -65,6 +65,21 @@ _detailed_help_text = ("""
     gs://bucket/abc**.txt
 
 
+<B>BUCKET WILDCARDS</B>
+  You can specify wildcards for bucket names. For example:
+
+    gsutil ls gs://data*.example.com
+
+  will list the contents of all buckets whose name starts with "data" and
+  ends with ".example.com".
+
+  You can also combine bucket and object name wildcards. For example this
+  command will remove all ".txt" files in any of your Google Cloud Storage
+  buckets:
+
+    gsutil rm gs://*/**.txt
+
+
 <B>OTHER WILDCARD CHARACTERS</B>
   In addition to '*', you can use these wildcards:
 
@@ -87,6 +102,29 @@ _detailed_help_text = ("""
   Bucket names also can be wildcarded. For example you can specify multiple
   buckets using something like:
     gs://my_bucket_[0-8]??
+
+
+<B>EFFICIENCY CONSIDERATIONS WHEN USING WILDCARDS OVER MANY OBJECTS</B>
+  It is more efficient, faster, and less network traffic-intensive
+  to use wildcards that have a non-wildcard object-name prefix, like:
+
+    gs://bucket/abc*.txt
+  
+  than it is to use wildcards as the first part of the object name, like:
+
+    gs://bucket/*abc.txt
+
+  This is because the request for "gs://bucket/abc*.txt" asks the server
+  to send back the subset of results whose object names start with "abc",
+  and then gsutil filters the result list for objects whose name ends with
+  ".txt". In contrast, "gs://bucket/*abc.txt" asks the server for the complete
+  list of objects in the bucket and then filters for those objects whose name
+  ends with "abc.txt". This efficiency consideration becomes increasingly
+  noticeable when you use buckets containing thousands or more objects. It is
+  sometimes possible to set up the names of your objects to fit with expected
+  wildcard matching patterns, to take advantage of the efficiency of doing
+  server-side prefix requests. See, for example "gsutil help prod" for a
+  concrete use case example.
 """)
 
 
