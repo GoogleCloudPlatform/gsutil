@@ -554,8 +554,8 @@ class CpCommand(Command):
         output, error = p.communicate()
         if p.returncode != 0 or error:
           raise CommandException(
-              'Encountered error running "file --mime-type %s" (returncode=%d).\n%s'
-              % (object_name, p.returncode, error))
+              'Encountered error running "file --mime-type %s" (returncode=%d).'
+              '\n%s' % (object_name, p.returncode, error))
         # Parse output by removing line delimiter and splitting on last ": ".
         mime_type = output.rstrip().rpartition(': ')[2]
         if mime_type:
@@ -978,14 +978,20 @@ class CpCommand(Command):
       return exp_dst_uri.clone_replace_name(dst_key_name)
 
     if src_uri_names_container and not exp_dst_uri.names_file():
-        #and (exp_dst_uri.names_directory() or exp_dst_uri.is_cloud_uri())):
       # Case 2. Build dst_key_name from subpath of exp_src_uri past
-      # where src_uri ends. For example for src_uri=gs://bucket/ and
+      # where src_uri ends. For example, for src_uri=gs://bucket/ and
       # exp_src_uri=gs://bucket/src_subdir/obj, dst_key_name should be
       # src_subdir/obj.
       src_uri_path_sans_final_dir = _GetPathBeforeFinalDir(src_uri)
       dst_key_name = exp_src_uri.uri[
          len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
+      # Handle special case where src_uri was a directory named with '.' or
+      # './', so that running a command like:
+      #   gsutil cp -r . gs://dest
+      # will produce obj names of the form gs://dest/abc instead of
+      # gs://dest/./abc.
+      if dst_key_name.startswith('./'):
+        dst_key_name = dst_key_name[2:]
 
     else:
       # Case 3.
@@ -1117,7 +1123,7 @@ class CpCommand(Command):
     ('upload gif', 'gsutil cp test.gif gs://$B1/$O1', 0, None),
     ('verify gif', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
       0, ('$F1', 'test_gif.mime')),
-    # TODO: The commented-out /noCT test below fail with USE_MAGICFILE=True. Fix this.
+    # TODO: The commented-out /noCT test below fails with USE_MAGICFILE=True.
     ('upload mp3/noCT',
       'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
     ('verify mp3/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
@@ -1299,8 +1305,8 @@ class CpCommand(Command):
 def _GetPathBeforeFinalDir(uri):
   """
   Returns the part of the path before the final directory component for the
-  given URI, handling cases for file system directory, bucket, and bucket
-  subdirectory. Example: for gs://bucket/dir/ we'll return 'gs://bucket'.
+  given URI, handling cases for file system directories, bucket, and bucket
+  subdirectories. Example: for gs://bucket/dir/ we'll return 'gs://bucket'.
 
   Args:
     uri: StorageUri.

@@ -270,7 +270,7 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual('f0', actual[0].object_name)
 
   def TestCopyingDirToBucket(self):
-    """Tests copying top-level directory to a bucket"""
+    """Tests recursively copying directory to a bucket"""
     self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_bucket_uri.uri])
     actual = set(str(u) for u in test_util.test_wildcard_iterator(
         '%s**' % self.dst_bucket_uri.uri).IterUris())
@@ -281,6 +281,29 @@ class GsutilCommandTests(unittest.TestCase):
       expected.add('%s%s' % (self.dst_bucket_uri.uri,
                              file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
+
+  def TestCopyingDotSlashToBucket(self):
+    """Tests copying ./ to a bucket produces expected naming"""
+    # When running a command like gsutil cp -r . gs://dest we expect the dest
+    # obj names to be of the form gs://dest/abc, not gs://dest/./abc.
+    orig_dir = os.getcwd()
+    for rel_src_dir in ['.', './']:
+      os.chdir(self.src_dir_root)
+      self.RunCommand('cp', ['-R', rel_src_dir, self.dst_bucket_uri.uri])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_uri.uri).IterUris())
+      expected = set()
+      for file_path in self.all_src_file_paths:
+        start_tmp_pos = (file_path.find(self.src_dir_root)
+                         + len(self.src_dir_root))
+        file_path_sans_top_tmp_dir = file_path[start_tmp_pos:]
+        expected.add('%s%s' % (self.dst_bucket_uri.uri,
+                               file_path_sans_top_tmp_dir))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+      os.chdir(orig_dir)
 
   def TestCopyingDirContainingOneFileToBucket(self):
     """Tests copying a directory containing 1 file to a bucket
