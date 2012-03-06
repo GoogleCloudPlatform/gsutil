@@ -36,7 +36,7 @@ class NameExpansionResult(object):
   # results instead of using a generator to iterate incrementally
   # because the caller needs to know the count before iterating and
   # performing copy operations (in order to determine if this is a
-  # multi- source copy request). That limits the scalability of wildcard
+  # multi-source copy request). That limits the scalability of wildcard
   # iteration, since the entire expansion needs to fit in memory (see
   # http://code.google.com/p/gsutil/issues/detail?id=80).
   # TODO: Rework NameExpansionResult to save
@@ -305,7 +305,7 @@ class NameExpansionHandler(object):
             desc = 'directory'
           else:
             desc = 'bucket'
-          print 'Omitting %s "%s. (Did you mean to do %s -R?)"' % (
+          print 'Omitting %s "%s". (Did you mean to do %s -R?)' % (
               desc, bucket_listing_ref.GetUri(), self.command_name)
           continue
         uri_names_container = True

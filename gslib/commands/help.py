@@ -129,8 +129,9 @@ class HelpCommand(Command):
       else:
         help_prov = help_name_map[self.args[0]]
         output.append('<B>NAME</B>\n')
-        output.append('  %s - %s\n' % (help_prov.help_spec[HELP_NAME],
-                                       help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+        output.append('  %s - %s\n' % (
+          help_prov.help_spec[HELP_NAME],
+          help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
         output.append('\n\n')
         output.append(help_prov.help_spec[HELP_TEXT].strip('\n'))
     self._OutputHelp(''.join(output))

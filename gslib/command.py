@@ -398,7 +398,8 @@ class Command(object):
     parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
 
-  def Apply(self, func, src_uri_expansion, thr_exc_handler, shared_attrs=None):
+  def Apply(self, func, src_uri_expansion, thr_exc_handler,
+            have_existing_dest_subdir=None, shared_attrs=None):
     """Dispatch input URI assignments across a pool of parallel OS
        processes and/or Python threads, based on options (-m or not)
        and settings in the user's config file. If non-parallel mode
@@ -409,6 +410,8 @@ class Command(object):
       func: Function to call to process each URI.
       src_uri_expansion: gslib.name_expansion.NameExpansionResult.
       thr_exc_handler: Exception handler for ThreadPool class.
+      have_existing_dest_subdir: bool indicator whether dest is an existing
+        subdirectory. Only matters for cp/mv; pass None otherwise.
       shared_attrs: List of attributes to manage across sub-processes.
 
     Raises:
@@ -443,7 +446,8 @@ class Command(object):
     # (src_uri to be copied,
     #  single URI from wildcard expansion of src_uri,
     #  bool indicator whether src_uri expands to multiple URIs,
-    #  bool indicator whether this is a multi-source request).
+    #  bool indicator whether this is a multi-source request,
+    #  bool indicator whether dest is an existing subdir).
     shard = 0
     assigned_uris = {}
     have_multiple_srcs = src_uri_expansion.IsMultiSrcRequest()
@@ -458,7 +462,7 @@ class Command(object):
         assigned_uris[shard].append((
             src_uri, exp_src_bucket_listing_ref.GetUri(),
             src_uri_names_container, src_uri_expands_to_multi,
-            have_multiple_srcs))
+            have_multiple_srcs, have_existing_dest_subdir))
         shard = (shard + 1) % process_count
 
     if self.parallel_operations and (process_count > 1):
@@ -573,7 +577,8 @@ class Command(object):
       func: Function to call for each request.
       assigned_uris: List of tuples to process, of the form:
           (src_uri, exp_src_uri, src_uri_names_container,
-           src_uri_expands_to_multi, have_multiple_srcs).
+           src_uri_expands_to_multi, have_multiple_srcs,
+           have_existing_dest_subdir).
       shard: Assigned subset (shard number) for this function.
       num_threads: Number of Python threads to spawn to process this shard.
       thr_exc_handler: Exception handler for ThreadPool class.
@@ -596,7 +601,8 @@ class Command(object):
     try:
       # Iterate over assigned URIs and perform copy operations for each.
       for (src_uri, exp_src_uri, src_uri_names_container,
-           src_uri_expands_to_multi, have_multiple_srcs) in assigned_uris:
+           src_uri_expands_to_multi, have_multiple_srcs,
+           have_existing_dest_subdir) in assigned_uris:
         if self.debug:
           self.THREADED_LOGGER.info('process %d shard %d is handling uri %s',
                                     os.getpid(), shard, exp_src_uri)
@@ -606,10 +612,11 @@ class Command(object):
         elif num_threads > 1:
           thread_pool.AddTask(func, src_uri, exp_src_uri,
                               src_uri_names_container, src_uri_expands_to_multi,
-                              have_multiple_srcs)
+                              have_multiple_srcs, have_existing_dest_subdir)
         else:
           func(src_uri, exp_src_uri, src_uri_names_container,
-               src_uri_expands_to_multi, have_multiple_srcs)
+               src_uri_expands_to_multi, have_multiple_srcs,
+               have_existing_dest_subdir)
       # If any Python threads created, wait here for them to finish.
       if num_threads > 1:
         thread_pool.WaitCompletion()

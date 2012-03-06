@@ -29,6 +29,7 @@ import time
 
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
+from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -82,6 +83,12 @@ _detailed_help_text = ("""
 
 
 <B>HOW NAMES ARE CONSTRUCTED</B>
+  The gsutil cp command strives to name objects in a way consistent with how
+  UNIX cp works, which causes names to be constructed varying ways depending on
+  whether you're performing a recursive directory copy or copying individually
+  named objects; and whether you're copying to an existing or non-existent
+  directory.
+
   When performing recursive directory copies, object names are constructed
   that mirror the source directory structure starting at the point of
   recursive processing. For example, the command:
@@ -105,6 +112,16 @@ _detailed_help_text = ("""
   Note that in the above example the '**' wildcard matches all names
   anywhere under dir. The wildcard '*' will match just one level deep
   names. For more details see 'gsutil help wildcards'.
+
+  There's an additional wrinkle when working with subdirectories: the resulting
+  names depend on whether the destination subdirectory exists. For example,
+  if gs://my_bucket/subdir exists as a subdirectory, the command:
+
+    gsutil cp -R dir1/dir2 gs://my_bucket/subdir
+
+  will create objects named like gs://my_bucket/subdir/dir2/a/b/c. In contrast,
+  if gs://my_bucket/subdir does not exist, this same gsutil cp command will
+  create objects named like gs://my_bucket/subdir/a/b/c.
 
 
 <B>COPYING TO/FROM SUBDIRECTORIES; DISTRIBUTING TRANSFERS ACROSS MACHINES</B>
@@ -357,14 +374,16 @@ class CpCommand(Command):
                              '(%s) where the file needs to be created.' %
                              (exp_src_uri, dst_path))
 
-  def _InsistDstUriNamesContainer(self, uri, have_multiple_srcs, command_name):
+  def _InsistDstUriNamesContainer(self, exp_dst_uri,
+                                  have_existing_dst_container, command_name):
     """
     Raises an exception if URI doesn't name a directory, bucket, or bucket
-    subdir.
+    subdir, with special exception for cp -R (see comments below).
 
     Args:
-      uri: StorageUri to check.
-      have_multiple_srcs: Bool indicator of whether operation is multi-source.
+      exp_dst_uri: Wildcard-expanding dst_uri.
+      have_existing_dst_container: bool indicator of whether exp_dst_uri
+        names a container (directory, bucket, or bucket subdir).
       command_name: Name of command making call. May not be the same as
           self.command_name in the case of commands implemented atop other
           commands (like mv command).
@@ -372,11 +391,21 @@ class CpCommand(Command):
     Raises:
       CommandException: if the URI being checked does not name a container.
     """
-    if ((uri.names_file() and os.path.exists(uri.object_name))
-        or (uri.names_object() and not self.recursion_requested)):
+    if exp_dst_uri.is_file_uri():
+      ok = exp_dst_uri.names_directory()
+    else:
+        if have_existing_dst_container:
+          ok = True
+        else:
+          # It's ok to specify a non-existing bucket subdir if this is a
+          # recursive copy, such as:
+          #  gsutil cp -R dir gs://bucket/abc
+          # where there is no existing subdir gs://bucket/abc.
+          ok = self.recursion_requested and exp_dst_uri.names_object()
+    if not ok:
       raise CommandException('Destination URI must name a directory, bucket, '
-                             'or bucket\nsubdirectory for the multiple source '
-                             'form of the %s command.' % command_name)
+                             'or bucket\nsubdirectory for the multiple '
+                             'source form of the %s command.' % command_name)
 
   class _FileCopyCallbackHandler(object):
     """Outputs progress info for large copy requests."""
@@ -860,34 +889,53 @@ class CpCommand(Command):
 
   def _ExpandDstUri(self, src_uri_expansion, dst_uri_str):
     """
-    Expands the destination URI (e.g., expanding wildcard-named destination
-    bucket). The final destination URI will be constructed from this URI
-    based on each individual object, file, directory, bucket, or directory
-    sub bucket being copied to it).
+    Expands wildcard if present in dst_uri_str.
 
     Args:
       src_uri_expansion: gslib.name_expansion.NameExpansionResult.
       dst_uri_str: String representation of requested dst_uri.
 
     Returns:
-        Expanded StorageUri.
+        (exp_dst_uri, have_existing_dst_container)
+        where have_existing_dst_container is a bool indicating whether
+        exp_dst_uri names an existing directory, bucket, or bucket subdirectory.
 
     Raises:
       CommandException: if dst_uri_str matched more than 1 URI.
     """
-    if ContainsWildcard(dst_uri_str):
-      matched_uris = list(
-          self.exp_handler.WildcardIterator(dst_uri_str).IterUris())
-      if len(matched_uris) != 1:
+    dst_uri = self.suri_builder.StorageUri(dst_uri_str)
+
+    # Handle wildcarded dst_uri case.
+    if ContainsWildcard(dst_uri):
+      blr_expansion = list(self.exp_handler.WildcardIterator(dst_uri))
+      if len(blr_expansion) != 1:
         raise CommandException('Destination (%s) must match exactly 1 URI' %
                                dst_uri_str)
-      return matched_uris[0]
-    else:
-      return self.suri_builder.StorageUri(dst_uri_str)
+      blr = blr_expansion[0]
+      uri = blr.GetUri()
+      if uri.is_cloud_uri():
+        return (uri, uri.names_bucket() or blr.HasPrefix())
+      else:
+        return (uri, uri.names_directory())
+
+    # Handle non-wildcarded dst_uri:
+    if dst_uri.is_file_uri():
+      return (dst_uri, dst_uri.names_directory())
+    if dst_uri.names_bucket():
+      return (dst_uri, True)
+    # For object URIs we need to do a wildcard expansion with
+    # dst_uri + "*" and then find if there's a Prefix matching dst_uri.
+    blr_expansion = list(self.exp_handler.WildcardIterator(
+        '%s*' % dst_uri_str.rstrip(dst_uri.delim)))
+    for blr in blr_expansion:
+      if (blr.GetRStrippedUriString() == dst_uri_str.rstrip(dst_uri.delim)):
+        return (dst_uri, blr.HasPrefix())
+    return (dst_uri, False)
 
   def _ConstructDstUri(self, src_uri, exp_src_uri,
                        src_uri_names_container, src_uri_expands_to_multi,
-                       have_multiple_srcs, exp_dst_uri):
+                       have_multiple_srcs, exp_dst_uri,
+                       have_existing_dest_subdir):
     """
     Constructs the destination URI for a given exp_src_uri/exp_dst_uri pair,
     using context-dependent naming rules intended to mimic UNIX cp semantics.
@@ -907,6 +955,8 @@ class CpCommand(Command):
       exp_dst_uri: the expanded StorageUri requested for the cp destination.
           Final written path is constructed from this plus a context-dependent
           variant of src_uri.
+      have_existing_dest_subdir: bool indicator whether dest is an existing
+        subdirectory.
 
     Returns:
       StorageUri to use for copy.
@@ -915,9 +965,18 @@ class CpCommand(Command):
       CommandException if destination object name not specified for
       source and source is a stream.
     """
-    if self._ShouldTreatDstUriAsSingleton(have_multiple_srcs, exp_dst_uri):
+    if self._ShouldTreatDstUriAsSingleton(
+        have_multiple_srcs, have_existing_dest_subdir, exp_dst_uri):
       # We're copying one file or object to one file or object.
       return exp_dst_uri
+
+    if not self.recursion_requested and not have_multiple_srcs:
+      # We're copying one file or object to a subdirectory. Append final comp
+      # of exp_src_uri to exp_dest_uri.
+      src_final_comp = exp_src_uri.object_name.rpartition(src_uri.delim)[-1]
+      return self.suri_builder.StorageUri('%s%s%s' % (
+          exp_dst_uri.uri.rstrip(exp_dst_uri.delim), exp_dst_uri.delim,
+          src_final_comp))
 
     # Else we're copying multiple sources to a directory, bucket, or a bucket
     # "sub-directory".
@@ -952,10 +1011,18 @@ class CpCommand(Command):
     #    whereas people expect:
     #      gs://bucket/subdir2/cloudauth/.svn/all-wcprops
     # 2. Copying from directories, buckets, or bucket subdirs should result in
-    #    objects/files mirroring the source directory hierarchy. Example:
+    #    objects/files mirroring the source directory hierarchy. For example:
     #      gsutil cp dir1/dir2 gs://bucket
     #    should create the object gs://bucket/dir2/file2, assuming dir1/dir2
     #    contains file2).
+    #    To be consistent with UNIX cp behavior, there's one more wrinkle when
+    #    working with subdirs: The resulting object names depend on whether the
+    #    destination subdirectory exists. For example, if gs://bucket/subdir
+    #    exists, the command:
+    #      gsutil cp -R dir1/dir2 gs://bucket/subdir
+    #    should create objects named like gs://bucket/subdir/dir2/a/b/c. In
+    #    contrast, if gs://bucket/subdir does not exist, this same command
+    #    should create objects named like gs://bucket/subdir/a/b/c.
     # 3. Copying individual files or objects to dirs, buckets or bucket subdirs
     #    should result in objects/files named by the final source file name
     #    component. Example:
@@ -985,6 +1052,9 @@ class CpCommand(Command):
       src_uri_path_sans_final_dir = _GetPathBeforeFinalDir(src_uri)
       dst_key_name = exp_src_uri.uri[
          len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
+      # Handle case where dst_uri is a non-existent subdir.
+      if not have_existing_dest_subdir:
+        dst_key_name = dst_key_name.partition(exp_dst_uri.delim)[-1]
       # Handle special case where src_uri was a directory named with '.' or
       # './', so that running a command like:
       #   gsutil cp -r . gs://dest
@@ -1017,7 +1087,8 @@ class CpCommand(Command):
       self.copy_failure_count += 1
 
     def _CopyFunc(src_uri, exp_src_uri, src_uri_names_container,
-                  src_uri_expands_to_multi, have_multiple_srcs):
+                  src_uri_expands_to_multi, have_multiple_srcs,
+                  have_existing_dest_subdir):
       """Worker function for performing the actual copy."""
       if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
         sys.stderr.write("Copying from <STDIN>...\n")
@@ -1026,7 +1097,8 @@ class CpCommand(Command):
       dst_uri = self._ConstructDstUri(src_uri, exp_src_uri,
                                       src_uri_names_container,
                                       src_uri_expands_to_multi,
-                                      have_multiple_srcs, exp_dst_uri)
+                                      have_multiple_srcs, exp_dst_uri,
+                                      have_existing_dest_subdir)
 
       self._CheckForDirFileConflict(exp_src_uri, dst_uri)
       if self._SrcDstSame(exp_src_uri, dst_uri):
@@ -1050,9 +1122,11 @@ class CpCommand(Command):
 
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
         self.args[0:len(self.args)-1])
-    exp_dst_uri = self._ExpandDstUri(src_uri_expansion, self.args[-1])
+    (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
+        src_uri_expansion, self.args[-1])
 
-    self._SanityCheckRequest(src_uri_expansion, exp_dst_uri)
+    self._SanityCheckRequest(src_uri_expansion, exp_dst_uri,
+                             have_existing_dst_container)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1072,7 +1146,7 @@ class CpCommand(Command):
     # configured number of parallel processes and threads. Otherwise,
     # perform request with sequential function calls in current process.
     self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler,
-               shared_attrs)
+               have_existing_dst_container, shared_attrs)
     if self.debug:
       print 'total_bytes_transferred:' + str(self.total_bytes_transferred)
 
@@ -1174,14 +1248,16 @@ class CpCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
 
-  def _SanityCheckRequest(self, src_uri_expansion, exp_dst_uri):
+  def _SanityCheckRequest(self, src_uri_expansion, exp_dst_uri,
+                          have_existing_dst_container):
     if src_uri_expansion.IsEmpty():
       raise CommandException('No URIs matched')
     for src_uri in src_uri_expansion.GetSrcUris():
       if src_uri.names_provider():
         raise CommandException('Provider-only src_uri (%s)')
     if src_uri_expansion.IsMultiSrcRequest():
-      self._InsistDstUriNamesContainer(exp_dst_uri, True, self.command_name)
+      self._InsistDstUriNamesContainer(exp_dst_uri, have_existing_dst_container,
+                                       self.command_name)
       if (exp_dst_uri.is_file_uri()
           and not os.path.exists(exp_dst_uri.object_name)):
         os.makedirs(exp_dst_uri.object_name)
@@ -1250,9 +1326,10 @@ class CpCommand(Command):
     Checks whether dst_uri should be treated as a bucket "sub-directory". The
     decision about whether something constitutes a bucket "sub-directory"
     depends on whether there are multiple sources in this request. For
-    example, when running the command gsutil cp file gs://bucket/abc
-    gs://bucket/abc names an object; in contrast, when running the command
-    gsutil cp file1 file2 gs://bucket/abc
+    example, when running the command:
+      gsutil cp file gs://bucket/abc
+    gs://bucket/abc names an object; in contrast, when running the command:
+      gsutil cp file1 file2 gs://bucket/abc
     gs://bucket/abc names a bucket "sub-directory".
 
     Note that we don't disallow naming a bucket "sub-directory" where there's
@@ -1272,24 +1349,21 @@ class CpCommand(Command):
       bool indicator.
     """
     return (self.recursion_requested and have_multiple_srcs
-            and dst_uri.names_object())
+            and dst_uri.is_cloud_uri())
 
-  def _ShouldTreatDstUriAsSingleton(self, have_multiple_srcs, dst_uri):
+  def _ShouldTreatDstUriAsSingleton(self, have_multiple_srcs, 
+                                    have_existing_dest_subdir, dst_uri):
     """
     Checks that dst_uri names a singleton (file or object) after
     dir/wildcard expansion. The decision is more nuanced than simply
     dst_uri.names_singleton()) because of the possibility that an object path
-    might name a bucket "sub-directory", which in turn depends on whether
-    there are multiple sources in the gsutil command being run. For example,
-    when running the command:
-      gsutil cp file gs://bucket/abc
-    gs://bucket/abc names an object; in contrast, when running the command:
-      gsutil cp file1 file2 gs://bucket/abc
-    gs://bucket/abc names a bucket "sub-directory".
+    might name a bucket sub-directory.
 
     Args:
       have_multiple_srcs: Bool indicator of whether this is a multi-source
           operation.
+      have_existing_dest_subdir: bool indicator whether dest is an existing
+        subdirectory.
       dst_uri: StorageUri to check.
 
     Returns:
@@ -1298,8 +1372,7 @@ class CpCommand(Command):
     if have_multiple_srcs:
       # Only a file meets the criteria in this case.
       return dst_uri.names_file()
-    else:
-      return dst_uri.names_singleton()
+    return not have_existing_dest_subdir and dst_uri.names_singleton()
 
 
 def _GetPathBeforeFinalDir(uri):

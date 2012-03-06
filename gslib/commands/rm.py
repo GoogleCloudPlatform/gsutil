@@ -133,7 +133,8 @@ class RmCommand(Command):
 
     def _RemoveFunc(src_uri, exp_src_uri, _unused_src_uri_names_container,
                     _unused_src_uri_expands_to_multi,
-                    _unused_have_multiple_srcs):
+                    _unused_have_multiple_srcs,
+                    _unused_have_existing_dest_subdir):
       if exp_src_uri.names_container():
         if exp_src_uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those

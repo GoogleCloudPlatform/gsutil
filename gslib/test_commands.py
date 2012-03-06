@@ -20,7 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-"""Tests for gsutil commands"""
+"""Tests for gsutil commands.
+The test code in this file runs against an in-memory storage service mock,
+so runs very quickly. This is valuable for testing changes that impact the
+naming rules, since those rules are complex and it's useful to be able to
+make small incremental changes and rerun the tests frequently. Additional
+end-to-end tests (which send traffic to the production Google Cloud Storage
+service) are available via the gsutil test command.
+"""
 
 import os
 import shutil
@@ -306,7 +313,7 @@ class GsutilCommandTests(unittest.TestCase):
       os.chdir(orig_dir)
 
   def TestCopyingDirContainingOneFileToBucket(self):
-    """Tests copying a directory containing 1 file to a bucket
+    """Tests copying a directory containing 1 file to a bucket.
     We test this case to ensure that correct bucket handling isn't dependent
     on the copy being treated as a multi-source copy.
     """
@@ -342,7 +349,6 @@ class GsutilCommandTests(unittest.TestCase):
                                 uri.object_name))
     self.assertEqual(expected, actual)
 
-  def TestCopyingDirToDir(self):
     """Tests copying from a directory to a directory"""
     self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_dir_root])
     actual = set(str(u) for u in test_util.test_wildcard_iterator(
@@ -750,17 +756,21 @@ class GsutilCommandTests(unittest.TestCase):
       fp.flush()
     self.DownloadTestHelper(overwrite)
 
-  def TestCopyingObjsAndFilesToBucketSubDir(self):
-    """Tests copying objects and files to bucket subdir"""
+  def TestFlatCopyingObjsAndFilesToBucketSubDir(self):
+    """Tests copying flatly listed objects and files to bucket subdir"""
     # Test with and without final slash on dest subdir.
     for final_char in ('/', ''):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
           'cp', ['-R', '%s**' % self.src_bucket_uri.uri,
                  '%s**' % self.src_dir_root,
                  '%sdst_subdir%s' % (self.dst_bucket_uri.uri, final_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_uri.uri).IterUris())
-      expected = set()
+      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       for uri in self.all_src_obj_uris:
         # Use FinalObjNameComponent here because we expect names to be flattened
         # when using wildcard copy semantics.
@@ -771,6 +781,59 @@ class GsutilCommandTests(unittest.TestCase):
         # using wildcard copy semantics.
         expected.add('%sdst_subdir/%s' % (self.dst_bucket_uri.uri,
                                          os.path.basename(file_path)))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestRecursiveCopyObjsAndFilesToExistingBucketSubDir(self):
+    """Tests recursive copy of objects and files to existing bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for final_char in ('/', ''):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
+      self.RunCommand(
+          'cp', ['-R', '%s' % self.src_bucket_uri.uri,
+                 '%s' % self.src_dir_root,
+                 '%sdst_subdir%s' % (self.dst_bucket_uri.uri, final_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_uri.uri).IterUris())
+      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
+      for uri in self.all_src_obj_uris:
+        expected.add('%sdst_subdir/%s/%s' %
+                    (self.dst_bucket_uri.uri, uri.bucket_name, uri.object_name))
+      for file_path in self.all_src_file_paths:
+        start_tmp_pos = file_path.find(self.tmpdir_prefix)
+        file_path_sans_base_dir = file_path[start_tmp_pos:]
+        expected.add('%sdst_subdir/%s' %
+                     (self.dst_bucket_uri.uri, file_path_sans_base_dir))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestRecursiveCopyObjsAndFilesToNonExistentBucketSubDir(self):
+    """Tests recursive copy of objs + files to non-existent bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for final_char in ('/', ''):
+      self.RunCommand(
+          'cp', ['-R', '%s' % self.src_bucket_uri.uri,
+                 '%s' % self.src_dir_root,
+                 '%sdst_subdir%s' % (self.dst_bucket_uri.uri, final_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_uri.uri).IterUris())
+      expected = set()
+      for uri in self.all_src_obj_uris:
+        expected.add('%sdst_subdir/%s' %
+                    (self.dst_bucket_uri.uri, uri.object_name))
+      for file_path in self.all_src_file_paths:
+        start_tmp_pos = file_path.find(self.tmpdir_prefix)
+        file_path_sans_base_dir = (
+            file_path[start_tmp_pos:].partition(os.sep)[-1])
+        expected.add('%sdst_subdir/%s' %
+                     (self.dst_bucket_uri.uri, file_path_sans_base_dir))
       self.assertEqual(expected, actual)
       # Clean up/re-set up for next variant iteration.
       self.TearDownClass()
@@ -795,7 +858,7 @@ class GsutilCommandTests(unittest.TestCase):
       self.TearDownClass()
       self.SetUpClass()
 
-  def TestCopyingWildcardSpecifiedBucketSubDirToDir(self):
+  def TestCopyingWildcardSpecifiedBucketSubDirToExistingDir(self):
     """Tests copying a wilcard-specified bucket subdir to a directory"""
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
@@ -830,12 +893,16 @@ class GsutilCommandTests(unittest.TestCase):
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
           'cp', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
-      expected = set()
+      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       for uri in self.all_src_subdir_and_below_obj_uris:
         expected.add(
             '%s/%s' % (self.dst_bucket_subdir_uri.uri, uri.object_name))
@@ -849,18 +916,64 @@ class GsutilCommandTests(unittest.TestCase):
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
           'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
-      expected = set()
+      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       for uri in self.all_src_subdir_and_below_obj_uris:
         # Unlike the case with copying, with mv we expect renaming to occur
         # at the level of the src subdir, vs appending that subdir beneath the
         # dst subdir like is done for copying.
         expected_name = uri.object_name.replace('src_', 'dst_')
         expected.add('%s%s' % (self.dst_bucket_uri.uri, expected_name))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestCopyingObjectToBucketSubDir(self):
+    """Tests copying an object to a bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_dst_char) in ('', '/'):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
+      self.RunCommand(
+          'cp', ['%sobj0' % self.src_bucket_uri,
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set([
+        '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri,
+        '%sdst_subdir/obj0' % self.dst_bucket_uri.uri])
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestMovingObjectToBucketSubDir(self):
+    """Tests moving an object to a bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_dst_char) in ('', '/'):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
+      self.RunCommand(
+          'mv', ['%sobj0' % self.src_bucket_uri,
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set([
+        '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri,
+        '%sdst_subdir/obj0' % self.dst_bucket_uri.uri])
       self.assertEqual(expected, actual)
       # Clean up/re-set up for next variant iteration.
       self.TearDownClass()
@@ -882,12 +995,16 @@ class GsutilCommandTests(unittest.TestCase):
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      # Set up existing bucket subdir by creating an object in the subdir.
+      self.RunCommand(
+          'cp', ['%sf0' % self.src_dir_root,
+                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
           'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
-      expected = set()
+      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       for uri in self.all_src_subdir_and_below_obj_uris:
         # Unlike the case with copying, with mv we expect renaming to occur
         # at the level of the src subdir, vs appending that subdir beneath the
