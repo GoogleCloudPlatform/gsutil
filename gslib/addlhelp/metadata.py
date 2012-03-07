@@ -131,7 +131,7 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'metadata',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['content type', 'md', 'mime type', 'mime', 'type'],
+    HELP_NAME_ALIASES : ['content type', 'mime type', 'mime', 'type'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

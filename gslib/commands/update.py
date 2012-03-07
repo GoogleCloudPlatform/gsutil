@@ -200,11 +200,14 @@ class UpdateCommand(Command):
     print 'Checking for software update...'
     if len(self.args):
       update_from_uri_str = self.args[0]
+      if not update_from_uri_str.endswith('.tar.gz'):
+        raise CommandException(
+          'The update command only works with tar.gz files.')
     else:
       update_from_uri_str = 'gs://pub/gsutil.tar.gz'
     self.command_runner.RunNamedCommand('cp', [update_from_uri_str,
-                                          'file://gsutil.tar.gz'],
-                                           self.headers, self.debug)
+                                        'file://gsutil.tar.gz'],
+                                        self.headers, self.debug)
     # Note: tf is closed in _CleanUpUpdateCommand.
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
@@ -223,8 +226,12 @@ class UpdateCommand(Command):
           force_update = True
     if not force_update and self.gsutil_ver == latest_version_string:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
-      raise CommandException('You have the latest version of gsutil installed.',
-                             informational=True)
+      if len(self.args):
+        raise CommandException('You already have %s installed.' %
+                               update_from_uri_str, informational=True)
+      else:
+        raise CommandException('You have the latest version of gsutil installed.',
+                               informational=True)
 
     print(('This command will update to the "%s" version of\ngsutil at %s') %
           (latest_version_string, self.gsutil_bin_dir))

@@ -135,7 +135,7 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'wildcards',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['wildcard', '*', '**', '?', '[]'],
+    HELP_NAME_ALIASES : ['wildcard', '*', '**'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

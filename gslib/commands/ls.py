@@ -51,7 +51,7 @@ _detailed_help_text = ("""
   (For details about projects, see "gsutil help projects" and also the -p
   option in the OPTIONS section below.)
 
-  If you specify one ore more provider URIs, gsutil ls will list buckets at
+  If you specify one or more provider URIs, gsutil ls will list buckets at
   each listed provider:
 
     gsutil ls gs://

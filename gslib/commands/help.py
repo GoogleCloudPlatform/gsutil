@@ -206,7 +206,7 @@ class HelpCommand(Command):
         # where the help command text lives (in addition to non-Command
         # HelpProviders, like naming.py).
         continue
-      gslib.help_provider.SanityCheck(help_prov)
+      gslib.help_provider.SanityCheck(help_prov, help_name_map)
       help_name_map[help_prov.help_spec[HELP_NAME]] = help_prov
       for help_name_aliases in help_prov.help_spec[HELP_NAME_ALIASES]:
         help_name_map[help_name_aliases] = help_prov

@@ -54,7 +54,7 @@ class HelpProvider(object):
 
 # This is a static helper instead of a class method because the help loader
 # (gslib.commands.help._LoadHelpMaps()) operates on classes not instances.
-def SanityCheck(help_provider):
+def SanityCheck(help_provider, help_name_map):
   """Helper for checking that a HelpProvider has minimally adequate content."""
   for k in REQUIRED_SPEC_KEYS:
     if k not in help_provider.help_spec or help_provider.help_spec[k] is None:
@@ -69,3 +69,13 @@ def SanityCheck(help_provider):
   assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN
           and one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
   assert len(help_provider.help_spec[HELP_TEXT]) > 10
+
+  # Ensure there are no dupe help names or aliases across commands.
+  name_check_list = [help_provider.help_spec[HELP_NAME]]
+  name_check_list.extend(help_provider.help_spec[HELP_NAME_ALIASES])
+  for name_or_alias in name_check_list:
+    if help_name_map.has_key(name_or_alias):
+      raise CommandException(
+          'Duplicate help name/alias "%s" found while loading help from %s. '
+          'That name/alias was already taken by %s' % (name_or_alias, 
+          help_provider.__module__, help_name_map[name_or_alias].__module__))

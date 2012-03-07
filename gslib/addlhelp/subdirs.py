@@ -25,10 +25,10 @@ _detailed_help_text = ("""
   Google Cloud Storage implements a "flat" name space, meaning that objects
   you upload don't have actual subdirectories. To the storage service, "/"
   is just a character in the name. However, gsutil makes "/" delimiters in
-  names look like subdirectories when you copy to or from the cloud, and when
-  you list data in the cloud. It achieves this illusion by performing a bucket
-  listing at the time you run cp, mv, and ls commands, to determine if the
-  target of the operation is a prefix match to the specified string. For
+  names behave like subdirectories when you copy to / from /in the cloud, and
+  when you list data in the cloud. It achieves this illusion by performing a
+  bucket listing at the time you run cp, mv, and ls commands, to determine if
+  the target of the operation is a prefix match to the specified string. For
   example, if you run the command:
 
     gsutil cp file gs://bucket/abc
@@ -37,23 +37,24 @@ _detailed_help_text = ("""
   delimiter="/" and prefix="abc". It will then examine the bucket listing
   results and determine whether there are objects in the bucket whose path
   starts with gs://bucket/abc/, to determine whether to treat the target as
-  an object name or a directory name. In turn this impacts the names of the
+  an object name or a directory name. In turn this impacts the name of the
   object you create: If the above check indicates there is an "abc" directory
   you will end up with the object gs://bucket/abc/file; otherwise you will
   end up with the object gs://bucket/file. (See "HOW NAMES ARE CONSTRUCTED"
   under "gsutil help cp" for more details.)
 
-  This stands in contrast to the way many tools work, by creating marker
-  objects (such as "$folder$). gsutil does not require those objects to
-  implement naming behavior consistent with UNIX commands (so, can work with
-  subdirectories created by a tool that doesn't use the $folder$ convention).
+  This stands in contrast to the way many tools work, by creating objects to
+  mark the existence of folders (such as "$folder$"). gsutil does not require
+  those objects to implement naming behavior consistent with UNIX commands
+  (so, can work with subdirectories created by a tool that doesn't use the
+  "$folder$" convention).
 
-  A downside of the gsutil approach is it requires an extra bucket listing
-  when uploading data. However those listings are relatively inexpensive
-  (since they use delimiter and prefix to limit result data). Moreover,
-  gsutil makes only one bucket listing request per cp/mv/ls command, and
-  thus amortizes the bucket listing cost across all uploaded objects (e.g.,
-  when performing a recursive copy of a directory to the cloud).
+  A downside of the gsutil approach is it requires an extra bucket
+  listing when performing cp, mv and ls operations. However those listings are
+  relatively inexpensive, because they use delimiter and prefix to limit result
+  data. Moreover, gsutil makes only one bucket listing request per cp/mv/ls
+  command, and thus amortizes the bucket listing cost across all transferred
+  objects (e.g., when performing a recursive copy of a directory to the cloud).
 """)
 
 

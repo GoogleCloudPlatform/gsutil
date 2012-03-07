@@ -45,8 +45,8 @@ import boto
 
 from boto.exception import StorageResponseError
 from boto import storage_uri
-from commands import cp
 from gslib.command_runner import CommandRunner
+from gslib.commands import cp
 from gslib.exception import CommandException
 from gslib import test_util
 from tests.s3.mock_storage_service import MockBucketStorageUri
@@ -581,6 +581,10 @@ class GsutilCommandTests(unittest.TestCase):
   def TestGetLoggingCommandRuns(self):
     """Test that the getlogging command basically runs"""
     self.RunCommand('getlogging', [self.src_bucket_uri.uri])
+
+  def TestHelpCommandDoesntRaise(self):
+    """Test that the help command doesn't raise (sanity checks all help)"""
+    self.RunCommand('help', [])
 
   def TestLsNonExistentObjectWithPrefixName(self):
     """Test ls of non-existent obj that matches prefix of existing objs"""

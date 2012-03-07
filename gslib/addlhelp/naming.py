@@ -163,7 +163,7 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'naming',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['name', 'names', 'subdirs'],
+    HELP_NAME_ALIASES : ['domain', 'limits', 'name', 'names'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

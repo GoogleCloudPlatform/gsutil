@@ -32,15 +32,15 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -d:         Shows HTTP requests/headers.
+  -d          Shows HTTP requests/headers.
 
-  -D:         Shows HTTP requests/headers plus additional debug info needed when
+  -D          Shows HTTP requests/headers plus additional debug info needed when
               posting support requests.
 
   -DD         Shows HTTP requests/headers plus additional debug info plus HTTP
               upstream payload.
 
-  -h:         Allows you to specify additional HTTP headers, for example:
+  -h          Allows you to specify additional HTTP headers, for example:
 
                 gsutil -h "Cache-Control:public,max-age=3600" \\
                        -h "Content-Type:text/html" cp ...
@@ -50,7 +50,7 @@ _detailed_help_text = ("""
               filename=filename.ext"), to avoid having the shell split them
               into separate arguments.
 
-  -m:         Causes supported operations (cp, mv, rm) to run in parallel. This
+  -m          Causes supported operations (cp, mv, rm) to run in parallel. This
               can significantly improve performance if you are uploading,
               downloading, moving, or removing a large number of files over
               a fast network connection.
@@ -72,7 +72,7 @@ _detailed_help_text = ("""
               1000 files have been transferred), you will need to restart the
               entire transfer.
 
-  -s:         Tells gsutil to use a simulated storage provider (for testing).
+  -s          Tells gsutil to use a simulated storage provider (for testing).
 """)
 
 
