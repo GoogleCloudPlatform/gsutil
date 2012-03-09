@@ -1121,7 +1121,7 @@ class CpCommand(Command):
       return
 
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args[0:len(self.args)-1])
+        self.args[0:len(self.args)-1], self.recursion_requested)
     (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
         src_uri_expansion, self.args[-1])
 

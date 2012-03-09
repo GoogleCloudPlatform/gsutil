@@ -80,7 +80,9 @@ class NameExpansionResult(object):
     return True
 
   def NamesContainer(self, src_uri):
-    """Returns bool indicator of whether src_uri names a container."""
+    """Returns bool indicator of whether src_uri names a directory, bucket, or
+       bucket subdir.
+    """
     return self._names_container_map[src_uri]
 
   def GetSrcUris(self):
@@ -175,12 +177,11 @@ class NameExpansionResult(object):
 
 class NameExpansionHandler(object):
 
-  def __init__(self, command_name, recursion_requested, proj_id_handler,
-               headers, debug, bucket_storage_uri_class):
+  def __init__(self, command_name, proj_id_handler, headers, debug,
+               bucket_storage_uri_class):
     """
     Args:
       command_name: name of command being run.
-      recursion_requested: True if -R specified on command-line.
       proj_id_handler: ProjectIdHandler to use for current command.
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
@@ -188,7 +189,6 @@ class NameExpansionHandler(object):
           Settable for testing/mocking.
     """
     self.command_name = command_name
-    self.recursion_requested = recursion_requested
     self.proj_id_handler = proj_id_handler
     self.headers = headers
     self.debug = debug
@@ -213,13 +213,15 @@ class NameExpansionHandler(object):
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         headers=self.headers, debug=self.debug)
 
-  def ExpandWildcardsAndContainers(self, uri_strs, flat=True):
+  def ExpandWildcardsAndContainers(self, uri_strs, recursion_requested,
+                                   flat=True):
     """
     Expands wildcards, object-less bucket names, subdir bucket names, and
     directory names, producing a flat listing of all the matching objects/files.
 
     Args:
       uri_strs: List of URI strings needing expansion.
+      recursion_requested: True if -R specified on command-line.
       flat: Bool indicating whether bucket listings should be flattened, i.e.,
           so the mapped-to results contain objects spanning subdirectories.
 
@@ -274,7 +276,7 @@ class NameExpansionHandler(object):
       #   [abcd/o1.txt, abcd/o2.txt].
       uri_names_container = False
       if flat:
-        if self.recursion_requested:
+        if recursion_requested:
           post_step2_bucket_listing_refs = []
           for bucket_listing_ref in post_step1_bucket_listing_refs:
             (uri_names_container, bucket_listing_refs) = (
@@ -300,7 +302,7 @@ class NameExpansionHandler(object):
             and (flat or not bucket_listing_ref.HasPrefix())):
           exp_src_bucket_listing_refs.append(bucket_listing_ref)
           continue
-        if not self.recursion_requested:
+        if not recursion_requested:
           if bucket_listing_ref.GetUri().is_file_uri():
             desc = 'directory'
           else:
@@ -325,23 +327,6 @@ class NameExpansionHandler(object):
 
     return result
 
-  def _UriCouldBeBucketSubdir(self, uri):
-    """
-    Checks whether uri could be an implicit bucket subdir, based on command
-    line options and its syntax. For example, gs://abc could be an implicit
-    bucket subdir if the -R option was specified. The complete determination
-    depends on whether (in addition to the current check) uri contains
-    a wildcard not confined to a subdir (i.e., '*').
-
-    Args:
-      uri: StorageUri to check.
-
-    Returns:
-      bool indicator.
-    """
-    return (self.recursion_requested and uri.names_object()
-            and uri.uri.find('*') == -1)
-
   def _DoImplicitBucketSubdirExpansionIfApplicable(self, uri, flat):
     """
     Checks whether uri could be an implicit bucket subdir, and expands if so;
@@ -361,10 +346,10 @@ class NameExpansionHandler(object):
         or bucket subdir (vs how StorageUri.names_container() doesn't
         handle latter case).
     """
-    assert self.recursion_requested
     names_container = False
     result_list = []
-    if self._UriCouldBeBucketSubdir(uri):
+    if uri.names_object():
+      # URI could be a bucket subdir.
       implicit_subdir_matches = list(self.WildcardIterator(
           self.suri_builder.StorageUri('%s/%s' % (uri.uri.rstrip('/'),
                                        self._flatness_wildcard[flat]))))

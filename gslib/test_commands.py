@@ -925,7 +925,7 @@ class GsutilCommandTests(unittest.TestCase):
           'cp', ['%sf0' % self.src_dir_root,
                  '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
-          'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+          'mv', ['%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
@@ -987,12 +987,11 @@ class GsutilCommandTests(unittest.TestCase):
     """Tests moving a bucket subdir specified by wildcard is disallowed"""
     try:
       self.RunCommand(
-          'mv', ['-R', '%s*' % self.src_bucket_subdir_uri,
+          'mv', ['%s*' % self.src_bucket_subdir_uri,
                  '%s' % self.dst_bucket_subdir_uri.uri])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(
-          e.reason.find('source URI cannot contain wildcards'), -1)
+      self.assertNotEqual(e.reason.find('mv command disallows'), -1)
 
   def TestMovingBucketNestedSubDirToBucketNestedSubDir(self):
     """Tests moving a bucket nested subdir to another bucket nested subdir"""
@@ -1004,7 +1003,7 @@ class GsutilCommandTests(unittest.TestCase):
           'cp', ['%sf0' % self.src_dir_root,
                  '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
-          'mv', ['-R', '%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+          'mv', ['%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())

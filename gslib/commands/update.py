@@ -230,8 +230,8 @@ class UpdateCommand(Command):
         raise CommandException('You already have %s installed.' %
                                update_from_uri_str, informational=True)
       else:
-        raise CommandException('You have the latest version of gsutil installed.',
-                               informational=True)
+        raise CommandException('You have the latest version of gsutil '
+                               'installed.', informational=True)
 
     print(('This command will update to the "%s" version of\ngsutil at %s') %
           (latest_version_string, self.gsutil_bin_dir))

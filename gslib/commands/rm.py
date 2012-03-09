@@ -149,7 +149,7 @@ class RmCommand(Command):
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args, flat=self.recursion_requested)
+        self.args, self.recursion_requested, flat=self.recursion_requested)
     if src_uri_expansion.IsEmpty():
       raise CommandException('No URIs matched')
 

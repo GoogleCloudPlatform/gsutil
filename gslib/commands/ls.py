@@ -40,9 +40,6 @@ _detailed_help_text = ("""
 
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
-  The gsutil ls command prints information about storage providers, buckets,
-  and objects.
-
   If you run gsutil ls without URIs, it lists all of the Google Cloud Storage
   buckets under your default project ID:
 
@@ -112,6 +109,7 @@ _detailed_help_text = ("""
 
   will print the object size, creation time stamp, and name of each matching
   object, along with the total count and sum of sizes of all matching objects:
+
        2276224  2012-03-02T19:25:17  gs://bucket/obj1
        3914624  2012-03-02T19:30:27  gs://bucket/obj2
     TOTAL: 2 objects, 6190848 bytes (5.9 MB)
@@ -408,7 +406,10 @@ class LsCommand(Command):
           # recursive listing, as it will be printed as 'subdir:' when we get
           # to the prefix expansion, the next iteration of the main loop.
           else:
-            print cur_blr.GetUriString()
+            if listing_style == ListingStyle.LONG:
+              print '%-33s%s' % ('', cur_blr.GetUriString())
+            else:
+              print cur_blr.GetUriString()
       expanding_top_level = False
     return (num_objs, num_bytes)
 

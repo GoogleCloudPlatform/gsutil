@@ -97,7 +97,7 @@ class EnableLoggingCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Enable logging on buckets:',
+    HELP_ONE_LINE_SUMMARY : 'Enable logging on buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

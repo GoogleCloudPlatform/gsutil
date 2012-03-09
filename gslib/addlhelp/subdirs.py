@@ -25,7 +25,7 @@ _detailed_help_text = ("""
   Google Cloud Storage implements a "flat" name space, meaning that objects
   you upload don't have actual subdirectories. To the storage service, "/"
   is just a character in the name. However, gsutil makes "/" delimiters in
-  names behave like subdirectories when you copy to / from /in the cloud, and
+  names behave like subdirectories when you copy to/from/in the cloud, and
   when you list data in the cloud. It achieves this illusion by performing a
   bucket listing at the time you run cp, mv, and ls commands, to determine if
   the target of the operation is a prefix match to the specified string. For
@@ -40,18 +40,18 @@ _detailed_help_text = ("""
   an object name or a directory name. In turn this impacts the name of the
   object you create: If the above check indicates there is an "abc" directory
   you will end up with the object gs://bucket/abc/file; otherwise you will
-  end up with the object gs://bucket/file. (See "HOW NAMES ARE CONSTRUCTED"
+  end up with the object gs://bucket/abc. (See "HOW NAMES ARE CONSTRUCTED"
   under "gsutil help cp" for more details.)
 
   This stands in contrast to the way many tools work, by creating objects to
   mark the existence of folders (such as "$folder$"). gsutil does not require
-  those objects to implement naming behavior consistent with UNIX commands
+  such marker objects to implement naming behavior consistent with UNIX commands
   (so, can work with subdirectories created by a tool that doesn't use the
   "$folder$" convention).
 
-  A downside of the gsutil approach is it requires an extra bucket
-  listing when performing cp, mv and ls operations. However those listings are
-  relatively inexpensive, because they use delimiter and prefix to limit result
+  A downside of the gsutil approach is it requires an extra bucket listing
+  when performing cp and mv. However those listings are relatively
+  inexpensive, because they use delimiter and prefix parameters to limit result
   data. Moreover, gsutil makes only one bucket listing request per cp/mv/ls
   command, and thus amortizes the bucket listing cost across all transferred
   objects (e.g., when performing a recursive copy of a directory to the cloud).
@@ -66,8 +66,8 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'subdirs',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['folder', 'folders', 'subdir', 'subdirectory',
-                         'subdirectories'],
+    HELP_NAME_ALIASES : ['dirs', 'directory', 'directories', 'folder',
+                         'folders', 'subdir', 'subdirectory', 'subdirectories'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

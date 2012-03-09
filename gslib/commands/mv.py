@@ -34,9 +34,9 @@ from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil mv [-p] [-R] src_uri dst_uri
+  gsutil mv [-p] src_uri dst_uri
     - or -
-  gsutil mv [-p] [-R] uri... dst_uri
+  gsutil mv [-p] uri... dst_uri
 
 
 <B>DESCRIPTION</B>
@@ -45,7 +45,7 @@ _detailed_help_text = ("""
   cloud storage providers. For example, to move all objects from a
   bucket to a local directory you could use:
 
-    gsutil mv -R gs://my_bucket dir
+    gsutil mv gs://my_bucket dir
 
   The mv command, like the rm command, will refuse to remove data from
   the local disk. Thus, for example, this command will not be allowed:
@@ -54,10 +54,10 @@ _detailed_help_text = ("""
 
 
 <B>RENAMING BUCKET SUBDIRECTORIES</B>
-  You can use the gsutil mv command to rename subdirectories, by specifying
-  the -R option. For example, the command:
+  You can use the gsutil mv command to rename subdirectories. For example,
+  the command:
 
-    gsutil mv -R gs://my_bucket/olddir gsutil mv -R gs://my_bucket/newdir
+    gsutil mv gs://my_bucket/olddir gs://my_bucket/newdir
 
   would rename all objects and subdirectories under gs://my_bucket/olddir to be
   under gs://my_bucket/newdir, otherwise preserving the subdirectory structure.
@@ -65,24 +65,15 @@ _detailed_help_text = ("""
   If you do a rename as specified above and you want to preserve ACLs, you
   should use the -p option (see OPTIONS).
 
-  Note that the mv -R option does not allow specifying either source or
-  destination URI using a wildcard. You need to spell out the complete
-  name for source and destination:
+  Note that when using mv to rename bucket subdirectories you cannot specify
+  the source URI using wildcards. You need to spell out the complete name:
 
-    gsutil mv -R gs://my_bucket/olddir gs://my_bucket/newdir
+    gsutil mv gs://my_bucket/olddir gs://my_bucket/newdir
 
   If you have a large number of files to move you might want to use the
   gsutil -m option, to perform a multi-threaded/multi-processing move:
 
-    gsutil -m mv -R gs://my_bucket/olddir gs://my_bucket/newdir
-
-  As an aside, although most gsutil commands strive to make the command line
-  options work as closely as possible to their UNIX command line counterparts,
-  in this case we chose to require the user to specify -R to force the user to
-  be explicit that they really intended to rename an entire subdirectory. Unlike
-  the case in a file system (where a directory move is typically implemented
-  with a single operation), a bucket subdirectory move involves running many
-  cp and rm commands.
+    gsutil -m mv gs://my_bucket/olddir gs://my_bucket/newdir
 
 
 <B>OPTIONS</B>
@@ -92,9 +83,6 @@ _detailed_help_text = ("""
               (The performance issue can be mitigated to some degree by
               using gsutil -m cp to cause multi-threaded/multi-processing
               copying.)
-
-  -R, -r      Causes directories, buckets, and bucket subdirectories to be moved
-              recursively.
 """)
 
 
@@ -109,13 +97,13 @@ class MvCommand(Command):
     # Name of command.
     COMMAND_NAME : 'mv',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['move', 'rename'],
+    COMMAND_NAME_ALIASES : ['move', 'ren', 'rename'],
     # Min number of args required by this command.
     MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'prR',
+    SUPPORTED_SUB_ARGS : 'p',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -140,13 +128,6 @@ class MvCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    # self.recursion_requested initialized in command.py (so can be checked
-    # in parent class for all commands).
-    if self.sub_opts:
-      for o, unused_a in self.sub_opts:
-        if o == '-r' or o == '-R':
-          self.recursion_requested = True
-
     # Check each source arg up, refusing to delete a bucket or directory src
     # URI (force users to explicitly do that as a separate operation).
     for arg_to_check in self.args[0:-1]:
@@ -154,16 +135,6 @@ class MvCommand(Command):
         raise CommandException('Will not remove source buckets or directories '
                                '(%s).\nYou must separately copy and remove for '
                                'that purpose.' % arg_to_check)
-
-    # Disallow recursive request (-r) with a wildcard src URI. Allowing
-    # this would make the name transformation too hairy and is too dangerous
-    # (e.g., someone could accidentally move many objects to the wrong name,
-    # or accidentally overwrite many objects).
-    if self.recursion_requested:
-      for src_uri in self.args[0:len(self.args)-1]:
-        if ContainsWildcard(src_uri):
-          raise CommandException(
-              'source URI cannot contain wildcards with mv -R')
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in StorageUris
     # before running cp and rm commands, to prevent the
@@ -173,13 +144,16 @@ class MvCommand(Command):
     # If we didn't expand the wildcard first, the cp command would
     # first copy gs://bucket/obj to gs://bucket/d.txt, and the
     # rm command would then remove that object.
-    # Note that this makes for somewhat less efficient operation, since we first
-    # do bucket listing operations here, then again in the underlying cp
-    # command.
-    # TODO: consider adding an internal interface to cp command to allow this
-    # expansion to be passed in.
+    # Note 1: This is somewhat inefficient, since we request a bucket listing
+    # here and then again in the generated cp command. TODO: Consider adding
+    # an internal interface to cp command to allow this expansion to be passed
+    # in.
+    # Note 2: We use recursion_requested when expanding wildcards and containers
+    # so we can determine if any of the source URIs are directories (and then
+    # use cp -R and rm -R to perform the move, to match the behavior of UNIX mv
+    # (where moving a directory moves all the contained files).
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args[0:len(self.args)-1])
+        self.args[0:len(self.args)-1], True)
     exp_arg_list = list(src_uri_expansion.IterExpandedUriStrings())
 
     # Check whether exp_arg_list has any file:// URIs, and disallow it. Note
@@ -196,11 +170,28 @@ class MvCommand(Command):
     if src_uri_expansion.IsEmpty():
       raise CommandException('No URIs matched')
 
+    # If any of the src URIs are directories add -R to options to be passed to
+    # cp and rm commands.
+    self.recursion_requested = False
+    for src_uri in src_uri_expansion.GetSrcUris():
+      if src_uri_expansion.NamesContainer(src_uri):
+        self.recursion_requested = True
+        # Disallow wildcard src URIs when moving directories, as supporting it
+        # would make the name transformation too complex and would also be
+        # dangerous (e.g., someone could accidentally move many objects to the
+        # wrong name, or accidentally overwrite many objects).
+        if ContainsWildcard(src_uri):
+          raise CommandException(
+              'mv command disallows naming source directories using wildcards')
+
     # Add command-line opts back in front of args so they'll be picked up by cp
-    # and rm commands (e.g., for -R option). Use undocumented (internal
+    # and rm commands (e.g., for -p option). Use undocumented (internal
     # use-only) cp -M option to request move naming semantics (see
     # _ConstructDstUri in cp.py).
     unparsed_args = ['-M']
+    if self.recursion_requested:
+      unparsed_args.append('-R')
+      exp_arg_list.insert(0, '-R')
     unparsed_args.extend(self.unparsed_args)
     self.command_runner.RunNamedCommand('cp', unparsed_args, self.headers,
                                         self.debug, self.parallel_operations)
