@@ -32,7 +32,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil setacl file-or-canned_acl_name uri...
+  gsutil setacl [-R] file-or-canned_acl_name uri...
 
 
 <B>DESCRIPTION</B>
@@ -62,9 +62,20 @@ _detailed_help_text = ("""
 
     gsutil setacl acl.txt gs://bucket/*.jpg
 
-  At present there is no multi-threading/multi-processing support for the
-  setacl command, so running the above command against large numbers of
-  objects can take a long time.
+  If you have a large number of ACLs to update you might want to use the
+  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
+  updates:
+
+    gsutil -m setacl acl.txt gs://bucket/*.jpg
+
+  Note that multi-threading/multi-processing is only done when the named URIs
+  refer to objects. gsutil -m setacl gs://bucket1 gs://bucket2 will run the
+  setacl operations sequentially.
+
+
+<B>OPTIONS</B>
+  -R, -r      Performs setacl request recursively, to all objects under the
+              specified URI.
 """)
 
 
@@ -82,7 +93,7 @@ class SetAclCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : '',
+    SUPPORTED_SUB_ARGS : 'Rr',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -107,4 +118,8 @@ class SetAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    if self.sub_opts:
+      for o, unused_a in self.sub_opts:
+        if o == '-r' or o == '-R':
+          self.recursion_requested = True
     self.SetAclCommandHelper()

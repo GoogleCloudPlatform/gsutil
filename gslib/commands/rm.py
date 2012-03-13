@@ -58,6 +58,12 @@ _detailed_help_text = ("""
     gsutil rm gs://bucket/**
     gsutil rm -R gs://bucket
 
+  If you have a large number of objects to remove you might want to use the
+  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
+  removes:
+
+    gsutil -m rm -R gs://my_bucket/subdir
+
   Note that gsutil rm will refuse to remove files from the local
   file system. For example this will fail:
 
@@ -162,7 +168,7 @@ class RmCommand(Command):
 
     # Perform remove requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
-    # perform request with sequential function calls in current process.
+    # perform requests with sequential function calls in current process.
     self.Apply(_RemoveFunc, src_uri_expansion, _RemoveExceptionHandler)
 
     if not self.everything_removed_okay:

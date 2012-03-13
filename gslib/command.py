@@ -338,7 +338,57 @@ class Command(object):
       if acl_arg not in canned_acls:
         raise CommandException('Invalid canned ACL "%s".' % acl_arg)
 
-    # Now iterate over URIs and set the ACL on each.
+    # Used to track if any ACLs failed to be set.
+    self.everything_set_okay = True
+
+    def _SetAclExceptionHandler(e):
+      """Simple exception handler to allow post-completion status."""
+      self.THREADED_LOGGER.error(str(e))
+      self.everything_set_okay = False
+
+    def _SetAclFunc(src_uri, exp_src_uri, _unused_src_uri_names_container=None,
+                    _unused_src_uri_expands_to_multi=None,
+                    _unused_have_multiple_srcs=None,
+                    _unused_have_existing_dest_subdir=None):
+      # We don't do bucket operations multi-threaded (see comment below).
+      assert self.command_name != 'setdefacl'
+      self.THREADED_LOGGER.info('Setting ACL on %s...' % exp_src_uri)
+      exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
+                          self.headers)
+
+    # If user specified -R option, convert any bucket args to bucket wildcards
+    # (e.g., gs://bucket/*), to prevent the operation from being  applied to
+    # the buckets themselves.
+    if self.recursion_requested:
+      for i in range(len(uri_args)):
+        uri = self.suri_builder.StorageUri(uri_args[i])
+        if uri.names_bucket():
+          uri_args[i] = uri.clone_replace_name('*').uri
+    else:
+      # Handle bucket ACL setting operations single-threaded, because
+      # our threading machinery currently assumes it's working with objects
+      # (src_uri_expansion), and normally we wouldn't expect users to need to
+      # set ACLs on huge numbers of buckets at once anyway.
+      for i in range(len(uri_args)):
+        uri_str = uri_args[i]
+        if self.suri_builder.StorageUri(uri_str).names_bucket():
+          self._RunSingleThreadedSetAcl(acl_arg, uri_args)
+          return
+
+    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
+        uri_args, self.recursion_requested, self.recursion_requested)
+    if src_uri_expansion.IsEmpty():
+      raise CommandException('No URIs matched')
+
+    # Perform requests in parallel (-m) mode, if requested, using
+    # configured number of parallel processes and threads. Otherwise,
+    # perform requests with sequential function calls in current process.
+    self.Apply(_SetAclFunc, src_uri_expansion, _SetAclExceptionHandler)
+
+    if not self.everything_set_okay:
+      raise CommandException('Some files could not be removed.')
+
+  def _RunSingleThreadedSetAcl(self, acl_arg, uri_args):
     some_matched = False
     for uri_str in uri_args:
       for blr in self.exp_handler.WildcardIterator(uri_str):

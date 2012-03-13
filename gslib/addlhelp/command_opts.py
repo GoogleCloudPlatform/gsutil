@@ -50,10 +50,10 @@ _detailed_help_text = ("""
               filename=filename.ext"), to avoid having the shell split them
               into separate arguments.
 
-  -m          Causes supported operations (cp, mv, rm) to run in parallel. This
-              can significantly improve performance if you are uploading,
-              downloading, moving, or removing a large number of files over
-              a fast network connection.
+  -m          Causes supported operations (cp, mv, rm, setacl) to run in
+              parallel. This can significantly improve performance if you are
+              uploading, downloading, moving, removing, or changing ACLs on
+              a large number of files over a fast network connection.
 
               gsutil performs the specified operation using a combination of
               multi-threading and multi-processing, using a number of threads

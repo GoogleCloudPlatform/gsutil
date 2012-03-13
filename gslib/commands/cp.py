@@ -1144,7 +1144,7 @@ class CpCommand(Command):
 
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
-    # perform request with sequential function calls in current process.
+    # perform requests with sequential function calls in current process.
     self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler,
                have_existing_dst_container, shared_attrs)
     if self.debug:
