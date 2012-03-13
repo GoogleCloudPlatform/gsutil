@@ -43,18 +43,18 @@ gsutil update [-f] [uri]
 
 
 <B>DESCRIPTION</B>
-  The gsutil update command downloads the latest copy of gsutil, checks its
-  version, and offers to let you update to it if it differs from the
-  version you're currently running.
+  The gsutil update command downloads the latest gsutil release, checks its
+  version, and offers to let you update to it if it differs from the version
+  you're currently running.
 
   Once you say "Y" to the prompt of whether to install the update, the gsutil
   update command locates where the running copy of gsutil is installed,
-  unpacks the new version, moves the previous version aside, moves the new
-  version to where the previous version was installed, and removes the
-  moved-aside old version. Because of this, users are cautioned not to store
-  data in the gsutil directory, since that data will be lost when you update
-  gsutil. (Some users change directories into the gsutil directory to run
-  the command. We advise against doing that, for this reason.)
+  unpacks the new version into an adjacent directory, moves the previous version
+  aside, moves the new version to where the previous version was installed,
+  and removes the moved-aside old version. Because of this, users are cautioned
+  not to store data in the gsutil directory, since that data will be lost
+  when you update gsutil. (Some users change directories into the gsutil
+  directory to run the command. We advise against doing that, for this reason.)
 
   By default gsutil update will retrieve the new code from
   gs://pub/gsutil.tar.gz, but you can optionally specify a URI to use
@@ -230,7 +230,7 @@ class UpdateCommand(Command):
         raise CommandException('You already have %s installed.' %
                                update_from_uri_str, informational=True)
       else:
-        raise CommandException('You have the latest version of gsutil '
+        raise CommandException('You already have the latest gsutil release '
                                'installed.', informational=True)
 
     print(('This command will update to the "%s" version of\ngsutil at %s') %

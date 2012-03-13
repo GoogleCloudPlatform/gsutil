@@ -295,6 +295,8 @@ class LsCommand(Command):
       if obj.cache_control:
         print '\tCache control:\t%s' % obj.cache_control
       print '\tMIME type:\t%s' % obj.content_type
+      if obj.content_disposition:
+        print '\tContent-Disposition:\t%s' % obj.content_disposition
       if obj.content_encoding:
         print '\tContent-Encoding:\t%s' % obj.content_encoding
       if obj.metadata:

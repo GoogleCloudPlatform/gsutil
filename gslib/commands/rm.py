@@ -65,7 +65,8 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -f          Continues despite errors when removing multiple objects.
+  -f          Continues silently (without printing error messages) despite
+              errors when removing multiple objects.
 
   -R, -r      Causes bucket contents to be removed recursively (i.e., including
               all objects and subdirectories). Will not delete the bucket
@@ -145,7 +146,13 @@ class RmCommand(Command):
                                'delete this/these bucket(s) do:\n\tgsutil rm '
                                '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
       self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
-      exp_src_uri.delete_key(validate=False, headers=self.headers)
+      try:
+        exp_src_uri.delete_key(validate=False, headers=self.headers)
+      except:
+        if continue_on_error:
+          self.everything_removed_okay = False
+        else:
+          raise
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
     src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
