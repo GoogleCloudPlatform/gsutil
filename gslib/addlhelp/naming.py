@@ -30,8 +30,8 @@ _detailed_help_text = ("""
   Bucket names must conform to standard DNS naming conventions. This is
   because a bucket name can appear in a DNS record as part of a CNAME
   redirect. In addition to meeting DNS naming requirements, Google Cloud
-  Storage imposes other requirements on bucket naming as well. At a
-  minimum, your bucket names must meet the following requirements:
+  Storage imposes other requirements on bucket naming. At a minimum, your
+  bucket names must meet the following requirements:
 
     - Bucket names must contain only lowercase letters, numbers, dashes (-), and
       dots (.).
@@ -66,7 +66,7 @@ _detailed_help_text = ("""
   You can carve out parts of the Google Cloud Storage bucket name space
   by creating buckets with domain names (like "example.com").
 
-  Before you can create a bucket names containing one or more '.' characters,
+  Before you can create a bucket name containing one or more '.' characters,
   the following rules apply:
   - If the name is a syntactically valid DNS name ending with a
     currently-recognized top-level domain (such as .com), you will be required

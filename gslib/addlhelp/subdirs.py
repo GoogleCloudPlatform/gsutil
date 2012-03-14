@@ -22,13 +22,24 @@ from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
-  Google Cloud Storage implements a "flat" name space, meaning that objects
-  you upload don't have actual subdirectories. To the storage service, "/"
-  is just a character in the name. However, gsutil makes "/" delimiters in
-  names behave like subdirectories when you copy to/from/in the cloud, and
-  when you list data in the cloud. It achieves this illusion by performing a
-  bucket listing at the time you run cp, mv, and ls commands, to determine if
-  the target of the operation is a prefix match to the specified string. For
+  This section provides details about how subdirectories work in gsutil.
+  Most users probably don't need to know these details, and can simply use
+  the commands (like cp -R) that work with subdirectories. We provide this
+  additional documentation to help users understand how gsutil handles
+  subdirectories differently than most GUI / web-based tools (e.g., why
+  those other tools create "$folder$ objects), and also to explain cost and
+  performance implications of the gsutil approach, for those interested in
+  such details.
+
+  gsutil provides the illusion of a hierarchical file tree atop the "flat"
+  name space supported by the Google Cloud Storage service. To the service,
+  the object gs://bucket/abc/def/ghi.txt is just an object that happens to have
+  "/" characters in its name. There are no "abc" or "abc/def" directories;
+  just a single object with the given name.
+
+  gsutil achieves the hierarchical file tree illusion by performing a bucket
+  listing at the time you run cp, mv, and ls commands, to determine if the
+  target of the operation is a prefix match to the specified string. For
   example, if you run the command:
 
     gsutil cp file gs://bucket/abc
@@ -67,11 +78,12 @@ class CommandOptions(HelpProvider):
     HELP_NAME : 'subdirs',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['dirs', 'directory', 'directories', 'folder',
-                         'folders', 'subdir', 'subdirectory', 'subdirectories'],
+                         'folders', 'hierarchy', 'subdir', 'subdirectory',
+                         'subdirectories'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Subdirectories in gsutil',
+    HELP_ONE_LINE_SUMMARY : 'How subdirectories work in gsutil',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

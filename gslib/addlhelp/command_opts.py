@@ -28,7 +28,13 @@ _detailed_help_text = ("""
 <B>DESCRIPTION</B>
   gsutil supports separate options for the top-level gsutil command and
   the individual sub-commands (like cp, rm, etc.) The top-level options
-  control behavior of gsutil that apply across commands.
+  control behavior of gsutil that apply across commands. For example, in
+  the command:
+
+    gsutil -m cp -p file gs://bucket/obj
+
+  the -m option applies to gsutil, while the -p option applies to the cp
+  sub-command.
 
 
 <B>OPTIONS</B>

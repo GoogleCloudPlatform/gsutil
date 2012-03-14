@@ -33,7 +33,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil enablelogging -b log_bucket [-o log_object_prefix] uri...
+  gsutil enablelogging -b logging_bucket [-o log_object_prefix] uri...
 
 <B>DESCRIPTION</B>
   Google Cloud Storage offers access logs and storage data in the form of
@@ -41,19 +41,26 @@ _detailed_help_text = ("""
   for all of the requests made on a specified bucket in the last 24 hours,
   while the storage logs provide information about the storage consumption of
   that bucket for the last 24 hour period. The logs and storage data files
-  are automatically created as new objects in a bucket that you specify,
-  in 24 hour intervals.
+  are automatically created as new objects in a bucket that you specify, in
+  24 hour intervals.
 
   The gsutil enablelogging command will enable access logging of the
   buckets named by the specified uris, outputting log files in the specified
-  log_bucket.  log_bucket must already exist, and all URIs must name buckets
-  (e.g., gs://bucket).
+  logging_bucket. logging_bucket must already exist, and all URIs must name
+  buckets (e.g., gs://bucket). For example, the command:
+
+    gsutil enablelogging -b gs://my_logging_bucket -o AccessLog \\
+        gs://my_bucket1 gs://my_bucket2
+
+  will cause all read and write activity to objects in gs://mybucket1 and
+  gs://mybucket2 to be logged to objects prefixed with the name "AccessLog",
+  with those log objects written to the bucket gs://my_logging_bucket.
 
   Note that log data may contain sensitive information, so you should make
   sure to set an appropriate default bucket ACL to protect that data. (See
   "gsutil help setdefacl".)
 
-  You can check logging status using the gsutil getlogging command.  For log
+  You can check logging status using the gsutil getlogging command. For log
   format details see "gsutil help getlogging".
 
 

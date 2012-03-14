@@ -140,7 +140,7 @@ _detailed_help_text = ("""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about gsutil object and bucket naming."""
+  """Additional help about using gsutil for production tasks."""
 
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
@@ -151,7 +151,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Using gsutil in production',
+    HELP_ONE_LINE_SUMMARY : 'Using gsutil for production tasks',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

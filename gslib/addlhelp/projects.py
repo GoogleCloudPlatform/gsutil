@@ -22,14 +22,11 @@ from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
-  The Google APIs Console (https://code.google.com/apis/console#:storage:access)
-  allows users to define projects authorized to use many different APIs
-  (with Google Cloud Storage being one of the supported APIs). Using the APIs
-  Console allows you to administer project memberships in one place, and to
-  have project membership reflected in the ACLs applied when you create buckets.
-  (See "gsutil help acls" for details about ACLs.)
-
   This section discusses how to work with projects in Google Cloud Storage.
+
+  For more information about using the Google APIs Console to administer
+  project memberships (which are automatically included in ACLs for buckets
+  you create) see https://code.google.com/apis/console#:storage:access.
 
 
 <B>PROJECT MEMBERS AND PERMISSIONS</B>
