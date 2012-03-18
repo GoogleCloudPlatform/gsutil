@@ -27,7 +27,7 @@ _detailed_help_text = ("""
   the commands (like cp -R) that work with subdirectories. We provide this
   additional documentation to help users understand how gsutil handles
   subdirectories differently than most GUI / web-based tools (e.g., why
-  those other tools create "$folder$ objects), and also to explain cost and
+  those other tools create "$folder$" objects), and also to explain cost and
   performance implications of the gsutil approach, for those interested in
   such details.
 

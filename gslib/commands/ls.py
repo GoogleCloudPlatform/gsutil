@@ -114,6 +114,10 @@ _detailed_help_text = ("""
        3914624  2012-03-02T19:30:27  gs://bucket/obj2
     TOTAL: 2 objects, 6190848 bytes (5.9 MB)
 
+  Note that the total listed in parentheses above is in mebibytes (or gibibytes,
+  tebibytes, etc.), which corresponds to the unit of billing measurement for
+  Google Cloud Storage.
+
   You can get a listing of all the objects in the top-level bucket directory
   (along with the total count and sum of sizes) using a command like:
 
@@ -279,16 +283,17 @@ class LsCommand(Command):
     uri = bucket_listing_ref.GetUri()
     obj = bucket_listing_ref.GetKey()
     if listing_style == ListingStyle.SHORT:
-      print self._UriStrForObj(uri, obj)
+      print self._UriStrForObj(uri, obj).encode('utf-8')
       return (0, 0)
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
-      print '%10s  %s  %s' % (obj.size, timestamp, self._UriStrForObj(uri, obj))
+      print '%10s  %s  %s' % (obj.size, timestamp,
+                              self._UriStrForObj(uri, obj).encode('utf-8'))
       return (1, obj.size)
     elif listing_style == ListingStyle.LONG_LONG:
       uri_str = self._UriStrForObj(uri, obj)
-      print '%s:' % uri_str
+      print '%s:' % uri_str.encode('utf-8')
       obj = self.suri_builder.StorageUri(uri_str).get_key(False)
       print '\tObject size:\t%s' % obj.size
       print '\tLast mod:\t%s' % obj.last_modified
@@ -377,7 +382,7 @@ class LsCommand(Command):
         # we're listing more than one subdir (or if it's a recursive listing),
         # to be consistent with the way UNIX ls works.
         if num_expanded_blrs > 1 or should_recurse:
-          print '%s:' % blr.GetUriString()
+          print '%s:' % blr.GetUriString().encode('utf-8')
         blr_expansion = list(self.exp_handler.WildcardIterator(
             '%s/*' % blr.GetRStrippedUriString()))
         printed_one = True
@@ -409,9 +414,9 @@ class LsCommand(Command):
           # to the prefix expansion, the next iteration of the main loop.
           else:
             if listing_style == ListingStyle.LONG:
-              print '%-33s%s' % ('', cur_blr.GetUriString())
+              print '%-33s%s' % ('', cur_blr.GetUriString().encode('utf-8'))
             else:
-              print cur_blr.GetUriString()
+              print cur_blr.GetUriString().encode('utf-8')
       expanding_top_level = False
     return (num_objs, num_bytes)
 

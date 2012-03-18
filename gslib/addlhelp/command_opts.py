@@ -56,6 +56,20 @@ _detailed_help_text = ("""
               filename=filename.ext"), to avoid having the shell split them
               into separate arguments.
 
+              Note that because the -h option allows you to specify any HTTP
+              header, it is both powerful and potentially dangerous:
+                - It is powerful because it allows you to specify headers that
+                  gsutil doesn't currently know about (e.g., to request
+                  service features from a different storage service provider
+                  than Google); or to override the values gsutil would normally
+                  send with different values.
+                - It is potentially dangerous because you can specify headers
+                  that cause gsutil to send invalid requests, or that in
+                  other ways change the behavior of requests.
+              Thus, you should be sure you understand the underlying storage
+              service HTTP API (and what impact the headers you specify will
+              have) before using the gsutil -h option.
+
   -m          Causes supported operations (cp, mv, rm, setacl) to run in
               parallel. This can significantly improve performance if you are
               uploading, downloading, moving, removing, or changing ACLs on
