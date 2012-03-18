@@ -58,12 +58,6 @@ _detailed_help_text = ("""
 
     gsutil cp 'data/abc**' gs://bucket
 
-  Note that wildcards containing '**' followed by a string containing additional
-  wildcard characters are not supported. For example, you can't use:
-    gs://bucket/abc**/*.txt
-  Instead you should use simply:
-    gs://bucket/abc**.txt
-
 
 <B>BUCKET WILDCARDS</B>
   You can specify wildcards for bucket names. For example:

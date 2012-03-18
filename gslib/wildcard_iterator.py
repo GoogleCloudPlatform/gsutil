@@ -119,7 +119,6 @@ class CloudWildcardIterator(WildcardIterator):
       debug: Debug level to pass in to boto connection (range 0..3).
     """
     self.wildcard_uri = wildcard_uri
-    self._SanityCheckWildcardUri()
     # Make a copy of the headers so any updates we make during wildcard
     # expansion aren't left in the input params (specifically, so we don't
     # include the x-goog-project-id header needed by a subset of cases, in
@@ -132,29 +131,6 @@ class CloudWildcardIterator(WildcardIterator):
     self.proj_id_handler = proj_id_handler
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.debug = debug
-
-  def _SanityCheckWildcardUri(self):
-    """Checks for disallowed wildcard_uri cases."""
-    # We don't support any wildcarding past a '**' wildcard. For example,
-    # you can't use:
-    #    gs://bucket/abc**/*.txt
-    # Instead you should use simply:
-    #    gs://bucket/abc**.txt
-    # The reason for this restriction is that '**' wildcards are implemented
-    # using a delimiter-less bucket listing, so there's nothing more that
-    # can be expanded by additional bucket listing request against the
-    # remainder-wildcard-appended results of an initial delimiter-less bucket
-    # listing request -- so attempting additional wildcard handling past the
-    # '**' would result in wasted (and potentially infinitely looping) bucket
-    # listing attempts.
-    uri_str = self.wildcard_uri.uri
-    recur_wildcard_pos = uri_str.find('**')
-    if (recur_wildcard_pos != -1
-        and ContainsWildcard(uri_str[recur_wildcard_pos+2:])):
-      raise WildcardException(
-          'Invalid wildcard (%s): URIs cannot contain any additional\n'
-          'wildcard chars after "**". See "gsutil help wildcards" for help '
-          'reformulating\nas a supported wildcard.' % uri_str)
 
   def __iter__(self):
     """Python iterator that gets called when iterating over cloud wildcard.
@@ -266,8 +242,8 @@ class CloudWildcardIterator(WildcardIterator):
       where:
         prefix is the prefix to be sent in bucket GET request.
         delimiter is the delimiter to be sent in bucket GET request.
-        prefix_wildcard is the wildcard to be used to filter GET results.
-        suffix is string to be appended to filtered GET results for next
+        prefix_wildcard is the wildcard to be used to filter bucket GET results.
+        suffix is string to be appended to filtered bucket GET results for next
           wildcard expansion iteration.
 
     Raises:
@@ -300,10 +276,12 @@ class CloudWildcardIterator(WildcardIterator):
       suffix = ''
     else:
       suffix = suffix[end+1:]
-    # If prefix_wildcard suffix starts with '**' don't send a delimiter,
-    # to implement recursive wildcarding semantics.
+    # To implement recursive wildcarding, if prefix_wildcard suffix starts with
+    # '**' don't send a delimiter, and combine suffix at end of prefix_wildcard.
     if prefix_wildcard.find('**') != -1:
       delimiter = None
+      prefix_wildcard = prefix_wildcard + suffix
+      suffix = ''
     else:
       delimiter = '/'
     # The following debug output is useful for tracing how the algorithm

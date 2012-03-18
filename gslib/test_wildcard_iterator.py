@@ -225,14 +225,14 @@ class CloudWildcardIteratorTests(unittest.TestCase):
             '%snested1/nest*2/xyz1' % self.test_bucket0_uri.uri).IterUris())
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
-  def TestInvalidPostRecursiveWildcard(self):
-    """Tests that wildcard containing wildcard past ** is rejected"""
-    try:
-      test_util.test_wildcard_iterator('gs://bucket/**/*.txt')
-      self.fail('Expected WildcardException not raised.')
-    except wildcard_iterator.WildcardException, e:
-      self.assertNotEquals(
-          e.reason.find('URIs cannot contain any additional'), -1)
+  def TestPostRecursiveWildcard(self):
+    """Tests that wildcard containing ** followed by an additional wildcard works"""
+    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
+        'nested1/nested2/xyz2'))])
+    actual_obj_uri_strs = set(
+        str(u) for u in test_util.test_wildcard_iterator(
+            '%s**/*y*2' % self.test_bucket0_uri.uri).IterUris())
+    self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def TestCallingGetKeyOnProviderOnlyWildcardIteration(self):
     """Tests that attempting iterating provider-only wildcard raises"""
