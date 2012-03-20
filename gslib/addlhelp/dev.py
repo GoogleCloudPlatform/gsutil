@@ -68,15 +68,15 @@ _detailed_help_text = ("""
 
   7. When it's time to send us code, please use the Rietveld code review tool
      rather than simply sending us a code patch. Do this as follows:
-      - check out the gsutil code from svn (at
-        http://code.google.com/p/gsutil/source/checkout) and apply your
-        changes in the checked out directory.
+      - check out the gsutil code from at
+        http://code.google.com/p/gsutil/source/checkout and apply your changes
+        in the checked out directory.
       - download the "upload.py" script from
         http://code.google.com/p/rietveld/wiki/UploadPyUsage
       - run upload.py from the above gsutil svn directory.
       - click the codereview.appspot.com link it generates, click "Edit Issue",
         and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
-      - then click Publish+Mail Comments.
+      - click Publish+Mail Comments.
 """)
 
 

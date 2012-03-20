@@ -111,7 +111,7 @@ class SetAclCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Set ACL on buckets and/or objects',
+    HELP_ONE_LINE_SUMMARY : 'Set ACLs on buckets and/or objects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

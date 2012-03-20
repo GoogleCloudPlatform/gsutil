@@ -1,0 +1,149 @@
+Release 3.0 (release-date: 2012-03-20)
+
+
+Important Notes
+---------------
+
+  - Backwards-incompatible wildcard change
+
+      The '*' wildcard now only matches objects within a bucket directory. If
+      you have scripts that depend on being able to match spanning multiple
+      directories you need to use '**' instead. For example, the command:
+
+        gsutil cp gs://bucket/*.txt
+
+      will now only match .txt files in the top-level directory.
+
+        gsutil cp gs://bucket/**.txt
+
+      will match across all directories.
+
+  - gsutil ls now lists one directory at a time. If you want to list all objects
+    in a bucket, you can use:
+
+        gsutil ls gs://bucket/**
+
+    or:
+
+        gsutil ls -R gs://bucket
+
+
+New Features
+------------
+
+  - Built-in help for all commands and many additional topics. Try
+    "gsutil help" for a list of available commands and topics.
+
+  - A new hierarchical file tree abstraction layer, which makes the flat bucket
+    name space look like a hierarchical file tree. This makes several things
+    possible:
+    - copying data to/from bucket sub-directories (see “gsutil help cp”).
+    - distributing large uploads/downloads across many machines
+      (see “gsutil help cp”)
+    - renaming bucket sub-directories (see “gsutil help mv”).
+    - listing individual bucket sub-directories and for listing directories
+      recursively (see “gsutil help ls”).
+    - setting ACLs for objects in a sub-directory (see “gsutil help setacl”).
+
+  - Support for per-directory (*) and recursive (**) wildcards. Essentially,
+    ** works the way * did in previous gsutil releases, and * now behaves
+    consistently with how it works in command interpreters (like bash). The
+    ability to specify directory-only wildcards also enables a number of use
+    cases, such as distributing large uploads/downloads by wildcarded name. See
+    "gsutil help wildcards" for details.
+
+  - Support for Cross-Origin Resource Sharing (CORS) configuration. See "gsutil
+    help cors" for details.
+
+  - Support for multi-threading and recursive operation for setacl command
+    (see “gsutil help setacl”).
+
+  - Ability to use the UNIX 'file' command to do content type recognition as
+    an alternative to filename extensions. 
+
+  - Introduction of new end-to-end test suite.
+
+  - The gsutil version command now computes a checksum of the code, to detect
+    corruption and local modification when assisting with technical support.
+
+  - The gsutil update command is no longer beta/experimental, and now also
+    supports updating from named URIs (for early/test releases).
+
+  - Changed gsutil ls -L to also print Content-Disposition header.
+
+
+Bug Fixes
+---------
+
+  - The gsutil cp -t option previously didn't work as documented, and instead
+    Content-Type was always detected based on filename extension. Content-Type
+    detection is now the default, the -t option is deprecated (to be removed in
+    the future), and specifying a -h Content-Type header now correctly overrides
+    the filename extension based handling. For details see "gsutil help
+    metadata".
+
+  - Fixed bug that caused multi-threaded mv command not to percolate failures
+    during the cp phase to the rm phase, which could under some circumstances
+    cause data that was not copied to be deleted.
+
+  - Fixed bug that caused gsutil to use GET for ls -L requests. It now uses HEAD
+    for ls -L requests, which is more efficient and faster.
+
+  - Fixed bug that caused gsutil not to preserve metadata during
+    copy-in-the-cloud.
+
+  - Fixed bug that prevented setacl command from allowing DisplayName's in ACLs.
+
+  - Fixed bug that caused gsutil/boto to suppress consecutive slashes in path
+    names.
+
+  - Fixed spec-non-compliant URI construction for resumable uploads.
+
+  - Fixed bug that caused rm -f not to work.
+
+  - Fixed UnicodeEncodeError that happened when redirecting gsutil ls output
+    to a file with non-ASCII object names.
+
+
+Other Changes
+-------------
+
+  - UserAgent sent in HTTP requests now includes gsutil version number and OS
+    name.
+
+  - Starting with this release users are able to get individual named releases
+    from version-named objects: gs://pub/gsutil_<version>.tar.gz
+    and gs://pub/gsutil_<version>.zip. The version-less counterparts
+    (gs://pub/gsutil.tar.gz and gs://pub/gsutil.zip) will contain the latest
+    release. Also, the gs://pub bucket is now publicly readable (so, anyone
+    can list its contents).
+
+
+================================================================================
+
+Release 2.0 (release-date: 2012-01-13)
+
+
+New Features
+------------
+
+  - Support for for two new installation modes: enterprise and RPM.
+    Customers can now install gsutil one of three ways:
+
+    - Individual user mode (previously the only available mode): unpacking from
+      a gzipped tarball (gs://pub/gsutil.tar.gz) or zip file
+      (gs://pub/gsutil.zip) and running the gsutil command in place in the
+      unpacked gsutil directory.
+
+    - Enterprise mode (new): unpacking as above, and then running the setup.py
+      script in the unpacked gsutil directory. This allows a systems
+      administrator to install gsutil in a central location, using the Python
+      distutils facility. This mode is supported only on Linux and MacOS.
+
+    - RPM mode (new). A RedHat RPM can be built from the gsutil.spec.in file
+      in the unpacked gsutil directory, allowing it to be installed as part of
+      a RedHat build.
+
+  - Note: v2.0 is the first numbered gsutil release. Previous releases
+    were given timestamps for versions. Numbered releases enable downstream
+    package builds (like RPMs) to define dependencies more easily.

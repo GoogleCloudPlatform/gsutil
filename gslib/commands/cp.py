@@ -306,7 +306,7 @@ class CpCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Copy files/objects to/from the cloud',
+    HELP_ONE_LINE_SUMMARY : 'Copy files and objects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

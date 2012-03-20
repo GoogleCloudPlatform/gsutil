@@ -51,6 +51,7 @@ _detailed_help_text = ("""
   (e.g., after the networking problem has been resolved), and the resumable
   transfer picks up where it left off.
 
+
 <B>SCRIPTING DATA TRANSFER TASKS</B>
   To script large production data transfer tasks around this mechanism,
   you can implement a script that runs periodically, determines which file
@@ -147,11 +148,12 @@ class CommandOptions(HelpProvider):
     HELP_NAME : 'prod',
     # List of help name aliases.
     HELP_NAME_ALIASES : ['production', 'resumable', 'resumable upload',
-                         'resumable transfer', 'resumable download'],
+                         'resumable transfer', 'resumable download',
+                         'scripts', 'scripting'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Using gsutil for production tasks',
+    HELP_ONE_LINE_SUMMARY : 'Scripting production data transfers with gsutil',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

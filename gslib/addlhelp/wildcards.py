@@ -92,12 +92,6 @@ _detailed_help_text = ("""
       gs://bucket/[a-m]??.j*g
 
 
-<B>WILDCARDED BUCKET NAMES</B>
-  Bucket names also can be wildcarded. For example you can specify multiple
-  buckets using something like:
-    gs://my_bucket_[0-8]??
-
-
 <B>EFFICIENCY CONSIDERATIONS WHEN USING WILDCARDS OVER MANY OBJECTS</B>
   It is more efficient, faster, and less network traffic-intensive
   to use wildcards that have a non-wildcard object-name prefix, like:
