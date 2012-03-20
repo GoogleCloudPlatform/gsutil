@@ -584,6 +584,10 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestHelpCommandDoesntRaise(self):
     """Test that the help command doesn't raise (sanity checks all help)"""
+    # Unset PAGER if defined, so help output paginating into $PAGER doesn't
+    # cause test to pause.
+    if 'PAGER' in os.environ:
+      del os.environ['PAGER']
     self.RunCommand('help', [])
 
   def TestLsNonExistentObjectWithPrefixName(self):
