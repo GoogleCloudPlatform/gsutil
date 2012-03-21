@@ -273,7 +273,6 @@ class CpCommand(Command):
 
   # Set default Content-Type type.
   DEFAULT_CONTENT_TYPE = 'application/octet-stream'
-  DEFAULT_CONTENT_ENCODING = None
   USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
 
   # Command specification (processed by parent class).
@@ -573,7 +572,7 @@ class CpCommand(Command):
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
-  def _GetContentTypeAndEncoding(self, object_name):
+  def _GetContentType(self, object_name):
     # Streams (denoted by '-') are expected to be 'application/octet-stream'
     # and 'file' would partially consume them.
     if not object_name == '-':
@@ -588,10 +587,10 @@ class CpCommand(Command):
         # Parse output by removing line delimiter and splitting on last ": ".
         mime_type = output.rstrip().rpartition(': ')[2]
         if mime_type:
-          return (mime_type, self.DEFAULT_CONTENT_ENCODING)
+          return mime_type
       else:
-        return mimetypes.guess_type(object_name)
-    return (self.DEFAULT_CONTENT_TYPE, self.DEFAULT_CONTENT_ENCODING)
+        return mimetypes.guess_type(object_name)[0]
+    return self.DEFAULT_CONTENT_TYPE
 
   def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers):
     """Helper method for uploading a local file to an object.
@@ -638,17 +637,13 @@ class CpCommand(Command):
         headers['Content-Type'] = None
     else:
       # If no CT header was specified via the -h option, we do auto-content
-      # detection and use the results to formulate the Content-Type and
-      # Content-Encoding headers.
-      (mime_type, content_encoding) = (
-          self._GetContentTypeAndEncoding(src_uri.object_name))
+      # detection and use the results to formulate the Content-Type.
+      mime_type = self._GetContentType(src_uri.object_name)
       if mime_type:
         headers['Content-Type'] = mime_type
         print '\t[Setting Content-Type=%s]' % mime_type
       else:
         print '\t[Unknown content type -> using %s]' % self.DEFAULT_CONTENT_TYPE
-      if content_encoding:
-        headers['Content-Encoding'] = content_encoding
 
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
@@ -804,15 +799,12 @@ class CpCommand(Command):
             # GCS and S3 support different ACLs.
             raise NotImplementedError('Cross-provider cp -p not supported')
           elif o == '-t':
-            (mime_type, content_encoding) = (
-                self._GetContentTypeAndEncoding(src_uri.object_name))
+            mime_type = self._GetContentType(src_uri.object_name)
             if mime_type:
               headers['Content-Type'] = mime_type
               print '\t[Setting Content-Type=%s]' % mime_type
             else:
               print '\t[Unknown content type -> using application/octet stream]'
-            if content_encoding:
-              headers['Content-Encoding'] = content_encoding
 
       # TODO: This _PerformStreamUpload call passes in a Key for fp
       # param, relying on Python "duck typing" (the fact that the lower-level

@@ -1,3 +1,21 @@
+Release 3.1 (release-date: 2012-03-20)
+
+Bug Fixes
+---------
+
+  - Removed erroneous setting of Content-Encoding when a gzip file is uploaded
+    (vs running gsutil cp -z, when Content-Encoding should be set). This
+    error caused users to get gsutil.tar.gz file uncompressed by the user
+    agent (like wget) while downloading, making the file appear to be of the
+    wrong size/content.
+
+  - Fixed handling of gsutil help for Windows (previous code depended on
+    termios and fcntl libs, which are Linux/MacOS-specific).
+
+
+================================================================================
+
+
 Release 3.0 (release-date: 2012-03-20)
 
 

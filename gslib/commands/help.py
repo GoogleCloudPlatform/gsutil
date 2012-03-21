@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fcntl
 import gslib
 import itertools
 import os
 import re
 import struct
 import sys
-import termios
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -155,8 +153,16 @@ class HelpCommand(Command):
     else:
       print str
 
+  _DEFAULT_LINES = 25
+
   def getTermLines(self):
     """Returns number of terminal lines"""
+    # fcntl isn't supported in Windows.
+    try:
+      import fcntl
+      import termios
+    except ImportError:
+      return _DEFAULT_LINES
     def ioctl_GWINSZ(fd):
       try:
         return struct.unpack(
@@ -177,7 +183,7 @@ class HelpCommand(Command):
       if 'LINES' in os.environ:
         ioc = env['LINES']
       else:
-        ioc = 25 # Default.
+        ioc = _DEFAULT_LINES
     return int(ioc)
 
   def _LoadHelpMaps(self):
