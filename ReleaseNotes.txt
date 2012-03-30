@@ -1,3 +1,16 @@
+Release 3.2 (release-date: 2012-03-30)
+
+Bug Fixes
+---------
+
+  - Fixed problem where gsutil didn't convert between OS-specific directory separators when copying individually-named files (issue 87).
+
+  - Fixed problem where gsutil ls -R doesn't work right if there was a key with a leading path (like /foo/bar/baz)
+
+
+================================================================================
+
+
 Release 3.1 (release-date: 2012-03-20)
 
 Bug Fixes
