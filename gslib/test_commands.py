@@ -622,6 +622,17 @@ class GsutilCommandTests(unittest.TestCase):
     actual = set(output.split('\n'))
     self.assertEqual(expected, actual)
 
+  def TestLsBucketRecursiveWithLeadingSlashObjectName(self):
+    """Test that ls -R of a bucket with an object that has leading slash"""
+    src_file = self.SrcFile('f0')
+    self.RunCommand('cp', [src_file, '%s/%s' % (self.dst_bucket_uri.uri, 'f0')])
+    output = self.RunCommand('ls', ['-R', '%s*' % self.dst_bucket_uri.uri],
+                             return_stdout=True)
+    expected = set(['%s/%s' % (self.dst_bucket_uri.uri, 'f0')])
+    expected.add('') # Blank line between subdir listings.
+    actual = set(output.split('\n'))
+    self.assertEqual(expected, actual)
+
   def TestLsBucketSubdirNonRecursive(self):
     """Test that ls of a bucket subdir returns expected results"""
     output = self.RunCommand('ls', ['%ssrc_subdir' % self.src_bucket_uri.uri],

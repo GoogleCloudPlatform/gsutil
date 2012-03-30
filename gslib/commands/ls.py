@@ -383,13 +383,12 @@ class LsCommand(Command):
         # to be consistent with the way UNIX ls works.
         if num_expanded_blrs > 1 or should_recurse:
           print '%s:' % blr.GetUriString().encode('utf-8')
+          printed_one = True
         blr_expansion = list(self.exp_handler.WildcardIterator(
             '%s/*' % blr.GetRStrippedUriString()))
-        printed_one = True
       elif blr.NamesBucket():
         blr_expansion = list(self.exp_handler.WildcardIterator(
             '%s*' % blr.GetUriString()))
-        printed_one = True
       else:
         # This BLR didn't come from a bucket listing. This case happens for
         # BLR's instantiated from a user-provided URI.
@@ -402,12 +401,19 @@ class LsCommand(Command):
               cur_blr, listing_style)
           num_objs += no
           num_bytes += nb
+          printed_one = True
         else:
           # Subdir listing. If we're at the top level of a bucket subdir
           # listing don't print the list here (corresponding to how UNIX ls
           # dir just prints its contents, not the name followed by its
           # contents).
           if (expanding_top_level and not uri.names_bucket()) or should_recurse:
+            if cur_blr.GetUriString().endswith('//'):
+	      # Expand gs://bucket// into gs://bucket//* so we don't infinite
+	      # loop. This case happens when user has uploaded an object whose
+              # name begins with a /.
+              cur_blr = BucketListingRef(self.suri_builder.StorageUri(
+                  '%s*' % cur_blr.GetUriString()), None, None, cur_blr.headers)
             blrs_to_expand.append(cur_blr)
           # Don't include the subdir name in the output if we're doing a
           # recursive listing, as it will be printed as 'subdir:' when we get
