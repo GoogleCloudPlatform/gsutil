@@ -1069,6 +1069,24 @@ class CpCommand(Command):
 
     return exp_dst_uri.clone_replace_name(dst_key_name)
 
+  def _FixWindowsNaming(self, src_uri, dst_uri):
+    """
+    Rewrites the destination URI built by _ConstructDstUri() to translate
+    Windows pathnames to cloud pathnames if neeeded.
+
+    Args:
+      src_uri: src_uri to be copied.
+      dst_uri: the destination URI built by _ConstructDstUri().
+
+    Returns:
+      StorageUri to use for copy.
+    """
+    if (src_uri.names_file() and src_uri.delim == '\\'
+        and dst_uri.is_cloud_uri()):
+      trans_uri_str = re.sub(r'\\', '/', dst_uri.uri)
+      dst_uri = self.suri_builder.StorageUri(trans_uri_str)
+    return dst_uri
+
   # Command entry point.
   def RunCommand(self):
 
@@ -1091,6 +1109,7 @@ class CpCommand(Command):
                                       src_uri_expands_to_multi,
                                       have_multiple_srcs, exp_dst_uri,
                                       have_existing_dest_subdir)
+      dst_uri = self._FixWindowsNaming(src_uri, dst_uri)
 
       self._CheckForDirFileConflict(exp_src_uri, dst_uri)
       if self._SrcDstSame(exp_src_uri, dst_uri):
