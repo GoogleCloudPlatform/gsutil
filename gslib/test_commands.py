@@ -718,7 +718,7 @@ class GsutilCommandTests(unittest.TestCase):
 
   def TestEnableLoggingCommandRuns(self):
     """Test that the enablelogging command basically runs"""
-    self.RunCommand('enablelogging', ['-b', 'log_bucket',
+    self.RunCommand('enablelogging', ['-b', 'gs://log_bucket',
                                       self.src_bucket_uri.uri])
 
   # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run

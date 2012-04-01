@@ -117,17 +117,19 @@ class EnableLoggingCommand(Command):
     if not storage_uri:
       raise CommandException('enablelogging command spanning providers not '
                              'allowed.')
-    target_bucket = None
+    target_bucket_uri = None
     target_prefix = None
     for opt, opt_arg in self.sub_opts:
       if opt == '-b':
-        target_bucket = opt_arg
+        target_bucket_uri = self.suri_builder.StorageUri(opt_arg)
       if opt == '-o':
         target_prefix = opt_arg
 
-    if not target_bucket:
+    if not target_bucket_uri:
       raise CommandException('enablelogging requires \'-b <log_bucket>\' '
                              'option')
+    if not target_bucket_uri.names_bucket():
+      raise CommandException('-b option must specify a bucket uri')
 
     did_some_work = False
     for uri_str in self.args:
@@ -138,6 +140,7 @@ class EnableLoggingCommand(Command):
         print 'Enabling logging on %s...' % uri
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'enablelogging', storage_uri, self.headers)
-        uri.enable_logging(target_bucket, target_prefix, False, self.headers)
+        uri.enable_logging(target_bucket_uri.bucket_name, target_prefix, False,
+                           self.headers)
     if not did_some_work:
       raise CommandException('No URIs matched')
