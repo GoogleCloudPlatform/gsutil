@@ -85,25 +85,18 @@ class VersionCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    config_ver = ''
     for path in BotoConfigLocations:
       f = None
       try:
         f = open(path, 'r')
-        while True:
-          line = f.readline()
-          if not line:
-            break
-          if line.find('was created by gsutil version') != -1:
-            config_ver = line.split('"')[-2]
-            break
-        # Only look at first config file found in BotoConfigLocations.
         break
       except IOError:
         pass
       finally:
         if f:
           f.close()
+        else:
+          path = "no config found"
 
     f = open(os.path.join(self.gsutil_bin_dir, 'CHECKSUM'))
     shipped_checksum = f.read().strip()
@@ -114,10 +107,11 @@ class VersionCommand(Command):
     else:
       checksum_ok_str = '!= %s' % shipped_checksum
     sys.stderr.write(
-        'gsutil version %s\nchecksum %s (%s)\nconfig file version %s\n'
-        'boto version %s\npython version %s\n' % (
-        self.gsutil_ver, cur_checksum, checksum_ok_str, config_ver,
-        boto.__version__, sys.version))
+        'gsutil version %s\nchecksum %s (%s)\n'
+        'boto version %s\npython version %s\n'
+        'config path: %s\ngsutil path: %s\n' % (
+        self.gsutil_ver, cur_checksum, checksum_ok_str,
+        boto.__version__, sys.version, path, os.path.realpath(sys.argv[0])))
 
   def _ComputeCodeChecksum(self):
     """
