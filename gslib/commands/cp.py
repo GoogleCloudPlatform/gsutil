@@ -1081,7 +1081,7 @@ class CpCommand(Command):
     Returns:
       StorageUri to use for copy.
     """
-    if (src_uri.names_file() and src_uri.delim == '\\'
+    if (src_uri.is_file_uri() and src_uri.delim == '\\'
         and dst_uri.is_cloud_uri()):
       trans_uri_str = re.sub(r'\\', '/', dst_uri.uri)
       dst_uri = self.suri_builder.StorageUri(trans_uri_str)

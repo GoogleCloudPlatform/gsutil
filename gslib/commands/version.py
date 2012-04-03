@@ -14,6 +14,7 @@
 
 import boto
 import os
+import re
 import sys
 
 from boto.pyami.config import BotoConfigLocations
@@ -122,7 +123,7 @@ class VersionCommand(Command):
     """
     m = md5()
     # Checksum gsutil and all .py files under gsutil bin (including bundled
-    # libs).  Although we will eventually make gsutil allow use of a centrally
+    # libs). Although we will eventually make gsutil allow use of a centrally
     # installed boto (once boto shifts to more frequent releases), in that case
     # the local copies still should not have any user modifications.
     files_to_checksum = [os.path.join(self.gsutil_bin_dir, 'gsutil')]
@@ -134,6 +135,8 @@ class VersionCommand(Command):
     # orders the list.
     for file in sorted(files_to_checksum):
       f = open(file, 'r')
-      m.update(f.read())
+      content = f.read()
+      content = re.sub(r'(\r\n|\r|\n)', '\n', content)
+      m.update(content)
       f.close()
     return m.hexdigest()
