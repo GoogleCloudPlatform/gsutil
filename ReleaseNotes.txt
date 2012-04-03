@@ -1,3 +1,18 @@
+Release 3.3 (release-date: 2012-04-03)
+
+Bug Fixes
+---------
+
+  - Fixed problem where gsutil ver and debug flags crashed when used with newly generated boto config files.
+
+  - Fixed gsutil bug in windows path handling, and make checksumming work across platforms
+
+  - Fixed enablelogging to translate -b URI param to plain bucket name in REST API request.
+
+
+================================================================================
+
+
 Release 3.2 (release-date: 2012-03-30)
 
 Bug Fixes
