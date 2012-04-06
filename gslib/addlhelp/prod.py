@@ -46,10 +46,12 @@ _detailed_help_text = ("""
   If the transfer fails each of these attempts with no intervening
   progress, gsutil gives up on the transfer, but keeps a "tracker" file
   for it in a configurable location (the default location is ~/.gsutil/,
-  in a file with the name of the bucket and object being transferred). When
-  transfers fail in this fashion, you can rerun gsutil at some later time
-  (e.g., after the networking problem has been resolved), and the resumable
-  transfer picks up where it left off.
+  in a file named by a combination of the SHA1 hash of the name of 
+  the bucket and object being transferred, the epoch time of the
+  transfer, and the last 16 characters of the file name). When 
+  transfers fail in this fashion, you can rerun gsutil at some later 
+  time (e.g., after the networking problem has been resolved), and 
+  the resumable transfer picks up where it left off.
 
 
 <B>SCRIPTING DATA TRANSFER TASKS</B>

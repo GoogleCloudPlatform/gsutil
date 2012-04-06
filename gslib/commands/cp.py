@@ -17,6 +17,7 @@ import boto
 import ctypes
 import errno
 import gzip
+import hashlib
 import mimetypes
 import os
 import platform
@@ -467,6 +468,8 @@ class CpCommand(Command):
         res_tracker_file_name = (
             re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
                    (os.path.realpath(uri.object_name))))
+
+      res_tracker_file_name = _hash_filename(res_tracker_file_name)
       tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
                                  res_tracker_file_name)
       if upload:
@@ -1406,3 +1409,29 @@ def _GetPathBeforeFinalDir(uri):
     return '%s://' % uri.scheme
   # Else it names a bucket subdir.
   return uri.uri.rstrip(sep).rpartition(sep)[0]
+
+def _hash_filename(filename):
+  """
+  Apply a hash function (SHA1) to shorten the passed file name. In order 
+  to minimize the risk of collisions, we include the epoch time (with 
+  microsecond graularity). The complete spec for the hashed file name is
+  as follows:
+
+      TRACKER_<hash>_<timestamp>_<trailing>
+
+  where hash is a SHA1 hash on the original file name, timestamp is a
+  microsecond granularity current time stamp and trailing is the last 
+  16 chars from the original file name. Max file name lengths vary by
+  operating system so the goal of this function is to ensure the hashed
+  version takes less than 100 characters.
+
+  Args:
+    filename: file name to be hashed.
+
+  Returns:
+    shorter, hashed version of passed file name
+  """
+  m = hashlib.sha1(filename)
+  hashed_name = ("TRACKER_" + m.hexdigest() + ('.%.6f' % time.time()) + 
+                 '.' + filename[-16:])
+  return hashed_name
