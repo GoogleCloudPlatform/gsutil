@@ -1,3 +1,22 @@
+
+Release 3.4 (release-date: 2012-04-06)
+
+Bug Fixes
+---------
+
+  - Fixed problem where resumable uploads/downloads of objects with very long 
+    names would generate tracking files with names that exceeded local file
+    system limits, making it impossible to complete resumable transfers for
+    those objects. Solution was to build the tracking file name from a fixed
+    prefix, SHA1 hash of the long filename, epoch timestamp and last 16
+    chars of the long filename, which is guarantee to be a predicable and
+    reasonable length.
+
+  - Fixed minor bug in output from 'gsutil help dev' which advised executing
+    an inconsequential test script (test_util.py).
+
+================================================================================
+
 Release 3.3 (release-date: 2012-04-03)
 
 Bug Fixes
