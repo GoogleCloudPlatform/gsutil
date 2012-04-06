@@ -53,7 +53,6 @@ _detailed_help_text = ("""
       export PYTHONPATH=./boto:$PYTHONPATH
       ./gslib/test_commands.py
       ./gslib/test_thread_pool.py
-      ./gslib/test_util.py
       ./gslib/test_wildcard_iterator.py
 
      The above tests run quickly, as they run against an in-memory mock
