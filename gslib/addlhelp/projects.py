@@ -30,7 +30,7 @@ _detailed_help_text = ("""
 
 
 <B>PROJECT MEMBERS AND PERMISSIONS</B>
-  You can define three groups of users for each project:
+  There are three groups of users associated with each project:
 
     - Project Owners are allowed to list, create, and delete buckets,
       and can also perform administrative tasks like adding and removing team
@@ -41,6 +41,12 @@ _detailed_help_text = ("""
     - Project Editors are allowed to list, create, and delete buckets.
 
     - All Project Team Members are allowed to list buckets within a project.
+
+  These projects make it easy to set up a bucket and start uploading objects
+  with access control appropriate for a project at your company, as the three
+  group memberships can be configured by your administrative staff. Control
+  over projects and their associated memberships is provided by the Google
+  APIs Console (https://code.google.com/apis/console).
 
 
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>

@@ -110,7 +110,7 @@ _detailed_help_text = ("""
 
 <B>ACL XML</B>
   When you use a canned ACL, it is translated into an XML representation
-  that can later be retrieved and edited to specify more fine grained
+  that can later be retrieved and edited to specify more fine-grained
   detail about who can read and write buckets and objects. By running
   the gsutil getacl command you can retrieve the ACL XML, and edit it to
   customize the permissions.
@@ -122,36 +122,60 @@ _detailed_help_text = ("""
   <AccessControlList>
     <Owner>
       <ID>
-          00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70
+        00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
       </ID>
     </Owner>
     <Entries>
       <Entry>
-        <Scope type="UserById">
+        <Scope type="GroupById">
           <ID>
-              00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70
+            00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
           </ID>
         </Scope>
         <Permission>
           FULL_CONTROL
         </Permission>
       </Entry>
+      <Entry>
+        <Scope type="GroupById">
+          <ID>
+            00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
+          </ID>
+        </Scope>
+        <Permission>
+          FULL_CONTROL
+        </Permission>
+      </Entry>
+      <Entry>
+        <Scope type="GroupById">
+          <ID>
+            00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
+          </ID>
+        </Scope>
+        <Permission>
+          READ
+        </Permission>
+      </Entry>
     </Entries>
   </AccessControlList>
 
-  The IDs shown here are "canonical IDs", which uniquely identify individuals
-  and groups.
+  The ACL consists of an Owner element and a collection of Entry elements,
+  each of which specifies a Scope and a Permission. Scopes are the way you
+  specify an individual or group of individuals, and Permissions specify what
+  access they're permitted.
 
-  The ACL consists of an Owner element and a collection of Entry elements, each
-  of which specifies a Scope and a Permission. Scopes are the way you specify
-  an individual or group of individuals, and Permissions specify what access
-  they're permitted.
+  This particular ACL grants FULL_CONTROL to two groups (which means members
+  of those groups are allowed to read the object and read and write the ACL),
+  and READ permission to a third group. The project groups are (in order)
+  the owners group, editors group, and viewers group.
 
-  This particular ACL grants a single user (the person who uploaded the
-  object in this case) FULL_CONTROL over the object, which just means
-  that person is allowed to read the object and read and write the ACL.
+  The 64 digit hex identifiers used in this ACL are called canonical IDs,
+  and are used to identify predefined groups associated with the project that
+  owns the bucket. For more information about project groups, see "gsutil
+  help projects".
 
-  Here's an example of a more interesting ACL:
+  Here's an example of an ACL specified using the GroupByEmail and GroupByDomain
+  scopes:
 
   <AccessControlList>
     <Entries>
@@ -167,69 +191,21 @@ _detailed_help_text = ("""
         <Permission>
           READ
         </Permission>
-        <Scope type="GroupByEmail">
-          <EmailAddress>travel-companion-readers@googlegroups.com</EmailAddress>
+        <Scope type="GroupByDomain">
+          <Domain>example.com</Domain>
         </Scope>
       </Entry>
     </Entries>
   </AccessControlList>
 
-  This ACL grants one group FULL_CONTROL, and grants a different
-  (probably much larger) group READ access. By applying group grants to
-  a collection of objects you can edit access control for large numbers
-  of objects at once via http://groups.google.com. That way, for example,
-  you can easily and quickly change access to a group of company objects
-  when employees join and leave your company (i.e., without having to
-  individually change ACLs across potentially millions of objects).
-
-
-<B>CANONICAL IDS VS. HUMAN READABLE IDENTIFIERS</B>
-  The first ACL in the previous section contained canonical IDs, while the
-  second contained email address-based identifiers. The reason for canonical IDs
-  is to guard user privacy, so that by default the names and email addresses
-  of sharees aren't visible (even to those users who are allowed to view
-  and edit the ACL). If hiding user identities is not needed for your case
-  and you'd like to have the ACLs contain human-readable addresses you can
-  add a DisplayName element to each Scope you put in the ACL. For example,
-  the second ACL above could be edited to contain this information:
-
-  <AccessControlList>
-    <Entries>
-      <Entry>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-        <Scope type="GroupByEmail">
-          <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
-          <DisplayName>travel-companion-owners@googlegroups.com</DisplayName>
-        </Scope>
-      </Entry>
-      <Entry>
-        <Permission>
-          READ
-        </Permission>
-        <Scope type="GroupByEmail">
-          <EmailAddress>travel-companion-readers@googlegroups.com</EmailAddress>
-          <DisplayName>travel-companion-readers@googlegroups.com</DisplayName>
-        </Scope>
-      </Entry>
-    </Entries>
-  </AccessControlList>
-
-  When written this way, even though the original identity will be translated
-  by the Google Cloud Storage service into a canonical ID when retrieved later,
-  the DisplayName field will be left with whatever content you wrote (the
-  email address in the above case).
-
-
-<B>PROJECT GROUPS</B>
-  Google Cloud Storage buckets are owned by projects. Associated with each
-  project is an owners group, an editors group, and a viewers group. In short,
-  these groups make it easy to set up a bucket and start uploading objects
-  with access control appropriate for a project at your company, as the three
-  group memberships can be configured by your administrative staff. Control
-  over projects and their associated memberships is provided by the Google
-  APIs Console (https://code.google.com/apis/console).
+  This ACL grants members of an email group FULL_CONTROL, and grants READ
+  access to any user in a domain (which must be a Google Apps for Business
+  domain). By applying email group grants to a collection of objects
+  you can edit access control for large numbers of objects at once via
+  http://groups.google.com. That way, for example, you can easily and quickly
+  change access to a group of company objects when employees join and leave
+  your company (i.e., without having to individually change ACLs across
+  potentially millions of objects).
 
 
 <B>SHARING SCENARIOS</B>
