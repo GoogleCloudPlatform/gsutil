@@ -23,6 +23,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
@@ -284,7 +285,7 @@ class LsCommand(Command):
     obj = bucket_listing_ref.GetKey()
     if listing_style == ListingStyle.SHORT:
       print self._UriStrForObj(uri, obj).encode('utf-8')
-      return (0, 0)
+      return (1, 0)
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
@@ -428,6 +429,7 @@ class LsCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    got_nomatch_errors = False
     listing_style = ListingStyle.SHORT
     get_bucket_info = False
     self.recursion_requested = False
@@ -475,6 +477,8 @@ class LsCommand(Command):
           # Not -b request: List objects in the bucket(s).
           (no, nb) = self._ExpandUriAndPrintInfo(uri, listing_style,
               should_recurse=self.recursion_requested)
+          if no == 0 and ContainsWildcard(uri):
+            got_nomatch_errors = True
           total_objs += no
           total_bytes += nb
       else:
@@ -482,12 +486,16 @@ class LsCommand(Command):
         # subdirs.
         (exp_objs, exp_bytes) = self._ExpandUriAndPrintInfo(uri, listing_style,
             should_recurse=self.recursion_requested)
+        if exp_objs == 0 and ContainsWildcard(uri):
+          got_nomatch_errors = True
         total_bytes += exp_bytes
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
       print ('TOTAL: %d objects, %d bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
+    if got_nomatch_errors:
+      raise CommandException('One or more URIs matched no objects.')
 
   # test specification, see definition of test_steps in base class for
   # details on how to populate these fields
