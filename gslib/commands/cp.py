@@ -314,18 +314,23 @@ class CpCommand(Command):
   def _CheckFinalMd5(self, key, file_name):
     """
     Checks that etag from server agrees with md5 computed after the
-    download completes. This is important, since the download could
-    have spanned a number of hours and multiple processes (e.g.,
-    gsutil runs), and the user could change some of the file and not
-    realize they have inconsistent data.
+    download completes.
     """
-    # Open file in binary mode to avoid surprises in Windows.
-    fp = open(file_name, 'rb')
-    try:
-      file_md5 = key.compute_md5(fp)[0]
-    finally:
-      fp.close()
     obj_md5 = key.etag.strip('"\'')
+    file_md5 = None
+
+    if hasattr(key, 'md5') and key.md5:
+      file_md5 = key.md5
+    else:
+      print 'Computing MD5 from scratch for resumed download'
+
+      # Open file in binary mode to avoid surprises in Windows.
+      fp = open(file_name, 'rb')
+      try:
+        file_md5 = key.compute_md5(fp)[0]
+      finally:
+        fp.close()
+
     if self.debug:
       print 'Checking file md5 against etag. (%s/%s)' % (file_md5, obj_md5)
     if file_md5 != obj_md5:
@@ -745,6 +750,10 @@ class CpCommand(Command):
     finally:
       if fp:
         fp.close()
+
+    # Discard the md5 if we are resuming a partial download.
+    if res_download_handler and res_download_handler.download_start_point:
+      src_key.md5 = None
 
     # Verify downloaded file checksum matched source object's checksum.
     self._CheckFinalMd5(src_key, download_file_name)
