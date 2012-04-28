@@ -388,7 +388,7 @@ class CpCommand(Command):
     Args:
       exp_dst_uri: Wildcard-expanding dst_uri.
       have_existing_dst_container: bool indicator of whether exp_dst_uri
-        names a container (directory, bucket, or bucket subdir).
+        names a container (directory, bucket, or existing bucket subdir).
       command_name: Name of command making call. May not be the same as
           self.command_name in the case of commands implemented atop other
           commands (like mv command).
@@ -399,14 +399,13 @@ class CpCommand(Command):
     if exp_dst_uri.is_file_uri():
       ok = exp_dst_uri.names_directory()
     else:
-        if have_existing_dst_container:
-          ok = True
-        else:
-          # It's ok to specify a non-existing bucket subdir if this is a
-          # recursive copy, such as:
-          #  gsutil cp -R dir gs://bucket/abc
-          # where there is no existing subdir gs://bucket/abc.
-          ok = self.recursion_requested and exp_dst_uri.names_object()
+      if have_existing_dst_container:
+        ok = True
+      else:
+        # It's ok to specify a non-existing bucket subdir, for example:
+        #   gsutil cp -R dir gs://bucket/abc
+        # where gs://bucket/abc isn't an existing subdir.
+        ok = exp_dst_uri.names_object()
     if not ok:
       raise CommandException('Destination URI must name a directory, bucket, '
                              'or bucket\nsubdirectory for the multiple '
@@ -1076,8 +1075,13 @@ class CpCommand(Command):
 
     if (exp_dst_uri.is_file_uri()
         or self._ShouldTreatDstUriAsBucketSubDir(
-            have_multiple_srcs, exp_dst_uri)):
-      dst_key_name = '%s%s' % (exp_dst_uri.object_name, dst_key_name)
+            have_multiple_srcs, exp_dst_uri, have_existing_dest_subdir)):
+      if exp_dst_uri.object_name.endswith(exp_dst_uri.delim):
+        dst_key_name = '%s%s%s' % (
+            exp_dst_uri.object_name.rstrip(exp_dst_uri.delim),
+            exp_dst_uri.delim, dst_key_name)
+      else:
+        dst_key_name = '%s%s' % (exp_dst_uri.object_name, dst_key_name)
 
     return exp_dst_uri.clone_replace_name(dst_key_name)
 
@@ -1344,16 +1348,22 @@ class CpCommand(Command):
       #   gsutil mv -R gs://bucket/abc/* gs://bucket/abc
       return src_uri.uri == dst_uri.uri
 
-  def _ShouldTreatDstUriAsBucketSubDir(self, have_multiple_srcs, dst_uri):
+  def _ShouldTreatDstUriAsBucketSubDir(self, have_multiple_srcs, dst_uri,
+                                       have_existing_dest_subdir):
     """
     Checks whether dst_uri should be treated as a bucket "sub-directory". The
     decision about whether something constitutes a bucket "sub-directory"
-    depends on whether there are multiple sources in this request. For
-    example, when running the command:
+    depends on whether there are multiple sources in this request and whether
+    there is an existing bucket subdirectory. For example, when running the
+    command:
       gsutil cp file gs://bucket/abc
-    gs://bucket/abc names an object; in contrast, when running the command:
+    if there's no existing gs://bucket/abc bucket subdirectory we should copy
+    file to the object gs://bucket/abc. In contrast, if 
+    there's an existing gs://bucket/abc bucket subdirectory we should copy
+    file to gs://bucket/abc/file. And regardless of whether gs://bucket/abc
+    exists, when running the command:
       gsutil cp file1 file2 gs://bucket/abc
-    gs://bucket/abc names a bucket "sub-directory".
+    we should copy file1 to gs://bucket/abc/file1 (and similarly for file2).
 
     Note that we don't disallow naming a bucket "sub-directory" where there's
     already an object at that URI. For example it's legitimate (albeit
@@ -1367,12 +1377,14 @@ class CpCommand(Command):
       have_multiple_srcs: Bool indicator of whether this is a multi-source
           operation.
       dst_uri: StorageUri to check.
+      have_existing_dest_subdir: bool indicator whether dest is an existing
+        subdirectory.
 
     Returns:
       bool indicator.
     """
-    return (self.recursion_requested and have_multiple_srcs
-            and dst_uri.is_cloud_uri())
+    return ((have_multiple_srcs and dst_uri.is_cloud_uri())
+            or (have_existing_dest_subdir))
 
   def _ShouldTreatDstUriAsSingleton(self, have_multiple_srcs, 
                                     have_existing_dest_subdir, dst_uri):
