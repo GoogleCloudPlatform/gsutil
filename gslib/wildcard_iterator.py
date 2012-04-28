@@ -201,27 +201,26 @@ class CloudWildcardIterator(WildcardIterator):
               bucket_uri.clone_replace_name(self.wildcard_uri.object_name)]
           while len(uris_needing_expansion) > 0:
             uri = uris_needing_expansion.pop(0)
-            (prefix, delimiter, prefix_wildcard, suffix) = (
+            (prefix, delimiter, prefix_wildcard, suffix_wildcard) = (
                 self._BuildBucketFilterStrings(uri.object_name))
             prog = re.compile(fnmatch.translate(prefix_wildcard))
             # List bucket for objects matching prefix up to delimiter.
             for key in bucket_uri.get_bucket(
                 validate=False, headers=self.headers).list(
                     prefix=prefix, delimiter=delimiter, headers=self.headers):
-              # Check that the prefix regex matches.
-              # Match rstripped key.name, to correspond with the rstripped
-              # prefix_wildcard from _BuildBucketFilterStrings.
+              # Check that the prefix regex matches rstripped key.name (to
+              # correspond with the rstripped prefix_wildcard from
+              # _BuildBucketFilterStrings).
               if prog.match(key.name.rstrip('/')):
-                if suffix and WILDCARD_REGEX.search(suffix):
-                  # There's more wildcard left to expand.
-                  uris_needing_expansion.append(
-                      uri.clone_replace_name(key.name + suffix))
+                if suffix_wildcard and key.name.rstrip('/') != suffix_wildcard:
+                  if isinstance(key, Prefix):
+                    # There's more wildcard left to expand.
+                    uris_needing_expansion.append(
+                        uri.clone_replace_name(key.name.rstrip('/') + '/'
+                        + suffix_wildcard))
                 else:
                   # Done expanding.
-                  if suffix:
-                    expanded_uri = uri.clone_replace_name(key.name + suffix)
-                  else:
-                    expanded_uri = uri.clone_replace_name(key.name)
+                  expanded_uri = uri.clone_replace_name(key.name)
                   if isinstance(key, Prefix):
                     yield BucketListingRef(expanded_uri, key=None, prefix=key,
                                            headers=self.headers)
@@ -238,60 +237,79 @@ class CloudWildcardIterator(WildcardIterator):
       wildcard: The wildcard string to match to objects.
 
     Returns:
-      (prefix, delimiter, prefix_wildcard, suffix)
+      (prefix, delimiter, prefix_wildcard, suffix_wildcard)
       where:
         prefix is the prefix to be sent in bucket GET request.
         delimiter is the delimiter to be sent in bucket GET request.
         prefix_wildcard is the wildcard to be used to filter bucket GET results.
-        suffix is string to be appended to filtered bucket GET results for next
-          wildcard expansion iteration.
+        suffix_wildcard is wildcard to be appended to filtered bucket GET
+          results for next wildcard expansion iteration.
+      For example, given the wildcard gs://bucket/abc/d*e/f*.txt we
+      would build prefix= abc/d, delimiter=/, prefix_wildcard=d*e, and
+      suffix_wildcard=f*.txt. Using this prefix and delimiter for a bucket
+      listing request will then produce a listing result set that can be
+      filtered using this prefix_wildcard; and we'd use this suffix_wildcard
+      to feed into the next call(s) to _BuildBucketFilterStrings(), for the
+      next iteration of listing/filtering.
 
     Raises:
       AssertionError if wildcard doesn't contain any wildcard chars.
     """
     # Generate a request prefix if the object name part of the wildcard starts
-    # with a non-regex string (e.g., that's true for 'gs://bucket/abc*xyz').
+    # with a non-wildcard string (e.g., that's true for 'gs://bucket/abc*xyz').
     match = WILDCARD_REGEX.search(wildcard)
-    assert match
-    if match.start() > 0:
-      # Wildcard does not occur at beginning of object name, so construct a
-      # prefix string to send to server.
-      prefix = wildcard[:match.start()]
-    else:
-      prefix = None
-    # Construct a sub-wildcard for the current path component. For
-    # example, while iterating the first prefix match result (with
-    # prefix abc/d), prefix_wildcard will be d*e and suffix would be
-    # f*.txt.
-    wildcard_part = wildcard[match.start():]
-    end = wildcard_part.find('/')
-    if end != -1:
-      wildcard_part = wildcard_part[:end+1]
-    # Remove trailing '/' so we will match gs://bucket/abc* as well as
-    # gs://bucket/abc*/ with the same wildcard regex.
-    prefix_wildcard = ((prefix or '') + wildcard_part).rstrip('/')
-    suffix = wildcard[match.end():]
-    end = suffix.find('/')
-    if end == -1:
-      suffix = ''
-    else:
-      suffix = suffix[end+1:]
-    # To implement recursive wildcarding, if prefix_wildcard suffix starts with
-    # '**' don't send a delimiter, and combine suffix at end of prefix_wildcard.
-    if prefix_wildcard.find('**') != -1:
-      delimiter = None
-      prefix_wildcard = prefix_wildcard + suffix
-      suffix = ''
-    else:
+    if not match:
+      # Input "wildcard" has no wildcard chars, so just return tuple that will
+      # cause a bucket listing to match the given input wildcard. Example: if
+      # previous iteration yielded gs://bucket/dir/ with suffix_wildcard abc,
+      # the next iteration will call _BuildBucketFilterStrings() with
+      # gs://bucket/dir/abc, and we will return prefix ='dir/abc',
+      # delimiter='/', prefix_wildcard='dir/abc', and suffix_wildcard=''.
+      prefix = wildcard
       delimiter = '/'
+      prefix_wildcard = wildcard
+      suffix_wildcard = ''
+    else:
+      if match.start() > 0:
+        # Wildcard does not occur at beginning of object name, so construct a
+        # prefix string to send to server.
+        prefix = wildcard[:match.start()]
+      else:
+        prefix = None
+      wildcard_part = wildcard[match.start():]
+      end = wildcard_part.find('/')
+      if end != -1:
+        wildcard_part = wildcard_part[:end+1]
+      # Remove trailing '/' so we will match gs://bucket/abc* as well as
+      # gs://bucket/abc*/ with the same wildcard regex.
+      prefix_wildcard = ((prefix or '') + wildcard_part).rstrip('/')
+      suffix_wildcard = wildcard[match.end():]
+      end = suffix_wildcard.find('/')
+      if end == -1:
+        suffix_wildcard = ''
+      else:
+        suffix_wildcard = suffix_wildcard[end+1:]
+      # To implement recursive (**_ wildcarding, if prefix_wildcard
+      # suffix_wildcard starts with '**' don't send a delimiter, and combine
+      # suffix_wildcard at end of prefix_wildcard.
+      if prefix_wildcard.find('**') != -1:
+        delimiter = None
+        prefix_wildcard = prefix_wildcard + suffix_wildcard
+        suffix_wildcard = ''
+      else:
+        delimiter = '/'
+        if (suffix_wildcard.find(delimiter) != -1
+            and not ContainsWildcard(suffix_wildcard)):
+          prefix_wildcard = prefix_wildcard + suffix_wildcard
+          suffix_wildcard = ''
     # The following debug output is useful for tracing how the algorithm
     # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
     if self.debug > 1:
       sys.stderr.write(
           'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
-          'prefix_wildcard=%s, suffix=%s\n' %
-          (wildcard, prefix, delimiter, prefix_wildcard, suffix))
-    return (prefix, delimiter, prefix_wildcard, suffix)
+          'prefix_wildcard=%s, suffix_wildcard=%s\n' %
+          (wildcard, prefix, delimiter, prefix_wildcard, suffix_wildcard))
+    return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
   def IterKeys(self):
     """

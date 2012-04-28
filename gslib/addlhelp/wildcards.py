@@ -92,7 +92,7 @@ _detailed_help_text = ("""
       gs://bucket/[a-m]??.j*g
 
 
-<B>EFFICIENCY CONSIDERATIONS WHEN USING WILDCARDS OVER MANY OBJECTS</B>
+<B>EFFICIENCY CONSIDERATION: USING WILDCARDS OVER MANY OBJECTS</B>
   It is more efficient, faster, and less network traffic-intensive
   to use wildcards that have a non-wildcard object-name prefix, like:
 
@@ -113,6 +113,29 @@ _detailed_help_text = ("""
   wildcard matching patterns, to take advantage of the efficiency of doing
   server-side prefix requests. See, for example "gsutil help prod" for a
   concrete use case example.
+
+
+<B>EFFICIENCY CONSIDERATION: USING MID-STRING WILDCARDS</B>
+  Suppose you have a bucket with these objects:
+    gs://bucket/obj1
+    gs://bucket/obj2
+    gs://bucket/obj3
+    gs://bucket/obj4
+    gs://bucket/dir1/obj5
+    gs://bucket/dir2/obj6
+
+  If you run the command:
+    gsutil ls gs://bucket/*/obj5
+  gsutil will perform a /-delimited top-level bucket listing and then one bucket
+  listing for each subdirectory, for a total of 3 bucket listings:
+    GET /bucket/?delimiter=/
+    GET /bucket/?prefix=dir1/obj5&delimiter=/
+    GET /bucket/?prefix=dir2/obj5&delimiter=/
+
+  The more bucket listings your wildcard requires, the slower and more expensive
+  it will be. The number of bucket listings required grows as a function of the
+  number of wildcard components (e.g., "gs://bucket/a??b/c*/*/d" has 3 wildcard
+  components) as well as the number of subdirectories that match each component.
 """)
 
 

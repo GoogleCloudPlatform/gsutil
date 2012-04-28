@@ -53,7 +53,7 @@ class CloudWildcardIteratorTests(unittest.TestCase):
     """Creates 2 mock buckets, each containing 4 objects, including 1 nested."""
     cls.immed_child_obj_names = ['abcd', 'abdd', 'ade$']
     cls.all_obj_names = ['abcd', 'abdd', 'ade$', 'nested1/nested2/xyz1',
-                         'nested1/nested2/xyz2']
+                         'nested1/nested2/xyz2', 'nested1/nfile_abc']
     cls.base_uri_str = 'gs://gslib_test_%d' % int(time.time())
     cls.test_bucket0_uri, cls.test_bucket0_obj_uri_strs = (
         cls.__SetUpOneMockBucket(0)
@@ -168,9 +168,24 @@ class CloudWildcardIteratorTests(unittest.TestCase):
           prefixes.add(blr.GetPrefix().name)
         else:
           uri_strs.add(blr.GetUri().uri)
-      self.assertEqual(0, len(uri_strs))
+      self.assertEqual(1, len(uri_strs))
       self.assertEqual(1, len(prefixes))
       self.assertTrue('nested1/nested2/' in prefixes)
+
+  def TestWildcardPlusSubdirMatch(self):
+    """Tests gs://bucket/*/subdir matching"""
+    actual_uri_strs = set()
+    actual_prefixes = set()
+    for blr in test_util.test_wildcard_iterator(
+        self.test_bucket0_uri.clone_replace_name('*/nested1')):
+      if blr.HasPrefix():
+        actual_prefixes.add(blr.GetPrefix().name)
+      else:
+        actual_uri_strs.add(blr.GetUri().uri)
+    expected_uri_strs = set()
+    expected_prefixes = set(['nested1/'])
+    self.assertEqual(expected_prefixes, actual_prefixes)
+    self.assertEqual(expected_uri_strs, actual_uri_strs)
 
   def TestNoMatchingWildcardedObjectUri(self):
     """Tests that get back an empty iterator for non-matching wildcarded URI"""
@@ -218,8 +233,6 @@ class CloudWildcardIteratorTests(unittest.TestCase):
     """Tests wildcard subd*r/obj name"""
     exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
         'nested1/nested2/xyz1'))])
-    x=list(test_util.test_wildcard_iterator(
-        '%s**' % self.test_bucket0_uri.uri).IterUris())
     actual_obj_uri_strs = set(
         str(u) for u in test_util.test_wildcard_iterator(
             '%snested1/nest*2/xyz1' % self.test_bucket0_uri.uri).IterUris())
