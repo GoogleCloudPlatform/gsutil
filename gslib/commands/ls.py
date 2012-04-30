@@ -395,6 +395,8 @@ class LsCommand(Command):
         # BLR's instantiated from a user-provided URI.
         blr_expansion = self._BuildBlrExpansionForUriOnlyBlr(blr)
         num_expanded_blrs += len(blr_expansion)
+        if num_expanded_blrs == 0 and not ContainsWildcard(uri):
+          raise CommandException('No such object %s' % uri)
       for cur_blr in blr_expansion:
         if cur_blr.HasKey():
           # Object listing.

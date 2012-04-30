@@ -62,6 +62,14 @@ _detailed_help_text = ("""
 
        ./gsutil test
 
+    If you made mods to boto please run the boto tests. For these tests you
+    need to use HMAC credentials (from gsutil config -a), because the current
+    boto test suite doesn't import the OAuth2 handler. To do this, change
+    directories into the gsutil top-level directory and run:
+      PYTHONPATH=boto python ./boto/tests/test.py -t ssl
+      PYTHONPATH=boto python ./boto/tests/test.py -t gs
+      PYTHONPATH=boto python ./boto/tests/test.py -t s3
+
   6. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
 

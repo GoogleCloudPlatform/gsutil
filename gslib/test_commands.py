@@ -594,9 +594,11 @@ class GsutilCommandTests(unittest.TestCase):
     """Test ls of non-existent obj that matches prefix of existing objs"""
     # Use an object name that matches a prefix of other names at that level, to
     # ensure the ls subdir handling logic doesn't pick up anything extra.
-    output = self.RunCommand('ls', ['%sobj' % self.src_bucket_uri.uri],
-                             return_stdout=True)
-    self.assertEqual('', output)
+    try:
+      output = self.RunCommand('ls', ['%sobj' % self.src_bucket_uri.uri],
+                               return_stdout=True)
+    except CommandException, e:
+      self.assertNotEqual(e.reason.find('No such object'), -1)
 
   def TestLsBucketNonRecursive(self):
     """Test that ls of a bucket returns expected results"""

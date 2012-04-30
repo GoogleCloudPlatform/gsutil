@@ -33,6 +33,7 @@ _detailed_help_text = ("""
 <B>SYNOPSIS</B>
   gsutil getlogging uri
 
+
 <B>DESCRIPTION</B>
   If logging is enabled for the specified bucket uri, the server responds
   with a <Logging> XML element that looks something like this:
@@ -125,7 +126,7 @@ class GetLoggingCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Get logging XML for a bucket',
+    HELP_ONE_LINE_SUMMARY : 'Get logging configuration for a bucket',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

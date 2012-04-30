@@ -1,3 +1,31 @@
+Release 3.5 (release-date: 2012-04-30)
+
+Performance Improvement
+-----------------------
+
+  - Change by Evan Worley to calculate MD5s incrementally during uploads and
+    downloads. This reduces overall transfer time substantially for large
+    objects.
+
+Bug Fixes
+---------
+
+  - Fixed bug where uploading and moving multiple files to a bucket subdirectory
+    didn't work as intended.
+    (http://code.google.com/p/gsutil/issues/detail?id=93).
+  - Fixed bug where gsutil cp -r sourcedir didn't copy to specified subdir
+    if there is only one file in sourcedir.
+  - Fixed bug where tracker file included a timestamp that caused it not to
+    be recognized across sessions.
+  - Fixed bug where gs://bucket/*/dir wildcard matches too many objects.
+  - Fixed documentation errors in help associated with ACLs and projects.
+  - Changed GCS ACL parsing to be case-insensitive.
+  - Changed ls to print error and exit with non-0 status when wildcard matches
+    nothing, to be more consistent with UNIX shell behavior.
+
+
+================================================================================
+
 
 Release 3.4 (release-date: 2012-04-06)
 
@@ -15,7 +43,9 @@ Bug Fixes
   - Fixed minor bug in output from 'gsutil help dev' which advised executing
     an inconsequential test script (test_util.py).
 
+
 ================================================================================
+
 
 Release 3.3 (release-date: 2012-04-03)
 
@@ -212,3 +242,4 @@ New Features
   - Note: v2.0 is the first numbered gsutil release. Previous releases
     were given timestamps for versions. Numbered releases enable downstream
     package builds (like RPMs) to define dependencies more easily.
+    This is also the first version where we began including release notes.

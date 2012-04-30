@@ -35,6 +35,7 @@ _detailed_help_text = ("""
 <B>SYNOPSIS</B>
   gsutil enablelogging -b logging_bucket [-o log_object_prefix] uri...
 
+
 <B>DESCRIPTION</B>
   Google Cloud Storage offers access logs and storage data in the form of
   CSV files that you can download and view. Access logs provide information
