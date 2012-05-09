@@ -518,11 +518,31 @@ class CpCommand(Command):
   def _CheckFreeSpace(self, path):
     """Return path/drive free space (in bytes)."""
     if platform.system() == 'Windows':
-      free_bytes = ctypes.c_ulonglong(0)
-      ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path), None,
-                                                 None,
-                                                 ctypes.pointer(free_bytes))
-      return free_bytes.value
+      from ctypes import c_int, c_uint64, c_wchar_p, windll, POINTER, WINFUNCTYPE, WinError
+      try:
+        GetDiskFreeSpaceEx = WINFUNCTYPE(c_int, c_wchar_p, POINTER(c_uint64),
+                                         POINTER(c_uint64), POINTER(c_uint64))
+        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(('GetDiskFreeSpaceExW', windll.kernel32), (
+            (1, 'lpszPathName'),
+            (2, 'lpFreeUserSpace'),
+            (2, 'lpTotalSpace'),
+            (2, 'lpFreeSpace'),))
+      except AttributeError: 
+        GetDiskFreeSpaceEx = WINFUNCTYPE(c_int, c_char_p, POINTER(c_uint64),
+                                         POINTER(c_uint64), POINTER(c_uint64))
+        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(('GetDiskFreeSpaceExA', windll.kernel32), (
+            (1, 'lpszPathName'),
+            (2, 'lpFreeUserSpace'),
+            (2, 'lpTotalSpace'),
+            (2, 'lpFreeSpace'),))
+
+      def GetDiskFreeSpaceEx_errcheck(result, func, args):
+        if not result:
+            raise WinError()
+        return args[1].value
+      GetDiskFreeSpaceEx.errcheck = GetDiskFreeSpaceEx_errcheck
+
+      return GetDiskFreeSpaceEx(os.getenv('SystemDrive'))
     else:
       (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
       return f_frsize * f_bavail
