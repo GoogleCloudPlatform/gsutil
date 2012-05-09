@@ -1,3 +1,16 @@
+Release 3.6 (release-date: 2012-05-09)
+
+Bug Fixes
+---------
+
+  - Fixed bug that caused wildcards spanning directories not to work.
+  - Fixed bug that gsutil cp -z not to find available tmp space correctly
+    under Windows.
+
+
+================================================================================
+
+
 Release 3.5 (release-date: 2012-04-30)
 
 Performance Improvement

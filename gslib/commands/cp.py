@@ -697,7 +697,12 @@ class CpCommand(Command):
                                                   canned_acl, headers))
       finally:
         gzip_fp.close()
-      os.unlink(gzip_path)
+      try:
+	os.unlink(gzip_path)
+      # Windows sometimes complains the temp file is locked when you try to
+      # delete it.
+      except Exception, e:
+        pass
     elif (src_key.is_stream()
           and dst_uri.get_provider().supports_chunked_transfer()):
       (elapsed_time, bytes_transferred) = self._PerformStreamUpload(

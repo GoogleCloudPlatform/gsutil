@@ -181,18 +181,11 @@ class CloudWildcardIterator(WildcardIterator):
           yield BucketListingRef(uri_to_yield, key=None, prefix=None,
                           headers=self.headers)
         else:
-          # URI contains a wildcard. Expand iteratively by making a prefix
-          # query of the string preceding the first wildcard char, setting
-          # delimiter=/ (unless the wildcard is **), then filtering the results
-          # by the wildcard at that level. For example given the wildcard:
-          #   gs://bucket/abc/d*e/f*.txt
-          # we would:
-          #   - get a bucket listing with prefix=abc/d, delimiter=/
-          #   - filter each result for those that start with the result + *e
-          # Assuming gs://bucket/abc/dxyze is a result from this iteration, the
-          # next iteration would:
-          #   - get a bucket listing with prefix= abc/dxyze, delimiter=/
-          #   - filter each result for those that start with the result + f.txt
+          # URI contains a wildcard. Expand iteratively by building
+          # prefix/delimiter bucket listing request, filtering the results per
+          # the current level's wildcard, and continuing with the next component
+          # of the wildcard. See _BuildBucketFilterStrings() documentation
+          # for details.
           #
           # Initialize the iteration with bucket name from bucket_uri but
           # object name from self.wildcard_uri. This is needed to handle cases
@@ -210,7 +203,7 @@ class CloudWildcardIterator(WildcardIterator):
                     prefix=prefix, delimiter=delimiter, headers=self.headers):
               # Check that the prefix regex matches rstripped key.name (to
               # correspond with the rstripped prefix_wildcard from
-              # _BuildBucketFilterStrings).
+              # _BuildBucketFilterStrings()).
               if prog.match(key.name.rstrip('/')):
                 if suffix_wildcard and key.name.rstrip('/') != suffix_wildcard:
                   if isinstance(key, Prefix):
@@ -274,9 +267,10 @@ class CloudWildcardIterator(WildcardIterator):
         # Wildcard does not occur at beginning of object name, so construct a
         # prefix string to send to server.
         prefix = wildcard[:match.start()]
+        wildcard_part = wildcard[match.start():]
       else:
         prefix = None
-      wildcard_part = wildcard[match.start():]
+        wildcard_part = wildcard
       end = wildcard_part.find('/')
       if end != -1:
         wildcard_part = wildcard_part[:end+1]
@@ -289,7 +283,7 @@ class CloudWildcardIterator(WildcardIterator):
         suffix_wildcard = ''
       else:
         suffix_wildcard = suffix_wildcard[end+1:]
-      # To implement recursive (**_ wildcarding, if prefix_wildcard
+      # To implement recursive (**) wildcarding, if prefix_wildcard
       # suffix_wildcard starts with '**' don't send a delimiter, and combine
       # suffix_wildcard at end of prefix_wildcard.
       if prefix_wildcard.find('**') != -1:
@@ -298,10 +292,7 @@ class CloudWildcardIterator(WildcardIterator):
         suffix_wildcard = ''
       else:
         delimiter = '/'
-        if (suffix_wildcard.find(delimiter) != -1
-            and not ContainsWildcard(suffix_wildcard)):
-          prefix_wildcard = prefix_wildcard + suffix_wildcard
-          suffix_wildcard = ''
+        delim_pos = suffix_wildcard.find(delimiter)
     # The following debug output is useful for tracing how the algorithm
     # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
     if self.debug > 1:

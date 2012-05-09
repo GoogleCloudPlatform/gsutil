@@ -187,6 +187,23 @@ class CloudWildcardIteratorTests(unittest.TestCase):
     self.assertEqual(expected_prefixes, actual_prefixes)
     self.assertEqual(expected_uri_strs, actual_uri_strs)
 
+  def TestWildcardPlusSubdirSubdirMatch(self):
+    """Tests gs://bucket/*/subdir/* matching"""
+    actual_uri_strs = set()
+    actual_prefixes = set()
+    for blr in test_util.test_wildcard_iterator(
+        self.test_bucket0_uri.clone_replace_name('*/nested2/*')):
+      if blr.HasPrefix():
+        actual_prefixes.add(blr.GetPrefix().name)
+      else:
+        actual_uri_strs.add(blr.GetUri().uri)
+    expected_uri_strs = set([
+      self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz1').uri,
+      self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz2').uri])
+    expected_prefixes = set()
+    self.assertEqual(expected_prefixes, actual_prefixes)
+    self.assertEqual(expected_uri_strs, actual_uri_strs)
+
   def TestNoMatchingWildcardedObjectUri(self):
     """Tests that get back an empty iterator for non-matching wildcarded URI"""
     res = list(test_util.test_wildcard_iterator(

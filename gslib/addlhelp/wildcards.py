@@ -133,9 +133,12 @@ _detailed_help_text = ("""
     GET /bucket/?prefix=dir2/obj5&delimiter=/
 
   The more bucket listings your wildcard requires, the slower and more expensive
-  it will be. The number of bucket listings required grows as a function of the
-  number of wildcard components (e.g., "gs://bucket/a??b/c*/*/d" has 3 wildcard
-  components) as well as the number of subdirectories that match each component.
+  it will be. The number of bucket listings required grows as:
+    - the number of wildcard components (e.g., "gs://bucket/a??b/c*/*/d"
+      has 3 wildcard components);
+    - the number of subdirectories that match each component; and
+    - the number of results (pagination is implemented using one GET
+      request per 1000 results, specifying markers for each).
 """)
 
 
