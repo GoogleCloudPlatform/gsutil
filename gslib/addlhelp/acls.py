@@ -25,7 +25,7 @@ _detailed_help_text = ("""
   Access Control Lists (ACLs) allow you to control who can read and write
   your data, and who can read and write the ACLs themselves.
 
-  If not specified at the time an object is uploaded (e.g., via the gstil cp
+  If not specified at the time an object is uploaded (e.g., via the gsutil cp
   -a option), objects will be created with a default object ACL set on the
   bucket (see "gsutil help setdefacl"). You can change the ACL on an object
   or bucket using the gsutil setacl command (see "gsutil help setacl").
@@ -36,7 +36,7 @@ _detailed_help_text = ("""
 
     - Users granted READ access are allowed to list the bucket contents.
 
-    - Users granted WRITE access are allowed READ acccess and also are
+    - Users granted WRITE access are allowed READ access and also are
       allowed to write and delete objects in that bucket -- including
       overwriting previously written objects.
 

@@ -1113,7 +1113,7 @@ class CpCommand(Command):
   def _FixWindowsNaming(self, src_uri, dst_uri):
     """
     Rewrites the destination URI built by _ConstructDstUri() to translate
-    Windows pathnames to cloud pathnames if neeeded.
+    Windows pathnames to cloud pathnames if needed.
 
     Args:
       src_uri: src_uri to be copied.
@@ -1230,7 +1230,7 @@ class CpCommand(Command):
     ('download', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
     ('stream upload', 'cat $F1 | gsutil cp - gs://$B1/$O1', 0, None),
     ('check stream upload', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
-    # Clean up if we got interupted.
+    # Clean up if we got interrupted.
     ('remove test files',
      'rm -f test.mp3 test_mp3.mime test.gif test_gif.mime test.foo',
       0, None),

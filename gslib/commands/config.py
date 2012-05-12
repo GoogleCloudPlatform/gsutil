@@ -133,6 +133,7 @@ _detailed_help_text = ("""
     proxy_pass
     is_secure
     https_validate_certificates
+    send_crlf_after_proxy_auth_headers
     debug
     num_retries
 
@@ -261,6 +262,16 @@ CONFIG_BOTO_SECTION_CONTENT = """
 # files.
 https_validate_certificates = True
 
+# Set 'send_crlf_after_proxy_auth_headers' to True if you encounter problems
+# tunneling HTTPS through a proxy. Users who don't have a proxy in the path
+# to Google Cloud Storage don't need to touch this. Users who use a proxy will
+# probably find that the default behavior (flag value False) works. If
+# you encounter an error like "EOF occurred in violation of protocol" while
+# trying to use gsutil through your proxy, try setting this flag to True. We
+# (gs-team@google.com) would be interested to hear from you if you need to set
+# this, including the make and version of the proxy server you are using.
+#send_crlf_after_proxy_auth_headers = False
+
 # 'debug' controls the level of debug messages printed: 0 for none, 1
 # for basic boto debug, 2 for all boto debug plus HTTP requests/responses.
 # Note: 'gsutil -d' sets debug to 2 for that one command run.
@@ -303,7 +314,6 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # UNIX-like commands). When available and enabled use_magicfile should be more
 # robust because it analyzes file contents in addition to extensions.
 #use_magicfile = False
-
 """ % {'resumable_threshold': ONE_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}

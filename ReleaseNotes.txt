@@ -1,3 +1,14 @@
+Release 3.7 (release-date: 2012-05-11)
+
+Bug Fixes
+---------
+
+  - Fixed handling of HTTPS tunneling through a proxy.
+
+
+================================================================================
+
+
 Release 3.6 (release-date: 2012-05-09)
 
 Bug Fixes
