@@ -1474,6 +1474,6 @@ def _hash_filename(filename):
   Returns:
     shorter, hashed version of passed file name
   """
-  m = hashlib.sha1(filename)
+  m = hashlib.sha1(filename.encode('utf-8'))
   hashed_name = ("TRACKER_" + m.hexdigest() + '.' + filename[-16:])
   return hashed_name
