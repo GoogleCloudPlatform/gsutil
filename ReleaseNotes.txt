@@ -1,3 +1,15 @@
+Release 3.8 (release-date: 2012-05-20)
+
+Bug Fixes
+---------
+
+  - Fixed problem with non-ASCII filename characters not setting encoding before
+    attempting to hash for generating resumable transfer filename.
+
+
+================================================================================
+
+
 Release 3.7 (release-date: 2012-05-11)
 
 Bug Fixes
