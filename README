@@ -10,8 +10,7 @@ Contents:
     later.  The boto repository is mapped into the gsutil svn tree using an
     svn:externals propset and is distributed with the gsutil tar ball.
 
-The cloudreader app is explained in
-cloud/bigstore/opensrc/gsutil/cloudreader/README.google.
+The cloudreader app is explained in cloudreader/README.google.
 
 Prerequisites:
 

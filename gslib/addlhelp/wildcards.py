@@ -115,7 +115,7 @@ _detailed_help_text = ("""
   concrete use case example.
 
 
-<B>EFFICIENCY CONSIDERATION: USING MID-STRING WILDCARDS</B>
+<B>EFFICIENCY CONSIDERATION: USING MID-PATH WILDCARDS</B>
   Suppose you have a bucket with these objects:
     gs://bucket/obj1
     gs://bucket/obj2
@@ -139,6 +139,17 @@ _detailed_help_text = ("""
     - the number of subdirectories that match each component; and
     - the number of results (pagination is implemented using one GET
       request per 1000 results, specifying markers for each).
+
+  If you want to use a mid-path wildcard, you might try instead using a
+  recursive wildcard, for example:
+
+    gsutil ls gs://bucket/**/obj5
+
+  This will match more objects than gs://bucket/*/obj5 (since it spans
+  directories), but is implemented using a delimiter-less bucket listing
+  request (which means fewer bucket requests, though it will list the entire
+  bucket and filter locally, so that could require a non-trivial amount of
+  network traffic).
 """)
 
 
