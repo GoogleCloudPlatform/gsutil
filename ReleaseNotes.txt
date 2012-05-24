@@ -1,3 +1,15 @@
+Release 3.9 (release-date: 2012-05-24)
+
+Bug Fixes
+---------
+
+  - Fixed bug that caused extra "file:/" to be included in pathnames with
+    doing gsutil cp -R on Windows.
+
+
+================================================================================
+
+
 Release 3.8 (release-date: 2012-05-20)
 
 Bug Fixes

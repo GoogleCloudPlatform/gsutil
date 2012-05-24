@@ -1450,7 +1450,11 @@ def _GetPathBeforeFinalDir(uri):
   sep = uri.delim
   assert not uri.names_file()
   if uri.names_directory():
-    return uri.uri.rstrip(sep).rpartition(sep)[0]
+    past_scheme = uri.uri[len('file://'):]
+    if past_scheme.find(sep) == -1:
+      return uri.uri
+    else:
+      return 'file://%s' % past_scheme.rstrip(sep).rpartition(sep)[0]
   if uri.names_bucket():
     return '%s://' % uri.scheme
   # Else it names a bucket subdir.
