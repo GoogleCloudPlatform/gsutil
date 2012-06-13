@@ -85,10 +85,10 @@ _detailed_help_text = ("""
 
 <B>HOW NAMES ARE CONSTRUCTED</B>
   The gsutil cp command strives to name objects in a way consistent with how
-  UNIX cp works, which causes names to be constructed varying ways depending on
-  whether you're performing a recursive directory copy or copying individually
-  named objects; and whether you're copying to an existing or non-existent
-  directory.
+  UNIX cp works, which causes names to be constructed in varying ways depending
+  on whether you're performing a recursive directory copy or copying
+  individually named objects; and whether you're copying to an existing or
+  non-existent directory.
 
   When performing recursive directory copies, object names are constructed
   that mirror the source directory structure starting at the point of
@@ -107,12 +107,12 @@ _detailed_help_text = ("""
   will create objects named like gs://my_bucket/c.
 
   The same rules apply for downloads: recursive copies of buckets and
-  bucket subdirectories produce mirrored filename structure, while copying
+  bucket subdirectories produce a mirrored filename structure, while copying
   individually (or wildcard) named objects produce flatly named files.
 
   Note that in the above example the '**' wildcard matches all names
-  anywhere under dir. The wildcard '*' will match just one level deep
-  names. For more details see 'gsutil help wildcards'.
+  anywhere under dir. The wildcard '*' will match names just one level deep. For
+  more details see 'gsutil help wildcards'.
 
   There's an additional wrinkle when working with subdirectories: the resulting
   names depend on whether the destination subdirectory exists. For example,
@@ -137,8 +137,8 @@ _detailed_help_text = ("""
 
     gsutil cp -R gs://my_bucket/data dir
 
-  This will cause everything nested under gs://my_bucket/data dir to be
-  downloaded to files, resulting in files with names like dir/data/a/b/c.
+  This will cause everything nested under gs://my_bucket/data to be downloaded
+  into dir, resulting in files with names like dir/data/a/b/c.
 
   Copying subdirectories is useful if you want to add data to an existing
   bucket directory structure over time. It's also useful if you want
