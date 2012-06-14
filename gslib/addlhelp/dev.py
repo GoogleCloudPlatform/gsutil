@@ -50,10 +50,10 @@ _detailed_help_text = ("""
   5. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
 
-      export PYTHONPATH=./boto:$PYTHONPATH
-      ./gslib/test_commands.py
-      ./gslib/test_thread_pool.py
-      ./gslib/test_wildcard_iterator.py
+       export PYTHONPATH=./boto:$PYTHONPATH
+       ./gslib/test_commands.py
+       ./gslib/test_thread_pool.py
+       ./gslib/test_wildcard_iterator.py
 
      The above tests run quickly, as they run against an in-memory mock
      storage service implementation. We have an additional set of tests
@@ -64,11 +64,12 @@ _detailed_help_text = ("""
 
     If you made mods to boto please run the boto tests. For these tests you
     need to use HMAC credentials (from gsutil config -a), because the current
-    boto test suite doesn't import the OAuth2 handler. To do this, change
-    directories into the gsutil top-level directory and run:
-      PYTHONPATH=boto python ./boto/tests/test.py -t ssl
-      PYTHONPATH=boto python ./boto/tests/test.py -t gs
-      PYTHONPATH=boto python ./boto/tests/test.py -t s3
+    boto test suite doesn't import the OAuth2 handler. You'll also need to
+    install a cople of modules:
+        pip install argparse nose
+    
+    Then change directories into the gsutil top-level directory and run:
+      PYTHONPATH=boto python tests/test.py tests/integration/s3
 
   6. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
