@@ -38,7 +38,7 @@ from boto import InvalidUriError
 from gslib import test_util
 from gslib import wildcard_iterator
 from gslib.project_id import ProjectIdHandler
-from tests.s3 import mock_storage_service
+from tests.integration.s3 import mock_storage_service
 from wildcard_iterator import ContainsWildcard
 
 

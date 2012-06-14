@@ -31,7 +31,7 @@ sys.path.insert(0, '.')
 sys.path.insert(0, 'boto')
 import boto
 from gslib.project_id import ProjectIdHandler
-from tests.s3 import mock_storage_service
+from tests.integration.s3 import mock_storage_service
 
 proj_id_handler = ProjectIdHandler()
 

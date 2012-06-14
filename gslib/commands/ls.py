@@ -312,6 +312,8 @@ class LsCommand(Command):
           print '\tContent-Disposition:\t%s' % obj.content_disposition
         if obj.content_encoding:
           print '\tContent-Encoding:\t%s' % obj.content_encoding
+        if obj.content_language:
+          print '\tContent-Language:\t%s' % obj.content_language
         if obj.metadata:
           for name in obj.metadata:
             print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
