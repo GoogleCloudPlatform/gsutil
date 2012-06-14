@@ -34,6 +34,7 @@ from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
+import boto
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -293,25 +294,38 @@ class LsCommand(Command):
                               self._UriStrForObj(uri, obj).encode('utf-8'))
       return (1, obj.size)
     elif listing_style == ListingStyle.LONG_LONG:
-      uri_str = self._UriStrForObj(uri, obj)
-      print '%s:' % uri_str.encode('utf-8')
-      obj = self.suri_builder.StorageUri(uri_str).get_key(False)
-      print '\tObject size:\t%s' % obj.size
-      print '\tLast mod:\t%s' % obj.last_modified
-      if obj.cache_control:
-        print '\tCache control:\t%s' % obj.cache_control
-      print '\tMIME type:\t%s' % obj.content_type
-      if obj.content_disposition:
-        print '\tContent-Disposition:\t%s' % obj.content_disposition
-      if obj.content_encoding:
-        print '\tContent-Encoding:\t%s' % obj.content_encoding
-      if obj.metadata:
-        for name in obj.metadata:
-          print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
-      print '\tEtag:\t%s' % obj.etag.strip('"\'')
-      print '\tACL:\t%s' % (
-          self.suri_builder.StorageUri(uri_str).get_acl(False, self.headers))
-      return (1, obj.size)
+      # Run in a try/except clause so we can continue listings past
+      # access-denied errors (which can happen because user may have READ
+      # permission on object and thus see the bucket listing data, but lack
+      # FULL_CONTROL over individual objects and thus not be able to read
+      # their ACLs).
+      try:
+        uri_str = self._UriStrForObj(uri, obj)
+        print '%s:' % uri_str.encode('utf-8')
+        obj = self.suri_builder.StorageUri(uri_str).get_key(False)
+        print '\tObject size:\t%s' % obj.size
+        print '\tLast mod:\t%s' % obj.last_modified
+        if obj.cache_control:
+          print '\tCache control:\t%s' % obj.cache_control
+        print '\tMIME type:\t%s' % obj.content_type
+        if obj.content_disposition:
+          print '\tContent-Disposition:\t%s' % obj.content_disposition
+        if obj.content_encoding:
+          print '\tContent-Encoding:\t%s' % obj.content_encoding
+        if obj.metadata:
+          for name in obj.metadata:
+            print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
+        print '\tEtag:\t%s' % obj.etag.strip('"\'')
+        print '\tACL:\t%s' % (
+            self.suri_builder.StorageUri(uri_str).get_acl(False, self.headers))
+        return (1, obj.size)
+      except boto.exception.GSResponseError as e:
+        if e.status == 403:
+          print('\tACCESS DENIED for reading ACL. Note: you need FULL_CONTROL'
+                ' permission on each\n\tobject in order to read its ACL.')
+          return (1, obj.size)
+        else:
+          raise e
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
 

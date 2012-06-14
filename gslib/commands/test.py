@@ -37,7 +37,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
-from tests.s3.mock_storage_service import MockBucketStorageUri
+from tests.integration.s3.mock_storage_service import MockBucketStorageUri
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
