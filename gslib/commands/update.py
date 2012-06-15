@@ -16,6 +16,7 @@ import os
 import platform
 import shutil
 import signal
+import sys
 import tarfile
 import tempfile
 
@@ -159,7 +160,7 @@ class UpdateCommand(Command):
     This provides a fail-safe check to ensure we don't try to overwrite
     or delete any important directories. (That shouldn't happen given the
     way we construct tmp dirs, etc., but since the gsutil update cleanup
-    use shutil.rmtree() it's prudent to add extra checks.)
+    uses shutil.rmtree() it's prudent to add extra checks.)
 
     Args:
       dirs: List of directories to check.
@@ -185,7 +186,15 @@ class UpdateCommand(Command):
     tf.close()
     self._EnsureDirsSafeForUpdate(dirs_to_remove)
     for directory in dirs_to_remove:
-      shutil.rmtree(directory)
+      try:
+        shutil.rmtree(directory)
+      except OSError as e:
+        # Ignore errors while attempting to remove old dirs under Windows. They
+        # happen because of Windows exclusive file locking, and the update
+        # actually succeeds but just leaves the old versions around in the
+        # user's temp dir.
+        if not platform.system().lower().startswith('windows'):
+          raise
 
   # Command entry point.
   def RunCommand(self):
