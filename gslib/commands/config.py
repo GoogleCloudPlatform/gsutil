@@ -314,6 +314,11 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # UNIX-like commands). When available and enabled use_magicfile should be more
 # robust because it analyzes file contents in addition to extensions.
 #use_magicfile = False
+
+# 'content_language' specifies the ISO 639-1 language code of the content, to be
+# passed in the Content-Language header. By default no Content-Language is sent.
+# See http://en.wikipedia.org/wiki/ISO_639-1 for a list of language codes.
+#content_language = en
 """ % {'resumable_threshold': ONE_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}

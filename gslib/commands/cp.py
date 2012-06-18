@@ -29,6 +29,7 @@ import threading
 import time
 
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
+from boto import config
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import Command
@@ -671,6 +672,11 @@ class CpCommand(Command):
         print '\t[Setting Content-Type=%s]' % mime_type
       else:
         print '\t[Unknown content type -> using %s]' % self.DEFAULT_CONTENT_TYPE
+
+    if 'Content-Language' not in headers:
+       content_language = config.get_value('GSUtil', 'content_language')
+       if content_language:
+         headers['Content-Language'] = content_language
 
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
