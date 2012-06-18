@@ -65,7 +65,7 @@ _detailed_help_text = ("""
     If you made mods to boto please run the boto tests. For these tests you
     need to use HMAC credentials (from gsutil config -a), because the current
     boto test suite doesn't import the OAuth2 handler. You'll also need to
-    install some python modules: change directories into the gsutil top-level
+    install some python modules: change directories into the top-level gsutil
     directory and run:
       pip install -qr boto/requirements.txt
     (You probably need to run this commad using sudo.)
@@ -73,8 +73,10 @@ _detailed_help_text = ("""
     you may need to run individual ones again, e.g.,
       pip install unittest2
     
-    Then run:
-      PYTHONPATH=boto python boto/tests/test.py boto/tests/integration/s3
+    Then ensure your .boto file has HMAC credentials defined (the boto tests
+    don't load the OAUTH2 plugin), and then change directories into boto/tests
+    and run:
+      python test.py -t s3 -t gs -t ssl          
 
   6. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
