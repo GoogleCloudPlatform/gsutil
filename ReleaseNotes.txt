@@ -1,3 +1,31 @@
+Release 3.10 (release-date: 2012-06-19)
+
+New Features
+------------
+
+  - Added support for setting and listing Content-Language header.
+
+
+Bug Fixes
+---------
+
+  - Fixed bug that caused getacl/setacl commands to get a character encoding
+    exception when ACL content contained content not representable in ISO-8859-1
+    character set.
+
+  - Fixed gsutil update not to fail under Windows exclusive file locking.
+
+  - Fixed gsutil ls -L to continue past 403 errors.
+
+  - Updated gsutil tests and also help dev with instructions on how to run
+    boto tests, based on recent test refactoring done to in boto library.
+
+  - Cleaned up parts of cp help text.
+
+
+================================================================================
+
+
 Release 3.9 (release-date: 2012-05-24)
 
 Bug Fixes

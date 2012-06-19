@@ -49,7 +49,7 @@ from gslib.command_runner import CommandRunner
 from gslib.commands import cp
 from gslib.exception import CommandException
 from gslib import test_util
-from tests.s3.mock_storage_service import MockBucketStorageUri
+from tests.integration.s3.mock_storage_service import MockBucketStorageUri
 
 
 class GsutilCommandTests(unittest.TestCase):
