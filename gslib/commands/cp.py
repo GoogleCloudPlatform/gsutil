@@ -193,10 +193,10 @@ _detailed_help_text = ("""
   standard Range GET operations) whenever you use the cp command to download an
   object larger than 1 MB.
 
-  Resumable uploads and downloads store some state information in a file named
-  by the file being uploaded (or object being downloaded) in ~/.gsutil. If you
-  attempt to resume a transfer from a machine with a different directory, the
-  transfer will start over from scratch.
+  Resumable uploads and downloads store some state information in a file
+  in ~/.gsutil named by the destination object or file. If you attempt to
+  resume a transfer from a machine with a different directory, the transfer
+  will start over from scratch.
 
   See also "gsutil help prod" for details on using resumable transfers
   in production.
@@ -441,44 +441,49 @@ class CpCommand(Command):
       if total_size and total_bytes_transferred == total_size:
         sys.stderr.write('\n')
 
-  def _GetTransferHandlers(self, uri, key, file_size, upload):
+  def _GetTransferHandlers(self, dst_uri, size, upload):
     """
     Selects upload/download and callback handlers.
 
     We use a callback handler that shows a simple textual progress indicator
-    if file_size is above the configurable threshold.
+    if size is above the configurable threshold.
 
-    We use a resumable transfer handler if file_size is >= the configurable
+    We use a resumable transfer handler if size is >= the configurable
     threshold and resumable transfers are supported by the given provider.
     boto supports resumable downloads for all providers, but resumable
     uploads are currently only supported by GS.
+
+    Args:
+      dst_uri: the destination URI.
+      size: size of file (object) being uploaded (downloaded).
+      upload: bool indication of whether transfer is an upload.
     """
     config = boto.config
     resumable_threshold = config.getint('GSUtil', 'resumable_threshold', ONE_MB)
-    if file_size >= resumable_threshold:
+    if size >= resumable_threshold:
       cb = self._FileCopyCallbackHandler(upload).call
-      num_cb = int(file_size / ONE_MB)
+      num_cb = int(size / ONE_MB)
       resumable_tracker_dir = config.get(
           'GSUtil', 'resumable_tracker_dir',
           os.path.expanduser('~' + os.sep + '.gsutil'))
       if not os.path.exists(resumable_tracker_dir):
         os.makedirs(resumable_tracker_dir)
       if upload:
-        # Encode the src bucket and key into the tracker file name.
+        # Encode the dest bucket and object name into the tracker file name.
         res_tracker_file_name = (
             re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
-                   (key.bucket.name, key.name)))
+                   (dst_uri.bucket_name, dst_uri.object_name)))
       else:
-        # Encode the fully-qualified src file name into the tracker file name.
+        # Encode the fully-qualified dest file name into the tracker file name.
         res_tracker_file_name = (
             re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
-                   (os.path.realpath(uri.object_name))))
+                   (os.path.realpath(dst_uri.object_name))))
 
       res_tracker_file_name = _hash_filename(res_tracker_file_name)
       tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
                                  res_tracker_file_name)
       if upload:
-        if uri.scheme == 'gs':
+        if dst_uri.scheme == 'gs':
           transfer_handler = ResumableUploadHandler(tracker_file)
         else:
           transfer_handler = None
@@ -559,7 +564,7 @@ class CpCommand(Command):
     file_size = os.path.getsize(fp.name)
     dst_key = dst_uri.new_key(False, headers)
     (cb, num_cb, res_upload_handler) = self._GetTransferHandlers(
-        dst_uri, dst_key, file_size, True)
+        dst_uri, file_size, True)
     if dst_uri.scheme == 'gs':
       # Resumable upload protocol is Google Cloud Storage-specific.
       dst_key.set_contents_from_file(fp, headers, policy=canned_acl,
@@ -738,7 +743,7 @@ class CpCommand(Command):
 
   def _DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers):
     (cb, num_cb, res_download_handler) = self._GetTransferHandlers(
-        src_uri, src_key, src_key.size, False)
+        dst_uri, src_key.size, False)
     file_name = dst_uri.object_name
     dir_name = os.path.dirname(file_name)
     if dir_name and not os.path.exists(dir_name):
@@ -809,7 +814,7 @@ class CpCommand(Command):
 
   def _PerformDownloadToStream(self, src_key, src_uri, str_fp, headers):
     (cb, num_cb, res_download_handler) = self._GetTransferHandlers(
-                                src_uri, src_key, src_key.size, False)
+                                src_uri, src_key.size, False)
     start_time = time.time()
     src_key.get_contents_to_file(str_fp, headers, cb=cb, num_cb=num_cb)
     end_time = time.time()
@@ -1122,8 +1127,8 @@ class CpCommand(Command):
     Windows pathnames to cloud pathnames if needed.
 
     Args:
-      src_uri: src_uri to be copied.
-      dst_uri: the destination URI built by _ConstructDstUri().
+      src_uri: Source URI to be copied.
+      dst_uri: The destination URI built by _ConstructDstUri().
 
     Returns:
       StorageUri to use for copy.
