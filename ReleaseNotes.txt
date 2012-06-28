@@ -1,3 +1,24 @@
+Release 3.11 (release-date: 2012-06-28)
+
+New Features
+------------
+
+  - Added support for configuring website buckets.
+
+
+Bug Fixes
+---------
+
+  - Fixed bug that caused simultaneous resumable downloads of the same source
+    object to use the same tracker file.
+
+  - Changed language code spec pointer from Wikipedia to loc.gov (for
+    Content-Language header).
+
+
+================================================================================
+
+
 Release 3.10 (release-date: 2012-06-19)
 
 New Features
