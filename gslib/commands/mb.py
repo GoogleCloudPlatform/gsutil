@@ -22,6 +22,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
@@ -114,6 +115,9 @@ class MbCommand(Command):
 
     for bucket_uri_str in self.args:
       bucket_uri = self.suri_builder.StorageUri(bucket_uri_str)
+      if not bucket_uri.names_bucket():
+        raise CommandException('The mb command requires a URI that specifies a '
+                               'bucket.\n"%s" is not valid.' % bucket_uri)
       self.proj_id_handler.FillInProjectHeaderIfNeeded('mb', bucket_uri,
                                                        headers)
       print 'Creating %s...' % bucket_uri
