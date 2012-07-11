@@ -14,6 +14,11 @@ the shared gsutil command. In enterprise mode, the software gets installed
 in one shared location, which makes it easier to install, update and 
 manage gsutil for a community of users.
 
+NOTE: Enterprise mode (installing gsutil via setup.py) is no longer 
+officially supported - unpacking the zip file into a directory is the 
+preferred method for installing gsutil for both shared and private 
+configurations.
+
 3. rpm mode - User installs the gsutil rpm package file on a Red Hat
 Linux system using the rpm command. The resulting installation image 
 looks precisely the same as the results of installing with enterprise 
