@@ -97,7 +97,7 @@ _detailed_help_text = ("""
   to use wildcards that have a non-wildcard object-name prefix, like:
 
     gs://bucket/abc*.txt
-  
+
   than it is to use wildcards as the first part of the object name, like:
 
     gs://bucket/*abc.txt

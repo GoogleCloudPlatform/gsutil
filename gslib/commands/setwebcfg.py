@@ -30,7 +30,6 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
-from gslib.wildcard_iterator import ContainsWildcard
 
 
 _detailed_help_text = ("""
@@ -44,7 +43,7 @@ _detailed_help_text = ("""
   main pages or directory indices (for example, index.html) for buckets and
   "directories". Also, you can define a custom error page in case a requested
   resource does not exist.
-  
+
   The gstuil setwebcfg command allows you to configure use of web semantics
   on one or more buckets. The main page suffix and error page parameters are
   specified as arguments to the -m and -e flags respectively. If either or
@@ -130,7 +129,7 @@ class SetWebcfgCommand(Command):
     # configuration on each.
     some_matched = False
     for uri_str in uri_args:
-      for blr in self.exp_handler.WildcardIterator(uri_str):
+      for blr in self.WildcardIterator(uri_str):
         uri = blr.GetUri()
         if not uri.names_bucket():
           raise CommandException('URI %s must name a bucket for the %s command'

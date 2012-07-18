@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import boto
-import ctypes
 import errno
 import gzip
 import hashlib
@@ -31,7 +30,6 @@ import time
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto import config
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
-from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -49,6 +47,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.name_expansion import NameExpansionIterator
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import ONE_MB
@@ -271,7 +270,25 @@ _detailed_help_text = ("""
 
 
 class CpCommand(Command):
-  """Implementation of gsutil cp command."""
+  """
+  Implementation of gsutil cp command.
+
+  Note that CpCommand is run for both gsutil cp and gsutil mv. The latter
+  happens by MvCommand calling CpCommand and passing the hidden (undocumented)
+  -M option. This allows the copy and remove needed for each mv to run
+  together (rather than first running all the cp's and then all the rm's, as
+  we originally had implemented), which in turn avoids the following problem
+  with removing the wrong objects: starting with a bucket containing only
+  the object gs://bucket/obj, say the user does:
+    gsutil mv gs://bucket/* gs://bucket/d.txt
+  If we ran all the cp's and then all the rm's and we didn't expand the wildcard
+  first, the cp command would first copy gs://bucket/obj to gs://bucket/d.txt,
+  and the rm command would then remove that object. In the implementation
+  prior to gsutil release 3.12 we avoided this by building a list of objects
+  to process and then running the copies and then the removes; but building
+  the list up front limits scalability (compared with the current approach
+  of processing the bucket listing iterator on the fly).
+  """
 
   # Set default Content-Type type.
   DEFAULT_CONTENT_TYPE = 'application/octet-stream'
@@ -533,7 +550,7 @@ class CpCommand(Command):
             (2, 'lpFreeUserSpace'),
             (2, 'lpTotalSpace'),
             (2, 'lpFreeSpace'),))
-      except AttributeError: 
+      except AttributeError:
         GetDiskFreeSpaceEx = WINFUNCTYPE(c_int, c_char_p, POINTER(c_uint64),
                                          POINTER(c_uint64), POINTER(c_uint64))
         GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(('GetDiskFreeSpaceExA', windll.kernel32), (
@@ -926,12 +943,11 @@ class CpCommand(Command):
     else:
       raise CommandException('Unexpected src/dest case')
 
-  def _ExpandDstUri(self, src_uri_expansion, dst_uri_str):
+  def _ExpandDstUri(self, dst_uri_str):
     """
     Expands wildcard if present in dst_uri_str.
 
     Args:
-      src_uri_expansion: gslib.name_expansion.NameExpansionResult.
       dst_uri_str: String representation of requested dst_uri.
 
     Returns:
@@ -946,7 +962,7 @@ class CpCommand(Command):
 
     # Handle wildcarded dst_uri case.
     if ContainsWildcard(dst_uri):
-      blr_expansion = list(self.exp_handler.WildcardIterator(dst_uri))
+      blr_expansion = list(self.WildcardIterator(dst_uri))
       if len(blr_expansion) != 1:
         raise CommandException('Destination (%s) must match exactly 1 URI' %
                                dst_uri_str)
@@ -964,7 +980,7 @@ class CpCommand(Command):
       return (dst_uri, True)
     # For object URIs we need to do a wildcard expansion with
     # dst_uri + "*" and then find if there's a Prefix matching dst_uri.
-    blr_expansion = list(self.exp_handler.WildcardIterator(
+    blr_expansion = list(self.WildcardIterator(
         '%s*' % dst_uri_str.rstrip(dst_uri.delim)))
     for blr in blr_expansion:
       if (blr.GetRStrippedUriString() == dst_uri_str.rstrip(dst_uri.delim)):
@@ -1037,7 +1053,7 @@ class CpCommand(Command):
       )
 
     # There are 3 cases for copying multiple sources to a dir/bucket/bucket
-    # subdir needed to match the naming semantics of the UNIX cp command:
+    # subdir needed to match the naming behavior of the UNIX cp command:
     # 1. For the "mv -R" command, people expect renaming to occur at the
     #    level of the src subdir, vs appending that subdir beneath
     #    the dst subdir like is done for copying. For example:
@@ -1069,12 +1085,12 @@ class CpCommand(Command):
     #    should create the objects gs://bucket/f1.txt and gs://bucket/f2.txt,
     #    assuming dir1 contains f1.txt and f2.txt.
 
-    if (self.mv_naming_semantics and self.recursion_requested
+    if (self.perform_mv and self.recursion_requested
         and src_uri_expands_to_multi):
-      # Case 1. Handle naming semantics for recursive bucket subdir mv.
-      # Here we want to line up the src_uri against its expansion, to find
-      # the base to build the new name. For example, starting with:
-      #   gsutil mv -R gs://bucket/abcd gs://bucket/xyz
+      # Case 1. Handle naming rules for bucket subdir mv. Here we want to
+      # line up the src_uri against its expansion, to find the base to build
+      # the new name. For example, starting with:
+      #   gsutil mv gs://bucket/abcd gs://bucket/xyz
       # and exp_src_uri being gs://bucket/abcd/123
       # we want exp_src_uri_tail to be /123
       # Note: mv.py code disallows wildcard specification of source URI.
@@ -1148,10 +1164,65 @@ class CpCommand(Command):
       self.THREADED_LOGGER.error(str(e))
       self.copy_failure_count += 1
 
-    def _CopyFunc(src_uri, exp_src_uri, src_uri_names_container,
-                  src_uri_expands_to_multi, have_multiple_srcs,
-                  have_existing_dest_subdir):
-      """Worker function for performing the actual copy."""
+    def _CopyFunc(name_expansion_result):
+      """Worker function for performing the actual copy (and rm, for mv)."""
+      if self.perform_mv:
+        cmd_name = 'mv'
+      else:
+        cmd_name = self.command_name
+      src_uri = self.suri_builder.StorageUri(
+          name_expansion_result.GetSrcUriStr())
+      exp_src_uri = self.suri_builder.StorageUri(
+          name_expansion_result.GetExpandedUriStr())
+      src_uri_names_container = name_expansion_result.NamesContainer()
+      src_uri_expands_to_multi = name_expansion_result.NamesContainer()
+      have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
+      have_existing_dest_subdir = (
+          name_expansion_result.HaveExistingDstContainer())
+
+      if src_uri.names_provider():
+        raise CommandException(
+            'The %s command does not allow provider-only source URIs (%s)' %
+            (cmd_name, src_uri))
+      if have_multiple_srcs:
+        self._InsistDstUriNamesContainer(exp_dst_uri,
+                                         have_existing_dst_container,
+                                         cmd_name)
+
+      if self.perform_mv:
+        # Disallow files as source arguments to protect users from deleting
+        # data off the local disk. Note that we can't simply set FILE_URIS_OK
+        # to False in command_spec because we *do* allow a file URI for the dest
+        # URI. (We allow users to move data out of the cloud to the local disk,
+        # but we disallow commands that would delete data off the local disk,
+        # and instead require the user to delete data separately, using local
+        # commands/tools.)
+        if src_uri.is_file_uri():
+          raise CommandException('The mv command disallows files as source '
+                                 'arguments.\nDid you mean to use a gs:// URI? '
+                                 'If you meant to use a file as a source, you\n'
+                                 'might consider using the "cp" command '
+                                 'instead.')
+        if name_expansion_result.NamesContainer():
+          # Use recursion_requested when performing name expansion for the
+          # directory mv case so we can determine if any of the source URIs are
+          # directories (and then use cp -R and rm -R to perform the move, to
+          # match the behavior of UNIX mv (which when moving a directory moves
+          # all the contained files).
+          self.recursion_requested = True
+          # Disallow wildcard src URIs when moving directories, as supporting it
+          # would make the name transformation too complex and would also be
+          # dangerous (e.g., someone could accidentally move many objects to the
+          # wrong name, or accidentally overwrite many objects).
+          if ContainsWildcard(src_uri):
+            raise CommandException('The mv command disallows naming source '
+                                   'directories using wildcards')
+
+      if (exp_dst_uri.is_file_uri()
+          and not os.path.exists(exp_dst_uri.object_name)
+          and have_multiple_srcs):
+        os.makedirs(exp_dst_uri.object_name)
+
       if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
         sys.stderr.write("Copying from <STDIN>...\n")
       else:
@@ -1165,11 +1236,14 @@ class CpCommand(Command):
 
       self._CheckForDirFileConflict(exp_src_uri, dst_uri)
       if self._SrcDstSame(exp_src_uri, dst_uri):
-        raise CommandException('cp: "%s" and "%s" are the same file - '
-                               'abort.' % (exp_src_uri, dst_uri))
+        raise CommandException('%s: "%s" and "%s" are the same file - '
+                               'abort.' % (cmd_name, exp_src_uri, dst_uri))
 
       (elapsed_time, bytes_transferred) = self._PerformCopy(exp_src_uri,
                                                             dst_uri)
+      if self.perform_mv:
+        self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
+        exp_src_uri.delete_key(validate=False, headers=self.headers)
       stats_lock.acquire()
       self.total_elapsed_time += elapsed_time
       self.total_bytes_transferred += bytes_transferred
@@ -1183,13 +1257,13 @@ class CpCommand(Command):
       self._HandleStreamingDownload()
       return
 
-    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args[0:len(self.args)-1], self.recursion_requested)
     (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
-        src_uri_expansion, self.args[-1])
-
-    self._SanityCheckRequest(src_uri_expansion, exp_dst_uri,
-                             have_existing_dst_container)
+         self.args[-1])
+    name_expansion_iterator = NameExpansionIterator(
+        self.command_name, self.proj_id_handler, self.headers, self.debug,
+        self.bucket_storage_uri_class, self.args[0:len(self.args)-1],
+        self.recursion_requested or self.perform_mv,
+        have_existing_dst_container)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1208,8 +1282,8 @@ class CpCommand(Command):
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(_CopyFunc, src_uri_expansion, _CopyExceptionHandler,
-               have_existing_dst_container, shared_attrs)
+    self.Apply(_CopyFunc, name_expansion_iterator, _CopyExceptionHandler,
+               shared_attrs)
     if self.debug:
       print 'total_bytes_transferred:' + str(self.total_bytes_transferred)
 
@@ -1294,7 +1368,7 @@ class CpCommand(Command):
   ]
 
   def _ParseArgs(self):
-    self.mv_naming_semantics = False
+    self.perform_mv = False
     self.exclude_symlinks = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -1303,27 +1377,13 @@ class CpCommand(Command):
         if o == '-e':
           self.exclude_symlinks = True
         if o == '-M':
-          # Note that we signal to the cp command to use the alternate naming
-          # semantics by passing the undocumented (for internal use) -m option
-          # when running the cp command from mv.py. These semantics only apply
-          # for mv -R applied to bucket subdirs.
-          self.mv_naming_semantics = True
+          # Note that we signal to the cp command to perform a move (copy
+          # followed by remove) and use directory-move naming rules by passing
+          # the undocumented (for internal use) -M option when running the cp
+          # command from mv.py.
+          self.perform_mv = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
-
-  def _SanityCheckRequest(self, src_uri_expansion, exp_dst_uri,
-                          have_existing_dst_container):
-    if src_uri_expansion.IsEmpty():
-      raise CommandException('No URIs matched')
-    for src_uri in src_uri_expansion.GetSrcUris():
-      if src_uri.names_provider():
-        raise CommandException('Provider-only src_uri (%s)')
-    if src_uri_expansion.IsMultiSrcRequest():
-      self._InsistDstUriNamesContainer(exp_dst_uri, have_existing_dst_container,
-                                       self.command_name)
-      if (exp_dst_uri.is_file_uri()
-          and not os.path.exists(exp_dst_uri.object_name)):
-        os.makedirs(exp_dst_uri.object_name)
 
   def _HandleStreamingDownload(self):
     # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all
@@ -1332,7 +1392,7 @@ class CpCommand(Command):
     sys.stdout = sys.stderr
     did_some_work = False
     for uri_str in self.args[0:len(self.args)-1]:
-      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
+      for uri in self.WildcardIterator(uri_str).IterUris():
         if not uri.names_object():
           raise CommandException('Destination Stream requires that '
                                  'source URI %s should represent an object!')
@@ -1394,7 +1454,7 @@ class CpCommand(Command):
     command:
       gsutil cp file gs://bucket/abc
     if there's no existing gs://bucket/abc bucket subdirectory we should copy
-    file to the object gs://bucket/abc. In contrast, if 
+    file to the object gs://bucket/abc. In contrast, if
     there's an existing gs://bucket/abc bucket subdirectory we should copy
     file to gs://bucket/abc/file. And regardless of whether gs://bucket/abc
     exists, when running the command:
@@ -1422,7 +1482,7 @@ class CpCommand(Command):
     return ((have_multiple_srcs and dst_uri.is_cloud_uri())
             or (have_existing_dest_subdir))
 
-  def _ShouldTreatDstUriAsSingleton(self, have_multiple_srcs, 
+  def _ShouldTreatDstUriAsSingleton(self, have_multiple_srcs,
                                     have_existing_dest_subdir, dst_uri):
     """
     Checks that dst_uri names a singleton (file or object) after
@@ -1473,14 +1533,14 @@ def _GetPathBeforeFinalDir(uri):
 
 def _hash_filename(filename):
   """
-  Apply a hash function (SHA1) to shorten the passed file name. The spec 
+  Apply a hash function (SHA1) to shorten the passed file name. The spec
   for the hashed file name is as follows:
 
       TRACKER_<hash>_<trailing>
 
-  where hash is a SHA1 hash on the original file name and trailing is 
-  the last 16 chars from the original file name. Max file name lengths 
-  vary by operating system so the goal of this function is to ensure 
+  where hash is a SHA1 hash on the original file name and trailing is
+  the last 16 chars from the original file name. Max file name lengths
+  vary by operating system so the goal of this function is to ensure
   the hashed version takes fewer than 100 characters.
 
   Args:

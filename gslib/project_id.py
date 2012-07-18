@@ -55,7 +55,7 @@ class ProjectIdHandler(object):
              or command == 'enablelogging'
              or (command == 'ls' and not uri.names_bucket())
              or (command == WILDCARD_BUCKET_ITERATOR))):
-      # Note: check for None (as opposed to "not headers") here beause
+      # Note: check for None (as opposed to "not headers") here because
       # it's ok to pass empty headers.
       if headers is None:
         raise ProjectIdException(

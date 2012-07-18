@@ -34,7 +34,6 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
-from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -61,8 +60,8 @@ _detailed_help_text = ("""
           </ResponseHeaders>
       </Cors>
   </CorsConfig>
-  
-  The above XML document explicitly allows cross-origin GET requests from 
+
+  The above XML document explicitly allows cross-origin GET requests from
   origin1.example.com and may include the Content-Type response header.
 
   For more info about CORS, see http://www.w3.org/TR/cors/.
@@ -133,10 +132,10 @@ class SetCorsCommand(Command):
     # Iterate over URIs, expanding wildcards, and setting the CORS on each.
     some_matched = False
     for uri_str in uri_args:
-      for blr in self.exp_handler.WildcardIterator(uri_str):
+      for blr in self.WildcardIterator(uri_str):
         uri = blr.GetUri()
         if not uri.names_bucket():
-          raise CommandException('URI %s must name a bucket for the %s command' 
+          raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
         print 'Setting CORS on %s...' % uri
@@ -242,7 +241,7 @@ class SetCorsCommand(Command):
     ('setup bad cors 2', 'echo \'' + cors_bad2 + '\' >$F3', 0, None),
     ('setup bad cors 3', 'echo \'' + cors_bad3 + '\' >$F2', 0, None),
     ('setup bad cors 4', 'echo \'' + cors_bad4 + '\' >$F1', 0, None),
-    ('verify default cors', 'gsutil getcors gs://$B0 >$F0', 
+    ('verify default cors', 'gsutil getcors gs://$B0 >$F0',
       0, ('$F0', '$F9')),
     ('set empty cors 1', 'gsutil setcors $F9 gs://$B0', 0, None),
     ('verify empty cors 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
@@ -260,13 +259,13 @@ class SetCorsCommand(Command):
     ('bad4 cors fails', 'gsutil setcors $F1 gs://$B0', 1, (0, None)),
     ('reset empty cors', 'gsutil setcors $F9 gs://$B0', 0, None),
     ('verify empty cors', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set multi non-null cors', 'gsutil setcors $F5 gs://$B0 gs://$B1', 
+    ('set multi non-null cors', 'gsutil setcors $F5 gs://$B0 gs://$B1',
       0, (0, None)),
     ('verify non-null 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F5')),
     ('verify non-null 2', 'gsutil getcors gs://$B1 >$F0', 0, ('$F0', '$F5')),
     ('reset empty cors', 'gsutil setcors $F9 gs://$B0', 0, None),
     ('verify empty cors', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set wildcard non-null cors', 'gsutil setcors $F5 gs://gsutil_test*', 
+    ('set wildcard non-null cors', 'gsutil setcors $F5 gs://gsutil_test*',
       0, (0, None)),
     ('verify non-null 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F5')),
     ('verify non-null 2', 'gsutil getcors gs://$B1 >$F0', 0, ('$F0', '$F5')),

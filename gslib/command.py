@@ -25,12 +25,12 @@ individual subclasses.
 import boto
 import getopt
 import gslib
-import gslib.util
 import logging
 import multiprocessing
 import os
 import re
 import sys
+import wildcard_iterator
 import xml.dom.minidom
 import xml.sax.xmlreader
 
@@ -40,7 +40,8 @@ from exception import CommandException
 from getopt import GetoptError
 from gslib.help_provider import HelpProvider
 from gslib import util
-from gslib.name_expansion import NameExpansionHandler
+from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import NameExpansionIteratorQueue
 from gslib.project_id import ProjectIdHandler
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.thread_pool import ThreadPool
@@ -77,6 +78,8 @@ FILE_URIS_OK = 'file_uri_ok'
 PROVIDER_URIS_OK = 'provider_uri_ok'
 URIS_START_ARG = 'uris_start_arg'
 CONFIG_REQUIRED = 'config_required'
+
+_EOF_NAME_EXPANSION_RESULT = ("EOF")
 
 
 class Command(object):
@@ -258,9 +261,19 @@ class Command(object):
           self.recursion_requested = True
           break
 
-    self.exp_handler = NameExpansionHandler(
-        self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.bucket_storage_uri_class)
+  def WildcardIterator(self, uri_or_str):
+    """
+    Helper to instantiate gslib.WildcardIterator. Args are same as
+    gslib.WildcardIterator interface, but this method fills in most of the
+    values from instance state.
+
+    Args:
+      uri_or_str: StorageUri or URI string naming wildcard objects to iterate.
+    """
+    return wildcard_iterator.wildcard_iterator(
+        uri_or_str, self.proj_id_handler,
+        bucket_storage_uri_class=self.bucket_storage_uri_class,
+        headers=self.headers, debug=self.debug)
 
   def RunCommand(self):
     """Abstract function in base class. Subclasses must implement this."""
@@ -319,7 +332,7 @@ class Command(object):
       # Handle wildcard-named bucket.
       if ContainsWildcard(storage_uri.bucket_name):
         try:
-          bucket_uri = self.exp_handler.WildcardIterator(
+          bucket_uri = self.WildcardIterator(
               storage_uri.clone_replace_name('')).IterUris().next()
         except StopIteration:
           raise CommandException('No URIs matched')
@@ -346,10 +359,9 @@ class Command(object):
       self.THREADED_LOGGER.error(str(e))
       self.everything_set_okay = False
 
-    def _SetAclFunc(src_uri, exp_src_uri, _unused_src_uri_names_container=None,
-                    _unused_src_uri_expands_to_multi=None,
-                    _unused_have_multiple_srcs=None,
-                    _unused_have_existing_dest_subdir=None):
+    def _SetAclFunc(name_expansion_result):
+      exp_src_uri = self.suri_builder.StorageUri(
+          name_expansion_result.GetExpandedUriStr())
       # We don't do bucket operations multi-threaded (see comment below).
       assert self.command_name != 'setdefacl'
       self.THREADED_LOGGER.info('Setting ACL on %s...' % exp_src_uri)
@@ -367,23 +379,23 @@ class Command(object):
     else:
       # Handle bucket ACL setting operations single-threaded, because
       # our threading machinery currently assumes it's working with objects
-      # (src_uri_expansion), and normally we wouldn't expect users to need to
-      # set ACLs on huge numbers of buckets at once anyway.
+      # (name_expansion_iterator), and normally we wouldn't expect users to need
+      # to set ACLs on huge numbers of buckets at once anyway.
       for i in range(len(uri_args)):
         uri_str = uri_args[i]
         if self.suri_builder.StorageUri(uri_str).names_bucket():
           self._RunSingleThreadedSetAcl(acl_arg, uri_args)
           return
 
-    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        uri_args, self.recursion_requested, self.recursion_requested)
-    if src_uri_expansion.IsEmpty():
-      raise CommandException('No URIs matched')
+    name_expansion_iterator = NameExpansionIterator(
+        self.command_name, self.proj_id_handler, self.headers, self.debug,
+        self.bucket_storage_uri_class, uri_args, self.recursion_requested,
+        self.recursion_requested)
 
     # Perform requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(_SetAclFunc, src_uri_expansion, _SetAclExceptionHandler)
+    self.Apply(_SetAclFunc, name_expansion_iterator, _SetAclExceptionHandler)
 
     if not self.everything_set_okay:
       raise CommandException('Some files could not be removed.')
@@ -391,7 +403,7 @@ class Command(object):
   def _RunSingleThreadedSetAcl(self, acl_arg, uri_args):
     some_matched = False
     for uri_str in uri_args:
-      for blr in self.exp_handler.WildcardIterator(uri_str):
+      for blr in self.WildcardIterator(uri_str):
         if blr.HasPrefix():
           continue
         some_matched = True
@@ -409,7 +421,7 @@ class Command(object):
     """Common logic for getting ACLs. Gets the standard ACL or the default
     object ACL depending on self.command_name."""
     # Wildcarding is allowed but must resolve to just one object.
-    uris = list(self.exp_handler.WildcardIterator(self.args[0]).IterUris())
+    uris = list(self.WildcardIterator(self.args[0]).IterUris())
     if len(uris) == 0:
       raise CommandException('No URIs matched')
     if len(uris) != 1:
@@ -438,7 +450,7 @@ class Command(object):
       CommandException: if errors encountered.
     """
     # Wildcarding is allowed but must resolve to just one bucket.
-    uris = list(self.exp_handler.WildcardIterator(uri_arg).IterUris())
+    uris = list(self.WildcardIterator(uri_arg).IterUris())
     if len(uris) != 1:
       raise CommandException('Wildcards must resolve to exactly one item for '
                              'get %s' % subresource)
@@ -448,8 +460,8 @@ class Command(object):
     parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
 
-  def Apply(self, func, src_uri_expansion, thr_exc_handler,
-            have_existing_dest_subdir=None, shared_attrs=None):
+  def Apply(self, func, name_expansion_iterator, thr_exc_handler,
+            shared_attrs=None):
     """Dispatch input URI assignments across a pool of parallel OS
        processes and/or Python threads, based on options (-m or not)
        and settings in the user's config file. If non-parallel mode
@@ -458,14 +470,12 @@ class Command(object):
 
     Args:
       func: Function to call to process each URI.
-      src_uri_expansion: gslib.name_expansion.NameExpansionResult.
+      name_expansion_iterator: Iterator of NameExpansionResult.
       thr_exc_handler: Exception handler for ThreadPool class.
-      have_existing_dest_subdir: bool indicator whether dest is an existing
-        subdirectory. Only matters for cp/mv; pass None otherwise.
       shared_attrs: List of attributes to manage across sub-processes.
 
     Raises:
-        CommandException if invalid config encountered.
+      CommandException if invalid config encountered.
     """
     # Set OS process and python thread count as a function of options
     # and config.
@@ -491,31 +501,7 @@ class Command(object):
       self.THREADED_LOGGER.info('process count: %d', process_count)
       self.THREADED_LOGGER.info('thread count: %d', thread_count)
 
-    # Construct dictionary of assigned URIs containing one list per
-    # OS process/shard. Assignments are stored as tuples containing
-    # (src_uri to be copied,
-    #  single URI from wildcard expansion of src_uri,
-    #  bool indicator whether src_uri expands to multiple URIs,
-    #  bool indicator whether this is a multi-source request,
-    #  bool indicator whether dest is an existing subdir).
-    shard = 0
-    assigned_uris = {}
-    have_multiple_srcs = src_uri_expansion.IsMultiSrcRequest()
-    for src_uri in src_uri_expansion.GetSrcUris():
-      src_uri_names_container = src_uri_expansion.NamesContainer(src_uri)
-      for exp_src_bucket_listing_ref in (
-          src_uri_expansion.IterExpandedBucketListingRefsFor(src_uri)):
-        if shard not in assigned_uris:
-          assigned_uris[shard] = []
-        src_uri_expands_to_multi = (
-            src_uri_expansion.SrcUriExpandsToMultipleSources(src_uri))
-        assigned_uris[shard].append((
-            src_uri, exp_src_bucket_listing_ref.GetUri(),
-            src_uri_names_container, src_uri_expands_to_multi,
-            have_multiple_srcs, have_existing_dest_subdir))
-        shard = (shard + 1) % process_count
-
-    if self.parallel_operations and (process_count > 1):
+    if self.parallel_operations and process_count > 1:
       procs = []
       # If any shared attributes passed by caller, create a dictionary of
       # shared memory variables for every element in the list of shared
@@ -526,16 +512,31 @@ class Command(object):
           if not shared_vars:
             shared_vars = {}
           shared_vars[name] = multiprocessing.Value('i', 0)
-      for shard in assigned_uris:
+      # Construct work queue for parceling out work to multiprocessing workers,
+      # setting the max queue length of 50k so we will block if workers don't
+      # empty the queue as fast as we can continue iterating over the bucket
+      # listing. This number may need tuning; it should be large enough to
+      # keep workers busy (overlapping bucket list next-page retrieval with
+      # operations being fed from the queue) but small enough that we don't
+      # overfill memory when runing across a slow network link.
+      work_queue = multiprocessing.Queue(50000)
+      for shard in range(process_count):
         # Spawn a separate OS process for each shard.
         if self.debug:
           self.THREADED_LOGGER.info('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
-                                    args=(func, assigned_uris[shard], shard,
+                                    args=(func, work_queue, shard,
                                           thread_count, thr_exc_handler,
                                           shared_vars))
         procs.append(p)
         p.start()
+      # Feed all work into the queue being emptied by the workers.
+      for name_expansion_result in name_expansion_iterator:
+        work_queue.put(name_expansion_result)
+      # Send an EOF per worker.
+      for shard in range(process_count):
+        work_queue.put(_EOF_NAME_EXPANSION_RESULT)
+
       # Wait for all spawned OS processes to finish.
       failed_process_count = 0
       for p in procs:
@@ -555,10 +556,13 @@ class Command(object):
         for (name, var) in shared_vars.items():
           setattr(self, name, var.value)
     else:
-      # Only one OS process requested so perform request in current
-      # OS process, in shard zero with thread_count threads.
-      self._ApplyThreads(func, assigned_uris[0], 0, thread_count,
-                         thr_exc_handler, None)
+      # Using just 1 process, so funnel results to _ApplyThreads using facade
+      # that makes NameExpansionIterator look like a Multiprocessing.Queue
+      # that sends one EOF once the iterator empties.
+      work_queue = NameExpansionIteratorQueue(name_expansion_iterator,
+                                              _EOF_NAME_EXPANSION_RESULT)
+      self._ApplyThreads(func, work_queue, 0, thread_count, thr_exc_handler,
+                         None)
 
   def HaveFileUris(self, args_to_check):
     """Checks whether args_to_check contain any file URIs.
@@ -616,7 +620,7 @@ class Command(object):
         # buckets and objects.
         from gslib import no_op_auth_plugin
 
-  def _ApplyThreads(self, func, assigned_uris, shard, num_threads,
+  def _ApplyThreads(self, func, work_queue, shard, num_threads,
                     thr_exc_handler=None, shared_vars=None):
     """
     Perform subset of required requests across a caller specified
@@ -625,20 +629,17 @@ class Command(object):
 
     Args:
       func: Function to call for each request.
-      assigned_uris: List of tuples to process, of the form:
-          (src_uri, exp_src_uri, src_uri_names_container,
-           src_uri_expands_to_multi, have_multiple_srcs,
-           have_existing_dest_subdir).
+      work_queue: shared queue of NameExpansionResult to process.
       shard: Assigned subset (shard number) for this function.
       num_threads: Number of Python threads to spawn to process this shard.
       thr_exc_handler: Exception handler for ThreadPool class.
       shared_vars: Dict of shared memory variables to be managed.
-                   (only relevant, and non-None, if this function is	
+                   (only relevant, and non-None, if this function is
                    run in a separate OS process).
     """
     # Each OS process needs to establish its own set of connections to
     # the server to avoid writes from different OS processes interleaving
-    # onto the same socket (and messing up the underlying SSL session).
+    # onto the same socket (and garbling the underlying SSL session).
     # We ensure each process gets its own set of connections here by
     # closing all connections in the storage provider connection pool.
     connection_pool = StorageUri.provider_pool
@@ -649,10 +650,12 @@ class Command(object):
     if num_threads > 1:
       thread_pool = ThreadPool(num_threads, thr_exc_handler)
     try:
-      # Iterate over assigned URIs and perform copy operations for each.
-      for (src_uri, exp_src_uri, src_uri_names_container,
-           src_uri_expands_to_multi, have_multiple_srcs,
-           have_existing_dest_subdir) in assigned_uris:
+      while True: # Loop until we hit EOF marker.
+        name_expansion_result = work_queue.get()
+        if name_expansion_result == _EOF_NAME_EXPANSION_RESULT:
+          break;
+        exp_src_uri = self.suri_builder.StorageUri(
+            name_expansion_result.GetExpandedUriStr())
         if self.debug:
           self.THREADED_LOGGER.info('process %d shard %d is handling uri %s',
                                     os.getpid(), shard, exp_src_uri)
@@ -660,13 +663,9 @@ class Command(object):
             and os.path.islink(exp_src_uri.object_name)):
           self.THREADED_LOGGER.info('Skipping symbolic link %s...', exp_src_uri)
         elif num_threads > 1:
-          thread_pool.AddTask(func, src_uri, exp_src_uri,
-                              src_uri_names_container, src_uri_expands_to_multi,
-                              have_multiple_srcs, have_existing_dest_subdir)
+          thread_pool.AddTask(func, name_expansion_result)
         else:
-          func(src_uri, exp_src_uri, src_uri_names_container,
-               src_uri_expands_to_multi, have_multiple_srcs,
-               have_existing_dest_subdir)
+          func(name_expansion_result)
       # If any Python threads created, wait here for them to finish.
       if num_threads > 1:
         thread_pool.WaitCompletion()

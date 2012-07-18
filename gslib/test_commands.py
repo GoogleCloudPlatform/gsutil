@@ -753,7 +753,7 @@ class GsutilCommandTests(unittest.TestCase):
     except:
       self.fail('Unexpected exception raised')
 
-  def TestDownloadWithObjectSizeShange(self):
+  def TestDownloadWithObjectSizeChange(self):
     """
     Test resumable download on an object that changes size before the
     downloaded file's checksum is validated.
@@ -1083,7 +1083,7 @@ class GsutilCommandTests(unittest.TestCase):
                  '%s' % self.dst_bucket_subdir_uri.uri])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertNotEqual(e.reason.find('mv command disallows'), -1)
+      self.assertNotEqual(e.reason.find('mv command disallows naming'), -1)
 
   def TestMovingBucketNestedSubDirToBucketNestedSubDir(self):
     """Tests moving a bucket nested subdir to another bucket nested subdir"""

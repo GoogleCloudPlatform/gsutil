@@ -106,7 +106,7 @@ class CatCommand(Command):
     sys.stdout = sys.stderr
     did_some_work = False
     for uri_str in self.args:
-      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
+      for uri in self.WildcardIterator(uri_str).IterUris():
         if not uri.names_object():
           raise CommandException('"%s" command must specify objects.' %
                                  self.command_name)

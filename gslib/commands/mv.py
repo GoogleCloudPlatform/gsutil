@@ -30,7 +30,6 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
-from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -74,6 +73,12 @@ _detailed_help_text = ("""
   gsutil -m option, to perform a multi-threaded/multi-processing move:
 
     gsutil -m mv gs://my_bucket/olddir gs://my_bucket/newdir
+
+
+<B>NON-ATOMIC OPERATION</B>
+  Unlike the case with many file systems, the gsutil mv command does not
+  perform a single atomic operation. Rather, it performs a copy from source
+  to destination followed by removing the source for each object.
 
 
 <B>OPTIONS</B>
@@ -132,74 +137,23 @@ class MvCommand(Command):
     # URI (force users to explicitly do that as a separate operation).
     for arg_to_check in self.args[0:-1]:
       if self.suri_builder.StorageUri(arg_to_check).names_container():
-        raise CommandException('Will not remove source buckets or directories '
-                               '(%s).\nYou must separately copy and remove for '
-                               'that purpose.' % arg_to_check)
+        raise CommandException('The mv command disallows removing source '
+                               'buckets or directories (%s).\nYou must '
+                               'separately copy and remove if you wish to do '
+                               'that.' % arg_to_check)
 
-    # Expand wildcards, dirs, buckets, and bucket subdirs in StorageUris
-    # before running cp and rm commands, to prevent the
-    # following problem: starting with a bucket containing only the object
-    # gs://bucket/obj, say the user does:
-    #   gsutil mv gs://bucket/* gs://bucket/d.txt
-    # If we didn't expand the wildcard first, the cp command would
-    # first copy gs://bucket/obj to gs://bucket/d.txt, and the
-    # rm command would then remove that object.
-    # Note 1: This is somewhat inefficient, since we request a bucket listing
-    # here and then again in the generated cp command. TODO: Consider adding
-    # an internal interface to cp command to allow this expansion to be passed
-    # in.
-    # Note 2: We use recursion_requested when expanding wildcards and containers
-    # so we can determine if any of the source URIs are directories (and then
-    # use cp -R and rm -R to perform the move, to match the behavior of UNIX mv
-    # (where moving a directory moves all the contained files).
-    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args[0:len(self.args)-1], True)
-    exp_arg_list = list(src_uri_expansion.IterExpandedUriStrings())
-
-    # Check whether exp_arg_list has any file:// URIs, and disallow it. Note
-    # that we can't simply set FILE_URIS_OK to False in command_spec because
-    # we *do* allow a file URI for the dest URI. (We allow users to move data
-    # out of the cloud to the local disk, but we disallow commands that would
-    # delete data off the local disk, and instead require the user to delete
-    # data separately, using local commands/tools.)
-    if self.HaveFileUris(exp_arg_list):
-      raise CommandException('"mv" command does not support "file://" URIs for '
-                             'source arguments.\nDid you mean to use a '
-                             'gs:// URI?')
-
-    if src_uri_expansion.IsEmpty():
-      raise CommandException('No URIs matched')
-
-    # If any of the src URIs are directories add -R to options to be passed to
-    # cp and rm commands.
-    self.recursion_requested = False
-    for src_uri in src_uri_expansion.GetSrcUris():
-      if src_uri_expansion.NamesContainer(src_uri):
-        self.recursion_requested = True
-        # Disallow wildcard src URIs when moving directories, as supporting it
-        # would make the name transformation too complex and would also be
-        # dangerous (e.g., someone could accidentally move many objects to the
-        # wrong name, or accidentally overwrite many objects).
-        if ContainsWildcard(src_uri):
-          raise CommandException(
-              'mv command disallows naming source directories using wildcards')
-
-    # Add command-line opts back in front of args so they'll be picked up by cp
+    # Insert command-line opts in front of args so they'll be picked up by cp
     # and rm commands (e.g., for -p option). Use undocumented (internal
-    # use-only) cp -M option to request move naming semantics (see
-    # _ConstructDstUri in cp.py).
+    # use-only) cp -M option, which causes each original object to be deleted
+    # after sucessfully copying to its destination, and also causes naming
+    # behavior consistent with Unix mv naming behavior (see _ConstructDstUri in
+    # cp.py).
     unparsed_args = ['-M']
     if self.recursion_requested:
       unparsed_args.append('-R')
-      exp_arg_list.insert(0, '-R')
     unparsed_args.extend(self.unparsed_args)
     self.command_runner.RunNamedCommand('cp', unparsed_args, self.headers,
                                         self.debug, self.parallel_operations)
-    # See comment above about why we're passing exp_arg_list instead of
-    # unparsed_args here.
-    self.command_runner.RunNamedCommand('rm', exp_arg_list,
-                                        self.headers, self.debug,
-                                        self.parallel_operations)
 
   # test specification, see definition of test_steps in base class for
   # details on how to populate these fields
@@ -216,8 +170,5 @@ class MvCommand(Command):
     ('rm 1 src object', 'gsutil rm gs://$B0/$O0', 0, None),
     ('verify 1 src obj', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F1')),
     ('verify 0 dst objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('mv 2 objects',
-       'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2 2>&1 | grep Removing',
-       1, None),
+    ('mv 2 objects', 'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2', 1, None),
   ]
-

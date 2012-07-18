@@ -37,11 +37,11 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  Gets the Cross-Origin Resource Sharing (CORS) configuration for a given 
-  bucket. This command is supported for buckets only, not objects and you 
-  can get the CORS settings for only one bucket at a time. The output from 
-  getcors can be redirected into a file, edited and then updated via the 
-  setcors sub-command. The CORS configuration is expressed by an XML document 
+  Gets the Cross-Origin Resource Sharing (CORS) configuration for a given
+  bucket. This command is supported for buckets only, not objects and you
+  can get the CORS settings for only one bucket at a time. The output from
+  getcors can be redirected into a file, edited and then updated via the
+  setcors sub-command. The CORS configuration is expressed by an XML document
   with the following structure:
 
   <?xml version="1.0" ?>
@@ -58,7 +58,7 @@ _detailed_help_text = ("""
           </ResponseHeaders>
       </Cors>
   </CorsConfig>
-  
+
   For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
 
@@ -102,7 +102,7 @@ class GetCorsCommand(Command):
   # Command entry point.
   def RunCommand(self):
     # Wildcarding is allowed but must resolve to just one bucket.
-    uris = list(self.exp_handler.WildcardIterator(self.args[0]).IterUris())
+    uris = list(self.WildcardIterator(self.args[0]).IterUris())
     if len(uris) == 0:
       raise CommandException('No URIs matched')
     if len(uris) != 1:

@@ -31,6 +31,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.name_expansion import NameExpansionIterator
 from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
@@ -138,10 +139,9 @@ class RmCommand(Command):
       self.THREADED_LOGGER.error(str(e))
       self.everything_removed_okay = False
 
-    def _RemoveFunc(src_uri, exp_src_uri, _unused_src_uri_names_container,
-                    _unused_src_uri_expands_to_multi,
-                    _unused_have_multiple_srcs,
-                    _unused_have_existing_dest_subdir):
+    def _RemoveFunc(name_expansion_result):
+      exp_src_uri = self.suri_builder.StorageUri(
+          name_expansion_result.GetExpandedUriStr())
       if exp_src_uri.names_container():
         if exp_src_uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those
@@ -161,15 +161,15 @@ class RmCommand(Command):
           raise
 
     # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
-    src_uri_expansion = self.exp_handler.ExpandWildcardsAndContainers(
-        self.args, self.recursion_requested, flat=self.recursion_requested)
-    if src_uri_expansion.IsEmpty():
-      raise CommandException('No URIs matched')
+    name_expansion_iterator = NameExpansionIterator(
+        self.command_name, self.proj_id_handler, self.headers, self.debug,
+        self.bucket_storage_uri_class, self.args, self.recursion_requested,
+        flat=self.recursion_requested)
 
     # Perform remove requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(_RemoveFunc, src_uri_expansion, _RemoveExceptionHandler)
+    self.Apply(_RemoveFunc, name_expansion_iterator, _RemoveExceptionHandler)
 
     if not self.everything_removed_okay:
       raise CommandException('Some files could not be removed.')

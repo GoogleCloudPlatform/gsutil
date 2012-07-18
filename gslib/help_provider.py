@@ -77,5 +77,5 @@ def SanityCheck(help_provider, help_name_map):
     if help_name_map.has_key(name_or_alias):
       raise CommandException(
           'Duplicate help name/alias "%s" found while loading help from %s. '
-          'That name/alias was already taken by %s' % (name_or_alias, 
+          'That name/alias was already taken by %s' % (name_or_alias,
           help_provider.__module__, help_name_map[name_or_alias].__module__))

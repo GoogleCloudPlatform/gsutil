@@ -52,6 +52,7 @@ _detailed_help_text = ("""
 
        export PYTHONPATH=./boto:$PYTHONPATH
        ./gslib/test_commands.py
+       ./gslib/test_plurality_checkable_iterator.py
        ./gslib/test_thread_pool.py
        ./gslib/test_wildcard_iterator.py
 
@@ -72,11 +73,11 @@ _detailed_help_text = ("""
     Make sure each of the individual installations succeeded. If they don't
     you may need to run individual ones again, e.g.,
       pip install unittest2
-    
+
     Then ensure your .boto file has HMAC credentials defined (the boto tests
     don't load the OAUTH2 plugin), and then change directories into boto/tests
     and run:
-      python test.py -t s3 -t gs -t ssl          
+      python test.py -t s3 -t gs -t ssl
 
   6. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).

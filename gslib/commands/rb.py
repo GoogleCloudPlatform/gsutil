@@ -90,7 +90,7 @@ class RbCommand(Command):
     # Expand bucket name wildcards, if any.
     did_some_work = False
     for uri_str in self.args:
-      for uri in self.exp_handler.WildcardIterator(uri_str).IterUris():
+      for uri in self.WildcardIterator(uri_str).IterUris():
         if uri.object_name:
           raise CommandException('"rb" command requires a URI with no object '
                                  'name')
