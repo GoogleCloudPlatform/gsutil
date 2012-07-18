@@ -1,3 +1,41 @@
+Release 3.12 (release-date: 2012-07-18)
+
+New Features
+------------
+
+  - Changed gsutil to display/process bucket listings/wildcards on the fly,
+    instead of building a complete list of all matches before starting work.
+    This makes gsutil cp, rm, ls, etc. capable of operating on an unlimited
+    number of objects (where previously you'd run out of memory if you
+    tried with too many matches), reduces memory footprint, and causes large
+    operations to visibly begin making progress immediately.
+
+  - Related to this, the gsutil mv command now performs each cp+rm operation one
+    after the other; previously all cp's were performed, followed by all
+    rm's. This means (a) if a large mv fails partway through you can restart
+    without re-doing all the operations (since some objects will already have
+    been moved), and (b) you don't need to have 2 copies of all objects in place
+    before the orignal objects are removed (saving storage costs for the user).
+
+
+Bug Fixes
+---------
+
+  - Made 'gsutil config' honor BOTO_CONFIG environment variable.
+
+  - Added check to mb command for invalid URI.
+
+
+Other Changes
+---------
+
+  - Removed official support for installing via setup.py.
+
+
+
+================================================================================
+
+
 Release 3.11 (release-date: 2012-06-28)
 
 New Features
