@@ -622,9 +622,16 @@ class ConfigCommand(Command):
       scopes.append(SCOPE_FULL_CONTROL)
 
     if output_file_name is None:
-      # Use the default config file name, if it doesn't exist or can be moved
-      # out of the way without clobbering an existing backup file.
-      default_config_path = os.path.expanduser(os.path.join('~', '.boto'))
+      # Check to see if a default config file name is requested via
+      # environment variable. If so, use it, otherwise use the hard-coded
+      # default file. Then use the default config file name, if it doesn't 
+      # exist or can be moved out of the way without clobbering an existing 
+      # backup file.
+      boto_config_from_env = os.environ.get('BOTO_CONFIG', None)
+      if boto_config_from_env:
+        default_config_path = boto_config_from_env
+      else:
+        default_config_path = os.path.expanduser(os.path.join('~', '.boto'))
       if not os.path.exists(default_config_path):
         output_file_name = default_config_path
       else:
