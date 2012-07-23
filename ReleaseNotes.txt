@@ -3,7 +3,8 @@ Release 3.13 (release-date: 2012-07-19)
 Bug Fixes
 ---------
 
-  - Included the fix to make 'gsutil config' honor BOTO_CONFIG environment variable (which was intended to be included in Release 3.12)
+  - Included the fix to make 'gsutil config' honor BOTO_CONFIG environment
+    variable (which was intended to be included in Release 3.12)
 
 
 ================================================================================
