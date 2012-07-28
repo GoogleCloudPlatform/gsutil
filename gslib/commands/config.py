@@ -17,6 +17,7 @@ import datetime
 import multiprocessing
 import platform
 import os
+import signal
 import sys
 import time
 import webbrowser
@@ -32,6 +33,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -634,6 +636,7 @@ class ConfigCommand(Command):
         default_config_path = os.path.expanduser(os.path.join('~', '.boto'))
       if not os.path.exists(default_config_path):
         output_file_name = default_config_path
+        default_config_path_bak = None
       else:
         default_config_path_bak = default_config_path + '.bak'
         if os.path.exists(default_config_path_bak):
@@ -661,15 +664,24 @@ class ConfigCommand(Command):
           'credentials, based on your responses to the following questions.\n\n'
           % output_file_name)
 
+    # Catch ^C so we can restore the backup.
+    signal.signal(signal.SIGINT, cleanup_handler)
     try:
       self._WriteBotoConfigFile(output_file, use_oauth2=use_oauth2,
           launch_browser=launch_browser, oauth2_scopes=scopes)
     except Exception, e:
+      user_aborted = isinstance(e, AbortException)
+      if user_aborted:
+        sys.stderr.write('\nCaught ^C; cleaning up\n')
       # If an error occurred during config file creation, remove the invalid
-      # config file.
+      # config file and restore the backup file.
       if output_file_name != '-':
         output_file.close()
         os.unlink(output_file_name)
+        if default_config_path_bak:
+          sys.stderr.write('Restoring previous backed up file (%s)\n' %
+                           default_config_path_bak)
+          os.rename(default_config_path_bak, output_file_name)
       raise
 
     if output_file_name != '-':
@@ -678,3 +690,6 @@ class ConfigCommand(Command):
           '\nBoto config file "%s" created. If you need to use\na proxy to '
           'access the Internet please see the instructions in that file.\n'
           % output_file_name)
+
+def cleanup_handler(signalnum, handler):
+  raise AbortException('User interrupted config command')

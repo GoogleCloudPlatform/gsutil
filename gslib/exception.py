@@ -22,6 +22,20 @@
 """gsutil exceptions."""
 
 
+class AbortException(StandardError):
+  """Exception raised when a user aborts a command that needs to do cleanup."""
+
+  def __init__(self, reason):
+    StandardError.__init__(self)
+    self.reason = reason
+
+  def __repr__(self):
+    return 'AbortException: %s' % self.reason
+
+  def __str__(self):
+    return 'AbortException: %s' % self.reason
+
+
 class CommandException(StandardError):
   """Exception raised when a problem is encountered running a gsutil command.
 
@@ -51,12 +65,12 @@ class CommandException(StandardError):
 
 class ProjectIdException(StandardError):
 
-    def __init__(self, reason):
-      StandardError.__init__(self)
-      self.reason = reason
+  def __init__(self, reason):
+    StandardError.__init__(self)
+    self.reason = reason
 
-    def __repr__(self):
-      return 'ProjectIdException: %s' % self.reason
+  def __repr__(self):
+    return 'ProjectIdException: %s' % self.reason
 
-    def __str__(self):
-      return 'ProjectIdException: %s' % self.reason
+  def __str__(self):
+    return 'ProjectIdException: %s' % self.reason
