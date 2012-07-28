@@ -207,6 +207,8 @@ _detailed_help_text = ("""
     long_running_computation | gsutil cp - gs://my_bucket/obj
 
   Streaming transfers do not support resumable uploads/downloads.
+  (The Google resumable transfer protocol has a way to support streaming
+  transers, but gsutil doesn't currently implement support for this.)
 
 
 <B>OPTIONS</B>
@@ -514,13 +516,14 @@ class CpCommand(Command):
     """
     Logs copy operation being performed, including Content-Type if appropriate.
     """
-    if src_uri.is_stream():
-      self.THREADED_LOGGER.info('Copying from <STDIN>...')
-    elif 'Content-Type' in headers and dst_uri.is_cloud_uri():
-      self.THREADED_LOGGER.info('Copying %s [Content-Type=%s]...',
-                                src_uri, headers['Content-Type'])
+    if 'Content-Type' in headers and dst_uri.is_cloud_uri():
+      content_type_msg = ' [Content-Type=%s]' % headers['Content-Type']
     else:
-      self.THREADED_LOGGER.info('Copying %s...', src_uri)
+      content_type_msg = ''
+    if src_uri.is_stream():
+      self.THREADED_LOGGER.info('Copying from <STDIN>%s...', content_type_msg)
+    else:
+      self.THREADED_LOGGER.info('Copying %s%s...', src_uri, content_type_msg)
 
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
@@ -612,9 +615,9 @@ class CpCommand(Command):
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
-  def _PerformStreamUpload(self, fp, dst_uri, headers, canned_acl=None):
+  def _PerformStreamingUpload(self, fp, dst_uri, headers, canned_acl=None):
     """
-    Performs Stream upload to cloud.
+    Performs a streaming upload to the cloud.
 
     Args:
       fp: The file whose contents to upload.
@@ -694,12 +697,6 @@ class CpCommand(Command):
     """
     gzip_exts = []
     canned_acl = None
-    # Previously, the -t option was used to request automatic content
-    # type detection, however, whether -t was specified for not, content
-    # detection was being done. To repair this problem while preserving
-    # backward compatibilty, the -t option has been deprecated and content
-    # type detection is now enabled by default unless the Content-Type
-    # header is explicitly specified via the -h option.
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
@@ -708,9 +705,10 @@ class CpCommand(Command):
             raise CommandException('Invalid canned ACL "%s".' % a)
           canned_acl = a
         elif o == '-t':
-          print 'Warning: -t is deprecated. Content type detection is ' + (
-                'enabled by default,\nunless inhibited by specifying ') + (
-                'a Content-Type header via the -h option.')
+          print('Warning: -t is deprecated, and will be removed in the future. '
+                'Content type\ndetection is '
+                'now performed by default, unless inhibited by specifying '
+                'a\nContent-Type header via the -h option.')
         elif o == '-z':
           gzip_exts = a.split(',')
 
@@ -758,7 +756,7 @@ class CpCommand(Command):
         pass
     elif (src_key.is_stream()
           and dst_uri.get_provider().supports_chunked_transfer()):
-      (elapsed_time, bytes_transferred) = self._PerformStreamUpload(
+      (elapsed_time, bytes_transferred) = self._PerformStreamingUpload(
           src_key.fp, dst_uri, headers, canned_acl)
     else:
       if src_key.is_stream():
@@ -878,8 +876,9 @@ class CpCommand(Command):
   def _CopyObjToObjDiffProvider(self, src_key, src_uri, dst_uri, headers):
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
-    # If destination is GS, we can avoid the local copying through a local file
-    # as GS supports chunked transfer.
+    # If destination is GS we can avoid the local copying through a local file
+    # as GS supports chunked transfer. This also allows us to preserve metadata
+    # between original and destination object.
     if dst_uri.scheme == 'gs':
       canned_acl = None
       if self.sub_opts:
@@ -894,23 +893,27 @@ class CpCommand(Command):
             # GCS and S3 support different ACLs.
             raise NotImplementedError('Cross-provider cp -p not supported')
 
-      # TODO: This _PerformStreamUpload call passes in a Key for fp
+      # TODO: This _PerformStreamingUpload call passes in a Key for fp
       # param, relying on Python "duck typing" (the fact that the lower-level
       # methods that expect an fp only happen to call fp methods that are
       # defined and semantically equivalent to those defined on src_key). This
       # should be replaced by a class that wraps an fp interface around the
       # Key, throwing 'not implemented' for methods (like seek) that aren't
       # implemented by non-file Keys.
-      return self._PerformStreamUpload(src_key, dst_uri, headers, canned_acl)
+      return self._PerformStreamingUpload(src_key, dst_uri, headers, canned_acl)
 
-    #todo now this doesnt preserve metadata - fix that and add to cl descr
-    # If destination is not GS, We implement object copy through a local
-    # temp file. Note that a downside of this approach is that killing the
-    # gsutil process partway through and then restarting will always repeat the
-    # download and upload, because the temp file name is different for each
-    # incarnation. (If however you just leave the process running and failures
-    # happen along the way, they will continue to restart and make progress
-    # as long as not too many failures happen in a row with no progress.)
+    # If destination is not GS we implement object copy through a local
+    # temp file. There are at least 3 downsides of this approach:
+    #   1. It doesn't preserve metadata from the src object when uploading to
+    #      the dst object.
+    #   2. It requires enough temp space on the local disk to hold the file
+    #      while transferring.
+    #   3. Killing the gsutil process partway through and then restarting will
+    #      always repeat the download and upload, because the temp file name is
+    #      different for each incarnation. (If however you just leave the process
+    #      running and failures happen along the way, they will continue to
+    #      restart and make progress as long as not too many failures happen in a
+    #      row with no progress.)
     tmp = tempfile.NamedTemporaryFile()
     if self._CheckFreeSpace(tempfile.tempdir) < src_key.size:
       raise CommandException('Inadequate temp space available to perform the '
@@ -1016,7 +1019,8 @@ class CpCommand(Command):
                        have_existing_dest_subdir):
     """
     Constructs the destination URI for a given exp_src_uri/exp_dst_uri pair,
-    using context-dependent naming rules intended to mimic Unix cp behavior.
+    using context-dependent naming rules intended to mimic Unix cp and mv
+    behavior.
 
     Args:
       src_uri: src_uri to be copied.
@@ -1048,6 +1052,12 @@ class CpCommand(Command):
       # We're copying one file or object to one file or object.
       return exp_dst_uri
 
+    if exp_src_uri.is_stream():
+      if exp_dst_uri.names_container():
+        raise CommandException('Destination object name needed when '
+                               'source is a stream')
+      return exp_dst_uri
+
     if not self.recursion_requested and not have_multiple_srcs:
       # We're copying one file or object to a subdirectory. Append final comp
       # of exp_src_uri to exp_dest_uri.
@@ -1075,8 +1085,10 @@ class CpCommand(Command):
          '%s%s' % (exp_dst_uri.object_name, exp_dst_uri.delim)
       )
 
-    # There are 3 cases for copying multiple sources to a dir/bucket/bucket
-    # subdir needed to match the naming behavior of the Unix cp command:
+    # Making naming behavior match how things work with local Unix file system
+    # operations depends on many factors, including whether the destination is a
+    # container, the plurality of the source(s), and whether the mv command is
+    # being used:
     # 1. For the "mv -R" command, renaming should occur at the level of the src
     #    subdir, vs appending that subdir beneath the dst subdir like is done
     #    for copying. For example:
@@ -1143,9 +1155,6 @@ class CpCommand(Command):
 
     else:
       # Case 3.
-      if exp_src_uri.is_stream():
-        raise CommandException('Destination object name needed when '
-                               'source is a stream')
       dst_key_name = exp_src_uri.object_name.rpartition(src_uri.delim)[-1]
 
     if (exp_dst_uri.is_file_uri()
