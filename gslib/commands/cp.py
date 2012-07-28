@@ -878,10 +878,10 @@ class CpCommand(Command):
   def _CopyObjToObjDiffProvider(self, src_key, src_uri, dst_uri, headers):
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
-    # If destination is GS, We can avoid the local copying through a local file
+    # If destination is GS, we can avoid the local copying through a local file
     # as GS supports chunked transfer.
     if dst_uri.scheme == 'gs':
-      canned_acls = None
+      canned_acl = None
       if self.sub_opts:
         for o, a in self.sub_opts:
           if o == '-a':
@@ -901,7 +901,7 @@ class CpCommand(Command):
       # should be replaced by a class that wraps an fp interface around the
       # Key, throwing 'not implemented' for methods (like seek) that aren't
       # implemented by non-file Keys.
-      return self._PerformStreamUpload(src_key.fp, dst_uri, headers, canned_acls)
+      return self._PerformStreamUpload(src_key, dst_uri, headers, canned_acl)
 
     #todo now this doesnt preserve metadata - fix that and add to cl descr
     # If destination is not GS, We implement object copy through a local
