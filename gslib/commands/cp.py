@@ -704,19 +704,21 @@ class CpCommand(Command):
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
       if self.debug:
         print 'Compressing %s (to tmp)...' % src_key
-      gzip_tmp = tempfile.mkstemp()
-      gzip_path = gzip_tmp[1]
-      # Check for temp space. Assume the compressed object is at most 2x
-      # the size of the object (normally should compress to smaller than
-      # the object)
-      if self._CheckFreeSpace(gzip_path) < 2*int(os.path.getsize(src_key.name)):
-        raise CommandException('Inadequate temp space available to compress '
-                               '%s' % src_key.name)
-      gzip_fp = gzip.open(gzip_path, 'wb')
+      (gzip_fh, gzip_path) = tempfile.mkstemp()
+      gzip_fp = None
       try:
+        # Check for temp space. Assume the compressed object is at most 2x
+        # the size of the object (normally should compress to smaller than
+        # the object)
+        if self._CheckFreeSpace(gzip_path) < 2*int(os.path.getsize(src_key.name)):
+          raise CommandException('Inadequate temp space available to compress '
+                                 '%s' % src_key.name)
+        gzip_fp = gzip.open(gzip_path, 'wb')
         gzip_fp.writelines(src_key.fp)
       finally:
-        gzip_fp.close()
+        if gzip_fp:
+          gzip_fp.close()
+        os.close(gzip_fh)
       headers['Content-Encoding'] = 'gzip'
       gzip_fp = open(gzip_path, 'rb')
       try:
