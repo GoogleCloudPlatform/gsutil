@@ -55,9 +55,9 @@ from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil cp [-a canned_acl] [-e] [-p] [-z ext1,ext2,...] src_uri dst_uri
+  gsutil cp [-a canned_acl] [-e] [-p] [-q] [-z ext1,ext2,...] src_uri dst_uri
     - or -
-  gsutil cp [-a canned_acl] [-e] [-p] [-R] [-z extensions] uri... dst_uri
+  gsutil cp [-a canned_acl] [-e] [-p] [-q] [-R] [-z extensions] uri... dst_uri
 
 
 <B>DESCRIPTION</B>
@@ -227,6 +227,12 @@ _detailed_help_text = ("""
 	      Note that it's not valid to specify both the -a and -p options
 	      together.
 
+  -q          Causes copies to be performed quietly, i.e., without reporting
+	      file name and content type for each copy operation. Errors are
+	      still reported. This option can be useful for running gsutil from a
+	      cron job that logs its output to a file, for which the only
+	      information desired in the log is failures.
+
   -R, -r      Causes directories, buckets, and bucket subdirectories to be
               copied recursively. If you neglect to use this option for
               an upload, gsutil will copy any files it finds and skip any
@@ -309,7 +315,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:eMprRtz:',
+    SUPPORTED_SUB_ARGS : 'a:eMpqrRtz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -519,6 +525,8 @@ class CpCommand(Command):
     """
     Logs copy operation being performed, including Content-Type if appropriate.
     """
+    if self.quiet:
+      return
     if 'Content-Type' in headers and dst_uri.is_cloud_uri():
       content_type_msg = ' [Content-Type=%s]' % headers['Content-Type']
     else:
@@ -1414,18 +1422,21 @@ class CpCommand(Command):
   def _ParseArgs(self):
     self.perform_mv = False
     self.exclude_symlinks = False
+    self.quiet = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-e':
           self.exclude_symlinks = True
-        if o == '-M':
+        elif o == '-M':
           # Note that we signal to the cp command to perform a move (copy
           # followed by remove) and use directory-move naming rules by passing
           # the undocumented (for internal use) -M option when running the cp
           # command from mv.py.
           self.perform_mv = True
+        elif o == '-q':
+          self.quiet = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
 
