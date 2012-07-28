@@ -224,6 +224,9 @@ _detailed_help_text = ("""
               (The performance issue can be mitigated to some degree by
               using gsutil -m cp to cause parallel copying.)
 
+	      Note that it's not valid to specify both the -a and -p options
+	      together.
+
   -R, -r      Causes directories, buckets, and bucket subdirectories to be
               copied recursively. If you neglect to use this option for
               an upload, gsutil will copy any files it finds and skip any
@@ -536,10 +539,20 @@ class CpCommand(Command):
     src_bucket = src_uri.get_bucket(False, headers)
     dst_bucket = dst_uri.get_bucket(False, headers)
     preserve_acl = False
+    canned_acl = None
     if self.sub_opts:
       for o, a in self.sub_opts:
+        if o == '-a':
+          canned_acls = dst_uri.canned_acls()
+          if a not in canned_acls:
+            raise CommandException('Invalid canned ACL "%s".' % a)
+          canned_acl = a
+          headers[dst_uri.get_provider().acl_header] = canned_acl
         if o == '-p':
           preserve_acl = True
+    if preserve_acl and canned_acl:
+      raise CommandException(
+          'Specifying both the -p and -a options together is invalid.')
     start_time = time.time()
     # Pass headers in headers param not metadata param, so boto will copy
     # existing key's metadata and just set the additional headers specified
@@ -900,6 +913,9 @@ class CpCommand(Command):
       # should be replaced by a class that wraps an fp interface around the
       # Key, throwing 'not implemented' for methods (like seek) that aren't
       # implemented by non-file Keys.
+      # NOTE: As of 7/28/2012 this bug now makes cross-provider copies into gs
+      # fail, because of boto changes that make that code now attempt to perform
+      # additional operations on the fp parameter, like seek() and tell().
       return self._PerformStreamingUpload(src_key, dst_uri, headers, canned_acl)
 
     # If destination is not GS we implement object copy through a local
