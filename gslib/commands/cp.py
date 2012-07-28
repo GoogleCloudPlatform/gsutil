@@ -85,7 +85,7 @@ _detailed_help_text = ("""
 
 <B>HOW NAMES ARE CONSTRUCTED</B>
   The gsutil cp command strives to name objects in a way consistent with how
-  UNIX cp works, which causes names to be constructed in varying ways depending
+  Unix cp works, which causes names to be constructed in varying ways depending
   on whether you're performing a recursive directory copy or copying
   individually named objects; and whether you're copying to an existing or
   non-existent directory.
@@ -995,7 +995,7 @@ class CpCommand(Command):
                        have_existing_dest_subdir):
     """
     Constructs the destination URI for a given exp_src_uri/exp_dst_uri pair,
-    using context-dependent naming rules intended to mimic UNIX cp semantics.
+    using context-dependent naming rules intended to mimic Unix cp behavior.
 
     Args:
       src_uri: src_uri to be copied.
@@ -1055,10 +1055,10 @@ class CpCommand(Command):
       )
 
     # There are 3 cases for copying multiple sources to a dir/bucket/bucket
-    # subdir needed to match the naming behavior of the UNIX cp command:
-    # 1. For the "mv -R" command, people expect renaming to occur at the
-    #    level of the src subdir, vs appending that subdir beneath
-    #    the dst subdir like is done for copying. For example:
+    # subdir needed to match the naming behavior of the Unix cp command:
+    # 1. For the "mv -R" command, renaming should occur at the level of the src
+    #    subdir, vs appending that subdir beneath the dst subdir like is done
+    #    for copying. For example:
     #      gsutil -m rm -R gs://bucket
     #      gsutil -m cp -R cloudreader gs://bucket
     #      gsutil -m cp -R cloudauth gs://bucket/subdir1
@@ -1072,7 +1072,7 @@ class CpCommand(Command):
     #      gsutil cp dir1/dir2 gs://bucket
     #    should create the object gs://bucket/dir2/file2, assuming dir1/dir2
     #    contains file2).
-    #    To be consistent with UNIX cp behavior, there's one more wrinkle when
+    #    To be consistent with Unix cp behavior, there's one more wrinkle when
     #    working with subdirs: The resulting object names depend on whether the
     #    destination subdirectory exists. For example, if gs://bucket/subdir
     #    exists, the command:
@@ -1091,10 +1091,10 @@ class CpCommand(Command):
         and src_uri_expands_to_multi):
       # Case 1. Handle naming rules for bucket subdir mv. Here we want to
       # line up the src_uri against its expansion, to find the base to build
-      # the new name. For example, starting with:
+      # the new name. For example, running the command:
       #   gsutil mv gs://bucket/abcd gs://bucket/xyz
-      # and exp_src_uri being gs://bucket/abcd/123
-      # we want exp_src_uri_tail to be /123
+      # when processing exp_src_uri=gs://bucket/abcd/123
+      # exp_src_uri_tail should become /123
       # Note: mv.py code disallows wildcard specification of source URI.
       exp_src_uri_tail = exp_src_uri.uri[len(src_uri.uri):]
       dst_key_name = '%s/%s' % (exp_dst_uri.object_name.rstrip('/'),
@@ -1209,7 +1209,7 @@ class CpCommand(Command):
           # Use recursion_requested when performing name expansion for the
           # directory mv case so we can determine if any of the source URIs are
           # directories (and then use cp -R and rm -R to perform the move, to
-          # match the behavior of UNIX mv (which when moving a directory moves
+          # match the behavior of Unix mv (which when moving a directory moves
           # all the contained files).
           self.recursion_requested = True
           # Disallow wildcard src URIs when moving directories, as supporting it
@@ -1512,7 +1512,8 @@ def _GetPathBeforeFinalDir(uri):
   """
   Returns the part of the path before the final directory component for the
   given URI, handling cases for file system directories, bucket, and bucket
-  subdirectories. Example: for gs://bucket/dir/ we'll return 'gs://bucket'.
+  subdirectories. Example: for gs://bucket/dir/ we'll return 'gs://bucket',
+  and for file://dir we'll return file://
 
   Args:
     uri: StorageUri.
@@ -1525,7 +1526,7 @@ def _GetPathBeforeFinalDir(uri):
   if uri.names_directory():
     past_scheme = uri.uri[len('file://'):]
     if past_scheme.find(sep) == -1:
-      return uri.uri
+      return 'file://'
     else:
       return 'file://%s' % past_scheme.rstrip(sep).rpartition(sep)[0]
   if uri.names_bucket():

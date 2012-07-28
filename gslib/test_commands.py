@@ -276,8 +276,8 @@ class GsutilCommandTests(unittest.TestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
-  def TestCopyingDirToBucket(self):
-    """Tests recursively copying directory to a bucket"""
+  def TestCopyingAbsolutePathDirToBucket(self):
+    """Tests recursively copying absolute path directory to a bucket"""
     self.RunCommand('cp', ['-R', self.src_dir_root, self.dst_bucket_uri.uri])
     actual = set(str(u) for u in test_util.test_wildcard_iterator(
         '%s**' % self.dst_bucket_uri.uri).IterUris())
@@ -288,6 +288,36 @@ class GsutilCommandTests(unittest.TestCase):
       expected.add('%s%s' % (self.dst_bucket_uri.uri,
                              file_path_sans_top_tmp_dir))
     self.assertEqual(expected, actual)
+
+  def TestCopyingRelativePathDirToBucket(self):
+    """Tests recursively copying relative directory to a bucket"""
+    orig_dir = os.getcwd()
+    os.chdir(self.src_dir_root)
+    self.RunCommand('cp', ['-R', 'dir0', self.dst_bucket_uri.uri])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
+    expected = set()
+    for file_path in self.all_src_file_paths:
+      start_tmp_pos = file_path.find(self.tmpdir_prefix)
+      file_path_sans_top_tmp_dir = file_path[start_tmp_pos:]
+      expected.add('%s%s' % (self.dst_bucket_uri.uri, 'dir0/dir1/nested'))
+    self.assertEqual(expected, actual)
+    os.chdir(orig_dir)
+
+  def TestCopyingRelativePathSubDirToBucket(self):
+    """Tests recursively copying relative sub-directory to a bucket"""
+    orig_dir = os.getcwd()
+    os.chdir(self.src_dir_root)
+    self.RunCommand('cp', ['-R', 'dir0/dir1', self.dst_bucket_uri.uri])
+    actual = set(str(u) for u in test_util.test_wildcard_iterator(
+        '%s**' % self.dst_bucket_uri.uri).IterUris())
+    expected = set()
+    for file_path in self.all_src_file_paths:
+      start_tmp_pos = file_path.find(self.tmpdir_prefix)
+      file_path_sans_top_tmp_dir = file_path[start_tmp_pos:]
+      expected.add('%s%s' % (self.dst_bucket_uri.uri, 'dir1/nested'))
+    self.assertEqual(expected, actual)
+    os.chdir(orig_dir)
 
   def TestCopyingDotSlashToBucket(self):
     """Tests copying ./ to a bucket produces expected naming"""
