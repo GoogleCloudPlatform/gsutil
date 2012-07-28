@@ -229,9 +229,9 @@ _detailed_help_text = ("""
               will cause gsutil to copy any objects at the current bucket
               directory level, and skip any subdirectories.
 
-  -t          DEPRECATED. This option used to be used to request setting
+  -t          DEPRECATED. At one time this option was used to request setting
               Content-Type based on file extension and/or content, which is
-              now the default behavior.  The -t option is left in place for
+              now the default behavior. The -t option is left in place for
               now to avoid breaking existing scripts. It will be removed at
               a future date.
 
@@ -247,12 +247,10 @@ _detailed_help_text = ("""
               uncompressed on the local disk. The uploaded objects retain the
               original content type and name as the original files but are given
               a Content-Encoding header with the value "gzip" to indicate that
-              the object data stored compressed on the Google Cloud Storage
+              the object data stored are compressed on the Google Cloud Storage
               servers.
 
-              The -z option is most useful in combination with Content-Type
-              recognition (see "gsutil help metadata").  For example, the
-              following command:
+              For example, the following command:
 
                 gsutil cp -z html -a public-read cattypes.html gs://mycats
 
@@ -512,9 +510,23 @@ class CpCommand(Command):
       num_cb = None
     return (cb, num_cb, transfer_handler)
 
+  def _LogCopyOperation(self, src_uri, dst_uri, headers):
+    """
+    Logs copy operation being performed, including Content-Type if appropriate.
+    """
+    if src_uri.is_stream():
+      self.THREADED_LOGGER.info('Copying from <STDIN>...')
+    elif 'Content-Type' in headers and dst_uri.is_cloud_uri():
+      self.THREADED_LOGGER.info('Copying %s [Content-Type=%s]...',
+                                src_uri, headers['Content-Type'])
+    else:
+      self.THREADED_LOGGER.info('Copying %s...', src_uri)
+
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
   def _CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
+    self._SetContentTypeHeader(src_uri, headers)
+    self._LogCopyOperation(src_uri, dst_uri, headers)
     # Do Object -> object copy within same provider (uses
     # x-<provider>-copy-source metadata HTTP header to request copying at the
     # server).
@@ -531,7 +543,10 @@ class CpCommand(Command):
     # in the headers param (rather than using the headers to override existing
     # metadata). In particular this allows us to copy the existing key's
     # Content-Type and other metadata users need while still being able to
-    # set headers the API needs (like x-goog-project-id).
+    # set headers the API needs (like x-goog-project-id). Note that this means
+    # you can't do something like:
+    #   gsutil cp -t Content-Type text/html gs://bucket/* gs://bucket2
+    # to change the Content-Type while copying.
     dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
                         src_uri.object_name, preserve_acl=preserve_acl,
                         headers=headers)
@@ -622,27 +637,47 @@ class CpCommand(Command):
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
-  def _GetContentType(self, object_name):
-    # Streams (denoted by '-') are expected to be 'application/octet-stream'
-    # and 'file' would partially consume them.
-    if not object_name == '-':
-      if self.USE_MAGICFILE:
-        p = subprocess.Popen(['file', '--mime-type', object_name],
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = p.communicate()
-        if p.returncode != 0 or error:
-          raise CommandException(
-              'Encountered error running "file --mime-type %s" (returncode=%d).'
-              '\n%s' % (object_name, p.returncode, error))
-        # Parse output by removing line delimiter and splitting on last ": ".
-        mime_type = output.rstrip().rpartition(': ')[2]
-        if mime_type:
-          return mime_type
-      else:
-        return mimetypes.guess_type(object_name)[0]
-    return self.DEFAULT_CONTENT_TYPE
+  def _SetContentTypeHeader(self, src_uri, headers):
+    """
+    Sets content type header to value specified in '-h Content-Type' option (if
+    specified); else sets using Content-Type detection.
+    """
+    if 'Content-Type' in headers:
+      # If empty string specified (i.e., -h "Content-Type:") set header to None,
+      # which will inhibit boto from sending the CT header. Otherwise, boto will
+      # pass through the user specified CT header.
+      if not headers['Content-Type']:
+        headers['Content-Type'] = None
+      # else we'll keep the value passed in via -h option (not performing content
+      # type detection).
+    else:
+      # Only do content type recognition is src_uri is a file. Object-to-object
+      # copies with no -h Content-Type specified re-use the content type of the
+      # source object.
+      if src_uri.is_file_uri():
+        object_name = src_uri.object_name
+        content_type = None
+        # Streams (denoted by '-') are expected to be 'application/octet-stream'
+        # and 'file' would partially consume them.
+        if object_name != '-':
+          if self.USE_MAGICFILE:
+            p = subprocess.Popen(['file', '--mime-type', object_name],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            if p.returncode != 0 or error:
+              raise CommandException(
+                  'Encountered error running "file --mime-type %s" (returncode=%d).'
+                  '\n%s' % (object_name, p.returncode, error))
+            # Parse output by removing line delimiter and splitting on last ": ".
+            content_type = output.rstrip().rpartition(': ')[2]
+          else:
+            content_type = mimetypes.guess_type(object_name)[0]
+        if not content_type:
+          content_type = self.DEFAULT_CONTENT_TYPE
+        headers['Content-Type'] = content_type
 
-  def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers):
+  def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers,
+                          should_log=True):
     """Helper method for uploading a local file to an object.
 
     Args:
@@ -650,6 +685,7 @@ class CpCommand(Command):
       src_uri: Source StorageUri.
       dst_uri: Destination StorageUri.
       headers: The headers dictionary.
+      should_log: bool indicator whether we should log this operation.
     Returns:
       (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
 
@@ -678,22 +714,9 @@ class CpCommand(Command):
         elif o == '-z':
           gzip_exts = a.split(',')
 
-    if 'Content-Type' in headers:
-      # Process Content-Type header. If specified via -h option with empty
-      # string (i.e. -h "Content-Type:") set header to None, which will
-      # inhibit boto from sending the CT header. Otherwise, boto will pass
-      # through the user specified CT header.
-      if not headers['Content-Type']:
-        headers['Content-Type'] = None
-    else:
-      # If no CT header was specified via the -h option, we do auto-content
-      # detection and use the results to formulate the Content-Type.
-      mime_type = self._GetContentType(src_uri.object_name)
-      if mime_type:
-        headers['Content-Type'] = mime_type
-        print '\t[Setting Content-Type=%s]' % mime_type
-      else:
-        print '\t[Unknown content type -> using %s]' % self.DEFAULT_CONTENT_TYPE
+    self._SetContentTypeHeader(src_uri, headers)
+    if should_log:
+      self._LogCopyOperation(src_uri, dst_uri, headers)
 
     if 'Content-Language' not in headers:
        content_language = config.get_value('GSUtil', 'content_language')
@@ -760,7 +783,10 @@ class CpCommand(Command):
 
     return (elapsed_time, bytes_transferred)
 
-  def _DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers):
+  def _DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers,
+                            should_log=True):
+    if should_log:
+      self._LogCopyOperation(src_uri, dst_uri, headers)
     (cb, num_cb, res_download_handler) = self._GetTransferHandlers(
         dst_uri, src_key.size, False)
     file_name = dst_uri.object_name
@@ -819,7 +845,7 @@ class CpCommand(Command):
       bytes_transferred = src_key.size
     if need_to_unzip:
       if self.debug:
-        sys.stderr.write('Uncompressing tmp to %s...\n' % file_name)
+        self.THREADED_LOGGER.info('Uncompressing tmp to %s...', file_name)
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
       f_in = gzip.open(download_file_name, 'rb')
       f_out = open(file_name, 'wb')
@@ -841,7 +867,8 @@ class CpCommand(Command):
     end_time = time.time()
     return (end_time - start_time, bytes_transferred)
 
-  def _CopyFileToFile(self, src_key, dst_uri, headers):
+  def _CopyFileToFile(self, src_key, src_uri, dst_uri, headers):
+    self._LogCopyOperation(src_uri, dst_uri, headers)
     dst_key = dst_uri.new_key(False, headers)
     start_time = time.time()
     dst_key.set_contents_from_file(src_key.fp, headers)
@@ -849,6 +876,8 @@ class CpCommand(Command):
     return (end_time - start_time, os.path.getsize(src_key.fp.name))
 
   def _CopyObjToObjDiffProvider(self, src_key, src_uri, dst_uri, headers):
+    self._SetContentTypeHeader(src_uri, headers)
+    self._LogCopyOperation(src_uri, dst_uri, headers)
     # If destination is GS, We can avoid the local copying through a local file
     # as GS supports chunked transfer.
     if dst_uri.scheme == 'gs':
@@ -864,13 +893,6 @@ class CpCommand(Command):
             # We don't attempt to preserve ACLs across providers because
             # GCS and S3 support different ACLs.
             raise NotImplementedError('Cross-provider cp -p not supported')
-          elif o == '-t':
-            mime_type = self._GetContentType(src_uri.object_name)
-            if mime_type:
-              headers['Content-Type'] = mime_type
-              print '\t[Setting Content-Type=%s]' % mime_type
-            else:
-              print '\t[Unknown content type -> using application/octet stream]'
 
       # TODO: This _PerformStreamUpload call passes in a Key for fp
       # param, relying on Python "duck typing" (the fact that the lower-level
@@ -879,8 +901,9 @@ class CpCommand(Command):
       # should be replaced by a class that wraps an fp interface around the
       # Key, throwing 'not implemented' for methods (like seek) that aren't
       # implemented by non-file Keys.
-      return self._PerformStreamUpload(src_key, dst_uri, headers, canned_acls)
+      return self._PerformStreamUpload(src_key.fp, dst_uri, headers, canned_acls)
 
+    #todo now this doesnt preserve metadata - fix that and add to cl descr
     # If destination is not GS, We implement object copy through a local
     # temp file. Note that a downside of this approach is that killing the
     # gsutil process partway through and then restarting will always repeat the
@@ -895,8 +918,9 @@ class CpCommand(Command):
     start_time = time.time()
     file_uri = self.suri_builder.StorageUri('file://%s' % tmp.name)
     try:
-      self._DownloadObjectToFile(src_key, src_uri, file_uri, headers)
-      self._UploadFileToObject(file_uri.get_key(), file_uri, dst_uri, headers)
+      self._DownloadObjectToFile(src_key, src_uri, file_uri, headers, False)
+      self._UploadFileToObject(file_uri.get_key(), file_uri, dst_uri, headers,
+                               False)
     finally:
       tmp.close()
     end_time = time.time()
@@ -926,9 +950,6 @@ class CpCommand(Command):
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
 
-    # Separately handle cases to avoid extra file and network copying of
-    # potentially very large files/objects.
-
     if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
       if src_uri.scheme == dst_uri.scheme:
         return self._CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
@@ -941,7 +962,7 @@ class CpCommand(Command):
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
       return self._DownloadObjectToFile(src_key, src_uri, dst_uri, headers)
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
-      return self._CopyFileToFile(src_key, dst_uri, headers)
+      return self._CopyFileToFile(src_key, src_uri, dst_uri, headers)
     else:
       raise CommandException('Unexpected src/dest case')
 
@@ -1225,10 +1246,6 @@ class CpCommand(Command):
           and have_multiple_srcs):
         os.makedirs(exp_dst_uri.object_name)
 
-      if exp_src_uri.is_file_uri() and exp_src_uri.is_stream():
-        sys.stderr.write("Copying from <STDIN>...\n")
-      else:
-        self.THREADED_LOGGER.info('Copying %s...', exp_src_uri)
       dst_uri = self._ConstructDstUri(src_uri, exp_src_uri,
                                       src_uri_names_container,
                                       src_uri_expands_to_multi,
@@ -1297,11 +1314,11 @@ class CpCommand(Command):
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
       if self.total_bytes_transferred != 0:
-        sys.stderr.write(
-            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' % (
+        self.THREADED_LOGGER.info(
+            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
                 self.total_bytes_transferred, self.total_elapsed_time,
                 MakeHumanReadable(float(self.total_bytes_transferred) /
-                                  float(self.total_elapsed_time))))
+                                  float(self.total_elapsed_time)))
     if self.copy_failure_count:
       plural_str = ''
       if self.copy_failure_count > 1:
@@ -1408,11 +1425,11 @@ class CpCommand(Command):
       raise CommandException('No URIs matched')
     if self.debug == 3:
       if self.total_bytes_transferred != 0:
-        sys.stderr.write(
-            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)\n' %
-                (self.total_bytes_transferred, self.total_elapsed_time,
+        self.THREADED_LOGGER.info(
+            'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
+                self.total_bytes_transferred, self.total_elapsed_time,
                  MakeHumanReadable(float(self.total_bytes_transferred) /
-                                   float(self.total_elapsed_time))))
+                                   float(self.total_elapsed_time)))
 
   def _SrcDstSame(self, src_uri, dst_uri):
     """Checks if src_uri and dst_uri represent the same object or file.
