@@ -1,3 +1,39 @@
+Release 3.14 (release-date: 2012-07-28)
+
+New Features
+------------
+  - Added cp -q option, to support quiet operation from cron jobs.
+
+  - Made config command restore backed up file if there was a failure or user
+    hits ^C.
+
+Bug Fixes
+---------
+
+  - Fixed bug where gsutil cp -R from a source directory didn't generate
+    correct destination path.
+
+  - Fixed file handle leak in gsutil cp -z
+
+  - Fixed bug that caused -a option not to work when copying in the cloud.
+
+  - Fixed bug that caused '/-' to be appended to object name for streaming
+    uploads. More logging and content type handling cleanup.
+
+  - Revert incorrect line I changed in previous CL, that attempted to
+    get fp from src_key object. The real fix that's needed is described in
+    http://code.google.com/p/gsutil/issues/detail?id=73.
+
+Other Changes
+-------------
+
+  - Changed logging to print "Copying..." and Content-Type on same line;
+    refactored content type and log handling.
+
+
+================================================================================
+
+
 Release 3.13 (release-date: 2012-07-19)
 
 Bug Fixes
@@ -16,7 +52,6 @@ New Features
 ------------
 
   - Added support for configuring website buckets.
-
 
 Bug Fixes
 ---------
@@ -161,11 +196,14 @@ Release 3.3 (release-date: 2012-04-03)
 Bug Fixes
 ---------
 
-  - Fixed problem where gsutil ver and debug flags crashed when used with newly generated boto config files.
+  - Fixed problem where gsutil ver and debug flags crashed when used
+    with newly generated boto config files.
 
-  - Fixed gsutil bug in windows path handling, and make checksumming work across platforms
+  - Fixed gsutil bug in windows path handling, and make checksumming work
+    across platforms.
 
-  - Fixed enablelogging to translate -b URI param to plain bucket name in REST API request.
+  - Fixed enablelogging to translate -b URI param to plain bucket name in REST
+    API request.
 
 
 ================================================================================
@@ -176,9 +214,11 @@ Release 3.2 (release-date: 2012-03-30)
 Bug Fixes
 ---------
 
-  - Fixed problem where gsutil didn't convert between OS-specific directory separators when copying individually-named files (issue 87).
+  - Fixed problem where gsutil didn't convert between OS-specific directory
+    separators when copying individually-named files (issue 87).
 
-  - Fixed problem where gsutil ls -R doesn't work right if there was a key with a leading path (like /foo/bar/baz)
+  - Fixed problem where gsutil ls -R didn't work right if there was a key
+    with a leading path (like /foo/bar/baz)
 
 
 ================================================================================
