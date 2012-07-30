@@ -259,8 +259,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     _OutputAndExit(e.reason)
   except StorageResponseError, e:
     # Check for access denied, and provide detail to users who have no boto
-    # config file (who have been using gsutil only for accessing publicly
-    # readable buckets and objects).
+    # config file (who might previously have been using gsutil only for
+    # accessing publicly readable buckets and objects).
     if e.status == 403 and not HasConfiguredCredentials():
       _OutputAndExit(
           'You are attempting to access protected data with no configured '
@@ -279,7 +279,7 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
       _OutputAndExit('%s: status=%d, code=%s, reason=%s, detail=%s.' %
                     (exc_name, e.status, e.code, e.reason, detail))
     else:
-      _OutputAndExit('%s:: status=%d, code=%s, reason=%s.' %
+      _OutputAndExit('%s: status=%d, code=%s, reason=%s.' %
                     (exc_name, e.status, e.code, e.reason))
   except ResumableUploadException, e:
     _OutputAndExit('ResumableUploadException: %s.' % e.message)

@@ -15,10 +15,10 @@ Bug Fixes
 
   - Fixed file handle leak in gsutil cp -z
 
-  - Fixed bug that caused -a option not to work when copying in the cloud.
+  - Fixed bug that caused cp -a option not to work when copying in the cloud.
 
   - Fixed bug that caused '/-' to be appended to object name for streaming
-    uploads. More logging and content type handling cleanup.
+    uploads.
 
   - Revert incorrect line I changed in previous CL, that attempted to
     get fp from src_key object. The real fix that's needed is described in
