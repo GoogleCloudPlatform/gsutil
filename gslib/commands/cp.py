@@ -486,7 +486,7 @@ class CpCommand(Command):
     """
     config = boto.config
     resumable_threshold = config.getint('GSUtil', 'resumable_threshold', ONE_MB)
-    if size >= resumable_threshold:
+    if not self.quiet and size >= resumable_threshold:
       cb = self._FileCopyCallbackHandler(upload).call
       num_cb = int(size / ONE_MB)
       resumable_tracker_dir = config.get(
