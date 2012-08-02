@@ -863,13 +863,20 @@ class CpCommand(Command):
     else:
       bytes_transferred = src_key.size
     if need_to_unzip:
-      if self.debug:
-        self.THREADED_LOGGER.info('Uncompressing tmp to %s...', file_name)
+      # Log that we're uncompressing if the file is big enough that
+      # decompressing would make it look like the transfer "stalled" at the end.
+      if not self.quiet and bytes_transferred > 10 * 1024 * 1024:
+        self.THREADED_LOGGER.info('Uncompressing downloaded tmp file to %s...',
+                                  file_name)
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
       f_in = gzip.open(download_file_name, 'rb')
       f_out = open(file_name, 'wb')
       try:
-        f_out.writelines(f_in)
+        while True:
+          data = f_in.read(8192)
+          if not data:
+            break
+          f_out.write(data)
       finally:
         f_out.close()
         f_in.close()
@@ -1294,7 +1301,8 @@ class CpCommand(Command):
       (elapsed_time, bytes_transferred) = self._PerformCopy(exp_src_uri,
                                                             dst_uri)
       if self.perform_mv:
-        self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
+        if not self.quiet:
+          self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
         exp_src_uri.delete_key(validate=False, headers=self.headers)
       stats_lock.acquire()
       self.total_elapsed_time += elapsed_time
