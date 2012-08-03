@@ -481,8 +481,8 @@ class LsCommand(Command):
     if got_nomatch_errors:
       raise CommandException('One or more URIs matched no objects.')
 
-  # test specification, see definition of test_steps in base class for
-  # details on how to populate these fields
+  # Test specification. See definition of test_steps in base class for
+  # details on how to populate these fields.
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('gen bucket expect', 'echo gs://$B0/ >$F9', 0, None),

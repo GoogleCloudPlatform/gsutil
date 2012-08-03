@@ -143,8 +143,8 @@ class SetCorsCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
-  # test specification, see definition of test_steps in base class for
-  # details on how to populate these fields
+  # Test specification. See definition of test_steps in base class for
+  # details on how to populate these fields.
   empty_doc1 = ('<?xml version="1.0" ?>\n'
                 '<CorsConfig/>\n')
 

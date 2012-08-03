@@ -155,8 +155,8 @@ class MvCommand(Command):
     self.command_runner.RunNamedCommand('cp', unparsed_args, self.headers,
                                         self.debug, self.parallel_operations)
 
-  # test specification, see definition of test_steps in base class for
-  # details on how to populate these fields
+  # Test specification. See definition of test_steps in base class for
+  # details on how to populate these fields.
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('gen expect files', 'echo 0 >$F0; echo 1 >$F1; echo 2 >$F2', 0, None),

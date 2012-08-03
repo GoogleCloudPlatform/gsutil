@@ -1367,8 +1367,8 @@ class CpCommand(Command):
       raise CommandException('%d file%s/object%s could not be transferred.' % (
                              self.copy_failure_count, plural_str, plural_str))
 
-  # test specification, see definition of test_steps in base class for
-  # details on how to populate these fields
+  # Test specification. See definition of test_steps in base class for
+  # details on how to populate these fields.
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('upload', 'gsutil cp $F1 gs://$B1/$O1', 0, None),
