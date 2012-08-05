@@ -224,14 +224,19 @@ _detailed_help_text = ("""
               (The performance issue can be mitigated to some degree by
               using gsutil -m cp to cause parallel copying.)
 
-	      Note that it's not valid to specify both the -a and -p options
-	      together.
+	      You can avoid the additional performance and cost of using cp -p
+	      if you want all objects in the destination bucket to end up with
+	      the same ACL, but setting a default ACL on that bucket instead of
+	      using cp -p. See "help gsutil setdefacl".
+
+              Note that it's not valid to specify both the -a and -p options
+              together.
 
   -q          Causes copies to be performed quietly, i.e., without reporting
-	      file name and content type for each copy operation. Errors are
-	      still reported. This option can be useful for running gsutil from a
-	      cron job that logs its output to a file, for which the only
-	      information desired in the log is failures.
+              file name and content type for each copy operation. Errors are
+              still reported. This option can be useful for running gsutil
+              from a cron job that logs its output to a file, for which the
+              only information desired in the log is failures.
 
   -R, -r      Causes directories, buckets, and bucket subdirectories to be
               copied recursively. If you neglect to use this option for
@@ -584,19 +589,21 @@ class CpCommand(Command):
       try:
         GetDiskFreeSpaceEx = WINFUNCTYPE(c_int, c_wchar_p, POINTER(c_uint64),
                                          POINTER(c_uint64), POINTER(c_uint64))
-        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(('GetDiskFreeSpaceExW', windll.kernel32), (
-            (1, 'lpszPathName'),
-            (2, 'lpFreeUserSpace'),
-            (2, 'lpTotalSpace'),
-            (2, 'lpFreeSpace'),))
+        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(
+            ('GetDiskFreeSpaceExW', windll.kernel32), (
+                (1, 'lpszPathName'),
+                (2, 'lpFreeUserSpace'),
+                (2, 'lpTotalSpace'),
+                (2, 'lpFreeSpace'),))
       except AttributeError:
         GetDiskFreeSpaceEx = WINFUNCTYPE(c_int, c_char_p, POINTER(c_uint64),
                                          POINTER(c_uint64), POINTER(c_uint64))
-        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(('GetDiskFreeSpaceExA', windll.kernel32), (
-            (1, 'lpszPathName'),
-            (2, 'lpFreeUserSpace'),
-            (2, 'lpTotalSpace'),
-            (2, 'lpFreeSpace'),))
+        GetDiskFreeSpaceEx = GetDiskFreeSpaceEx(
+            ('GetDiskFreeSpaceExA', windll.kernel32), (
+                (1, 'lpszPathName'),
+                (2, 'lpFreeUserSpace'),
+                (2, 'lpTotalSpace'),
+                (2, 'lpFreeSpace'),))
 
       def GetDiskFreeSpaceEx_errcheck(result, func, args):
         if not result:
@@ -672,8 +679,8 @@ class CpCommand(Command):
       # pass through the user specified CT header.
       if not headers['Content-Type']:
         headers['Content-Type'] = None
-      # else we'll keep the value passed in via -h option (not performing content
-      # type detection).
+      # else we'll keep the value passed in via -h option (not performing
+      # content type detection).
     else:
       # Only do content type recognition is src_uri is a file. Object-to-object
       # copies with no -h Content-Type specified re-use the content type of the
@@ -690,9 +697,9 @@ class CpCommand(Command):
             output, error = p.communicate()
             if p.returncode != 0 or error:
               raise CommandException(
-                  'Encountered error running "file --mime-type %s" (returncode=%d).'
-                  '\n%s' % (object_name, p.returncode, error))
-            # Parse output by removing line delimiter and splitting on last ": ".
+                  'Encountered error running "file --mime-type %s" '
+                  '(returncode=%d).\n%s' % (object_name, p.returncode, error))
+            # Parse output by removing line delimiter and splitting on last ":
             content_type = output.rstrip().rpartition(': ')[2]
           else:
             content_type = mimetypes.guess_type(object_name)[0]
@@ -752,7 +759,8 @@ class CpCommand(Command):
         # Check for temp space. Assume the compressed object is at most 2x
         # the size of the object (normally should compress to smaller than
         # the object)
-        if self._CheckFreeSpace(gzip_path) < 2*int(os.path.getsize(src_key.name)):
+        if (self._CheckFreeSpace(gzip_path)
+            < 2*int(os.path.getsize(src_key.name))):
           raise CommandException('Inadequate temp space available to compress '
                                  '%s' % src_key.name)
         gzip_fp = gzip.open(gzip_path, 'wb')
@@ -770,7 +778,7 @@ class CpCommand(Command):
       finally:
         gzip_fp.close()
       try:
-	os.unlink(gzip_path)
+        os.unlink(gzip_path)
       # Windows sometimes complains the temp file is locked when you try to
       # delete it.
       except Exception, e:
@@ -941,10 +949,10 @@ class CpCommand(Command):
     #      while transferring.
     #   3. Killing the gsutil process partway through and then restarting will
     #      always repeat the download and upload, because the temp file name is
-    #      different for each incarnation. (If however you just leave the process
-    #      running and failures happen along the way, they will continue to
-    #      restart and make progress as long as not too many failures happen in a
-    #      row with no progress.)
+    #      different for each incarnation. (If however you just leave the
+    #      process running and failures happen along the way, they will
+    #      continue to restart and make progress as long as not too many
+    #      failures happen in a row with no progress.)
     tmp = tempfile.NamedTemporaryFile()
     if self._CheckFreeSpace(tempfile.tempdir) < src_key.size:
       raise CommandException('Inadequate temp space available to perform the '
@@ -974,7 +982,7 @@ class CpCommand(Command):
       CommandException: if errors encountered.
     """
     # Make a copy of the input headers each time so we can set a different
-    # MIME type for each object.
+    # content type for each object.
     if self.headers:
       headers = self.headers.copy()
     else:
@@ -1377,54 +1385,58 @@ class CpCommand(Command):
     ('check stream upload', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
     # Clean up if we got interrupted.
     ('remove test files',
-     'rm -f test.mp3 test_mp3.mime test.gif test_gif.mime test.foo',
+     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo',
       0, None),
     ('setup mp3 file', 'cp gslib/test_data/test.mp3 test.mp3', 0, None),
-    ('setup mp3 mime', 'echo audio/mpeg >test_mp3.mime', 0, None),
+    ('setup mp3 CT', 'echo audio/mpeg >test_mp3.ct', 0, None),
     ('setup gif file', 'cp gslib/test_data/test.gif test.gif', 0, None),
-    ('setup gif mime', 'echo image/gif >test_gif.mime', 0, None),
+    ('setup gif CT', 'echo image/gif >test_gif.ct', 0, None),
     # TODO: we don't need test.app and test.bin anymore if
     # USE_MAGICFILE=True. Implement a way to test both with and without using
     # magic file.
     #('setup app file', 'echo application/octet-stream >test.app', 0, None),
     ('setup foo file', 'echo foo/bar >test.foo', 0, None),
     ('upload mp3', 'gsutil cp test.mp3 gs://$B1/$O1', 0, None),
-    ('verify mp3', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_mp3.mime')),
+    ('verify mp3',
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_mp3.ct')),
     ('upload gif', 'gsutil cp test.gif gs://$B1/$O1', 0, None),
-    ('verify gif', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_gif.mime')),
+    ('verify gif',
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_gif.ct')),
     # TODO: The commented-out /noCT test below fails with USE_MAGICFILE=True.
     ('upload mp3/noCT',
-      'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
-    ('verify mp3/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_mp3.mime')),
+     'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
+    ('verify mp3/noCT',
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_mp3.ct')),
     ('upload gif/noCT',
-      'gsutil -h "Content-Type:" cp test.gif gs://$B1/$O1', 0, None),
-    ('verify gif/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_gif.mime')),
+     'gsutil -h "Content-Type:" cp test.gif gs://$B1/$O1', 0, None),
+    ('verify gif/noCT',
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_gif.ct')),
     #('upload foo/noCT', 'gsutil -h "Content-Type:" cp test.foo gs://$B1/$O1',
-    #  0, None),
-    #('verify foo/noCT', 'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-    #  0, ('$F1', 'test_bin.mime')),
+    # 0, None),
+    #('verify foo/noCT',
+    # 'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+    # 0, ('$F1', 'test_bin.ct')),
     ('upload mp3/-h gif',
-      'gsutil -h "Content-Type:image/gif" cp test.mp3 gs://$B1/$O1', 0, None),
+     'gsutil -h "Content-Type:image/gif" cp test.mp3 gs://$B1/$O1', 0, None),
     ('verify mp3/-h gif',
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_gif.mime')),
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_gif.ct')),
     ('upload gif/-h gif',
-      'gsutil -h "Content-Type:image/gif" cp test.gif gs://$B1/$O1', 0, None),
+     'gsutil -h "Content-Type:image/gif" cp test.gif gs://$B1/$O1', 0, None),
     ('verify gif/-h gif',
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_gif.mime')),
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_gif.ct')),
     ('upload foo/-h gif',
-      'gsutil -h "Content-Type: image/gif" cp test.foo gs://$B1/$O1', 0, None),
+     'gsutil -h "Content-Type: image/gif" cp test.foo gs://$B1/$O1', 0, None),
     ('verify foo/-h gif',
-      'gsutil ls -L gs://$B1/$O1 | grep MIME | cut -f3 >$F1',
-      0, ('$F1', 'test_gif.mime')),
+     'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
+     0, ('$F1', 'test_gif.ct')),
     ('remove test files',
-     'rm -f test.mp3 test_mp3.mime test.gif test_gif.mime test.foo',
-      0, None),
+     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo', 0, None),
   ]
 
   def _ParseArgs(self):

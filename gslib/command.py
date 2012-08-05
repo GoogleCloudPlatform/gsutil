@@ -36,10 +36,10 @@ import xml.sax.xmlreader
 
 from boto import handler
 from boto.storage_uri import StorageUri
-from exception import CommandException
 from getopt import GetoptError
-from gslib.help_provider import HelpProvider
 from gslib import util
+from gslib.exception import CommandException
+from gslib.help_provider import HelpProvider
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionIteratorQueue
 from gslib.project_id import ProjectIdHandler
@@ -398,7 +398,7 @@ class Command(object):
     self.Apply(_SetAclFunc, name_expansion_iterator, _SetAclExceptionHandler)
 
     if not self.everything_set_okay:
-      raise CommandException('Some files could not be removed.')
+      raise CommandException('ACLs for some objects could not be set.')
 
   def _RunSingleThreadedSetAcl(self, acl_arg, uri_args):
     some_matched = False

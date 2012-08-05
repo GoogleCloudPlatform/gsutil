@@ -56,6 +56,9 @@ _detailed_help_text = ("""
   ".webp" was recognized by the server-side content detection system, but
   not by gsutil.)
 
+  You can also set or remove metadata fields from already uploaded objects
+  using the gsutil setmeta command.
+
 <B>CACHE-CONTROL</B>
   Another commonly set piece of metadata is Cache-Control, which allows
   you to control whether and for how long browser and Internet caches are

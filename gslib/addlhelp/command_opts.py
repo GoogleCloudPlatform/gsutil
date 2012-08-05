@@ -70,8 +70,11 @@ _detailed_help_text = ("""
               service HTTP API (and what impact the headers you specify will
               have) before using the gsutil -h option.
 
-  -m          Causes supported operations (cp, mv, rm, setacl) to run in
-              parallel. This can significantly improve performance if you are
+              See also "gsutil help setmeta" for the ability to set metadata
+              fields on objects after they have been uploaded.
+
+  -m          Causes supported operations (cp, mv, rm, setacl, setmeta) to run
+              in parallel. This can significantly improve performance if you are
               uploading, downloading, moving, removing, or changing ACLs on
               a large number of files over a fast network connection.
 

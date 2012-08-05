@@ -310,7 +310,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #parallel_thread_count = %(parallel_thread_count)d
 
 # 'use_magicfile' specifies if the 'file --mime-type <filename>' command should
-# be used to guess MIME types instead of the default filename extension-based
+# be used to guess content types instead of the default filename extension-based
 # mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
 # running Cygwin or some other package that provides implementations of
 # UNIX-like commands). When available and enabled use_magicfile should be more

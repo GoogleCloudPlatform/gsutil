@@ -64,7 +64,7 @@ _detailed_help_text = ("""
 
   If you have a large number of ACLs to update you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
-  updates:
+  update:
 
     gsutil -m setacl acl.txt gs://bucket/*.jpg
 
@@ -111,7 +111,7 @@ class SetAclCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Set ACLs on buckets and/or objects',
+    HELP_ONE_LINE_SUMMARY : 'Set bucket and/or object ACLs',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

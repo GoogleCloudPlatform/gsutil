@@ -134,12 +134,12 @@ _detailed_help_text = ("""
   will print something like:
 
     gs://bucket/obj1:
-            Object size:	2276224
-            Last mod:	Fri, 02 Mar 2012 19:25:17 GMT
-            Cache control:	private, max-age=0
-            MIME type:	application/x-executable
-            Etag:	5ca6796417570a586723b7344afffc81
-            ACL:	<Owner:00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70, <<UserById: 00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70>: u'FULL_CONTROL'>>
+            Creation Time:      Fri, 02 Mar 2012 19:25:17 GMT
+            Size:               2276224
+            Cache-Control:      private, max-age=0
+            Content-Type:       application/x-executable
+            ETag:       5ca6796417570a586723b7344afffc81
+            ACL:        <Owner:00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70, <<UserById: 00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70>: u'FULL_CONTROL'>>
     TOTAL: 1 objects, 2276224 bytes (2.17 MB)
 
   Note that the -L option is slower and more costly to use than the -l option,
@@ -304,21 +304,22 @@ class LsCommand(Command):
         uri_str = self._UriStrForObj(uri, obj)
         print '%s:' % uri_str.encode('utf-8')
         obj = self.suri_builder.StorageUri(uri_str).get_key(False)
-        print '\tObject size:\t%s' % obj.size
-        print '\tLast mod:\t%s' % obj.last_modified
+        print '\tCreation time:\t%s' % obj.last_modified
         if obj.cache_control:
-          print '\tCache control:\t%s' % obj.cache_control
-        print '\tMIME type:\t%s' % obj.content_type
+          print '\tCache-Control:\t%s' % obj.cache_control
         if obj.content_disposition:
           print '\tContent-Disposition:\t%s' % obj.content_disposition
         if obj.content_encoding:
           print '\tContent-Encoding:\t%s' % obj.content_encoding
         if obj.content_language:
           print '\tContent-Language:\t%s' % obj.content_language
+        print '\tContent-Length:\t%s' % obj.size
+        print '\tContent-Type:\t%s' % obj.content_type
         if obj.metadata:
+          prefix = uri.get_provider().metadata_prefix
           for name in obj.metadata:
-            print '\tMetadata:\t%s = %s' % (name, obj.metadata[name])
-        print '\tEtag:\t\t%s' % obj.etag.strip('"\'')
+            print '\t%s%s:\t%s' % (prefix, name, obj.metadata[name])
+        print '\tETag:\t\t%s' % obj.etag.strip('"\'')
         print '\tACL:\t\t%s' % (
             self.suri_builder.StorageUri(uri_str).get_acl(False, self.headers))
         return (1, obj.size)
@@ -395,8 +396,8 @@ class LsCommand(Command):
           # contents).
           if (expanding_top_level and not uri.names_bucket()) or should_recurse:
             if cur_blr.GetUriString().endswith('//'):
-	      # Expand gs://bucket// into gs://bucket//* so we don't infinite
-	      # loop. This case happens when user has uploaded an object whose
+              # Expand gs://bucket// into gs://bucket//* so we don't infinite
+              # loop. This case happens when user has uploaded an object whose
               # name begins with a /.
               cur_blr = BucketListingRef(self.suri_builder.StorageUri(
                   '%s*' % cur_blr.GetUriString()), None, None, cur_blr.headers)
