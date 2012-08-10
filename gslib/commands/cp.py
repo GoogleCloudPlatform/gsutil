@@ -282,6 +282,27 @@ _detailed_help_text = ("""
                   the Content-Type header.
 """)
 
+class KeyFile():
+    """
+    Wrapper class to expose Key class as file to boto.
+    """
+    def __init__(self, key):
+        self.key = key
+
+    def tell(self):
+        raise IOError
+
+    def seek(self, pos):
+        raise IOError
+
+    def read(self, size):
+	return self.key.read(size)
+
+    def write(self, buf):
+        raise IOError
+
+    def close(self):
+        self.key.close()
 
 class CpCommand(Command):
   """
@@ -939,7 +960,7 @@ class CpCommand(Command):
       # NOTE: As of 7/28/2012 this bug now makes cross-provider copies into gs
       # fail, because of boto changes that make that code now attempt to perform
       # additional operations on the fp parameter, like seek() and tell().
-      return self._PerformStreamingUpload(src_key, dst_uri, headers, canned_acl)
+      return self._PerformStreamingUpload(KeyFile(src_key), dst_uri, headers, canned_acl)
 
     # If destination is not GS we implement object copy through a local
     # temp file. There are at least 3 downsides of this approach:
