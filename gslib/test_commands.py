@@ -962,8 +962,30 @@ class GsutilCommandTests(unittest.TestCase):
       self.TearDownClass()
       self.SetUpClass()
 
-  def TestMovingBucketSubDirToBucketSubDir(self):
-    """Tests moving a bucket subdir to another bucket subdir"""
+  def TestMovingBucketSubDirToNonExistentBucketSubDir(self):
+    """Tests moving a bucket subdir to a non-existent bucket subdir"""
+    # Test with and without final slash on dest subdir.
+    for (final_src_char, final_dst_char) in (
+        ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
+      self.RunCommand(
+          'mv', ['%s%s' % (self.src_bucket_subdir_uri, final_src_char),
+                 '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
+      actual = set(str(u) for u in test_util.test_wildcard_iterator(
+          '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
+      expected = set([])
+      for uri in self.all_src_subdir_and_below_obj_uris:
+        # Unlike the case with copying, with mv we expect renaming to occur
+        # at the level of the src subdir, vs appending that subdir beneath the
+        # dst subdir like is done for copying.
+        expected_name = uri.object_name.replace('src_', 'dst_')
+        expected.add('%s%s' % (self.dst_bucket_uri.uri, expected_name))
+      self.assertEqual(expected, actual)
+      # Clean up/re-set up for next variant iteration.
+      self.TearDownClass()
+      self.SetUpClass()
+
+  def TestMovingBucketSubDirToExistingBucketSubDir(self):
+    """Tests moving a bucket subdir to a existing bucket subdir"""
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
@@ -978,11 +1000,8 @@ class GsutilCommandTests(unittest.TestCase):
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
       expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       for uri in self.all_src_subdir_and_below_obj_uris:
-        # Unlike the case with copying, with mv we expect renaming to occur
-        # at the level of the src subdir, vs appending that subdir beneath the
-        # dst subdir like is done for copying.
-        expected_name = uri.object_name.replace('src_', 'dst_')
-        expected.add('%s%s' % (self.dst_bucket_uri.uri, expected_name))
+        expected.add(
+            '%s/%s' % (self.dst_bucket_subdir_uri.uri, uri.object_name))
       self.assertEqual(expected, actual)
       # Clean up/re-set up for next variant iteration.
       self.TearDownClass()
@@ -1120,16 +1139,12 @@ class GsutilCommandTests(unittest.TestCase):
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/') ):
-      # Set up existing bucket subdir by creating an object in the subdir.
-      self.RunCommand(
-          'cp', ['%sf0' % self.src_dir_root,
-                 '%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
       self.RunCommand(
           'mv', ['%s%s' % (self.src_bucket_subdir_uri, final_src_char),
                  '%s%s' % (self.dst_bucket_subdir_uri.uri, final_dst_char)])
       actual = set(str(u) for u in test_util.test_wildcard_iterator(
           '%s**' % self.dst_bucket_subdir_uri.uri).IterUris())
-      expected = set(['%sdst_subdir/existing_obj' % self.dst_bucket_uri.uri])
+      expected = set([])
       for uri in self.all_src_subdir_and_below_obj_uris:
         # Unlike the case with copying, with mv we expect renaming to occur
         # at the level of the src subdir, vs appending that subdir beneath the

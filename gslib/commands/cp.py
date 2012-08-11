@@ -1079,8 +1079,7 @@ class CpCommand(Command):
                        have_existing_dest_subdir):
     """
     Constructs the destination URI for a given exp_src_uri/exp_dst_uri pair,
-    using context-dependent naming rules intended to mimic Unix cp and mv
-    behavior.
+    using context-dependent naming rules that mimic Unix cp and mv behavior.
 
     Args:
       src_uri: src_uri to be copied.
@@ -1145,20 +1144,20 @@ class CpCommand(Command):
          '%s%s' % (exp_dst_uri.object_name, exp_dst_uri.delim)
       )
 
-    # Making naming behavior match how things work with local Unix file system
+    # Making naming behavior match how things work with local Unix cp and mv
     # operations depends on many factors, including whether the destination is a
     # container, the plurality of the source(s), and whether the mv command is
     # being used:
-    # 1. For the "mv -R" command, renaming should occur at the level of the src
-    #    subdir, vs appending that subdir beneath the dst subdir like is done
-    #    for copying. For example:
-    #      gsutil -m rm -R gs://bucket
-    #      gsutil -m cp -R cloudreader gs://bucket
-    #      gsutil -m cp -R cloudauth gs://bucket/subdir1
-    #      gsutil -m mv -R gs://bucket/subdir1 gs://bucket/subdir2
-    #    would (if using cp semantics) end up with paths like:
+    # 1. For the "mv" command that specifies a non-existent destination subdir,
+    #    renaming should occur at the level of the src subdir, vs appending that
+    #    subdir beneath the dst subdir like is done for copying. For example:
+    #      gsutil rm -R gs://bucket
+    #      gsutil cp -R cloudreader gs://bucket
+    #      gsutil cp -R cloudauth gs://bucket/subdir1
+    #      gsutil mv gs://bucket/subdir1 gs://bucket/subdir2
+    #    would (if using cp naming behavior) end up with paths like:
     #      gs://bucket/subdir2/subdir1/cloudauth/.svn/all-wcprops
-    #    whereas people expect:
+    #    whereas mv naming behavior should result in:
     #      gs://bucket/subdir2/cloudauth/.svn/all-wcprops
     # 2. Copying from directories, buckets, or bucket subdirs should result in
     #    objects/files mirroring the source directory hierarchy. For example:
@@ -1181,7 +1180,7 @@ class CpCommand(Command):
     #    assuming dir1 contains f1.txt and f2.txt.
 
     if (self.perform_mv and self.recursion_requested
-        and src_uri_expands_to_multi):
+        and src_uri_expands_to_multi and not have_existing_dest_subdir):
       # Case 1. Handle naming rules for bucket subdir mv. Here we want to
       # line up the src_uri against its expansion, to find the base to build
       # the new name. For example, running the command:
@@ -1537,7 +1536,7 @@ class CpCommand(Command):
       # function to allow this check to be overridden. Note that we want this
       # check to prevent a user from blowing away data using the mv command,
       # with a command like:
-      #   gsutil mv -R gs://bucket/abc/* gs://bucket/abc
+      #   gsutil mv gs://bucket/abc/* gs://bucket/abc
       return src_uri.uri == dst_uri.uri
 
   def _ShouldTreatDstUriAsBucketSubDir(self, have_multiple_srcs, dst_uri,
