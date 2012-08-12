@@ -255,13 +255,10 @@ CONFIG_BOTO_SECTION_CONTENT = """
 #is_secure = False
 
 # Set 'https_validate_certificates' to False to disable server certificate
-# checking. This is useful if you want to capture/analyze traffic using an
-# intercepting proxy. This option should always be set to True in production
-# environments.
-# In gsutil, the default for this option is True. *However*, the default for
-# this option in the boto library itself is currently 'False'; it is therefore
-# recommended to always set this option explicitly to True in configuration
-# files.
+# checking. The default for this option in the boto library is currently
+# 'False' (to avoid breaking apps that depend on invalid certificates); it is
+# therefore strongly recommended to always set this option explicitly to True
+# in configuration files, to protect against "man-in-the-middle" attacks.
 https_validate_certificates = True
 
 # Set 'send_crlf_after_proxy_auth_headers' to True if you encounter problems
