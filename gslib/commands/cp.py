@@ -233,10 +233,10 @@ _detailed_help_text = ("""
               together.
 
   -q          Causes copies to be performed quietly, i.e., without reporting
-              file name and content type for each copy operation. Errors are
-              still reported. This option can be useful for running gsutil
-              from a cron job that logs its output to a file, for which the
-              only information desired in the log is failures.
+              progress indicators of files being copied. Errors are still
+              reported. This option can be useful for running gsutil from a
+              cron job that logs its output to a file, for which the only
+              information desired in the log is failures.
 
   -R, -r      Causes directories, buckets, and bucket subdirectories to be
               copied recursively. If you neglect to use this option for
@@ -1055,7 +1055,8 @@ class CpCommand(Command):
       blr = blr_expansion[0]
       uri = blr.GetUri()
       if uri.is_cloud_uri():
-        return (uri, uri.names_bucket() or blr.HasPrefix())
+        return (uri, uri.names_bucket() or blr.HasPrefix()
+                or blr.GetKey().endswith('/'))
       else:
         return (uri, uri.names_directory())
 
@@ -1064,12 +1065,18 @@ class CpCommand(Command):
       return (dst_uri, dst_uri.names_directory())
     if dst_uri.names_bucket():
       return (dst_uri, True)
-    # For object URIs we need to do a wildcard expansion with
-    # dst_uri + "*" and then find if there's a Prefix matching dst_uri.
+    # For object URIs check 3 cases: (a) if the name ends with '/' treat as a
+    # subdir; else, perform a wildcard expansion with dst_uri + "*" and then
+    # find if (b) there's a Prefix matching dst_uri, or (c) name is of form
+    # dir_$folder$ (and in both these cases also treat dir as a subdir).
+    if dst_uri.is_cloud_uri() and dst_uri_str.endswith('/'):
+      return (dst_uri, True)
     blr_expansion = list(self.WildcardIterator(
         '%s*' % dst_uri_str.rstrip(dst_uri.delim)))
     for blr in blr_expansion:
-      if (blr.GetRStrippedUriString() == dst_uri_str.rstrip(dst_uri.delim)):
+      if blr.GetRStrippedUriString().endswith('_$folder$'):
+        return (dst_uri, True)
+      if blr.GetRStrippedUriString() == dst_uri_str.rstrip(dst_uri.delim):
         return (dst_uri, blr.HasPrefix())
     return (dst_uri, False)
 
