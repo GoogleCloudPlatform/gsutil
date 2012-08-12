@@ -1,3 +1,49 @@
+Release 3.15 (release-date: 2012-08-12)
+
+New Features
+------------
+  - Implemented gsutil setmeta command.
+
+  - Made gsutil understand bucket subdir conventions used by various tools
+    (like GCS Manager and CloudBerry) so if you cp or mv to a subdir you
+    created with one of those tools it will work as expected.
+
+  - Added support for Windows drive letter-prefaced paths when using Storage
+    URIs.
+
+
+Bug Fixes
+---------
+
+  - Fixed performance bug when downloading a large object with Content-
+    Encoding:gzip, where decompression attempted to load the entire object
+    in memory. Also added "Uncompressing" log output if file is larger than
+    50M, to make it clear the download hasn't stalled.
+
+  - Fixed naming bug when performing gsutil mv from a bucket subdir to
+    and existing bucket subdir.
+
+  - Fixed bug that caused cross-provider copies into Google Cloud Storage to
+    fail.
+
+  - Made change needed to make resumable transfer progress messages not print
+    when running gsutil cp -q.
+
+  - Fixed copy/paste error in config file documentation for
+    https_validate_certificates option.
+
+  - Various typo fixes.
+
+Other Changes
+-------------
+
+  - Changed gsutil to unset http_proxy environment variable if it's set,
+    because it confuses boto. (Proxies should instead be configured via the
+    boto config file.)
+
+================================================================================
+
+
 Release 3.14 (release-date: 2012-07-28)
 
 New Features
