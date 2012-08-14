@@ -536,9 +536,13 @@ class OAuth2Client(object):
     refresh_token = None
     refresh_token_string = response.get('refresh_token', None)
 
-    if refresh_token_string:
-      refresh_token = RefreshToken(self, refresh_token_string)
-      self.access_token_cache.PutToken(refresh_token.CacheKey(), access_token)
+    token_exchange_lock.acquire()
+    try:
+      if refresh_token_string:
+        refresh_token = RefreshToken(self, refresh_token_string)
+        self.access_token_cache.PutToken(refresh_token.CacheKey(), access_token)
+    finally:
+      token_exchange_lock.release()
 
     return (refresh_token, access_token)
 
