@@ -1,3 +1,14 @@
+Release 3.16 (release-date: 2012-08-13)
+
+Bug Fixes
+---------
+
+  - Added info to built-in help for setmeta command, to explain the syntax
+    needed when running from Windows.
+
+================================================================================
+
+
 Release 3.15 (release-date: 2012-08-12)
 
 New Features

@@ -56,11 +56,15 @@ _detailed_help_text = ("""
   removing it).
 
   The more general form of the first argument allows both setting and removing
-  multiple fields, without any of the content restrictions noted above. For this
-  variant the first argument is a CSV-formatted list of headers to add or
-  remove. For this to work you need to surround the entire argument in single
-  quotes to avoid having the shell interpret/strip out the double-quotes in the
-  CSV data. For example, the following command would set the Content-Type and
+  multiple fields, without any of the content restrictions noted above. For
+  this variant the first argument is a CSV-formatted list of headers to add
+  or remove. Getting the CSV-formatted list to be passed correctly into gsutil
+  requires different syntax on Linux or MacOS than it does on Windows.
+
+<B>PASSING METADATA USING A CSV-FORMATTED ARGUMENT ON LINUX OR MACOS</B>
+  On Linux or MacOS you need to surround the entire argument in single quotes
+  to avoid having the shell interpret/strip out the double-quotes in the CSV
+  data. For example, the following command would set the Content-Type and
   Cache-Control and remove the Content-Disposition on the specified objects:
 
     gsutil setmeta '"Content-Type:text/html","Cache-Control:public, max-age=3600","-Content-Disposition"' gs://bucket/*.html
@@ -71,6 +75,17 @@ _detailed_help_text = ("""
 
     gsutil -m setmeta '"Content-Type:text/html","Cache-Control:public, max-age=3600","-Content-Disposition"' gs://bucket/*.html
 
+
+<B>PASSING METADATA USING A CSV-FORMATTED ARGUMENT ON WINDOWS</B>
+  To pass CSV data on Windows you need two sets of double quotes around
+  each header/value pair, and one set of double quotes around the entire
+  expression. For example, the following command would set the Content-Type
+  and Cache-Control and remove the Content-Disposition on the specified objects:
+
+  gsutil setmeta "\""Content-Type:text/html"",""Cache-Control:public, max-age=3600"",""-Content-Disposition""\" gs://bucket/*.html
+
+
+<B>SETTABLE FIELDS; FIELD VALUES</B>
   You can't set some metadata fields, such as ETag and Content-Length. The
   fields you can set are:
     - Cache-Control
@@ -86,6 +101,7 @@ _detailed_help_text = ("""
   X-GOOG-META- fields can have data set to arbitrary Unicode values. All
   other fields must have ASCII values.
 
+<B>VIEWING CURRENTLY SET METADATA</B>
   You can see what metadata is currently set on an object by using:
 
     gsutil ls -L gs://the_bucket/the_object
