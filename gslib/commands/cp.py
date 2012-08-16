@@ -280,6 +280,22 @@ _detailed_help_text = ("""
                   browser will know to uncompress the data based on the
                   Content-Encoding header, and to render it as HTML based on
                   the Content-Type header.
+
+              Note: gsutil writes compressed data into a temporary location
+              that by default is chosen under one of a standard set of
+              directories that varies by operating system. If you find that
+              gsutil is running out of space for writing these temp files
+              (raising "CommandException: Inadequate temp space available to
+              compress <your file>"), you can change where it writes these
+              temp files by setting the TMPDIR environment variable. For
+              example on Linux and MacOS you can do this using:
+
+                export TMPDIR=/some/directory
+
+              and on Windows 7 you can do it from Start -> Computer -> System,
+              Advanced System Settings -> Environment Variables. After you
+              add this new environment variable you need to reboot for it
+              to take effect.
 """)
 
 class KeyFile():
