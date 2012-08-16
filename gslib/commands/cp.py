@@ -292,10 +292,10 @@ _detailed_help_text = ("""
 
                 export TMPDIR=/some/directory
 
-              and on Windows 7 you can do it from Start -> Computer -> System,
-              Advanced System Settings -> Environment Variables. After you
-              add this new environment variable you need to reboot for it
-              to take effect.
+              and on Windows 7 you can do it from Start -> Computer ->
+              System, Advanced System Settings -> Environment Variables,
+              and then rebooting for it to take effect. (Rebooting is not
+              necessary on Linux and MacOS.)
 """)
 
 class KeyFile():
