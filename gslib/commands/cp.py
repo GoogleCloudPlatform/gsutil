@@ -211,6 +211,32 @@ _detailed_help_text = ("""
   transers, but gsutil doesn't currently implement support for this.)
 
 
+<B>CHANGING TEMP DIRECTORIES</B>
+  gsutil writes data to a temporary directory in several cases:
+    - when compressing data to be uploaded (see the -z option)
+    - when decompressing data being downloaded (when the data has
+      Content-Encoding:gzip, e.g., as happens when uploaded using gsutil cp -z)
+    - when copying between cloud service providers, where the destination
+      provider does not support streaming uploads. In this case each object
+      is downloaded from the source provider to a temp file, and then uploaded
+      from that temp file to the destination provider.
+
+  In these cases it's possible the temp file location on your system that
+  gsutil selects by default may not have enough space. If you find that
+  gsutil runs out of space during one of these operations (e.g., raising
+  "CommandException: Inadequate temp space available to compress <your file>"
+  during a gsutil cp -z operation), you can change where it writes these
+  temp files by setting the TMPDIR environment variable. On Linux and MacOS
+  you can do this using:
+
+    export TMPDIR=/some/directory
+
+  On Windows 7 you can change the TMPDIR environment variable from Start ->
+  Computer -> System -> Advanced System Settings -> Environment Variables.
+  You need to reboot after making this change for it to take effect. (Rebooting
+  is not necessary after running the export command on Linux and MacOS.)
+
+
 <B>OPTIONS</B>
   -a          Sets named canned_acl when uploaded objects created. See
               'gsutil help acls' for further details.
@@ -280,22 +306,6 @@ _detailed_help_text = ("""
                   browser will know to uncompress the data based on the
                   Content-Encoding header, and to render it as HTML based on
                   the Content-Type header.
-
-              Note: gsutil writes compressed data into a temporary location
-              that by default is chosen under one of a standard set of
-              directories that varies by operating system. If you find that
-              gsutil is running out of space for writing these temp files
-              (raising "CommandException: Inadequate temp space available to
-              compress <your file>"), you can change where it writes these
-              temp files by setting the TMPDIR environment variable. For
-              example on Linux and MacOS you can do this using:
-
-                export TMPDIR=/some/directory
-
-              and on Windows 7 you can do it from Start -> Computer ->
-              System, Advanced System Settings -> Environment Variables,
-              and then rebooting for it to take effect. (Rebooting is not
-              necessary on Linux and MacOS.)
 """)
 
 class KeyFile():
