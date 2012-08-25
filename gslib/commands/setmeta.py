@@ -64,28 +64,9 @@ _detailed_help_text = ("""
 
     gsutil -m setmeta -h "Content-Type:text/html" -h "Cache-Control:public, max-age=3600" -h "Content-Disposition" gs://bucket/*.html
 
-
-<B>SETTABLE FIELDS; FIELD VALUES</B>
-  You can't set some metadata fields, such as ETag and Content-Length. The
-  fields you can set are:
-    - Cache-Control
-    - Content-Disposition
-    - Content-Encoding
-    - Content-Language
-    - Content-MD5
-    - Content-Type
-    - Any field starting with X-GOOG-META- (i.e., custom metadata).
-
-  Header names are case-insensitive.
-
-  X-GOOG-META- fields can have data set to arbitrary Unicode values. All
-  other fields must have ASCII values.
-
-
-<B>VIEWING CURRENTLY SET METADATA</B>
-  You can see what metadata is currently set on an object by using:
-
-    gsutil ls -L gs://the_bucket/the_object
+  See "gsutil help metadata" for details about how you can set metadata
+  while uploading objects, what metadata fields can be set and the meaning of
+  these fields, use of custom metadata, and how to view currently set metadata.
 
 
 <B>OPERATION COST</B>
@@ -188,7 +169,7 @@ class SetMetaCommand(Command):
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Set object metadata',
+    HELP_ONE_LINE_SUMMARY : 'Set metadata on already uploaded objects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
