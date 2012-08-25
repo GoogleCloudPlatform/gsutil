@@ -705,7 +705,10 @@ class CpCommand(Command):
     start_time = time.time()
     dst_key = dst_uri.new_key(False, headers)
 
-    cb = self._StreamCopyCallbackHandler().call
+    if self.quiet:
+      cb = None
+    else:
+      cb = self._StreamCopyCallbackHandler().call
     dst_key.set_contents_from_stream(fp, headers, policy=canned_acl, cb=cb)
     try:
       bytes_transferred = fp.tell()
