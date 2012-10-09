@@ -17,6 +17,7 @@ import boto
 import csv
 import StringIO
 
+from boto.s3.key import Key
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
@@ -52,7 +53,7 @@ _detailed_help_text = ("""
 
     - if you specify header (with no value), it will remove the given header
       from all named objects.
-  
+
   For example, the following command would set the Content-Type and
   Cache-Control and remove the Content-Disposition on the specified objects:
 
@@ -82,12 +83,12 @@ _detailed_help_text = ("""
   -h          Specifies a header:value to be added, or header to be removed,
               from each named object.
   -n          Causes the operations for reading and writing the ACL to be
-	      skipped. This halves the number of operations performed per
-	      request, improving the speed and reducing the cost of performing
-	      the operations. This option makes sense for cases where you want
-	      all objects to have the same ACL, for which you have set a default
-	      ACL on the bucket(s) containing the objects. See "help gsutil
-	      setdefacl".
+              skipped. This halves the number of operations performed per
+              request, improving the speed and reducing the cost of performing
+              the operations. This option makes sense for cases where you want
+              all objects to have the same ACL, for which you have set a default
+              ACL on the bucket(s) containing the objects. See "help gsutil
+              setdefacl".
 
 
 <B>OLDER SYNTAX (DEPRECATED)</B>
@@ -174,15 +175,6 @@ class SetMetaCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
-  # The fields a user can set, other than custom metadata fields (i.e., those
-  # beginning with a provider-specific prefix like x-goog-meta).
-  _base_user_settable_fields = set(["cache-control", "content-disposition",
-                                    "content-encoding", "content-language",
-                                    "content-md5", "content-type"])
-  _underscore_base_user_settable_fields = set()
-  for f in _base_user_settable_fields:
-    _underscore_base_user_settable_fields.add(f.replace('-', '_'))
-
   # Command entry point.
   def RunCommand(self):
     headers = []
@@ -205,7 +197,7 @@ class SetMetaCommand(Command):
         and not self.suri_builder.StorageUri(uri_args[0]).names_object()):
       raise CommandException('URI (%s) must name an object' % uri_args[0])
 
-    # Used to track if any objects' metaadata failed to be set.
+    # Used to track if any objects' metadata failed to be set.
     self.everything_set_okay = True
 
     def _SetMetadataExceptionHandler(e):
@@ -217,25 +209,7 @@ class SetMetaCommand(Command):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
       self.THREADED_LOGGER.info('Setting metadata on %s...' % exp_src_uri)
-      metadata = self._ExtractMetadata(exp_src_uri)
-      metadata.update(metadata_plus)
-      for h in metadata_minus:
-        if h in metadata:
-          del metadata[h]
-      src_bucket = exp_src_uri.get_bucket()
-      # Boto prepends the meta prefix when adding headers, so strip prefix in
-      # metadata before sending back in to copy_key() call.
-      rewritten_metadata = {}
-      for h in metadata:
-        if _IsCustomMeta(h):
-          h_pref_stripped = (
-              h.replace('x-goog-meta-', '').replace('x-amz-meta-', ''))
-          rewritten_metadata[h_pref_stripped] = metadata[h]
-        else:
-          rewritten_metadata[h] = metadata[h]
-      metadata = rewritten_metadata
-      src_bucket.copy_key(exp_src_uri.object_name, exp_src_uri.bucket_name,
-          exp_src_uri.object_name, metadata=metadata, preserve_acl=preserve_acl)
+      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl)
 
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
@@ -250,6 +224,157 @@ class SetMetaCommand(Command):
 
     if not self.everything_set_okay:
       raise CommandException('Metadata for some objects could not be set.')
+
+  def _ParseMetadataHeaders(self, headers):
+    metadata_minus = set()
+    cust_metadata_minus = set()
+    metadata_plus = {}
+    cust_metadata_plus = {}
+    # Build a count of the keys encountered from each plus and minus arg so we
+    # can check for dupe field specs.
+    num_metadata_plus_elems = 0
+    num_cust_metadata_plus_elems = 0
+    num_metadata_minus_elems = 0
+    num_cust_metadata_minus_elems = 0
+
+    for md_arg in headers:
+      parts = md_arg.split(':')
+      if len(parts) not in (1, 2):
+        raise CommandException(
+            'Invalid argument: must be either header or header:value (%s)' %
+            md_arg)
+      if len(parts) == 2:
+        (header, value) = parts
+      else:
+        (header, value) = (parts[0], None)
+      _InsistAsciiHeader(header)
+      # Translate headers to lowercase to match the casing assumed by our
+      # sanity-checking operations.
+      header = header.lower()
+      if value:
+        if _IsCustomMeta(header):
+          # Allow non-ASCII data for custom metadata fields. Don't unicode
+          # encode other fields because that would perturb their content
+          # (e.g., adding %2F's into the middle of a Cache-Control value).
+          value = unicode(value, 'utf-8')
+          cust_metadata_plus[header] = value
+          num_cust_metadata_plus_elems += 1
+        else:
+          metadata_plus[header] = value
+          num_metadata_plus_elems += 1
+      else:
+        if _IsCustomMeta(header):
+          cust_metadata_minus.add(header)
+          num_cust_metadata_minus_elems += 1
+        else:
+          metadata_minus.add(header)
+          num_metadata_minus_elems += 1
+    if (num_metadata_plus_elems != len(metadata_plus)
+        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
+        or num_metadata_minus_elems != len(metadata_minus)
+        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
+        or metadata_minus.intersection(set(metadata_plus.keys()))):
+      raise CommandException('Each header must appear at most once.')
+    other_than_base_fields = (set(metadata_plus.keys())
+        .difference(Key.base_user_settable_fields))
+    other_than_base_fields.update(
+        metadata_minus.difference(Key.base_user_settable_fields))
+    for f in other_than_base_fields:
+      # This check is overly simple; it would be stronger to check, for each
+      # URI argument, whether f.startswith the
+      # uri.get_provider().metadata_prefix, but here we just parse the spec
+      # once, before processing any of the URIs. This means we will not
+      # detect if the user tries to set an x-goog-meta- field on an another
+      # provider's object, for example.
+      if not _IsCustomMeta(f):
+        raise CommandException('Invalid or disallowed header (%s).\n'
+                               'Only these fields (plus x-goog-meta-* fields)'
+                               ' can be set or unset:\n%s' % (f,
+                               sorted(list(Key.base_user_settable_fields))))
+    metadata_plus.update(cust_metadata_plus)
+    metadata_minus.update(cust_metadata_minus)
+    return (metadata_minus, metadata_plus)
+
+  def _ParseMetadataSpec(self, spec):
+    self.THREADED_LOGGER.info('WARNING: metadata spec syntax (%s)\nis '
+                              'deprecated and will eventually be removed.\n'
+                              'Please see "gsutil help setmeta" for current '
+                              'syntax' % spec)
+    metadata_minus = set()
+    cust_metadata_minus = set()
+    metadata_plus = {}
+    cust_metadata_plus = {}
+    # Build a count of the keys encountered from each plus and minus arg so we
+    # can check for dupe field specs.
+    num_metadata_plus_elems = 0
+    num_cust_metadata_plus_elems = 0
+    num_metadata_minus_elems = 0
+    num_cust_metadata_minus_elems = 0
+
+    mdf = StringIO.StringIO(spec)
+    for md_arg in csv.reader(mdf).next():
+      if not md_arg:
+        raise CommandException(
+            'Invalid empty metadata specification component.')
+      if md_arg[0] == '-':
+        header = md_arg[1:]
+        if header.find(':') != -1:
+          raise CommandException('Removal spec may not contain ":" (%s).' %
+                                 header)
+        _InsistAsciiHeader(header)
+        # Translate headers to lowercase to match the casing required by
+        # uri.set_metadata().
+        header = header.lower()
+        if _IsCustomMeta(header):
+          cust_metadata_minus.add(header)
+          num_cust_metadata_minus_elems += 1
+        else:
+          metadata_minus.add(header)
+          num_metadata_minus_elems += 1
+      else:
+        parts = md_arg.split(':', 1)
+        if len(parts) != 2:
+          raise CommandException(
+              'Fields being added must include values (%s).' % md_arg)
+        (header, value) = parts
+        _InsistAsciiHeader(header)
+        header = header.lower()
+        if _IsCustomMeta(header):
+          # Allow non-ASCII data for custom metadata fields. Don't unicode
+          # encode other fields because that would perturb their content
+          # (e.g., adding %2F's into the middle of a Cache-Control value).
+          value = unicode(value, 'utf-8')
+          cust_metadata_plus[header] = value
+          num_cust_metadata_plus_elems += 1
+        else:
+          metadata_plus[header] = value
+          num_metadata_plus_elems += 1
+    mdf.close()
+    if (num_metadata_plus_elems != len(metadata_plus)
+        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
+        or num_metadata_minus_elems != len(metadata_minus)
+        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
+        or metadata_minus.intersection(set(metadata_plus.keys()))):
+      raise CommandException('Each header must appear at most once.')
+    other_than_base_fields = (set(metadata_plus.keys())
+        .difference(Key.base_user_settable_fields))
+    other_than_base_fields.update(
+        metadata_minus.difference(Key.base_user_settable_fields))
+    for f in other_than_base_fields:
+      # This check is overly simple; it would be stronger to check, for each
+      # URI argument, whether f.startswith the
+      # uri.get_provider().metadata_prefix, but here we just parse the spec
+      # once, before processing any of the URIs. This means we will not
+      # detect if the user tries to set an x-goog-meta- field on an another
+      # provider's object, for example.
+      if not _IsCustomMeta(f):
+        raise CommandException('Invalid or disallowed header (%s).\n'
+                               'Only these fields (plus x-goog-meta-* fields)'
+                               ' can be set or unset:\n%s' % (f,
+                               sorted(list(Key.base_user_settable_fields))))
+    metadata_plus.update(cust_metadata_plus)
+    metadata_minus.update(cust_metadata_minus)
+    return (metadata_minus, metadata_plus)
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
@@ -319,182 +444,10 @@ class SetMetaCommand(Command):
     ('remove test files', 'rm -f test_gif.ct test_html.ct test.meta', 0, None),
   ]
 
-  def _ParseMetadataHeaders(self, headers):
-    metadata_minus = set()
-    cust_metadata_minus = set()
-    metadata_plus = {}
-    cust_metadata_plus = {}
-    # Build a count of the keys encountered from each plus and minus arg so we
-    # can check for dupe field specs.
-    num_metadata_plus_elems = 0
-    num_cust_metadata_plus_elems = 0
-    num_metadata_minus_elems = 0
-    num_cust_metadata_minus_elems = 0
-
-    for md_arg in headers:
-      parts = md_arg.split(':')
-      if len(parts) not in (1, 2):
-        raise CommandException(
-            'Invalid argument: must be either header or header:value (%s)' %
-            md_arg)
-      if len(parts) == 2:
-        (header, value) = parts
-      else:
-        (header, value) = (parts[0], None)
-      _InsistAsciiHeader(header)
-      # Translate headers to lowercase to match the casing that comes back
-      # from self._ExtractMetadata().
-      header = header.lower()
-      if value:
-        if _IsCustomMeta(header):
-          # Allow non-ASCII data for custom metadata fields. Don't unicode
-          # encode other fields because that would perturb their content
-          # (e.g., adding %2F's into the middle of a Cache-Control value).
-          value = unicode(value, 'utf-8')
-          cust_metadata_plus[header] = value
-          num_cust_metadata_plus_elems += 1
-        else:
-          metadata_plus[header] = value
-          num_metadata_plus_elems += 1
-      else:
-        if _IsCustomMeta(header):
-          cust_metadata_minus.add(header)
-          num_cust_metadata_minus_elems += 1
-        else:
-          metadata_minus.add(header)
-          num_metadata_minus_elems += 1
-    if (num_metadata_plus_elems != len(metadata_plus)
-        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
-        or num_metadata_minus_elems != len(metadata_minus)
-        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
-        or metadata_minus.intersection(set(metadata_plus.keys()))):
-      raise CommandException('Each header must appear at most once.')
-    other_than_base_fields = (set(metadata_plus.keys())
-        .difference(self._base_user_settable_fields))
-    other_than_base_fields.update(
-        metadata_minus.difference(self._base_user_settable_fields))
-    for f in other_than_base_fields:
-      # This check is overly simple; it would be stronger to check, for each
-      # URI argument, whether f.startswith the
-      # uri.get_provider().metadata_prefix, but here we just parse the spec
-      # once, before processing any of the URIs. This means we will not
-      # detect if the user tries to set an x-goog-meta- field on an another
-      # provider's object, for example.
-      if not _IsCustomMeta(f):
-        raise CommandException('Invalid or disallowed header (%s).\n'
-                               'Only these fields (plus x-goog-meta-* fields)'
-                               ' can be set or unset:\n%s' % (f,
-                               sorted(list(self._base_user_settable_fields))))
-    metadata_plus.update(cust_metadata_plus)
-    metadata_minus.update(cust_metadata_minus)
-    return (metadata_minus, metadata_plus)
-
-  def _ParseMetadataSpec(self, spec):
-    self.THREADED_LOGGER.info('WARNING: metadata spec syntax (%s)\nis '
-                              'deprecated and will eventually be removed.\n'
-                              'Please see "gsutil help setmeta" for current '
-                              'syntax' % spec)
-    metadata_minus = set()
-    cust_metadata_minus = set()
-    metadata_plus = {}
-    cust_metadata_plus = {}
-    # Build a count of the keys encountered from each plus and minus arg so we
-    # can check for dupe field specs.
-    num_metadata_plus_elems = 0
-    num_cust_metadata_plus_elems = 0
-    num_metadata_minus_elems = 0
-    num_cust_metadata_minus_elems = 0
-
-    mdf = StringIO.StringIO(spec)
-    for md_arg in csv.reader(mdf).next():
-      if not md_arg:
-        raise CommandException(
-            'Invalid empty metadata specification component.')
-      if md_arg[0] == '-':
-        header = md_arg[1:]
-        if header.find(':') != -1:
-          raise CommandException('Removal spec may not contain ":" (%s).' %
-                                 header)
-        _InsistAsciiHeader(header)
-        # Translate headers to lowercase to match the casing that comes back
-        # from self._ExtractMetadata().
-        header = header.lower()
-        if _IsCustomMeta(header):
-          cust_metadata_minus.add(header)
-          num_cust_metadata_minus_elems += 1
-        else:
-          metadata_minus.add(header)
-          num_metadata_minus_elems += 1
-      else:
-        parts = md_arg.split(':', 1)
-        if len(parts) != 2:
-          raise CommandException(
-              'Fields being added must include values (%s).' % md_arg)
-        (header, value) = parts
-        _InsistAsciiHeader(header)
-        header = header.lower()
-        if _IsCustomMeta(header):
-          # Allow non-ASCII data for custom metadata fields. Don't unicode
-          # encode other fields because that would perturb their content
-          # (e.g., adding %2F's into the middle of a Cache-Control value).
-          value = unicode(value, 'utf-8')
-          cust_metadata_plus[header] = value
-          num_cust_metadata_plus_elems += 1
-        else:
-          metadata_plus[header] = value
-          num_metadata_plus_elems += 1
-    mdf.close()
-    if (num_metadata_plus_elems != len(metadata_plus)
-        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
-        or num_metadata_minus_elems != len(metadata_minus)
-        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
-        or metadata_minus.intersection(set(metadata_plus.keys()))):
-      raise CommandException('Each header must appear at most once.')
-    other_than_base_fields = (set(metadata_plus.keys())
-        .difference(self._base_user_settable_fields))
-    other_than_base_fields.update(
-        metadata_minus.difference(self._base_user_settable_fields))
-    for f in other_than_base_fields:
-      # This check is overly simple; it would be stronger to check, for each
-      # URI argument, whether f.startswith the
-      # uri.get_provider().metadata_prefix, but here we just parse the spec
-      # once, before processing any of the URIs. This means we will not
-      # detect if the user tries to set an x-goog-meta- field on an another
-      # provider's object, for example.
-      if not _IsCustomMeta(f):
-        raise CommandException('Invalid or disallowed header (%s).\n'
-                               'Only these fields (plus x-goog-meta-* fields)'
-                               ' can be set or unset:\n%s' % (f,
-                               sorted(list(self._base_user_settable_fields))))
-    metadata_plus.update(cust_metadata_plus)
-    metadata_minus.update(cust_metadata_minus)
-    return (metadata_minus, metadata_plus)
-
-  def _ExtractMetadata(self, uri):
-    """
-    Extracts metadata from existing URI into a dict, so we can overwrite/delete
-    from it to form the new set of metadata to apply to a key.
-    """
-    key = uri.get_key(False)
-    metadata = {}
-    for underscore_name in self._underscore_base_user_settable_fields:
-      if hasattr(key, underscore_name):
-        value = getattr(key, underscore_name)
-        if value:
-          # Generate HTTP field name corresponding to "_" named field.
-          field_name = underscore_name.replace('_', '-')
-          metadata[field_name.lower()] = value
-    # key.metadata contains custom metadata, which are all user-settable.
-    prefix = uri.get_provider().metadata_prefix
-    for underscore_name in key.metadata:
-      field_name = underscore_name.replace('_', '-')
-      metadata['%s%s' % (prefix, field_name.lower())] = (
-          key.metadata[underscore_name])
-    return metadata
 
 def _InsistAsciiHeader(header):
-    if not all(ord(c) < 128 for c in header):
-      raise CommandException('Invalid non-ASCII header (%s).' % header)
+  if not all(ord(c) < 128 for c in header):
+    raise CommandException('Invalid non-ASCII header (%s).' % header)
 
 def _IsCustomMeta(header):
   return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
