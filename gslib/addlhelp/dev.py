@@ -47,7 +47,12 @@ _detailed_help_text = ("""
      Cloud Storage. If you do make such changes we recommend including someone
      with knowledge of the specific provider as a code reviewer (see below).
 
-  5. Please make sure to run all tests against your modified code. To
+  5. You can check out the gsutil code from svn  - see
+     http://code.google.com/p/gsutil/source/checkout. Then change directories
+     into gsutil/src, and check out the boto code from github:
+        git clone git://github.com/boto/boto.git
+
+  6. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
 
        export PYTHONPATH=./boto:$PYTHONPATH
@@ -79,10 +84,10 @@ _detailed_help_text = ("""
     and run:
       python test.py -t s3 -t gs -t ssl
 
-  6. Please consider contributing test code for your change, especially if the
+  7. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
 
-  7. When it's time to send us code, please use the Rietveld code review tool
+  8. When it's time to send us code, please use the Rietveld code review tool
      rather than simply sending us a code patch. Do this as follows:
       - check out the gsutil code from at
         http://code.google.com/p/gsutil/source/checkout and apply your changes
