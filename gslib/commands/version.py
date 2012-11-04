@@ -99,10 +99,16 @@ class VersionCommand(Command):
         else:
           path = "no config found"
 
-    f = open(os.path.join(self.gsutil_bin_dir, 'CHECKSUM'))
-    shipped_checksum = f.read().strip()
-    f.close()
-    cur_checksum = self._ComputeCodeChecksum()
+    try:
+      f = open(os.path.join(self.gsutil_bin_dir, 'CHECKSUM'))
+      shipped_checksum = f.read().strip()
+      f.close()
+    except IOError:
+      shipped_checksum = 'MISSING'
+    try:
+      cur_checksum = self._ComputeCodeChecksum()
+    except IOError:
+      cur_checksum = 'MISSING FILES'
     if shipped_checksum == cur_checksum:
       checksum_ok_str = 'OK'
     else:
