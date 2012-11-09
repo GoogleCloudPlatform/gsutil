@@ -538,14 +538,21 @@ class CpCommand(Command):
     """
     config = boto.config
     resumable_threshold = config.getint('GSUtil', 'resumable_threshold', ONE_MB)
-    if not self.quiet and size >= resumable_threshold:
-      cb = self._FileCopyCallbackHandler(upload).call
-      num_cb = int(size / ONE_MB)
+    transfer_handler = None
+    cb = None
+    num_cb = None
+
+    if size >= resumable_threshold:
+      if not self.quiet:
+        cb = self._FileCopyCallbackHandler(upload).call
+        num_cb = int(size / ONE_MB)
+
       resumable_tracker_dir = config.get(
           'GSUtil', 'resumable_tracker_dir',
           os.path.expanduser('~' + os.sep + '.gsutil'))
       if not os.path.exists(resumable_tracker_dir):
         os.makedirs(resumable_tracker_dir)
+
       if upload:
         # Encode the dest bucket and object name into the tracker file name.
         res_tracker_file_name = (
@@ -563,14 +570,9 @@ class CpCommand(Command):
       if upload:
         if dst_uri.scheme == 'gs':
           transfer_handler = ResumableUploadHandler(tracker_file)
-        else:
-          transfer_handler = None
       else:
         transfer_handler = ResumableDownloadHandler(tracker_file)
-    else:
-      transfer_handler = None
-      cb = None
-      num_cb = None
+
     return (cb, num_cb, transfer_handler)
 
   def _LogCopyOperation(self, src_uri, dst_uri, headers):

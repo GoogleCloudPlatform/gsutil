@@ -143,30 +143,22 @@ class SetWebcfgCommand(Command):
   webcfg_full = (
 '''<?xmlversion="1.0"?>
 <WebsiteConfiguration>
-<MainPageSuffix>
-main
-</MainPageSuffix>
-<NotFoundPage>
-404
-</NotFoundPage>
+<MainPageSuffix>main</MainPageSuffix>
+<NotFoundPage>404</NotFoundPage>
 </WebsiteConfiguration>
 ''')
 
   webcfg_main = (
 '''<?xmlversion="1.0"?>
 <WebsiteConfiguration>
-<MainPageSuffix>
-main
-</MainPageSuffix>
+<MainPageSuffix>main</MainPageSuffix>
 </WebsiteConfiguration>
 ''')
 
   webcfg_error = (
 '''<?xmlversion="1.0"?>
 <WebsiteConfiguration>
-<NotFoundPage>
-404
-</NotFoundPage>
+<NotFoundPage>404</NotFoundPage>
 </WebsiteConfiguration>
 ''')
 
