@@ -1,3 +1,25 @@
+Release 3.18 (release-date: 2012-09-19)
+
+Bug Fixes
+---------
+
+  - Fixed resumable upload boundary condition when handling POST request
+    when server already has complete file, which resulted in an infinite
+    loop that consumed 100% of the CPU.
+
+  - Fixed one more place that outputted progress info when gsutil cp -q
+    specified (during streaming uploads).
+
+Other Changes
+-------------
+
+  - Updated help text for "gsutil help setmeta" and "gsutil help metadata", to
+    clarify and deepen parts of the documentation.
+   
+
+================================================================================
+
+
 Release 3.17 (release-date: 2012-08-17)
 
 Bug Fixes
