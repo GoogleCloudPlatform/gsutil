@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import xml.dom.minidom
+from xml.dom.minidom import parseString
 import xml.sax.xmlreader
 from boto import handler
 from boto.gs.cors import Cors
@@ -145,20 +145,17 @@ class SetCorsCommand(Command):
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
-  empty_doc1 = ('<?xml version="1.0" ?>\n'
-                '<CorsConfig/>\n')
+  empty_doc1 = parseString('<CorsConfig/>').toprettyxml(indent='    ')
 
-  empty_doc2 = ('<?xml version="1.0" ?>\n'
-                '<CorsConfig></CorsConfig>\n')
+  empty_doc2 = parseString(
+      '<CorsConfig></CorsConfig>').toprettyxml(indent='    ')
 
-  empty_doc3 = ('<?xml version="1.0" ?>\n'
-                '<CorsConfig>\n'
-                '    <Cors/>\n'
-                '</CorsConfig>\n')
+  empty_doc3 = parseString(
+      '<CorsConfig><Cors/></CorsConfig>').toprettyxml(indent='    ')
 
-  empty_doc4 = ('<?xml version="1.0" ?>\n'
-                '<CorsConfig><Cors></Cors></CorsConfig>\n')
-
+  empty_doc4 = parseString(
+    '<CorsConfig><Cors></Cors></CorsConfig>').toprettyxml(indent='    ')
+  
   cors_bad1 = ('<?xml version="1.0" ?><CorsConfig><Cors><Methods><Method>GET'
                '</ResponseHeader></Methods></Cors></CorsConfig>')
 
@@ -171,39 +168,21 @@ class SetCorsCommand(Command):
   cors_bad4 = ('<?xml version="1.0" ?><CorsConfig><Cors><Method>GET'
                '</Method></Cors></CorsConfig>')
 
-  cors_doc = ('<?xml version="1.0" ?>\n'
-              '<CorsConfig>\n'
-              '    <Cors>\n'
-              '        <Origins>\n'
-              '            <Origin>origin1.example.com</Origin>\n'
-              '            <Origin>origin2.example.com</Origin>\n'
-              '        </Origins>\n'
-              '        <Methods>\n'
-              '            <Method>GET</Method>\n'
-              '            <Method>PUT</Method>\n'
-              '            <Method>POST</Method>\n'
-              '        </Methods>\n'
-              '        <ResponseHeaders>\n'
-              '            <ResponseHeader>foo</ResponseHeader>\n'
-              '            <ResponseHeader>bar</ResponseHeader>\n'
-              '        </ResponseHeaders>\n'
-              '        <MaxAgeSec>3600</MaxAgeSec>\n'
-              '    </Cors>\n'
-              '    <Cors>\n'
-              '        <Origins>\n'
-              '            <Origin>origin3.example.com</Origin>\n'
-              '        </Origins>\n'
-              '        <Methods>\n'
-              '            <Method>GET</Method>\n'
-              '            <Method>DELETE</Method>\n'
-              '        </Methods>\n'
-              '        <ResponseHeaders>\n'
-              '            <ResponseHeader>foo2</ResponseHeader>\n'
-              '            <ResponseHeader>bar2</ResponseHeader>\n'
-              '        </ResponseHeaders>\n'
-              '    </Cors>\n'
-              '</CorsConfig>\n')
+  cors_doc=parseString('<CorsConfig><Cors><Origins>'
+      '<Origin>origin1.example.com</Origin>'
+      '<Origin>origin2.example.com</Origin>'
+      '</Origins><Methods><Method>GET</Method>'
+      '<Method>PUT</Method><Method>POST</Method></Methods>'
+      '<ResponseHeaders><ResponseHeader>foo</ResponseHeader>'
+      '<ResponseHeader>bar</ResponseHeader></ResponseHeaders>'
+      '<MaxAgeSec>3600</MaxAgeSec></Cors>'
+      '<Cors><Origins><Origin>origin3.example.com</Origin></Origins>'
+      '<Methods><Method>GET</Method><Method>DELETE</Method></Methods>'
+      '<ResponseHeaders><ResponseHeader>foo2</ResponseHeader>'
+      '<ResponseHeader>bar2</ResponseHeader></ResponseHeaders>'
+      '</Cors></CorsConfig>').toprettyxml(indent='    ')
 
+ 
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('setup empty doc 1', 'echo \'' + empty_doc1 + '\' >$F9', 0, None),

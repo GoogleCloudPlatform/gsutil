@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from xml.dom.minidom import parseString
+
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -140,60 +142,38 @@ class SetWebcfgCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
-  webcfg_full = (
-'''<?xmlversion="1.0"?>
-<WebsiteConfiguration>
-<MainPageSuffix>
-main
-</MainPageSuffix>
-<NotFoundPage>
-404
-</NotFoundPage>
-</WebsiteConfiguration>
-''')
+  webcfg_full = parseString('<WebsiteConfiguration><MainPageSuffix>main'
+      '</MainPageSuffix><NotFoundPage>404</NotFoundPage>'
+      '</WebsiteConfiguration>').toprettyxml()
 
-  webcfg_main = (
-'''<?xmlversion="1.0"?>
-<WebsiteConfiguration>
-<MainPageSuffix>
-main
-</MainPageSuffix>
-</WebsiteConfiguration>
-''')
+  webcfg_main = parseString('<WebsiteConfiguration>'
+    '<MainPageSuffix>main</MainPageSuffix>'
+    '</WebsiteConfiguration>').toprettyxml()
 
-  webcfg_error = (
-'''<?xmlversion="1.0"?>
-<WebsiteConfiguration>
-<NotFoundPage>
-404
-</NotFoundPage>
-</WebsiteConfiguration>
-''')
+  webcfg_error = parseString('<WebsiteConfiguration><NotFoundPage>'
+      '404</NotFoundPage></WebsiteConfiguration>').toprettyxml()
 
-  webcfg_empty = (
-'''<?xmlversion="1.0"?>
-<WebsiteConfiguration/>
-''')
+  webcfg_empty = parseString('<WebsiteConfiguration/>').toprettyxml()
 
   test_steps = [
     ('1. setup webcfg_full', 'echo \'%s\' > $F0' % webcfg_full, 0, None),
     ('2. apply full config', 'gsutil setwebcfg -m main -e 404 gs://$B0', 0, None),
     ('3. check full config', 'gsutil getwebcfg gs://$B0 '
         '| grep -v \'^Getting website config on\' '
-        '| sed \'s/\s//g\' > $F1', 0, ('$F0', '$F1')),
+        ' > $F1', 0, ('$F0', '$F1')),
     ('4. setup webcfg_main', 'echo \'%s\' > $F0' % webcfg_main, 0, None),
     ('5. apply config_main', 'gsutil setwebcfg -m main gs://$B0', 0, None),
     ('6. check config_main', 'gsutil getwebcfg gs://$B0 '
         '| grep -v \'^Getting website config on\' '
-        '| sed \'s/\s//g\' > $F1', 0, ('$F0', '$F1')),
+        ' > $F1', 0, ('$F0', '$F1')),
     ('7. setup webcfg_error', 'echo \'%s\' > $F0' % webcfg_error, 0, None),
     ('8. apply config_error', 'gsutil setwebcfg -e 404 gs://$B0', 0, None),
     ('9. check config_error', 'gsutil getwebcfg gs://$B0 '
         '| grep -v \'^Getting website config on\' '
-        '| sed \'s/\s//g\' > $F1', 0, ('$F0', '$F1')),
+        ' > $F1', 0, ('$F0', '$F1')),
     ('10. setup webcfg_empty', 'echo \'%s\' > $F0' % webcfg_empty, 0, None),
     ('11. remove config', 'gsutil setwebcfg gs://$B0', 0, None),
     ('12. check empty config', 'gsutil getwebcfg gs://$B0 '
         '| grep -v \'^Getting website config on\' '
-        '| sed \'s/\s//g\' > $F1', 0, ('$F0', '$F1')),
+        ' > $F1', 0, ('$F0', '$F1')),
   ]
