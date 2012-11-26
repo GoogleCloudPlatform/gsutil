@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import threading
 import wildcard_iterator
 
@@ -137,7 +138,8 @@ class _NameExpansionIterator(object):
 
   def __init__(self, command_name, proj_id_handler, headers, debug,
                bucket_storage_uri_class, uri_strs, recursion_requested,
-               have_existing_dst_container=None, flat=True):
+               have_existing_dst_container=None, flat=True,
+               all_versions=False, for_all_version_delete=False):
     """
     Args:
       command_name: name of command being run.
@@ -154,6 +156,9 @@ class _NameExpansionIterator(object):
           other than cp).
       flat: Bool indicating whether bucket listings should be flattened, i.e.,
           so the mapped-to results contain objects spanning subdirectories.
+      all_versions: Bool indicating whether to iterate over all object versions.
+      for_all_version_delete: Bool indicating whether this is for an all-version
+          delete.
 
     Examples of ExpandWildcardsAndContainers with flat=True:
       - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
@@ -194,12 +199,40 @@ class _NameExpansionIterator(object):
     self.recursion_requested = recursion_requested
     self.have_existing_dst_container = have_existing_dst_container
     self.flat = flat
+    self.all_versions = all_versions
+    self.for_all_version_delete = for_all_version_delete
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
     self._flatness_wildcard = {True: '**', False: '*'}
 
   def __iter__(self):
+    if self.all_versions:
+      return self._VersionedIter()
+    else:
+      return self._VersionLessIter()
+
+  def _VersionedIter(self):
+    for ne_result in self._VersionLessIter():
+      exp_src_uri = self.suri_builder.StorageUri(ne_result.GetExpandedUriStr())
+      for key in exp_src_uri.list_bucket(prefix=exp_src_uri.object_name,
+                                         headers=self.headers,
+                                         all_versions=True):
+        if key.name != exp_src_uri.object_name:
+          # The desired entries will be alphabetically first in this listing.
+          break
+        versioned_ne_result = copy.deepcopy(ne_result)
+        versioned_ne_result.expanded_uri_str = (
+            '%s://%s/%s#%s' % (exp_src_uri.scheme, key.bucket.name, key.name,
+                               key.version_id or key.generation))
+        yield versioned_ne_result
+      # If we're trying to delete all versions, the last version may need to be
+      # deleted twice.
+      if self.for_all_version_delete:
+        versioned_ne_result.is_duplicate = True
+        yield versioned_ne_result
+
+  def _VersionLessIter(self):
     for uri_str in self.uri_strs:
 
       # Step 1: Expand any explicitly specified wildcards. The output from this
@@ -280,13 +313,16 @@ class _NameExpansionIterator(object):
     return wildcard_iterator.wildcard_iterator(
         uri_or_str, self.proj_id_handler,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
-        headers=self.headers, debug=self.debug)
+        headers=self.headers, debug=self.debug,
+        all_versions=self.all_versions)
 
 
 def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
                           bucket_storage_uri_class, uri_strs,
                           recursion_requested,
-                          have_existing_dst_container=None, flat=True):
+                          have_existing_dst_container=None, flat=True,
+                          all_versions=False,
+                          for_all_version_delete=False):
   """
   Static factory function for instantiating _NameExpansionIterator, which
   wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -296,7 +332,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
   """
   name_expansion_iterator = _NameExpansionIterator(
       command_name, proj_id_handler, headers, debug, bucket_storage_uri_class,
-      uri_strs, recursion_requested, have_existing_dst_container, flat)
+      uri_strs, recursion_requested, have_existing_dst_container, flat,
+      all_versions=all_versions, for_all_version_delete=for_all_version_delete)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.is_empty():
     raise CommandException('No URIs matched')

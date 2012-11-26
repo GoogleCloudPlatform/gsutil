@@ -76,6 +76,15 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -R, -r      Performs setacl request recursively, to all objects under the
               specified URI.
+
+  -a          Performs setacl request on all versions / generations.
+
+  -v          Parses uris for version / generation numbers (only applicable in 
+              version-enabled buckets). For example:
+
+                gsutil setacl -v public-read gs://bucket/object#1348772910166013
+
+              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -93,7 +102,7 @@ class SetAclCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'Rr',
+    SUPPORTED_SUB_ARGS : 'aRrv',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -120,6 +129,10 @@ class SetAclCommand(Command):
   def RunCommand(self):
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
-        if o == '-r' or o == '-R':
+        if o == '-a':
+          self.all_versions = True
+        elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-v':
+          self.parse_versions = True
     self.SetAclCommandHelper()

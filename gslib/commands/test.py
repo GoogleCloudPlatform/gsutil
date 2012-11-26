@@ -131,17 +131,17 @@ class TestCommand(Command):
       print 'cmd:', cmd
     return subprocess.call(cmd, shell=True)
 
-  def global_setup(self, debug):
+  def global_setup(self, debug, num_buckets=10):
     """General test setup.
 
-    For general testing use create three buckets, one empty, one
+    For general testing use create up to three buckets, one empty, one
     containing one object and one containing two objects. Also create
     three files for general use.
     """
     print 'Global setup started...'
 
     # Build lists of buckets and files.
-    bucket_list = ['gs://$B%d' % i for i in range(0, 10)]
+    bucket_list = ['gs://$B%d' % i for i in range(0, num_buckets)]
     file_list = ['$F%d' % i for i in range(0, 3)]
 
     # Create test buckets.
@@ -150,7 +150,7 @@ class TestCommand(Command):
     self._TestRunner(bucket_cmd, debug)
 
     # Create test objects - zero in first bucket, one in second, two in third.
-    for i in range(0, 3):
+    for i in range(0, min(3, num_buckets)):
       for j in range(0, i):
         object_cmd = 'echo test | ' + self.gsutil_cmd + \
                      ' cp - gs://$B%d/$O%d' % (i, j)
@@ -166,18 +166,18 @@ class TestCommand(Command):
 
     print 'Global setup completed.'
 
-  def global_teardown(self, debug):
+  def global_teardown(self, debug, num_buckets=10):
     """General test cleanup.
 
     Remove all buckets, objects and files used by this test facility.
     """
     print 'Global teardown started...'
     # Build commands to remove objects, buckets and files.
-    bucket_list = ['gs://$B%d' % i for i in range(0, 10)]
-    object_list = ['gs://$B%d/*' % i for i in range(0, 10)]
-    file_list = ['$F%d' % i for i in range(0, 10)]
+    bucket_list = ['gs://$B%d' % i for i in range(0, num_buckets)]
+    object_list = ['gs://$B%d/*' % i for i in range(0, num_buckets)]
+    file_list = ['$F%d' % i for i in range(0, num_buckets)]
     bucket_cmd = self.gsutil_cmd + ' rb ' + ' '.join(bucket_list)
-    object_cmd = self.gsutil_cmd + ' rm -f ' + ' '.join(object_list)
+    object_cmd = self.gsutil_cmd + ' rm -af ' + ' '.join(object_list)
     for f in file_list:
       f = self.sub_format_specs(f)
       if os.path.exists(f):
@@ -245,8 +245,13 @@ class TestCommand(Command):
         continue
       already_tested[cmd] = 1
 
+      # Figure out how many buckets we'll need.
+      num_test_buckets = 3
+      if hasattr(cmd, 'num_test_buckets'):
+        num_test_buckets = cmd.num_test_buckets
+
       # Run global test setup.
-      self.global_setup(self.debug)
+      self.global_setup(self.debug, num_test_buckets)
 
       # If command has a test_setup method, run per command setup here.
       if hasattr(cmd, 'test_setup'):
@@ -279,7 +284,7 @@ class TestCommand(Command):
         suite.addTest(test_case)
 
       # Run the tests we've just accumulated.
-      print 'Running tests for', name, 'command.'
+      print 'Running %s tests for %s command.' % (suite.countTestCases(), name)
       unittest.TextTestRunner(verbosity=2).run(suite)
 
       # If command has a test_teardown method, run per command teardown here.
@@ -287,7 +292,7 @@ class TestCommand(Command):
         cmd.test_teardown(self.debug)
 
       # Run global test teardown.
-      self.global_teardown(self.debug)
+      self.global_teardown(self.debug, num_test_buckets)
 
   def sub_format_specs(self, s):
     """Perform iterative regexp substitutions on passed string.
@@ -341,4 +346,3 @@ class test_generator(unittest.TestCase):
         self.assertEqual(diff_ret, 0)
     # Return the generated function to the caller.
     return test_func
-

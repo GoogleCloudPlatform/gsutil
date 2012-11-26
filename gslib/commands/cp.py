@@ -277,6 +277,13 @@ _detailed_help_text = ("""
               now to avoid breaking existing scripts. It will be removed at
               a future date.
 
+  -v          Parses uris for version / generation numbers (only applicable in 
+              version-enabled buckets). For example:
+
+                gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
+
+              Note that wildcards are not permitted while using this flag.
+
   -z          'txt,html' Compresses file uploads with the given extensions.
               If you are uploading a large file with compressible content,
               such as a .js, .css, or .html file, you can gzip-compress the
@@ -367,7 +374,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:eMpqrRtz:',
+    SUPPORTED_SUB_ARGS : 'a:eMpqrRtvz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -625,9 +632,11 @@ class CpCommand(Command):
     # you can't do something like:
     #   gsutil cp -t Content-Type text/html gs://bucket/* gs://bucket2
     # to change the Content-Type while copying.
-    dst_bucket.copy_key(dst_uri.object_name, src_bucket.name,
-                        src_uri.object_name, preserve_acl=preserve_acl,
-                        headers=headers)
+
+    dst_uri.copy_key(src_bucket.name, src_uri.object_name,
+                     preserve_acl=False, headers=headers,
+                     src_version_id=src_uri.version_id,
+                     src_generation=src_uri.generation)
     end_time = time.time()
     return (end_time - start_time, src_key.size)
 
@@ -1302,7 +1311,8 @@ class CpCommand(Command):
       src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetSrcUriStr())
       exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr())
+          name_expansion_result.GetExpandedUriStr(),
+          parse_version=self.parse_versions)
       src_uri_names_container = name_expansion_result.NamesContainer()
       src_uri_expands_to_multi = name_expansion_result.NamesContainer()
       have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
@@ -1435,6 +1445,7 @@ class CpCommand(Command):
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
+  num_test_buckets = 3
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('upload', 'gsutil cp $F1 gs://$B1/$O1', 0, None),
@@ -1495,6 +1506,26 @@ class CpCommand(Command):
      0, ('$F1', 'test_gif.ct')),
     ('remove test files',
      'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo', 0, None),
+    # To make the following tests simpler to understand, we note that bucket $B2
+    # is unused before this point.
+    ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
+    ('upload new version', 'echo \'data1\' | gsutil cp - gs://$B2/$O3', 0,
+     None),
+    ('cloud cp new version', 'gsutil cp gs://$B2/$O0 gs://$B2/$O3', 0, None),
+    ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B2/$O3', 0,
+     None),
+    ('get first generation name', 'gsutil ls -a gs://$B2/$O3 | head -n 1 > $F9',
+     0, None),
+    ('setup data1 file', 'echo \'data1\' > $F1', 0, None),
+    ('setup data2 file', 'echo \'data2\' > $F2', 0, None),
+    ('download current version', 'gsutil cp gs://$B2/$O3 $F3', 0,
+     ('$F3', '$F2')),
+    ('download first version', 'gsutil cp -v `cat $F9` $F3', 0,
+     ('$F3', '$F1')),
+    ('cp first verion to current', 'gsutil cp -v `cat $F9` gs://$B2/$O3', 0,
+     None),
+    ('download current version', 'gsutil cp gs://$B2/$O3 $F3', 0,
+     ('$F3', '$F1')),
   ]
 
   def _ParseArgs(self):
@@ -1517,6 +1548,8 @@ class CpCommand(Command):
           self.quiet = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-v':
+          self.parse_versions = True
 
   def _HandleStreamingDownload(self):
     # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all
@@ -1568,14 +1601,9 @@ class CpCommand(Command):
       return (src_uri.clone_replace_name(new_src_path).uri ==
               dst_uri.clone_replace_name(new_dst_path).uri)
     else:
-      # TODO: There are cases where copying from src to dst with the same
-      # object makes sense, namely, for setting metadata on an object. At some
-      # point if we offer a command to do so, add a parameter to the current
-      # function to allow this check to be overridden. Note that we want this
-      # check to prevent a user from blowing away data using the mv command,
-      # with a command like:
-      #   gsutil mv gs://bucket/abc/* gs://bucket/abc
-      return src_uri.uri == dst_uri.uri
+      return (src_uri.uri == dst_uri.uri and
+              src_uri.generation == dst_uri.generation and
+              src_uri.version_id == dst_uri.version_id)
 
   def _ShouldTreatDstUriAsBucketSubDir(self, have_multiple_srcs, dst_uri,
                                        have_existing_dest_subdir):

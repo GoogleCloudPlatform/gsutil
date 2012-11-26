@@ -29,50 +29,36 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
-from xml.dom.minidom import parseString as XmlParseString
+from gslib.util import NO_MAX
 
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil getwebcfg bucket_uri
+  gsutil setversioning [on|off] bucket_uri...
 
 
 <B>DESCRIPTION</B>
-  The Website Configuration feature enables you to configure a Google Cloud
-  Storage bucket to simulate the behavior of a static website. You can define
-  main pages or directory indices (for example, index.html) for buckets and
-  "directories". Also, you can define a custom error page in case a requested
-  resource does not exist.
+  The Versioning Configuration feature enables you to configure a Google Cloud
+  Storage bucket to keep old versions of objects.
 
-  The gstuil getwebcfg command gets the web semantics configuration for a
-  bucket, and displays an XML representation of the configuration.
-
-  In Google Cloud Storage, this would look like:
-
-  <?xml version="1.0" ?>
-  <WebsiteConfiguration>
-    <MainPageSuffix>
-      index.html
-    </MainPageSuffix>
-    <NotFoundPage>
-      404.html
-    </NotFoundPage>
-  </WebsiteConfiguration>
+  The gsutil setversioning command allows you to enable or suspend versioning
+  on one or more buckets.
 """)
 
-class GetWebcfgCommand(Command):
-  """Implementation of gsutil getwebcfg command."""
+class SetVersioningCommand(Command):
+  """Implementation of gsutil setversioning command."""
 
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
-    COMMAND_NAME : 'getwebcfg',
+    COMMAND_NAME : 'setversioning',
     # List of command name aliases.
     COMMAND_NAME_ALIASES : [],
     # Min number of args required by this command.
     MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 1, # Getopt-style string specifying acceptable sub args.
+    MAX_ARGS : NO_MAX,
+    # Getopt-style string specifying acceptable sub args.
     SUPPORTED_SUB_ARGS : '',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
@@ -85,23 +71,28 @@ class GetWebcfgCommand(Command):
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'getwebcfg',
+    HELP_NAME : 'setversioning',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
     # Type of help)
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : ('Get the website configuration '
-                             'for one or more buckets'),
+    HELP_ONE_LINE_SUMMARY : 'Enable or suspend versioning for one or more '
+                            'buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
 
+
   # Command entry point.
   def RunCommand(self):
-    uri_args = self.args
+    versioning_arg = self.args[0].lower()
+    if not versioning_arg in ('on', 'off'):
+      raise CommandException('Argument to %s must be either [on|off]'
+                             % (self.command_name))
+    uri_args = self.args[1:]
 
-    # Iterate over URIs, expanding wildcards, and getting the website
+    # Iterate over URIs, expanding wildcards, and setting the website
     # configuration on each.
     some_matched = False
     for uri_str in uri_args:
@@ -111,8 +102,26 @@ class GetWebcfgCommand(Command):
           raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
-        print 'Getting website config on %s...' % uri
-        _, xml_body = uri.get_website_config()
-        print XmlParseString(xml_body).toprettyxml()
+        if versioning_arg == 'on':
+          print 'Enabling versioning for %s...' % uri
+          uri.configure_versioning(True)
+        else:
+          print 'Suspending versioning for %s...' % uri
+          uri.configure_versioning(False)
     if not some_matched:
       raise CommandException('No URIs matched')
+
+  num_test_buckets = 1
+  test_steps = [
+      ('set up suspended file', 'echo gs://$B0: Suspended > $F0', 0, None),
+      ('set up enabled file', 'echo gs://$B0: Enabled > $F1', 0, None),
+      ('check versioning off', 'gsutil getversioning gs://$B0 > $F9', 0,
+       ('$F0', '$F9')),
+      ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
+      ('check versioning on', 'gsutil getversioning gs://$B0 > $F9', 0,
+       ('$F1', '$F9')),
+      ('disable versioning', 'gsutil setversioning off gs://$B0', 0,
+       None),
+      ('check versioning off', 'gsutil getversioning gs://$B0 > $F9', 0,
+       ('$F0', '$F9')),
+  ]

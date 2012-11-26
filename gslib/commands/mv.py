@@ -108,7 +108,7 @@ class MvCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'p',
+    SUPPORTED_SUB_ARGS : 'pv',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -157,6 +157,7 @@ class MvCommand(Command):
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
+  num_test_buckets = 3
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('gen expect files', 'echo 0 >$F0; echo 1 >$F1; echo 2 >$F2', 0, None),

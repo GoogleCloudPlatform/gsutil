@@ -14,6 +14,7 @@
 
 import boto
 
+from boto.exception import GSResponseError
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -79,6 +80,15 @@ _detailed_help_text = ("""
               all objects and subdirectories). Will not delete the bucket
               itself; you need to run the gsutil rb command separately to do
               that.
+
+  -a          Delete all versions of an object.
+
+  -v          Parses uris for version / generation numbers (only applicable in 
+              version-enabled buckets). For example:
+
+                gsutil rm -v gs://bucket/object#1348772910166013.1
+
+              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -96,7 +106,7 @@ class RmCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'frR',
+    SUPPORTED_SUB_ARGS : 'afrRv',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -123,13 +133,19 @@ class RmCommand(Command):
   def RunCommand(self):
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
+    delete_all_versions = False
     continue_on_error = False
+    parse_versions = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
-        if o == '-f':
+        if o == '-a':
+          delete_all_versions = True
+        elif o == '-f':
           continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-v':
+          parse_versions = True
 
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
@@ -141,7 +157,8 @@ class RmCommand(Command):
 
     def _RemoveFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr())
+          name_expansion_result.GetExpandedUriStr(),
+          parse_version=(parse_versions or delete_all_versions))
       if exp_src_uri.names_container():
         if exp_src_uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those
@@ -151,9 +168,19 @@ class RmCommand(Command):
         raise CommandException('"rm" command will not remove buckets. To '
                                'delete this/these bucket(s) do:\n\tgsutil rm '
                                '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
-      self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
+      self.THREADED_LOGGER.info('Removing %s...',
+                                name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
+      except GSResponseError, e:
+        is_duplicate_ne_result = (hasattr(name_expansion_result, 'is_duplicate')
+                                  and name_expansion_result.is_duplicate)
+        if delete_all_versions and is_duplicate_ne_result and e.status == 404:
+          self.THREADED_LOGGER.info(
+              '  %s was not found; possibly already deleted' %
+              name_expansion_result.expanded_uri_str)
+        else:
+          raise
       except:
         if continue_on_error:
           self.everything_removed_okay = False
@@ -164,7 +191,8 @@ class RmCommand(Command):
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, self.args, self.recursion_requested,
-        flat=self.recursion_requested)
+        flat=self.recursion_requested, all_versions=delete_all_versions,
+        for_all_version_delete=delete_all_versions)
 
     # Perform remove requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,

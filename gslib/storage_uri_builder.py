@@ -20,6 +20,12 @@ constructed object with just one param for most cases.
 """
 
 import boto
+import re
+from gslib.exception import CommandException
+
+GENERATION_RE = ('(?P<uri_str>.+)#'
+                 '(?P<generation>[0-9]+)(\.(?P<meta_generation>[0-9]+))?')
+VERSION_RE = '(?P<uri_str>.+)#(?P<version_id>.+)'
 
 
 class StorageUriBuilder(object):
@@ -34,12 +40,14 @@ class StorageUriBuilder(object):
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.debug = debug
 
-  def StorageUri(self, uri_str):
+  def StorageUri(self, uri_str, parse_version=False):
     """
     Instantiates StorageUri using class state and gsutil default flag values.
 
     Args:
       uri_str: StorageUri naming bucket + optional object.
+      parse_version: boolean indicating whether to parse out version/generation
+          information from uri_str.
 
     Returns:
       boto.StorageUri for given uri_str.
@@ -47,7 +55,42 @@ class StorageUriBuilder(object):
     Raises:
       InvalidUriError: if uri_str not valid.
     """
-    return boto.storage_uri(
-      uri_str, 'file', debug=self.debug, validate=False,
-      bucket_storage_uri_class=self.bucket_storage_uri_class,
-      suppress_consec_slashes=False)
+    version_id = None
+    generation = None
+    meta_generation = None
+
+    uri_str_only = uri_str
+    if parse_version:
+      if uri_str.startswith('gs'):
+        match = re.search(GENERATION_RE, uri_str)
+        if not match:
+          raise CommandException(
+              'Generation number expected in uri %s' % uri_str)
+        md = match.groupdict()
+        uri_str_only = md['uri_str']
+        generation = int(md['generation'])
+        if md['meta_generation']:
+          meta_generation = int(md['meta_generation'])
+
+      elif uri_str.startswith('s3'):
+        match = re.search(VERSION_RE, uri_str)
+        if not match:
+          raise CommandException('Version ID expected in uri %s' % uri_str)
+        md = match.groupdict()
+        uri_str_only = md['uri_str']
+        version_id = md['version_id']
+
+      else:
+        raise CommandException('Unrecognized provider scheme in uri %s' %
+                               uri_str)
+
+    suri = boto.storage_uri(
+        uri_str_only, 'file', debug=self.debug, validate=False,
+        bucket_storage_uri_class=self.bucket_storage_uri_class,
+        suppress_consec_slashes=False)
+
+    suri.version_id = version_id
+    suri.generation = generation
+    suri.meta_generation = meta_generation
+
+    return suri

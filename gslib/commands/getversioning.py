@@ -29,50 +29,44 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
-from xml.dom.minidom import parseString as XmlParseString
 
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil getwebcfg bucket_uri
+  gsutil getversioning bucket_uri
 
 
 <B>DESCRIPTION</B>
-  The Website Configuration feature enables you to configure a Google Cloud
-  Storage bucket to simulate the behavior of a static website. You can define
-  main pages or directory indices (for example, index.html) for buckets and
-  "directories". Also, you can define a custom error page in case a requested
-  resource does not exist.
+  The Versioning Configuration feature enables you to configure a Google Cloud
+  Storage bucket to keep old versions of objects.
 
-  The gstuil getwebcfg command gets the web semantics configuration for a
+  The gsutil getversioning command gets the versioning configuration for a
   bucket, and displays an XML representation of the configuration.
 
   In Google Cloud Storage, this would look like:
 
   <?xml version="1.0" ?>
-  <WebsiteConfiguration>
-    <MainPageSuffix>
-      index.html
-    </MainPageSuffix>
-    <NotFoundPage>
-      404.html
-    </NotFoundPage>
-  </WebsiteConfiguration>
+  <VersioningConfiguration>
+    <Status>
+      Enabled
+    </Status>
+  </VersioningConfiguration>
 """)
 
-class GetWebcfgCommand(Command):
-  """Implementation of gsutil getwebcfg command."""
+class GetVersioningCommand(Command):
+  """Implementation of gsutil getversioning command."""
 
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
-    COMMAND_NAME : 'getwebcfg',
+    COMMAND_NAME : 'getversioning',
     # List of command name aliases.
     COMMAND_NAME_ALIASES : [],
     # Min number of args required by this command.
     MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 1, # Getopt-style string specifying acceptable sub args.
+    MAX_ARGS : 1,
+    # Getopt-style string specifying acceptable sub args.
     SUPPORTED_SUB_ARGS : '',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
@@ -85,14 +79,14 @@ class GetWebcfgCommand(Command):
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'getwebcfg',
+    HELP_NAME : 'getversioning',
     # List of help name aliases.
     HELP_NAME_ALIASES : [],
     # Type of help)
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : ('Get the website configuration '
-                             'for one or more buckets'),
+    HELP_ONE_LINE_SUMMARY : 'Get the versioning configuration '
+                            'for one or more buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
@@ -111,8 +105,10 @@ class GetWebcfgCommand(Command):
           raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
-        print 'Getting website config on %s...' % uri
-        _, xml_body = uri.get_website_config()
-        print XmlParseString(xml_body).toprettyxml()
+        uri_str = '%s://%s' % (uri.scheme, uri.bucket_name)
+        if uri.get_versioning_config():
+          print '%s: Enabled' % uri_str
+        else:
+          print '%s: Suspended' % uri_str
     if not some_matched:
       raise CommandException('No URIs matched')

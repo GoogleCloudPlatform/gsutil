@@ -155,9 +155,11 @@ class SetWebcfgCommand(Command):
 
   webcfg_empty = parseString('<WebsiteConfiguration/>').toprettyxml()
 
+  num_test_buckets = 3
   test_steps = [
     ('1. setup webcfg_full', 'echo \'%s\' > $F0' % webcfg_full, 0, None),
-    ('2. apply full config', 'gsutil setwebcfg -m main -e 404 gs://$B0', 0, None),
+    ('2. apply full config', 'gsutil setwebcfg -m main -e 404 gs://$B0', 0,
+     None),
     ('3. check full config', 'gsutil getwebcfg gs://$B0 '
         '| grep -v \'^Getting website config on\' '
         ' > $F1', 0, ('$F0', '$F1')),

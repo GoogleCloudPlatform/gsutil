@@ -36,6 +36,15 @@ _detailed_help_text = ("""
 <B>DESCRIPTION</B>
   Gets ACL XML for a bucket or object, which you can save and edit for the
   setacl command.
+
+
+<B>OPTIONS</B>
+  -v          Parses uris for version / generation numbers (only applicable in 
+              version-enabled buckets). For example:
+
+                gsutil getacl -v gs://bucket/object#1348772910166013
+
+              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -53,7 +62,7 @@ class GetAclCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : 1,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : '',
+    SUPPORTED_SUB_ARGS : 'v',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.

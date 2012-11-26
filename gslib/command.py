@@ -206,6 +206,8 @@ class Command(object):
     self.test_method = test_method
     self.exclude_symlinks = False
     self.recursion_requested = False
+    self.all_versions = False
+    self.parse_versions = False
 
     # Process sub-command instance specifications.
     # First, ensure subclass implementation sets all required keys.
@@ -261,7 +263,7 @@ class Command(object):
           self.recursion_requested = True
           break
 
-  def WildcardIterator(self, uri_or_str):
+  def WildcardIterator(self, uri_or_str, all_versions=False):
     """
     Helper to instantiate gslib.WildcardIterator. Args are same as
     gslib.WildcardIterator interface, but this method fills in most of the
@@ -273,6 +275,7 @@ class Command(object):
     return wildcard_iterator.wildcard_iterator(
         uri_or_str, self.proj_id_handler,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
+        all_versions=all_versions,
         headers=self.headers, debug=self.debug)
 
   def RunCommand(self):
@@ -302,6 +305,16 @@ class Command(object):
         return None
     return uri
 
+  def _CheckNoWildcardsForVersions(self, uri_args):
+    for uri_str in uri_args:
+      if ContainsWildcard(uri_str):
+        # It's exceedingly unlikely that specifying a generation and wildcarding
+        # an object name will match multiple objects, so we explicitly disallow
+        # this behavior. Wildcarding generation numbers is slightly more useful,
+        # but probably still a remote use-case.
+        raise CommandException('Wildcard-ful URI (%s) disallowed with -v flag.'
+                               % uri_str)
+
   def SetAclCommandHelper(self):
     """
     Common logic for setting ACLs. Sets the standard ACL or the default
@@ -309,6 +322,8 @@ class Command(object):
     """
     acl_arg = self.args[0]
     uri_args = self.args[1:]
+    if self.parse_versions:
+      self._CheckNoWildcardsForVersions(uri_args)
     # Disallow multi-provider setacl requests, because there are differences in
     # the ACL models.
     storage_uri = self.UrisAreForSingleProvider(uri_args)
@@ -360,11 +375,14 @@ class Command(object):
       self.everything_set_okay = False
 
     def _SetAclFunc(name_expansion_result):
+      parse_version = self.parse_versions or self.all_versions
       exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr())
+          name_expansion_result.GetExpandedUriStr(),
+          parse_version=parse_version)
       # We don't do bucket operations multi-threaded (see comment below).
       assert self.command_name != 'setdefacl'
-      self.THREADED_LOGGER.info('Setting ACL on %s...' % exp_src_uri)
+      self.THREADED_LOGGER.info('Setting ACL on %s...' %
+                                name_expansion_result.expanded_uri_str)
       exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
                           self.headers)
 
@@ -390,7 +408,7 @@ class Command(object):
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, uri_args, self.recursion_requested,
-        self.recursion_requested)
+        self.recursion_requested, all_versions=self.all_versions)
 
     # Perform requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
@@ -420,14 +438,26 @@ class Command(object):
   def GetAclCommandHelper(self):
     """Common logic for getting ACLs. Gets the standard ACL or the default
     object ACL depending on self.command_name."""
-    # Wildcarding is allowed but must resolve to just one object.
-    uris = list(self.WildcardIterator(self.args[0]).IterUris())
-    if len(uris) == 0:
-      raise CommandException('No URIs matched')
-    if len(uris) != 1:
-      raise CommandException('%s matched more than one URI, which is not '
-          'allowed by the %s command' % (self.args[0], self.command_name))
-    uri = uris[0]
+    parse_versions = False
+    if self.sub_opts:
+      for o, a in self.sub_opts:
+        if o == '-v':
+          parse_versions = True
+
+    if parse_versions:
+      uri_str = self.args[0]
+      if ContainsWildcard(uri_str):
+        raise CommandException('Wildcards disallowed with -v flag.')
+      uri = self.suri_builder.StorageUri(uri_str, parse_version=True)
+    else:
+      # Wildcarding is allowed but must resolve to just one object.
+      uris = list(self.WildcardIterator(self.args[0]).IterUris())
+      if len(uris) == 0:
+        raise CommandException('No URIs matched')
+      if len(uris) != 1:
+        raise CommandException('%s matched more than one URI, which is not '
+            'allowed by the %s command' % (self.args[0], self.command_name))
+      uri = uris[0]
     if not uri.names_bucket() and not uri.names_object():
       raise CommandException('"%s" command must specify a bucket or '
                              'object.' % self.command_name)

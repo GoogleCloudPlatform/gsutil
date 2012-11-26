@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from boto.s3.deletemarker import DeleteMarker
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -39,7 +40,7 @@ import boto
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil ls [-b] [-l] [-L] [-R] [-p proj_id] uri...
+  gsutil ls [-a] [-b] [-l] [-L] [-R] [-p proj_id] uri...
 
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
@@ -178,6 +179,9 @@ _detailed_help_text = ("""
   -p proj_id  Specifies the project ID to use for listing buckets.
 
   -R, -r      Requests a recursive listing.
+
+  -a          Includes non-current object versions / generations in the listing
+              (only useful with a versioning-enabled bucket).
 """)
 
 
@@ -195,7 +199,7 @@ class LsCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'blLp:rR',
+    SUPPORTED_SUB_ARGS : 'ablLp:rR',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -267,7 +271,18 @@ class LsCommand(Command):
     Returns:
       URI string.
     """
-    return '%s://%s/%s' % (uri.scheme, obj.bucket.name, obj.name)
+    version_info = ''
+    if self.all_versions:
+      if uri.get_provider().name == 'google' and obj.generation:
+        version_info = '#%s.%s' % (obj.generation , obj.meta_generation)
+      elif uri.get_provider().name == 'aws' and obj.version_id:
+        if isinstance(obj, DeleteMarker):
+          version_info = '#<DeleteMarker>' + str(obj.version_id)
+        else:
+          version_info = '#' + str(obj.version_id)
+      else:
+        version_info = ''
+    return '%s://%s/%s%s' % (uri.scheme, obj.bucket.name, obj.name, version_info)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref, listing_style):
     """Print listing info for given bucket_listing_ref.
@@ -285,15 +300,19 @@ class LsCommand(Command):
     """
     uri = bucket_listing_ref.GetUri()
     obj = bucket_listing_ref.GetKey()
+    uri_str = self._UriStrForObj(uri, obj)
     if listing_style == ListingStyle.SHORT:
-      print self._UriStrForObj(uri, obj).encode('utf-8')
+      print uri_str.encode('utf-8')
       return (1, 0)
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
-      print '%10s  %s  %s' % (obj.size, timestamp,
-                              self._UriStrForObj(uri, obj).encode('utf-8'))
-      return (1, obj.size)
+      if not isinstance(obj, DeleteMarker):
+        print '%10s  %s  %s' % (obj.size, timestamp, uri_str.encode('utf-8'))
+        return (1, obj.size)
+      else:
+        print '%10s  %s  %s' % (0, timestamp, uri_str.encode('utf-8'))
+        return (0, 1)
     elif listing_style == ListingStyle.LONG_LONG:
       # Run in a try/except clause so we can continue listings past
       # access-denied errors (which can happen because user may have READ
@@ -301,9 +320,10 @@ class LsCommand(Command):
       # FULL_CONTROL over individual objects and thus not be able to read
       # their ACLs).
       try:
-        uri_str = self._UriStrForObj(uri, obj)
         print '%s:' % uri_str.encode('utf-8')
-        obj = self.suri_builder.StorageUri(uri_str).get_key(False)
+        suri = self.suri_builder.StorageUri(uri_str,
+                                            parse_version=self.all_versions)
+        obj = suri.get_key(False)
         print '\tCreation time:\t%s' % obj.last_modified
         if obj.cache_control:
           print '\tCache-Control:\t%s' % obj.cache_control
@@ -320,8 +340,7 @@ class LsCommand(Command):
           for name in obj.metadata:
             print '\t%s%s:\t%s' % (prefix, name, obj.metadata[name])
         print '\tETag:\t\t%s' % obj.etag.strip('"\'')
-        print '\tACL:\t\t%s' % (
-            self.suri_builder.StorageUri(uri_str).get_acl(False, self.headers))
+        print '\tACL:\t\t%s' % (suri.get_acl(False, self.headers))
         return (1, obj.size)
       except boto.exception.GSResponseError as e:
         if e.status == 403:
@@ -369,15 +388,18 @@ class LsCommand(Command):
         if num_expanded_blrs > 1 or should_recurse:
           print '%s:' % blr.GetUriString().encode('utf-8')
           printed_one = True
-        blr_iterator = self.WildcardIterator(
-            '%s/*' % blr.GetRStrippedUriString())
+        blr_iterator = self.WildcardIterator( '%s/*' %
+                                             blr.GetRStrippedUriString(),
+                                             all_versions=self.all_versions)
       elif blr.NamesBucket():
-        blr_iterator = self.WildcardIterator('%s*' % blr.GetUriString())
+        blr_iterator = self.WildcardIterator('%s*' % blr.GetUriString(),
+                                             all_versions=self.all_versions)
       else:
         # This BLR didn't come from a bucket listing. This case happens for
         # BLR's instantiated from a user-provided URI.
         blr_iterator = PluralityCheckableIterator(
-            _UriOnlyBlrExpansionIterator(self, blr))
+            _UriOnlyBlrExpansionIterator(
+                self, blr, all_versions=self.all_versions))
         if blr_iterator.is_empty() and not ContainsWildcard(uri):
           raise CommandException('No such object %s' % uri)
       for cur_blr in blr_iterator:
@@ -419,9 +441,12 @@ class LsCommand(Command):
     listing_style = ListingStyle.SHORT
     get_bucket_info = False
     self.recursion_requested = False
+    self.all_versions = False
     if self.sub_opts:
       for o, a in self.sub_opts:
-        if o == '-b':
+        if o == '-a':
+          self.all_versions = True
+        elif o == '-b':
           get_bucket_info = True
         elif o == '-l':
           listing_style = ListingStyle.LONG
@@ -484,6 +509,7 @@ class LsCommand(Command):
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
+  num_test_buckets = 3
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('gen bucket expect', 'echo gs://$B0/ >$F9', 0, None),
@@ -494,6 +520,12 @@ class LsCommand(Command):
                                                         ('$F7', '$F9')),
     ('list bucket contents', 'gsutil ls gs://$B1 >$F7', 0, ('$F7', '$F8')),
     ('list object', 'gsutil ls gs://$B1/$O0 >$F7', 0, ('$F7', '$F8')),
+    ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
+    ('add version 1', 'gsutil cp gs://$B2/$O0 gs://$B2/$O1', 0, None),
+    ('add version 2', 'gsutil cp gs://$B2/$O0 gs://$B2/$O1', 0, None),
+    ('gen expected count', 'echo 3 > $F6', 0, None),
+    ('check version list', 'gsutil ls -a gs://$B2/$O1 | wc -l  > $F5', 0,
+                                                        ('$F5', '$F6')),
   ]
 
 
@@ -502,15 +534,16 @@ class _UriOnlyBlrExpansionIterator:
   Iterator that expands a BucketListingRef that contains only a URI (i.e.,
   didn't come from a bucket listing), yielding BucketListingRefs to which it
   expands.  This case happens for BLR's instantiated from a user-provided URI.
-  
+
   Note that we can't use NameExpansionIterator here because it produces an
   iteration over the full object names (e.g., expanding "gs://bucket" to
   "gs://bucket/dir/o1" and "gs://bucket/dir/o2"), while for the ls command
   we need also to see the intermediate directories (like "gs://bucket/dir").
   """
-  def __init__(self, command_instance, blr):
+  def __init__(self, command_instance, blr, all_versions=False):
     self.command_instance = command_instance
     self.blr = blr
+    self.all_versions=all_versions
 
   def __iter__(self):
     """
@@ -527,12 +560,14 @@ class _UriOnlyBlrExpansionIterator:
     # the first with HasKey()=True and the second with HasPrefix()=True.
     rstripped_uri_str = self.blr.GetRStrippedUriString()
     if ContainsWildcard(rstripped_uri_str):
-      for blr in self.command_instance.WildcardIterator(rstripped_uri_str):
+      for blr in self.command_instance.WildcardIterator(
+          rstripped_uri_str, all_versions=self.all_versions):
         yield blr
       return
     # Build a wildcard to expand so CloudWildcardIterator will not just treat it
     # as a key and yield the result without doing a bucket listing.
-    for blr in self.command_instance.WildcardIterator(rstripped_uri_str + '*'):
+    for blr in self.command_instance.WildcardIterator(
+        rstripped_uri_str + '*', all_versions=self.all_versions):
       # Find the originally specified BucketListingRef in the expanded list (if
       # present). Don't just use the expanded list, because it would also
       # include objects whose name prefix matches the blr name (because of the

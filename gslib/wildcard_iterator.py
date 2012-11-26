@@ -105,7 +105,7 @@ class CloudWildcardIterator(WildcardIterator):
   """
 
   def __init__(self, wildcard_uri, proj_id_handler,
-               bucket_storage_uri_class=BucketStorageUri,
+               bucket_storage_uri_class=BucketStorageUri, all_versions=False,
                headers=None, debug=0):
     """
     Instantiates an iterator over BucketListingRef matching given wildcard URI.
@@ -130,6 +130,7 @@ class CloudWildcardIterator(WildcardIterator):
       self.headers = headers.copy()
     self.proj_id_handler = proj_id_handler
     self.bucket_storage_uri_class = bucket_storage_uri_class
+    self.all_versions = all_versions
     self.debug = debug
 
   def __iter__(self):
@@ -198,9 +199,10 @@ class CloudWildcardIterator(WildcardIterator):
                 self._BuildBucketFilterStrings(uri.object_name))
             prog = re.compile(fnmatch.translate(prefix_wildcard))
             # List bucket for objects matching prefix up to delimiter.
-            for key in bucket_uri.get_bucket(
-                validate=False, headers=self.headers).list(
-                    prefix=prefix, delimiter=delimiter, headers=self.headers):
+            for key in bucket_uri.list_bucket(prefix=prefix,
+                                              delimiter=delimiter,
+                                              headers=self.headers,
+                                              all_versions=self.all_versions):
               # Check that the prefix regex matches rstripped key.name (to
               # correspond with the rstripped prefix_wildcard from
               # _BuildBucketFilterStrings()).
@@ -435,6 +437,7 @@ class WildcardException(StandardError):
 
 def wildcard_iterator(uri_or_str, proj_id_handler,
                       bucket_storage_uri_class=BucketStorageUri,
+                      all_versions=False,
                       headers=None, debug=0):
   """Instantiate a WildCardIterator for the given StorageUri.
 
@@ -463,7 +466,9 @@ def wildcard_iterator(uri_or_str, proj_id_handler,
   if uri.is_cloud_uri():
     return CloudWildcardIterator(
         uri, proj_id_handler,
-        bucket_storage_uri_class=bucket_storage_uri_class, headers=headers,
+        bucket_storage_uri_class=bucket_storage_uri_class,
+        all_versions=all_versions,
+        headers=headers,
         debug=debug)
   elif uri.is_file_uri():
     return FileWildcardIterator(uri, headers=headers, debug=debug)
