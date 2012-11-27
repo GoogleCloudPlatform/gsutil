@@ -33,7 +33,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil mb [-l location] [-p proj_id] uri...
+  gsutil mb [-c storage_class] [-l location] [-p proj_id] uri...
 
 
 <B>DESCRIPTION</B>
@@ -42,22 +42,47 @@ _detailed_help_text = ("""
   in use by another user. You can, however, carve out parts of the bucket name
   space corresponding to your company's domain name (see "gsutil help naming").
 
-  If you specify a location for the bucket (using the -l option), the
-  bucket will be created in the named geographic location. Once created in
-  a location, a bucket cannot be moved to a different location; you would
-  instead need to create a new bucket and move the data over and then delete
-  the original bucket.
-
   If you don't specify a project ID using the -p option, the bucket
   will be created using the default project ID specified in your gsutil
   configuration file (see "gsutil help config"). For more details about
   projects see "gsutil help projects".
 
+  The -c and -l options specify the storage class and location, respectively,
+  for the bucket. Once a bucket is created in a given location and with a
+  given storage class, it cannot be moved to a different location, and the
+  storage class cannot be changed. Instead, you would need to create a new
+  bucket and move the data over and then delete the original bucket.
+
+
+<B>BUCKET STORAGE CLASSES</B>
+  If you don't specify a -c option, the bucket will be created with the default
+  (standard) storage class.
+
+  If you specify -c RA, it causes the data stored in the bucket to use
+  reduced availability storage. Reduced availability storage buckets have lower
+  availability than standard storage class buckets, but durability equal to
+  that of storage class buckets. This option allows users to reduce costs
+  for data for which lower availability is acceptable. Reduced availability
+  storage would not be appropriate for "hot" objects (i.e., objects being
+  accessed frequently) or for interactive workloads; however, it might be
+  appropriate for other types of applications. See the online documentation
+  for pricing and SLA details.
+
+
+<B>BUCKET LOCATIONS</B>
+  If you don't specify a -l option, the bucket will be created in the default
+  location (US). Otherwise, you can specify one of the available locations:
+  US (United States) or EU (Europe).
+
 
 <B>OPTIONS</B>
-  -l location Can be us or eu. Default is us.
+  -c storage_class  Can be DRA (or DURABLE_REDUCED_AVAILABILITY) or S (or
+                    STANDARD). Default is STANDARD.
 
-  -p proj_id  Specifies the project ID under which to create the bucket.
+  -l location       Can be US or EU. Default is US. Locations are case
+                    insensitive.
+
+  -p proj_id        Specifies the project ID under which to create the bucket.
 """)
 
 
@@ -75,7 +100,7 @@ class MbCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'l:p:',
+    SUPPORTED_SUB_ARGS : 'c:l:p:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -89,7 +114,11 @@ class MbCommand(Command):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'mb',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['makebucket', 'createbucket', 'md', 'mkdir'],
+    HELP_NAME_ALIASES : ['createbucket', 'makebucket', 'md', 'mkdir',
+                         'location', 'dra', 'dras', 'reduced_availability',
+                         'durable_reduced_availability',
+                         'rr', 'reduced_redundancy',
+                         'standard', 'storage class' ],
     # Type of help:
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
@@ -101,12 +130,15 @@ class MbCommand(Command):
   # Command entry point.
   def RunCommand(self):
     location = ''
+    storage_class = ''
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
           location = a
         elif o == '-p':
           self.proj_id_handler.SetProjectId(a)
+        elif o == '-c':
+          storage_class = self._Normalize_Storage_Class(a)
 
     if not self.headers:
       headers = {}
@@ -121,5 +153,18 @@ class MbCommand(Command):
       self.proj_id_handler.FillInProjectHeaderIfNeeded('mb', bucket_uri,
                                                        headers)
       print 'Creating %s...' % bucket_uri
-      bucket_uri.create_bucket(headers=headers, location=location)
+      # Pass storage_class param only if this is a GCS bucket. (In S3 the
+      # storage class is specified on the key object.)
+      if bucket_uri.scheme == 'gs':
+        bucket_uri.create_bucket(headers=headers, location=location,
+                                 storage_class=storage_class)
+      else:
+        bucket_uri.create_bucket(headers=headers, location=location)
 
+  def _Normalize_Storage_Class(self, sc):
+    sc = sc.upper()
+    if sc in ('DRA', 'DURABLE_REDUCED_AVAILABILITY'):
+      return 'DURABLE_REDUCED_AVAILABILITY'
+    if sc in ('S', 'STD', 'STANDARD'):
+      return 'STANDARD'
+    return sc

@@ -162,6 +162,7 @@ _detailed_help_text = ("""
     gs://bucket/ :
             24 objects, 29.83 KB
             LocationConstraint: US
+            StorageClass: STANDARD
             ACL: <Owner:00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7, <<GroupById: 00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7>: u'FULL_CONTROL'>>
             Default ACL: <>
     TOTAL: 24 objects, 30544 bytes (29.83 KB)
@@ -250,12 +251,16 @@ class LsCommand(Command):
         location_output = ''
         if location_constraint:
           location_output = '\n\tLocationConstraint: %s' % location_constraint
+        storage_class = bucket_uri.get_storage_class(validate=False,
+                                                     headers=self.headers)
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'get_acl', bucket_uri, self.headers)
-        print '%s :\n\t%d objects, %s%s\n\tACL: %s\n\tDefault ACL: %s' % (
-            bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
-            location_output, bucket_uri.get_acl(False, self.headers),
-            bucket_uri.get_def_acl(False, self.headers))
+        print('%s :\n\t%d objects, %s\n\tStorageClass: %s%s\n\tACL: %s\n'
+              '\tDefault ACL: %s' % (
+              bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
+              storage_class, location_output,
+              bucket_uri.get_acl(False, self.headers),
+              bucket_uri.get_def_acl(False, self.headers)))
     return (bucket_objs, bucket_bytes)
 
   def _UriStrForObj(self, uri, obj):
