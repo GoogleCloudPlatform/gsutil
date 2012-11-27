@@ -1,3 +1,32 @@
+Release 3.19 (release-date: 2012-11-26)
+
+New Features
+------------
+  - Added support for object versions.
+
+  - Added support for storage classes (including Durable Reduced Availability).
+
+
+Bug Fixes
+---------
+  - Fixed problem where cp -q prevented resumable uploads from being performed.
+
+  - Made setwebcfg and setcors tests robust wrt XML formatting variation.
+
+
+Other Changes
+-------------
+
+  - Incorporated vapier@ mods to make version command not fail if CHECKSUM file missing.
+
+  - Refactored gsutil such that most functionality exists in boto.
+
+  - Updated gsutil help dev instructions for how to check out source.
+
+
+================================================================================
+
+
 Release 3.18 (release-date: 2012-09-19)
 
 Bug Fixes
@@ -9,6 +38,7 @@ Bug Fixes
 
   - Fixed one more place that outputted progress info when gsutil cp -q
     specified (during streaming uploads).
+
 
 Other Changes
 -------------
@@ -27,6 +57,7 @@ Bug Fixes
 
   - Fixed race condition when multiple threads attempt to get an OAuth2 refresh
     token concurrently.
+
 
 Other Changes
 -------------
