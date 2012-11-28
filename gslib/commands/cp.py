@@ -695,7 +695,10 @@ class CpCommand(Command):
       dst_key.set_contents_from_file(fp, headers, policy=canned_acl,
                                      cb=cb, num_cb=num_cb)
     if res_upload_handler:
-      bytes_transferred = file_size - res_upload_handler.upload_start_point
+      # ResumableUploadHandler does not update upload_start_point from its
+      # initial value of -1 if transferring the whole file, so clamp at 0
+      bytes_transferred = file_size - max(
+                              res_upload_handler.upload_start_point, 0)
     else:
       bytes_transferred = file_size
     end_time = time.time()
