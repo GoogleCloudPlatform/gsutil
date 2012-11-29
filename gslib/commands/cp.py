@@ -30,6 +30,8 @@ import time
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto import config
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
+from boto.exception import GSResponseError
+from boto.exception import ResumableUploadException
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -244,6 +246,14 @@ _detailed_help_text = ("""
   -e          Exclude symlinks. When specified, symbolic links will not be
               copied.
 
+  -n          No-clobber. When specified, existing files or objects at the
+              destination will not be overwritten. Any items that are skipped
+              by this option will be reported as being skipped.
+
+              Please note that using this feature will make gsutil perform
+              additional HTTP requests for every item being copied. This may
+              increase latency and cost.
+
   -p          Causes ACL to be preserved when copying in the cloud. Note that
               this option has performance and cost implications, because it
               is essentially performing three requests (getacl, cp, setacl).
@@ -277,7 +287,7 @@ _detailed_help_text = ("""
               now to avoid breaking existing scripts. It will be removed at
               a future date.
 
-  -v          Parses uris for version / generation numbers (only applicable in 
+  -v          Parses uris for version / generation numbers (only applicable in
               version-enabled buckets). For example:
 
                 gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
@@ -374,7 +384,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:eMpqrRtvz:',
+    SUPPORTED_SUB_ARGS : 'a:eMnpqrRtvz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -1056,6 +1066,28 @@ class CpCommand(Command):
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
 
+    if self.no_clobber:
+        # There are two checks to prevent clobbering:
+        # 1) The first check is to see if the item
+        #    already exists at the destination and prevent the upload/download
+        #    from happening. This is done by the exists() call.
+        # 2) The second check is only relevant if we are writing to gs. We can
+        #    enforce that the server only writes the object if it doesn't exist
+        #    by specifying the header below. This check only happens at the
+        #    server after the complete file has been uploaded. We specify this
+        #    header to prevent a race condition where a destination file may
+        #    be created after the first check and before the file is fully
+        #    uploaded.
+        # In order to save on unneccesary uploads/downloads we perform both
+        # checks. However, this may come at the cost of additional HTTP calls.
+        if dst_uri.exists(headers):
+          if not self.quiet:
+            self.THREADED_LOGGER.info('Skipping existing item: %s' %
+                                      dst_uri.uri)
+          return (0, 0)
+        if dst_uri.is_cloud_uri() and dst_uri.scheme == 'gs':
+          headers['x-goog-if-generation-match'] = '0'
+
     if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
       if src_uri.scheme == dst_uri.scheme:
         return self._CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
@@ -1377,8 +1409,29 @@ class CpCommand(Command):
         raise CommandException('%s: "%s" and "%s" are the same file - '
                                'abort.' % (cmd_name, exp_src_uri, dst_uri))
 
-      (elapsed_time, bytes_transferred) = self._PerformCopy(exp_src_uri,
-                                                            dst_uri)
+      elapsed_time = bytes_transferred = 0
+      try:
+        (elapsed_time, bytes_transferred) = self._PerformCopy(exp_src_uri,
+                                                              dst_uri)
+      except GSResponseError, e:
+        if self.no_clobber and e.status == 412:
+          # We tried to overwrite an object that already exists on the server.
+          if not self.quiet:
+            self.THREADED_LOGGER.info('Rejected (noclobber): %s' % dst_uri.uri)
+        else:
+          raise
+      except ResumableUploadException, e:
+        if self.no_clobber and 'code 412' in e.message:
+          # We tried to stream over an object that already exists on the server.
+          if not self.quiet:
+            self.THREADED_LOGGER.info('Rejected (noclobber): %s' % dst_uri.uri)
+        else:
+          raise
+
+      # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
+      # since we call copy internally from move and don't specify the -n flag)
+      # we'll need to only remove the source when we have not skipped the
+      # destination.
       if self.perform_mv:
         if not self.quiet:
           self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
@@ -1452,12 +1505,25 @@ class CpCommand(Command):
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
     ('upload', 'gsutil cp $F1 gs://$B1/$O1', 0, None),
+    ('setup noclobber', 'echo Skipping >noclob.ct', 0, None),
     ('download', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
+    ('noclobber upload',
+      'gsutil cp -n $F1 gs://$B1/$O1 2>&1 >/dev/null | cut -c1-8 >noclob.ct1',
+      0, ('noclob.ct', 'noclob.ct1')),
+    ('noclobber download',
+      'gsutil cp -n gs://$B1/$O1 $F9 2>&1 >/dev/null | cut -c1-8 >noclob.ct2',
+      0, ('noclob.ct', 'noclob.ct2')),
+    # Copy-in-the-cloud
+    ('noclobber setup copy-in-the-cloud',
+      'gsutil cp gs://$B1/$O1 gs://$B2', 0, None),
+    ('noclobber verify copy-in-the-cloud',
+      'gsutil cp -n gs://$B1/$O1 gs://$B2 2>&1 '
+      '>/dev/null | cut -c1-8 > noclob.ct3', 0, ('noclob.ct', 'noclob.ct3')),
     ('stream upload', 'cat $F1 | gsutil cp - gs://$B1/$O1', 0, None),
     ('check stream upload', 'gsutil cp gs://$B1/$O1 $F9', 0, ('$F9', '$F1')),
     # Clean up if we got interrupted.
     ('remove test files',
-     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo',
+     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo noclob.ct*',
       0, None),
     ('setup mp3 file', 'cp gslib/test_data/test.mp3 test.mp3', 0, None),
     ('setup mp3 CT', 'echo audio/mpeg >test_mp3.ct', 0, None),
@@ -1529,12 +1595,14 @@ class CpCommand(Command):
      None),
     ('download current version', 'gsutil cp gs://$B2/$O3 $F3', 0,
      ('$F3', '$F1')),
+    ('remove versioning test files', 'rm -f $F3 $F9', 0, None),
   ]
 
   def _ParseArgs(self):
     self.perform_mv = False
     self.exclude_symlinks = False
     self.quiet = False
+    self.no_clobber = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     if self.sub_opts:
@@ -1547,6 +1615,8 @@ class CpCommand(Command):
           # the undocumented (for internal use) -M option when running the cp
           # command from mv.py.
           self.perform_mv = True
+        elif o == '-n':
+          self.no_clobber = True
         elif o == '-q':
           self.quiet = True
         elif o == '-r' or o == '-R':
