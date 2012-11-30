@@ -48,9 +48,11 @@ class NameExpansionResult(object):
   in _NameExpansionIterator.
   """
 
+  is_current_version = False
+
   def __init__(self, src_uri_str, is_multi_src_request,
                src_uri_expands_to_multi, names_container, expanded_uri_str,
-               have_existing_dst_container=None):
+               have_existing_dst_container=None, parse_version=False):
     """
     Args:
       src_uri_str: string representation of StorageUri that was expanded.
@@ -65,6 +67,8 @@ class NameExpansionResult(object):
           request to an existing bucket, bucket subdir, or directory. Default
           None value should be used in cases where this is not needed (commands
           other than cp).
+      parse_version: Bool indicating that the result is version-ful and should
+          be parsed accordingly.
     """
     self.src_uri_str = src_uri_str
     self.is_multi_src_request = is_multi_src_request
@@ -72,6 +76,7 @@ class NameExpansionResult(object):
     self.names_container = names_container
     self.expanded_uri_str = expanded_uri_str
     self.have_existing_dst_container = have_existing_dst_container
+    self.parse_version = parse_version
 
   def __repr__(self):
     return '%s' % self.expanded_uri_str
@@ -139,7 +144,8 @@ class _NameExpansionIterator(object):
   def __init__(self, command_name, proj_id_handler, headers, debug,
                bucket_storage_uri_class, uri_strs, recursion_requested,
                have_existing_dst_container=None, flat=True,
-               all_versions=False, for_all_version_delete=False):
+               all_versions=False, for_all_version_delete=False,
+               parse_versions=False):
     """
     Args:
       command_name: name of command being run.
@@ -159,6 +165,7 @@ class _NameExpansionIterator(object):
       all_versions: Bool indicating whether to iterate over all object versions.
       for_all_version_delete: Bool indicating whether this is for an all-version
           delete.
+      parse_versions: Bool indicating that the uri_strs are version-ful.
 
     Examples of ExpandWildcardsAndContainers with flat=True:
       - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
@@ -201,6 +208,7 @@ class _NameExpansionIterator(object):
     self.flat = flat
     self.all_versions = all_versions
     self.for_all_version_delete = for_all_version_delete
+    self.parse_versions = parse_versions
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -210,11 +218,20 @@ class _NameExpansionIterator(object):
     if self.all_versions:
       return self._VersionedIter()
     else:
-      return self._VersionLessIter()
+      return self._VersionAgnosticIter()
 
   def _VersionedIter(self):
-    for ne_result in self._VersionLessIter():
+    for ne_result in self._VersionAgnosticIter():
       exp_src_uri = self.suri_builder.StorageUri(ne_result.GetExpandedUriStr())
+
+      # If a current version exists, hold onto its URI.
+      current_version_str = None
+      if self.for_all_version_delete and exp_src_uri.exists():
+        key = exp_src_uri.get_key()
+        current_version_str = (
+              '%s://%s/%s#%s' % (exp_src_uri.scheme, key.bucket.name, key.name,
+                                 key.version_id or key.generation))
+
       for key in exp_src_uri.list_bucket(prefix=exp_src_uri.object_name,
                                          headers=self.headers,
                                          all_versions=True):
@@ -225,14 +242,17 @@ class _NameExpansionIterator(object):
         versioned_ne_result.expanded_uri_str = (
             '%s://%s/%s#%s' % (exp_src_uri.scheme, key.bucket.name, key.name,
                                key.version_id or key.generation))
-        yield versioned_ne_result
-      # If we're trying to delete all versions, the last version may need to be
-      # deleted twice.
-      if self.for_all_version_delete:
-        versioned_ne_result.is_duplicate = True
+        versioned_ne_result.parse_version = True
+        # If this is the current version, and we're doing an "rm -a", then set
+        # the is_current_version flag, so the remove function will delete it
+        # twice (in versioned buckets, the first delete just marks the object
+        # deleted so it won't show up in bucket listings without deleting data).
+        if (self.for_all_version_delete and
+            current_version_str == versioned_ne_result.expanded_uri_str):
+          versioned_ne_result.is_current_version = True
         yield versioned_ne_result
 
-  def _VersionLessIter(self):
+  def _VersionAgnosticIter(self):
     for uri_str in self.uri_strs:
 
       # Step 1: Expand any explicitly specified wildcards. The output from this
@@ -273,7 +293,8 @@ class _NameExpansionIterator(object):
           yield NameExpansionResult(uri_str, is_multi_src_request,
                                     src_uri_expands_to_multi, names_container,
                                     blr.GetUriString(),
-                                    self.have_existing_dst_container)
+                                    self.have_existing_dst_container,
+                                    parse_version=self.parse_versions)
           continue
         if not self.recursion_requested:
           if blr.GetUri().is_file_uri():
@@ -322,7 +343,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
                           recursion_requested,
                           have_existing_dst_container=None, flat=True,
                           all_versions=False,
-                          for_all_version_delete=False):
+                          for_all_version_delete=False,
+                          parse_versions=False):
   """
   Static factory function for instantiating _NameExpansionIterator, which
   wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -333,7 +355,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
   name_expansion_iterator = _NameExpansionIterator(
       command_name, proj_id_handler, headers, debug, bucket_storage_uri_class,
       uri_strs, recursion_requested, have_existing_dst_container, flat,
-      all_versions=all_versions, for_all_version_delete=for_all_version_delete)
+      all_versions=all_versions, for_all_version_delete=for_all_version_delete,
+      parse_versions=parse_versions)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.is_empty():
     raise CommandException('No URIs matched')

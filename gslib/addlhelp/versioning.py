@@ -73,8 +73,8 @@ _detailed_help_text = ("""
 
 
 <B>OTHER VERSION-AWARE COMMANDS</B>
-  The following commands additionally support the "-v" flag to specify a target
-  object's version:
+  In addition to rm, the following commands also support the "-v" flag to
+  specify a target object's version:
 
     cat, cp, getacl, setacl
 

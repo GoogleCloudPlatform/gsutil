@@ -150,6 +150,12 @@ class RmCommand(Command):
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
+    if parse_versions and delete_all_versions:
+      raise CommandException(
+          '"rm" does not permit "-a" and "-v" commands simultaneously. If you '
+          'wish to delete only one object version, use "-v". Use "-a" to '
+          'delete all versions.')
+
     def _RemoveExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
       self.THREADED_LOGGER.error(str(e))
@@ -158,7 +164,7 @@ class RmCommand(Command):
     def _RemoveFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr(),
-          parse_version=(parse_versions or delete_all_versions))
+          parse_version=name_expansion_result.parse_version)
       if exp_src_uri.names_container():
         if exp_src_uri.is_cloud_uri():
           # Before offering advice about how to do rm + rb, ensure those
@@ -168,19 +174,25 @@ class RmCommand(Command):
         raise CommandException('"rm" command will not remove buckets. To '
                                'delete this/these bucket(s) do:\n\tgsutil rm '
                                '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
+
+      # In versioned buckets, current versions need to be deleted twice - the
+      # first delete just marks the object deleted without removing data.
+      if delete_all_versions and name_expansion_result.is_current_version:
+        self.THREADED_LOGGER.info('Removing current version %s...',
+                                  name_expansion_result.expanded_uri_str)
+        try:
+          exp_src_uri.delete_key(validate=False, headers=self.headers)
+        except:
+          if continue_on_error:
+            self.everything_removed_okay = False
+          else:
+            raise
+
+      # Perform delete.
       self.THREADED_LOGGER.info('Removing %s...',
                                 name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
-      except GSResponseError, e:
-        is_duplicate_ne_result = (hasattr(name_expansion_result, 'is_duplicate')
-                                  and name_expansion_result.is_duplicate)
-        if delete_all_versions and is_duplicate_ne_result and e.status == 404:
-          self.THREADED_LOGGER.info(
-              '  %s was not found; possibly already deleted' %
-              name_expansion_result.expanded_uri_str)
-        else:
-          raise
       except:
         if continue_on_error:
           self.everything_removed_okay = False
@@ -192,7 +204,8 @@ class RmCommand(Command):
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, self.args, self.recursion_requested,
         flat=self.recursion_requested, all_versions=delete_all_versions,
-        for_all_version_delete=delete_all_versions)
+        for_all_version_delete=delete_all_versions,
+        parse_versions=parse_versions)
 
     # Perform remove requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
@@ -203,3 +216,29 @@ class RmCommand(Command):
       raise CommandException('Some files could not be removed.')
 
     return 0
+
+  # Test specification. See definition of test_steps in base class for
+  # details on how to populate these fields.
+  num_test_buckets = 1
+  test_steps = [
+    ('stage empty file', 'echo -n \'\' > $F9', 0, None),
+    ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
+    ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    # Test that "rm -a" for an object with a current version works.
+    ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
+    ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
+     ('$F1', '$F9')),
+    ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    ('delete current version', 'gsutil rm gs://$B0/$O0', 0, None),
+    # Test that "rm -a" for an object without a current version works.
+    ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
+    ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
+     ('$F1', '$F9')),
+    ('rm -a fails for missing obj', 'gsutil rm -a gs://$B0/$O0', 1, None),
+  ]

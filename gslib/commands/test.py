@@ -161,8 +161,8 @@ class TestCommand(Command):
     # Create test objects - zero in first bucket, one in second, two in third.
     for i in range(0, min(3, num_buckets)):
       for j in range(0, i):
-        object_cmd = 'echo test | ' + self.gsutil_cmd + \
-                     ' cp - gs://$B%d/$O%d' % (i, j)
+        object_cmd = ('echo test | ' + self.gsutil_cmd +
+                      ' cp - gs://$B%d/$O%d' % (i, j))
         object_cmd = self.sub_format_specs(object_cmd)
         self._TestRunner(object_cmd, debug)
 
@@ -310,16 +310,14 @@ class TestCommand(Command):
     t1 = time.time()
     num_failures = sum(len(result.failures) for result in test_results)
     num_errors = sum(len(result.errors) for result in test_results)
-    num_skipped = sum(len(result.skipped) for result in test_results)
     num_run = sum(result.testsRun for result in test_results)
     passed = all(result.wasSuccessful() for result in test_results)
 
     print
     print '-' * 80
-    print 'Ran %d tests from %d test suites in %.7g seconds' % \
-          (num_run, len(test_results), t1-t0)
-    print '%d failures, %d errors, %d skipped' % \
-          (num_failures, num_errors, num_skipped)
+    print ('Ran %d tests from %d test suites in %.7g seconds' %
+           (num_run, len(test_results), t1-t0))
+    print '%d failures, %d errors' % (num_failures, num_errors)
     print
     if passed:
       print 'ALL TESTS PASS'
@@ -331,11 +329,11 @@ class TestCommand(Command):
   def pipefail_capable(self):
     """Check whether the system's shell is capable of setting the pipefail
        attribute. Returns True if capable, False otherwise. Only runs the actual
-       shell once so subsequent calls are cached. 
+       shell once so subsequent calls are cached.
     """
     if TestCommand._pipefail_capable is None:
-      if 'win32' not in str(sys.platform).lower() and \
-         subprocess.call('set -o pipefail', shell=True) == 0:
+      if ('win32' not in str(sys.platform).lower() and
+          subprocess.call('set -o pipefail', shell=True) == 0):
         TestCommand._pipefail_capable = True
       else:
         TestCommand._pipefail_capable = False
