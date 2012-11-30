@@ -201,3 +201,5 @@ class RmCommand(Command):
 
     if not self.everything_removed_okay:
       raise CommandException('Some files could not be removed.')
+
+    return 0

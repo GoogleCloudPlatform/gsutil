@@ -688,5 +688,7 @@ class ConfigCommand(Command):
           'access the Internet please see the instructions in that file.\n'
           % output_file_name)
 
+    return 0
+
 def cleanup_handler(signalnum, handler):
   raise AbortException('User interrupted config command')

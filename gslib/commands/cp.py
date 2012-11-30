@@ -1447,7 +1447,7 @@ class CpCommand(Command):
     self.total_elapsed_time = self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       self._HandleStreamingDownload()
-      return
+      return 0
 
     (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
          self.args[-1])
@@ -1498,6 +1498,8 @@ class CpCommand(Command):
         plural_str = 's'
       raise CommandException('%d file%s/object%s could not be transferred.' % (
                              self.copy_failure_count, plural_str, plural_str))
+
+    return 0
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.

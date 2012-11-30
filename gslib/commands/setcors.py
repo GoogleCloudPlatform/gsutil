@@ -143,6 +143,8 @@ class SetCorsCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
+    return 0
+
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
   empty_doc1 = parseString('<CorsConfig/>').toprettyxml(indent='    ')

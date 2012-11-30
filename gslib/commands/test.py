@@ -15,7 +15,9 @@
 import subprocess
 import unittest
 import os
+import sys
 import re
+import time
 import getpass
 import platform
 
@@ -119,6 +121,8 @@ class TestCommand(Command):
     r'\$O(\d)' : _test_prefix_object + r'\1',
     r'\$F(\d)' : _test_prefix_file + r'\1',
   }
+  # Cache for whether system shell is pipefail capable
+  _pipefail_capable = None
 
   def _TestRunner(self, cmd, debug):
     """Run a test command in a subprocess and return result. If debugging
@@ -127,6 +131,11 @@ class TestCommand(Command):
     """
     if not debug and '>' not in cmd:
       cmd += ' >/dev/null 2>&1'
+    # Set pipefail when bash is available. Otherwise, errors might be ignored
+    # silently in the case of commands like `gsutil cp foo bar | wc -l`. Without
+    # pipefail being set, gsutil could crash but a test might still pass.
+    if self.pipefail_capable():
+      cmd = 'set -o pipefail; ' + cmd
     if debug:
       print 'cmd:', cmd
     return subprocess.call(cmd, shell=True)
@@ -231,6 +240,9 @@ class TestCommand(Command):
       # No commands specified so test all commands.
       commands_to_test = self.command_runner.command_map.keys()
 
+    t0 = time.time()
+    test_results = []
+
     for name in commands_to_test:
       cmd = self.command_runner.command_map[name]
 
@@ -285,7 +297,8 @@ class TestCommand(Command):
 
       # Run the tests we've just accumulated.
       print 'Running %s tests for %s command.' % (suite.countTestCases(), name)
-      unittest.TextTestRunner(verbosity=2).run(suite)
+      test_result = unittest.TextTestRunner(verbosity=2).run(suite)
+      test_results.append(test_result)
 
       # If command has a test_teardown method, run per command teardown here.
       if hasattr(cmd, 'test_teardown'):
@@ -293,6 +306,40 @@ class TestCommand(Command):
 
       # Run global test teardown.
       self.global_teardown(self.debug, num_test_buckets)
+
+    t1 = time.time()
+    num_failures = sum(len(result.failures) for result in test_results)
+    num_errors = sum(len(result.errors) for result in test_results)
+    num_skipped = sum(len(result.skipped) for result in test_results)
+    num_run = sum(result.testsRun for result in test_results)
+    passed = all(result.wasSuccessful() for result in test_results)
+
+    print
+    print '-' * 80
+    print 'Ran %d tests from %d test suites in %.7g seconds' % \
+          (num_run, len(test_results), t1-t0)
+    print '%d failures, %d errors, %d skipped' % \
+          (num_failures, num_errors, num_skipped)
+    print
+    if passed:
+      print 'ALL TESTS PASS'
+      return 0
+    else:
+      print 'FAIL'
+      return 1
+
+  def pipefail_capable(self):
+    """Check whether the system's shell is capable of setting the pipefail
+       attribute. Returns True if capable, False otherwise. Only runs the actual
+       shell once so subsequent calls are cached. 
+    """
+    if TestCommand._pipefail_capable is None:
+      if 'win32' not in str(sys.platform).lower() and \
+         subprocess.call('set -o pipefail', shell=True) == 0:
+        TestCommand._pipefail_capable = True
+      else:
+        TestCommand._pipefail_capable = False
+      return TestCommand._pipefail_capable
 
   def sub_format_specs(self, s):
     """Perform iterative regexp substitutions on passed string.

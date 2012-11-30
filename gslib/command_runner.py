@@ -98,4 +98,4 @@ class CommandRunner(object):
                                  self.boto_lib_dir, self.config_file_list,
                                  self.gsutil_ver, self.bucket_storage_uri_class,
                                  test_method)
-    command_inst.RunCommand()
+    return command_inst.RunCommand()

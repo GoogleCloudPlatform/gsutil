@@ -279,7 +279,11 @@ class Command(object):
         headers=self.headers, debug=self.debug)
 
   def RunCommand(self):
-    """Abstract function in base class. Subclasses must implement this."""
+    """Abstract function in base class. Subclasses must implement this. The
+    return value of this function will be used as the exit status of the
+    process, so subclass commands should return an integer exit code (0 for
+    success, a value in [1,255] for failure).
+    """
     raise CommandException('Command %s is missing its RunCommand() '
                            'implementation' % self.command_name)
 

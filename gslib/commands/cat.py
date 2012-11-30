@@ -148,3 +148,5 @@ class CatCommand(Command):
     sys.stdout = cat_outfd
     if not did_some_work:
       raise CommandException('No URIs matched')
+
+    return 0

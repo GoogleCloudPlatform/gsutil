@@ -145,3 +145,5 @@ class EnableLoggingCommand(Command):
                            self.headers)
     if not did_some_work:
       raise CommandException('No URIs matched')
+
+    return 0

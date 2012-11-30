@@ -512,6 +512,8 @@ class LsCommand(Command):
     if got_nomatch_errors:
       raise CommandException('One or more URIs matched no objects.')
 
+    return 0
+
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
   num_test_buckets = 3

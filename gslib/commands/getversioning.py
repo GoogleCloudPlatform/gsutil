@@ -112,3 +112,5 @@ class GetVersioningCommand(Command):
           print '%s: Suspended' % uri_str
     if not some_matched:
       raise CommandException('No URIs matched')
+
+    return 0

@@ -142,6 +142,8 @@ class SetWebcfgCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
+    return 0
+
   webcfg_full = parseString('<WebsiteConfiguration><MainPageSuffix>main'
       '</MainPageSuffix><NotFoundPage>404</NotFoundPage>'
       '</WebsiteConfiguration>').toprettyxml()

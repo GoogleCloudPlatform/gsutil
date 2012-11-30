@@ -120,6 +120,8 @@ class VersionCommand(Command):
         self.gsutil_ver, cur_checksum, checksum_ok_str,
         boto.__version__, sys.version, path, os.path.realpath(sys.argv[0])))
 
+    return 0
+
   def _ComputeCodeChecksum(self):
     """
     Computes a checksum of gsutil code so we can see if users locally modified

@@ -295,3 +295,4 @@ class UpdateCommand(Command):
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     print 'Update complete.'
+    return 0

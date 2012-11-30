@@ -88,3 +88,4 @@ class GetAclCommand(Command):
   # Command entry point.
   def RunCommand(self):
     self.GetAclCommandHelper()
+    return 0

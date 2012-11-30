@@ -136,3 +136,4 @@ class SetAclCommand(Command):
         elif o == '-v':
           self.parse_versions = True
     self.SetAclCommandHelper()
+    return 0

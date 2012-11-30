@@ -99,4 +99,5 @@ class RbCommand(Command):
         did_some_work = True
     if not did_some_work:
       raise CommandException('No URIs matched')
+    return 0
 

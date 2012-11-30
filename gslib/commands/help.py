@@ -133,6 +133,7 @@ class HelpCommand(Command):
         output.append('\n\n')
         output.append(help_prov.help_spec[HELP_TEXT].strip('\n'))
     self._OutputHelp(''.join(output))
+    return 0
 
   def _OutputHelp(self, str):
     """Outputs simply formatted string, paginating if long and PAGER defined"""

@@ -225,6 +225,8 @@ class SetMetaCommand(Command):
     if not self.everything_set_okay:
       raise CommandException('Metadata for some objects could not be set.')
 
+    return 0
+
   def _ParseMetadataHeaders(self, headers):
     metadata_minus = set()
     cust_metadata_minus = set()

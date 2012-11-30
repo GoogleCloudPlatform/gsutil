@@ -134,3 +134,4 @@ class GetLoggingCommand(Command):
   # Command entry point.
   def RunCommand(self):
     self.GetXmlSubresource('logging', self.args[0])
+    return 0

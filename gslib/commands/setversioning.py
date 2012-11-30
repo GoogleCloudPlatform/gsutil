@@ -111,6 +111,8 @@ class SetVersioningCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
+    return 0
+
   num_test_buckets = 1
   test_steps = [
       ('set up suspended file', 'echo gs://$B0: Suspended > $F0', 0, None),

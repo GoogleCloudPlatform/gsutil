@@ -116,3 +116,5 @@ class GetWebcfgCommand(Command):
         print XmlParseString(xml_body).toprettyxml()
     if not some_matched:
       raise CommandException('No URIs matched')
+
+    return 0

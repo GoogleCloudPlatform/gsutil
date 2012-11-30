@@ -116,3 +116,4 @@ class GetCorsCommand(Command):
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(cors.to_xml().encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
+    return 0

@@ -161,6 +161,8 @@ class MbCommand(Command):
       else:
         bucket_uri.create_bucket(headers=headers, location=location)
 
+    return 0
+
   def _Normalize_Storage_Class(self, sc):
     sc = sc.upper()
     if sc in ('DRA', 'DURABLE_REDUCED_AVAILABILITY'):

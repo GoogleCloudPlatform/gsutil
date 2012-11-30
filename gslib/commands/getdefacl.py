@@ -83,3 +83,4 @@ class GetDefAclCommand(Command):
       raise CommandException('URI must name a bucket for the %s command' %
                              self.command_name)
     self.GetAclCommandHelper()
+    return 0

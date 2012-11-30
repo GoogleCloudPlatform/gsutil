@@ -97,3 +97,5 @@ class DisableLoggingCommand(Command):
         uri.disable_logging(False, self.headers)
     if not did_some_work:
       raise CommandException('No URIs matched')
+
+    return 0

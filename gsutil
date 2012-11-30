@@ -188,8 +188,9 @@ def main():
           'Unsetting http_proxy environment variable within gsutil run.\n')
     del os.environ['http_proxy']
 
-  _RunNamedCommandAndHandleExceptions(command_runner, command_name, args[1:],
-                                      headers, debug, parallel_operations)
+  return _RunNamedCommandAndHandleExceptions(command_runner, command_name,
+                                             args[1:], headers, debug,
+                                             parallel_operations)
 
 
 def _GetBotoConfigFileList():
@@ -245,8 +246,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # Catch ^C so we can print a brief message instead of the normal Python
     # stack trace.
     signal.signal(signal.SIGINT, _HandleControlC)
-    command_runner.RunNamedCommand(command_name, args, headers, debug,
-                                   parallel_operations)
+    return command_runner.RunNamedCommand(command_name, args, headers, debug,
+                                          parallel_operations)
   except AttributeError, e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit('Missing credentials for the given URI(s). Does your '
@@ -325,5 +326,4 @@ a more specific error code.
 
 
 if __name__ == '__main__':
-  main()
-  sys.exit(0)
+  sys.exit(main())
