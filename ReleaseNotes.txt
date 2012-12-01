@@ -1,3 +1,29 @@
+Release 3.20 (release-date: 2012-11-30)
+
+New Features
+------------
+
+  - Added a noclobber (-n) setting for the cp command. Existing objects/files
+    will not be overwritten when using this setting.
+
+
+Bug Fixes
+---------
+
+  - Fixed off-by-one error when reporting bytes transferred.
+
+
+Other Changes
+-------------
+
+  - Improved versioning support for the remove command.
+
+  - Improved test runner support.
+
+
+================================================================================
+
+
 Release 3.19 (release-date: 2012-11-26)
 
 New Features
@@ -17,7 +43,8 @@ Bug Fixes
 Other Changes
 -------------
 
-  - Incorporated vapier@ mods to make version command not fail if CHECKSUM file missing.
+  - Incorporated vapier@ mods to make version command not fail if CHECKSUM file
+    missing.
 
   - Refactored gsutil such that most functionality exists in boto.
 
@@ -45,7 +72,7 @@ Other Changes
 
   - Updated help text for "gsutil help setmeta" and "gsutil help metadata", to
     clarify and deepen parts of the documentation.
-   
+
 
 ================================================================================
 
@@ -67,7 +94,7 @@ Other Changes
 
   - Added help to gsutil cp -z option, to describe how to change where temp
     files are written.
-   
+
 
 ================================================================================
 
@@ -307,7 +334,7 @@ Release 3.4 (release-date: 2012-04-06)
 Bug Fixes
 ---------
 
-  - Fixed problem where resumable uploads/downloads of objects with very long 
+  - Fixed problem where resumable uploads/downloads of objects with very long
     names would generate tracking files with names that exceeded local file
     system limits, making it impossible to complete resumable transfers for
     those objects. Solution was to build the tracking file name from a fixed
