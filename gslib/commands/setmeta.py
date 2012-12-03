@@ -135,6 +135,14 @@ _detailed_help_text = ("""
   and Cache-Control and remove the Content-Disposition on the specified objects:
 
     gsutil setmeta "\""Content-Type:text/html"",""Cache-Control:public, max-age=3600"",""-Content-Disposition""\" gs://bucket/*.html
+
+
+<B>WARNING ABOUT USING SETMETA WITH VERSIONING ENABLED</B>
+
+Note that if you use the gsutil setmeta command on an object in a bucket
+with versioning enabled (see 'gsutil help versioning'), it will create
+a new object version (and thus, you will get charged for the space required
+for holding the additional version.
 """)
 
 

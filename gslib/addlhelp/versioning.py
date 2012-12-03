@@ -79,6 +79,11 @@ _detailed_help_text = ("""
     cat, cp, getacl, setacl
 
 
+<B>WARNING ABOUT USING SETMETA WITH VERSIONING ENABLED</B>
+
+Note that if you use the gsutil setmeta command on an object in a bucket
+with versioning enabled, it will create a new object version (and thus,
+you will get charged for the space required for holding the additional version.
 """)
 
 
