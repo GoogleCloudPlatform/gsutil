@@ -1527,9 +1527,9 @@ class CpCommand(Command):
     ('remove test files',
      'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo noclob.ct*',
       0, None),
-    ('setup mp3 file', 'cp gslib/test_data/test.mp3 test.mp3', 0, None),
+    ('setup mp3 file', 'cp $G/gslib/test_data/test.mp3 test.mp3', 0, None),
     ('setup mp3 CT', 'echo audio/mpeg >test_mp3.ct', 0, None),
-    ('setup gif file', 'cp gslib/test_data/test.gif test.gif', 0, None),
+    ('setup gif file', 'cp $G/gslib/test_data/test.gif test.gif', 0, None),
     ('setup gif CT', 'echo image/gif >test_gif.ct', 0, None),
     # TODO: we don't need test.app and test.bin anymore if
     # USE_MAGICFILE=True. Implement a way to test both with and without using

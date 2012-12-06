@@ -139,6 +139,8 @@ class Command(object):
     $Bn - converted to one of 10 unique-for-testing bucket names (n=0..9)
     $On - converted to one of 10 unique-for-testing object names (n=0..9)
     $Fn - converted to one of 10 unique-for-testing file names (n=0..9)
+    $G  - converted to the directory where gsutil is installed. Useful for
+          referencing test data.
 
   - The generated file names are full pathnames, whereas the generated
     bucket and object names are simple relative names.

@@ -116,11 +116,7 @@ class TestCommand(Command):
   _test_prefix_bucket = 'gsutil_test_bucket_' + username + '_'
   _test_prefix_object = 'gsutil_test_object_' + username + '_'
   # Replacement regexps for format specs in test_steps values.
-  _test_replacements = {
-    r'\$B(\d)' : _test_prefix_bucket + r'\1',
-    r'\$O(\d)' : _test_prefix_object + r'\1',
-    r'\$F(\d)' : _test_prefix_file + r'\1',
-  }
+  _test_replacements = {}
   # Cache for whether system shell is pipefail capable
   _pipefail_capable = None
 
@@ -145,9 +141,16 @@ class TestCommand(Command):
 
     For general testing use create up to three buckets, one empty, one
     containing one object and one containing two objects. Also create
-    three files for general use.
+    three files for general use. Also initialize _test_replacements.
     """
     print 'Global setup started...'
+
+    self._test_replacements = {
+      r'\$B(\d)' : self._test_prefix_bucket + r'\1',
+      r'\$O(\d)' : self._test_prefix_object + r'\1',
+      r'\$F(\d)' : self._test_prefix_file + r'\1',
+      r'\$G'     : self.gsutil_bin_dir,
+    }
 
     # Build lists of buckets and files.
     bucket_list = ['gs://$B%d' % i for i in range(0, num_buckets)]
@@ -192,7 +195,7 @@ class TestCommand(Command):
       if os.path.exists(f):
         os.unlink(f)
 
-    # Substitute format specifiers ($Bn, $On, $Fn).
+    # Substitute format specifiers ($Bn, $On, $Fn, $G).
     bucket_cmd = self.sub_format_specs(bucket_cmd)
     if not debug:
       bucket_cmd += ' >/dev/null 2>&1'
