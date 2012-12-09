@@ -154,7 +154,7 @@ class _NameExpansionIterator(object):
       debug: Debug level to pass in to boto connection (range 0..3).
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
           Settable for testing/mocking.
-      uri_strs: List of URI strings needing expansion.
+      uri_strs: PluralityCheckableIterator of URI strings needing expansion.
       recursion_requested: True if -R specified on command-line.
       have_existing_dst_container: Bool indicator whether this is a copy
           request to an existing bucket, bucket subdir, or directory. Default
@@ -285,7 +285,7 @@ class _NameExpansionIterator(object):
       wc = self._flatness_wildcard[self.flat]
       src_uri_expands_to_multi = (post_step1_iter.has_plurality()
                                   or post_step2_iter.has_plurality())
-      is_multi_src_request = (len(self.uri_strs) > 1
+      is_multi_src_request = (self.uri_strs.has_plurality()
                               or src_uri_expands_to_multi)
       for (names_container, blr) in post_step2_iter:
         if (not blr.GetUri().names_container()
@@ -314,7 +314,7 @@ class _NameExpansionIterator(object):
             self._WildcardIterator(uri_to_iterate))
         src_uri_expands_to_multi = (src_uri_expands_to_multi
                                     or wc_iter.has_plurality())
-        is_multi_src_request = (len(self.uri_strs) > 1
+        is_multi_src_request = (self.uri_strs.has_plurality()
                                 or src_uri_expands_to_multi)
         for blr in wc_iter:
           yield NameExpansionResult(uri_str, is_multi_src_request,
@@ -348,10 +348,59 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
   """
   Static factory function for instantiating _NameExpansionIterator, which
   wraps the resulting iterator in a PluralityCheckableIterator and checks
-  that it is non-empty.
+  that it is non-empty. Also, allows uri_strs can be either an array or an
+  iterator.
 
-  Args are as documented in constructor for _NameExpansionIterator class.
+  Args:
+    command_name: name of command being run.
+    proj_id_handler: ProjectIdHandler to use for current command.
+    headers: Dictionary containing optional HTTP headers to pass to boto.
+    debug: Debug level to pass in to boto connection (range 0..3).
+    bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
+        Settable for testing/mocking.
+    uri_strs: PluralityCheckableIterator of URI strings needing expansion.
+    recursion_requested: True if -R specified on command-line.
+    have_existing_dst_container: Bool indicator whether this is a copy
+        request to an existing bucket, bucket subdir, or directory. Default
+        None value should be used in cases where this is not needed (commands
+        other than cp).
+    flat: Bool indicating whether bucket listings should be flattened, i.e.,
+        so the mapped-to results contain objects spanning subdirectories.
+    all_versions: Bool indicating whether to iterate over all object versions.
+    for_all_version_delete: Bool indicating whether this is for an all-version
+        delete.
+    parse_versions: Bool indicating that the uri_strs are version-ful.
+
+  Examples of ExpandWildcardsAndContainers with flat=True:
+    - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
+      top-level objects, as will 'gs://bucket/' and 'gs://bucket/*'.
+    - 'gs://bucket/**' will enumerate all objects in the bucket.
+    - 'gs://bucket/abc' will enumerate all next-level objects under directory
+      abc (i.e., not including subdirectories of abc) if gs://bucket/abc/*
+      matches any objects; otherwise it will enumerate the single name
+      gs://bucket/abc
+    - 'gs://bucket/abc/**' will enumerate all objects under abc or any of its
+      subdirectories.
+    - 'file:///tmp' will enumerate all files under /tmp, as will
+      'file:///tmp/*'
+    - 'file:///tmp/**' will enumerate all files under /tmp or any of its
+      subdirectories.
+
+  Example if flat=False: calling with gs://bucket/abc/* lists matching objects
+  or subdirs, but not sub-subdirs or objects beneath subdirs.
+
+  Note: In step-by-step comments below we give examples assuming there's a
+  gs://bucket with object paths:
+    abcd/o1.txt
+    abcd/o2.txt
+    xyz/o1.txt
+    xyz/o2.txt
+  and a directory file://dir with file paths:
+    dir/a.txt
+    dir/b.txt
+    dir/c/
   """
+  uri_strs = PluralityCheckableIterator(uri_strs)
   name_expansion_iterator = _NameExpansionIterator(
       command_name, proj_id_handler, headers, debug, bucket_storage_uri_class,
       uri_strs, recursion_requested, have_existing_dst_container, flat,
