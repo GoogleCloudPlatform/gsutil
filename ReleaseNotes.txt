@@ -1,3 +1,32 @@
+Release 3.21 (release-date: 2012-12-10)
+
+New Features
+------------
+
+  - Added the ability for the cp command to continue even if there is an
+    error. This can be activated with the -c flag.
+
+  - Added support for specifying src args for gsutil cp on stdin (-I option)
+
+
+Bug Fixes
+---------
+
+  - Fixed gsutil test cp, which assumed it was run from gsutil install dir.
+
+  - Mods so we send generation subresource only when user requested
+    version parsing (-v option for cp and cat commands).
+
+
+Other Changes
+-------------
+
+  - Updated docs about using setmeta with versioning enabled.
+
+
+================================================================================
+
+
 Release 3.20 (release-date: 2012-11-30)
 
 New Features
