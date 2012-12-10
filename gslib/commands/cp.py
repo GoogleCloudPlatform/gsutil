@@ -933,6 +933,8 @@ class CpCommand(Command):
       else:
         fp = open(download_file_name, 'wb')
       start_time = time.time()
+      if not self.parse_versions:
+        src_key.generation = None
       src_key.get_contents_to_file(fp, headers, cb=cb, num_cb=num_cb,
                                    res_download_handler=res_download_handler)
       # If a custom test method is defined, call it here. For the copy command,

@@ -144,6 +144,8 @@ class CatCommand(Command):
         print '==> %s <==' % uri.__str__()
         printed_one = True
       key = uri.get_key(False, self.headers)
+      if not parse_versions:
+        key.generation = None
       key.get_file(cat_outfd, self.headers)
     sys.stdout = cat_outfd
     if not did_some_work:
