@@ -52,7 +52,7 @@ from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
-from gslib.util import ONE_MB
+from gslib.util import TWO_MB
 from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
@@ -568,7 +568,7 @@ class CpCommand(Command):
       upload: bool indication of whether transfer is an upload.
     """
     config = boto.config
-    resumable_threshold = config.getint('GSUtil', 'resumable_threshold', ONE_MB)
+    resumable_threshold = config.getint('GSUtil', 'resumable_threshold', TWO_MB)
     transfer_handler = None
     cb = None
     num_cb = None
@@ -576,7 +576,7 @@ class CpCommand(Command):
     if size >= resumable_threshold:
       if not self.quiet:
         cb = self._FileCopyCallbackHandler(upload).call
-        num_cb = int(size / ONE_MB)
+        num_cb = int(size / TWO_MB)
 
       resumable_tracker_dir = config.get(
           'GSUtil', 'resumable_tracker_dir',

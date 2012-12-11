@@ -28,7 +28,7 @@ try:
 except ImportError:
   pass
 
-ONE_MB = 1024*1024
+TWO_MB = 2 * 1024 * 1024
 
 NO_MAX = sys.maxint
 

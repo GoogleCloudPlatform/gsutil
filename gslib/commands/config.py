@@ -42,7 +42,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import HAVE_OAUTH2
-from gslib.util import ONE_MB
+from gslib.util import TWO_MB
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -286,8 +286,8 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 [GSUtil]
 
 # 'resumable_threshold' specifies the smallest file size [bytes] for which
-# resumable Google Cloud Storage transfers are attempted. The default is 1048576
-# (1MB).
+# resumable Google Cloud Storage transfers are attempted. The default is 2097152
+# (2 MiB).
 #resumable_threshold = %(resumable_threshold)d
 
 # 'resumable_tracker_dir' specifies the base location where resumable
@@ -320,7 +320,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # http://www.loc.gov/standards/iso639-2/php/code_list.php for a list of
 # language codes.
 content_language = en
-""" % {'resumable_threshold': ONE_MB,
+""" % {'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}
 
