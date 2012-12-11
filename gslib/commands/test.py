@@ -19,6 +19,7 @@ import sys
 import re
 import time
 import getpass
+import glob
 import platform
 
 from gslib.command import Command
@@ -187,7 +188,8 @@ class TestCommand(Command):
     # Build commands to remove objects, buckets and files.
     bucket_list = ['gs://$B%d' % i for i in range(0, num_buckets)]
     object_list = ['gs://$B%d/*' % i for i in range(0, num_buckets)]
-    file_list = ['$F%d' % i for i in range(0, num_buckets)]
+    assert len(self._test_prefix_file) > 0 # To be safe, so we can't "rm *".
+    file_list = glob.glob('%s*' % self._test_prefix_file)
     bucket_cmd = self.gsutil_cmd + ' rb ' + ' '.join(bucket_list)
     object_cmd = self.gsutil_cmd + ' rm -af ' + ' '.join(object_list)
     for f in file_list:
