@@ -1231,8 +1231,8 @@ class GsutilCommandTests(unittest.TestCase):
     return uri.uri.rpartition('/')[-1]
 
 if __name__ == '__main__':
-  if sys.version_info[:3] < (2, 5, 1):
-    sys.exit('These tests must be run on at least Python 2.5.1\n')
+  if sys.version_info[:3] < (2, 6):
+    sys.exit('These tests must be run on at least Python 2.6\n')
   test_loader = unittest.TestLoader()
   test_loader.testMethodPrefix = 'Test'
   suite = test_loader.loadTestsFromTestCase(GsutilCommandTests)

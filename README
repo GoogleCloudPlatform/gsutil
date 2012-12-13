@@ -14,9 +14,7 @@ The cloudreader app is explained in cloudreader/README.google.
 
 Prerequisites:
 
-Gsutil requires either
- - Python 2.6 or later, or
- - Python 2.5 or later, with the 'simplejson' library installed.
+Gsutil requires Python 2.6 or later.
 
 To install gsutil take the following steps:
 

@@ -68,8 +68,8 @@ def first_token(filename):
   return token
 
 # Validate python version.
-if sys.version_info <= (2, 4):
-  error = 'ERROR: gsutil requires Python Version 2.5 or above...exiting.'
+if sys.version_info <= (2, 6):
+  error = 'ERROR: gsutil requires Python Version 2.6 or above...exiting.'
   exit(error)
 
 # Rather than hard-coding package contents here, we read the manifest 
