@@ -14,8 +14,10 @@
 
 """Static data and helper functions."""
 
-import boto
+import math
 import sys
+
+import boto
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default. Note: we made this static
@@ -34,14 +36,18 @@ NO_MAX = sys.maxint
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
-    (0, 'B'),
-    (10, 'KB'),
-    (20, 'MB'),
-    (30, 'GB'),
-    (40, 'TB'),
-    (50, 'PB'),
+    (0, 'B', 'bit'),
+    (10, 'KB', 'kbit'),
+    (20, 'MB', 'Mbit'),
+    (30, 'GB', 'Gbit'),
+    (40, 'TB', 'Tbit'),
+    (50, 'PB', 'Pbit'),
 ]
 
+# Detect platform types.
+IS_WINDOWS = 'win32' in str(sys.platform).lower()
+IS_LINUX = 'linux' in str(sys.platform).lower()
+IS_OSX = 'darwin' in str(sys.platform).lower()
 
 # Enum class for specifying listing style.
 class ListingStyle(object):
@@ -64,17 +70,58 @@ def HasConfiguredCredentials():
           or has_auth_plugins)
 
 
+def _RoundToNearestExponent(num):
+  i = 0
+  while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
+    i += 1
+  return i, round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
+
 def MakeHumanReadable(num):
-  """Generates human readable string for a number.
+  """Generates human readable string for a number of bytes.
 
   Args:
-    num: The number.
+    num: The number, in bytes.
 
   Returns:
     A string form of the number using size abbreviations (KB, MB, etc.).
   """
-  i = 0
-  while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
-    i += 1
-  rounded_val = round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
+  i, rounded_val = _RoundToNearestExponent(num)
   return '%s %s' % (rounded_val, _EXP_STRINGS[i][1])
+
+def MakeBitsHumanReadable(num):
+  """Generates human readable string for a number of bits.
+
+  Args:
+    num: The number, in bits.
+
+  Returns:
+    A string form of the number using bit size abbreviations (kbit, Mbit, etc.)
+  """
+  i, rounded_val = _RoundToNearestExponent(num)
+  return '%s %s' % (rounded_val, _EXP_STRINGS[i][2])
+
+def Percentile(values, percent, key=lambda x:x):
+    """Find the percentile of a list of values.
+
+    Taken from: http://code.activestate.com/recipes/511478/
+
+    Args:
+      values: a list of numeric values. Note that the values MUST BE already
+              sorted.
+      percent: a float value from 0.0 to 1.0.
+      key: optional key function to compute value from each element of the list
+           of values.
+
+    Returns:
+      The percentile of the values.
+    """
+    if not values:
+      return None
+    k = (len(values) - 1) * percent
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+      return key(values[int(k)])
+    d0 = key(values[int(f)]) * (c-k)
+    d1 = key(values[int(c)]) * (k-f)
+    return d0 + d1

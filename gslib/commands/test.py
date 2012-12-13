@@ -15,12 +15,10 @@
 import subprocess
 import unittest
 import os
-import sys
 import re
 import time
 import getpass
 import glob
-import platform
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -39,6 +37,8 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.util import IS_OSX
+from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 from tests.integration.s3.mock_storage_service import MockBucketStorageUri
 
@@ -127,7 +127,7 @@ class TestCommand(Command):
        to /dev/null.
     """
     if not debug and '>' not in cmd:
-      cmd += ' >/dev/null 2>&1'
+      cmd += ' >%s 2>&1' % os.devnull
     # Set pipefail when bash is available. Otherwise, errors might be ignored
     # silently in the case of commands like `gsutil cp foo bar | wc -l`. Without
     # pipefail being set, gsutil could crash but a test might still pass.
@@ -150,7 +150,9 @@ class TestCommand(Command):
       r'\$B(\d)' : self._test_prefix_bucket + r'\1',
       r'\$O(\d)' : self._test_prefix_object + r'\1',
       r'\$F(\d)' : self._test_prefix_file + r'\1',
-      r'\$G'     : self.gsutil_bin_dir,
+      # Note: re.sub allows backslash escapes, so replace backslashes with
+      # literal backslashes.
+      r'\$G'     : self.gsutil_bin_dir.replace('\\', '\\\\'),
     }
 
     # Build lists of buckets and files.
@@ -200,10 +202,10 @@ class TestCommand(Command):
     # Substitute format specifiers ($Bn, $On, $Fn, $G).
     bucket_cmd = self.sub_format_specs(bucket_cmd)
     if not debug:
-      bucket_cmd += ' >/dev/null 2>&1'
+      bucket_cmd += ' >%s 2>&1' % os.devnull
     object_cmd = self.sub_format_specs(object_cmd)
     if not debug:
-      object_cmd += ' >/dev/null 2>&1'
+      object_cmd += ' >%s 2>&1' % os.devnull
 
     # Run the commands.
     self._TestRunner(object_cmd, debug)
@@ -216,13 +218,6 @@ class TestCommand(Command):
 
     # To avoid testing aliases, we keep track of previous tests.
     already_tested = {}
-
-    self.gsutil_cmd = ''
-    # If running on Windows, invoke python interpreter explicitly.
-    if platform.system() == "Windows":
-      self.gsutil_cmd += 'python '
-    # Add full path to gsutil to make sure we test the correct version.
-    self.gsutil_cmd += os.path.join(self.gsutil_bin_dir, 'gsutil')
 
     # Set sim option on exec'ed commands if user requested mock provider.
     if issubclass(self.bucket_storage_uri_class, MockBucketStorageUri):
@@ -280,8 +275,61 @@ class TestCommand(Command):
       # Iterate over the entries in this command's test specification.
       for (cmdname, cmdline, expect_ret, diff) in cmd.test_steps:
         cmdline = cmdline.replace('gsutil ', self.gsutil_cmd + ' ')
-        if platform.system() == 'Windows':
+        cmdline = cmdline.replace('/dev/null', os.devnull)
+
+        if IS_OSX:
+          # On OS X, the wc command has extra spaces in it that breaks diffs.
+          cmdline = cmdline.replace('wc -l', 'wc -l | tr -d \' \'')
+
+        if IS_WINDOWS:
+          # Trying to use a backtick in unix (ls `cat foo.txt`) has no easy
+          # equivalent in Windows. Rewrite it to run the subcommand and place
+          # it into a variable for use within an inner FOR command.
+          subcommand_regex = '`(?P<subcmd>[^`]*)`'
+          subcommand_match = re.search(subcommand_regex, cmdline)
+          if subcommand_match:
+            cmdline = re.sub(subcommand_regex, '%i', cmdline)
+            subcmd = subcommand_match.group('subcmd')
+            cmdline = ('for /f "usebackq tokens=*" %%i in (`%s`) do %s'
+                       % (subcmd, cmdline))
+
+          gslib_dir = os.path.join(self.gsutil_bin_dir, 'gslib')
+          cut_py = os.path.join(gslib_dir, 'cut.py')
+          head_py = os.path.join(gslib_dir, 'head.py')
+
+          cmdline = cmdline.replace('touch ', '<nul (set/p z=) >')
+          cmdline = cmdline.replace('wc -l', 'find /c /v "~~~"')
+          cmdline = cmdline.replace('grep -v ', 'findstr /V /C:')
+          cmdline = cmdline.replace('grep ', 'findstr /C:')
+          cmdline = re.sub('^rm ', 'del ', cmdline)
+          cmdline = re.sub('^cp ', 'copy ', cmdline)
+          cmdline = cmdline.replace('cut', 'python %s' % cut_py)
+          cmdline = cmdline.replace('head', 'python %s' % head_py)
           cmdline = cmdline.replace('cat ', 'type ')
+
+          # This will match echo commands that are normally fine on *nix
+          # platforms like `echo 3 > foo` but when executed on Windows, the
+          # trailing slash is echoed to the file and newlines are not handled.
+          # It rewrites the echo commands to the form
+          # `(echo.line1& echo.line2)> foo`, which works properly on Windows.
+          echo_regexes = (r'echo\s(?P<echostr>[^|>]*)\s>',
+                          r'echo\s\'(?P<echostr>[^\']*)\'\s>',
+                          r'echo\s"(?P<echostr>[^"]*)"\s>',
+                          r'echo\s(?P<echostr>[^|>]*)\s\|')
+          def echo_replace(m):
+            echolines = []
+            # Convert multiline strings to an echo format Windows handles.
+            for line in m.group('echostr').split('\n'):
+              # These need escaping for windows echo command.
+              for escape_char in ('^', '<', '>', '|', '&'):
+                line = line.replace(escape_char, '^%s' % escape_char)
+              echolines.append('echo.%s' % line)
+            echoline = '& '.join(echolines)
+            outchar = '|' if m.group(0).endswith('|') else '>'
+            echoline = '(%s)%s' % (echoline, outchar)
+            return echoline
+          for echo_regex in echo_regexes:
+            cmdline = re.sub(echo_regex, echo_replace, cmdline)
 
         # Store file names requested for diff.
         result_file = None
@@ -337,7 +385,7 @@ class TestCommand(Command):
        shell once so subsequent calls are cached.
     """
     if TestCommand._pipefail_capable is None:
-      if ('win32' not in str(sys.platform).lower() and
+      if (not IS_WINDOWS and
           subprocess.call('set -o pipefail', shell=True) == 0):
         TestCommand._pipefail_capable = True
       else:
@@ -382,17 +430,29 @@ class test_generator(unittest.TestCase):
     def test_func():
       # Run the test command and capture the result in ret.
       ret = runner(cmd, debug)
+      # The find command on Windows (being used to emulate wc -l) returns 1 when
+      # the resulting line count is 0. The command sequence used to emulate
+      # `truncate -s 0` also returns 1 on success. This detects either case and
+      # changes the return code to 0.
+      if IS_WINDOWS and ret == 1 and ('find /c /v' in cmd or
+                                      '<nul (set/p z=) >' in cmd):
+        ret = 0
       if expect_ret is not None:
         # If an expected return code was passed, make sure we got it.
         self.assertEqual(ret, expect_ret)
       if result_file and expect_file:
         # If cmd generated output, diff it against expected output.
-        if platform.system() == 'Windows':
+        if IS_WINDOWS:
           diff_cmd = 'echo n | comp '
         else:
           diff_cmd = 'diff '
         diff_cmd += '%s %s' % (result_file, expect_file)
         diff_ret = runner(diff_cmd, debug)
+        if debug and diff_ret != 0:
+          print 'Result file (%s): %s' % (result_file,
+                                          repr(open(result_file, 'r').read()))
+          print 'Expect file (%s): %s' % (expect_file,
+                                          repr(open(expect_file, 'r').read()))
         self.assertEqual(diff_ret, 0)
     # Return the generated function to the caller.
     return test_func

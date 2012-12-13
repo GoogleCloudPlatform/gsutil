@@ -162,7 +162,9 @@ class MvCommand(Command):
   num_test_buckets = 3
   test_steps = [
     # (test name, cmd line, ret code, (result_file, expect_file))
-    ('gen expect files', 'echo 0 >$F0; echo 1 >$F1; echo 2 >$F2', 0, None),
+    ('gen expect file 0', 'echo 0 >$F0', 0, None),
+    ('gen expect file 1', 'echo 1 >$F1', 0, None),
+    ('gen expect file 2', 'echo 2 >$F2', 0, None),
     ('verify 2 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F2')),
     ('verify 0 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F0')),
     ('mv 2 objects',

@@ -22,6 +22,7 @@ import os
 import platform
 import re
 import subprocess
+import stat
 import sys
 import tempfile
 import threading
@@ -50,6 +51,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
+from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import TWO_MB
@@ -573,7 +575,23 @@ class CpCommand(Command):
     cb = None
     num_cb = None
 
-    if size >= resumable_threshold:
+    # Checks whether the destination file is a "special" file, like /dev/null on
+    # unix platforms or nul on Windows platforms, so we can disable resumable
+    # download support since the file size of the destination won't ever be
+    # correct.
+    dst_is_special = False
+    if dst_uri.is_file_uri():
+      # Check explicitly first because os.stat doesn't work on 'nul' in Windows.
+      if dst_uri.object_name == os.devnull:
+        dst_is_special = True
+      try:
+        mode = os.stat(dst_uri.object_name).st_mode
+        if stat.S_ISCHR(mode):
+          dst_is_special = True
+      except OSError:
+        pass
+
+    if size >= resumable_threshold and not dst_is_special:
       if not self.quiet:
         cb = self._FileCopyCallbackHandler(upload).call
         num_cb = int(size / TWO_MB)
@@ -1082,6 +1100,12 @@ class CpCommand(Command):
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
 
+    # On Windows, stdin is opened as text mode instead of binary which causes
+    # problems when piping a binary file, so this switches it to binary mode.
+    if IS_WINDOWS and src_uri.is_file_uri() and src_key.is_stream():
+      import msvcrt
+      msvcrt.setmode(src_key.fp.fileno(), os.O_BINARY)
+
     if self.no_clobber:
         # There are two checks to prevent clobbering:
         # 1) The first check is to see if the item
@@ -1552,11 +1576,11 @@ class CpCommand(Command):
     ('remove test files',
      'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo noclob.ct*',
       0, None),
-    #
-    # Testing of Content-Type detection:
-    ('setup mp3 file', 'cp $G/gslib/test_data/test.mp3 test.mp3', 0, None),
+    ('setup mp3 file', 'cp %s test.mp3' % os.sep.join(
+     ['$G', 'gslib', 'test_data', 'test.mp3']), 0, None),
     ('setup mp3 CT', 'echo audio/mpeg >test_mp3.ct', 0, None),
-    ('setup gif file', 'cp $G/gslib/test_data/test.gif test.gif', 0, None),
+    ('setup gif file', 'cp %s test.gif' % os.sep.join(
+     ['$G', 'gslib', 'test_data', 'test.gif']), 0, None),
     ('setup gif CT', 'echo image/gif >test_gif.ct', 0, None),
     # TODO: we don't need test.app and test.bin anymore if
     # USE_MAGICFILE=True. Implement a way to test both with and without using
@@ -1608,16 +1632,16 @@ class CpCommand(Command):
     # Testing of versioning:
     # To make the following tests simpler to understand, we note that bucket $B2
     # is unused before this point.
+    ('setup data1 file', 'echo data1 > $F1', 0, None),
+    ('setup data2 file', 'echo data2 > $F2', 0, None),
     ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
-    ('upload new version', 'echo \'data1\' | gsutil cp - gs://$B2/$O3', 0,
+    ('upload new version', 'cat $F1 | gsutil cp - gs://$B2/$O3', 0,
      None),
     ('cloud cp new version', 'gsutil cp gs://$B2/$O0 gs://$B2/$O3', 0, None),
-    ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B2/$O3', 0,
+    ('upload new version', 'cat $F2 | gsutil cp - gs://$B2/$O3', 0,
      None),
     ('get first generation name', 'gsutil ls -a gs://$B2/$O3 | head -n 1 > $F9',
      0, None),
-    ('setup data1 file', 'echo \'data1\' > $F1', 0, None),
-    ('setup data2 file', 'echo \'data2\' > $F2', 0, None),
     ('download current version', 'gsutil cp gs://$B2/$O3 $F3', 0,
      ('$F3', '$F2')),
     ('download first version', 'gsutil cp -v `cat $F9` $F3', 0,

@@ -221,7 +221,8 @@ class RmCommand(Command):
   # details on how to populate these fields.
   num_test_buckets = 1
   test_steps = [
-    ('stage empty file', 'echo -n \'\' > $F9', 0, None),
+    ('stage empty file 1', 'rm -f $F9', 0, None),
+    ('stage empty file 2', 'touch $F9', 0, None),
     ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
     ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
      None),

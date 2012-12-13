@@ -163,21 +163,21 @@ class SetWebcfgCommand(Command):
     ('2. apply full config', 'gsutil setwebcfg -m main -e 404 gs://$B0', 0,
      None),
     ('3. check full config', 'gsutil getwebcfg gs://$B0 '
-        '| grep -v \'^Getting website config on\' '
+        '| grep -v "Getting website config on" '
         ' > $F1', 0, ('$F0', '$F1')),
     ('4. setup webcfg_main', 'echo \'%s\' > $F0' % webcfg_main, 0, None),
     ('5. apply config_main', 'gsutil setwebcfg -m main gs://$B0', 0, None),
     ('6. check config_main', 'gsutil getwebcfg gs://$B0 '
-        '| grep -v \'^Getting website config on\' '
+        '| grep -v "Getting website config on" '
         ' > $F1', 0, ('$F0', '$F1')),
     ('7. setup webcfg_error', 'echo \'%s\' > $F0' % webcfg_error, 0, None),
     ('8. apply config_error', 'gsutil setwebcfg -e 404 gs://$B0', 0, None),
     ('9. check config_error', 'gsutil getwebcfg gs://$B0 '
-        '| grep -v \'^Getting website config on\' '
+        '| grep -v "Getting website config on" '
         ' > $F1', 0, ('$F0', '$F1')),
     ('10. setup webcfg_empty', 'echo \'%s\' > $F0' % webcfg_empty, 0, None),
     ('11. remove config', 'gsutil setwebcfg gs://$B0', 0, None),
     ('12. check empty config', 'gsutil getwebcfg gs://$B0 '
-        '| grep -v \'^Getting website config on\' '
+        '| grep -v "Getting website config on" '
         ' > $F1', 0, ('$F0', '$F1')),
   ]
