@@ -1582,10 +1582,8 @@ class CpCommand(Command):
     ('setup gif file', 'cp %s test.gif' % os.sep.join(
      ['$G', 'gslib', 'test_data', 'test.gif']), 0, None),
     ('setup gif CT', 'echo image/gif >test_gif.ct', 0, None),
-    # TODO: we don't need test.app and test.bin anymore if
-    # USE_MAGICFILE=True. Implement a way to test both with and without using
-    # magic file.
-    #('setup app file', 'echo application/octet-stream >test.app', 0, None),
+    # TODO: Implement a way to test both with and without using magic file.
+    ('setup app file', 'echo binary/octet-stream >bin.ct', 0, None),
     ('setup foo file', 'echo foo/bar >test.foo', 0, None),
     ('upload mp3', 'gsutil cp test.mp3 gs://$B1/$O1', 0, None),
     ('verify mp3',
@@ -1600,12 +1598,12 @@ class CpCommand(Command):
      'gsutil -h "Content-Type:" cp test.mp3 gs://$B1/$O1', 0, None),
     ('verify mp3/noCT',
      'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
-     0, ('$F1', 'test_mp3.ct')),
+     0, ('$F1', 'bin.ct')),
     ('upload gif/noCT',
      'gsutil -h "Content-Type:" cp test.gif gs://$B1/$O1', 0, None),
     ('verify gif/noCT',
      'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
-     0, ('$F1', 'test_gif.ct')),
+     0, ('$F1', 'bin.ct')),
     #('upload foo/noCT', 'gsutil -h "Content-Type:" cp test.foo gs://$B1/$O1',
     # 0, None),
     #('verify foo/noCT',
@@ -1627,7 +1625,8 @@ class CpCommand(Command):
      'gsutil ls -L gs://$B1/$O1 | grep Content-Type | cut -f3 >$F1',
      0, ('$F1', 'test_gif.ct')),
     ('remove test files',
-     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo', 0, None),
+     'rm -f test.mp3 test_mp3.ct test.gif test_gif.ct test.foo bin.ct', 0,
+     None),
     #
     # Testing of versioning:
     # To make the following tests simpler to understand, we note that bucket $B2
