@@ -163,7 +163,7 @@ class HelpCommand(Command):
       import fcntl
       import termios
     except ImportError:
-      return _DEFAULT_LINES
+      return self._DEFAULT_LINES
     def ioctl_GWINSZ(fd):
       try:
         return struct.unpack(
@@ -181,10 +181,7 @@ class HelpCommand(Command):
       except:
         pass
     if not ioc:
-      if 'LINES' in os.environ:
-        ioc = env['LINES']
-      else:
-        ioc = _DEFAULT_LINES
+      ioc = os.environ.get('LINES', self._DEFAULT_LINES)
     return int(ioc)
 
   def _LoadHelpMaps(self):
