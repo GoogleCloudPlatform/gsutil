@@ -50,7 +50,7 @@ _detailed_help_text = ("""
   <CorsConfig>
       <Cors>
           <Origins>
-              <Origin>origin1.example.com</Origin>
+              <Origin>http://origin1.example.com</Origin>
           </Origins>
           <Methods>
               <Method>GET</Method>
@@ -62,7 +62,7 @@ _detailed_help_text = ("""
   </CorsConfig>
 
   The above XML document explicitly allows cross-origin GET requests from
-  origin1.example.com and may include the Content-Type response header.
+  http://origin1.example.com and may include the Content-Type response header.
 
   For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
@@ -171,14 +171,14 @@ class SetCorsCommand(Command):
                '</Method></Cors></CorsConfig>')
 
   cors_doc=parseString('<CorsConfig><Cors><Origins>'
-      '<Origin>origin1.example.com</Origin>'
-      '<Origin>origin2.example.com</Origin>'
+      '<Origin>http://origin1.example.com</Origin>'
+      '<Origin>http://origin2.example.com</Origin>'
       '</Origins><Methods><Method>GET</Method>'
       '<Method>PUT</Method><Method>POST</Method></Methods>'
       '<ResponseHeaders><ResponseHeader>foo</ResponseHeader>'
       '<ResponseHeader>bar</ResponseHeader></ResponseHeaders>'
       '<MaxAgeSec>3600</MaxAgeSec></Cors>'
-      '<Cors><Origins><Origin>origin3.example.com</Origin></Origins>'
+      '<Cors><Origins><Origin>http://origin3.example.com</Origin></Origins>'
       '<Methods><Method>GET</Method><Method>DELETE</Method></Methods>'
       '<ResponseHeaders><ResponseHeader>foo2</ResponseHeader>'
       '<ResponseHeader>bar2</ResponseHeader></ResponseHeaders>'
