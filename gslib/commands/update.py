@@ -20,6 +20,7 @@ import sys
 import tarfile
 import tempfile
 
+from boto import config
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -198,6 +199,12 @@ class UpdateCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    for cfg_var in ('is_secure', 'https_validate_certificates'):
+      if (config.has_option('Boto', cfg_var)
+          and not config.getboolean('Boto', cfg_var)):
+        raise CommandException('Your boto configuration has %s = False. '
+                               'The update command\ncannot be run this way, for '
+                               'security reasons.' % cfg_var)
     dirs_to_remove = []
     # Retrieve gsutil tarball and check if it's newer than installed code.
     # TODO: Store this version info as metadata on the tarball object and
