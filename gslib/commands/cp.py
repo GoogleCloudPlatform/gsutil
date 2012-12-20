@@ -1274,13 +1274,13 @@ class CpCommand(Command):
     #    renaming should occur at the level of the src subdir, vs appending that
     #    subdir beneath the dst subdir like is done for copying. For example:
     #      gsutil rm -R gs://bucket
-    #      gsutil cp -R cloudreader gs://bucket
-    #      gsutil cp -R cloudauth gs://bucket/subdir1
+    #      gsutil cp -R dir1 gs://bucket
+    #      gsutil cp -R dir2 gs://bucket/subdir1
     #      gsutil mv gs://bucket/subdir1 gs://bucket/subdir2
     #    would (if using cp naming behavior) end up with paths like:
-    #      gs://bucket/subdir2/subdir1/cloudauth/.svn/all-wcprops
+    #      gs://bucket/subdir2/subdir1/dir2/.svn/all-wcprops
     #    whereas mv naming behavior should result in:
-    #      gs://bucket/subdir2/cloudauth/.svn/all-wcprops
+    #      gs://bucket/subdir2/dir2/.svn/all-wcprops
     # 2. Copying from directories, buckets, or bucket subdirs should result in
     #    objects/files mirroring the source directory hierarchy. For example:
     #      gsutil cp dir1/dir2 gs://bucket

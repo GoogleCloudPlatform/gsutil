@@ -1,16 +1,6 @@
-This directory contains Python code Google is releasing as open source,
-to demonstrate the Google Storage API and to provide a command line
-tool for manipulating data in the system.
-
-Contents:
-  - gsutil is the command line tool
-  - cloudreader contains an example Google App Engine app that accesses Google
-    storage
-  - both depend on the boto open source Python library, version 2.0b4 or
-    later.  The boto repository is mapped into the gsutil svn tree using an
-    svn:externals propset and is distributed with the gsutil tar ball.
-
-The cloudreader app is explained in cloudreader/README.google.
+This directory contains the Python command line tool gsutil, which Google
+has released as open source, to demonstrate the Google Storage API and to
+provide a tool for manipulating data in the system.
 
 Prerequisites:
 
