@@ -215,19 +215,43 @@ class RmCommand(Command):
     if not self.everything_removed_okay:
       raise CommandException('Some files could not be removed.')
 
+    # If this was a gsutil rm -r command covering any bucket subdirs,
+    # remove any dir_$folder$ objects (which are created by various web UI
+    # tools to simulate folders).
+    if self.recursion_requested:
+      folder_object_wildcards = []
+      for uri_str in self.args:
+        uri = self.suri_builder.StorageUri(uri_str)
+        if uri.names_object:
+          folder_object_wildcards.append('%s**_$folder$' % uri)
+      if len(folder_object_wildcards):
+        continue_on_error = True
+        name_expansion_iterator = NameExpansionIterator(
+            self.command_name, self.proj_id_handler, self.headers, self.debug,
+            self.bucket_storage_uri_class, folder_object_wildcards,
+            self.recursion_requested, flat=True,
+            all_versions=delete_all_versions,
+            for_all_version_delete=delete_all_versions,
+            parse_versions=parse_versions)
+        self.Apply(_RemoveFunc, name_expansion_iterator,
+                   _RemoveExceptionHandler)
+
     return 0
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
-  num_test_buckets = 1
+  num_test_buckets = 2
   test_steps = [
-    ('stage empty file 1', 'rm -f $F9', 0, None),
-    ('stage empty file 2', 'touch $F9', 0, None),
+    # (test name, cmd line, ret code, (result_file, expect_file))
+    #
+    ('stage empty file, pt 1', 'rm -f $F9', 0, None),
+    ('stage empty file, pt 2', 'touch $F9', 0, None),
     ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
     ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
      None),
     ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
      None),
+    #
     # Test that "rm -a" for an object with a current version works.
     ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
     ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
@@ -237,9 +261,22 @@ class RmCommand(Command):
     ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
      None),
     ('delete current version', 'gsutil rm gs://$B0/$O0', 0, None),
+    #
     # Test that "rm -a" for an object without a current version works.
     ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
     ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
      ('$F1', '$F9')),
     ('rm -a fails for missing obj', 'gsutil rm -a gs://$B0/$O0', 1, None),
+    #
+    # Test that "rm -r" of a folder with a dir_$folder$ marker object removes
+    # the dir_$folder$ object.
+    ('save ls result', 'gsutil ls >/tmp/ls.out', 0, None), #todo now
+    ('delete test object created by harness', 'gsutil rm gs://$B1/*', 0, None),
+    ('upload folder marker object',
+     'echo \'\' | gsutil cp - gs://$B1/abc_\$folder\$', 0, None),
+    ('upload object to folder',
+     'echo \'\' | gsutil cp - gs://$B1/abc/o1', 0, None),
+    ('rm -r folder', 'gsutil rm -r gs://$B1/abc', 0, None),
+    ('check that folder marker object removed', 'gsutil ls gs://$B1>$F7', 0,
+     ('$F7', '$F9')),
   ]

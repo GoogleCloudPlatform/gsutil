@@ -167,7 +167,7 @@ class _NameExpansionIterator(object):
           delete.
       parse_versions: Bool indicating that the uri_strs are version-ful.
 
-    Examples of ExpandWildcardsAndContainers with flat=True:
+    Examples of _NameExpansionIterator with flat=True:
       - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
         top-level objects, as will 'gs://bucket/' and 'gs://bucket/*'.
       - 'gs://bucket/**' will enumerate all objects in the bucket.
