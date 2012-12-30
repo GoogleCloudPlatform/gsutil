@@ -171,7 +171,7 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -l          Prints long listing (owner, length).
 
-  -L          Prints even more detail than -L. This is a separate option because
+  -L          Prints even more detail than -l. This is a separate option because
               it makes additional service requests (so, takes longer and adds
               requests costs).
 
