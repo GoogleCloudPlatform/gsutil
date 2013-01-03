@@ -195,6 +195,8 @@ _detailed_help_text = ("""
   "gsutil help setdefacl").  You can override this behavior with the -p
   option (see OPTIONS below).
 
+  gsutil does not preserve metadata when copying objects between providers.
+
 
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload
@@ -274,10 +276,9 @@ _detailed_help_text = ("""
                 copying files from another provider into Google Cloud Storage,
                 when you want to have objects downloaded to local temp
                 storage and then uploaded from there, to take advantage of
-                resumable uploads for large objects. There are several downsides:
+                resumable uploads for large objects. There are two downsides:
                 (a) it requires temp disk space for all concurrent transfers;
                 (b) it may run more slowly because of local disk contention.
-                (c) it won't preserve metadata copied from the original object.
                 Note also that this option cannot be used when copying from
                 stdin, such as:
                   gsutil cp - gs://bucket/object
@@ -1057,17 +1058,8 @@ class CpCommand(Command):
             # GCS and S3 support different ACLs.
             raise NotImplementedError('Cross-provider cp -p not supported')
 
-      # TODO: This _PerformStreamingUpload call passes in a Key for fp
-      # param, relying on Python "duck typing" (the fact that the lower-level
-      # methods that expect an fp only happen to call fp methods that are
-      # defined and semantically equivalent to those defined on src_key). This
-      # should be replaced by a class that wraps an fp interface around the
-      # Key, throwing 'not implemented' for methods (like seek) that aren't
-      # implemented by non-file Keys.
-      # NOTE: As of 7/28/2012 this bug now makes cross-provider copies into gs
-      # fail, because of boto changes that make that code now attempt to perform
-      # additional operations on the fp parameter, like seek() and tell().
-      return self._PerformStreamingUpload(KeyFile(src_key), dst_uri, headers, canned_acl)
+      return self._PerformStreamingUpload(KeyFile(src_key), dst_uri, headers,
+                                          canned_acl)
 
     # If destination is not GS we implement object copy through a local
     # temp file. There are at least 3 downsides of this approach:
