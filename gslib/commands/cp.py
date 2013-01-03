@@ -59,11 +59,11 @@ from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil cp [-a canned_acl] [-e] [-p] [-q] [-z ext1,ext2,...] src_uri dst_uri
+  gsutil cp [OPTION]... src_uri dst_uri
     - or -
-  gsutil cp [-a canned_acl] [-e] [-p] [-q] [-R] [-z extensions] src_uri... dst_uri
+  gsutil cp [OPTION]... src_uri... dst_uri
     - or -
-  gsutil cp [-a canned_acl] [-e] [-p] [-q] [-R] [-z extensions] -I dst_uri
+  gsutil cp [OPTION]... -I dst_uri
 
 
 <B>DESCRIPTION</B>
@@ -253,92 +253,104 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -a          Sets named canned_acl when uploaded objects created. See
-              'gsutil help acls' for further details.
+  -a canned_acl Sets named canned_acl when uploaded objects created. See
+                'gsutil help acls' for further details.
 
-  -c          If an error occurrs, continue to attempt to copy the remaining
-              files.
+  -c            If an error occurrs, continue to attempt to copy the remaining
+                files.
 
-  -e          Exclude symlinks. When specified, symbolic links will not be
-              copied.
+  -e            Exclude symlinks. When specified, symbolic links will not be
+                copied.
 
-  -n          No-clobber. When specified, existing files or objects at the
-              destination will not be overwritten. Any items that are skipped
-              by this option will be reported as being skipped.
+  -n            No-clobber. When specified, existing files or objects at the
+                destination will not be overwritten. Any items that are skipped
+                by this option will be reported as being skipped.
 
-              Please note that using this feature will make gsutil perform
-              additional HTTP requests for every item being copied. This may
-              increase latency and cost.
+                Please note that using this feature will make gsutil perform
+                additional HTTP requests for every item being copied. This may
+                increase latency and cost.
 
-  -p          Causes ACL to be preserved when copying in the cloud. Note that
-              this option has performance and cost implications, because it
-              is essentially performing three requests (getacl, cp, setacl).
-              (The performance issue can be mitigated to some degree by
-              using gsutil -m cp to cause parallel copying.)
+  -N            Forces non-streamed uploads. This can be used, for example, when
+                copying files from another provider into Google Cloud Storage,
+                when you want to have objects downloaded to local temp
+                storage and then uploaded from there, to take advantage of
+                resumable uploads for large objects. There are several downsides:
+                (a) it requires temp disk space for all concurrent transfers;
+                (b) it may run more slowly because of local disk contention.
+                (c) it won't preserve metadata copied from the original object.
+                Note also that this option cannot be used when copying from
+                stdin, such as:
+                  gsutil cp - gs://bucket/object
 
-	      You can avoid the additional performance and cost of using cp -p
-	      if you want all objects in the destination bucket to end up with
-	      the same ACL, but setting a default ACL on that bucket instead of
-	      using cp -p. See "help gsutil setdefacl".
+  -p            Causes ACL to be preserved when copying in the cloud. Note that
+                this option has performance and cost implications, because it
+                is essentially performing three requests (getacl, cp, setacl).
+                (The performance issue can be mitigated to some degree by
+                using gsutil -m cp to cause parallel copying.)
 
-              Note that it's not valid to specify both the -a and -p options
-              together.
+	        You can avoid the additional performance and cost of using cp -p
+	        if you want all objects in the destination bucket to end up with
+	        the same ACL, but setting a default ACL on that bucket instead of
+	        using cp -p. See "help gsutil setdefacl".
 
-  -q          Causes copies to be performed quietly, i.e., without reporting
-              progress indicators of files being copied. Errors are still
-              reported. This option can be useful for running gsutil from a
-              cron job that logs its output to a file, for which the only
-              information desired in the log is failures.
+                Note that it's not valid to specify both the -a and -p options
+                together.
 
-  -R, -r      Causes directories, buckets, and bucket subdirectories to be
-              copied recursively. If you neglect to use this option for
-              an upload, gsutil will copy any files it finds and skip any
-              directories. Similarly, neglecting to specify -R for a download
-              will cause gsutil to copy any objects at the current bucket
-              directory level, and skip any subdirectories.
+  -q            Causes copies to be performed quietly, i.e., without reporting
+                progress indicators of files being copied. Errors are still
+                reported. This option can be useful for running gsutil from a
+                cron job that logs its output to a file, for which the only
+                information desired in the log is failures.
 
-  -t          DEPRECATED. At one time this option was used to request setting
-              Content-Type based on file extension and/or content, which is
-              now the default behavior. The -t option is left in place for
-              now to avoid breaking existing scripts. It will be removed at
-              a future date.
+  -R, -r        Causes directories, buckets, and bucket subdirectories to be
+                copied recursively. If you neglect to use this option for
+                an upload, gsutil will copy any files it finds and skip any
+                directories. Similarly, neglecting to specify -R for a download
+                will cause gsutil to copy any objects at the current bucket
+                directory level, and skip any subdirectories.
 
-  -v          Parses uris for version / generation numbers (only applicable in
-              version-enabled buckets). For example:
+  -t            DEPRECATED. At one time this option was used to request setting
+                Content-Type based on file extension and/or content, which is
+                now the default behavior. The -t option is left in place for
+                now to avoid breaking existing scripts. It will be removed at
+                a future date.
 
-                gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
+  -v            Parses uris for version / generation numbers (only applicable in
+                version-enabled buckets). For example:
 
-              Note that wildcards are not permitted while using this flag.
+                  gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
 
-  -z          'txt,html' Compresses file uploads with the given extensions.
-              If you are uploading a large file with compressible content,
-              such as a .js, .css, or .html file, you can gzip-compress the
-              file during the upload process by specifying the -z <extensions>
-              option. Compressing data before upload saves on usage charges
-              because you are uploading a smaller amount of data.
+                Note that wildcards are not permitted while using this flag.
 
-              When you specify the -z option, the data from your files is
-              compressed before it is uploaded, but your actual files are left
-              uncompressed on the local disk. The uploaded objects retain the
-              original content type and name as the original files but are given
-              a Content-Encoding header with the value "gzip" to indicate that
-              the object data stored are compressed on the Google Cloud Storage
-              servers.
+  -z ext1,...   Compresses file uploads with the given extensions. If you are
+                uploading a large file with compressible content, such as
+                a .js, .css, or .html file, you can gzip-compress the file
+                during the upload process by specifying the -z <extensions>
+                option. Compressing data before upload saves on usage charges
+                because you are uploading a smaller amount of data.
 
-              For example, the following command:
+                When you specify the -z option, the data from your files is
+                compressed before it is uploaded, but your actual files are left
+                uncompressed on the local disk. The uploaded objects retain the
+                original content type and name as the original files but are
+                given a Content-Encoding header with the value "gzip" to
+                indicate that the object data stored are compressed on the
+                Google Cloud Storage servers.
 
-                gsutil cp -z html -a public-read cattypes.html gs://mycats
+                For example, the following command:
 
-              will do all of the following:
-                - Upload as the object gs://mycats/cattypes.html (cp command)
-                - Set the Content-Type to text/html (based on file extension)
-                - Compress the data in the file cattypes.html (-z option)
-                - Set the Content-Encoding to gzip (-z option)
-                - Set the ACL to public-read (-a option)
-                - If a user tries to view cattypes.html in a browser, the
-                  browser will know to uncompress the data based on the
-                  Content-Encoding header, and to render it as HTML based on
-                  the Content-Type header.
+                  gsutil cp -z html -a public-read cattypes.html gs://mycats
+
+                will do all of the following:
+                  - Upload as the object gs://mycats/cattypes.html (cp command)
+                  - Set the Content-Type to text/html (based on file extension)
+                  - Compress the data in the file cattypes.html (-z option)
+                  - Set the Content-Encoding to gzip (-z option)
+                  - Set the ACL to public-read (-a option)
+                  - If a user tries to view cattypes.html in a browser, the
+                    browser will know to uncompress the data based on the
+                    Content-Encoding header, and to render it as HTML based on
+                    the Content-Type header.
 """)
 
 class KeyFile():
@@ -400,7 +412,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:ceIMnpqrRtvz:',
+    SUPPORTED_SUB_ARGS : 'a:ceIMNnpqrRtvz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -758,6 +770,9 @@ class CpCommand(Command):
 
     Returns (elapsed_time, bytes_transferred).
     """
+    for o, a in self.sub_opts:
+      if o == '-N':
+        raise CommandException('-N option not allowed for streaming uploads')
     start_time = time.time()
     dst_key = dst_uri.new_key(False, headers)
 
@@ -1023,7 +1038,12 @@ class CpCommand(Command):
     # If destination is GS we can avoid the local copying through a local file
     # as GS supports chunked transfer. This also allows us to preserve metadata
     # between original and destination object.
-    if dst_uri.scheme == 'gs':
+    N_option = False
+    for o, a in self.sub_opts:
+      if o == '-N':
+        N_option = True
+        break
+    if dst_uri.scheme == 'gs' and not N_option:
       canned_acl = None
       if self.sub_opts:
         for o, a in self.sub_opts:
