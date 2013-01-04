@@ -1664,7 +1664,7 @@ class CpCommand(Command):
     ('remove versioning test files', 'rm -f $F3 $F9', 0, None),
     #
     # Testing of taking args from stdin:
-    ('remove bucket B2 contents', 'gsutil -m rm -r gs://$B2', 0, None),
+    ('remove bucket B2 contents', 'gsutil -m rm -raf gs://$B2', 0, None),
     ('setup inputlist file, pt1', 'echo $F1 > $F3', 0, None),
     ('setup inputlist file, pt1', 'echo $F2 >> $F3', 0, None),
     ('setup expected ls output, pt1', 'echo gs://$B2/$F1 > $F4', 0, None),

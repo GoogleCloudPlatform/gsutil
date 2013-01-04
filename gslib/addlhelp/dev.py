@@ -82,7 +82,9 @@ _detailed_help_text = ("""
     Then ensure your .boto file has HMAC credentials defined (the boto tests
     don't load the OAUTH2 plugin), and then change directories into boto/tests
     and run:
-      python test.py -t s3 -t gs -t ssl
+      python test.py -t s3
+      python test.py -t gs
+      python test.py -t ssl
 
   7. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).

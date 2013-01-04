@@ -142,7 +142,7 @@ _detailed_help_text = ("""
 Note that if you use the gsutil setmeta command on an object in a bucket
 with versioning enabled (see 'gsutil help versioning'), it will create
 a new object version (and thus, you will get charged for the space required
-for holding the additional version.
+for holding the additional version).
 """)
 
 
