@@ -212,7 +212,7 @@ class RmCommand(Command):
     # perform requests with sequential function calls in current process.
     self.Apply(_RemoveFunc, name_expansion_iterator, _RemoveExceptionHandler)
 
-    if not self.everything_removed_okay:
+    if not self.everything_removed_okay and not continue_on_error:
       raise CommandException('Some files could not be removed.')
 
     # If this was a gsutil rm -r command covering any bucket subdirs,
