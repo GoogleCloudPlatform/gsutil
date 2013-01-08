@@ -239,6 +239,11 @@ def _HandleControlC(signal_num, cur_stack_frame):
     _OutputAndExit('Caught signal %d - exiting' % signal_num)
 
 
+def _HandleSigQuit(signal_num, cur_stack_frame):
+  """Called when user hits ^\, so we can force breakpoint a running gsutil."""
+  import pdb; pdb.set_trace()
+
+
 def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
                                         headers=None, debug=0,
                                         parallel_operations=False):
@@ -246,6 +251,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # Catch ^C so we can print a brief message instead of the normal Python
     # stack trace.
     signal.signal(signal.SIGINT, _HandleControlC)
+    # Catch ^\ so we can force a breakpoint in a running gsutil.
+    signal.signal(signal.SIGQUIT, _HandleSigQuit)
     return command_runner.RunNamedCommand(command_name, args, headers, debug,
                                           parallel_operations)
   except AttributeError, e:
