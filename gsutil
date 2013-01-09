@@ -305,12 +305,6 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
                     (exc_name, e.status, e.code, e.reason))
   except ResumableUploadException, e:
     _OutputAndExit('ResumableUploadException: %s.' % e.message)
-  except boto.exception.TooManyAuthHandlerReadyToAuthenticate, e:
-    _OutputAndExit(
-        'You have credentials for more than one authentication handler \n'
-        'configured in your boto configuration file and/or environment \n'
-        'variables (for example, both an OAuth2 token and Developer Access \n'
-        'keys/secret):\n%s' % e)
   except socket.error, e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because
