@@ -677,7 +677,7 @@ class PerfDiagCommand(Command):
           write_thru['num_copies'],
           MakeHumanReadable(write_thru['total_bytes_copied']))
       print 'Write throughput: %s/s.' % (
-          MakeBitsHumanReadable(write_thru['bytes_per_second']))
+          MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8))
 
     if 'read_throughput' in self.results:
       print
@@ -690,7 +690,7 @@ class PerfDiagCommand(Command):
           read_thru['num_times'],
           MakeHumanReadable(read_thru['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
-          MakeBitsHumanReadable(read_thru['bytes_per_second']))
+          MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8))
 
     if 'sysinfo' in self.results:
       print
