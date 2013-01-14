@@ -355,26 +355,33 @@ _detailed_help_text = ("""
 """)
 
 class KeyFile():
-    """
-    Wrapper class to expose Key class as file to boto.
-    """
-    def __init__(self, key):
-        self.key = key
+  """Wrapper class to expose Key class as file to boto."""
 
-    def tell(self):
-        raise IOError
+  def __init__(self, key):
+    self.key = key
+    self.key.open_read()
+    self.location = 0
 
-    def seek(self, pos):
-        raise IOError
+  def tell(self):
+    if self.location is None:
+      raise ValueError("I/O operation on closed file")
+    return self.location
 
-    def read(self, size):
-	return self.key.read(size)
+  def seek(self, pos):
+    self.key.close()
+    self.key.open_read(headers={"Range": "bytes=%d-" % pos})
+    self.location = pos
 
-    def write(self, buf):
-        raise IOError
+  def read(self, size):
+    self.location += size
+    return self.key.read(size)
 
-    def close(self):
-        self.key.close()
+  def write(self, buf):
+    raise IOError("KeyFile does not support writing")
+
+  def close(self):
+    self.key.close()
+    self.location = None
 
 class CpCommand(Command):
   """
