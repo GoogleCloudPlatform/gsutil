@@ -3,6 +3,7 @@ import gslib.tests.case as case
 
 
 class KeyfileTest(case.GsUtilIntegrationTestCase):
+  """Tests gslib.commands.cp.KeyFile."""
 
   def testReadFull(self):
     bucket = self.CreateBucket()
@@ -44,3 +45,15 @@ class KeyfileTest(case.GsUtilIntegrationTestCase):
     self.assertEqual(keyfile.read(4), contents[:4])
     keyfile.seek(5)
     self.assertEqual(keyfile.read(5), contents[5:])
+
+    # Seeking negative should raise.
+    with self.assertRaisesRegexp(IOError, 'Invalid argument'):
+      keyfile.seek(-5)
+
+    # Reading past end of file is supposed to return empty string.
+    self.assertEqual(keyfile.read(20), '')
+
+    # Seeking past end of file is supposed to silently work.
+    keyfile.seek(50)
+    self.assertEqual(keyfile.tell(), 50)
+    self.assertEqual(keyfile.read(1), '')

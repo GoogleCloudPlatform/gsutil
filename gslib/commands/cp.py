@@ -368,8 +368,20 @@ class KeyFile():
     return self.location
 
   def seek(self, pos):
+    if pos < 0:
+      raise IOError("Invalid argument")
+
     self.key.close()
-    self.key.open_read(headers={"Range": "bytes=%d-" % pos})
+
+    try:
+      self.key.open_read(headers={"Range": "bytes=%d-" % pos})
+    except GSResponseError as e:
+      # 416 Invalid Range means that the given starting byte was past the end
+      # of file. We catch this because the Python file interface allows silently
+      # seeking past the end of the file.
+      if e.status != 416:
+        raise
+
     self.location = pos
 
   def read(self, size):
