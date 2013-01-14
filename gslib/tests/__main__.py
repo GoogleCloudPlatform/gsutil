@@ -20,6 +20,17 @@ def MungePath():
   except ImportError:
     sys.path.append(GSUTIL_DIR)
 
+  try:
+    import boto
+  except ImportError:
+    sys.exit('The boto library was not found. Please follow the installation '
+             'instructions in the README file.')
+
+  try:
+    import gslib
+  except ImportError:
+    sys.exit('The gslib library was not found. Please follow the installation '
+             'instructions in the README file.')
 
 if __name__ == '__main__':
   MungePath()
