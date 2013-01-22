@@ -207,7 +207,7 @@ _detailed_help_text = ("""
 
   Similarly, gsutil automatically performs resumable downloads (using HTTP
   standard Range GET operations) whenever you use the cp command to download an
-  object larger than 1 MB.
+  object larger than 2 MB.
 
   Resumable uploads and downloads store some state information in a file
   in ~/.gsutil named by the destination object or file. If you attempt to
@@ -268,22 +268,11 @@ _detailed_help_text = ("""
                 destination will not be overwritten. Any items that are skipped
                 by this option will be reported as being skipped.
 
-                Please note that using this feature will make gsutil perform
-                additional HTTP requests for every item being copied. This may
-                increase latency and cost.
+                Note that using this feature will make gsutil perform
+                additional HTTP requests for every item being copied. This
+                may increase latency and cost.
 
-  -N            Forces non-streamed uploads. This can be used, for example, when
-                copying files from another provider into Google Cloud Storage,
-                when you want to have objects downloaded to local temp
-                storage and then uploaded from there, to take advantage of
-                resumable uploads for large objects. There are two downsides:
-                (a) it requires temp disk space for all concurrent transfers;
-                (b) it may run more slowly because of local disk contention.
-                Note also that this option cannot be used when copying from
-                stdin, such as:
-                  gsutil cp - gs://bucket/object
-
-  -p            Causes ACL to be preserved when copying in the cloud. Note that
+  -p            Causes ACLs to be preserved when copying in the cloud. Note that
                 this option has performance and cost implications, because it
                 is essentially performing three requests (getacl, cp, setacl).
                 (The performance issue can be mitigated to some degree by
@@ -291,7 +280,7 @@ _detailed_help_text = ("""
 
 	        You can avoid the additional performance and cost of using cp -p
 	        if you want all objects in the destination bucket to end up with
-	        the same ACL, but setting a default ACL on that bucket instead of
+	        the same ACL by setting a default ACL on that bucket instead of
 	        using cp -p. See "help gsutil setdefacl".
 
                 Note that it's not valid to specify both the -a and -p options
@@ -316,7 +305,7 @@ _detailed_help_text = ("""
                 now to avoid breaking existing scripts. It will be removed at
                 a future date.
 
-  -v            Parses uris for version / generation numbers (only applicable in
+  -v            Parses URIs for version / generation numbers (only applicable in
                 version-enabled buckets). For example:
 
                   gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
@@ -790,9 +779,6 @@ class CpCommand(Command):
 
     Returns (elapsed_time, bytes_transferred).
     """
-    for o, a in self.sub_opts:
-      if o == '-N':
-        raise CommandException('-N option not allowed for streaming uploads')
     start_time = time.time()
     dst_key = dst_uri.new_key(False, headers)
 
@@ -1058,12 +1044,7 @@ class CpCommand(Command):
     # If destination is GS we can avoid the local copying through a local file
     # as GS supports chunked transfer. This also allows us to preserve metadata
     # between original and destination object.
-    N_option = False
-    for o, a in self.sub_opts:
-      if o == '-N':
-        N_option = True
-        break
-    if dst_uri.scheme == 'gs' and not N_option:
+    if dst_uri.scheme == 'gs':
       canned_acl = None
       if self.sub_opts:
         for o, a in self.sub_opts:
