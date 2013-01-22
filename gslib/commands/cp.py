@@ -1416,19 +1416,6 @@ class CpCommand(Command):
                                          cmd_name)
 
       if self.perform_mv:
-        # Disallow files as source arguments to protect users from deleting
-        # data off the local disk. Note that we can't simply set FILE_URIS_OK
-        # to False in command_spec because we *do* allow a file URI for the dest
-        # URI. (We allow users to move data out of the cloud to the local disk,
-        # but we disallow commands that would delete data off the local disk,
-        # and instead require the user to delete data separately, using local
-        # commands/tools.)
-        if src_uri.is_file_uri():
-          raise CommandException('The mv command disallows files as source '
-                                 'arguments.\nDid you mean to use a gs:// URI? '
-                                 'If you meant to use a file as a source, you\n'
-                                 'might consider using the "cp" command '
-                                 'instead.')
         if name_expansion_result.NamesContainer():
           # Use recursion_requested when performing name expansion for the
           # directory mv case so we can determine if any of the source URIs are

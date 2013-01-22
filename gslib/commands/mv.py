@@ -46,10 +46,10 @@ _detailed_help_text = ("""
 
     gsutil mv gs://my_bucket dir
 
-  The mv command, like the rm command, will refuse to remove data from
-  the local disk. Thus, for example, this command will not be allowed:
+  Similarly, to move all objects from a local directory to a bucket you could
+  use:
 
-    gsutil mv *.txt gs://my_bucket
+    gsutil mv ./dir gs://my_bucket
 
 
 <B>RENAMING BUCKET SUBDIRECTORIES</B>
@@ -133,14 +133,15 @@ class MvCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    # Check each source arg up, refusing to delete a bucket or directory src
-    # URI (force users to explicitly do that as a separate operation).
+    # Check each source arg up, refusing to delete a bucket src URI (force users
+    # to explicitly do that as a separate operation).
     for arg_to_check in self.args[0:-1]:
-      if self.suri_builder.StorageUri(arg_to_check).names_container():
-        raise CommandException('The mv command disallows removing source '
-                               'buckets or directories (%s).\nYou must '
-                               'separately copy and remove if you wish to do '
-                               'that.' % arg_to_check)
+      if self.suri_builder.StorageUri(arg_to_check).names_bucket():
+        raise CommandException('You cannot move a source bucket using the mv '
+                               'command. If you meant to move\nall objects in '
+                               'the bucket, you can use a command like:\n'
+                               '\tgsutil mv %s/* %s' %
+                               (arg_to_check, self.args[-1]))
 
     # Insert command-line opts in front of args so they'll be picked up by cp
     # and rm commands (e.g., for -p option). Use undocumented (internal
