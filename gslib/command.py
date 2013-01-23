@@ -580,31 +580,49 @@ class Command(object):
                                           shared_vars))
         procs.append(p)
         p.start()
-      # Feed all work into the queue being emptied by the workers.
-      for name_expansion_result in name_expansion_iterator:
-        work_queue.put(name_expansion_result)
-      # Send an EOF per worker.
-      for shard in range(process_count):
-        work_queue.put(_EOF_NAME_EXPANSION_RESULT)
 
-      # Wait for all spawned OS processes to finish.
-      failed_process_count = 0
-      for p in procs:
-        p.join()
-        # Count number of procs that returned non-zero exit code.
-        if p.exitcode != 0:
-          failed_process_count += 1
-      # Abort main process if one or more sub-processes failed.
+      last_name_expansion_result = None
+      try:
+        # Feed all work into the queue being emptied by the workers.
+        for name_expansion_result in name_expansion_iterator:
+          last_name_expansion_result = name_expansion_result
+          work_queue.put(name_expansion_result)
+      except:
+        sys.stderr.write('Failed URI iteration. Last result (prior to '
+                         'exception) was: %s\n'
+                         % repr(last_name_expansion_result))
+      finally:
+        # We do all of the process cleanup in a finally cause in case the name
+        # expansion iterator throws an exception. This will send EOF to all the
+        # child processes and join them back into the parent process. 
+
+        # Send an EOF per worker.
+        for shard in range(process_count):
+          work_queue.put(_EOF_NAME_EXPANSION_RESULT)
+
+        # Wait for all spawned OS processes to finish.
+        failed_process_count = 0
+        for p in procs:
+          p.join()
+          # Count number of procs that returned non-zero exit code.
+          if p.exitcode != 0:
+            failed_process_count += 1
+
+        # Propagate shared variables back to caller's attributes.
+        if shared_vars:
+          for (name, var) in shared_vars.items():
+            setattr(self, name, var.value)
+
+      # Abort main process if one or more sub-processes failed. Note that this
+      # is outside the finally clause, because we only want to raise a new
+      # exception if an exception wasn't already raised in the try clause above.
       if failed_process_count:
         plural_str = ''
         if failed_process_count > 1:
           plural_str = 'es'
         raise Exception('unexpected failure in %d sub-process%s, '
                         'aborting...' % (failed_process_count, plural_str))
-      # Propagate shared variables back to caller's attributes.
-      if shared_vars:
-        for (name, var) in shared_vars.items():
-          setattr(self, name, var.value)
+
     else:
       # Using just 1 process, so funnel results to _ApplyThreads using facade
       # that makes NameExpansionIterator look like a Multiprocessing.Queue
