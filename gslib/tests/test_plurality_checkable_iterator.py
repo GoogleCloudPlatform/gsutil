@@ -23,26 +23,12 @@
 
 """Unit tests for PluralityCheckableIterator"""
 
-import unittest
+from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+import gslib.tests.testcase as testcase
 
-from plurality_checkable_iterator import PluralityCheckableIterator
+class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
 
-class PluralityCheckableIteratorTests(unittest.TestCase):
-
-  def GetSuiteDescription(self):
-    return 'Unit tests for PluralityCheckableIterator'
-
-  @classmethod
-  def SetUpClass(cls):
-    """Creates class level artifacts useful to multiple tests."""
-    pass
-
-  @classmethod
-  def TearDownClass(cls):
-    """Cleans up any artifacts created by SetUpClass."""
-    pass
-
-  def TestPluralityCheckableIteratorWith0Elems(self):
+  def testPluralityCheckableIteratorWith0Elems(self):
     """Tests empty PluralityCheckableIterator."""
     input_list = range(0)
     it = iter(input_list)
@@ -52,7 +38,7 @@ class PluralityCheckableIteratorTests(unittest.TestCase):
     output_list = list(pcit)
     self.assertEqual(input_list, output_list)
 
-  def TestPluralityCheckableIteratorWith1Elem(self):
+  def testPluralityCheckableIteratorWith1Elem(self):
     """Tests PluralityCheckableIterator with 1 element."""
     input_list = range(1)
     it = iter(input_list)
@@ -62,7 +48,7 @@ class PluralityCheckableIteratorTests(unittest.TestCase):
     output_list = list(pcit)
     self.assertEqual(input_list, output_list)
 
-  def TestPluralityCheckableIteratorWith2Elems(self):
+  def testPluralityCheckableIteratorWith2Elems(self):
     """Tests PluralityCheckableIterator with 2 elements."""
     input_list = range(2)
     it = iter(input_list)
@@ -72,7 +58,7 @@ class PluralityCheckableIteratorTests(unittest.TestCase):
     output_list = list(pcit)
     self.assertEqual(input_list, output_list)
 
-  def TestPluralityCheckableIteratorWith3Elems(self):
+  def testPluralityCheckableIteratorWith3Elems(self):
     """Tests PluralityCheckableIterator with 3 elements."""
     input_list = range(3)
     it = iter(input_list)
@@ -81,22 +67,3 @@ class PluralityCheckableIteratorTests(unittest.TestCase):
     self.assertTrue(pcit.has_plurality())
     output_list = list(pcit)
     self.assertEqual(input_list, output_list)
-
-if __name__ == '__main__':
-  test_loader = unittest.TestLoader()
-  test_loader.testMethodPrefix = 'Test'
-  suite = test_loader.loadTestsFromTestCase(PluralityCheckableIteratorTests)
-  # Seems like there should be a cleaner way to find the test_class.
-  test_class = suite.__getattribute__('_tests')[0]
-  # We call SetUpClass() and TearDownClass() ourselves because we
-  # don't assume the user has Python 2.7 (which supports classmethods
-  # that do it, with camelCase versions of these names).
-  try:
-    print 'Setting up %s...' % test_class.GetSuiteDescription()
-    test_class.SetUpClass()
-    print 'Running %s...' % test_class.GetSuiteDescription()
-    unittest.TextTestRunner(verbosity=2).run(suite)
-  finally:
-    print 'Cleaning up after %s...' % test_class.GetSuiteDescription()
-    test_class.TearDownClass()
-    print ''

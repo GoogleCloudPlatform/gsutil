@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright 2011 Google Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -23,27 +21,14 @@
 
 """Unit tests for gsutil thread pool."""
 
-import sys
 import threading
-import thread_pool
-import unittest
+
+import gslib.tests.testcase as testcase
+import gslib.thread_pool as thread_pool
 
 
-class GsutilThreadPoolTests(unittest.TestCase):
+class GsutilThreadPoolTests(testcase.GsUtilUnitTestCase):
   """gsutil thread pool test suite."""
-
-  def GetSuiteDescription(self):
-    return 'gsutil thread pool test suite'
-
-  @classmethod
-  def SetUpClass(cls):
-    """Creates class level artifacts useful to multiple tests."""
-    pass
-
-  @classmethod
-  def TearDownClass(cls):
-    """Cleans up any artifacts created by SetUpClass."""
-    pass
 
   def _TestThreadPool(self, threads):
     """Tests pool with specified threads from end to end."""
@@ -77,15 +62,15 @@ class GsutilThreadPoolTests(unittest.TestCase):
     for thread in pool.threads:
       self.assertFalse(thread.is_alive())
 
-  def TestSingleThreadPool(self):
+  def testSingleThreadPool(self):
     """Tests thread pool with a single thread."""
     self._TestThreadPool(1)
 
-  def TestThirtyThreadPool(self):
+  def testThirtyThreadPool(self):
     """Tests thread pool with 30 threads."""
     self._TestThreadPool(30)
 
-  def TestThreadPoolExceptionHandler(self):
+  def testThreadPoolExceptionHandler(self):
     """Tests thread pool with exceptions."""
     self.exception_raised = False
 
@@ -105,25 +90,3 @@ class GsutilThreadPoolTests(unittest.TestCase):
     pool.Shutdown()
 
     self.assertTrue(self.exception_raised)
-
-
-if __name__ == '__main__':
-  if sys.version_info[:3] < (2, 6):
-    sys.exit('These tests must be run on at least Python 2.6\n')
-  test_loader = unittest.TestLoader()
-  test_loader.testMethodPrefix = 'Test'
-  suite = test_loader.loadTestsFromTestCase(GsutilThreadPoolTests)
-  # Seems like there should be a cleaner way to find the test_class.
-  test_class = suite.__getattribute__('_tests')[0]
-  # We call SetUpClass() and TearDownClass() ourselves because we
-  # don't assume the user has Python 2.7 (which supports classmethods
-  # that do it, with camelCase versions of these names).
-  try:
-    print 'Setting up %s...' % test_class.GetSuiteDescription()
-    test_class.SetUpClass()
-    print 'Running %s...' % test_class.GetSuiteDescription()
-    unittest.TextTestRunner(verbosity=2).run(suite)
-  finally:
-    print 'Cleaning up after %s...' % test_class.GetSuiteDescription()
-    test_class.TearDownClass()
-    print ''

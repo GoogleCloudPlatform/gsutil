@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Contains test cases for gsutil."""
+"""Contains test case base classes for gsutil tests."""
+
+from integration_testcase import GsUtilIntegrationTestCase
+from unit_testcase import GsUtilUnitTestCase

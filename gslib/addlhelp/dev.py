@@ -71,17 +71,14 @@ _detailed_help_text = ("""
   7. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
 
-       export PYTHONPATH=./boto:$PYTHONPATH
-       ./gslib/test_commands.py
-       ./gslib/test_plurality_checkable_iterator.py
-       ./gslib/test_thread_pool.py
-       ./gslib/test_wildcard_iterator.py
+       python gslib/tests --unit-only
 
      The above tests run quickly, as they run against an in-memory mock
      storage service implementation. We have an additional set of tests
      that take longer because they send requests to the production service;
      please also run these tests:
 
+       python gslib/tests
        ./gsutil test
 
     If you made mods to boto please run the boto tests. For these tests you
