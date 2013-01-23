@@ -40,7 +40,7 @@ class StorageUriBuilder(object):
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.debug = debug
 
-  def StorageUri(self, uri_str, parse_version=False):
+  def StorageUri(self, uri_str, parse_version=False, is_latest=False):
     """
     Instantiates StorageUri using class state and gsutil default flag values.
 
@@ -48,6 +48,8 @@ class StorageUriBuilder(object):
       uri_str: StorageUri naming bucket + optional object.
       parse_version: boolean indicating whether to parse out version/generation
           information from uri_str.
+      is_latest: boolean indicating whether this versioned object represents the
+          current version.
 
     Returns:
       boto.StorageUri for given uri_str.
@@ -92,5 +94,6 @@ class StorageUriBuilder(object):
     suri.version_id = version_id
     suri.generation = generation
     suri.meta_generation = meta_generation
+    suri.is_latest = is_latest
 
     return suri

@@ -391,9 +391,9 @@ class LsCommand(Command):
         # we're listing more than one subdir (or if it's a recursive listing),
         # to be consistent with the way UNIX ls works.
         if num_expanded_blrs > 1 or should_recurse:
-          print '%s:' % blr.GetUriString().encode('utf-8')
+          print '%s:' % blr.GetVersionedUriString().encode('utf-8')
           printed_one = True
-        blr_iterator = self.WildcardIterator( '%s/*' %
+        blr_iterator = self.WildcardIterator('%s/*' %
                                              blr.GetRStrippedUriString(),
                                              all_versions=self.all_versions)
       elif blr.NamesBucket():
@@ -422,7 +422,7 @@ class LsCommand(Command):
           # dir just prints its contents, not the name followed by its
           # contents).
           if (expanding_top_level and not uri.names_bucket()) or should_recurse:
-            if cur_blr.GetUriString().endswith('//'):
+            if cur_blr.GetVersionedUriString().endswith('//'):
               # Expand gs://bucket// into gs://bucket//* so we don't infinite
               # loop. This case happens when user has uploaded an object whose
               # name begins with a /.
@@ -434,9 +434,10 @@ class LsCommand(Command):
           # to the prefix expansion, the next iteration of the main loop.
           else:
             if listing_style == ListingStyle.LONG:
-              print '%-33s%s' % ('', cur_blr.GetUriString().encode('utf-8'))
+              print '%-33s%s' % (
+                  '', cur_blr.GetVersionedUriString().encode('utf-8'))
             else:
-              print cur_blr.GetUriString().encode('utf-8')
+              print cur_blr.GetVersionedUriString().encode('utf-8')
       expanding_top_level = False
     return (num_objs, num_bytes)
 
@@ -526,6 +527,9 @@ class LsCommand(Command):
     ('list empty bucket w/ -b', 'gsutil ls -b gs://$B0 >$F7', 0,
                                                         ('$F7', '$F9')),
     ('list bucket contents', 'gsutil ls gs://$B1 >$F7', 0, ('$F7', '$F8')),
+    ('stage subdir obj', 'gsutil cp gs://$B1/$O0 gs://$B1/dir/$O0', 0, None),
+    ('gen subdir expect', 'echo gs://$B1/dir/$O0 > $F6', 0, None),
+    ('list subdir', 'gsutil ls gs://$B1/dir > $F5', 0, ('$F5', '$F6')),
     ('list object', 'gsutil ls gs://$B1/$O0 >$F7', 0, ('$F7', '$F8')),
     ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
     ('add version 1', 'gsutil cp gs://$B2/$O0 gs://$B2/$O1', 0, None),

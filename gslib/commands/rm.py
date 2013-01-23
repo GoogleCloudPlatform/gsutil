@@ -133,15 +133,15 @@ class RmCommand(Command):
   def RunCommand(self):
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
-    delete_all_versions = False
-    continue_on_error = False
+    self.continue_on_error = False
+    self.all_versions = False
     parse_versions = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-a':
-          delete_all_versions = True
+          self.all_versions = True
         elif o == '-f':
-          continue_on_error = True
+          self.continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
@@ -150,69 +150,43 @@ class RmCommand(Command):
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
-    if parse_versions and delete_all_versions:
+    # Tracks if any URIs matched the given args.
+
+    if parse_versions and self.all_versions:
       raise CommandException(
           '"rm" does not permit "-a" and "-v" commands simultaneously. If you '
           'wish to delete only one object version, use "-v". Use "-a" to '
           'delete all versions.')
 
-    def _RemoveExceptionHandler(e):
-      """Simple exception handler to allow post-completion status."""
-      self.THREADED_LOGGER.error(str(e))
-      self.everything_removed_okay = False
+    remove_func = self._MkRemoveFunc()
+    exception_handler = self._MkRemoveExceptionHandler()
 
-    def _RemoveFunc(name_expansion_result):
-      exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr(),
-          parse_version=name_expansion_result.parse_version)
-      if exp_src_uri.names_container():
-        if exp_src_uri.is_cloud_uri():
-          # Before offering advice about how to do rm + rb, ensure those
-          # commands won't fail because of bucket naming problems.
-          boto.s3.connection.check_lowercase_bucketname(exp_src_uri.bucket_name)
-        uri_str = exp_src_uri.object_name.rstrip('/')
-        raise CommandException('"rm" command will not remove buckets. To '
-                               'delete this/these bucket(s) do:\n\tgsutil rm '
-                               '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
+    try:
+      # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
+      name_expansion_iterator = NameExpansionIterator(
+          self.command_name, self.proj_id_handler, self.headers, self.debug,
+          self.bucket_storage_uri_class, self.args, self.recursion_requested,
+          flat=self.recursion_requested, all_versions=self.all_versions,
+          parse_versions=parse_versions)
 
-      # In versioned buckets, current versions need to be deleted twice - the
-      # first delete just marks the object deleted without removing data.
-      if delete_all_versions and name_expansion_result.is_current_version:
-        self.THREADED_LOGGER.info('Removing current version %s...',
-                                  name_expansion_result.expanded_uri_str)
-        try:
-          exp_src_uri.delete_key(validate=False, headers=self.headers)
-        except:
-          if continue_on_error:
-            self.everything_removed_okay = False
-          else:
-            raise
+      # Perform remove requests in parallel (-m) mode, if requested, using
+      # configured number of parallel processes and threads. Otherwise,
+      # perform requests with sequential function calls in current process.
+      self.Apply(remove_func, name_expansion_iterator, exception_handler)
 
-      # Perform delete.
-      self.THREADED_LOGGER.info('Removing %s...',
-                                name_expansion_result.expanded_uri_str)
-      try:
-        exp_src_uri.delete_key(validate=False, headers=self.headers)
-      except:
-        if continue_on_error:
-          self.everything_removed_okay = False
-        else:
-          raise
+    # Assuming the bucket has versioning enabled, uri's that don't map to
+    # objects should throw an error even with all_versions, since the prior
+    # round of deletes only sends objects to a history table.
+    # This assumption that rm -a is only called for versioned buckets should be
+    # corrected, but the fix is non-trivial.
+    except CommandException, e:
+      if not self.continue_on_error:
+        raise
+    except GSResponseError, e:
+      if not self.continue_on_error:
+        raise
 
-    # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
-    name_expansion_iterator = NameExpansionIterator(
-        self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.bucket_storage_uri_class, self.args, self.recursion_requested,
-        flat=self.recursion_requested, all_versions=delete_all_versions,
-        for_all_version_delete=delete_all_versions,
-        parse_versions=parse_versions)
-
-    # Perform remove requests in parallel (-m) mode, if requested, using
-    # configured number of parallel processes and threads. Otherwise,
-    # perform requests with sequential function calls in current process.
-    self.Apply(_RemoveFunc, name_expansion_iterator, _RemoveExceptionHandler)
-
-    if not self.everything_removed_okay and not continue_on_error:
+    if not self.everything_removed_okay and not self.continue_on_error:
       raise CommandException('Some files could not be removed.')
 
     # If this was a gsutil rm -r command covering any bucket subdirs,
@@ -225,18 +199,60 @@ class RmCommand(Command):
         if uri.names_object:
           folder_object_wildcards.append('%s**_$folder$' % uri)
       if len(folder_object_wildcards):
-        continue_on_error = True
-        name_expansion_iterator = NameExpansionIterator(
-            self.command_name, self.proj_id_handler, self.headers, self.debug,
-            self.bucket_storage_uri_class, folder_object_wildcards,
-            self.recursion_requested, flat=True,
-            all_versions=delete_all_versions,
-            for_all_version_delete=delete_all_versions,
-            parse_versions=parse_versions)
-        self.Apply(_RemoveFunc, name_expansion_iterator,
-                   _RemoveExceptionHandler)
+        self.continue_on_error = True
+        try:
+          name_expansion_iterator = NameExpansionIterator(
+              self.command_name, self.proj_id_handler, self.headers, self.debug,
+              self.bucket_storage_uri_class, folder_object_wildcards,
+              self.recursion_requested, flat=True,
+              all_versions=self.all_versions,
+              parse_versions=parse_versions)
+          self.Apply(remove_func, name_expansion_iterator, exception_handler)
+        except CommandException, e:
+          # Ignore exception from name expansion due to an absent folder file.
+          if e.reason != 'No URIs matched':
+            raise
 
     return 0
+
+  def _MkRemoveExceptionHandler(self):
+    def RemoveExceptionHandler(e):
+      """Simple exception handler to allow post-completion status."""
+      self.THREADED_LOGGER.error(str(e))
+      self.everything_removed_okay = False
+    return RemoveExceptionHandler
+
+  def _MkRemoveFunc(self):
+    def RemoveFunc(name_expansion_result):
+      exp_src_uri = self.suri_builder.StorageUri(
+          name_expansion_result.GetExpandedUriStr(),
+          parse_version=name_expansion_result.names_version,
+          is_latest=name_expansion_result.is_latest)
+      if exp_src_uri.names_container():
+        if exp_src_uri.is_cloud_uri():
+          # Before offering advice about how to do rm + rb, ensure those
+          # commands won't fail because of bucket naming problems.
+          boto.s3.connection.check_lowercase_bucketname(exp_src_uri.bucket_name)
+        uri_str = exp_src_uri.object_name.rstrip('/')
+        raise CommandException('"rm" command will not remove buckets. To '
+                               'delete this/these bucket(s) do:\n\tgsutil rm '
+                               '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
+
+      # Perform delete.
+      self.THREADED_LOGGER.info('Removing %s...',
+                                name_expansion_result.expanded_uri_str)
+      try:
+        exp_src_uri.delete_key(validate=False, headers=self.headers)
+        if self.all_versions and exp_src_uri.is_latest:
+          exp_src_uri.delete_key(validate=False, headers=self.headers)
+
+      except:
+        if self.continue_on_error:
+          self.everything_removed_okay = False
+        else:
+          raise
+    return RemoveFunc
+
 
   # Test specification. See definition of test_steps in base class for
   # details on how to populate these fields.
@@ -247,26 +263,63 @@ class RmCommand(Command):
     ('stage empty file, pt 1', 'rm -f $F9', 0, None),
     ('stage empty file, pt 2', 'touch $F9', 0, None),
     ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
+    #
+    # Test that "rm -a" for an object with a current version works.
     ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
      None),
     ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
      None),
-    #
-    # Test that "rm -a" for an object with a current version works.
     ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
     ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
      ('$F1', '$F9')),
+    #
+    # Test that "rm -a" for an object without a current version works.
     ('upload initial version', 'echo \'data1\' | gsutil cp - gs://$B0/$O0', 0,
      None),
     ('upload new version', 'echo \'data2\' | gsutil cp - gs://$B0/$O0', 0,
      None),
     ('delete current version', 'gsutil rm gs://$B0/$O0', 0, None),
-    #
-    # Test that "rm -a" for an object without a current version works.
     ('delete all versions', 'gsutil -m rm -a gs://$B0/$O0', 0, None),
     ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
      ('$F1', '$F9')),
     ('rm -a fails for missing obj', 'gsutil rm -a gs://$B0/$O0', 1, None),
+    #
+    # Test that "rm -ar" works on bucket.
+    ('create obj1', 'echo \'data1a\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    ('add obj1 version', 'echo \'data1b\' | gsutil cp - gs://$B0/$O0', 0,
+     None),
+    ('create obj2', 'echo \'data2a\' | gsutil cp - gs://$B0/$O1',
+     0, None),
+    ('add obj2 version', 'echo \'data2b\' | gsutil cp - gs://$B0/$O1', 0,
+     None),
+    ('rm -ar on bucket', 'gsutil rm -ar gs://$B0/', 0, None),
+    ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
+     ('$F1', '$F9')),
+    #
+    # Test that "rm -ar" works on subdir.
+    ('create obj1 in dir', 'echo \'data1a\' | gsutil cp - gs://$B0/dir/$O0', 0,
+     None),
+    ('add obj1 version', 'echo \'data1b\' | gsutil cp - gs://$B0/dir/$O0', 0,
+     None),
+    ('create obj2 in dir', 'echo \'data2a\' | gsutil cp - gs://$B0/dir/$O1',
+     0, None),
+    ('add obj2 version', 'echo \'data2b\' | gsutil cp - gs://$B0/dir/$O1', 0,
+     None),
+    ('rm -ar on subdir', 'gsutil rm -ar gs://$B0/dir', 0, None),
+    ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
+     ('$F1', '$F9')),
+    #
+    # Test that rm -a fails when some but not all uris don't exist.
+    ('create obj1', 'echo \'data\' | gsutil cp - gs://$B0/$O0', 0, None),
+    ('rm -a with bad arg', 'gsutil rm -a gs://$B0/missing gs://$B0/$O0',
+     1, None),
+    #
+    # Test that rm -af succeeds despite hidden first uri
+    ('rm -af with bad arg', 'gsutil rm -af gs://$B0/missing gs://$B0/$O0',
+     0, None),
+    ('check all versions gone', 'gsutil ls -a gs://$B0/ > $F1', 0,
+     ('$F1', '$F9')),
     #
     # Test that "rm -r" of a folder with a dir_$folder$ marker object removes
     # the dir_$folder$ object.

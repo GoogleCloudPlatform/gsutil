@@ -1399,7 +1399,7 @@ class CpCommand(Command):
           name_expansion_result.GetSrcUriStr())
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr(),
-          parse_version=self.parse_versions)
+          parse_version=name_expansion_result.names_version)
       src_uri_names_container = name_expansion_result.NamesContainer()
       src_uri_expands_to_multi = name_expansion_result.NamesContainer()
       have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
@@ -1500,7 +1500,7 @@ class CpCommand(Command):
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, uri_strs,
         self.recursion_requested or self.perform_mv,
-        have_existing_dst_container)
+        have_existing_dst_container, parse_versions=self.parse_versions)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1633,7 +1633,7 @@ class CpCommand(Command):
     ('setup data1 file', 'echo data1 > $F1', 0, None),
     ('setup data2 file', 'echo data2 > $F2', 0, None),
     ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
-    ('upload new version', 'cat $F1 | gsutil cp - gs://$B2/$O3', 0,
+    ('upload first version', 'cat $F1 | gsutil cp - gs://$B2/$O3', 0,
      None),
     ('cloud cp new version', 'gsutil cp gs://$B2/$O0 gs://$B2/$O3', 0, None),
     ('upload new version', 'cat $F2 | gsutil cp - gs://$B2/$O3', 0,

@@ -215,7 +215,8 @@ class CloudWildcardIterator(WildcardIterator):
                         + suffix_wildcard))
                 else:
                   # Done expanding.
-                  expanded_uri = uri.clone_replace_name(key.name)
+                  expanded_uri = uri.clone_replace_key(key)
+
                   if isinstance(key, Prefix):
                     yield BucketListingRef(expanded_uri, key=None, prefix=key,
                                            headers=self.headers)
