@@ -107,7 +107,7 @@ class BucketListingRef(object):
     Returns:
       bool indicator.
     """
-    return self.uri.is_latest
+    return hasattr(self.uri, 'is_latest') and self.uri.is_latest
 
   def GetRStrippedUriString(self):
     """Get string URI form of listed URI, stripped of any right trailing delims.
