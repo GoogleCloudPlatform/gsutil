@@ -32,7 +32,6 @@ from gslib import wildcard_iterator
 from gslib.project_id import ProjectIdHandler
 import gslib.tests.testcase as testcase
 from gslib.wildcard_iterator import ContainsWildcard
-from tests.integration.s3 import mock_storage_service
 
 class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
   """CloudWildcardIterator test suite"""
@@ -261,7 +260,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       from gslib.bucket_listing_ref import BucketListingRefException
       for iter_result in wildcard_iterator.wildcard_iterator(
           'gs://', ProjectIdHandler(),
-          bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri):
+          bucket_storage_uri_class=self.mock_bucket_storage_uri):
         iter_result.GetKey()
         self.fail('Expected BucketListingRefException not raised.')
     except BucketListingRefException, e:

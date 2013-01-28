@@ -36,6 +36,21 @@ GSUTIL_DIR = os.path.split(GSLIB_DIR)[0]
 BOTO_DIR = os.path.join(GSUTIL_DIR, 'boto')
 
 
+class GSMockConnection(mock_storage_service.MockConnection):
+
+  def __init__(self, *args, **kwargs):
+    kwargs['provider'] = 'gs'
+    super(GSMockConnection, self).__init__(*args, **kwargs)
+
+mock_connection = GSMockConnection()
+
+
+class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
+
+  def connect(self, access_key_id=None, secret_access_key=None):
+    return mock_connection
+
+
 @unittest.skipUnless(util.RUN_UNIT_TESTS,
                      'Not running integration tests.')
 class GsUtilUnitTestCase(unittest.TestCase):
@@ -43,13 +58,14 @@ class GsUtilUnitTestCase(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
+    cls.mock_bucket_storage_uri = GSMockBucketStorageUri
     cls.proj_id_handler = ProjectIdHandler()
     config_file_list = boto.pyami.config.BotoConfigLocations
     # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
     # sent via HTTP because we're using MockStorageService here.
     cls.command_runner = CommandRunner(GSUTIL_DIR, BOTO_DIR,
                                    config_file_list, 'gsutil_test_commands',
-                                   mock_storage_service.MockBucketStorageUri)
+                                   cls.mock_bucket_storage_uri)
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  test_method=None, return_stdout=False):
@@ -116,8 +132,8 @@ class GsUtilUnitTestCase(unittest.TestCase):
       WildcardIterator.IterUris(), over which caller can iterate.
     """
     return wildcard_iterator.wildcard_iterator(
-        uri_or_str, cls.proj_id_handler,
-        mock_storage_service.MockBucketStorageUri, debug=debug)
+        uri_or_str, cls.proj_id_handler, cls.mock_bucket_storage_uri,
+        debug=debug)
 
   @staticmethod
   def _test_storage_uri(uri_str, default_scheme='file', debug=0,
@@ -133,4 +149,4 @@ class GsUtilUnitTestCase(unittest.TestCase):
     no bucket_storage_uri_class arg.
     """
     return boto.storage_uri(uri_str, default_scheme, debug, validate,
-                            mock_storage_service.MockBucketStorageUri)
+                            GSMockBucketStorageUri)
