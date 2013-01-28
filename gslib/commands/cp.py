@@ -28,15 +28,16 @@ import tempfile
 import threading
 import time
 
-from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto import config
-from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from boto.exception import GSResponseError
 from boto.exception import ResumableUploadException
-from gslib.command import Command
+from boto.gs.resumable_upload_handler import ResumableUploadHandler
+from boto.s3.keyfile import KeyFile
+from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
+from gslib.command import Command
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
@@ -48,8 +49,8 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.name_expansion import NameExpansionIterator
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
@@ -342,47 +343,6 @@ _detailed_help_text = ("""
                     Content-Encoding header, and to render it as HTML based on
                     the Content-Type header.
 """)
-
-class KeyFile():
-  """Wrapper class to expose Key class as file to boto."""
-
-  def __init__(self, key):
-    self.key = key
-    self.key.open_read()
-    self.location = 0
-
-  def tell(self):
-    if self.location is None:
-      raise ValueError("I/O operation on closed file")
-    return self.location
-
-  def seek(self, pos):
-    if pos < 0:
-      raise IOError("Invalid argument")
-
-    self.key.close()
-
-    try:
-      self.key.open_read(headers={"Range": "bytes=%d-" % pos})
-    except GSResponseError as e:
-      # 416 Invalid Range means that the given starting byte was past the end
-      # of file. We catch this because the Python file interface allows silently
-      # seeking past the end of the file.
-      if e.status != 416:
-        raise
-
-    self.location = pos
-
-  def read(self, size):
-    self.location += size
-    return self.key.read(size)
-
-  def write(self, buf):
-    raise IOError("KeyFile does not support writing")
-
-  def close(self):
-    self.key.close()
-    self.location = None
 
 class CpCommand(Command):
   """
@@ -745,7 +705,12 @@ class CpCommand(Command):
     Returns (elapsed_time, bytes_transferred).
     """
     start_time = time.time()
-    file_size = os.path.getsize(fp.name)
+    # Determine file size different ways for case where fp is actually a wrapper
+    # around a Key vs an actual file.
+    if isinstance(fp, KeyFile):
+      file_size = fp.getkey().size
+    else:
+      file_size = os.path.getsize(fp.name)
     dst_key = dst_uri.new_key(False, headers)
     (cb, num_cb, res_upload_handler) = self._GetTransferHandlers(
         dst_uri, file_size, True)
@@ -1041,52 +1006,20 @@ class CpCommand(Command):
   def _CopyObjToObjDiffProvider(self, src_key, src_uri, dst_uri, headers):
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
-    # If destination is GS we can avoid the local copying through a local file
-    # as GS supports chunked transfer. This also allows us to preserve metadata
-    # between original and destination object.
-    if dst_uri.scheme == 'gs':
-      canned_acl = None
-      if self.sub_opts:
-        for o, a in self.sub_opts:
-          if o == '-a':
-            canned_acls = dst_uri.canned_acls()
-            if a not in canned_acls:
-              raise CommandException('Invalid canned ACL "%s".' % a)
-            canned_acl = a
-          elif o == '-p':
-            # We don't attempt to preserve ACLs across providers because
-            # GCS and S3 support different ACLs.
-            raise NotImplementedError('Cross-provider cp -p not supported')
-
-      return self._PerformStreamingUpload(KeyFile(src_key), dst_uri, headers,
-                                          canned_acl)
-
-    # If destination is not GS we implement object copy through a local
-    # temp file. There are at least 3 downsides of this approach:
-    #   1. It doesn't preserve metadata from the src object when uploading to
-    #      the dst object.
-    #   2. It requires enough temp space on the local disk to hold the file
-    #      while transferring.
-    #   3. Killing the gsutil process partway through and then restarting will
-    #      always repeat the download and upload, because the temp file name is
-    #      different for each incarnation. (If however you just leave the
-    #      process running and failures happen along the way, they will
-    #      continue to restart and make progress as long as not too many
-    #      failures happen in a row with no progress.)
-    tmp = tempfile.NamedTemporaryFile()
-    if self._CheckFreeSpace(tempfile.tempdir) < src_key.size:
-      raise CommandException('Inadequate temp space available to perform the '
-                             'requested copy')
-    start_time = time.time()
-    file_uri = self.suri_builder.StorageUri('file://%s' % tmp.name)
-    try:
-      self._DownloadObjectToFile(src_key, src_uri, file_uri, headers, False)
-      self._UploadFileToObject(file_uri.get_key(), file_uri, dst_uri, headers,
-                               False)
-    finally:
-      tmp.close()
-    end_time = time.time()
-    return (end_time - start_time, src_key.size)
+    canned_acl = None
+    if self.sub_opts:
+      for o, a in self.sub_opts:
+        if o == '-a':
+          canned_acls = dst_uri.canned_acls()
+          if a not in canned_acls:
+            raise CommandException('Invalid canned ACL "%s".' % a)
+          canned_acl = a
+        elif o == '-p':
+          # We don't attempt to preserve ACLs across providers because
+          # GCS and S3 support different ACLs and disjoint principals.
+          raise NotImplementedError('Cross-provider cp -p not supported')
+    return self._PerformResumableUploadIfApplies(KeyFile(src_key), dst_uri,
+                                                 canned_acl, headers)
 
   def _PerformCopy(self, src_uri, dst_uri):
     """Performs copy from src_uri to dst_uri, handling various special cases.

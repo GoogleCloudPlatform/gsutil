@@ -73,8 +73,8 @@ _detailed_help_text = ("""
 
        python gslib/tests --unit-only
 
-     The above tests run quickly, as they run against an in-memory mock
-     storage service implementation. We have an additional set of tests
+     The above tests run quickly, as they run against an in-memory mock storage
+     service implementation. We have additional unit and integration tests
      that take longer because they send requests to the production service;
      please also run these tests:
 

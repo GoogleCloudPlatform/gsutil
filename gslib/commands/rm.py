@@ -323,7 +323,6 @@ class RmCommand(Command):
     #
     # Test that "rm -r" of a folder with a dir_$folder$ marker object removes
     # the dir_$folder$ object.
-    ('save ls result', 'gsutil ls >/tmp/ls.out', 0, None), #todo now
     ('delete test object created by harness', 'gsutil rm gs://$B1/*', 0, None),
     ('upload folder marker object',
      'echo \'\' | gsutil cp - gs://$B1/abc_\$folder\$', 0, None),
