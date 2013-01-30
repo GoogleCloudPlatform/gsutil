@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -111,9 +113,9 @@ class GetWebcfgCommand(Command):
           raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
-        print 'Getting website config on %s...' % uri
+        sys.stderr.write('Getting website config on %s...\n' % uri)
         _, xml_body = uri.get_website_config()
-        print XmlParseString(xml_body).toprettyxml()
+        sys.stdout.write(XmlParseString(xml_body).toprettyxml())
     if not some_matched:
       raise CommandException('No URIs matched')
 

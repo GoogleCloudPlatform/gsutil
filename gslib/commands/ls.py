@@ -515,30 +515,6 @@ class LsCommand(Command):
 
     return 0
 
-  # Test specification. See definition of test_steps in base class for
-  # details on how to populate these fields.
-  num_test_buckets = 3
-  test_steps = [
-    # (test name, cmd line, ret code, (result_file, expect_file))
-    ('gen bucket expect', 'echo gs://$B0/ >$F9', 0, None),
-    ('gen obj expect', 'echo gs://$B1/$O0 >$F8', 0, None),
-    ('simple ls', 'gsutil ls', 0, None),
-    ('list empty bucket', 'gsutil ls gs://$B0', 0, None),
-    ('list empty bucket w/ -b', 'gsutil ls -b gs://$B0 >$F7', 0,
-                                                        ('$F7', '$F9')),
-    ('list bucket contents', 'gsutil ls gs://$B1 >$F7', 0, ('$F7', '$F8')),
-    ('stage subdir obj', 'gsutil cp gs://$B1/$O0 gs://$B1/dir/$O0', 0, None),
-    ('gen subdir expect', 'echo gs://$B1/dir/$O0 > $F6', 0, None),
-    ('list subdir', 'gsutil ls gs://$B1/dir > $F5', 0, ('$F5', '$F6')),
-    ('list object', 'gsutil ls gs://$B1/$O0 >$F7', 0, ('$F7', '$F8')),
-    ('enable versioning', 'gsutil setversioning on gs://$B2', 0, None),
-    ('add version 1', 'gsutil cp gs://$B2/$O0 gs://$B2/$O1', 0, None),
-    ('add version 2', 'gsutil cp gs://$B2/$O0 gs://$B2/$O1', 0, None),
-    ('gen expected count', 'echo 3 > $F6', 0, None),
-    ('check version list', 'gsutil ls -a gs://$B2/$O1 | wc -l  > $F5', 0,
-                                                        ('$F5', '$F6')),
-  ]
-
 
 class _UriOnlyBlrExpansionIterator:
   """

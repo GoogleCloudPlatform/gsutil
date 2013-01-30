@@ -252,7 +252,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # stack trace.
     signal.signal(signal.SIGINT, _HandleControlC)
     # Catch ^\ so we can force a breakpoint in a running gsutil.
-    signal.signal(signal.SIGQUIT, _HandleSigQuit)
+    if not util.IS_WINDOWS:
+      signal.signal(signal.SIGQUIT, _HandleSigQuit)
     return command_runner.RunNamedCommand(command_name, args, headers, debug,
                                           parallel_operations)
   except AttributeError, e:

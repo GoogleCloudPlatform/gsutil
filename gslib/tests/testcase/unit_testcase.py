@@ -25,8 +25,8 @@ from gslib.command_runner import CommandRunner
 from gslib.project_id import ProjectIdHandler
 import gslib.tests.util as util
 from gslib.tests.util import unittest
-
 from tests.integration.s3 import mock_storage_service
+import base
 
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
@@ -53,7 +53,7 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
 
 @unittest.skipUnless(util.RUN_UNIT_TESTS,
                      'Not running integration tests.')
-class GsUtilUnitTestCase(unittest.TestCase):
+class GsUtilUnitTestCase(base.GsUtilTestCase):
   """Base class for gsutil unit tests."""
 
   @classmethod
@@ -64,8 +64,8 @@ class GsUtilUnitTestCase(unittest.TestCase):
     # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
     # sent via HTTP because we're using MockStorageService here.
     cls.command_runner = CommandRunner(GSUTIL_DIR, BOTO_DIR,
-                                   config_file_list, 'gsutil_test_commands',
-                                   cls.mock_bucket_storage_uri)
+                                       config_file_list, 'gsutil_test_commands',
+                                       cls.mock_bucket_storage_uri)
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  test_method=None, return_stdout=False):
@@ -100,6 +100,7 @@ class GsUtilUnitTestCase(unittest.TestCase):
       outfile = None
 
     stdout_sav = sys.stdout
+    output = None
     try:
       if outfile:
         fp = open(outfile, 'w')
@@ -114,7 +115,9 @@ class GsUtilUnitTestCase(unittest.TestCase):
         output = open(outfile, 'r').read()
         if return_stdout:
           os.unlink(outfile)
-          return output
+
+    if output and return_stdout:
+      return output
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):

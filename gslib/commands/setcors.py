@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from xml.dom.minidom import parseString
-import xml.sax.xmlreader
+import xml.sax
 from boto import handler
 from boto.gs.cors import Cors
 from gslib.command import Command
@@ -144,85 +143,3 @@ class SetCorsCommand(Command):
       raise CommandException('No URIs matched')
 
     return 0
-
-  # Test specification. See definition of test_steps in base class for
-  # details on how to populate these fields.
-  empty_doc1 = parseString('<CorsConfig/>').toprettyxml(indent='    ')
-
-  empty_doc2 = parseString(
-      '<CorsConfig></CorsConfig>').toprettyxml(indent='    ')
-
-  empty_doc3 = parseString(
-      '<CorsConfig><Cors/></CorsConfig>').toprettyxml(indent='    ')
-
-  empty_doc4 = parseString(
-    '<CorsConfig><Cors></Cors></CorsConfig>').toprettyxml(indent='    ')
-  
-  cors_bad1 = ('<?xml version="1.0" ?><CorsConfig><Cors><Methods><Method>GET'
-               '</ResponseHeader></Methods></Cors></CorsConfig>')
-
-  cors_bad2 = ('<?xml version="1.0" ?><CorsConfig><Cors><Methods><Cors>GET'
-               '</Cors></Methods></Cors></CorsConfig>')
-
-  cors_bad3 = ('<?xml version="1.0" ?><CorsConfig><Methods><Method>GET'
-               '</Method></Methods></Cors></CorsConfig>')
-
-  cors_bad4 = ('<?xml version="1.0" ?><CorsConfig><Cors><Method>GET'
-               '</Method></Cors></CorsConfig>')
-
-  cors_doc=parseString('<CorsConfig><Cors><Origins>'
-      '<Origin>http://origin1.example.com</Origin>'
-      '<Origin>http://origin2.example.com</Origin>'
-      '</Origins><Methods><Method>GET</Method>'
-      '<Method>PUT</Method><Method>POST</Method></Methods>'
-      '<ResponseHeaders><ResponseHeader>foo</ResponseHeader>'
-      '<ResponseHeader>bar</ResponseHeader></ResponseHeaders>'
-      '<MaxAgeSec>3600</MaxAgeSec></Cors>'
-      '<Cors><Origins><Origin>http://origin3.example.com</Origin></Origins>'
-      '<Methods><Method>GET</Method><Method>DELETE</Method></Methods>'
-      '<ResponseHeaders><ResponseHeader>foo2</ResponseHeader>'
-      '<ResponseHeader>bar2</ResponseHeader></ResponseHeaders>'
-      '</Cors></CorsConfig>').toprettyxml(indent='    ')
-
- 
-  test_steps = [
-    # (test name, cmd line, ret code, (result_file, expect_file))
-    ('setup empty doc 1', 'echo \'' + empty_doc1 + '\' >$F9', 0, None),
-    ('setup empty doc 2', 'echo \'' + empty_doc2 + '\' >$F8', 0, None),
-    ('setup empty doc 3', 'echo \'' + empty_doc3 + '\' >$F7', 0, None),
-    ('setup empty doc 4', 'echo \'' + empty_doc4 + '\' >$F6', 0, None),
-    ('setup cors doc', 'echo \'' + cors_doc + '\' >$F5', 0, None),
-    ('setup bad cors 1', 'echo \'' + cors_bad1 + '\' >$F4', 0, None),
-    ('setup bad cors 2', 'echo \'' + cors_bad2 + '\' >$F3', 0, None),
-    ('setup bad cors 3', 'echo \'' + cors_bad3 + '\' >$F2', 0, None),
-    ('setup bad cors 4', 'echo \'' + cors_bad4 + '\' >$F1', 0, None),
-    ('verify default cors', 'gsutil getcors gs://$B0 >$F0',
-      0, ('$F0', '$F9')),
-    ('set empty cors 1', 'gsutil setcors $F9 gs://$B0', 0, None),
-    ('verify empty cors 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set empty cors 2', 'gsutil setcors $F8 gs://$B0', 0, None),
-    ('verify empty cors 2', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set empty cors 3', 'gsutil setcors $F7 gs://$B0', 0, None),
-    ('verify empty cors 3', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F7')),
-    ('set empty cors 4', 'gsutil setcors $F6 gs://$B0', 0, None),
-    ('verify empty cors 4', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F7')),
-    ('set non-null cors', 'gsutil setcors $F5 gs://$B0', 0, (0, None)),
-    ('verify non-null cors', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F5')),
-    ('bad1 cors fails', 'gsutil setcors $F4 gs://$B0', 1, (0, None)),
-    ('bad2 cors fails', 'gsutil setcors $F3 gs://$B0', 1, (0, None)),
-    ('bad3 cors fails', 'gsutil setcors $F2 gs://$B0', 1, (0, None)),
-    ('bad4 cors fails', 'gsutil setcors $F1 gs://$B0', 1, (0, None)),
-    ('reset empty cors', 'gsutil setcors $F9 gs://$B0', 0, None),
-    ('verify empty cors', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set multi non-null cors', 'gsutil setcors $F5 gs://$B0 gs://$B1',
-      0, (0, None)),
-    ('verify non-null 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F5')),
-    ('verify non-null 2', 'gsutil getcors gs://$B1 >$F0', 0, ('$F0', '$F5')),
-    ('reset empty cors', 'gsutil setcors $F9 gs://$B0', 0, None),
-    ('verify empty cors', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F9')),
-    ('set wildcard non-null cors', 'gsutil setcors $F5 gs://gsutil_test*',
-      0, (0, None)),
-    ('verify non-null 1', 'gsutil getcors gs://$B0 >$F0', 0, ('$F0', '$F5')),
-    ('verify non-null 2', 'gsutil getcors gs://$B1 >$F0', 0, ('$F0', '$F5')),
-  ]
-

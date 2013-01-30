@@ -112,18 +112,3 @@ class SetVersioningCommand(Command):
       raise CommandException('No URIs matched')
 
     return 0
-
-  num_test_buckets = 1
-  test_steps = [
-      ('set up suspended file', 'echo gs://$B0: Suspended > $F0', 0, None),
-      ('set up enabled file', 'echo gs://$B0: Enabled > $F1', 0, None),
-      ('check versioning off', 'gsutil getversioning gs://$B0 > $F9', 0,
-       ('$F0', '$F9')),
-      ('enable versioning', 'gsutil setversioning on gs://$B0', 0, None),
-      ('check versioning on', 'gsutil getversioning gs://$B0 > $F9', 0,
-       ('$F1', '$F9')),
-      ('disable versioning', 'gsutil setversioning off gs://$B0', 0,
-       None),
-      ('check versioning off', 'gsutil getversioning gs://$B0 > $F9', 0,
-       ('$F0', '$F9')),
-  ]

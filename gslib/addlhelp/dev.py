@@ -71,15 +71,15 @@ _detailed_help_text = ("""
   7. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
 
-       python gslib/tests --unit-only
-
-     The above tests run quickly, as they run against an in-memory mock storage
-     service implementation. We have additional unit and integration tests
-     that take longer because they send requests to the production service;
-     please also run these tests:
-
-       python gslib/tests
        ./gsutil test
+
+     The above tests take a long time to run because they send many requests to
+     the production service. The gsutil test command has a -u argument that will
+     only run unit tests. These run quickly, as they are executed with an
+     in-memory mock storage service implementation. To run only the unit tests,
+     run:
+
+       ./gsutil test -u
 
     If you made mods to boto please run the boto tests. For these tests you
     need to use HMAC credentials (from gsutil config -a), because the current
@@ -95,9 +95,7 @@ _detailed_help_text = ("""
     Then ensure your .boto file has HMAC credentials defined (the boto tests
     don't load the OAUTH2 plugin), and then change directories into boto/tests
     and run:
-      python test.py -t s3
-      python test.py -t gs
-      python test.py -t ssl
+      python test.py -t s3 -t gs -t ssl
 
   8. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).

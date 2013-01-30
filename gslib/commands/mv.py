@@ -157,24 +157,3 @@ class MvCommand(Command):
                                         self.debug, self.parallel_operations)
 
     return 0
-
-  # Test specification. See definition of test_steps in base class for
-  # details on how to populate these fields.
-  num_test_buckets = 3
-  test_steps = [
-    # (test name, cmd line, ret code, (result_file, expect_file))
-    ('gen expect file 0', 'echo 0 >$F0', 0, None),
-    ('gen expect file 1', 'echo 1 >$F1', 0, None),
-    ('gen expect file 2', 'echo 2 >$F2', 0, None),
-    ('verify 2 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F2')),
-    ('verify 0 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('mv 2 objects',
-       'gsutil -m mv gs://$B2/$O0 gs://$B2/$O1 gs://$B0 2>&1 | grep Removing',
-       0, None),
-    ('verify 0 src objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('verify 2 dst objs', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F2')),
-    ('rm 1 src object', 'gsutil rm gs://$B0/$O0', 0, None),
-    ('verify 1 src obj', 'gsutil ls gs://$B0 | wc -l >$F9', 0, ('$F9', '$F1')),
-    ('verify 0 dst objs', 'gsutil ls gs://$B2 | wc -l >$F9', 0, ('$F9', '$F0')),
-    ('mv 2 objects', 'gsutil -m mv gs://$B0/$O0 gs://$B0/$O1 gs://$B2', 1, None),
-  ]

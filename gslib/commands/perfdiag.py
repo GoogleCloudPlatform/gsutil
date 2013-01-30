@@ -163,19 +163,6 @@ class PerfDiagCommand(Command):
       HELP_TEXT: _detailed_help_text,
   }
 
-  # Test specification. See definition of test_steps in base class for
-  # details on how to populate these fields.
-  num_test_buckets = 1
-  test_steps = [
-      # (test name, cmd line, ret code, (result_file, expect_file))
-      ('perfdiag latency', 'gsutil perfdiag -n 1 -t lat gs://$B0/', 0, None),
-      ('perfdiag write throughput',
-       'gsutil perfdiag -n 1 -s 1024 -t wthru gs://$B0/', 0, None),
-      ('perfdiag read throughput',
-       'gsutil perfdiag -o $F0 -n 1 -s 1024 -t rthru gs://$B0/', 0, None),
-      ('perfdiag input', 'gsutil perfdiag -i $F0', 0, None),
-  ]
-
   # Byte sizes to use for testing files.
   # TODO: Consider letting the user specify these sizes with a configuration
   # parameter.
