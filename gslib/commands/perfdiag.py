@@ -77,11 +77,11 @@ _detailed_help_text = ("""
 
 
 <B>PROVIDING DIAGNOSTIC OUTPUT TO GOOGLE CLOUD STORAGE TEAM</B>
-  If the Google Cloud Storage Team asks you to run a performance performance
-  diagnostic please use the following command, and email the output file
-  (output.json) to gs-team@google.com:
+  If the Google Cloud Storage Team asks you to run a performance diagnostic
+  please use the following command, and email the output file (output.json)
+  to gs-team@google.com:
 
-    gsutil perfdiag -o output.json gs://your-bucket/
+    gsutil perfdiag -o output.json gs://your-bucket
 
 
 <B>OPTIONS</B>

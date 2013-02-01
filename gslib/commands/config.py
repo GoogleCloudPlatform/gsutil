@@ -580,7 +580,7 @@ class ConfigCommand(Command):
       sys.stderr.write('No default project ID entered. You will need to edit '
                        'the default_project_id value\nin your boto config file '
                        'before using "gsutil ls gs://" or "mb" commands'
-                       'with the default API version 2.\n')
+                       'with the\ndefault API version (2).\n')
       config_file.write('%s#default_project_id = <value>\n\n\n' %
                         project_id_section_prelude)
 
@@ -684,9 +684,9 @@ class ConfigCommand(Command):
     if output_file_name != '-':
       output_file.close()
       sys.stderr.write(
-          '\nBoto config file "%s" created. If you need to use\na proxy to '
-          'access the Internet please see the instructions in that file.\n'
-          % output_file_name)
+          '\nBoto config file "%s" created.\nIf you need to use a proxy to '
+          'use a proxy to access the Internet please see the instructions in '
+          'that file.\n' % output_file_name)
 
     return 0
 

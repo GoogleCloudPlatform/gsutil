@@ -234,10 +234,7 @@ _detailed_help_text = ("""
     - when compressing data to be uploaded (see the -z option)
     - when decompressing data being downloaded (when the data has
       Content-Encoding:gzip, e.g., as happens when uploaded using gsutil cp -z)
-    - when copying between cloud service providers, where the destination
-      provider does not support streaming uploads. In this case each object
-      is downloaded from the source provider to a temp file, and then uploaded
-      from that temp file to the destination provider.
+    - when running integration tests (using the gsutil test command)
 
   In these cases it's possible the temp file location on your system that
   gsutil selects by default may not have enough space. If you find that
