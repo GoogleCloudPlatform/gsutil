@@ -179,7 +179,7 @@ class RmCommand(Command):
     # round of deletes only sends objects to a history table.
     # This assumption that rm -a is only called for versioned buckets should be
     # corrected, but the fix is non-trivial.
-    except CommandException, e:
+    except CommandException as e:
       if not self.continue_on_error:
         raise
     except GSResponseError, e:
@@ -208,7 +208,7 @@ class RmCommand(Command):
               all_versions=self.all_versions,
               parse_versions=parse_versions)
           self.Apply(remove_func, name_expansion_iterator, exception_handler)
-        except CommandException, e:
+        except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
           if e.reason != 'No URIs matched':
             raise

@@ -255,10 +255,12 @@ class LsCommand(Command):
                                                      headers=self.headers)
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'get_acl', bucket_uri, self.headers)
-        print('%s :\n\t%d objects, %s\n\tStorageClass: %s%s\n\tACL: %s\n'
+        print('%s :\n\t%d objects, %s\n\tStorageClass: %s%s\n'
+              '\tVersioning enabled: %s\n\tACL: %s\n'
               '\tDefault ACL: %s' % (
               bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
               storage_class, location_output,
+              bucket_uri.get_versioning_config(),
               bucket_uri.get_acl(False, self.headers),
               bucket_uri.get_def_acl(False, self.headers)))
     return (bucket_objs, bucket_bytes)
