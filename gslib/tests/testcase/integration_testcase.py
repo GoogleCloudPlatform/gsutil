@@ -82,7 +82,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     name = '%s-%08x' % (name, random.randrange(256**4))
     return name
 
-  def CreateBucket(self, bucket_name=None, test_objects=0):
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -92,6 +92,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
+      storage_class: storage class to use. If not provided we us standard.
 
     Returns:
       StorageUri for the created bucket.
@@ -99,7 +100,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     bucket_name = bucket_name or self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % bucket_name.lower(),
                                   suppress_consec_slashes=False)
-    bucket_uri.create_bucket()
+    bucket_uri.create_bucket(storage_class=storage_class)
     self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,

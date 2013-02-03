@@ -180,3 +180,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(os.path.basename(fpath1), stdout)
     self.assertIn(os.path.basename(fpath2), stdout)
     self.assertNumLines(stdout, 2)
+
+  def test_daisy_chain_cp(self):
+    # Daisy chain mode is required for copying across storage classes,
+    # so create 2 buckets and attempt to copy without vs with daisy chain mode.
+    bucket1_uri = self.CreateBucket(storage_class='STANDARD')
+    bucket2_uri = self.CreateBucket(
+        storage_class='DURABLE_REDUCED_AVAILABILITY')
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)], 
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Copy-in-the-cloud disallowed', stderr)
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    stderr = self.RunGsUtil(['cp', '-D', suri(key_uri), suri(bucket2_uri)], 
+                            return_stderr=True)
+    self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
