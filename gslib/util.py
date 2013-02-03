@@ -15,6 +15,7 @@
 """Static data and helper functions."""
 
 import math
+import re
 import sys
 
 import boto
@@ -36,12 +37,12 @@ NO_MAX = sys.maxint
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
-    (0, 'B', 'bit'),
-    (10, 'KB', 'kbit'),
-    (20, 'MB', 'Mbit'),
-    (30, 'GB', 'Gbit'),
-    (40, 'TB', 'Tbit'),
-    (50, 'PB', 'Pbit'),
+  (0, 'B', 'bit'),
+  (10, 'KB', 'kbit'),
+  (20, 'MB', 'Mbit'),
+  (30, 'GB', 'Gbit'),
+  (40, 'TB', 'Tbit'),
+  (50, 'PB', 'Pbit'),
 ]
 
 # Detect platform types.
@@ -101,27 +102,50 @@ def MakeBitsHumanReadable(num):
   return '%s %s' % (rounded_val, _EXP_STRINGS[i][2])
 
 def Percentile(values, percent, key=lambda x:x):
-    """Find the percentile of a list of values.
+  """Find the percentile of a list of values.
 
-    Taken from: http://code.activestate.com/recipes/511478/
+  Taken from: http://code.activestate.com/recipes/511478/
 
-    Args:
-      values: a list of numeric values. Note that the values MUST BE already
-              sorted.
-      percent: a float value from 0.0 to 1.0.
-      key: optional key function to compute value from each element of the list
-           of values.
+  Args:
+    values: a list of numeric values. Note that the values MUST BE already
+            sorted.
+    percent: a float value from 0.0 to 1.0.
+    key: optional key function to compute value from each element of the list
+         of values.
 
-    Returns:
-      The percentile of the values.
-    """
-    if not values:
-      return None
-    k = (len(values) - 1) * percent
-    f = math.floor(k)
-    c = math.ceil(k)
-    if f == c:
-      return key(values[int(k)])
-    d0 = key(values[int(f)]) * (c-k)
-    d1 = key(values[int(c)]) * (k-f)
-    return d0 + d1
+  Returns:
+    The percentile of the values.
+  """
+  if not values:
+    return None
+  k = (len(values) - 1) * percent
+  f = math.floor(k)
+  c = math.ceil(k)
+  if f == c:
+    return key(values[int(k)])
+  d0 = key(values[int(f)]) * (c-k)
+  d1 = key(values[int(c)]) * (k-f)
+  return d0 + d1
+
+def ExtractErrorDetail(e):
+  """Extract <Details> text from XML content.
+
+  Args:
+    e: The GSResponseError that includes XML to be parsed.
+
+  Returns:
+    (exception_name, d), where d is <Details> text or None if not found.
+  """
+  exc_name_parts = re.split("[\.']", str(type(e)))
+  if len(exc_name_parts) < 2:
+    # Shouldn't happen, but have fallback in case.
+    exc_name = str(type(e))
+  else:
+    exc_name = exc_name_parts[-2]
+  if not hasattr(e, 'body'):
+    return (exc_name, None)
+  detail_start = e.body.find('<Details>')
+  detail_end = e.body.find('</Details>')
+  if detail_start != -1 and detail_end != -1:
+    return (exc_name, e.body[detail_start+9:detail_end])
+  return (exc_name, None)

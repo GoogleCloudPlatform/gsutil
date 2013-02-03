@@ -72,6 +72,7 @@ from gslib.command_runner import CommandRunner
 from gslib.exception import CommandException
 from gslib.exception import ProjectIdException
 from gslib import util
+from gslib.util import ExtractErrorDetail
 from gslib.util import HasConfiguredCredentials
 from gslib.wildcard_iterator import WildcardException
 
@@ -342,13 +343,10 @@ project.""")
 
     if not e.body:
       e.body = ''
-    detail_start = e.body.find('<Details>')
-    detail_end = e.body.find('</Details>')
-    exc_name = re.split("[\.']", str(type(e)))[-2]
-    if detail_start != -1 and detail_end != -1:
-      detail = e.body[detail_start+9:detail_end]
+    exc_name, error_detail = ExtractErrorDetail(e)
+    if error_detail:
       _OutputAndExit('%s: status=%d, code=%s, reason=%s, detail=%s.' %
-                    (exc_name, e.status, e.code, e.reason, detail))
+                    (exc_name, e.status, e.code, e.reason, error_detail))
     else:
       _OutputAndExit('%s: status=%d, code=%s, reason=%s.' %
                     (exc_name, e.status, e.code, e.reason))

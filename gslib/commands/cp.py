@@ -52,6 +52,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 from gslib.name_expansion import NameExpansionIterator
+from gslib.util import ExtractErrorDetail
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
@@ -259,6 +260,19 @@ _detailed_help_text = ("""
   -c            If an error occurrs, continue to attempt to copy the remaining
                 files.
 
+  -D            Copy in "daisy chain" mode, i.e., copying between two buckets by
+                hooking a download to an upload, via the machine where gsutil is
+                run. By default, data are copied between two buckets "in the
+                cloud", i.e., without needing to copy via the machine where
+                gsutil runs. However, copy-in-the-cloud is not supported when
+                copying between different locations (like US and EU) or between
+                different storage classes (like STANDARD and
+                DURABLE_REDUCED_AVAILABILITY). For these cases, you can use the
+                -D option to copy data between buckets.
+                Note: Daisy chain mode is automatically used when copying
+                between providers (e.g., to copy data from Google Cloud Storage
+                to another provider).
+
   -e            Exclude symlinks. When specified, symbolic links will not be
                 copied.
 
@@ -378,7 +392,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:ceIMNnpqrRtvz:',
+    SUPPORTED_SUB_ARGS : 'a:cDeIMNnpqrRtvz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -619,7 +633,7 @@ class CpCommand(Command):
 
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
-  def _CopyObjToObjSameProvider(self, src_key, src_uri, dst_uri, headers):
+  def _CopyObjToObjInTheCloud(self, src_key, src_uri, dst_uri, headers):
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
     # Do Object -> object copy within same provider (uses
@@ -653,10 +667,19 @@ class CpCommand(Command):
     #   gsutil cp -t Content-Type text/html gs://bucket/* gs://bucket2
     # to change the Content-Type while copying.
 
-    dst_uri.copy_key(src_bucket.name, src_uri.object_name,
-                     preserve_acl=False, headers=headers,
-                     src_version_id=src_uri.version_id,
-                     src_generation=src_uri.generation)
+    try:
+      dst_uri.copy_key(src_bucket.name, src_uri.object_name, preserve_acl=False,
+                       headers=headers, src_version_id=src_uri.version_id,
+                       src_generation=src_uri.generation)
+    except GSResponseError as e:
+      exc_name, error_detail = ExtractErrorDetail(e)
+      if (exc_name == 'GSResponseError'
+          and ('Copy-in-the-cloud disallowed' in error_detail)):
+          raise CommandException('%s.\nNote: you can copy between locations '
+                                 'and between storage classes by using the '
+                                 'gsutil cp -D option.' % error_detail)
+      else:
+        raise
     end_time = time.time()
     return (end_time - start_time, src_key.size)
 
@@ -1000,7 +1023,8 @@ class CpCommand(Command):
     end_time = time.time()
     return (end_time - start_time, os.path.getsize(src_key.fp.name))
 
-  def _CopyObjToObjDiffProvider(self, src_key, src_uri, dst_uri, headers):
+  def _CopyObjToObjDaisyChainMode(self, src_key, src_uri, dst_uri, headers):
+    # See -D OPTION documentation about what daisy chain mode is.
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
     canned_acl = None
@@ -1071,12 +1095,11 @@ class CpCommand(Command):
           headers['x-goog-if-generation-match'] = '0'
 
     if src_uri.is_cloud_uri() and dst_uri.is_cloud_uri():
-      if src_uri.scheme == dst_uri.scheme:
-        return self._CopyObjToObjSameProvider(src_key, src_uri, dst_uri,
-                                              headers)
+      if src_uri.scheme == dst_uri.scheme and not self.daisy_chain:
+        return self._CopyObjToObjInTheCloud(src_key, src_uri, dst_uri, headers)
       else:
-        return self._CopyObjToObjDiffProvider(src_key, src_uri, dst_uri,
-                                              headers)
+        return self._CopyObjToObjDaisyChainMode(src_key, src_uri, dst_uri,
+                                                headers)
     elif src_uri.is_file_uri() and dst_uri.is_cloud_uri():
       return self._UploadFileToObject(src_key, src_uri, dst_uri, headers)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
@@ -1482,6 +1505,7 @@ class CpCommand(Command):
     self.quiet = False
     self.no_clobber = False
     self.continue_on_error = False
+    self.daisy_chain = False
     self.read_args_from_stdin = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -1489,6 +1513,8 @@ class CpCommand(Command):
       for o, unused_a in self.sub_opts:
         if o == '-c':
           self.continue_on_error = True
+        elif o == '-D':
+          self.daisy_chain = True
         elif o == '-e':
           self.exclude_symlinks = True
         elif o == '-I':
