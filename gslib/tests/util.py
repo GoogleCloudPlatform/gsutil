@@ -47,7 +47,7 @@ def _NormalizeURI(uri):
 
 
 def ObjectToURI(obj, suffix=None):
-  """Returns the storage URI string for a given Key, Bucket, or file object.
+  """Returns the storage URI string for a given StorageUri or file object.
 
   Args:
     obj: The object to get the URI from. Should be a file object or a sublcass

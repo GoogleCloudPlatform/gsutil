@@ -47,7 +47,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   """Base class for gsutil integration tests."""
 
   def setUp(self):
-    self.buckets = []
+    self.bucket_uris = []
     self.tempdirs = []
 
   # Retry with an exponential backoff if a server error is received. This
@@ -58,15 +58,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       tmpdir = self.tempdirs.pop()
       shutil.rmtree(tmpdir, ignore_errors=True)
 
-    while self.buckets:
-      bucket = self.buckets[-1]
-      bucket_list = list(bucket.list_bucket(all_versions=True))
+    while self.bucket_uris:
+      bucket_uri = self.bucket_uris[-1]
+      bucket_list = list(bucket_uri.list_bucket(all_versions=True))
       while bucket_list:
         for k in bucket_list:
           k.delete()
-        bucket_list = list(bucket.list_bucket(all_versions=True))
-      bucket.delete_bucket()
-      self.buckets.pop()
+        bucket_list = list(bucket_uri.list_bucket(all_versions=True))
+      bucket_uri.delete_bucket()
+      self.bucket_uris.pop()
 
   def MakeTempName(self, kind):
     """Creates a temporary name that is most-likely unique.
@@ -94,17 +94,18 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     Defaults to 0.
 
     Returns:
-      A Bucket object.
+      StorageUri for the created bucket.
     """
     bucket_name = bucket_name or self.MakeTempName('bucket')
-    bucket = boto.storage_uri('gs://%s' % bucket_name.lower(),
-                              suppress_consec_slashes=False)
-    bucket.create_bucket()
-    self.buckets.append(bucket)
+    bucket_uri = boto.storage_uri('gs://%s' % bucket_name.lower(),
+                                  suppress_consec_slashes=False)
+    bucket_uri.create_bucket()
+    self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
-      self.CreateObject(bucket=bucket, object_name=self.MakeTempName('obj'),
+      self.CreateObject(bucket_uri=bucket_uri,
+                        object_name=self.MakeTempName('obj'),
                         contents='test %d' % i)
-    return bucket
+    return bucket_uri
 
   def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
     """Creates a versioned test bucket.
@@ -118,19 +119,19 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     Defaults to 0.
 
     Returns:
-      A Bucket object with versioning enabled.
+      StorageUri for the created bucket with versioning enabled.
     """
-    bucket = self.CreateBucket(bucket_name=bucket_name,
+    bucket_uri = self.CreateBucket(bucket_name=bucket_name,
                                test_objects=test_objects)
-    bucket.configure_versioning(True)
-    return bucket
+    bucket_uri.configure_versioning(True)
+    return bucket_uri
 
-  def CreateObject(self, bucket=None, object_name=None, contents=None):
+  def CreateObject(self, bucket_uri=None, object_name=None, contents=None):
     """Creates a test object.
 
     Args:
-      bucket: The Bucket to place the object in. If not specified, a new
-              temporary bucket is created.
+      bucket: The URI of the bucket to place the object in. If not specified, a
+              new temporary bucket is created.
       object_name: The name to use for the object. If not specified, a temporary
                    test object name is constructed.
       contents: The contents to write to the object. If not specified, the key
@@ -138,14 +139,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                 yet on the server.
 
     Returns:
-      A Key object.
+      A StorageUri for the created object.
     """
-    bucket = bucket or self.CreateBucket()
+    bucket_uri = bucket_uri or self.CreateBucket()
     object_name = object_name or self.MakeTempName('obj')
-    key = bucket.clone_replace_name(object_name)
+    key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
-      key.set_contents_from_string(contents)
-    return key
+      key_uri.set_contents_from_string(contents)
+    return key_uri
 
   def CreateTempDir(self):
     """Creates a temporary directory on disk.

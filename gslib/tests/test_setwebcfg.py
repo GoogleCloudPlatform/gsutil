@@ -39,25 +39,25 @@ class TestSetWebCfg(testcase.GsUtilIntegrationTestCase):
   """Integration tests for setwebcfg command."""
 
   def test_full(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-m', 'main', '-e', '404', suri(bucket)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket)], return_stdout=True)
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setwebcfg', '-m', 'main', '-e', '404', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_FULL)
 
   def test_main(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-m', 'main', suri(bucket)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket)], return_stdout=True)
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setwebcfg', '-m', 'main', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_MAIN)
 
   def test_error(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-e', '404', suri(bucket)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket)], return_stdout=True)
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setwebcfg', '-e', '404', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_ERROR)
 
   def test_empty(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', suri(bucket)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket)], return_stdout=True)
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setwebcfg', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_EMPTY)

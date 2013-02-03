@@ -21,121 +21,124 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
   def test_all_versions_current(self):
     """Test that 'rm -a' for an object with a current version works."""
-    bucket = self.CreateVersionedBucket()
-    k = bucket.clone_replace_name('foo')
-    k.set_contents_from_string('bar')
-    g1 = k.generation
-    k.set_contents_from_string('baz')
-    g2 = k.generation
-    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(k)], return_stderr=True)
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = bucket_uri.clone_replace_name('foo')
+    key_uri.set_contents_from_string('bar')
+    g1 = key_uri.generation
+    key_uri.set_contents_from_string('baz')
+    g2 = key_uri.generation
+    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
+                            return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    self.assertIn('Removing %s#%s.1...' % (suri(k), g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k), g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket)], return_stdout=True)
+    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g2), stderr)
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
   def test_all_versions_no_current(self):
     """Test that 'rm -a' for an object without a current version works."""
-    bucket = self.CreateVersionedBucket()
-    k = bucket.clone_replace_name('foo')
-    k.set_contents_from_string('bar')
-    g1 = k.generation
-    k.set_contents_from_string('baz')
-    g2 = k.generation
-    stderr = self.RunGsUtil(['rm', suri(k)], return_stderr=True)
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = bucket_uri.clone_replace_name('foo')
+    key_uri.set_contents_from_string('bar')
+    g1 = key_uri.generation
+    key_uri.set_contents_from_string('baz')
+    g2 = key_uri.generation
+    stderr = self.RunGsUtil(['rm', suri(key_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 1)
-    self.assertIn('Removing %s...' % suri(k), stderr)
-    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(k)], return_stderr=True)
+    self.assertIn('Removing %s...' % suri(key_uri), stderr)
+    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)], 
+                            return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    self.assertIn('Removing %s#%s.1...' % (suri(k), g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k), g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket)], return_stdout=True)
+    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g2), stderr)
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
   def test_fails_for_missing_obj(self):
-    bucket = self.CreateVersionedBucket()
-    stderr = self.RunGsUtil(['rm', '-a', '%s/foo' % suri(bucket)],
+    bucket_uri = self.CreateVersionedBucket()
+    stderr = self.RunGsUtil(['rm', '-a', '%s/foo' % suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
     self.assertIn('Not Found', stderr)
 
   def test_remove_all_versions_recursive_on_bucket(self):
     """Test that 'rm -ar' works on bucket."""
-    bucket = self.CreateVersionedBucket()
-    k1 = bucket.clone_replace_name('foo')
-    k2 = bucket.clone_replace_name('foo2')
-    k1.set_contents_from_string('bar')
-    k2.set_contents_from_string('bar2')
-    k1g1 = k1.generation
-    k2g1 = k2.generation
-    k1.set_contents_from_string('baz')
-    k2.set_contents_from_string('baz2')
-    k1g2 = k1.generation
-    k2g2 = k2.generation
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = bucket_uri.clone_replace_name('foo')
+    k2_uri = bucket_uri.clone_replace_name('foo2')
+    k1_uri.set_contents_from_string('bar')
+    k2_uri.set_contents_from_string('bar2')
+    k1g1 = k1_uri.generation
+    k2g1 = k2_uri.generation
+    k1_uri.set_contents_from_string('baz')
+    k2_uri.set_contents_from_string('baz2')
+    k1g2 = k1_uri.generation
+    k2g2 = k2_uri.generation
 
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket)], return_stderr=True)
+    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 4)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1), k1g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1), k1g2), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2), k2g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2), k2g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket)], return_stdout=True)
+    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g2), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g2), stderr)
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
   def test_remove_all_versions_recursive_on_subdir(self):
     """Test that 'rm -ar' works on subdir."""
-    bucket = self.CreateVersionedBucket()
-    k1 = bucket.clone_replace_name('dir/foo')
-    k2 = bucket.clone_replace_name('dir/foo2')
-    k1.set_contents_from_string('bar')
-    k2.set_contents_from_string('bar2')
-    k1g1 = k1.generation
-    k2g1 = k2.generation
-    k1.set_contents_from_string('baz')
-    k2.set_contents_from_string('baz2')
-    k1g2 = k1.generation
-    k2g2 = k2.generation
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = bucket_uri.clone_replace_name('dir/foo')
+    k2_uri = bucket_uri.clone_replace_name('dir/foo2')
+    k1_uri.set_contents_from_string('bar')
+    k2_uri.set_contents_from_string('bar2')
+    k1g1 = k1_uri.generation
+    k2g1 = k2_uri.generation
+    k1_uri.set_contents_from_string('baz')
+    k2_uri.set_contents_from_string('baz2')
+    k1g2 = k1_uri.generation
+    k2g2 = k2_uri.generation
 
-    stderr = self.RunGsUtil(['rm', '-ar', '%s/dir' % suri(bucket)],
+    stderr = self.RunGsUtil(['rm', '-ar', '%s/dir' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 4)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1), k1g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1), k1g2), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2), k2g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2), k2g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket)], return_stdout=True)
+    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g2), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g1), stderr)
+    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g2), stderr)
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
   def test_some_missing(self):
     """Test that 'rm -a' fails when some but not all uris don't exist."""
-    bucket = self.CreateVersionedBucket()
-    k = bucket.clone_replace_name('foo')
-    k.set_contents_from_string('bar')
-    stderr = self.RunGsUtil(['rm', '-a', suri(k), '%s/missing' % suri(bucket)],
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = bucket_uri.clone_replace_name('foo')
+    key_uri.set_contents_from_string('bar')
+    stderr = self.RunGsUtil(['rm', '-a', suri(key_uri), '%s/missing'
+                            % suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
     self.assertEqual(stderr.count('Removing gs://'), 2)
     self.assertIn('Not Found', stderr)
 
   def test_some_missing_force(self):
     """Test that 'rm -af' succeeds despite hidden first uri."""
-    bucket = self.CreateVersionedBucket()
-    k = bucket.clone_replace_name('foo')
-    k.set_contents_from_string('bar')
-    stderr = self.RunGsUtil(['rm', '-af', suri(k), '%s/missing' % suri(bucket)],
-                            return_stderr=True)
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = bucket_uri.clone_replace_name('foo')
+    key_uri.set_contents_from_string('bar')
+    stderr = self.RunGsUtil(['rm', '-af', suri(key_uri), '%s/missing'
+                            % suri(bucket_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
   def test_folder_objects_deleted(self):
     """Test for 'rm -r' of a folder with a dir_$folder$ marker."""
-    bucket = self.CreateVersionedBucket()
-    k = bucket.clone_replace_name('abc/o1')
-    k.set_contents_from_string('foobar')
-    folderkey = bucket.clone_replace_name('abc_$folder$')
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = bucket_uri.clone_replace_name('abc/o1')
+    key_uri.set_contents_from_string('foobar')
+    folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
 
-    stderr = self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket)],
+    stderr = self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    stdout = self.RunGsUtil(['ls', suri(bucket)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')

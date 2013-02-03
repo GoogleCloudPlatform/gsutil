@@ -31,40 +31,43 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     return os.path.join(TEST_DATA_DIR, name)
 
   def test_noclobber(self):
-    k = self.CreateObject(contents='foo')
+    key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='bar')
-    stderr = self.RunGsUtil(['cp', '-n', fpath, suri(k)], return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(k), stderr)
-    self.assertEqual(k.get_contents_as_string(), 'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(k), fpath], return_stderr=True)
+    stderr = self.RunGsUtil(['cp', '-n', fpath, suri(key_uri)],
+                            return_stderr=True)
+    self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
+    self.assertEqual(key_uri.get_contents_as_string(), 'foo')
+    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath], 
+                            return_stderr=True)
     with open(fpath, 'r') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'bar')
 
   def test_copy_in_cloud_noclobber(self):
-    bucket1 = self.CreateBucket()
-    bucket2 = self.CreateBucket()
-    k = self.CreateObject(bucket=bucket1, contents='foo')
-    stderr = self.RunGsUtil(['cp', suri(k), suri(bucket2)], return_stderr=True)
-    self.assertEqual(stderr.count('Copying'), 1)
-    stderr = self.RunGsUtil(['cp', '-n', suri(k), suri(bucket2)],
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)], 
                             return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(bucket2, k.object_name),
-                  stderr)
+    self.assertEqual(stderr.count('Copying'), 1)
+    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), suri(bucket2_uri)],
+                            return_stderr=True)
+    self.assertIn('Skipping existing item: %s' % suri(bucket2_uri, 
+                  key_uri.object_name), stderr)
 
   def test_streaming(self):
-    bucket = self.CreateBucket()
-    stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket, 'foo')],
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
                             stdin='bar', return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
-    k = bucket.clone_replace_name('foo')
-    self.assertEqual(k.get_contents_as_string(), 'bar')
+    key_uri = bucket_uri.clone_replace_name('foo')
+    self.assertEqual(key_uri.get_contents_as_string(), 'bar')
 
   # TODO: Implement a way to test both with and without using magic file.
 
   def test_detect_content_type(self):
-    bucket = self.CreateBucket()
-    dsturi = suri(bucket, 'foo')
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil(['cp', self._get_test_file('test.mp3'), dsturi])
     stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
@@ -75,8 +78,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Content-Type:\timage/gif', stdout)
 
   def test_content_type_override_default(self):
-    bucket = self.CreateBucket()
-    dsturi = suri(bucket, 'foo')
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
@@ -89,8 +92,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
 
   def test_content_type_override(self):
-    bucket = self.CreateBucket()
-    dsturi = suri(bucket, 'foo')
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
@@ -103,8 +106,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
 
   def test_foo_noct(self):
-    bucket = self.CreateBucket()
-    dsturi = suri(bucket, 'foo')
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents='foo/bar\n')
     self.RunGsUtil(['cp', fpath, dsturi])
     stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
@@ -113,8 +116,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Content-Type:\t%s' % content_type, stdout)
 
   def test_content_type_mismatches(self):
-    bucket = self.CreateBucket()
-    dsturi = suri(bucket, 'foo')
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents='foo/bar\n')
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
@@ -132,37 +135,37 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Content-Type:\timage/gif', stdout)
 
   def test_versioning(self):
-    bucket = self.CreateVersionedBucket()
-    k1 = self.CreateObject(bucket=bucket, contents='data2')
-    k2 = self.CreateObject(bucket=bucket, contents='data1')
-    g1 = k2.generation
-    self.RunGsUtil(['cp', suri(k1), suri(k2)])
-    k2 = bucket.clone_replace_name(k2.object_name)
-    k2 = bucket.clone_replace_key(k2.get_key())
-    g2 = k2.generation
-    k2.set_contents_from_string('data3')
-    g3 = k2.generation
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
+    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    g1 = k2_uri.generation
+    self.RunGsUtil(['cp', suri(k1_uri), suri(k2_uri)])
+    k2_uri = bucket_uri.clone_replace_name(k2_uri.object_name)
+    k2_uri = bucket_uri.clone_replace_key(k2_uri.get_key())
+    g2 = k2_uri.generation
+    k2_uri.set_contents_from_string('data3')
+    g3 = k2_uri.generation
 
     fpath = self.CreateTempFile()
     # Check to make sure current version is data3.
-    self.RunGsUtil(['cp', suri(k2), fpath])
+    self.RunGsUtil(['cp', suri(k2_uri), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data3')
 
     # Check contents of all three versions
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2), g1), fpath])
+    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g1), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2), g2), fpath])
+    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g2), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data2')
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2), g3), fpath])
+    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g3), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data3')
 
     # Copy first version to current and verify.
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2), g1), suri(k2)])
-    self.RunGsUtil(['cp', suri(k2), fpath])
+    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g1), suri(k2_uri)])
+    self.RunGsUtil(['cp', suri(k2_uri), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
 
@@ -170,10 +173,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
     fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['cp', '-I', suri(bucket)],
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['cp', '-I', suri(bucket_uri)],
                    stdin='\n'.join((fpath1, fpath2)))
-    stdout = self.RunGsUtil(['ls', suri(bucket)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
     self.assertIn(os.path.basename(fpath1), stdout)
     self.assertIn(os.path.basename(fpath2), stdout)
     self.assertNumLines(stdout, 2)

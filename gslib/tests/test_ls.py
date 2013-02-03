@@ -23,40 +23,40 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['ls'])
 
   def test_empty_bucket(self):
-    bucket = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', suri(bucket)], return_stdout=True)
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
     self.assertEqual('', stdout)
 
   def test_empty_bucket_with_b(self):
-    bucket = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', '-b', suri(bucket)], return_stdout=True)
-    self.assertEqual('%s/\n' % suri(bucket), stdout)
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)], return_stdout=True)
+    self.assertEqual('%s/\n' % suri(bucket_uri), stdout)
 
   def test_with_one_object(self):
-    bucket = self.CreateBucket(test_objects=1)
-    stdout = self.RunGsUtil(['ls', suri(bucket)], return_stdout=True)
-    objuri = [suri(bucket.clone_replace_key(key))
-              for key in bucket.list_bucket()][0]
+    bucket_uri = self.CreateBucket(test_objects=1)
+    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+    objuri = [suri(bucket_uri.clone_replace_key(key))
+              for key in bucket_uri.list_bucket()][0]
     self.assertEqual('%s\n' % objuri, stdout)
 
   def test_subdir(self):
-    bucket = self.CreateBucket(test_objects=1)
-    k1 = bucket.clone_replace_name('foo')
-    k1.set_contents_from_string('baz')
-    k2 = bucket.clone_replace_name('dir/foo')
-    k2.set_contents_from_string('bar')
-    stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket)],
+    bucket_uri = self.CreateBucket(test_objects=1)
+    k1_uri = bucket_uri.clone_replace_name('foo')
+    k1_uri.set_contents_from_string('baz')
+    k2_uri = bucket_uri.clone_replace_name('dir/foo')
+    k2_uri.set_contents_from_string('bar')
+    stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual('%s\n' % suri(k2), stdout)
-    stdout = self.RunGsUtil(['ls', suri(k1)], return_stdout=True)
-    self.assertEqual('%s\n' % suri(k1), stdout)
+    self.assertEqual('%s\n' % suri(k2_uri), stdout)
+    stdout = self.RunGsUtil(['ls', suri(k1_uri)], return_stdout=True)
+    self.assertEqual('%s\n' % suri(k1_uri), stdout)
 
   def test_versioning(self):
-    bucket1 = self.CreateBucket(test_objects=1)
-    bucket2 = self.CreateVersionedBucket(test_objects=1)
-    objuri = [suri(bucket1.clone_replace_key(key))
-              for key in bucket1.list_bucket()][0]
-    self.RunGsUtil(['cp', objuri, suri(bucket2)])
-    self.RunGsUtil(['cp', objuri, suri(bucket2)])
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket2)], return_stdout=True)
+    bucket1_uri = self.CreateBucket(test_objects=1)
+    bucket2_uri = self.CreateVersionedBucket(test_objects=1)
+    objuri = [suri(bucket1_uri.clone_replace_key(key))
+              for key in bucket1_uri.list_bucket()][0]
+    self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
+    self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
+    stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 3)

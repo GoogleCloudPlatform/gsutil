@@ -20,22 +20,22 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   """Integration tests for perfdiag command."""
 
   def test_latency(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['perfdiag', '-n', '1', '-t', 'lat', suri(bucket)])
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['perfdiag', '-n', '1', '-t', 'lat', suri(bucket_uri)])
 
   def test_write_throughput(self):
-    bucket = self.CreateBucket()
+    bucket_uri = self.CreateBucket()
     self.RunGsUtil(['perfdiag', '-n', '1', '-s', '1024', '-t', 'wthru',
-                    suri(bucket)])
+                    suri(bucket_uri)])
 
   def test_read_throughput(self):
-    bucket = self.CreateBucket()
+    bucket_uri = self.CreateBucket()
     self.RunGsUtil(['perfdiag', '-n', '1', '-s', '1024', '-t', 'rthru',
-                    suri(bucket)])
+                    suri(bucket_uri)])
 
   def test_input_output(self):
     outpath = self.CreateTempFile()
-    bucket = self.CreateBucket()
+    bucket_uri = self.CreateBucket()
     self.RunGsUtil(['perfdiag', '-o', outpath, '-n', '1', '-t', 'lat',
-                    suri(bucket)])
+                    suri(bucket_uri)])
     self.RunGsUtil(['perfdiag', '-i', outpath])

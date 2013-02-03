@@ -21,49 +21,49 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
   def test_moving(self):
     # Create two buckets, one with 2 objects and one with 0 objects, and verify.
-    bucket1 = self.CreateBucket(test_objects=2)
-    stdout = self.RunGsUtil(['ls', suri(bucket1)], return_stdout=True)
+    bucket1_uri = self.CreateBucket(test_objects=2)
+    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
     self.assertNumLines(stdout, 2)
-    bucket2 = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', suri(bucket2)], return_stdout=True)
+    bucket2_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 0)
 
     # Move two objects from bucket1 to bucket2.
-    objs = [suri(bucket1.clone_replace_key(key))
-            for key in bucket1.list_bucket()]
-    cmd = (['-m', 'mv'] + objs + [suri(bucket2)])
+    objs = [suri(bucket1_uri.clone_replace_key(key))
+            for key in bucket1_uri.list_bucket()]
+    cmd = (['-m', 'mv'] + objs + [suri(bucket2_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     self.assertEqual(stderr.count('Copying'), 2)
     self.assertEqual(stderr.count('Removing'), 2)
 
     # Verify objects were moved.
-    stdout = self.RunGsUtil(['ls', suri(bucket1)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
     self.assertNumLines(stdout, 0)
-    stdout = self.RunGsUtil(['ls', suri(bucket2)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 2)
 
     # Remove one of the objects.
-    objs = [suri(bucket2.clone_replace_key(key))
-            for key in bucket2.list_bucket()]
+    objs = [suri(bucket2_uri.clone_replace_key(key))
+            for key in bucket2_uri.list_bucket()]
     obj1 = objs[0]
     self.RunGsUtil(['rm', obj1])
 
     # Verify there are now 1 and 0 objects.
-    stdout = self.RunGsUtil(['ls', suri(bucket1)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
     self.assertNumLines(stdout, 0)
-    stdout = self.RunGsUtil(['ls', suri(bucket2)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 1)
 
     # Move the 1 remaining object back.
-    objs = [suri(bucket2.clone_replace_key(key))
-            for key in bucket2.list_bucket()]
-    cmd = (['-m', 'mv'] + objs + [suri(bucket1)])
+    objs = [suri(bucket2_uri.clone_replace_key(key))
+            for key in bucket2_uri.list_bucket()]
+    cmd = (['-m', 'mv'] + objs + [suri(bucket1_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     self.assertEqual(stderr.count('Copying'), 1)
     self.assertEqual(stderr.count('Removing'), 1)
 
     # Verify object moved.
-    stdout = self.RunGsUtil(['ls', suri(bucket1)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
     self.assertNumLines(stdout, 1)
-    stdout = self.RunGsUtil(['ls', suri(bucket2)], return_stdout=True)
+    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 0)

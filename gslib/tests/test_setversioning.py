@@ -20,21 +20,25 @@ class TestSetVersioning(testcase.GsUtilIntegrationTestCase):
   """Integration tests for setversioning command."""
 
   def test_off_default(self):
-    bucket = self.CreateBucket()
-    stdout = self.RunGsUtil(['getversioning', suri(bucket)], return_stdout=True)
-    self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket))
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['getversioning',
+                            suri(bucket_uri)], return_stdout=True)
+    self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
 
   def test_turning_on(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setversioning', 'on', suri(bucket)])
-    stdout = self.RunGsUtil(['getversioning', suri(bucket)], return_stdout=True)
-    self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket))
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setversioning', 'on', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getversioning',
+                            suri(bucket_uri)], return_stdout=True)
+    self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
 
   def test_turning_off(self):
-    bucket = self.CreateBucket()
-    self.RunGsUtil(['setversioning', 'on', suri(bucket)])
-    stdout = self.RunGsUtil(['getversioning', suri(bucket)], return_stdout=True)
-    self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket))
-    self.RunGsUtil(['setversioning', 'off', suri(bucket)])
-    stdout = self.RunGsUtil(['getversioning', suri(bucket)], return_stdout=True)
-    self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket))
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['setversioning', 'on', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getversioning',
+                            suri(bucket_uri)], return_stdout=True)
+    self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
+    self.RunGsUtil(['setversioning', 'off', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['getversioning',
+                            suri(bucket_uri)], return_stdout=True)
+    self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
