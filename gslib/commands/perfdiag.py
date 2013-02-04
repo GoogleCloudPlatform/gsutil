@@ -14,8 +14,10 @@
 
 """Contains the perfdiag gsutil command."""
 
+import calendar
 from collections import defaultdict
 import contextlib
+import datetime
 import json
 import math
 import multiprocessing
@@ -536,6 +538,10 @@ class PerfDiagCommand(Command):
     # when on a networked filesystem.
     sysinfo['tempdir'] = tempfile.gettempdir()
 
+    # Produces an RFC 2822 compliant GMT timestamp.
+    sysinfo['gmt_timestamp'] = time.strftime('%a, %d %b %Y %H:%M:%S +0000',
+                                             time.gmtime())
+
     # Execute a CNAME lookup on Google DNS to find what Google server
     # it's routing to.
     cmd = ['nslookup', '-type=CNAME', self.GOOGLE_API_HOST]
@@ -696,6 +702,23 @@ class PerfDiagCommand(Command):
       print 'IP Address: \n  %s' % info['ip_address']
       print 'Temporary Directory: \n  %s' % info['tempdir']
       print 'Bucket URI: \n  %s' % self.results['bucket_uri']
+
+      if 'gmt_timestamp' in info:
+        ts_string = info['gmt_timestamp']
+        timetuple = None
+        try:
+          # Convert RFC 2822 string to unix timestamp.
+          timetuple = time.strptime(ts_string, '%a, %d %b %Y %H:%M:%S +0000')
+        except ValueError:
+          pass
+
+        if timetuple:
+          # Converts the GMT time tuple to local unix timestamp.
+          localtime = calendar.timegm(timetuple)
+          localdt = datetime.datetime.fromtimestamp(localtime)
+          print 'Measurement time: \n %s' % localdt.strftime(
+              '%Y-%m-%d %I-%M-%S %p %Z')
+
       print 'Google Server: \n  %s' % info['googserv_route']
       print ('Google Server IP Addresses: \n  %s' %
              ('\n  '.join(info['googserv_ips'])))
