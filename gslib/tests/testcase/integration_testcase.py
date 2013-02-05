@@ -25,6 +25,7 @@ import tempfile
 import boto
 from boto.exception import GSResponseError
 
+from gslib.project_id import ProjectIdHandler
 import gslib.tests.util as util
 from gslib.tests.util import Retry
 from gslib.tests.util import unittest
@@ -49,6 +50,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def setUp(self):
     self.bucket_uris = []
     self.tempdirs = []
+
+    # Set up API version and project ID handler.
+    self.api_version = boto.config.get_value(
+        'GSUtil', 'default_api_version', '1')
+    self.proj_id_handler = ProjectIdHandler()
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
@@ -98,8 +104,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       StorageUri for the created bucket.
     """
     bucket_name = bucket_name or self.MakeTempName('bucket')
+
     bucket_uri = boto.storage_uri('gs://%s' % bucket_name.lower(),
                                   suppress_consec_slashes=False)
+
+    # Apply API version and project ID headers if necessary.
+    headers = {'x-goog-api-version': self.api_version}
+    self.proj_id_handler.FillInProjectHeaderIfNeeded('test', bucket_uri, headers)
+
     bucket_uri.create_bucket(storage_class=storage_class)
     self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
