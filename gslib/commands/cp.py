@@ -1311,7 +1311,8 @@ class CpCommand(Command):
             exp_dst_uri.object_name.rstrip(exp_dst_uri.delim),
             exp_dst_uri.delim, dst_key_name)
       else:
-        dst_key_name = '%s%s' % (exp_dst_uri.object_name, dst_key_name)
+        delim = exp_dst_uri.delim if exp_dst_uri.object_name else ''
+        dst_key_name = '%s%s%s' % (exp_dst_uri.object_name, delim, dst_key_name)
 
     return exp_dst_uri.clone_replace_name(dst_key_name)
 
