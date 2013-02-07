@@ -110,9 +110,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     # Apply API version and project ID headers if necessary.
     headers = {'x-goog-api-version': self.api_version}
-    self.proj_id_handler.FillInProjectHeaderIfNeeded('test', bucket_uri, headers)
+    self.proj_id_handler.FillInProjectHeaderIfNeeded(
+        'test', bucket_uri, headers)
 
-    bucket_uri.create_bucket(storage_class=storage_class)
+    bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
     self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
