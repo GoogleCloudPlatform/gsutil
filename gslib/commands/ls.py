@@ -161,8 +161,9 @@ _detailed_help_text = ("""
 
     gs://bucket/ :
             24 objects, 29.83 KB
-            LocationConstraint: US
             StorageClass: STANDARD
+            LocationConstraint: US
+            Versioning enabled: True
             ACL: <Owner:00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7, <<GroupById: 00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7>: u'FULL_CONTROL'>>
             Default ACL: <>
     TOTAL: 24 objects, 30544 bytes (29.83 KB)
@@ -289,7 +290,8 @@ class LsCommand(Command):
           version_info = '#' + str(obj.version_id)
       else:
         version_info = ''
-    return '%s://%s/%s%s' % (uri.scheme, obj.bucket.name, obj.name, version_info)
+    return '%s://%s/%s%s' % (uri.scheme, obj.bucket.name, obj.name,
+                             version_info)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref, listing_style):
     """Print listing info for given bucket_listing_ref.
@@ -328,8 +330,7 @@ class LsCommand(Command):
       # their ACLs).
       try:
         print '%s:' % uri_str.encode('utf-8')
-        suri = self.suri_builder.StorageUri(uri_str,
-                                            parse_version=self.all_versions)
+        suri = self.suri_builder.StorageUri(uri_str)
         obj = suri.get_key(False)
         print '\tCreation time:\t%s' % obj.last_modified
         if obj.cache_control:
@@ -393,7 +394,7 @@ class LsCommand(Command):
         # we're listing more than one subdir (or if it's a recursive listing),
         # to be consistent with the way UNIX ls works.
         if num_expanded_blrs > 1 or should_recurse:
-          print '%s:' % blr.GetVersionedUriString().encode('utf-8')
+          print '%s:' % blr.GetUriString().encode('utf-8')
           printed_one = True
         blr_iterator = self.WildcardIterator('%s/*' %
                                              blr.GetRStrippedUriString(),
@@ -424,7 +425,7 @@ class LsCommand(Command):
           # dir just prints its contents, not the name followed by its
           # contents).
           if (expanding_top_level and not uri.names_bucket()) or should_recurse:
-            if cur_blr.GetVersionedUriString().endswith('//'):
+            if cur_blr.GetUriString().endswith('//'):
               # Expand gs://bucket// into gs://bucket//* so we don't infinite
               # loop. This case happens when user has uploaded an object whose
               # name begins with a /.
@@ -437,9 +438,9 @@ class LsCommand(Command):
           else:
             if listing_style == ListingStyle.LONG:
               print '%-33s%s' % (
-                  '', cur_blr.GetVersionedUriString().encode('utf-8'))
+                  '', cur_blr.GetUriString().encode('utf-8'))
             else:
-              print cur_blr.GetVersionedUriString().encode('utf-8')
+              print cur_blr.GetUriString().encode('utf-8')
       expanding_top_level = False
     return (num_objs, num_bytes)
 
@@ -522,7 +523,7 @@ class _UriOnlyBlrExpansionIterator:
   """
   Iterator that expands a BucketListingRef that contains only a URI (i.e.,
   didn't come from a bucket listing), yielding BucketListingRefs to which it
-  expands.  This case happens for BLR's instantiated from a user-provided URI.
+  expands. This case happens for BLR's instantiated from a user-provided URI.
 
   Note that we can't use NameExpansionIterator here because it produces an
   iteration over the full object names (e.g., expanding "gs://bucket" to
@@ -547,21 +548,22 @@ class _UriOnlyBlrExpansionIterator:
     # whether they are keys or prefixes. That way if bucket contains a key
     # 'abcd' and another key 'abce/x.txt' the expansion will return two BLRs,
     # the first with HasKey()=True and the second with HasPrefix()=True.
-    rstripped_uri_str = self.blr.GetRStrippedUriString()
-    if ContainsWildcard(rstripped_uri_str):
+    rstripped_versionless_uri_str = self.blr.GetRStrippedUriString()
+    if ContainsWildcard(rstripped_versionless_uri_str):
       for blr in self.command_instance.WildcardIterator(
-          rstripped_uri_str, all_versions=self.all_versions):
+          rstripped_versionless_uri_str, all_versions=self.all_versions):
         yield blr
       return
     # Build a wildcard to expand so CloudWildcardIterator will not just treat it
     # as a key and yield the result without doing a bucket listing.
     for blr in self.command_instance.WildcardIterator(
-        rstripped_uri_str + '*', all_versions=self.all_versions):
+        rstripped_versionless_uri_str + '*', all_versions=self.all_versions):
       # Find the originally specified BucketListingRef in the expanded list (if
       # present). Don't just use the expanded list, because it would also
       # include objects whose name prefix matches the blr name (because of the
       # wildcard match we did above).  Note that there can be multiple matches,
       # for the case where there's both an object and a subdirectory with the
       # same name.
-      if blr.GetRStrippedUriString() == rstripped_uri_str:
+      if (blr.GetRStrippedUriString()
+          == rstripped_versionless_uri_str):
         yield blr

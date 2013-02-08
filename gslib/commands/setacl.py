@@ -78,13 +78,6 @@ _detailed_help_text = ("""
               specified URI.
 
   -a          Performs setacl request on all versions / generations.
-
-  -v          Parses uris for version / generation numbers (only applicable in 
-              version-enabled buckets). For example:
-
-                gsutil setacl -v public-read gs://bucket/object#1348772910166013
-
-              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -134,6 +127,8 @@ class SetAclCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          self.parse_versions = True
+          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
+                                    ' needed, and will eventually be removed.\n'
+                                    % self.command_name)
     self.SetAclCommandHelper()
     return 0

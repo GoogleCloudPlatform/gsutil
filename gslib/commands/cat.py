@@ -52,13 +52,6 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -h          Prints short header for each object. For example:
                 gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
-
-  -v          Parses uris for version / generation numbers (only applicable in 
-              version-enabled buckets). For example:
-
-                gsutil cat -v gs://bucket/object#1348772910166003
-
-              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -99,27 +92,17 @@ class CatCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
-  def VersionedSrcUriIter(self):
-    for uri_str in self.args:
-      if ContainsWildcard(uri_str):
-        raise CommandException('Wildcarding disallowed with -v flag.')
-      yield self.suri_builder.StorageUri(uri_str, parse_version=True)
-
-  def UnVersionedSrcUriIter(self):
-    for uri_str in self.args:
-      for uri in self.WildcardIterator(uri_str).IterUris():
-        yield uri
-
   # Command entry point.
   def RunCommand(self):
     show_header = False
-    parse_versions = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-h':
           show_header = True
         elif o == '-v':
-          parse_versions = True
+          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
+                                    ' needed, and will eventually be removed.\n'
+                                    % self.command_name)
 
     printed_one = False
     # We manipulate the stdout so that all other data other than the Object
@@ -128,25 +111,19 @@ class CatCommand(Command):
     sys.stdout = sys.stderr
     did_some_work = False
 
-    if parse_versions:
-      uri_iter = self.VersionedSrcUriIter
-    else:
-      uri_iter = self.UnVersionedSrcUriIter
-
-    for uri in uri_iter():
-      if not uri.names_object():
-        raise CommandException('"%s" command must specify objects.' %
-                               self.command_name)
-      did_some_work = True
-      if show_header:
-        if printed_one:
-          print
-        print '==> %s <==' % uri.__str__()
-        printed_one = True
-      key = uri.get_key(False, self.headers)
-      if not parse_versions:
-        key.generation = None
-      key.get_file(cat_outfd, self.headers)
+    for uri_str in self.args:
+      for uri in self.WildcardIterator(uri_str).IterUris():
+        if not uri.names_object():
+          raise CommandException('"%s" command must specify objects.' %
+                                 self.command_name)
+        did_some_work = True
+        if show_header:
+          if printed_one:
+            print
+          print '==> %s <==' % uri.__str__()
+          printed_one = True
+        key = uri.get_key(False, self.headers)
+        key.get_file(cat_outfd, self.headers)
     sys.stdout = cat_outfd
     if not did_some_work:
       raise CommandException('No URIs matched')

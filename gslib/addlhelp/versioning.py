@@ -22,31 +22,29 @@ from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
 <B>OVERVIEW OF VERSIONING</B>
-  Versioning-enabled buckets will maintain an archive of overwritten objects,
-  thus providing a way to restore accidentally deleted or older versions of
-  your data.
+  Versioning-enabled buckets maintain an archive of overwritten objects,
+  thus providing a way to un-delete data that you accidentally deleted,
+  or to retrieve older versions of your data.
 
-  For information about Google Cloud Storage versioning, see:
-    https://developers.google.com/storage/docs/object-versioning
+  Google Cloud Storage associates two versioning-related fields with each
+  object in a versioning-enabled bucket:
+    - generation, which identifies the content generation, and is updated
+      when the content of an object is overwritten.
+    - meta-generation, which identifies the metadata generation and is
+      updated every time the metadata (e.g. ACL) for a given content generation
+      is updated.
 
-  Version-unaware gsutil commands will interact with the latest version of the
-  target object. The template for version-aware commands is to use the "-a"
-  flag to refer to all versions of an object and to use "-v" to indicate that
-  storage URI arguments should be parsed for version IDs or generation numbers.
+  gsutil commands interact with the latest object version unless you specify a
+  version-specific URI. For example, the version-less object:
+  
+    gs://bucket/object
 
-  Version-ful storage URIs are specified by appending a '#' character
-  followed by a version ID (S3) or generation number (GCS). Google Cloud
-  Storage users may also include a meta-generation number by further appending
-  a '.' character followed by the meta-generation, although all commands
-  currently ignore this value.
+  might have the version-specific name:
 
-  Examples of version-ful URIs:
-    gs://bucket/object#1348879296388002
     gs://bucket/object#1348879296388002.6
-    s3://bucket/object#OQBvIrRQ6CLeBIi3oTnM3Jam..t0KGxo
-
-  Note that version-ful URIs must be used in conjunction with the "-v" flag in
-  order to distinguish these URIs from object names containing '#' characters.
+    
+  For this URI, 1348879296388002 is the object's generation, and 6 is its
+  meta-generation.
 
 
 <B>ENABLING VERSIONING</B>
@@ -54,36 +52,78 @@ _detailed_help_text = ("""
   view and set the versioning property on cloud storage buckets respectively.
 
 
-<B>LISTING OBJECT VERSIONS</B>
-  As described in the overview, listing respects the "-a" argument to show all
-  versions of objects. For example:
+<B>WORKING WITH OBJECT VERSIONS</B>
+  To see all object versions in a versioning-enabled bucket along with
+  their generation.meta-generation information, use gsutil ls -a:
 
-    gsutil ls -a -l gs://bucket
+    gsutil ls -a gs://bucket
 
+  You can also use wildcards:
 
-<B>DELETING OBJECT VERSIONS</B>
-  Using the rm subcommand with "-a" will instruct gsutil to delete all versions
-  of the target object (use with caution).
+    gsutil ls -a gs://bucket/images/*.jpg
+
+  The generation.meta-generation values form a monotonically increasing
+  sequence as you create additional object generations. Because of this,
+  the latest object version is always the last one listed in the gsutil ls
+  output for a particular object. For example, if a bucket contains these
+  three object versions:
+
+    gs://bucket/object1#1360035307075000.1
+    gs://bucket/object1#1360101007329000.1
+    gs://bucket/object2#1360102216114000.1
+
+  then gs://bucket/object1#1360101007329000.1 is the latest version of
+  gs://bucket/object1.
+
+  If you specify version-less URIs with gsutil, you will operate on the
+  latest not-deleted version of an object, for example:
+
+    gsutil cp gs://bucket/object ./dir
+
+  or
+
+    gsutil rm gs://bucket/object
+
+  To operate on a specific object version, use a version-specific URI.
+  For example, suppose the output of the above gsutil ls -a command is:
+
+    gs://bucket/object#1360035307075000.1
+    gs://bucket/object#1360101007329000.1
+
+  Thus, the command:
+
+    gsutil cp gs://bucket/object#1360035307075000.1 ./dir
+
+  will retrieve the previous version of the object.
+
+  If an object has been deleted, it will not show up in a normal gsutil ls
+  listing (i.e., one that doesn't specify the -a option). You can restore
+  a deleted object by running gsutil ls -a to find the available versions,
+  and then copying one of the version-specific URIs to the version-less URI,
+  for example:
+
+    gsutil cp gs://bucket/object#1360101007329000.1 gs://bucket/object
+
+  Note that when you do this it creates a new object version, which will
+  incur additional charges.
+
+  You can get rid of the extra copy by deleting the older version-specfic
+  object:
+
+    gsutil rm gs://bucket/object#1360101007329000.1
+
+  Or you can combine the two steps by using the gsutil mv command:
+
+    gsutil mv gs://bucket/object#1360101007329000.1 gs://bucket/object
+
+  If you want to remove all versions of an object use the gsutil rm -a option:
 
     gsutil rm -a gs://bucket/object
 
-  Remove also supports "-v" for specifying that the target URI is version-ful:
 
-    gsutil rm -v gs://bucket/object#1348879296388002
-
-
-<B>OTHER VERSION-AWARE COMMANDS</B>
-  In addition to rm, the following commands also support the "-v" flag to
-  specify a target object's version:
-
-    cat, cp, getacl, setacl
-
-
-<B>WARNING ABOUT USING SETMETA WITH VERSIONING ENABLED</B>
-
-Note that if you use the gsutil setmeta command on an object in a bucket
-with versioning enabled, it will create a new object version (and thus,
-you will get charged for the space required for holding the additional version.
+<B>For MORE INFORMATION</B>
+  For more information about Google Cloud Storage versioning, see:
+    https://developers.google.com/storage/docs/object-versioning
 """)
 
 

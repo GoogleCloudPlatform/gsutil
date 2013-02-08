@@ -148,24 +148,25 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     fpath = self.CreateTempFile()
     # Check to make sure current version is data3.
-    self.RunGsUtil(['cp', suri(k2_uri), fpath])
+    self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data3')
 
     # Check contents of all three versions
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g1), fpath])
+    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g1), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g2), fpath])
+    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g2), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data2')
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g3), fpath])
+    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g3), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data3')
 
     # Copy first version to current and verify.
-    self.RunGsUtil(['cp', '-v', '%s#%s.1' % (suri(k2_uri), g1), suri(k2_uri)])
-    self.RunGsUtil(['cp', suri(k2_uri), fpath])
+    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g1),
+                    k2_uri.versionless_uri])
+    self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
 

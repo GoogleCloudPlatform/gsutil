@@ -317,13 +317,6 @@ _detailed_help_text = ("""
                 now to avoid breaking existing scripts. It will be removed at
                 a future date.
 
-  -v            Parses URIs for version / generation numbers (only applicable in
-                version-enabled buckets). For example:
-
-                  gsutil cp -v gs://bucket/object#1348772910166013 ~/Desktop
-
-                Note that wildcards are not permitted while using this flag.
-
   -z ext1,...   Compresses file uploads with the given extensions. If you are
                 uploading a large file with compressible content, such as
                 a .js, .css, or .html file, you can gzip-compress the file
@@ -957,8 +950,6 @@ class CpCommand(Command):
       else:
         fp = open(download_file_name, 'wb')
       start_time = time.time()
-      if not self.parse_versions:
-        src_key.generation = None
       src_key.get_contents_to_file(fp, headers, cb=cb, num_cb=num_cb,
                                    res_download_handler=res_download_handler)
       # If a custom test method is defined, call it here. For the copy command,
@@ -1352,8 +1343,7 @@ class CpCommand(Command):
       src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetSrcUriStr())
       exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr(),
-          parse_version=name_expansion_result.names_version)
+          name_expansion_result.GetExpandedUriStr())
       src_uri_names_container = name_expansion_result.NamesContainer()
       src_uri_expands_to_multi = name_expansion_result.NamesContainer()
       have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
@@ -1454,7 +1444,7 @@ class CpCommand(Command):
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, uri_strs,
         self.recursion_requested or self.perform_mv,
-        have_existing_dst_container, parse_versions=self.parse_versions)
+        have_existing_dst_container)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1533,7 +1523,9 @@ class CpCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          self.parse_versions = True
+          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
+                                    ' needed, and will eventually be removed.\n'
+                                    % self.command_name)
 
   def _HandleStreamingDownload(self):
     # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all

@@ -136,7 +136,6 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('foobar')
     folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
-
     stderr = self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)

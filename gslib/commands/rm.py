@@ -82,13 +82,6 @@ _detailed_help_text = ("""
               that.
 
   -a          Delete all versions of an object.
-
-  -v          Parses uris for version / generation numbers (only applicable in 
-              version-enabled buckets). For example:
-
-                gsutil rm -v gs://bucket/object#1348772910166013.1
-
-              Note that wildcards are not permitted while using this flag.
 """)
 
 
@@ -135,7 +128,6 @@ class RmCommand(Command):
     # in parent class for all commands).
     self.continue_on_error = False
     self.all_versions = False
-    parse_versions = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-a':
@@ -145,18 +137,14 @@ class RmCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          parse_versions = True
+          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
+                                    ' needed, and will eventually be removed.\n'
+                                    % self.command_name)
 
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
     # Tracks if any URIs matched the given args.
-
-    if parse_versions and self.all_versions:
-      raise CommandException(
-          '"rm" does not permit "-a" and "-v" commands simultaneously. If you '
-          'wish to delete only one object version, use "-v". Use "-a" to '
-          'delete all versions.')
 
     remove_func = self._MkRemoveFunc()
     exception_handler = self._MkRemoveExceptionHandler()
@@ -166,8 +154,7 @@ class RmCommand(Command):
       name_expansion_iterator = NameExpansionIterator(
           self.command_name, self.proj_id_handler, self.headers, self.debug,
           self.bucket_storage_uri_class, self.args, self.recursion_requested,
-          flat=self.recursion_requested, all_versions=self.all_versions,
-          parse_versions=parse_versions)
+          flat=self.recursion_requested, all_versions=self.all_versions)
 
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
@@ -205,12 +192,11 @@ class RmCommand(Command):
               self.command_name, self.proj_id_handler, self.headers, self.debug,
               self.bucket_storage_uri_class, folder_object_wildcards,
               self.recursion_requested, flat=True,
-              all_versions=self.all_versions,
-              parse_versions=parse_versions)
+              all_versions=self.all_versions)
           self.Apply(remove_func, name_expansion_iterator, exception_handler)
         except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
-          if e.reason != 'No URIs matched':
+          if not e.reason.startswith('No URIs matched:'):
             raise
 
     return 0
@@ -226,7 +212,6 @@ class RmCommand(Command):
     def RemoveFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr(),
-          parse_version=name_expansion_result.names_version,
           is_latest=name_expansion_result.is_latest)
       if exp_src_uri.names_container():
         if exp_src_uri.is_cloud_uri():

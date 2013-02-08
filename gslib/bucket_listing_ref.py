@@ -53,7 +53,6 @@ class BucketListingRef(object):
 
       At most one of key and prefix can be populated.
     """
-    # At most one of key or prefix may be specified.
     assert key is None or prefix is None
     self.uri = uri
     self.key = key
@@ -67,14 +66,6 @@ class BucketListingRef(object):
       StorageUri.
     """
     return self.uri
-
-  def GetVersionedUriString(self):
-    """Get versioned string URI form of listed URI.
-
-    Returns:
-      String.
-    """
-    return self.uri.versioned_uri_str()
 
   def GetUriString(self):
     """Get string URI form of listed URI.
@@ -92,14 +83,6 @@ class BucketListingRef(object):
     """
     return self.key is None and self.prefix is None and self.uri.names_bucket()
 
-  def NamesVersion(self):
-    """Determines if this BucketListingRef names a specific object version.
-
-    Returns:
-      bool indicator.
-    """
-    return self.uri.has_version()
-
   def IsLatest(self):
     """Determines if this BucketListingRef names the latest version of an
     object.
@@ -110,12 +93,13 @@ class BucketListingRef(object):
     return hasattr(self.uri, 'is_latest') and self.uri.is_latest
 
   def GetRStrippedUriString(self):
-    """Get string URI form of listed URI, stripped of any right trailing delims.
+    """Get string URI form of listed URI, stripped of any right trailing
+    delims, and without version string.
 
     Returns:
       String.
     """
-    return self.GetUriString().rstrip('/')
+    return self.uri.versionless_uri.rstrip('/')
 
   def HasKey(self):
     """Return bool indicator of whether this BucketListingRef has a Key."""

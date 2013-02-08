@@ -29,7 +29,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertNumLines(stdout, 0)
 
     # Move two objects from bucket1 to bucket2.
-    objs = [suri(bucket1_uri.clone_replace_key(key))
+    objs = [bucket1_uri.clone_replace_key(key).versionless_uri
             for key in bucket1_uri.list_bucket()]
     cmd = (['-m', 'mv'] + objs + [suri(bucket2_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
@@ -43,7 +43,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertNumLines(stdout, 2)
 
     # Remove one of the objects.
-    objs = [suri(bucket2_uri.clone_replace_key(key))
+    objs = [bucket2_uri.clone_replace_key(key).versionless_uri
             for key in bucket2_uri.list_bucket()]
     obj1 = objs[0]
     self.RunGsUtil(['rm', obj1])

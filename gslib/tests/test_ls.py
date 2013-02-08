@@ -35,7 +35,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket(test_objects=1)
     stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-    objuri = [suri(bucket_uri.clone_replace_key(key))
+    objuri = [suri(bucket_uri.clone_replace_name(key.name))
               for key in bucket_uri.list_bucket()][0]
     self.assertEqual('%s\n' % objuri, stdout)
 
@@ -54,7 +54,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_versioning(self):
     bucket1_uri = self.CreateBucket(test_objects=1)
     bucket2_uri = self.CreateVersionedBucket(test_objects=1)
-    objuri = [suri(bucket1_uri.clone_replace_key(key))
+    objuri = [bucket1_uri.clone_replace_key(key).versionless_uri
               for key in bucket1_uri.list_bucket()][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])

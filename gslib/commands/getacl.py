@@ -36,15 +36,6 @@ _detailed_help_text = ("""
 <B>DESCRIPTION</B>
   Gets ACL XML for a bucket or object, which you can save and edit for the
   setacl command.
-
-
-<B>OPTIONS</B>
-  -v          Parses uris for version / generation numbers (only applicable in 
-              version-enabled buckets). For example:
-
-                gsutil getacl -v gs://bucket/object#1348772910166013
-
-              Note that wildcards are not permitted while using this flag.
 """)
 
 

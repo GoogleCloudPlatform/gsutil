@@ -455,8 +455,8 @@ def wildcard_iterator(uri_or_str, proj_id_handler,
   """
 
   if isinstance(uri_or_str, basestring):
-    # Disable enforce_bucket_naming, to allow bucket names containing
-    # wildcard chars.
+    # Disable enforce_bucket_naming, to allow bucket names containing wildcard
+    # chars.
     uri = boto.storage_uri(
         uri_or_str, debug=debug, validate=False,
         bucket_storage_uri_class=bucket_storage_uri_class,
