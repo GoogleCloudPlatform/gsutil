@@ -34,6 +34,7 @@ from boto.exception import ResumableUploadException
 from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto.s3.keyfile import KeyFile
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
+from boto.storage_uri import BucketStorageUri
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
@@ -311,11 +312,14 @@ _detailed_help_text = ("""
                 will cause gsutil to copy any objects at the current bucket
                 directory level, and skip any subdirectories.
 
-  -t            DEPRECATED. At one time this option was used to request setting
-                Content-Type based on file extension and/or content, which is
-                now the default behavior. The -t option is left in place for
-                now to avoid breaking existing scripts. It will be removed at
-                a future date.
+  -v            Requests that the version-specific URI for each uploaded object
+                be printed. Given this URI you can make future upload requests
+                that are safe in the face of concurrent updates, because Google
+                Cloud Storage will refuse to perform the update if the current
+                object version doesn't match the version-specific URI. See
+                'gsutil help versioning' for more details. Note: at present this
+                option does not work correctly for objects copied "in the cloud"
+                (e.g., gsutil cp gs://bucket/obj1 gs://bucket/obj2).
 
   -z ext1,...   Compresses file uploads with the given extensions. If you are
                 uploading a large file with compressible content, such as
@@ -627,13 +631,29 @@ class CpCommand(Command):
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
   def _CopyObjToObjInTheCloud(self, src_key, src_uri, dst_uri, headers):
+    """Performs copy-in-the cloud from specified src to dest object.
+
+    Args:
+      src_key: Source Key.
+      src_uri: Source StorageUri.
+      dst_uri: Destination StorageUri.
+      headers: A copy of the headers dictionary.
+
+    Returns:
+      (elapsed_time, bytes_transferred, dst_uri) excluding overhead like initial
+      HEAD. Note: At present copy-in-the-cloud doesn't return the generation and
+      meta_generation of the created object, so the returned URI is actually not
+      version-specific (unlike other cp cases).
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
     # Do Object -> object copy within same provider (uses
     # x-<provider>-copy-source metadata HTTP header to request copying at the
     # server).
     src_bucket = src_uri.get_bucket(False, headers)
-    dst_bucket = dst_uri.get_bucket(False, headers)
     preserve_acl = False
     canned_acl = None
     if self.sub_opts:
@@ -661,9 +681,10 @@ class CpCommand(Command):
     # to change the Content-Type while copying.
 
     try:
-      dst_uri.copy_key(src_bucket.name, src_uri.object_name, preserve_acl=False,
-                       headers=headers, src_version_id=src_uri.version_id,
-                       src_generation=src_uri.generation)
+      dst_key = dst_uri.copy_key(
+          src_bucket.name, src_uri.object_name, preserve_acl=False,
+          headers=headers, src_version_id=src_uri.version_id,
+          src_generation=src_uri.generation)
     except GSResponseError as e:
       exc_name, error_detail = ExtractErrorDetail(e)
       if (exc_name == 'GSResponseError'
@@ -674,7 +695,8 @@ class CpCommand(Command):
       else:
         raise
     end_time = time.time()
-    return (end_time - start_time, src_key.size)
+    return (end_time - start_time, src_key.size,
+            dst_uri.clone_replace_key(dst_key))
 
   def _CheckFreeSpace(self, path):
     """Return path/drive free space (in bytes)."""
@@ -715,7 +737,7 @@ class CpCommand(Command):
     Performs resumable upload if supported by provider and file is above
     threshold, else performs non-resumable upload.
 
-    Returns (elapsed_time, bytes_transferred).
+    Returns (elapsed_time, bytes_transferred, version-specific dst_uri).
     """
     start_time = time.time()
     # Determine file size different ways for case where fp is actually a wrapper
@@ -724,16 +746,15 @@ class CpCommand(Command):
       file_size = fp.getkey().size
     else:
       file_size = os.path.getsize(fp.name)
-    dst_key = dst_uri.new_key(False, headers)
     (cb, num_cb, res_upload_handler) = self._GetTransferHandlers(
         dst_uri, file_size, True)
     if dst_uri.scheme == 'gs':
       # Resumable upload protocol is Google Cloud Storage-specific.
-      dst_key.set_contents_from_file(fp, headers, policy=canned_acl,
+      dst_uri.set_contents_from_file(fp, headers, policy=canned_acl,
                                      cb=cb, num_cb=num_cb,
                                      res_upload_handler=res_upload_handler)
     else:
-      dst_key.set_contents_from_file(fp, headers, policy=canned_acl,
+      dst_uri.set_contents_from_file(fp, headers, policy=canned_acl,
                                      cb=cb, num_cb=num_cb)
     if res_upload_handler:
       # ResumableUploadHandler does not update upload_start_point from its
@@ -743,7 +764,7 @@ class CpCommand(Command):
     else:
       bytes_transferred = file_size
     end_time = time.time()
-    return (end_time - start_time, bytes_transferred)
+    return (end_time - start_time, bytes_transferred, dst_uri)
 
   def _PerformStreamingUpload(self, fp, dst_uri, headers, canned_acl=None):
     """
@@ -755,23 +776,23 @@ class CpCommand(Command):
       headers: A copy of the headers dictionary.
       canned_acl: Optional canned ACL to set on the object.
 
-    Returns (elapsed_time, bytes_transferred).
+    Returns (elapsed_time, bytes_transferred, version-specific dst_uri).
     """
     start_time = time.time()
-    dst_key = dst_uri.new_key(False, headers)
 
     if self.quiet:
       cb = None
     else:
       cb = self._StreamCopyCallbackHandler().call
-    dst_key.set_contents_from_stream(fp, headers, policy=canned_acl, cb=cb)
+    dst_uri.set_contents_from_stream(
+        fp, headers, policy=canned_acl, cb=cb)
     try:
       bytes_transferred = fp.tell()
     except:
       bytes_transferred = 0
 
     end_time = time.time()
-    return (end_time - start_time, bytes_transferred)
+    return (end_time - start_time, bytes_transferred, dst_uri)
 
   def _SetContentTypeHeader(self, src_uri, headers):
     """
@@ -814,7 +835,7 @@ class CpCommand(Command):
 
   def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers,
                           should_log=True):
-    """Helper method for uploading a local file to an object.
+    """Uploads a local file to an object.
 
     Args:
       src_key: Source StorageUri. Must be a file URI.
@@ -823,7 +844,8 @@ class CpCommand(Command):
       headers: The headers dictionary.
       should_log: bool indicator whether we should log this operation.
     Returns:
-      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
+      (elapsed_time, bytes_transferred, version-specific dst_uri), excluding
+      overhead like initial HEAD.
 
     Raises:
       CommandException: if errors encountered.
@@ -877,7 +899,7 @@ class CpCommand(Command):
       headers['Content-Encoding'] = 'gzip'
       gzip_fp = open(gzip_path, 'rb')
       try:
-        (elapsed_time, bytes_transferred) = (
+        (elapsed_time, bytes_transferred, result_uri) = (
             self._PerformResumableUploadIfApplies(gzip_fp, dst_uri,
                                                   canned_acl, headers))
       finally:
@@ -890,8 +912,9 @@ class CpCommand(Command):
         pass
     elif (src_key.is_stream()
           and dst_uri.get_provider().supports_chunked_transfer()):
-      (elapsed_time, bytes_transferred) = self._PerformStreamingUpload(
-          src_key.fp, dst_uri, headers, canned_acl)
+      (elapsed_time, bytes_transferred, result_uri) = (
+          self._PerformStreamingUpload(src_key.fp, dst_uri, headers,
+                                       canned_acl))
     else:
       if src_key.is_stream():
         # For Providers that doesn't support chunked Transfers
@@ -904,7 +927,7 @@ class CpCommand(Command):
         finally:
           file_uri.close()
       try:
-        (elapsed_time, bytes_transferred) = (
+        (elapsed_time, bytes_transferred, result_uri) = (
             self._PerformResumableUploadIfApplies(src_key.fp, dst_uri,
                                                   canned_acl, headers))
       finally:
@@ -913,10 +936,25 @@ class CpCommand(Command):
         else:
           src_key.close()
 
-    return (elapsed_time, bytes_transferred)
+    return (elapsed_time, bytes_transferred, result_uri)
 
   def _DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers,
                             should_log=True):
+    """Downloads an object to a local file.
+
+    Args:
+      src_key: Source StorageUri. Must be a file URI.
+      src_uri: Source StorageUri.
+      dst_uri: Destination StorageUri.
+      headers: The headers dictionary.
+      should_log: bool indicator whether we should log this operation.
+    Returns:
+      (elapsed_time, bytes_transferred, dst_uri), excluding overhead like
+      initial HEAD.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     if should_log:
       self._LogCopyOperation(src_uri, dst_uri, headers)
     (cb, num_cb, res_download_handler) = self._GetTransferHandlers(
@@ -994,7 +1032,7 @@ class CpCommand(Command):
         f_out.close()
         f_in.close()
         os.unlink(download_file_name)
-    return (end_time - start_time, bytes_transferred)
+    return (end_time - start_time, bytes_transferred, dst_uri)
 
   def _PerformDownloadToStream(self, src_key, src_uri, str_fp, headers):
     (cb, num_cb, res_download_handler) = self._GetTransferHandlers(
@@ -1007,15 +1045,44 @@ class CpCommand(Command):
     return (end_time - start_time, bytes_transferred)
 
   def _CopyFileToFile(self, src_key, src_uri, dst_uri, headers):
+    """Copies a local file to a local file.
+
+    Args:
+      src_key: Source StorageUri. Must be a file URI.
+      src_uri: Source StorageUri.
+      dst_uri: Destination StorageUri.
+      headers: The headers dictionary.
+    Returns:
+      (elapsed_time, bytes_transferred, dst_uri), excluding
+      overhead like initial HEAD.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     self._LogCopyOperation(src_uri, dst_uri, headers)
     dst_key = dst_uri.new_key(False, headers)
     start_time = time.time()
     dst_key.set_contents_from_file(src_key.fp, headers)
     end_time = time.time()
-    return (end_time - start_time, os.path.getsize(src_key.fp.name))
+    return (end_time - start_time, os.path.getsize(src_key.fp.name), dst_uri)
 
   def _CopyObjToObjDaisyChainMode(self, src_key, src_uri, dst_uri, headers):
-    # See -D OPTION documentation about what daisy chain mode is.
+    """Copies from src_uri to dst_uri in "daisy chain" mode.
+       See -D OPTION documentation about what daisy chain mode is.
+
+    Args:
+      src_key: Source Key.
+      src_uri: Source StorageUri.
+      dst_uri: Destination StorageUri.
+      headers: A copy of the headers dictionary.
+
+    Returns:
+      (elapsed_time, bytes_transferred, version-specific dst_uri) excluding
+      overhead like initial HEAD.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
     canned_acl = None
@@ -1041,7 +1108,8 @@ class CpCommand(Command):
       dst_uri: Destination StorageUri.
 
     Returns:
-      (elapsed_time, bytes_transferred) excluding overhead like initial HEAD.
+      (elapsed_time, bytes_transferred, version-specific dst_uri) excluding
+      overhead like initial HEAD.
 
     Raises:
       CommandException: if errors encountered.
@@ -1081,7 +1149,7 @@ class CpCommand(Command):
           if not self.quiet:
             self.THREADED_LOGGER.info('Skipping existing item: %s' %
                                       dst_uri.uri)
-          return (0, 0)
+          return (0, 0, None)
         if dst_uri.is_cloud_uri() and dst_uri.scheme == 'gs':
           headers['x-goog-if-generation-match'] = '0'
 
@@ -1197,7 +1265,7 @@ class CpCommand(Command):
 
     if not self.recursion_requested and not have_multiple_srcs:
       # We're copying one file or object to a subdirectory. Append final comp
-      # of exp_src_uri to exp_dest_uri.
+      # of exp_src_uri to exp_dst_uri.
       src_final_comp = exp_src_uri.object_name.rpartition(src_uri.delim)[-1]
       return self.suri_builder.StorageUri('%s%s%s' % (
           exp_dst_uri.uri.rstrip(exp_dst_uri.delim), exp_dst_uri.delim,
@@ -1394,19 +1462,27 @@ class CpCommand(Command):
 
       elapsed_time = bytes_transferred = 0
       try:
-        (elapsed_time, bytes_transferred) = self._PerformCopy(exp_src_uri,
-                                                              dst_uri)
+        (elapsed_time, bytes_transferred, result_uri) = (
+            self._PerformCopy(exp_src_uri, dst_uri))
       except Exception, e:
         if self._IsNoClobberServerException(e):
           if not self.quiet:
             self.THREADED_LOGGER.info('Rejected (noclobber): %s' % dst_uri.uri)
         elif self.continue_on_error:
-            if not self.quiet:
-              self.THREADED_LOGGER.error('Error copying %s: %s' % (src_uri.uri,
-                str(e)))
-            self.copy_failure_count += 1
+          if not self.quiet:
+            self.THREADED_LOGGER.error('Error copying %s: %s' % (src_uri.uri,
+              str(e)))
+          self.copy_failure_count += 1
         else:
           raise
+      if self.print_ver:
+        # Some cases don't return a version-specific URI (e.g., if destination
+        # is a file).
+        if hasattr(result_uri, 'version_specific_uri'):
+          self.THREADED_LOGGER.info('Created: %s' %
+                                    result_uri.version_specific_uri)
+        else:
+          self.THREADED_LOGGER.info('Created: %s' % result_uri.uri)
 
       # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
       # since we call copy internally from move and don't specify the -n flag)
@@ -1498,6 +1574,7 @@ class CpCommand(Command):
     self.continue_on_error = False
     self.daisy_chain = False
     self.read_args_from_stdin = False
+    self.print_ver = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     if self.sub_opts:
@@ -1523,9 +1600,7 @@ class CpCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
-                                    ' needed, and will eventually be removed.\n'
-                                    % self.command_name)
+          self.print_ver = True
 
   def _HandleStreamingDownload(self):
     # Destination is <STDOUT>. Manipulate sys.stdout so as to redirect all

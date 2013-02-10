@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os.path
-
 import boto
-
+import os
+import re
 import gslib.tests.testcase as testcase
+from gslib.util import TWO_MB
+from boto import storage_uri
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -169,6 +170,56 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
+
+  def test_cp_v_option(self):
+    # Tests that cp -v option returns the created object's version-specific URI.
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
+    g1 = k1_uri.generation
+
+    # Case 1: Upload file to object using one-shot PUT.
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
+    self._run_cp_minus_v_test('-v', fpath1, k2_uri.uri)
+
+    # Case 2: Upload file to object using resumable upload.
+    size_threshold = boto.config.get('GSUtil', 'resumable_threshold', TWO_MB)
+    file_as_string = os.urandom(size_threshold)
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents=file_as_string)
+    self._run_cp_minus_v_test('-v', fpath1, k2_uri.uri)
+
+    # Case 3: Upload stream to object.
+    self._run_cp_minus_v_test('-v', '-', k2_uri.uri)
+
+    # Case 4: Download object to file. For this case we just expect output of
+    # gsutil cp -v to be the URI of the file.
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir)
+    dst_uri = storage_uri(fpath1)
+    stderr = self.RunGsUtil(['cp', '-v', suri(k1_uri), suri(dst_uri)],
+                            return_stderr=True)
+    self.assertIn('Created: %s' % dst_uri.uri, stderr.split('\n')[-2])
+
+    # Case 5: Daisy-chain from object to object.
+    self._run_cp_minus_v_test('-Dv', k1_uri.uri, k2_uri.uri)
+
+    # Case 6: Copy object to object in-the-cloud.
+    # TODO: Uncomment this test once copy-in-the-cloud returns version-specific
+    # URI.
+    #self._run_cp_minus_v_test('-v', k1_uri.uri, k2_uri.uri)
+
+  def _run_cp_minus_v_test(self, opt, src_str, dst_str):
+    stderr = self.RunGsUtil(['cp', opt, src_str, dst_str], return_stderr=True)
+    match = re.search(r'Created: (.*)\n', stderr)
+    self.assertIsNotNone(match)
+    created_uri = match.group(1)
+    stdout = self.RunGsUtil(['ls', '-a', dst_str], return_stdout=True)
+    lines = stdout.split('\n')
+    # Final (most recent) object should match the "Created:" URI. This is
+    # in second-to-last line (last line is '\n').
+    self.assertEqual(created_uri, lines[-2])
 
   def test_stdin_args(self):
     tmpdir = self.CreateTempDir()
