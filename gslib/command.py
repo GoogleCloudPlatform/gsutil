@@ -33,7 +33,6 @@ import re
 import sys
 import wildcard_iterator
 import xml.dom.minidom
-import xml.sax.xmlreader
 
 from boto import handler
 from boto.storage_uri import StorageUri
@@ -329,6 +328,7 @@ class Command(object):
     Common logic for setting ACLs. Sets the standard ACL or the default
     object ACL depending on self.command_name.
     """
+
     acl_arg = self.args[0]
     uri_args = self.args[1:]
     # Disallow multi-provider setacl requests, because there are differences in
@@ -338,40 +338,25 @@ class Command(object):
       raise CommandException('"%s" command spanning providers not allowed.' %
                              self.command_name)
 
-    # Get ACL object from connection for one URI, for interpreting the ACL.
-    # This won't fail because the main startup code insists on at least 1 arg
-    # for this command.
-    acl_class = storage_uri.acl_class()
-    canned_acls = storage_uri.canned_acls()
-
     # Determine whether acl_arg names a file containing XML ACL text vs. the
     # string name of a canned ACL.
     if os.path.isfile(acl_arg):
       acl_file = open(acl_arg, 'r')
-      acl_txt = acl_file.read()
+      acl_arg = acl_file.read()
+      
+      # TODO: Remove this workaround when GCS allows
+      # whitespace in the Permission element on the server-side 
+      acl_arg = re.sub(r'<Permission>\s*(\S+)\s*</Permission>',
+                       r'<Permission>\1</Permission>', acl_arg)
+
       acl_file.close()
-      acl_obj = acl_class()
-      # Handle wildcard-named bucket.
-      if ContainsWildcard(storage_uri.bucket_name):
-        try:
-          bucket_uri = self.WildcardIterator(
-              storage_uri.clone_replace_name('')).IterUris().next()
-        except StopIteration:
-          raise CommandException('No URIs matched')
-      else:
-        bucket_uri = storage_uri
-      h = handler.XmlHandler(acl_obj, bucket_uri.get_bucket())
-      try:
-        xml.sax.parseString(acl_txt, h)
-      except xml.sax._exceptions.SAXParseException, e:
-        raise CommandException('Requested ACL is invalid: %s at line %s, '
-                               'column %s' % (e.getMessage(), e.getLineNumber(),
-                                              e.getColumnNumber()))
-      acl_arg = acl_obj
+      self.canned = False
     else:
       # No file exists, so expect a canned ACL string.
+      canned_acls = storage_uri.canned_acls()
       if acl_arg not in canned_acls:
         raise CommandException('Invalid canned ACL "%s".' % acl_arg)
+      self.canned = True
 
     # Used to track if any ACLs failed to be set.
     self.everything_set_okay = True
@@ -388,8 +373,12 @@ class Command(object):
       assert self.command_name != 'setdefacl'
       self.THREADED_LOGGER.info('Setting ACL on %s...' %
                                 name_expansion_result.expanded_uri_str)
-      exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
-                          self.headers)
+      if self.canned:
+        exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
+                            self.headers)
+      else:
+        exp_src_uri.set_xml_acl(acl_arg, exp_src_uri.object_name, False,
+                                self.headers)
 
     # If user specified -R option, convert any bucket args to bucket wildcards
     # (e.g., gs://bucket/*), to prevent the operation from being  applied to
@@ -433,10 +422,16 @@ class Command(object):
         uri = blr.GetUri()
         if self.command_name == 'setdefacl':
           print 'Setting default object ACL on %s...' % uri
-          uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
+          if self.canned:
+            uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
+          else:
+            uri.set_def_xml_acl(acl_arg, False, self.headers)
         else:
           print 'Setting ACL on %s...' % uri
-          uri.set_acl(acl_arg, uri.object_name, False, self.headers)
+          if self.canned:
+            uri.set_acl(acl_arg, uri.object_name, False, self.headers)
+          else:
+            uri.set_xml_acl(acl_arg, uri.object_name, False, self.headers)
     if not some_matched:
       raise CommandException('No URIs matched')
 
@@ -506,6 +501,7 @@ class Command(object):
     Raises:
       CommandException if invalid config encountered.
     """
+
     # Set OS process and python thread count as a function of options
     # and config.
     if self.parallel_operations:
@@ -573,7 +569,7 @@ class Command(object):
       finally:
         # We do all of the process cleanup in a finally cause in case the name
         # expansion iterator throws an exception. This will send EOF to all the
-        # child processes and join them back into the parent process. 
+        # child processes and join them back into the parent process.
 
         # Send an EOF per worker.
         for shard in range(process_count):
@@ -700,7 +696,7 @@ class Command(object):
       while True: # Loop until we hit EOF marker.
         name_expansion_result = work_queue.get()
         if name_expansion_result == _EOF_NAME_EXPANSION_RESULT:
-          break;
+          break
         exp_src_uri = self.suri_builder.StorageUri(
             name_expansion_result.GetExpandedUriStr())
         if self.debug:
