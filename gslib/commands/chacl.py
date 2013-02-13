@@ -276,8 +276,9 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   Makes atomic changes to access control lists, similar to the Linux chmod
-  command.  A change consists of a scope, an identifier (if required for the
-  supplied scope), + or -, and one of R, W, F.
+  command.  A change consists of a scope flag, an identifier, a colon,
+  and one of R, W, FC.  Multiple changes can be executed in a single run,
+  saving time and decreasing the number of requests issued.
 
 
 <B>EXAMPLES</B>
