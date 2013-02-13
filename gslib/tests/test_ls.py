@@ -54,9 +54,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_versioning(self):
     bucket1_uri = self.CreateBucket(test_objects=1)
     bucket2_uri = self.CreateVersionedBucket(test_objects=1)
+    bucket_list = list(bucket1_uri.list_bucket())
     objuri = [bucket1_uri.clone_replace_key(key).versionless_uri
-              for key in bucket1_uri.list_bucket()][0]
+              for key in bucket_list][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)], return_stdout=True)
     self.assertNumLines(stdout, 3)
+    stdout = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)], return_stdout=True)
+    self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name), stdout)
+    self.assertIn('meta_generation=', stdout)

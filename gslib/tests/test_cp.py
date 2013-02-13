@@ -154,22 +154,27 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(f.read(), 'data3')
 
     # Check contents of all three versions
-    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g1), fpath])
+    self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g1), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
-    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g2), fpath])
+    self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g2), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data2')
-    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g3), fpath])
+    self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g3), fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data3')
 
     # Copy first version to current and verify.
-    self.RunGsUtil(['cp', '%s#%s.1' % (k2_uri.versionless_uri, g1),
+    self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g1),
                     k2_uri.versionless_uri])
     self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), 'data1')
+
+    # Attempt to specify a version-specific URI for destination.
+    stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri], return_stderr=True,
+                            expected_status=1)
+    self.assertIn('cannot be the destination for gstuil cp', stderr)
 
   def test_cp_v_option(self):
     # Tests that cp -v option returns the created object's version-specific URI.

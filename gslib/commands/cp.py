@@ -641,9 +641,9 @@ class CpCommand(Command):
 
     Returns:
       (elapsed_time, bytes_transferred, dst_uri) excluding overhead like initial
-      HEAD. Note: At present copy-in-the-cloud doesn't return the generation and
-      meta_generation of the created object, so the returned URI is actually not
-      version-specific (unlike other cp cases).
+      HEAD. Note: At present copy-in-the-cloud doesn't return the generation of
+      the created object, so the returned URI is actually not version-specific
+      (unlike other cp cases).
 
     Raises:
       CommandException: if errors encountered.
@@ -1459,6 +1459,11 @@ class CpCommand(Command):
       if self._SrcDstSame(exp_src_uri, dst_uri):
         raise CommandException('%s: "%s" and "%s" are the same file - '
                                'abort.' % (cmd_name, exp_src_uri, dst_uri))
+
+      if dst_uri.is_cloud_uri() and dst_uri.is_version_specific:
+        raise CommandException('%s: a version-specific URI\n(%s)\ncannot be '
+                               'the destination for gstuil cp - abort.'
+                               % (cmd_name, dst_uri))
 
       elapsed_time = bytes_transferred = 0
       try:

@@ -30,8 +30,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
@@ -49,8 +49,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)], 
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(key_uri), g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
@@ -76,10 +76,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
     stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 4)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g2), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
     stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 
@@ -100,10 +100,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['rm', '-ar', '%s/dir' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 4)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k1_uri), k1g2), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g1), stderr)
-    self.assertIn('Removing %s#%s.1...' % (suri(k2_uri), k2g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
+    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
     stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout, '')
 

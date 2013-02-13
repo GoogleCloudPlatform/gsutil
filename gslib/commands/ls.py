@@ -183,7 +183,8 @@ _detailed_help_text = ("""
   -R, -r      Requests a recursive listing.
 
   -a          Includes non-current object versions / generations in the listing
-              (only useful with a versioning-enabled bucket).
+              (only useful with a versioning-enabled bucket). If combined with
+              -l option also prints meta-generation for each listed object.
 """)
 
 
@@ -282,7 +283,7 @@ class LsCommand(Command):
     version_info = ''
     if self.all_versions:
       if uri.get_provider().name == 'google' and obj.generation:
-        version_info = '#%s.%s' % (obj.generation , obj.meta_generation)
+        version_info = '#%s' % obj.generation
       elif uri.get_provider().name == 'aws' and obj.version_id:
         if isinstance(obj, DeleteMarker):
           version_info = '#<DeleteMarker>' + str(obj.version_id)
@@ -317,10 +318,18 @@ class LsCommand(Command):
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
       if not isinstance(obj, DeleteMarker):
-        print '%10s  %s  %s' % (obj.size, timestamp, uri_str.encode('utf-8'))
+        if self.all_versions:
+          print '%10s  %s  %s  meta_generation=%s' % (
+              obj.size, timestamp, uri_str.encode('utf-8'), obj.meta_generation)
+        else:
+          print '%10s  %s  %s' % (obj.size, timestamp, uri_str.encode('utf-8'))
         return (1, obj.size)
       else:
-        print '%10s  %s  %s' % (0, timestamp, uri_str.encode('utf-8'))
+        if self.all_versions:
+          print '%10s  %s  %s  meta_generation=%s' % (
+              0, timestamp, uri_str.encode('utf-8'), obj.meta_generation)
+        else:
+          print '%10s  %s  %s' % (0, timestamp, uri_str.encode('utf-8'))
         return (0, 1)
     elif listing_style == ListingStyle.LONG_LONG:
       # Run in a try/except clause so we can continue listings past
