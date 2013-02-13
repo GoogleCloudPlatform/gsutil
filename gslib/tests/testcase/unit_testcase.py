@@ -58,6 +58,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
   @classmethod
   def setUpClass(cls):
+    base.GsUtilTestCase.setUpClass()
     cls.mock_bucket_storage_uri = GSMockBucketStorageUri
     cls.proj_id_handler = ProjectIdHandler()
     config_file_list = boto.pyami.config.BotoConfigLocations
@@ -67,8 +68,12 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
                                        config_file_list, 'gsutil_test_commands',
                                        cls.mock_bucket_storage_uri)
 
+  def setUp(self):
+    super(GsUtilUnitTestCase, self).setUp()
+    self.bucket_uris = []
+
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
-                 test_method=None, return_stdout=False):
+                 test_method=None, return_stdout=False, cwd=None):
     """
     Method for calling gslib.command_runner.CommandRunner, passing
     parallel_operations=False for all tests, optionally saving/returning stdout
@@ -86,6 +91,10 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
                    command and test type.
+      cwd: The working directory that should be switched to before running the
+           command. The working directory will be reset back to its original
+           value after running the command. If not specified, the working
+           directory is left unchanged.
       return_stdout: If true will save and return stdout produced by command.
     """
     if util.VERBOSE_OUTPUT:
@@ -93,7 +102,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
                        (command_name, ' '.join(args)))
     if return_stdout:
       # Redirect stdout temporarily, to save output to a file.
-      outfile = tempfile.mkstemp()[1]
+      fh, outfile = tempfile.mkstemp()
+      os.close(fh)
     elif not util.VERBOSE_OUTPUT:
       outfile = os.devnull
     else:
@@ -101,22 +111,33 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     stdout_sav = sys.stdout
     output = None
+    cwd_sav = None
+    try:
+      cwd_sav = os.getcwd()
+    except OSError:
+      # This can happen if the current working directory no longer exists.
+      pass
     try:
       if outfile:
         fp = open(outfile, 'w')
         sys.stdout = fp
+      if cwd:
+        os.chdir(cwd)
       self.command_runner.RunNamedCommand(
           command_name, args=args, headers=headers, debug=debug,
           parallel_operations=False, test_method=test_method)
     finally:
+      if cwd and cwd_sav:
+        os.chdir(cwd_sav)
       if outfile:
         fp.close()
         sys.stdout = stdout_sav
-        output = open(outfile, 'r').read()
+        with open(outfile, 'r') as f:
+          output = f.read()
         if return_stdout:
           os.unlink(outfile)
 
-    if output and return_stdout:
+    if output is not None and return_stdout:
       return output
 
   @classmethod
@@ -153,3 +174,57 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     """
     return boto.storage_uri(uri_str, default_scheme, debug, validate,
                             GSMockBucketStorageUri)
+
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
+    """Creates a test bucket.
+
+    The bucket and all of its contents will be deleted after the test.
+
+    Args:
+      bucket_name: Create the bucket with this name. If not provided, a
+                   temporary test bucket name is constructed.
+      test_objects: The number of objects that should be placed in the bucket or
+                    a list of object names to place in the bucket. Defaults to
+                    0.
+      storage_class: storage class to use. If not provided we us standard.
+
+    Returns:
+      StorageUri for the created bucket.
+    """
+    bucket_name = bucket_name or self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri(
+        'gs://%s' % bucket_name.lower(),
+        suppress_consec_slashes=False,
+        bucket_storage_uri_class=GSMockBucketStorageUri)
+    bucket_uri.create_bucket(storage_class=storage_class)
+    self.bucket_uris.append(bucket_uri)
+    try:
+      iter(test_objects)
+    except TypeError:
+      test_objects = [self.MakeTempName('obj') for _ in range(test_objects)]
+    for i, name in enumerate(test_objects):
+      self.CreateObject(bucket_uri=bucket_uri, object_name=name,
+                        contents='test %d' % i)
+    return bucket_uri
+
+  def CreateObject(self, bucket_uri=None, object_name=None, contents=None):
+    """Creates a test object.
+
+    Args:
+      bucket: The URI of the bucket to place the object in. If not specified, a
+              new temporary bucket is created.
+      object_name: The name to use for the object. If not specified, a temporary
+                   test object name is constructed.
+      contents: The contents to write to the object. If not specified, the key
+                is not written to, which means that it isn't actually created
+                yet on the server.
+
+    Returns:
+      A StorageUri for the created object.
+    """
+    bucket_uri = bucket_uri or self.CreateBucket()
+    object_name = object_name or self.MakeTempName('obj')
+    key_uri = bucket_uri.clone_replace_name(object_name)
+    if contents is not None:
+      key_uri.set_contents_from_string(contents)
+    return key_uri

@@ -1349,13 +1349,13 @@ class CpCommand(Command):
          len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
       # Handle case where dst_uri is a non-existent subdir.
       if not have_existing_dest_subdir:
-        dst_key_name = dst_key_name.partition(exp_dst_uri.delim)[-1]
+        dst_key_name = dst_key_name.partition(src_uri.delim)[-1]
       # Handle special case where src_uri was a directory named with '.' or
       # './', so that running a command like:
       #   gsutil cp -r . gs://dest
       # will produce obj names of the form gs://dest/abc instead of
       # gs://dest/./abc.
-      if dst_key_name.startswith('./'):
+      if dst_key_name.startswith('.%s' % os.sep):
         dst_key_name = dst_key_name[2:]
 
     else:
@@ -1552,6 +1552,17 @@ class CpCommand(Command):
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time
 
+    # Sometimes, particularly when running unit tests, the total elapsed time
+    # is really small. On Windows, the timer resolution is too small and
+    # causes total_elapsed_time to be zero.
+    try:
+      float(self.total_bytes_transferred) / float(self.total_elapsed_time)
+    except ZeroDivisionError:
+      self.total_elapsed_time = 0.01
+
+    self.total_bytes_per_second = (float(self.total_bytes_transferred) /
+                                   float(self.total_elapsed_time))
+
     if self.debug == 3:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial HEAD
@@ -1560,8 +1571,7 @@ class CpCommand(Command):
         self.THREADED_LOGGER.info(
             'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
                 self.total_bytes_transferred, self.total_elapsed_time,
-                MakeHumanReadable(float(self.total_bytes_transferred) /
-                                  float(self.total_elapsed_time)))
+                MakeHumanReadable(self.total_bytes_per_second))
     if self.copy_failure_count:
       plural_str = ''
       if self.copy_failure_count > 1:
@@ -1653,12 +1663,8 @@ class CpCommand(Command):
     """
     if src_uri.is_file_uri() and dst_uri.is_file_uri():
       # Translate a/b/./c to a/b/c, so src=dst comparison below works.
-      new_src_path = re.sub('%s+\.%s+' % (os.sep, os.sep), os.sep,
-                            src_uri.object_name)
-      new_src_path = re.sub('^.%s+' % os.sep, '', new_src_path)
-      new_dst_path = re.sub('%s+\.%s+' % (os.sep, os.sep), os.sep,
-                            dst_uri.object_name)
-      new_dst_path = re.sub('^.%s+' % os.sep, '', new_dst_path)
+      new_src_path = os.path.normpath(src_uri.object_name)
+      new_dst_path = os.path.normpath(dst_uri.object_name)
       return (src_uri.clone_replace_name(new_src_path).uri ==
               dst_uri.clone_replace_name(new_dst_path).uri)
     else:

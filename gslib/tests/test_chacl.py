@@ -146,8 +146,8 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
 
   def _MakeScopeRegex(self, scope_type, email_address, perm):
     template_regex = (
-        r'<Scope type="{}">\s*<EmailAddress>{}</EmailAddress>\s*'
-        r'</Scope>\s*<Permission>{}</Permission>')
+        r'<Scope type="{0}">\s*<EmailAddress>\s*{1}\s*</EmailAddress>\s*'
+        r'</Scope>\s*<Permission>\s*{2}\s*</Permission>')
     return template_regex.format(scope_type, email_address, perm)
 
   def testBucketAclChange(self):
@@ -189,7 +189,7 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
     for i in range(count):
       objects.append(self.CreateObject(
           bucket_uri=self.sample_uri,
-          contents='something {}'.format(i)))
+          contents='something {0}'.format(i)))
 
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')

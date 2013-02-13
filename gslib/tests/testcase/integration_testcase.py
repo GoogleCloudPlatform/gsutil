@@ -16,11 +16,8 @@
 
 import logging
 import os.path
-import random
-import shutil
 import subprocess
 import sys
-import tempfile
 
 import boto
 from boto.exception import GSResponseError
@@ -38,7 +35,6 @@ TESTS_DIR = os.path.split(CURDIR)[0]
 GSLIB_DIR = os.path.split(TESTS_DIR)[0]
 GSUTIL_DIR = os.path.split(GSLIB_DIR)[0]
 GSUTIL_PATH = os.path.join(GSUTIL_DIR, 'gsutil')
-MAX_BUCKET_LENGTH = 63
 LOGGER = logging.getLogger('integration-test')
 
 
@@ -53,8 +49,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   DOMAIN_TEST = 'google.com'
 
   def setUp(self):
+    super(GsUtilIntegrationTestCase, self).setUp()
     self.bucket_uris = []
-    self.tempdirs = []
 
     # Set up API version and project ID handler.
     self.api_version = boto.config.get_value(
@@ -65,9 +61,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   # ensures that we try *really* hard to clean up after ourselves.
   @Retry(GSResponseError, logger=LOGGER)
   def tearDown(self):
-    while self.tempdirs:
-      tmpdir = self.tempdirs.pop()
-      shutil.rmtree(tmpdir, ignore_errors=True)
+    super(GsUtilIntegrationTestCase, self).tearDown()
 
     while self.bucket_uris:
       bucket_uri = self.bucket_uris[-1]
@@ -78,20 +72,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         bucket_list = list(bucket_uri.list_bucket(all_versions=True))
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
-
-  def MakeTempName(self, kind):
-    """Creates a temporary name that is most-likely unique.
-
-    Args:
-      kind: A string indicating what kind of test name this is.
-
-    Returns:
-      The temporary name.
-    """
-    name = 'gsutil-test-%s-%s' % (self._testMethodName, kind)
-    name = name[:MAX_BUCKET_LENGTH-9]
-    name = '%s-%08x' % (name, random.randrange(256**4))
-    return name
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
     """Creates a test bucket.
@@ -167,37 +147,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       key_uri.set_contents_from_string(contents)
     return key_uri
 
-  def CreateTempDir(self):
-    """Creates a temporary directory on disk.
-
-    The directory and all of its contents will be deleted after the test.
-
-    Returns:
-      The path to the new temporary directory.
-    """
-    tmpdir = tempfile.mkdtemp(prefix=self.MakeTempName('directory'))
-    self.tempdirs.append(tmpdir)
-    return tmpdir
-
-  def CreateTempFile(self, tmpdir=None, contents=None):
-    """Creates a temporary file on disk.
-
-    Args:
-      tmpdir: The temporary directory to place the file in. If not specified, a
-              new temporary directory is created.
-      contents: The contents to write to the file. If not specified, a test
-                string is constructed and written to the file.
-
-    Returns:
-      The path to the new temporary file.
-    """
-    tmpdir = tmpdir or self.CreateTempDir()
-    fpath = os.path.join(tmpdir, self.MakeTempName('file'))
-    with open(fpath, 'w') as f:
-      contents = contents or self.MakeTempName('contents')
-      f.write(contents)
-    return fpath
-
   def RunGsUtil(self, cmd, return_status=False, return_stdout=False,
                 return_stderr=False, expected_status=0, stdin=None):
     """Runs the gsutil command.
@@ -234,8 +183,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if return_status:
       toreturn.append(status)
     if return_stdout:
+      if IS_WINDOWS:
+        stdout = stdout.replace('\r\n', '\n')
       toreturn.append(stdout)
     if return_stderr:
+      if IS_WINDOWS:
+        stderr = stderr.replace('\r\n', '\n')
       toreturn.append(stderr)
 
     if len(toreturn) == 1:

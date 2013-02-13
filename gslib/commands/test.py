@@ -34,8 +34,19 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 import gslib.tests as tests
-from gslib.tests.util import unittest
 from gslib.util import NO_MAX
+
+
+# For Python 2.6, unittest2 is required to run the tests. If it's not available,
+# display an error if the test command is run instead of breaking the whole
+# program.
+try:
+  from gslib.tests.util import unittest
+except ImportError as e:
+  if 'unittest2' in str(e):
+    unittest = None
+  else:
+    raise
 
 
 COMMANDS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -103,12 +114,13 @@ def MakeCustomTestResultClass(total_tests):
     def startTest(self, test):
       super(CustomTestResult, self).startTest(test)
       if self.dots:
+        id = '.'.join(test.id().split('.')[-2:])
         message = ('\r%d/%d finished - E[%d] F[%d] s[%d] - %s' % (
             self.testsRun, total_tests, len(self.errors),
-            len(self.failures), len(self.skipped), test.id()))
-        message = message[:77]
-        message = message.ljust(77)
-        self.stream.write('%s\r' % message)
+            len(self.failures), len(self.skipped), id))
+        message = message[:73]
+        message = message.ljust(73)
+        self.stream.write('%s - ' % message)
 
   return CustomTestResult
 
@@ -152,6 +164,10 @@ class TestCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    if not unittest:
+      raise CommandException('On Python 2.6, the unittest2 module is required '
+                             'to run the gsutil tests.')
+
     failfast = False
     list_tests = False
     if self.sub_opts:

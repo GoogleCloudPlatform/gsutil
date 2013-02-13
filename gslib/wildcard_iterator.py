@@ -386,7 +386,7 @@ class FileWildcardIterator(WildcardIterator):
       if not remaining_wildcard:
         remaining_wildcard = '*'
       # Skip slash(es).
-      remaining_wildcard = remaining_wildcard.lstrip('/')
+      remaining_wildcard = remaining_wildcard.lstrip(os.sep)
       filepaths = []
       for dirpath, unused_dirnames, filenames in os.walk(base_dir):
         filepaths.extend(

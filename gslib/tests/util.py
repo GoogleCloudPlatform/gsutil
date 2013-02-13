@@ -38,28 +38,40 @@ def _NormalizeURI(uri):
     gs://foo//bar -> gs://foo/bar
     gs://foo/./bar -> gs://foo/bar
   """
+  # Note: we have to do this dance of changing gs:// to file:// because on
+  # Windows, the urlparse function won't work with URL schemes that are not
+  # known. urlparse('gs://foo/bar') on Windows turns into:
+  #     scheme='gs', netloc='', path='//foo/bar'
+  # while on non-Windows platforms, it turns into:
+  #     scheme='gs', netloc='foo', path='/bar'
+  uri = uri.replace('gs://', 'file://')
   parsed = list(urlparse.urlparse(uri))
   parsed[2] = posixpath.normpath(parsed[2])
   if parsed[2].startswith('//'):
     # The normpath function doesn't change '//foo' -> '/foo' by design.
     parsed[2] = parsed[2][1:]
-  return urlparse.urlunparse(parsed)
+  unparsed = urlparse.urlunparse(parsed)
+  unparsed = unparsed.replace('file://', 'gs://')
+  return unparsed
 
 
-def ObjectToURI(obj, suffix=None):
+def ObjectToURI(obj, *suffixes):
   """Returns the storage URI string for a given StorageUri or file object.
 
   Args:
-    obj: The object to get the URI from. Should be a file object or a sublcass
-         of boto.storage_uri.StorageURI
-    suffix: A suffix to append. For example, ObjectToUri(bucketuri, 'foo') would
-            return the URI for a key name 'foo' inside the given bucket.
+    obj: The object to get the URI from. Can be a file object, a subclass of
+         boto.storage_uri.StorageURI, or a string. If a string, it is assumed to
+         be a local on-disk path.
+    suffixes: Suffixes to append. For example, ObjectToUri(bucketuri, 'foo')
+              would return the URI for a key name 'foo' inside the given bucket.
   """
   if isinstance(obj, file):
-    return 'file://%s' % urllib.pathname2url(os.path.abspath(obj.name))
+    return 'file://%s' % os.path.abspath(os.path.join(obj.name, *suffixes))
+  if isinstance(obj, basestring):
+    return 'file://%s' % os.path.join(obj, *suffixes)
   uri = obj.uri
-  if suffix:
-    uri = _NormalizeURI('%s/%s' % (uri, suffix))
+  if suffixes:
+    uri = _NormalizeURI('/'.join([uri] + list(suffixes)))
 
   # Storage URIs shouldn't contain a trailing slash.
   if uri.endswith('/'):

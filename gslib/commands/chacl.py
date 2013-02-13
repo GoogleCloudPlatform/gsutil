@@ -79,7 +79,7 @@ class AclChange(object):
     self._Validate()
 
   def __str__(self):
-    return 'AclChange<{}|{}|{}>'.format(self.scope_type, self.perm,
+    return 'AclChange<{0}|{1}|{2}>'.format(self.scope_type, self.perm,
                                         self.identifier)
 
   def _Parse(self, change_descriptor, scope_type):
@@ -98,7 +98,7 @@ class AclChange(object):
           return type_string
 
     if change_descriptor.count(':') != 1:
-      raise CommandException('{} is an invalid change description.'
+      raise CommandException('{0} is an invalid change description.'
                              .format(change_descriptor))
 
     scope_string, perm_token = change_descriptor.split(':')
@@ -113,10 +113,10 @@ class AclChange(object):
     if scope_class == 'Domain':
       # This may produce an invalid UserByDomain scope,
       # which is good because then validate can complain.
-      self.scope_type = '{}ByDomain'.format(scope_type)
+      self.scope_type = '{0}ByDomain'.format(scope_type)
       self.identifier = scope_string
     elif scope_class in ['Email', 'Id']:
-      self.scope_type = '{}By{}'.format(scope_type, scope_class)
+      self.scope_type = '{0}By{1}'.format(scope_type, scope_class)
       self.identifier = scope_string
     elif scope_class == 'AllAuthenticatedUsers':
       self.scope_type = 'AllAuthenticatedUsers'
@@ -131,27 +131,27 @@ class AclChange(object):
     """Validates a parsed AclChange object."""
 
     def _ThrowError(msg):
-      raise CommandException('{} is not a valid ACL change\n{}'
+      raise CommandException('{0} is not a valid ACL change\n{1}'
                              .format(self.raw_descriptor, msg))
 
     if self.scope_type not in self.scope_types:
-      _ThrowError('{} is not a valid scope type'.format(self.scope_type))
+      _ThrowError('{0} is not a valid scope type'.format(self.scope_type))
 
     if self.scope_type in self.public_scopes and self.identifier:
-      _ThrowError('{} requires no arguments'.format(self.scope_type))
+      _ThrowError('{0} requires no arguments'.format(self.scope_type))
 
     if self.scope_type in self.id_scopes and not self.identifier:
-      _ThrowError('{} requires an id'.format(self.scope_type))
+      _ThrowError('{0} requires an id'.format(self.scope_type))
 
     if self.scope_type in self.email_scopes and not self.identifier:
-      _ThrowError('{} requires an email address'.format(self.scope_type))
+      _ThrowError('{0} requires an email address'.format(self.scope_type))
 
     if self.scope_type in self.domain_scopes and not self.identifier:
-      _ThrowError('{} requires domain'.format(self.scope_type))
+      _ThrowError('{0} requires domain'.format(self.scope_type))
 
     if self.perm not in self.permission_shorthand_mapping.values():
       perms = ', '.join(self.permission_shorthand_mapping.values())
-      _ThrowError('Allowed permissions are {}'.format(perms))
+      _ThrowError('Allowed permissions are {0}'.format(perms))
 
   def _YieldMatchingEntries(self, current_acl):
     """Generator that yields entries that match the change descriptor.
@@ -198,12 +198,12 @@ class AclChange(object):
     uri: The URI object to change.
     current_acl: An instance of boto.gs.acl.ACL to permute.
     """
-    self.logger.debug('Executing {} on {}'
+    self.logger.debug('Executing {0} on {1}'
                       .format(self.raw_descriptor, uri))
 
     if self.perm == 'WRITE' and uri.names_object():
       self.logger.warn(
-          'Skipping {} on {}, as WRITE does not apply to objects'
+          'Skipping {0} on {1}, as WRITE does not apply to objects'
           .format(self.raw_descriptor, uri))
       return 0
 
@@ -219,7 +219,7 @@ class AclChange(object):
       change_count = 1
 
     parsed_acl = minidom.parseString(current_acl.to_xml())
-    self.logger.debug('New Acl:\n{}'.format(parsed_acl.toprettyxml()))
+    self.logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
     return change_count
 
 
@@ -231,7 +231,7 @@ class AclDel(AclChange):
       }
 
   def __init__(self, identifier, logger):
-    self.raw_descriptor = '-d {}'.format(identifier)
+    self.raw_descriptor = '-d {0}'.format(identifier)
     self.logger = logger
     self.identifier = identifier
     for regex, scope in self.scope_regexes.items():
@@ -255,13 +255,13 @@ class AclDel(AclChange):
         yield entry
 
   def Execute(self, uri, current_acl):
-    self.logger.debug('Executing {} on {}'
+    self.logger.debug('Executing {0} on {1}'
                       .format(self.raw_descriptor, uri))
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:
       current_acl.entries.entry_list.remove(entry)
     parsed_acl = minidom.parseString(current_acl.to_xml())
-    self.logger.debug('New Acl:\n{}'.format(parsed_acl.toprettyxml()))
+    self.logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
     return len(matching_entries)
 
 
@@ -431,7 +431,7 @@ class ChAclCommand(Command):
 
     storage_uri = self.UrisAreForSingleProvider(self.args)
     if not (storage_uri and storage_uri.get_provider().name == 'google'):
-      raise CommandException('The "{}" command can only be used with gs:// URIs'
+      raise CommandException('The "{0}" command can only be used with gs:// URIs'
                              .format(self.command_name))
 
     bulk_uris = set()
@@ -470,7 +470,7 @@ class ChAclCommand(Command):
     return 0
 
   def _ApplyExceptionHandler(self, exception):
-    self.THREADED_LOGGER.error('Encountered a problem: {}'.format(exception))
+    self.THREADED_LOGGER.error('Encountered a problem: {0}'.format(exception))
     self.everything_set_okay = False
 
   def ApplyAclChanges(self, uri_or_expansion_result, retry=3):
@@ -484,7 +484,7 @@ class ChAclCommand(Command):
     try:
       current_acl = uri.get_acl()
     except GSResponseError as e:
-      self.THREADED_LOGGER.warning('Failed to set acl for {}: {}'
+      self.THREADED_LOGGER.warning('Failed to set acl for {0}: {1}'
                                    .format(uri, e.reason))
       return
 
@@ -492,7 +492,7 @@ class ChAclCommand(Command):
     for change in self.changes:
       modification_count += change.Execute(uri, current_acl)
     if modification_count == 0:
-      self.THREADED_LOGGER.info('No changes to {}'.format(uri))
+      self.THREADED_LOGGER.info('No changes to {0}'.format(uri))
       return
 
     # TODO: Remove the concept of forcing when boto provides access to
@@ -505,16 +505,16 @@ class ChAclCommand(Command):
       headers['x-goog-if-metageneration-match'] = key.meta_generation
     try:
       uri.set_acl(current_acl, uri.object_name, False, headers)
-      self.THREADED_LOGGER.info('Updated ACL on {}'.format(uri))
+      self.THREADED_LOGGER.info('Updated ACL on {0}'.format(uri))
     except GSResponseError as response_error:
       # HTTP error 412 is "Precondition Failed".
       if response_error.status == 412:
         if retry <= 0:
           self.THREADED_LOGGER.error(
-              'Exhausted retries on {}, giving up.'.format(uri))
+              'Exhausted retries on {0}, giving up.'.format(uri))
           return
         self.THREADED_LOGGER.warn(
-            'Encountered a collision, retrying {} more times on {}'
+            'Encountered a collision, retrying {0} more times on {1}'
             .format(retry, uri))
         time.sleep(random.uniform(0.5, 1.0))
         return self.ApplyAclChanges(uri, retry - 1)

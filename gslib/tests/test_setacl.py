@@ -15,6 +15,7 @@
 """Integration tests for the setacl and setdefacl commands."""
 
 import gslib.tests.testcase as testcase
+import os
 import re
 from gslib.tests.util import ObjectToURI as suri
 
@@ -147,4 +148,5 @@ class TestSetAcl(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(acl, orig_acls[0])
 
   def _strip_xml_whitespace(self, xml):
-    return re.sub('> *<', '><', xml.replace('\n', ''))
+    s = re.sub('>\s*', '>', xml.replace('\n', ''))
+    return re.sub('\s*<', '<', s)
