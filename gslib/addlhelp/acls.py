@@ -27,8 +27,10 @@ _detailed_help_text = ("""
 
   If not specified at the time an object is uploaded (e.g., via the gsutil cp
   -a option), objects will be created with a default object ACL set on the
-  bucket (see "gsutil help setdefacl"). You can change the ACL on an object
-  or bucket using the gsutil setacl command (see "gsutil help setacl").
+  bucket (see "gsutil help setdefacl"). You can replace the ACL on an object
+  or bucket using the gsutil setacl command (see "gsutil help setacl"), or
+  modify the existing ACL using the gsutil chacl command (see "gsutil help
+  chacl").
 
 
 <B>BUCKET VS OBJECT ACLS</B>

@@ -46,6 +46,11 @@ LOGGER = logging.getLogger('integration-test')
                      'Not running integration tests.')
 class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   """Base class for gsutil integration tests."""
+  GROUP_TEST_ADDRESS = 'gs-discussion@googlegroups.com'
+  GROUP_TEST_ID = '00b4903a97d097895ab58ef505d535916a712215b79c3e54932c2eb502ad97f5'
+  USER_TEST_ADDRESS = 'gs-team@google.com'
+  USER_TEST_ID = '00b4903a9703325c6bfc98992d72e75600387a64b3b6bee9ef74613ef8842080'
+  DOMAIN_TEST = 'google.com'
 
   def setUp(self):
     self.bucket_uris = []
