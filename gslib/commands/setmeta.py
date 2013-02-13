@@ -15,8 +15,11 @@
 
 import boto
 import csv
+import random
 import StringIO
+import time
 
+from boto.exception import GSResponseError
 from boto.s3.key import Key
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -213,12 +216,36 @@ class SetMetaCommand(Command):
       self.THREADED_LOGGER.error(str(e))
       self.everything_set_okay = False
 
-    def _SetMetadataFunc(name_expansion_result):
+    def _SetMetadataFunc(name_expansion_result, retry=3):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
-      self.THREADED_LOGGER.info('Setting metadata on %s...' % exp_src_uri)
-      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl)
-
+      self.THREADED_LOGGER.info('Setting metadata on %s...', exp_src_uri)
+      
+      key = exp_src_uri.get_key()
+      meta_generation = key.meta_generation
+      generation = key.generation
+            
+      headers = {}
+      if generation:
+        headers['x-goog-if-generation-match'] = generation
+      if meta_generation:
+        headers['x-goog-if-metageneration-match'] = meta_generation
+          
+      try:
+        exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl, 
+                                 headers=headers)
+      except GSResponseError as response_error:
+        # HTTP error 412 is "Precondition Failed."
+        if response_error.status == 412:
+          if retry <= 0:
+            self.THREADED_LOGGER.error('Exhausted retries. Giving up.')
+            raise
+          self.THREADED_LOGGER.warn('Collision - %d tries left.', retry)
+          time.sleep(random.uniform(0.5, 1.0))
+          _SetMetadataFunc(name_expansion_result, retry-1)
+        else:
+          raise
+      
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.bucket_storage_uri_class, uri_args, self.recursion_requested,
