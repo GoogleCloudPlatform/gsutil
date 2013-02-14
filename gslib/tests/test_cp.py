@@ -252,3 +252,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', '-D', suri(key_uri), suri(bucket2_uri)], 
                             return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
+
+  def test_cp_key_to_local_stream(self):
+    bucket_uri = self.CreateBucket()
+    contents = 'foo'
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents)
+    stdout = self.RunGsUtil(['cp', suri(key_uri), '-'], return_stdout=True)
+    self.assertIn(contents, stdout)
+
+  def test_cp_local_file_to_local_stream(self):
+    contents = 'content'
+    fpath = self.CreateTempFile(contents=contents)
+    stdout = self.RunGsUtil(['cp', fpath, '-'], return_stdout=True)
+    self.assertIn(contents, stdout)
