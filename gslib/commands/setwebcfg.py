@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc.
+# Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ _detailed_help_text = ("""
   1. Create a bucket called example.com (see the "DOMAIN NAMED BUCKETS"
      section of "gsutil help naming" for details about creating such buckets).
 
-  2.  Create index.html and 404.html files and upload them to the bucket.
+  2. Create index.html and 404.html files and upload them to the bucket.
   
   3. Configure the bucket to have website behavior using the command:
 
@@ -62,7 +62,10 @@ _detailed_help_text = ("""
      (ask your DNS administrator for help with this).
      
   Now if you open a browser and navigate to http://example.com, it will display
-  the main page instead of the default bucket listing.
+  the main page instead of the default bucket listing. Note: It can take time
+  for DNS updates to propagate because of caching used by the DNS, so it may
+  take up to a day for the domain-named bucket website to work after you create
+  the CNAME DNS record.
 
   Additional notes:
 

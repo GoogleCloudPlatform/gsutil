@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc.
+# Copyright 2012 Google Inc. All Rights Reserved.
 #coding=utf8
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
