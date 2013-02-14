@@ -66,7 +66,8 @@ _detailed_help_text = ("""
   6. You can check out the gsutil code from svn  - see
      http://code.google.com/p/gsutil/source/checkout. Then change directories
      into gsutil/src, and check out the boto code from github:
-        git clone git://github.com/boto/boto.git
+
+       git clone git://github.com/boto/boto.git
 
   7. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
@@ -86,15 +87,20 @@ _detailed_help_text = ("""
     boto test suite doesn't import the OAuth2 handler. You'll also need to
     install some python modules: change directories into the top-level gsutil
     directory and run:
+
       pip install -qr boto/requirements.txt
+
     (You probably need to run this commad using sudo.)
     Make sure each of the individual installations succeeded. If they don't
     you may need to run individual ones again, e.g.,
+
       pip install unittest2
 
     Then ensure your .boto file has HMAC credentials defined (the boto tests
     don't load the OAUTH2 plugin), and then change directories into boto/tests
     and run:
+
+      python test.py unit
       python test.py -t s3 -t gs -t ssl
 
   8. Please consider contributing test code for your change, especially if the

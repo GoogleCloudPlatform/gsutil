@@ -103,7 +103,7 @@ _detailed_help_text = ("""
 
 <B>HOW NAMES ARE CONSTRUCTED</B>
   The gsutil cp command strives to name objects in a way consistent with how
-  Unix cp works, which causes names to be constructed in varying ways depending
+  Linux cp works, which causes names to be constructed in varying ways depending
   on whether you're performing a recursive directory copy or copying
   individually named objects; and whether you're copying to an existing or
   non-existent directory.
@@ -172,9 +172,9 @@ _detailed_help_text = ("""
   you could perform concurrent downloads across 3 machines by running these
   commands on each machine, respectively:
 
-    gsutil cp -R gs://my_bucket/data/result_set_[0-3]* dir
-    gsutil cp -R gs://my_bucket/data/result_set_[4-6]* dir
-    gsutil cp -R gs://my_bucket/data/result_set_[7-9]* dir
+    gsutil -m cp -R gs://my_bucket/data/result_set_[0-3]* dir
+    gsutil -m cp -R gs://my_bucket/data/result_set_[4-6]* dir
+    gsutil -m cp -R gs://my_bucket/data/result_set_[7-9]* dir
 
   Note that dir could be a local directory on each machine, or it could
   be a directory mounted off of a shared file server; whether the latter
@@ -204,7 +204,7 @@ _detailed_help_text = ("""
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload
   feature whenever you use the cp command to upload an object that is larger
-  than 1 MB. You do not need to specify any special command line options
+  than 2 MB. You do not need to specify any special command line options
   to make this happen. If your upload is interrupted you can restart the
   upload by running the same cp command that you ran to start the upload.
 
@@ -244,7 +244,12 @@ _detailed_help_text = ("""
   "CommandException: Inadequate temp space available to compress <your file>"
   during a gsutil cp -z operation), you can change where it writes these
   temp files by setting the TMPDIR environment variable. On Linux and MacOS
-  you can do this using:
+  you can do this either by running gsutil this way:
+
+    TMPDIR=/some/directory gsutil cp ...
+
+  or by adding this line to your ~/.bashrc file and then restarting the shell
+  before running gsutil:
 
     export TMPDIR=/some/directory
 
@@ -279,11 +284,28 @@ _detailed_help_text = ("""
 
   -n            No-clobber. When specified, existing files or objects at the
                 destination will not be overwritten. Any items that are skipped
-                by this option will be reported as being skipped.
+                by this option will be reported as being skipped. This option
+                will perform an additional HEAD request to check if an item
+                exists before attempting to upload the data. This will save
+                retransmitting data, but the additional HTTP requests may make
+                small object transfers slower and more expensive.
 
-                Note that using this feature will make gsutil perform
-                additional HTTP requests for every item being copied. This
-                may increase latency and cost.
+                This option can be combined with the -c option to build a script
+                that copies a large number of objects, allowing retries when
+                some failures occur from which gsutil doesn't automatically
+                recover, using a bash script like the following:
+
+                    status=1
+                    while [ $status -ne 0 ] ; do
+                        gsutil cp -c -n -R ./dir gs://bucket
+                        status=$?
+                    done
+
+                The -c option will cause copying to continue after failures
+                occur, and the -n option will cause objects already copied to be
+                skipped on subsequent iterations. The loop will continue running
+                as long as gsutil exits with a non-zero status (such a status
+                indicates there was at least one failure during the gsutil run).
 
   -p            Causes ACLs to be preserved when copying in the cloud. Note that
                 this option has performance and cost implications, because it
@@ -291,10 +313,10 @@ _detailed_help_text = ("""
                 (The performance issue can be mitigated to some degree by
                 using gsutil -m cp to cause parallel copying.)
 
-	        You can avoid the additional performance and cost of using cp -p
-	        if you want all objects in the destination bucket to end up with
-	        the same ACL by setting a default ACL on that bucket instead of
-	        using cp -p. See "help gsutil setdefacl".
+                You can avoid the additional performance and cost of using cp -p
+                if you want all objects in the destination bucket to end up with
+                the same ACL by setting a default ACL on that bucket instead of
+                using cp -p. See "help gsutil setdefacl".
 
                 Note that it's not valid to specify both the -a and -p options
                 together.
@@ -565,7 +587,7 @@ class CpCommand(Command):
     num_cb = None
 
     # Checks whether the destination file is a "special" file, like /dev/null on
-    # unix platforms or nul on Windows platforms, so we can disable resumable
+    # Linux platforms or null on Windows platforms, so we can disable resumable
     # download support since the file size of the destination won't ever be
     # correct.
     dst_is_special = False
@@ -1143,7 +1165,7 @@ class CpCommand(Command):
         #    header to prevent a race condition where a destination file may
         #    be created after the first check and before the file is fully
         #    uploaded.
-        # In order to save on unneccesary uploads/downloads we perform both
+        # In order to save on unnecessary uploads/downloads we perform both
         # checks. However, this may come at the cost of additional HTTP calls.
         if dst_uri.exists(headers):
           if not self.quiet:
@@ -1225,7 +1247,7 @@ class CpCommand(Command):
                        have_existing_dest_subdir):
     """
     Constructs the destination URI for a given exp_src_uri/exp_dst_uri pair,
-    using context-dependent naming rules that mimic Unix cp and mv behavior.
+    using context-dependent naming rules that mimic Linux cp and mv behavior.
 
     Args:
       src_uri: src_uri to be copied.
@@ -1290,7 +1312,7 @@ class CpCommand(Command):
          '%s%s' % (exp_dst_uri.object_name, exp_dst_uri.delim)
       )
 
-    # Making naming behavior match how things work with local Unix cp and mv
+    # Making naming behavior match how things work with local Linux cp and mv
     # operations depends on many factors, including whether the destination is a
     # container, the plurality of the source(s), and whether the mv command is
     # being used:
@@ -1310,7 +1332,7 @@ class CpCommand(Command):
     #      gsutil cp dir1/dir2 gs://bucket
     #    should create the object gs://bucket/dir2/file2, assuming dir1/dir2
     #    contains file2).
-    #    To be consistent with Unix cp behavior, there's one more wrinkle when
+    #    To be consistent with Linux cp behavior, there's one more wrinkle when
     #    working with subdirs: The resulting object names depend on whether the
     #    destination subdirectory exists. For example, if gs://bucket/subdir
     #    exists, the command:
@@ -1432,7 +1454,7 @@ class CpCommand(Command):
           # Use recursion_requested when performing name expansion for the
           # directory mv case so we can determine if any of the source URIs are
           # directories (and then use cp -R and rm -R to perform the move, to
-          # match the behavior of Unix mv (which when moving a directory moves
+          # match the behavior of Linux mv (which when moving a directory moves
           # all the contained files).
           self.recursion_requested = True
           # Disallow wildcard src URIs when moving directories, as supporting it
@@ -1462,7 +1484,7 @@ class CpCommand(Command):
 
       if dst_uri.is_cloud_uri() and dst_uri.is_version_specific:
         raise CommandException('%s: a version-specific URI\n(%s)\ncannot be '
-                               'the destination for gstuil cp - abort.'
+                               'the destination for gsutil cp - abort.'
                                % (cmd_name, dst_uri))
 
       elapsed_time = bytes_transferred = 0
@@ -1625,9 +1647,6 @@ class CpCommand(Command):
     did_some_work = False
     for uri_str in self.args[0:len(self.args)-1]:
       for uri in self.WildcardIterator(uri_str).IterUris():
-        if not uri.names_object():
-          raise CommandException('Destination Stream requires that '
-                                 'source URI %s should represent an object!')
         did_some_work = True
         key = uri.get_key(False, self.headers)
         (elapsed_time, bytes_transferred) = self._PerformDownloadToStream(
@@ -1643,6 +1662,7 @@ class CpCommand(Command):
                 self.total_bytes_transferred, self.total_elapsed_time,
                  MakeHumanReadable(float(self.total_bytes_transferred) /
                                    float(self.total_elapsed_time)))
+
   def _StdinIterator(self):
     """A generator function that returns lines from stdin."""
     for line in sys.stdin:

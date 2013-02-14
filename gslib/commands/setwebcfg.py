@@ -39,16 +39,60 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   The Website Configuration feature enables you to configure a Google Cloud
-  Storage bucket to simulate the behavior of a static website. You can define
-  main pages or directory indices (for example, index.html) for buckets and
-  "directories". Also, you can define a custom error page in case a requested
-  resource does not exist.
+  Storage bucket to behave like a static website. This means requests made via a
+  domain-named bucket aliased using a Domain Name System "CNAME" to
+  c.storage.googleapis.com will work like any other website, i.e., a GET to the
+  bucket will serve the configured "main" page instead of the usual bucket
+  listing and a GET for a non-existent object will serve the configured error
+  page.
 
-  The gstuil setwebcfg command allows you to configure use of web semantics
-  on one or more buckets. The main page suffix and error page parameters are
-  specified as arguments to the -m and -e flags respectively. If either or
-  both parameters are excluded, the corresponding behavior will be disabled
-  on the target bucket.
+  For example, suppose your company's Domain name is example.com. You could set
+  up a website bucket as follows:
+
+  1. Create a bucket called example.com (see the "DOMAIN NAMED BUCKETS"
+     section of "gsutil help naming" for details about creating such buckets).
+
+  2.  Create index.html and 404.html files and upload them to the bucket.
+  
+  3. Configure the bucket to have website behavior using the command:
+
+       gsutil setwebcfg -m index.html -e 404.html gs://example.com
+
+  4. Add a DNS CNAME record for example.com pointing to c.storage.googleapis.com
+     (ask your DNS administrator for help with this).
+     
+  Now if you open a browser and navigate to http://example.com, it will display
+  the main page instead of the default bucket listing.
+
+  Additional notes:
+
+  1. Because the main page is only served when a bucket listing request is made
+     via the CNAME alias, you can continue to use "gsutil ls" to list the bucket
+     and get the normal bucket listing (rather than the main page).
+
+  2. The main_page_suffix applies to each subdirectory of the bucket. For
+     example, with the main_page_suffix configured to be index.html, a GET
+     request for http://example.com would retrieve
+     http://example.com/index.html, and a GET request for
+     http://example.com/photos would retrieve
+     http://example.com/photos/index.html.
+
+  2. There is just one 404.html page: For example, a GET request for
+     http://example.com/photos/missing would retrieve
+     http://example.com/404.html, not http://example.com/photos/404.html.
+
+  3. For additional details see
+     https://developers.google.com/storage/docs/website-configuration.
+
+
+<B>OPTIONS</B>
+  -m index.html        Specifies the object name to serve when a bucket listing
+                       is requested via the CNAME alias to
+                       c.storage.googleapis.com.
+
+  -e 404.html          Specifies the error page to serve when a request is made
+                       for a non-existing object, via the is requested via the
+                       CNAME alias to c.storage.googleapis.com.
 """)
 
 def BuildGSWebConfig(main_page_suffix=None, not_found_page=None):

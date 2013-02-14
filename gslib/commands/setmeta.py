@@ -60,13 +60,17 @@ _detailed_help_text = ("""
   For example, the following command would set the Content-Type and
   Cache-Control and remove the Content-Disposition on the specified objects:
 
-    gsutil setmeta -h "Content-Type:text/html" -h "Cache-Control:public, max-age=3600" -h "Content-Disposition" gs://bucket/*.html
+    gsutil setmeta -h "Content-Type:text/html" \\
+      -h "Cache-Control:public, max-age=3600" \\
+      -h "Content-Disposition" gs://bucket/*.html
 
   If you have a large number of objects to update you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
   update:
 
-    gsutil -m setmeta -h "Content-Type:text/html" -h "Cache-Control:public, max-age=3600" -h "Content-Disposition" gs://bucket/*.html
+    gsutil -m setmeta -h "Content-Type:text/html" \\
+      -h "Cache-Control:public, max-age=3600" \\
+      -h "Content-Disposition" gs://bucket/*.html
 
   See "gsutil help metadata" for details about how you can set metadata
   while uploading objects, what metadata fields can be set and the meaning of
@@ -113,7 +117,9 @@ _detailed_help_text = ("""
   set. For example, the following command would set the Content-Type and
   Cache-Control and remove the Content-Disposition on the specified objects:
 
-    gsutil setmeta -h "Content-Type:text/html" -h "Cache-Control:public, max-age=3600" -h "Content-Disposition" gs://bucket/*.html
+    gsutil setmeta -h "Content-Type:text/html" \\
+      -h "Cache-Control:public, max-age=3600" \\
+      -h "Content-Disposition" gs://bucket/*.html
 
   This form only works if the header name and value don't contain double
   quotes or commas, and only works for setting the header value (not for

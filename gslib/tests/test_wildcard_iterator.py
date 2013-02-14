@@ -327,7 +327,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(exp_uri_strs, actual_uri_strs)
 
   def testRecursiveDirectoryOnlyWildcarding(self):
-    """Tests recusive expansion of directory-only '**' wildcard"""
+    """Tests recursive expansion of directory-only '**' wildcard"""
     uri = self._test_storage_uri(suri(self.test_dir, '**'))
     actual_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(uri).IterUris())

@@ -58,15 +58,15 @@ _detailed_help_text = ("""
   If you don't specify a -c option, the bucket will be created with the default
   (standard) storage class.
 
-  If you specify -c RA, it causes the data stored in the bucket to use
-  reduced availability storage. Reduced availability storage buckets have lower
-  availability than standard storage class buckets, but durability equal to
-  that of storage class buckets. This option allows users to reduce costs
-  for data for which lower availability is acceptable. Reduced availability
-  storage would not be appropriate for "hot" objects (i.e., objects being
-  accessed frequently) or for interactive workloads; however, it might be
-  appropriate for other types of applications. See the online documentation
-  for pricing and SLA details.
+  If you specify -c DURABLE_REDUCED_AVAILABILITY (or -c DRA), it causes the data
+  stored in the bucket to use durable reduced availability storage. Buckets
+  created with this storage class have lower availability than standard storage
+  class buckets, but durability equal to that of buckets created with standard
+  storage class. This option allows users to reduce costs for data for which
+  lower availability is acceptable. Durable Reduced Availability storage would
+  not be appropriate for "hot" objects (i.e., objects being accessed frequently)
+  or for interactive workloads; however, it might be appropriate for other types
+  of applications. See the online documentation for pricing and SLA details.
 
 
 <B>BUCKET LOCATIONS</B>

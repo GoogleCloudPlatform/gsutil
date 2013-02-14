@@ -275,10 +275,19 @@ _detailed_help_text = ("""
   -d <id|email|domain|All|AllAuth>
 
 <B>DESCRIPTION</B>
-  Makes atomic changes to access control lists, similar to the Linux chmod
-  command.  A change consists of a scope flag, an identifier, a colon,
-  and one of R, W, FC.  Multiple changes can be executed in a single run,
-  saving time and decreasing the number of requests issued.
+  The chacl command updates access control lists, similar in spirit to the Linux
+  chmod command. You can specify multiple access grant additions and deletions
+  in a single command run; all changes will be made atomically to each object in
+  turn. For example, if the command requests deleting one grant and adding a
+  different grant, the ACLs being updated will never be left in an intermediate
+  state where one grant has been deleted but the second grant not yet added.
+  Each change specifies a user or group grant to add or delete, and for grant
+  additions, one of R, W, FC (for the permission to be granted). A more formal
+  description is provided in a later section; below we provide examples.
+
+  Note: If you want to set a simple "canned" ACL on each object (such as
+  project-private or public), or if you prefer to edit the XML representation
+  for ACLs, you can do that with the setacl command (see 'gsutil help setacl').
 
 
 <B>EXAMPLES</B>
@@ -305,20 +314,20 @@ _detailed_help_text = ("""
 
     gsutil chacl -g my-domain.org:R gs://gcs.my-domain.org
 
-  Remove any current access by john.doe@example.com to the bucket
+  Remove any current access by john.doe@example.com from the bucket
   example-bucket:
 
     gsutil chacl -d john.doe@example.com gs://example-bucket
 
-  If you have a large number of objects to update, enabling multithreading with
-  the gsutil -m flag can significantly improve performance.  The following
-  command adds FULL_CONTROL for admin@example.org using multithreading:
+  If you have a large number of objects to update, enabling multi-threading with
+  the gsutil -m flag can significantly improve performance. The following
+  command adds FULL_CONTROL for admin@example.org using multi-threading:
 
     gsutil -m chacl -R -u admin@example.org:FC gs://example-bucket
 
-  Grant read access to everyone from my-domain.org and all authenticated users,
-  along with full control to admin@mydomain.org for the buckets my-bucket and
-  my-other-bucket, with multithreading enabled:
+  Grant READ access to everyone from my-domain.org and to all authenticated
+  users, and grant FULL_CONTROL to admin@mydomain.org, for the buckets
+  my-bucket and my-other-bucket, with multi-threading enabled:
 
     gsutil -m chacl -R -g my-domain.org:R -g AllAuth:R \\
       -u admin@mydomain.org:FC gs://my-bucket/ gs://my-other-bucket
@@ -332,18 +341,18 @@ _detailed_help_text = ("""
   "-u john-doe@gmail.com:r"
 
   Groups are like users, but specified with the -g flag, as in
-  "-g power-users@example.com:fc".  Groups may also be specified as a full
+  "-g power-users@example.com:fc". Groups may also be specified as a full
   domain, as in "-g my-company.com:r".
 
   AllAuthenticatedUsers and AllUsers are specified directly, as
-  in "-g AllUsers:R" or "-g AllAuthenticatedUsers:FC".  These are case
+  in "-g AllUsers:R" or "-g AllAuthenticatedUsers:FC". These are case
   insensitive, and may be shortened to "all" and "allauth", respectively.
 
   Removing permissions is specified with the -d flag and an ID, email
   address, domain, or one of AllUsers or AllAuthenticatedUsers.
 
   Many scopes can be specified on the same command line, allowing bundled
-  changes to be executed in a single run.  This will reduce the number of
+  changes to be executed in a single run. This will reduce the number of
   requests made to the server.
 
 

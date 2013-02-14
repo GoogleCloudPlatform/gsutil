@@ -146,7 +146,7 @@ class MvCommand(Command):
     # Insert command-line opts in front of args so they'll be picked up by cp
     # and rm commands (e.g., for -p option). Use undocumented (internal
     # use-only) cp -M option, which causes each original object to be deleted
-    # after sucessfully copying to its destination, and also causes naming
+    # after successfully copying to its destination, and also causes naming
     # behavior consistent with Unix mv naming behavior (see comments in
     # _ConstructDstUri in cp.py).
     unparsed_args = ['-M']

@@ -25,10 +25,12 @@ _detailed_help_text = ("""
   If you have any questions or encounter any problems with Google Cloud Storage,
   please first read the FAQ at https://developers.google.com/storage/docs/faq.
   If you still need help, please post your question to the gs-discussion forum
-  (https://developers.google.com/storage/forum). Our support team actively
-  monitors the forum and we'll do our best to respond. To help us diagnose
-  any issues you encounter, please provide these details in addition to the
-  description of your problem:
+  (https://developers.google.com/storage/forum) or to Stack Overflow with the
+  Google Cloud Storage tag
+  (http://stackoverflow.com/questions/tagged/google-cloud-storage). Our support
+  team actively monitors these forums and we'll do our best to respond. To help
+  us diagnose any issues you encounter, please provide these details in addition
+  to the description of your problem:
 
   - The resource you are attempting to access (bucket name, object name)
   - The operation you attempted (GET, PUT, etc.)
@@ -39,9 +41,9 @@ _detailed_help_text = ("""
     to the forum as they can help us further troubleshoot your issue.
 
   Warning: The gsutil -D, -d, and -DD options will also print the authentication
-  header with authentication credentials for your Google Cloud Storage
-  account. Make sure to revoke or sanitize these credentials before you post
-  HTTP details to the forum.
+  header with authentication credentials for your Google Cloud Storage account.
+  Make sure to remove any "Authorization:" headers before you post HTTP details
+  to the forum.
 
   If you make any local modifications to gsutil, please make sure to use
   a released copy of gsutil (instead of your locally modified copy) when

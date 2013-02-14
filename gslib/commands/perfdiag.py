@@ -120,6 +120,7 @@ _detailed_help_text = ("""
   -i          Reads the JSON output file created using the -o command and prints
               a formatted description of the results.
 
+
 <B>NOTE</B>
   The perfdiag command collects system information. It collects your IP address,
   executes DNS queries to Google servers and collects the results, and collects
@@ -707,13 +708,13 @@ class PerfDiagCommand(Command):
         ts_string = info['gmt_timestamp']
         timetuple = None
         try:
-          # Convert RFC 2822 string to unix timestamp.
+          # Convert RFC 2822 string to Linux timestamp.
           timetuple = time.strptime(ts_string, '%a, %d %b %Y %H:%M:%S +0000')
         except ValueError:
           pass
 
         if timetuple:
-          # Converts the GMT time tuple to local unix timestamp.
+          # Converts the GMT time tuple to local Linux timestamp.
           localtime = calendar.timegm(timetuple)
           localdt = datetime.datetime.fromtimestamp(localtime)
           print 'Measurement time: \n %s' % localdt.strftime(

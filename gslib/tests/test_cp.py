@@ -174,7 +174,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Attempt to specify a version-specific URI for destination.
     stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri], return_stderr=True,
                             expected_status=1)
-    self.assertIn('cannot be the destination for gstuil cp', stderr)
+    self.assertIn('cannot be the destination for gsutil cp', stderr)
 
   def test_cp_v_option(self):
     # Tests that cp -v option returns the created object's version-specific URI.

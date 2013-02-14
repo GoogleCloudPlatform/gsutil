@@ -46,7 +46,7 @@ _detailed_help_text = ("""
   "directories". Also, you can define a custom error page in case a requested
   resource does not exist.
 
-  The gstuil getwebcfg command gets the web semantics configuration for a
+  The gsutil getwebcfg command gets the web semantics configuration for a
   bucket, and displays an XML representation of the configuration.
 
   In Google Cloud Storage, this would look like:

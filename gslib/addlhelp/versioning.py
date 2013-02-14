@@ -151,7 +151,7 @@ _detailed_help_text = ("""
   gsutil, where a periodic job computes some data and uploads it to the cloud.
   On each run, the job starts with the data that it computed from last run, and
   computes a new value. To make this system robust, you need to have multiple
-  machines on which the job can run, which raises the possibliity that two
+  machines on which the job can run, which raises the possibility that two
   simultaneous runs could attempt to update an object at the same time. This
   leads to the following potential race condition:
     - job 1 computes the new value to be written
