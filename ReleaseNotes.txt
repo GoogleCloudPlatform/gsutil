@@ -1,3 +1,186 @@
+Release 3.22 (release-date: 2013-02-15)
+
+
+New Features
+------------
+
+  - Implemented new chacl command, which makes it easy to add and remove bucket
+    and object ACL grants without having to edit XML (like the older setacl
+    command).
+
+  - Implemented new "daisy-chain" copying mode, which allows cross-provider
+    copies to run without buffering to local disk, and to use resumable uploads.
+    This copying mode also allows copying between locations and between storage
+    classes, using the new gsutil cp -D option. (Daisy-chain copying is the
+    default when copying between providers, but must be explicitly requested for
+    the other cases to keep costs and performance expectations clear.)
+
+  - Implemented new perfdiag command to run a diagnostic test against
+    a bucket, collect system information, and report results. Useful
+    when working with Google Cloud Storage team to resolve questions
+    about performance.
+
+  - Added SIGQUIT (^\) handler, to allow breakpointing a running gsutil.
+
+
+Bug Fixes
+---------
+
+  - Fixed bug where gsutil setwebcfg signature didn't match with
+    HMAC authentication.
+
+  - Fixed ASCII codec decode error when constructing tracker filename
+    from non-7bit ASCII intput filename.
+
+  - Changed boto auth plugin framework to allow multiple plugins
+    supporting requested capability, which fixes gsutil exception
+    that used to happen where a GCE user had a service account
+    configured and then ran gsutil config.
+
+  - Changed Command.Apply method to be resilient to name expansion
+    exceptions. Before this change, if an exception was raised
+    during iteration of NameExpansionResult, the parent process
+    would immediately stop execution, causing the
+    _EOF_NAME_EXPANSION_RESULT to never be sent to child processes.
+    This resulted in the process hanging forever.
+
+  - Fixed various bugs for gsutil running on Windows:
+    - Fixed various places from a hard-coded '/' to os.sep.
+    - Fixed a bug in the cp command where it was using the destination
+      URI's .delim property instead of the source URI.
+    - Fixed a bug in the cp command's _SrcDstSame function by
+      simplifying it to use os.path.normpath.
+    - Fixed windows bug in tests/util.py _NormalizeURI function.
+    - Fixed ZeroDivisionError sometimes happening during unit tests
+      on Windows.
+
+  - Fixed gsutil rm bug that caused exit status 1 when encountered
+    non-existent URI.
+
+  - Fixed support for gsutil cp file -.
+
+  - Added preconditions and retry logic to setmeta command, to
+    enforce concurrency control.
+
+  - Fixed bug in copying subdirs to subdirs.
+
+  - Fixed cases where boto debug_level caused too much or too little
+    logging:
+    - resumable and one-shot uploads weren't showing response headers
+      when connection.debug > 0.
+    - payload was showing up in debug output when connection.debug
+      < 4 for streaming uploads.
+
+  - Removed XML parsing from setacl. The previous implementation
+    relied on loose XML handling, which could truncate what it sends
+    to the service, allowing invalid XML to be specified by the
+    user. Instead now the ACL XML is passed verbatim and we rely
+    on server-side schema enforcement.
+
+  - Added user-agent header to resumable uploads.
+
+  - Fixed reporting bits/s when it was really bytes/s.
+
+  - Changed so we now pass headers with API version & project ID
+    to create_bucket().
+
+  - Made "gsutil rm -r gs://bucket/folder" remove xyz_$folder$ object
+    (which is created by various GUI tools).
+
+  - Fixed bug where gsutil binary was shipped with protection 750
+    instead of 755.
+
+
+Other Changes
+---------
+
+  - Reworked versioned object handling:
+    - Removed need for commands to specify -v option to parse
+      versions. Versioned URIs are now uniformly handled by all
+      commands.
+    - Refactored StorageUri parsing that had been split across
+      storage_uri and conveience; made versioned URIs render with
+      version string so StorageUri is round-trippable (boto change).
+    - Implemented gsutil cp -v option for printing the version-specific
+      URI that was just created.
+    - Added error detail for attempt to delete non-empty versioned
+      bucket. Also added versioning state to ls -L -b gs://bucket
+      output.
+    - Changed URI parsing to use pre-compiled regex's.
+    - Other bug fixes.
+
+  - Rewrote/deepened/improved various parts of built-in help:
+    - Updated 'gsutil help dev'.
+    - Fixed help command handling when terminal does not have the
+      number of rows set.
+    - Rewrote versioning help.
+    - Added gsutil help text for common 403 AccountProblem error.
+    - Added text to 'gsutil help dev' about legal agreement needed
+      with code submissions.
+    - Fixed various other typos.
+    - Updated doc for cp command regarding metadata not being
+      preserved when copying between providers.
+    - Fixed gsutil ls command documentation typo for the -L option.
+    - Added HTTP scheme to doc/examples for gsutil setcors command.
+    - Changed minimum version in documentation from 2.5 to 2.6 since
+      gsutil no longer works in Python 2.5.
+    - Cleaned up/clarify/deepen various other parts of gsutil
+      built-in documentation.
+
+  - Numerous improvements to testing infrastructure:
+    - Completely refactored infrastructure, allowing deeper testing
+      and more readable test code, and enabling better debugging
+      output when tests fail.
+    - Moved gslib/test_*.py unit tests to gslib/tests module.
+    - Made all tests (unit and integration, per-command and modules
+      (like naming) run from single gsutil test command.
+    - Moved TempDir functions from GsUtilIntegrationTestCase to
+      GsUtilTestCase.
+    - Made test runner message show the test function being run.
+    - Added file path support to ObjectToURI function.
+    - Disabled the test command if running on Python 2.6 and unittest2
+      is not available instead of breaking all of gsutil.
+    - Changed to pass GCS V2 API and project_id from boto config
+      if necessary in integration_testcase#CreateBucket().
+    - Fixed unit tests by using a GS-specific mocking class to
+      override the S3 provider.
+    - Added friendlier error message if test path munging fails.
+    - Fixed bug where gsutil test only cleaned up first few test files.
+    - Implemented setacl integration tests.
+    - Implemented StorageUri parsing unit tests.
+    - Implemented test for gsutil cp -D.
+    - Implemented setacl integration tests.
+    - Implemented tests for reading and seeking past end of file.
+    - Implemented and tests for it in new tests module.
+    - Changed cp tests that don't specify a Content-Type to check
+      for new binary/octet-stream default instead of server-detected
+      mime type.
+
+  - Changed gsutil mv to allow moving local files/dirs to the cloud.
+    Previously this was disallowed in the belief we should be
+    conservative about deleting data from local disk but there are
+    legitimate use cases for moving data from a local dir to the
+    cloud, it's clear to the user this would remove data from the
+    local disk, and allowing it makes the tool behavior more
+    consistent with what users would expect.
+
+  - Changed gsutil update command to insist on is_secure and
+    https_validate_certificates.
+
+  - Fixed release no longer to include extraneous boto dirs in
+    top-level of gsutil distribution (like bin/ and docs/).
+
+  - Changed resumable upload threshold from 1 MB to 2 MB.
+
+  - Removed leftover cloudauth and cloudreader dirs. Sample code
+    now lives at https://github.com/GoogleCloudPlatform.
+
+  - Updated copyright notice on code files.
+
+
+================================================================================
+
+
 Release 3.21 (release-date: 2012-12-10)
 
 New Features
@@ -22,6 +205,8 @@ Other Changes
 -------------
 
   - Updated docs about using setmeta with versioning enabled.
+
+  - Changed GCS endpoint in boto to storage.googleapis.com.
 
 
 ================================================================================
