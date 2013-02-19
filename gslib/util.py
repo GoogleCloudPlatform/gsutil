@@ -17,8 +17,10 @@
 import math
 import re
 import sys
+import time
 
 import boto
+from third_party.retry_decorator.decorators import retry
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default. Note: we made this static
@@ -49,6 +51,8 @@ _EXP_STRINGS = [
 IS_WINDOWS = 'win32' in str(sys.platform).lower()
 IS_LINUX = 'linux' in str(sys.platform).lower()
 IS_OSX = 'darwin' in str(sys.platform).lower()
+
+Retry = retry
 
 # Enum class for specifying listing style.
 class ListingStyle(object):

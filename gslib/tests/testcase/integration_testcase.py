@@ -24,9 +24,9 @@ from boto.exception import GSResponseError
 
 from gslib.project_id import ProjectIdHandler
 import gslib.tests.util as util
-from gslib.tests.util import Retry
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
+from gslib.util import Retry
 import base
 
 

@@ -40,6 +40,7 @@ from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 from gslib.name_expansion import NameExpansionIterator
 from gslib.util import NO_MAX
+from gslib.util import Retry
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -222,7 +223,8 @@ class SetMetaCommand(Command):
       self.THREADED_LOGGER.error(str(e))
       self.everything_set_okay = False
 
-    def _SetMetadataFunc(name_expansion_result, retry=3):
+    @Retry(GSResponseError, tries=3, delay=1, backoff=2)
+    def _SetMetadataFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
       self.THREADED_LOGGER.info('Setting metadata on %s...', exp_src_uri)
@@ -237,20 +239,10 @@ class SetMetaCommand(Command):
       if meta_generation:
         headers['x-goog-if-metageneration-match'] = meta_generation
           
-      try:
-        exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl, 
+      # If this fails because of a precondition, it will raise a 
+      # GSResponseError for @Retry to handle.
+      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl, 
                                  headers=headers)
-      except GSResponseError as response_error:
-        # HTTP error 412 is "Precondition Failed."
-        if response_error.status == 412:
-          if retry <= 0:
-            self.THREADED_LOGGER.error('Exhausted retries. Giving up.')
-            raise
-          self.THREADED_LOGGER.warn('Collision - %d tries left.', retry)
-          time.sleep(random.uniform(0.5, 1.0))
-          _SetMetadataFunc(name_expansion_result, retry-1)
-        else:
-          raise
       
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,

@@ -42,6 +42,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 from gslib.util import NO_MAX
+from gslib.util import Retry
 
 
 class ChangeType(object):
@@ -483,7 +484,8 @@ class ChAclCommand(Command):
     self.THREADED_LOGGER.error('Encountered a problem: {0}'.format(exception))
     self.everything_set_okay = False
 
-  def ApplyAclChanges(self, uri_or_expansion_result, retry=3):
+  @Retry(GSResponseError, tries=3, delay=1, backoff=2)
+  def ApplyAclChanges(self, uri_or_expansion_result):
     """Applies the changes in self.changes to the provided URI."""
     if isinstance(uri_or_expansion_result, name_expansion.NameExpansionResult):
       uri = self.suri_builder.StorageUri(
@@ -513,20 +515,9 @@ class ChAclCommand(Command):
       key = uri.get_key()
       headers['x-goog-if-generation-match'] = key.generation
       headers['x-goog-if-metageneration-match'] = key.meta_generation
-    try:
-      uri.set_acl(current_acl, uri.object_name, False, headers)
-      self.THREADED_LOGGER.info('Updated ACL on {0}'.format(uri))
-    except GSResponseError as response_error:
-      # HTTP error 412 is "Precondition Failed".
-      if response_error.status == 412:
-        if retry <= 0:
-          self.THREADED_LOGGER.error(
-              'Exhausted retries on {0}, giving up.'.format(uri))
-          return
-        self.THREADED_LOGGER.warn(
-            'Encountered a collision, retrying {0} more times on {1}'
-            .format(retry, uri))
-        time.sleep(random.uniform(0.5, 1.0))
-        return self.ApplyAclChanges(uri, retry - 1)
-      else:
-        raise response_error
+    
+    # If this fails because of a precondition, it will raise a 
+    # GSResponseError for @Retry to handle.
+    uri.set_acl(current_acl, uri.object_name, False, headers)
+    self.THREADED_LOGGER.info('Updated ACL on {0}'.format(uri))
+    
