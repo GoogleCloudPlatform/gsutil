@@ -15,8 +15,8 @@
 """Integration tests for the setacl and setdefacl commands."""
 
 import gslib.tests.testcase as testcase
-import os
 import re
+from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
 
 PUBLIC_READ_ACL_TEXT = '<Scope type="AllUsers"/><Permission>READ</Permission>'
@@ -118,12 +118,15 @@ class TestSetAcl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', inpath, uri.uri])
 
     # Find out the two object version IDs.
-    stdout = self.RunGsUtil(['ls', '-a', uri.uri], return_stdout=True)
-    lines = stdout.split('\n')
-    # There should be 3 lines, counting final \n.
-    self.assertEqual(len(lines), 3)
-    v0_uri_str = lines[0]
-    v1_uri_str = lines[1]
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _GetVersions():
+      stdout = self.RunGsUtil(['ls', '-a', uri.uri], return_stdout=True)
+      lines = stdout.split('\n')
+      # There should be 3 lines, counting final \n.
+      self.assertEqual(len(lines), 3)
+      return lines[0], lines[1]
+
+    v0_uri_str, v1_uri_str = _GetVersions()
 
     # Check that neither version currently has public-read permission
     # (default ACL is project-private).

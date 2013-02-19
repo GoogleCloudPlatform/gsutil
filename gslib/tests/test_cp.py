@@ -16,6 +16,7 @@ import boto
 import os
 import re
 import gslib.tests.testcase as testcase
+from gslib.util import Retry
 from gslib.util import TWO_MB
 from boto import storage_uri
 from gslib.tests.util import ObjectToURI as suri
@@ -71,12 +72,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil(['cp', self._get_test_file('test.mp3'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\taudio/mpeg', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\taudio/mpeg', stdout)
+    _Check1()
 
     self.RunGsUtil(['cp', self._get_test_file('test.gif'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\timage/gif', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+    _Check2()
 
   def test_content_type_override_default(self):
     bucket_uri = self.CreateBucket()
@@ -84,13 +91,19 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.gif'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    _Check2()
 
   def test_content_type_override(self):
     bucket_uri = self.CreateBucket()
@@ -98,23 +111,33 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.gif'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+    _Check2()
 
   def test_foo_noct(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents='foo/bar\n')
     self.RunGsUtil(['cp', fpath, dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
-    content_type = 'text/plain' if USE_MAGICFILE else 'application/octet-stream'
-    self.assertIn('Content-Type:\t%s' % content_type, stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
+      content_type = ('text/plain' if USE_MAGICFILE
+                      else 'application/octet-stream')
+      self.assertIn('Content-Type:\t%s' % content_type, stdout)
+    _Check1()
 
   def test_content_type_mismatches(self):
     bucket_uri = self.CreateBucket()
@@ -123,17 +146,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\timage/gif', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+    _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
                     self._get_test_file('test.gif'), dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\timage/gif', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+    _Check2()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp', fpath, dsturi])
-    stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-    self.assertIn('Content-Type:\timage/gif', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check3():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+    _Check3()
 
   def test_versioning(self):
     bucket_uri = self.CreateVersionedBucket()
@@ -220,11 +252,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     match = re.search(r'Created: (.*)\n', stderr)
     self.assertIsNotNone(match)
     created_uri = match.group(1)
-    stdout = self.RunGsUtil(['ls', '-a', dst_str], return_stdout=True)
-    lines = stdout.split('\n')
-    # Final (most recent) object should match the "Created:" URI. This is
-    # in second-to-last line (last line is '\n').
-    self.assertEqual(created_uri, lines[-2])
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', dst_str], return_stdout=True)
+      lines = stdout.split('\n')
+      # Final (most recent) object should match the "Created:" URI. This is
+      # in second-to-last line (last line is '\n').
+      self.assertEqual(created_uri, lines[-2])
+    _Check1()
 
   def test_stdin_args(self):
     tmpdir = self.CreateTempDir()
@@ -233,10 +268,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['cp', '-I', suri(bucket_uri)],
                    stdin='\n'.join((fpath1, fpath2)))
-    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-    self.assertIn(os.path.basename(fpath1), stdout)
-    self.assertIn(os.path.basename(fpath2), stdout)
-    self.assertNumLines(stdout, 2)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertIn(os.path.basename(fpath1), stdout)
+      self.assertIn(os.path.basename(fpath2), stdout)
+      self.assertNumLines(stdout, 2)
+    _Check1()
 
   def test_daisy_chain_cp(self):
     # Daisy chain mode is required for copying across storage classes,

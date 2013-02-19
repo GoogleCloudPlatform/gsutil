@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import gslib.tests.testcase as testcase
+from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -22,11 +23,17 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   def test_moving(self):
     # Create two buckets, one with 2 objects and one with 0 objects, and verify.
     bucket1_uri = self.CreateBucket(test_objects=2)
-    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 2)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 2)
+    _Check1()
     bucket2_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 0)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 0)
+    _Check2()
 
     # Move two objects from bucket1 to bucket2.
     objs = [bucket1_uri.clone_replace_key(key).versionless_uri
@@ -37,10 +44,13 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing'), 2)
 
     # Verify objects were moved.
-    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 0)
-    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 2)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check3():
+      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 0)
+      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 2)
+    _Check3()
 
     # Remove one of the objects.
     objs = [bucket2_uri.clone_replace_key(key).versionless_uri
@@ -49,10 +59,13 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rm', obj1])
 
     # Verify there are now 1 and 0 objects.
-    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 0)
-    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 1)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check4():
+      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 0)
+      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 1)
+    _Check4()
 
     # Move the 1 remaining object back.
     objs = [suri(bucket2_uri.clone_replace_key(key))
@@ -63,7 +76,10 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing'), 1)
 
     # Verify object moved.
-    stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 1)
-    stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 0)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check5():
+      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 1)
+      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
+      self.assertNumLines(stdout, 0)
+    _Check5()

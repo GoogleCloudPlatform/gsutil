@@ -13,12 +13,11 @@
 # limitations under the License.
 
 
-import time
-
 from gslib.command import _ThreadedLogger as ThreadedLogger
 import gslib.commands.chacl as chacl
 import gslib.tests.testcase as case
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
 
 
 class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
@@ -217,11 +216,15 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
     # Create another on the same URI, giving us a second version.
     self.CreateObject(
         bucket_uri=bucket, object_name=object_name, contents='Another thing')
-    # Bucket listings are eventually consistent, so wait to increase the likelihood 
-    # we'll see both versions of the object we just created. 
-    time.sleep(0.5)
-    stdout = self.RunGsUtil(['ls', '-a', suri(obj)], return_stdout=True)
-    obj_v1, obj_v2 = stdout.strip().split('\n')
+
+    @Retry(AssertionError, tries=3, delay=1, backoff=1, logger=self.logger)
+    def _getObjects():
+      stdout = self.RunGsUtil(['ls', '-a', suri(obj)], return_stdout=True)
+      lines = stdout.strip().split('\n')
+      self.assertEqual(len(lines), 2)
+      return lines
+
+    obj_v1, obj_v2 = _getObjects()
 
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')

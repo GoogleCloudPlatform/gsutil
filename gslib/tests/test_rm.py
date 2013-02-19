@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import gslib.tests.testcase as testcase
+from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -32,8 +33,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing gs://'), 2)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()
 
   def test_all_versions_no_current(self):
     """Test that 'rm -a' for an object without a current version works."""
@@ -51,8 +56,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing gs://'), 2)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()
 
   def test_fails_for_missing_obj(self):
     bucket_uri = self.CreateVersionedBucket()
@@ -74,14 +83,19 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k1g2 = k1_uri.generation
     k2g2 = k2_uri.generation
 
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+                            return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 4)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()
 
   def test_remove_all_versions_recursive_on_subdir(self):
     """Test that 'rm -ar' works on subdir."""
@@ -104,8 +118,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()
 
   def test_some_missing(self):
     """Test that 'rm -a' fails when some but not all uris don't exist."""
@@ -126,8 +144,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['rm', '-af', suri(key_uri), '%s/missing'
                             % suri(bucket_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()
 
   def test_folder_objects_deleted(self):
     """Test for 'rm -r' of a folder with a dir_$folder$ marker."""
@@ -139,5 +161,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
-    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual(stdout, '')
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertEqual(stdout, '')
+    _Check1()

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import gslib.tests.testcase as testcase
+from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -26,9 +27,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     ct = 'image/gif'
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:%s' % ct,
                     'cp', inpath, objuri])
-    stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-    self.assertIn('Content-Type:\t%s' % ct, stdout)
-    self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
+      self.assertIn('Content-Type:\t%s' % ct, stdout)
+      self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+    _Check1()
 
   def test_overwrite_existing(self):
     objuri = suri(self.CreateObject(contents='foo'))
@@ -37,9 +41,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
                     'cp', inpath, objuri])
     self.RunGsUtil(['setmeta', '-n', '-h', 'Content-Type:text/html', '-h',
                     'x-goog-meta-xyz', objuri])
-    stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-    self.assertIn('Content-Type:\ttext/html', stdout)
-    self.assertNotIn('xyz', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
+      self.assertIn('Content-Type:\ttext/html', stdout)
+      self.assertNotIn('xyz', stdout)
+    _Check1()
 
   def test_missing_header(self):
     stderr = self.RunGsUtil(['setmeta', '"Content-Type"', 'gs://foo/bar'],
@@ -76,9 +83,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:image/gif',
                     'cp', inpath, objuri])
 
-    stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-    self.assertIn('Content-Type:\timage/gif', stdout)
-    self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+    _Check1()
 
     stderr = self.RunGsUtil(
         ['setmeta', '-n', '"Content-Type:text/html","-x-goog-meta-xyz"',
@@ -86,6 +96,9 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         return_stderr=True)
     self.assertIn('WARNING: metadata spec syntax', stderr)
     self.assertIn('is deprecated and will eventually be removed', stderr)
-    stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-    self.assertIn('Content-Type:\ttext/html', stdout)
-    self.assertNotIn('xyz', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
+      self.assertIn('Content-Type:\ttext/html', stdout)
+      self.assertNotIn('xyz', stdout)
+    _Check2()

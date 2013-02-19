@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import gslib.tests.testcase as testcase
+from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -24,20 +25,30 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_empty_bucket(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual('', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertEqual('', stdout)
+    _Check1()
 
   def test_empty_bucket_with_b(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)], return_stdout=True)
-    self.assertEqual('%s/\n' % suri(bucket_uri), stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual('%s/\n' % suri(bucket_uri), stdout)
+    _Check1()
 
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket(test_objects=1)
-    stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
     objuri = [suri(bucket_uri.clone_replace_name(key.name))
               for key in bucket_uri.list_bucket()][0]
-    self.assertEqual('%s\n' % objuri, stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertEqual('%s\n' % objuri, stdout)
+    _Check1()
 
   def test_subdir(self):
     bucket_uri = self.CreateBucket(test_objects=1)
@@ -45,11 +56,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     k1_uri.set_contents_from_string('baz')
     k2_uri = bucket_uri.clone_replace_name('dir/foo')
     k2_uri.set_contents_from_string('bar')
-    stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
-                            return_stdout=True)
-    self.assertEqual('%s\n' % suri(k2_uri), stdout)
-    stdout = self.RunGsUtil(['ls', suri(k1_uri)], return_stdout=True)
-    self.assertEqual('%s\n' % suri(k1_uri), stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual('%s\n' % suri(k2_uri), stdout)
+      stdout = self.RunGsUtil(['ls', suri(k1_uri)], return_stdout=True)
+      self.assertEqual('%s\n' % suri(k1_uri), stdout)
+    _Check1()
 
   def test_versioning(self):
     bucket1_uri = self.CreateBucket(test_objects=1)
@@ -59,8 +73,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
               for key in bucket_list][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
-    stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)], return_stdout=True)
-    self.assertNumLines(stdout, 3)
-    stdout = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)], return_stdout=True)
-    self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name), stdout)
-    self.assertIn('meta_generation=', stdout)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)],
+                              return_stdout=True)
+      self.assertNumLines(stdout, 3)
+      stdout = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
+                              return_stdout=True)
+      self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
+                    stdout)
+      self.assertIn('meta_generation=', stdout)
+    _Check1()
