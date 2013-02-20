@@ -1,3 +1,39 @@
+Release 3.24 (release-date: 2013-02-19)
+
+
+Bug Fixes
+---------
+
+  - Fixed bug that caused attempt to dupe-encode a unicode filename.
+
+
+Other Changes
+---------
+
+  - Refactored retry logic from setmeta and chacl to use @Retry decorator.
+
+  - Moved @Retry decorator to third_party.
+
+  - Fixed flaky tests.
+
+
+================================================================================
+
+
+Release 3.23 (release-date: 2013-02-16)
+
+
+Bug Fixes
+---------
+
+  - Make version-specific URI parsing more robust. This fixes a bug where
+    listing buckets in certain cases would result in the error
+    'BucketStorageUri' object has no attribute 'version_specific_uri'
+
+
+================================================================================
+
+
 Release 3.22 (release-date: 2013-02-15)
 
 
