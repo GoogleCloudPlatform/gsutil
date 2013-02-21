@@ -221,8 +221,14 @@ class CloudWildcardIterator(WildcardIterator):
                     yield BucketListingRef(expanded_uri, key=None, prefix=key,
                                            headers=self.headers)
                   else:
-                    yield BucketListingRef(expanded_uri, key=key, prefix=None,
-                                           headers=self.headers)
+                    if self.all_versions:
+                      yield BucketListingRef(expanded_uri, key=key, prefix=None,
+                                             headers=self.headers)
+                    else:
+                      # Yield BLR wrapping version-less URI.
+                      yield BucketListingRef(expanded_uri.clone_replace_name(
+                          expanded_uri.object_name), key=key, prefix=None,
+                          headers=self.headers)
 
   def _BuildBucketFilterStrings(self, wildcard):
     """

@@ -25,6 +25,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_empty_bucket(self):
     bucket_uri = self.CreateBucket()
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
@@ -33,6 +34,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_empty_bucket_with_b(self):
     bucket_uri = self.CreateBucket()
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)],
@@ -44,6 +46,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket(test_objects=1)
     objuri = [suri(bucket_uri.clone_replace_name(key.name))
               for key in bucket_uri.list_bucket()][0]
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
@@ -56,6 +59,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     k1_uri.set_contents_from_string('baz')
     k2_uri = bucket_uri.clone_replace_name('dir/foo')
     k2_uri.set_contents_from_string('bar')
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
@@ -73,6 +77,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
               for key in bucket_list][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)],

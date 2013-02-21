@@ -23,12 +23,14 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   def test_moving(self):
     # Create two buckets, one with 2 objects and one with 0 objects, and verify.
     bucket1_uri = self.CreateBucket(test_objects=2)
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
       self.assertNumLines(stdout, 2)
     _Check1()
     bucket2_uri = self.CreateBucket()
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
@@ -44,6 +46,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing'), 2)
 
     # Verify objects were moved.
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
@@ -59,6 +62,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rm', obj1])
 
     # Verify there are now 1 and 0 objects.
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check4():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
@@ -76,6 +80,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing'), 1)
 
     # Verify object moved.
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check5():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)

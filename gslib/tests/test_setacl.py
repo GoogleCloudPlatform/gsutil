@@ -118,6 +118,7 @@ class TestSetAcl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', inpath, uri.uri])
 
     # Find out the two object version IDs.
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _GetVersions():
       stdout = self.RunGsUtil(['ls', '-a', uri.uri], return_stdout=True)

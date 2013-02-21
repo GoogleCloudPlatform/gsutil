@@ -217,6 +217,7 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
     self.CreateObject(
         bucket_uri=bucket, object_name=object_name, contents='Another thing')
 
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1, logger=self.logger)
     def _getObjects():
       stdout = self.RunGsUtil(['ls', '-a', suri(obj)], return_stdout=True)

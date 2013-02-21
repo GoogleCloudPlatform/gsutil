@@ -228,8 +228,6 @@ class RmCommand(Command):
                                 name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
-        if self.all_versions and exp_src_uri.is_latest:
-          exp_src_uri.delete_key(validate=False, headers=self.headers)
 
       except:
         if self.continue_on_error:

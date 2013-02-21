@@ -27,6 +27,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     ct = 'image/gif'
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:%s' % ct,
                     'cp', inpath, objuri])
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
@@ -41,6 +42,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
                     'cp', inpath, objuri])
     self.RunGsUtil(['setmeta', '-n', '-h', 'Content-Type:text/html', '-h',
                     'x-goog-meta-xyz', objuri])
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
@@ -83,6 +85,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:image/gif',
                     'cp', inpath, objuri])
 
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
@@ -96,6 +99,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         return_stderr=True)
     self.assertIn('WARNING: metadata spec syntax', stderr)
     self.assertIn('is deprecated and will eventually be removed', stderr)
+    # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
