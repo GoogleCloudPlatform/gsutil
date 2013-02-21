@@ -344,11 +344,6 @@ class Command(object):
       acl_file = open(acl_arg, 'r')
       acl_arg = acl_file.read()
       
-      # TODO: Remove this workaround when GCS allows
-      # whitespace in the Permission element on the server-side 
-      acl_arg = re.sub(r'<Permission>\s*(\S+)\s*</Permission>',
-                       r'<Permission>\1</Permission>', acl_arg)
-
       acl_file.close()
       self.canned = False
     else:
