@@ -301,7 +301,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # files, you may experiment with hand tuning these values to optimize
 # performance for your particular system configuration.
 # MacOS and Windows users should see
-# http://code.google.com/p/gsutil/issues/detail?id=78 before attempting
+# https://github.com/GoogleCloudPlatform/gsutil/issues/77 before attempting
 # to experiment with these values.
 #parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d

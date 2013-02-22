@@ -453,7 +453,7 @@ Bug Fixes
 
   - Revert incorrect line I changed in previous CL, that attempted to
     get fp from src_key object. The real fix that's needed is described in
-    http://code.google.com/p/gsutil/issues/detail?id=73.
+    https://github.com/GoogleCloudPlatform/gsutil/issues/72.
 
 Other Changes
 -------------
@@ -587,7 +587,7 @@ Bug Fixes
 
   - Fixed bug where uploading and moving multiple files to a bucket subdirectory
     didn't work as intended.
-    (http://code.google.com/p/gsutil/issues/detail?id=93).
+    (https://github.com/GoogleCloudPlatform/gsutil/issues/92).
   - Fixed bug where gsutil cp -r sourcedir didn't copy to specified subdir
     if there is only one file in sourcedir.
   - Fixed bug where tracker file included a timestamp that caused it not to

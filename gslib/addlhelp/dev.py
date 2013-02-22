@@ -42,9 +42,10 @@ _detailed_help_text = ("""
      your patches.
 
   2. If you found a bug or have an idea for a feature enhancement, we suggest
-     you check http://code.google.com/p/gsutil/issues/list to see if it has
-     already been reported by another user. From there you can also add yourself
-     to the Cc list for an issue, so you will find out about any developments.
+     you check https://github.com/GoogleCloudPlatform/gsutil/issues to see if it
+     has already been reported by another user. From there you can also
+     subscribe to updates to the issue by clicking the "Watch thread" button at
+     the bottom of the page.
 
   3. It's usually worthwhile to send email to gs-team@google.com about your
      idea before sending actual code. Often we can discuss the idea and help
@@ -63,9 +64,19 @@ _detailed_help_text = ("""
      Cloud Storage. If you do make such changes we recommend including someone
      with knowledge of the specific provider as a code reviewer (see below).
 
-  6. You can check out the gsutil code from svn  - see
-     http://code.google.com/p/gsutil/source/checkout. Then change directories
-     into gsutil/src, and check out the boto code from github:
+  6. You can check out the gsutil code from the GitHub repository:
+
+       https://github.com/GoogleCloudPlatform/gsutil
+
+     To clone a read-only copy of the repository:
+
+       git clone git://github.com/GoogleCloudPlatform/gsutil.git
+
+     To push your own changes to GitHub, click the Fork button on the
+     repository page and clone the repository from your own fork.
+
+     Once checked out, enter the repository directory and check out the boto
+     code from GitHub as well:
 
        git clone git://github.com/boto/boto.git
 
@@ -88,13 +99,11 @@ _detailed_help_text = ("""
     install some python modules: change directories into the top-level gsutil
     directory and run:
 
-      pip install -qr boto/requirements.txt
+      pip install -r boto/requirements.txt
 
-    (You probably need to run this commad using sudo.)
+    (You probably need to run this command using sudo.)
     Make sure each of the individual installations succeeded. If they don't
-    you may need to run individual ones again, e.g.,
-
-      pip install unittest2
+    you may need to run the install command again.
 
     Then ensure your .boto file has HMAC credentials defined (the boto tests
     don't load the OAUTH2 plugin), and then change directories into boto/tests
@@ -108,15 +117,16 @@ _detailed_help_text = ("""
 
   9. When it's time to send us code, please use the Rietveld code review tool
      rather than simply sending us a code patch. Do this as follows:
-      - check out the gsutil code from at
-        http://code.google.com/p/gsutil/source/checkout and apply your changes
-        in the checked out directory.
-      - download the "upload.py" script from
+      - Check out the gsutil code from your fork of the gsutil repository and
+        apply your changes.
+      - Download the "upload.py" script from
         http://code.google.com/p/rietveld/wiki/UploadPyUsage
-      - run upload.py from the above gsutil svn directory.
-      - click the codereview.appspot.com link it generates, click "Edit Issue",
+      - Run upload.py from your git directory with the changes.
+      - Click the codereview.appspot.com link it generates, click "Edit Issue",
         and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
-      - click Publish+Mail Comments.
+      - Click Publish+Mail Comments.
+      - Once your changes are accepted, submit a pull request on GitHub and we
+        will merge your commits.
 """)
 
 

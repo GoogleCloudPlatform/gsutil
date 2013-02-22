@@ -35,11 +35,11 @@ then
   exit 1
 fi
 
-# Create staging dir and copy package files there, filtering .svn dirs 
+# Create staging dir and copy package files there, filtering .git dirs
 # and .pyc files.
 rm -rf $STAGING_DIR
 mkdir -p $STAGING_DIR
-find . -print | grep -v "\.svn" | grep -v "\.pyc$" | cpio -pud $STAGING_DIR
+find . -print | grep -v "\.git" | grep -v "\.pyc$" | cpio -pud $STAGING_DIR
 
 # Generate archive from staging area contents, then clean up staging area.
 CUR_DIR=$PWD
