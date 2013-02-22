@@ -66,7 +66,7 @@ LOG = logging.getLogger('oauth2_client')
 token_exchange_lock = threading.Lock()
 
 # SHA1 sum of the CA certificates file imported from boto.
-CACERTS_FILE_SHA1SUM = 'ed024a78d9327f8669b3b117d9eac9e3c9460e9b'
+CACERTS_FILE_SHA1SUM = '183c495586bf93d2effe9b3a43d45b1b4fa14ff3'
 
 class Error(Exception):
   """Base exception for the OAuth2 module."""
