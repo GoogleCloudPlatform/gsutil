@@ -187,7 +187,6 @@ _detailed_help_text = ("""
               -l option also prints meta-generation for each listed object.
 """)
 
-
 class LsCommand(Command):
   """Implementation of gsutil ls command."""
 
@@ -257,14 +256,30 @@ class LsCommand(Command):
                                                      headers=self.headers)
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'get_acl', bucket_uri, self.headers)
-        print('%s :\n\t%d objects, %s\n\tStorageClass: %s%s\n'
-              '\tVersioning enabled: %s\n\tACL: %s\n'
-              '\tDefault ACL: %s' % (
-              bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes),
-              storage_class, location_output,
-              bucket_uri.get_versioning_config(),
-              bucket_uri.get_acl(False, self.headers),
-              bucket_uri.get_def_acl(False, self.headers)))
+        fields = { "bucket": bucket_uri,
+                   "object_count": bucket_objs,
+                   "bytes": MakeHumanReadable(bucket_bytes),
+                   "storage_class": storage_class,
+                   "location_output": location_output,
+                   "versioning": bucket_uri.get_versioning_config(self.headers),
+                   "acl": bucket_uri.get_acl(False, self.headers),
+                   "default_acl": bucket_uri.get_def_acl(False, self.headers) }
+        # Logging and website need a bit more work to make them human-readable
+        for message in [bucket_uri.get_website_config(self.headers),
+                        bucket_uri.get_logging_config(self.headers)]:
+          field, content = message.items()[0]  # expect only one entry in dict
+          fields[field] = ", ".join("%s: %s" % (property, value) for
+                                    property, value in sorted(content.items()))
+
+        print("{bucket} :\n"
+              "\t{object_count} objects, {bytes}\n"
+              "\tStorageClass: {storage_class}{location_output}\n"
+              "\tVersioning enabled: {versioning}\n"
+              "\tLogging: {Logging}\n"
+              "\tWebsiteConfiguration: {WebsiteConfiguration}\n"
+              "\tACL: {acl}\n"
+              "\tDefault ACL: {default_acl}".format(**fields))
+
     return (bucket_objs, bucket_bytes)
 
   def _UriStrForObj(self, uri, obj):
