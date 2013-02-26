@@ -339,9 +339,7 @@ _detailed_help_text = ("""
                 that are safe in the face of concurrent updates, because Google
                 Cloud Storage will refuse to perform the update if the current
                 object version doesn't match the version-specific URI. See
-                'gsutil help versioning' for more details. Note: at present this
-                option does not work correctly for objects copied "in the cloud"
-                (e.g., gsutil cp gs://bucket/obj1 gs://bucket/obj2).
+                'gsutil help versioning' for more details.
 
   -z ext1,...   Compresses file uploads with the given extensions. If you are
                 uploading a large file with compressible content, such as

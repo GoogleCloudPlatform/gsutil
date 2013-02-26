@@ -253,9 +253,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self._run_cp_minus_v_test('-Dv', k1_uri.uri, k2_uri.uri)
 
     # Case 6: Copy object to object in-the-cloud.
-    # TODO: Uncomment this test once copy-in-the-cloud returns version-specific
-    # URI.
-    #self._run_cp_minus_v_test('-v', k1_uri.uri, k2_uri.uri)
+    self._run_cp_minus_v_test('-v', k1_uri.uri, k2_uri.uri)
 
   def _run_cp_minus_v_test(self, opt, src_str, dst_str):
     stderr = self.RunGsUtil(['cp', opt, src_str, dst_str], return_stderr=True)
