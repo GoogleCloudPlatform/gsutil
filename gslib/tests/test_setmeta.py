@@ -31,8 +31,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertIn('Content-Type:\t%s' % ct, stdout)
-      self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % ct)
+      self.assertRegexpMatches(stdout, 'x-goog-meta-xyz:\s+abc')
     _Check1()
 
   def test_overwrite_existing(self):
@@ -46,7 +46,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertIn('Content-Type:\ttext/html', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/html')
       self.assertNotIn('xyz', stdout)
     _Check1()
 
@@ -89,8 +89,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertIn('Content-Type:\timage/gif', stdout)
-      self.assertIn('x-goog-meta-xyz:\tabc', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, 'x-goog-meta-xyz:\s+abc')
     _Check1()
 
     stderr = self.RunGsUtil(
@@ -103,6 +103,6 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertIn('Content-Type:\ttext/html', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/html')
       self.assertNotIn('xyz', stdout)
     _Check2()

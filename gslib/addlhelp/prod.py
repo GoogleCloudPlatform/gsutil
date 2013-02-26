@@ -85,12 +85,12 @@ _detailed_help_text = ("""
      request partial bucket listings. For example, if your periodic process
      involves downloading the current day's objects, you could name objects
      using a year-month-day-object-ID format and then find today's objects by
-     using a command like gsutil ls gs://bucket/2011-09-27-*. Note that it
+     using a command like gsutil ls "gs://bucket/2011-09-27-*". Note that it
      is more efficient to have a non-wildcard prefix like this than to use
-     something like gsutil ls gs://bucket/*-2011-09-27. The latter command
+     something like gsutil ls "gs://bucket/*-2011-09-27". The latter command
      actually requests a complete bucket listing and then filters in gsutil,
      while the former asks Google Storage to return the subset of objects
-     whose names start with everything up to the *.
+     whose names start with everything up to the "*".
 
      For data uploads, another technique would be to move local files from a "to
      be processed" area to a "done" area as your script successfully copies

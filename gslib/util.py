@@ -76,6 +76,11 @@ class ListingStyle(object):
   LONG_LONG = 'LONG_LONG'
 
 
+def UsingCrcmodExtension(crcmod):
+  return (getattr(crcmod, 'crcmod', None) and
+          getattr(crcmod.crcmod, '_usingExtension', None))
+
+
 def CreateTrackerDirIfNeeded():
   """Looks up the configured directory where gsutil keeps its resumable
      transfer tracker files, and creates it if it doesn't already exist.

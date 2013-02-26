@@ -142,7 +142,8 @@ class _NameExpansionIterator(object):
   def __init__(self, command_name, proj_id_handler, headers, debug, logger,
                bucket_storage_uri_class, uri_strs, recursion_requested,
                have_existing_dst_container=None, flat=True,
-               all_versions=False, for_all_version_delete=False):
+               all_versions=False, for_all_version_delete=False,
+               cmd_supports_recursion=True):
     """
     Args:
       command_name: name of command being run.
@@ -163,6 +164,8 @@ class _NameExpansionIterator(object):
       all_versions: Bool indicating whether to iterate over all object versions.
       for_all_version_delete: Bool indicating whether this is for an all-version
           delete.
+    cmd_supports_recursion: Bool indicating whether this command supports a '-R'
+        flag. Useful for printing helpful error messages.
 
     Examples of _NameExpansionIterator with flat=True:
       - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
@@ -208,6 +211,7 @@ class _NameExpansionIterator(object):
     # Check self.uri_strs.has_plurality() at start because its value can change
     # if uri_strs is itself an iterator.
     self.uri_strs.has_plurality = self.uri_strs.has_plurality()
+    self.cmd_supports_recursion = cmd_supports_recursion
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -267,9 +271,12 @@ class _NameExpansionIterator(object):
             desc = 'directory'
           else:
             desc = 'bucket'
-          self.logger.info(
-              'Omitting %s "%s". (Did you mean to do %s -R?)',
-              desc, blr.GetUri(), self.command_name)
+          if self.cmd_supports_recursion:
+            self.logger.info(
+                'Omitting %s "%s". (Did you mean to do %s -R?)',
+                desc, blr.GetUri(), self.command_name)
+          else:
+            self.logger.info('Omitting %s "%s".', desc, blr.GetUri())
           continue
         if blr.GetUri().is_file_uri():
           # Convert dir to implicit recursive wildcard.
@@ -311,7 +318,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
                           recursion_requested,
                           have_existing_dst_container=None, flat=True,
                           all_versions=False,
-                          for_all_version_delete=False):
+                          for_all_version_delete=False,
+                          cmd_supports_recursion=True):
   """
   Static factory function for instantiating _NameExpansionIterator, which
   wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -337,6 +345,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
     all_versions: Bool indicating whether to iterate over all object versions.
     for_all_version_delete: Bool indicating whether this is for an all-version
         delete.
+    cmd_supports_recursion: Bool indicating whether this command supports a '-R'
+        flag. Useful for printing helpful error messages.
 
   Examples of ExpandWildcardsAndContainers with flat=True:
     - Calling with one of the uri_strs being 'gs://bucket' will enumerate all
@@ -372,7 +382,8 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
       command_name, proj_id_handler, headers, debug, logger,
       bucket_storage_uri_class, uri_strs, recursion_requested,
       have_existing_dst_container, flat, all_versions=all_versions,
-      for_all_version_delete=for_all_version_delete)
+      for_all_version_delete=for_all_version_delete,
+      cmd_supports_recursion=cmd_supports_recursion)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.is_empty():
     raise CommandException('No URIs matched')

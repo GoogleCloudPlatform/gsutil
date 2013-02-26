@@ -25,15 +25,15 @@ _detailed_help_text = ("""
   gsutil currently supports four types of credentials/authentication, as well as
   the ability to access public data anonymously (see "gsutil help anon" for more
   on anonymous access).
-  
+
   OAuth2 User Account:
     This is the preferred type of credentials for authenticating requests on 
     behalf of a specific user (which is probably the most common use of gsutil).
     This is the default type of credential that will be created when you run
     "gsutil config".
     For more details about OAuth2 authentication, see:
-      https://developers.google.com/accounts/docs/OAuth2#scenarios
-  
+    https://developers.google.com/accounts/docs/OAuth2#scenarios
+
   HMAC:
     This type of credential can be used by programs that are implemented using 
     HMAC authentication, which is an authentication mechanism supported by 
@@ -51,7 +51,7 @@ _detailed_help_text = ("""
 
     For more details about HMAC authentication, see:
       https://developers.google.com/storage/docs/reference/v1/getting-startedv1#keys
-      
+
   OAuth2 Service Account: 
     This is the preferred type of credential to use when authenticating on 
     behalf of a service or application (as opposed to a user). For example, if 
@@ -59,7 +59,7 @@ _detailed_help_text = ("""
     using a service account allows the cron job not to depend on credentials of 
     an individual employee at your company. This is the type of credential that
     will be created when you run "gsutil config -e".
-    
+
     It is important to note that a service account is considered an Editor by 
     default for the purposes of API access, rather than an Owner. In particular,
     the fact that Editors have full_control access in the default object and 
@@ -72,19 +72,18 @@ _detailed_help_text = ("""
 
     For more details about OAuth2 service accounts, see:
       https://developers.google.com/accounts/docs/OAuth2ServiceAccount
-      
+
   GCE Internal Service Account:
     This is the type of service account used for accounts hosted by App Engine 
     or GCE. Such credentials are created automatically for you on GCE when you 
     run the gcutil addinstance command with the --service_account flag.
-    
+
     For more details about GCE service accounts, see:
       https://developers.google.com/compute/docs/authentication;
-      
+
     For more details about App Engine service accounts, see:
       https://developers.google.com/appengine/docs/python/appidentity/overview
-      
-  
+
 """)
 
 

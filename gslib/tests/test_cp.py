@@ -76,7 +76,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\taudio/mpeg', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+audio/mpeg')
     _Check1()
 
     self.RunGsUtil(['cp', self._get_test_file('test.gif'), dsturi])
@@ -84,7 +84,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check2()
 
   def test_content_type_override_default(self):
@@ -97,7 +97,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
@@ -106,7 +106,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
     _Check2()
 
   def test_content_type_override(self):
@@ -119,7 +119,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
@@ -128,7 +128,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\tbinary/octet-stream', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
     _Check2()
 
   def test_foo_noct(self):
@@ -143,7 +143,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
       content_type = ('text/plain' if USE_MAGICFILE
                       else 'application/octet-stream')
-      self.assertIn('Content-Type:\t%s' % content_type, stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % content_type)
     _Check1()
 
   def test_content_type_mismatches(self):
@@ -157,7 +157,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
@@ -166,7 +166,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check2()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp', fpath, dsturi])
@@ -174,7 +174,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check3()
 
   def test_versioning(self):
@@ -312,9 +312,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil([
           'ls', '-L', suri(bucket2_uri, key_uri.object_name)],
           return_stdout=True)
-      self.assertIn('Cache-Control:\tpublic,max-age=12', stdout)
-      self.assertIn('Content-Type:\timage/gif', stdout)
-      self.assertIn('x-goog-meta-1:\tabcd', stdout)
+      self.assertRegexpMatches(stdout, 'Cache-Control:\s+public,max-age=12')
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, 'x-goog-meta-1:\s+abcd')
     _Check()
 
 

@@ -14,14 +14,14 @@
 
 import posixpath
 import os.path
-import time
-import urllib
 import urlparse
 
 import unittest
 if not hasattr(unittest.TestCase, 'assertIsNone'):
   # external dependency unittest2 required for Python <= 2.6
   import unittest2 as unittest
+
+from boto.provider import Provider
 
 # Flags for running different types of tests.
 RUN_INTEGRATION_TESTS = True
@@ -30,6 +30,13 @@ RUN_UNIT_TESTS = True
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False
 
+def _HasS3Credentials():
+    provider = Provider('aws')
+    if provider.access_key is None or provider.secret_key is None:
+      return False
+    return True
+
+HAS_S3_CREDS = _HasS3Credentials()
 
 def _NormalizeURI(uri):
   """Normalizes the path component of a URI.

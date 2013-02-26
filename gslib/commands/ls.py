@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import binascii
+
 from boto.s3.deletemarker import DeleteMarker
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import Command
@@ -356,27 +358,33 @@ class LsCommand(Command):
         print '%s:' % uri_str.encode('utf-8')
         suri = self.suri_builder.StorageUri(uri_str)
         obj = suri.get_key(False)
-        print '\tCreation time:\t%s' % obj.last_modified
+        print '\tCreation time:\t\t%s' % obj.last_modified
         if obj.cache_control:
-          print '\tCache-Control:\t%s' % obj.cache_control
+          print '\tCache-Control:\t\t%s' % obj.cache_control
         if obj.content_disposition:
-          print '\tContent-Disposition:\t%s' % obj.content_disposition
+          print '\tContent-Disposition:\t\t%s' % obj.content_disposition
         if obj.content_encoding:
-          print '\tContent-Encoding:\t%s' % obj.content_encoding
+          print '\tContent-Encoding:\t\t%s' % obj.content_encoding
         if obj.content_language:
           print '\tContent-Language:\t%s' % obj.content_language
-        print '\tContent-Length:\t%s' % obj.size
-        print '\tContent-Type:\t%s' % obj.content_type
+        print '\tContent-Length:\t\t%s' % obj.size
+        print '\tContent-Type:\t\t%s' % obj.content_type
+        if hasattr(obj, 'component_count') and obj.component_count:
+          print '\tComponent-Count:\t%d' % obj.component_count
         if obj.metadata:
           prefix = uri.get_provider().metadata_prefix
           for name in obj.metadata:
-            print '\t%s%s:\t%s' % (prefix, name, obj.metadata[name])
-        print '\tETag:\t\t%s' % obj.etag.strip('"\'')
+            print '\t%s%s:\t\t%s' % (prefix, name, obj.metadata[name])
+        if hasattr(obj, 'cloud_hashes'):
+          for alg in obj.cloud_hashes:
+            print '\tHash (%s):\t\t%s' % (
+                alg, binascii.b2a_hex(obj.cloud_hashes[alg]))
+        print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
         print '\tACL:\t\t%s' % (suri.get_acl(False, self.headers))
         return (1, obj.size)
       except boto.exception.GSResponseError as e:
         if e.status == 403:
-          print ('\tACL:\t\tACCESS DENIED. Note: you need FULL_CONTROL '
+          print ('\tACL:\t\t\tACCESS DENIED. Note: you need FULL_CONTROL '
                  'permission\n\t\t\ton the object to read its ACL.')
           return (1, obj.size)
         else:

@@ -1,3 +1,88 @@
+Release 3.26 (release-date: 2013-03-25)
+
+
+New Features
+------------
+
+  - Added support for object composition.
+
+  - Added support for external service accounts.
+
+  - Changed gsutil to check for available updates periodically (only while
+    stdin, stderr, stdout are connected to a TTY, so as not to interfere with
+    cron jobs).
+
+  - Added chdefacl command.
+
+  - Made gsutil built-in help available under
+    https://developers.google.com/storage/docs/gsutil
+
+  - Add a command suggestion when the command name is not found.
+
+  - Added byte suffix parsing to the -s parameter of perfdiag.
+
+  - Added --help support to subcommands. Fixes #96.
+
+  - Updated perfdiag command to track availability and record TCP settings.
+
+  - Added metadata parameter to perfdiag command.
+
+  - Added support for specifying byte range to cat command.
+
+  - Output more bucket metadata on ls -Lb.
+
+  - Implemented gsutil -q (global quiet) option (fixes issue #130). Also changed
+    gsutil to output all progress indicators using logging levels. Also changed
+    help command not to output bold escape sequences and not use PAGER if stdout
+    is not a tty, which also fixes bug that caused gsutil help test to fail.
+
+  - Plumbed https_validate_certificates through to OAuth2 plugin handler,
+    allowing control over cert validation for OAuth2 requests
+
+  - Fixed ISO 639.1 ref in config command help text
+
+
+Bug Fixes
+---------
+
+  - Fixed bug where gsutil cp -D didn't preserve metadata
+
+  - Fixed problem where gsutil -m is hard to interrupt (partial fix for issue
+    #99 - only for Linux/MacOS; problem still exists for Windows).
+
+  - Fixed broken reference to boto_lib_dir in update command.
+
+  - Made changing ACL not retry on 400 error.
+
+  - Fixed name expansion bug for case where uri_strs is itself an iterator
+    (issue #131); implemented additional naming unit test for this case.
+
+  - Fixed flaky gsutil rm test
+
+  - Fixed a bug in the chacl command that made it so you couldn't delete the
+    AllAuthenticatedUsers group from an ACL.
+
+
+Other Changes
+---------
+
+  - Refactored gsutil main function into gslib, with gsutil being a thin
+    wrapper.
+
+  - Added a test for the update command.
+
+  - Renamed gsutil meta_generation params to metageneration, for consistency
+    with GCS docs.
+
+  - Removed .pyc files from tarball/zipfile.
+
+  - Added new root certs to cacerts.txt, to provide additional flexibility
+    in the future.
+
+
+================================================================================
+
+
 Release 3.25 (release-date: 2013-02-21)
 
 

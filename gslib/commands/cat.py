@@ -55,6 +55,9 @@ _detailed_help_text = ("""
 
                 gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
 
+              This would print a header with the object name before the contents
+              of each text object that matched the wildcard.
+
   -r range    Causes gsutil to output just the specified byte range of the
               object. Ranges are can be of these forms:
 

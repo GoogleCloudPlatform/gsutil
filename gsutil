@@ -53,5 +53,20 @@ for libdir, subdir in THIRD_PARTY_LIBS:
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
 
+from gslib.util import UsingCrcmodExtension
+from gslib.util import IS_OSX
+
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+
+try:
+  import crcmod
+except ImportError:
+  crcmod = None
+
+if not UsingCrcmodExtension(crcmod):
+  local_crcmod_path = CRCMOD_OSX_PATH if IS_OSX else CRCMOD_PATH
+  sys.path.insert(0, local_crcmod_path)
+
 import gslib.__main__
 gslib.__main__.main()

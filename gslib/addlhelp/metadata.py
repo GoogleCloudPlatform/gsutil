@@ -36,8 +36,8 @@ _detailed_help_text = ("""
     would cause gsutil to set the Content-Type and Cache-Control for each
     of the files being uploaded:
 
-      gsutil -h "Content-Type:text/html" \
-             -h "Cache-Control:public, max-age=3600" cp -r images \
+      gsutil -h "Content-Type:text/html" \\
+             -h "Cache-Control:public, max-age=3600" cp -r images \\
              gs://bucket/images
 
     Note that -h is an option on the gsutil command, not the cp sub-command.
@@ -89,7 +89,7 @@ _detailed_help_text = ("""
 
   Here's an example of uploading an object set to allow caching:
 
-    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \
+    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \\
            -r html gs://bucket/html
 
   This command would upload all files in the html directory (and subdirectories)

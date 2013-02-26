@@ -154,7 +154,7 @@ _detailed_help_text = ("""
 
     gsutil ls gs://bucket/**/obj5
 
-  This will match more objects than gs://bucket/*/obj5 (since it spans
+  This will match more objects than "gs://bucket/*/obj5" (since it spans
   directories), but is implemented using a delimiter-less bucket listing
   request (which means fewer bucket requests, though it will list the entire
   bucket and filter locally, so that could require a non-trivial amount of

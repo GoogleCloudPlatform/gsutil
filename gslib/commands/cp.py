@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import binascii
 import boto
+import crcmod
 import errno
 import gzip
 import hashlib
@@ -25,9 +27,15 @@ import stat
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import logging
 import time
+
+try:
+  from hashlib import md5
+except ImportError:
+  from md5 import md5
 
 from boto import config
 from boto.exception import GSResponseError
@@ -60,7 +68,50 @@ from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import TWO_MB
+from gslib.util import UsingCrcmodExtension
 from gslib.wildcard_iterator import ContainsWildcard
+
+
+SLOW_CRC_WARNING = """
+WARNING: Downloading this composite object requires integrity checking with
+CRC32c, but your crcmod installation isn't using the module's C extension, so
+the the hash computation will likely throttle download performance. For help
+installing the extension, please see:
+  $ gsutil help crcmod
+To disable slow integrity checking, see the "check_hashes" option in your boto
+config file.
+"""
+
+SLOW_CRC_EXCEPTION = CommandException(
+"""
+Downloading this composite object requires integrity checking with CRC32c, but
+your crcmod installation isn't using the module's C extension, so the the hash
+computation will likely throttle download performance. For help installing the
+extension, please see:
+  $ gsutil help crcmod
+To download regardless of crcmod performance or to skip slow integrity checks,
+see the "check_hashes" option in your boto config file.""")
+
+NO_HASH_CHECK_WARNING = """
+WARNING: This download will not be validated since your crcmod installation
+doesn't use the module's C extension, so the hash computation would likely
+throttle download performance. For help in installing the extension, please see:
+  $ gsutil help crcmod
+To force integrity checking, see the "check_hashes" option in your boto config
+file.
+"""
+
+NO_SERVER_HASH_EXCEPTION = CommandException(
+"""
+This object has no server-supplied hash for performing integrity
+checks. To skip integrity checking for such objects, see the "check_hashes"
+option in your boto config file.""")
+
+NO_SERVER_HASH_WARNING = """
+WARNING: This object has no server-supplied hash for performing integrity
+checks. To force integrity checking, see the "check_hashes" option in your boto
+config file.
+"""
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -434,36 +485,63 @@ class CpCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
-  def _CheckFinalMd5(self, key, file_name):
+  def _GetMD5FromETag(self, key):
+    possible_md5 = key.etag.strip('"\'').lower()
+    if re.match(r'[0-9a-f]{32}', possible_md5):
+      return binascii.a2b_hex(possible_md5)
+
+  def _CheckHashes(self, key, file_name, hash_algs_to_compute):
     """
     Checks that etag from server agrees with md5 computed after the
     download completes.
     """
-    obj_md5 = key.etag.strip('"\'')
-    file_md5 = None
+    cloud_hashes = {}
+    if hasattr(key, 'cloud_hashes'):
+      cloud_hashes = key.cloud_hashes
+    # Check for older-style MD5-based etag.
+    etag_md5 = self._GetMD5FromETag(key)
+    if etag_md5:
+      cloud_hashes.setdefault('md5', etag_md5)
 
-    if hasattr(key, 'md5') and key.md5:
-      file_md5 = key.md5
-    else:
+    local_hashes = {}
+    # If we've already computed a valid local hash, use that, else calculate an
+    # md5 or crc32c depending on what we have available to compare against.
+    if hasattr(key, 'local_hashes') and key.local_hashes:
+      local_hashes = key.local_hashes
+    elif 'md5' in cloud_hashes and 'md5' in hash_algs_to_compute:
       self.logger.info(
           'Computing MD5 from scratch for resumed download')
+      print 'Computing MD5 from scratch for resumed download'
 
       # Open file in binary mode to avoid surprises in Windows.
-      fp = open(file_name, 'rb')
-      try:
-        file_md5 = key.compute_md5(fp)[0]
-      finally:
-        fp.close()
-
-    if self.debug:
+      with open(file_name, 'rb') as fp:
+        local_hashes['md5'] = binascii.a2b_hex(key.compute_md5(fp)[0])
+    elif 'crc32c' in cloud_hashes and 'crc32c' in hash_algs_to_compute:
       self.logger.info(
-          'Checking file md5 against etag. (%s/%s)', file_md5, obj_md5)
-    if file_md5 != obj_md5:
-      # Checksums don't match - remove file and raise exception.
-      os.unlink(file_name)
-      raise CommandException(
-        'File changed during download: md5 signature doesn\'t match '
-        'etag (incorrect downloaded file deleted)')
+          'Computing CRC32C from scratch for resumed download')
+
+      # Open file in binary mode to avoid surprises in Windows.
+      with open(file_name, 'rb') as fp:
+        crc32c_alg = lambda: crcmod.predefined.Crc('crc-32c')
+        crc32c_hex = key.compute_hash(
+            fp, algorithm=crc32c_alg)[0]
+        local_hashes['crc32c'] = binascii.a2b_hex(crc32c_hex)
+
+    for alg in local_hashes:
+      if alg not in cloud_hashes:
+        continue
+      local_hexdigest = binascii.b2a_hex(local_hashes[alg])
+      cloud_hexdigest = binascii.b2a_hex(cloud_hashes[alg])
+      if self.debug:
+        self.logger.info('Comparing local vs cloud %s-checksum. (%s/%s)' % (
+            alg, local_hexdigest, cloud_hexdigest))
+      if local_hexdigest != cloud_hexdigest:
+        # Checksums don't match - remove file and raise exception.
+        os.unlink(file_name)
+        raise CommandException(
+            'File changed during download: %s signature doesn\'t match '
+            'cloud-supplied digest (incorrect downloaded file deleted).'
+            % alg)
 
   def _CheckForDirFileConflict(self, exp_src_uri, dst_uri):
     """Checks whether copying exp_src_uri into dst_uri is not possible.
@@ -953,12 +1031,45 @@ class CpCommand(Command):
 
     return (elapsed_time, bytes_transferred, result_uri)
 
+  def _GetHashAlgs(self, key):
+    hash_algs = {}
+    check_hashes_config = config.get(
+        'GSUtil', 'check_hashes', 'if_fast_else_fail')
+    if self._GetMD5FromETag(key):
+      hash_algs['md5'] = md5
+    if hasattr(key, 'cloud_hashes') and key.cloud_hashes:
+      if 'md5' in key.cloud_hashes:
+        hash_algs['md5'] = md5
+      # If the cloud provider supplies a CRC, we'll compute a checksum to
+      # validate if we're using a native crcmod installation or MD5 isn't
+      # offered as an alternative.
+      if 'crc32c' in key.cloud_hashes:
+        if UsingCrcmodExtension(crcmod):
+          hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
+        elif not hash_algs:
+          if check_hashes_config == 'if_fast_else_fail':
+            raise SLOW_CRC_EXCEPTION
+          elif check_hashes_config == 'if_fast_else_skip':
+            sys.stderr.write(NO_HASH_CHECK_WARNING)
+          elif check_hashes_config == 'always':
+            sys.stderr.write(SLOW_CRC_WARNING)
+            hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
+          else:
+            raise CommandException(
+                'Your boto config \'check_hashes\' option is misconfigured.')
+    elif not hash_algs:
+      if check_hashes_config == 'if_fast_else_skip':
+        sys.stderr.write(NO_SERVER_HASH_WARNING)
+      else:
+        raise NO_SERVER_HASH_EXCEPTION
+    return hash_algs
+
   def _DownloadObjectToFile(self, src_key, src_uri, dst_uri, headers,
                             should_log=True):
     """Downloads an object to a local file.
 
     Args:
-      src_key: Source StorageUri. Must be a file URI.
+      src_key: Source Key.
       src_uri: Source StorageUri.
       dst_uri: Destination StorageUri.
       headers: The headers dictionary.
@@ -996,6 +1107,9 @@ class CpCommand(Command):
     else:
       download_file_name = file_name
       need_to_unzip = False
+
+    hash_algs = self._GetHashAlgs(src_key)
+
     fp = None
     try:
       if res_download_handler:
@@ -1003,8 +1117,16 @@ class CpCommand(Command):
       else:
         fp = open(download_file_name, 'wb')
       start_time = time.time()
-      src_key.get_contents_to_file(fp, headers, cb=cb, num_cb=num_cb,
-                                   res_download_handler=res_download_handler)
+      # Use our hash_algs if get_contents_to_file() will accept them, else the
+      # default (md5-only) will suffice.
+      try:
+        src_key.get_contents_to_file(fp, headers, cb=cb, num_cb=num_cb,
+                                     res_download_handler=res_download_handler,
+                                     hash_algs=hash_algs)
+      except TypeError:
+        src_key.get_contents_to_file(fp, headers, cb=cb, num_cb=num_cb,
+                                     res_download_handler=res_download_handler)
+
       # If a custom test method is defined, call it here. For the copy command,
       # test methods are expected to take one argument: an open file pointer,
       # and are used to perturb the open file during download to exercise
@@ -1016,12 +1138,12 @@ class CpCommand(Command):
       if fp:
         fp.close()
 
-    # Discard the md5 if we are resuming a partial download.
+    # Discard all hashes if we are resuming a partial download.
     if res_download_handler and res_download_handler.download_start_point:
-      src_key.md5 = None
+      src_key.local_hashes = {}
 
     # Verify downloaded file checksum matched source object's checksum.
-    self._CheckFinalMd5(src_key, download_file_name)
+    self._CheckHashes(src_key, download_file_name, hash_algs)
 
     if res_download_handler:
       bytes_transferred = (

@@ -330,6 +330,21 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # http://www.loc.gov/standards/iso639-2/php/code_list.php for a list of
 # language codes.
 content_language = en
+
+# 'check_hashes' specifies how strictly to require integrity checking for
+# downloaded data. Legal values are:
+#   'if_fast_else_fail' - (default) Only integrity check if the digest will run
+#       efficiently (using compiled code), else fail the download.
+#   'if_fast_else_skip' - Only integrity check if the server supplies a hash and
+#       the local digest computation will run quickly, else skip the check.
+#   'always' - Always check download integrity regardless of possible
+#       performance costs.
+# This option exists to assist users who wish to download a GCS composite object
+# and are unable to install crcmod with the C-extension. CRC32c is the only
+# available integrity check for composite objects, and without the C-extension,
+# download performance can be significantly degraded by the digest computation.
+#check_hashes = if_fast_else_fail
+
 """ % {'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}

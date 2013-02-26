@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import boto
+import crcmod
 import os
 import re
 import sys
@@ -34,6 +35,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.util import UsingCrcmodExtension
 from hashlib import md5
 
 _detailed_help_text = ("""
@@ -116,9 +118,11 @@ class VersionCommand(Command):
     sys.stderr.write(
         'gsutil version %s\nchecksum %s (%s)\n'
         'boto version %s\npython version %s\n'
-        'config path: %s\ngsutil path: %s\n' % (
+        'config path: %s\ngsutil path: %s\n'
+        'compiled crcmod: %s\n' % (
         self.gsutil_ver, cur_checksum, checksum_ok_str,
-        boto.__version__, sys.version, path, os.path.realpath(sys.argv[0])))
+        boto.__version__, sys.version, path, os.path.realpath(sys.argv[0]),
+        UsingCrcmodExtension(crcmod)))
     sys.stderr.write('Note: a log of gsutil release changes is available at:\n'
                      'gs://pub/gsutil_ReleaseNotes.txt\n')
 
