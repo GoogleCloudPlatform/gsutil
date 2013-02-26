@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -22,12 +24,15 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.exception import CommandException
+from gslib.util import UnaryDictToXml
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from xml.dom.minidom import parseString as XmlParseString
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -133,5 +138,22 @@ class GetLoggingCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    self.GetXmlSubresource('logging', self.args[0])
+    uri_args = self.args
+
+    # Iterate over URIs, expanding wildcards, and getting the website
+    # configuration on each.
+    some_matched = False
+    for uri_str in uri_args:
+      for blr in self.WildcardIterator(uri_str):
+        uri = blr.GetUri()
+        if not uri.names_bucket():
+          raise CommandException('URI %s must name a bucket for the %s command'
+                                 % (str(uri), self.command_name))
+        some_matched = True
+        sys.stderr.write('Getting logging config on %s...\n' % uri)
+        logging_config_xml = UnaryDictToXml(uri.get_logging_config())
+        sys.stdout.write(XmlParseString(logging_config_xml).toprettyxml())
+    if not some_matched:
+      raise CommandException('No URIs matched')
+
     return 0

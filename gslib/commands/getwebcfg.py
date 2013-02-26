@@ -25,6 +25,7 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.util import UnaryDictToXml
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
@@ -114,8 +115,8 @@ class GetWebcfgCommand(Command):
                                  % (str(uri), self.command_name))
         some_matched = True
         sys.stderr.write('Getting website config on %s...\n' % uri)
-        _, xml_body = uri.get_website_config()
-        sys.stdout.write(XmlParseString(xml_body).toprettyxml())
+        web_config_xml = UnaryDictToXml(uri.get_website_config())
+        sys.stdout.write(XmlParseString(web_config_xml).toprettyxml())
     if not some_matched:
       raise CommandException('No URIs matched')
 
