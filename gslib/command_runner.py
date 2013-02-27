@@ -90,6 +90,9 @@ class CommandRunner(object):
 
     if command_name not in self.command_map:
       raise CommandException('Invalid command "%s".' % command_name)
+    if '--help' in args:
+      args = [command_name]
+      command_name = 'help'
     command_class = self.command_map[command_name]
     command_inst = command_class(
         self, args, headers, debug, parallel_operations, self.gsutil_bin_dir,
