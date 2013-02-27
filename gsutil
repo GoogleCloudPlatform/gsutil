@@ -51,17 +51,24 @@ debug = 0
 # to be used without explicitly adding it to the PYTHONPATH.
 # We use realpath() below to unwind symlinks if any were used in the gsutil
 # installation.
-gsutil_bin_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-if not gsutil_bin_dir:
+GSUTIL_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
+if not GSUTIL_DIR:
   _OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
                 'cannot run correctly without this.\n')
-boto_lib_dir = os.path.join(gsutil_bin_dir, 'boto')
-if not os.path.isdir(boto_lib_dir):
-  _OutputAndExit('There is no boto library under the gsutil install directory '
-                '(%s).\nThe gsutil command cannot work properly when installed '
-                'this way.\nPlease re-install gsutil per the installation '
-                'instructions.' % gsutil_bin_dir)
-sys.path.insert(0, boto_lib_dir)
+
+THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+LIBS_TO_CHECK = ['boto']
+for lib in LIBS_TO_CHECK:
+  if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, lib)):
+    _OutputAndExit(
+        'There is no %s library under the gsutil third-party directory (%s).\n'
+        'The gsutil command cannot work properly when installed this way.\n'
+        'Please re-install gsutil per the installation instructions.' % (
+            lib, THIRD_PARTY_DIR))
+
+BOTO_LIB_DIR = os.path.join(THIRD_PARTY_DIR, 'boto')
+sys.path.insert(0, THIRD_PARTY_DIR)
+sys.path.insert(0, BOTO_LIB_DIR)
 import boto
 from boto.exception import BotoClientError
 from boto.exception import InvalidAclError
@@ -80,7 +87,7 @@ from gslib.wildcard_iterator import WildcardException
 # is set before anything instantiates boto. (If parts of boto were instantiated
 # first those parts would have the old value of boto.UserAgent, so we wouldn't
 # be guaranteed that all code paths send the correct user agent.)
-ver_file_path = os.path.join(gsutil_bin_dir, 'VERSION')
+ver_file_path = os.path.join(GSUTIL_DIR, 'VERSION')
 if not os.path.isfile(ver_file_path):
   raise CommandException(
       '%s not found. Please reinstall gsutil from scratch' % ver_file_path)
@@ -93,7 +100,7 @@ boto.UserAgent += ' gsutil/%s (%s)' % (gsutil_ver, sys.platform)
 # ensures that it's loaded and available by default when an operation requiring
 # authentication is performed.
 try:
-  from oauth2_plugin import oauth2_plugin
+  from gslib.third_party.oauth2_plugin import oauth2_plugin
 except ImportError:
   pass
 
@@ -105,8 +112,8 @@ def main():
     raise CommandException('gsutil requires Python 2.6 or higher.')
 
   config_file_list = _GetBotoConfigFileList()
-  command_runner = CommandRunner(gsutil_bin_dir, boto_lib_dir, config_file_list,
-                                 gsutil_ver)
+  command_runner = CommandRunner(
+      GSUTIL_DIR, config_file_list, gsutil_ver)
   headers = {}
   parallel_operations = False
   debug = 0
