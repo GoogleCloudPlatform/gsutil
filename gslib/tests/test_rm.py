@@ -30,13 +30,16 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     g2 = key_uri.generation
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
-    def _Check1():
+    def _Check1(stderr_lines):
       stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
                               return_stderr=True)
+      stderr_lines.update(set(stderr.splitlines()))
+      stderr = '\n'.join(stderr_lines)
       self.assertEqual(stderr.count('Removing gs://'), 2)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
-    _Check1()
+    all_stderr_lines = set()
+    _Check1(all_stderr_lines)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check2():
