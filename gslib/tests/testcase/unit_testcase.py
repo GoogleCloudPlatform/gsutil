@@ -33,7 +33,6 @@ CURDIR = os.path.abspath(os.path.dirname(__file__))
 TESTS_DIR = os.path.split(CURDIR)[0]
 GSLIB_DIR = os.path.split(TESTS_DIR)[0]
 GSUTIL_DIR = os.path.split(GSLIB_DIR)[0]
-BOTO_DIR = os.path.join(GSUTIL_DIR, 'boto')
 
 
 class GSMockConnection(mock_storage_service.MockConnection):
@@ -64,9 +63,9 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     config_file_list = boto.pyami.config.BotoConfigLocations
     # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
     # sent via HTTP because we're using MockStorageService here.
-    cls.command_runner = CommandRunner(GSUTIL_DIR, BOTO_DIR,
-                                       config_file_list, 'gsutil_test_commands',
-                                       cls.mock_bucket_storage_uri)
+    cls.command_runner = CommandRunner(
+        GSUTIL_DIR, config_file_list, 'gsutil_test_commands',
+        cls.mock_bucket_storage_uri)
 
   def setUp(self):
     super(GsUtilUnitTestCase, self).setUp()
