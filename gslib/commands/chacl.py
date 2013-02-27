@@ -497,6 +497,9 @@ class ChAclCommand(Command):
     try:
       current_acl = uri.get_acl()
     except GSResponseError as e:
+      if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
+          and e.status == 403:
+        self._WarnServiceAccounts()
       self.THREADED_LOGGER.warning('Failed to set acl for {0}: {1}'
                                    .format(uri, e.reason))
       return

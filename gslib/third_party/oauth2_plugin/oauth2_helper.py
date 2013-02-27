@@ -18,12 +18,15 @@ import sys
 import time
 import webbrowser
 
+from gslib.commands.creds_types import CredsTypes
 import oauth2_client
+
+
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
 # application/utility such as gsutil.  Of course, in such cases the "secret" is
-# actually publicly known; security depends entirly on the secrecy of refresh
+# actually publicly known; security depends entirely on the secrecy of refresh
 # tokens, which effectively become bearer tokens.
 GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
 
@@ -32,13 +35,14 @@ GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI = (
     'https://accounts.google.com/o/oauth2/auth')
 GOOGLE_OAUTH2_PROVIDER_TOKEN_URI = (
     'https://accounts.google.com/o/oauth2/token')
+GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
 
 OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
-def OAuth2ClientFromBotoConfig(config):
+def OAuth2ClientFromBotoConfig(config, 
+    creds_type=CredsTypes.OAUTH2_USER_ACCOUNT):
   token_cache = None
   token_cache_type = config.get('OAuth2', 'token_cache', 'file_system')
-
   if token_cache_type == 'file_system':
     if config.has_option('OAuth2', 'token_cache_path_pattern'):
       token_cache = oauth2_client.FileSystemTokenCache(
@@ -57,25 +61,40 @@ def OAuth2ClientFromBotoConfig(config):
       and config.has_option('Boto', 'proxy_port')):
     proxy = "%s:%s" % (config.get('Boto', 'proxy'),
         config.get('Boto', 'proxy_port'))
+  
+  if creds_type == CredsTypes.OAUTH2_SERVICE_ACCOUNT:
+    service_client_id = config.get('Credentials', 'gs_service_client_id', '')
+    private_key_filename = config.get('Credentials', 'gs_service_key_file', '')
+    key_file_pass = config.get('Credentials', 'gs_service_key_file_password',
+                               GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD)
+    with open(private_key_filename, 'rb') as private_key_file:
+      private_key = private_key_file.read()
+    
+    return oauth2_client.OAuth2ServiceAccountClient(service_client_id, 
+        private_key, key_file_pass, access_token_cache=token_cache)
+  elif creds_type == CredsTypes.OAUTH2_USER_ACCOUNT:
+    provider_label = config.get(
+        'OAuth2', 'provider_label', GOOGLE_OAUTH2_PROVIDER_LABEL)
+    provider_authorization_uri = config.get(
+        'OAuth2', 'provider_authorization_uri',
+        GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI)
+    provider_token_uri = config.get(
+        'OAuth2', 'provider_token_uri', GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
+    client_id = config.get('OAuth2', 'client_id', GSUTIL_CLIENT_ID)
+    client_secret = config.get(
+        'OAuth2', 'client_secret', GSUTIL_CLIENT_NOTSOSECRET)
+    return oauth2_client.OAuth2UserAccountClient(
+        oauth2_client.OAuth2Provider(
+            provider_label, provider_authorization_uri, provider_token_uri),
+        client_id, client_secret,
+        proxy=proxy, access_token_cache=token_cache)
+  else:
+    raise Exception('You have attempted to create an OAuth2 client without '
+        'setting up OAuth2 credentials. Please run "gsutil config" to set up '
+        'your credentials correctly or see "gsutil help config" for more '
+        'information.')
 
-  provider_label = config.get(
-      'OAuth2', 'provider_label', GOOGLE_OAUTH2_PROVIDER_LABEL)
-  provider_authorization_uri = config.get(
-      'OAuth2', 'provider_authorization_uri',
-      GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI)
-  provider_token_uri = config.get(
-      'OAuth2', 'provider_token_uri', GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
-
-  client_id = config.get('OAuth2', 'client_id', GSUTIL_CLIENT_ID)
-  client_secret = config.get(
-      'OAuth2', 'client_secret', GSUTIL_CLIENT_NOTSOSECRET)
-
-  return oauth2_client.OAuth2Client(
-      oauth2_client.OAuth2Provider(
-          provider_label, provider_authorization_uri, provider_token_uri),
-      client_id, client_secret,
-      proxy=proxy, access_token_cache=token_cache)
-
+    
 def OAuth2ApprovalFlow(oauth2_client, scopes, launch_browser=False):
   approval_url = oauth2_client.GetAuthorizationUri(OOB_REDIRECT_URI, scopes)
   if launch_browser:

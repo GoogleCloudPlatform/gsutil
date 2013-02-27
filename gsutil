@@ -57,7 +57,7 @@ if not GSUTIL_DIR:
                 'cannot run correctly without this.\n')
 
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
-LIBS_TO_CHECK = ['boto']
+LIBS_TO_CHECK = ['boto', 'httplib2']
 for lib in LIBS_TO_CHECK:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, lib)):
     _OutputAndExit(
@@ -67,7 +67,13 @@ for lib in LIBS_TO_CHECK:
             lib, THIRD_PARTY_DIR))
 
 BOTO_LIB_DIR = os.path.join(THIRD_PARTY_DIR, 'boto')
+HTTPLIB2_LIB_DIR = os.path.join(THIRD_PARTY_DIR, 'httplib2', 'python2')
+API_CLIENT_LIB_DIR = os.path.join(THIRD_PARTY_DIR, 'google-api-python-client')
+GFLAGS_DIR = os.path.join(THIRD_PARTY_DIR, 'python-gflags')
+sys.path.insert(0, GFLAGS_DIR)
 sys.path.insert(0, THIRD_PARTY_DIR)
+sys.path.insert(0, API_CLIENT_LIB_DIR)
+sys.path.insert(0, HTTPLIB2_LIB_DIR)
 sys.path.insert(0, BOTO_LIB_DIR)
 import boto
 from boto.exception import BotoClientError
@@ -82,6 +88,7 @@ from gslib import util
 from gslib.util import ExtractErrorDetail
 from gslib.util import HasConfiguredCredentials
 from gslib.wildcard_iterator import WildcardException
+import httplib2
 
 # Load the gsutil version number and append it to boto.UserAgent so the value
 # is set before anything instantiates boto. (If parts of boto were instantiated
@@ -157,6 +164,7 @@ def main():
       headers[hdr_name] = hdr_val
     if o in ('-m', '--multithreaded'):
       parallel_operations = True
+  httplib2.debuglevel = debug
   if debug > 1:
     sys.stderr.write(
         '***************************** WARNING *****************************\n'

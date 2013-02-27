@@ -1,3 +1,12 @@
 [submodule "third_party/boto"]
 	path = third_party/boto
 	url = git://github.com/boto/boto.git
+[submodule "third_party/httplib2"]
+	path = third_party/httplib2
+	url = git://github.com/jcgregorio/httplib2.git
+[submodule "third_party/google-api-python-client"]
+	path = third_party/google-api-python-client
+	url = git://github.com/gsutil-mirrors/google-api-python-client.git
+[submodule "third_party/python-gflags"]
+	path = third_party/python-gflags
+	url = git://github.com/gsutil-mirrors/python-gflags.git

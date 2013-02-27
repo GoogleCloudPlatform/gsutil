@@ -39,6 +39,7 @@ import cgi
 import datetime
 import errno
 from hashlib import sha1
+import httplib2
 import logging
 import os
 import tempfile
@@ -46,9 +47,12 @@ import threading
 import urllib
 import urllib2
 import urlparse
-
 from boto import cacerts
 from gslib.third_party import fancy_urllib
+from oauth2client.client import HAS_CRYPTO
+if HAS_CRYPTO:
+  from oauth2client.client import SignedJwtAssertionCredentials
+
 
 try:
   import json
@@ -67,6 +71,9 @@ token_exchange_lock = threading.Lock()
 
 # SHA1 sum of the CA certificates file imported from boto.
 CACERTS_FILE_SHA1SUM = '183c495586bf93d2effe9b3a43d45b1b4fa14ff3'
+
+GSUTIL_DEFAULT_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control'
+
 
 class Error(Exception):
   """Base exception for the OAuth2 module."""
@@ -209,7 +216,7 @@ class FileSystemTokenCache(TokenCache):
 
     try:
       fd = os.open(cache_file, flags, 0600)
-    except (OSError, IOError), e:
+    except (OSError, IOError) as e:
       LOG.warning('FileSystemTokenCache.PutToken: '
                   'Failed to create cache file %s: %s', cache_file, e)
       return
@@ -221,15 +228,16 @@ class FileSystemTokenCache(TokenCache):
     """Returns a deserialized access token from the key's filename."""
     value = None
     cache_file = self.CacheFileName(key)
+    
     try:
       f = open(cache_file)
       value = AccessToken.UnSerialize(f.read())
       f.close()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
       if e.errno != errno.ENOENT:
         LOG.warning('FileSystemTokenCache.GetToken: '
                     'Failed to read cache file %s: %s', cache_file, e)
-    except Exception, e:
+    except Exception as e:
       LOG.warning('FileSystemTokenCache.GetToken: '
                   'Failed to read cache file %s (possibly corrupted): %s',
                   cache_file, e)
@@ -253,9 +261,87 @@ class OAuth2Provider(object):
     self.label = label
     self.authorization_uri = authorization_uri
     self.token_uri = token_uri
-
-
+    
 class OAuth2Client(object):
+  """Common logic for OAuth2 clients."""
+  
+  def __init__(self, access_token_cache=None,
+               datetime_strategy=datetime.datetime):    
+    # datetime_strategy is used to invoke utcnow() on; it is injected into the
+    # constructor for unit testing purposes.
+    self.datetime_strategy = datetime_strategy
+    self.access_token_cache = access_token_cache or InMemoryTokenCache()
+  
+  def GetAccessToken(self, refresh_token=None):
+    """Given a RefreshToken, obtains a corresponding access token.
+
+    For user accounts, this client's access token cache is first checked for an
+    existing, not-yet-expired access token for the provided refresh token.
+    If none is found, the client obtains a fresh access token for the provided
+    refresh token from the OAuth2 provider's token endpoint.
+    
+    Refresh tokens do not exist for service accounts, and refresh_token's only
+    use for service accounts is to compute the access token's cache key. 
+    
+    TODO(zwilt): This confusing naming convention should be removed upon the
+    refactoring to use oauth2client for user accounts.
+
+    Args:
+      refresh_token: The RefreshToken object which to get an access token for.
+    Returns:
+      The cached or freshly obtained AccessToken.
+    Raises:
+      AccessTokenRefreshError if an error occurs.
+    """
+    # Ensure only one thread at a time attempts to get (and possibly refresh)
+    # the access token. This doesn't prevent concurrent refresh attempts across
+    # multiple gsutil instances, but at least protects against multiple threads
+    # simultaneously attempting to refresh when gsutil -m is used.
+    token_exchange_lock.acquire()
+    try:
+      cache_key = refresh_token.CacheKey()
+      LOG.info('GetAccessToken: checking cache for key %s', cache_key)
+      access_token = self.access_token_cache.GetToken(cache_key)
+      LOG.debug('GetAccessToken: token from cache: %s', access_token)
+      if access_token is None or access_token.ShouldRefresh():
+        LOG.info('GetAccessToken: fetching fresh access token...')
+        access_token = self.FetchAccessToken(refresh_token)          
+        LOG.debug('GetAccessToken: fresh access token: %s', access_token)
+        self.access_token_cache.PutToken(cache_key, access_token)
+      return access_token
+    finally:
+      token_exchange_lock.release()
+      
+  def FetchAccessToken(self, refresh_token=None):
+    pass
+
+    
+class OAuth2ServiceAccountClient(OAuth2Client):
+  
+  def __init__(self, client_id, private_key, password, access_token_cache=None,
+               datetime_strategy=datetime.datetime):
+    super(OAuth2ServiceAccountClient, self).__init__(access_token_cache, 
+                                                     datetime_strategy)
+    self.client_id = client_id
+    self.private_key = private_key
+    self.password = password     
+  
+  def FetchAccessToken(self, refresh_token):
+    credentials = SignedJwtAssertionCredentials(self.client_id,
+        self.private_key, scope=GSUTIL_DEFAULT_SCOPE, 
+        private_key_password=self.password)
+    ca_certs = os.path.join(
+        os.path.dirname(os.path.abspath(cacerts.__file__ )), "cacerts.txt")
+    
+    http = httplib2.Http(ca_certs=ca_certs)
+    credentials.authorize(http)
+    credentials.refresh(http)
+
+    return AccessToken(http.request.credentials.access_token, 
+        credentials.token_expiry, datetime_strategy=self.datetime_strategy)
+
+
+class OAuth2UserAccountClient(OAuth2Client):
   """An OAuth2 client."""
 
   def __init__(self, provider, client_id, client_secret,
@@ -284,16 +370,13 @@ class OAuth2Client(object):
           None, an InMemoryTokenCache is used.
       datetime_strategy: datetime module strategy to use.
     """
+    super(OAuth2UserAccountClient, self).__init__(
+        access_token_cache=access_token_cache,
+        datetime_strategy=datetime_strategy)
     self.provider = provider
     self.client_id = client_id
     self.client_secret = client_secret
-    # datetime_strategy is used to invoke utcnow() on; it is injected into the
-    # constructor for unit testing purposes.
-    self.datetime_strategy = datetime_strategy
     self._proxy = proxy
-
-    self.access_token_cache = access_token_cache or InMemoryTokenCache()
-
     self.ca_certs_file = os.path.join(
         os.path.dirname(os.path.abspath(cacerts.__file__)), 'cacerts.txt')
 
@@ -340,7 +423,7 @@ class OAuth2Client(object):
       result = self.url_opener.open(request)
       resp_body = result.read()
       LOG.debug('_TokenRequest response: %s', resp_body)
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
       try:
         response = json.loads(e.read())
       except:
@@ -349,45 +432,12 @@ class OAuth2Client(object):
 
     try:
       response = json.loads(resp_body)
-    except ValueError, e:
+    except ValueError as e:
       return (None, e)
 
     return (response, None)
 
-  def GetAccessToken(self, refresh_token):
-    """Given a RefreshToken, obtains a corresponding access token.
-
-    First, this client's access token cache is checked for an existing,
-    not-yet-expired access token for the provided refresh token.  If none is
-    found, the client obtains a fresh access token for the provided refresh
-    token from the OAuth2 provider's token endpoint.
-
-    Args:
-      refresh_token: The RefreshToken object which to get an access token for.
-    Returns:
-      The cached or freshly obtained AccessToken.
-    Raises:
-      AccessTokenRefreshError if an error occurs.
-    """
-    # Ensure only one thread at a time attempts to get (and possibly refresh)
-    # the access token. This doesn't prevent concurrent refresh attempts across
-    # multiple gsutil instances, but at least protects against multiple threads
-    # simultaneously attempting to refresh when gsutil -m is used.
-    token_exchange_lock.acquire()
-    try:
-      cache_key = refresh_token.CacheKey()
-      LOG.info('GetAccessToken: checking cache for key %s', cache_key)
-      access_token = self.access_token_cache.GetToken(cache_key)
-      LOG.debug('GetAccessToken: token from cache: %s', access_token)
-      if access_token is None or access_token.ShouldRefresh():
-        LOG.info('GetAccessToken: fetching fresh access token...')
-        access_token = self.FetchAccessToken(refresh_token)
-        LOG.debug('GetAccessToken: fresh access token: %s', access_token)
-        self.access_token_cache.PutToken(cache_key, access_token)
-      return access_token
-    finally:
-      token_exchange_lock.release()
-
+  
   def FetchAccessToken(self, refresh_token):
     """Fetches an access token from the provider's token endpoint.
 
@@ -535,7 +585,6 @@ class OAuth2Client(object):
 
     refresh_token = None
     refresh_token_string = response.get('refresh_token', None)
-
     token_exchange_lock.acquire()
     try:
       if refresh_token_string:

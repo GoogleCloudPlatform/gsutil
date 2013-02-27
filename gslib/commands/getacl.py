@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from boto.exception import GSResponseError
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -78,5 +79,11 @@ class GetAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    self.GetAclCommandHelper()
+    try:
+      self.GetAclCommandHelper()
+    except GSResponseError as e:
+      if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
+          and e.status == 403:
+        self._WarnServiceAccounts()
+      raise
     return 0

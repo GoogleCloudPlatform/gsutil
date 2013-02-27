@@ -70,7 +70,7 @@ class OAuth2ClientTest(unittest.TestCase):
     self.mock_datetime = MockDateTime()
     self.start_time = datetime.datetime(2011, 3, 1, 10, 25, 13, 300826)
     self.mock_datetime.mock_now = self.start_time
-    self.client = oauth2_client.OAuth2Client(
+    self.client = oauth2_client.OAuth2UserAccountClient(
         oauth2_client.OAuth2Provider(
             'Sample OAuth Provider',
             'https://provider.example.com/oauth/provider?mode=authorize',
@@ -292,7 +292,7 @@ class RefreshTokenTest(unittest.TestCase):
     self.mock_datetime = MockDateTime()
     self.start_time = datetime.datetime(2011, 3, 1, 10, 25, 13, 300826)
     self.mock_datetime.mock_now = self.start_time
-    self.client = oauth2_client.OAuth2Client(
+    self.client = oauth2_client.OAuth2UserAccountClient(
         oauth2_client.OAuth2Provider(
             'Sample OAuth Provider',
             'https://provider.example.com/oauth/provider?mode=authorize',

@@ -250,11 +250,17 @@ class SetMetaCommand(Command):
         self.bucket_storage_uri_class, uri_args, self.recursion_requested,
         self.recursion_requested)
 
-    # Perform requests in parallel (-m) mode, if requested, using
-    # configured number of parallel processes and threads. Otherwise,
-    # perform requests with sequential function calls in current process.
-    self.Apply(_SetMetadataFunc, name_expansion_iterator,
-               _SetMetadataExceptionHandler)
+    try:
+      # Perform requests in parallel (-m) mode, if requested, using
+      # configured number of parallel processes and threads. Otherwise,
+      # perform requests with sequential function calls in current process.
+      self.Apply(_SetMetadataFunc, name_expansion_iterator,
+                 _SetMetadataExceptionHandler)
+    except GSResponseError as e:
+      if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
+          and e.status == 403:
+        self._WarnServiceAccounts()
+      raise
 
     if not self.everything_set_okay:
       raise CommandException('Metadata for some objects could not be set.')
