@@ -613,7 +613,7 @@ class ConfigCommand(Command):
       raise CommandException(
           'OAuth2 is only supported when running under Python 2.6 or later\n'
           '(unless additional dependencies are installed, '
-          'see README for details);\n'
+          'see README.md for details);\n'
           'you are running Python %s.\nUse "gsutil config -a" to create a '
           'config with Developer Key authentication credentials.' % sys.version)
 

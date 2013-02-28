@@ -71,16 +71,18 @@ _detailed_help_text = ("""
      To clone a read-only copy of the repository:
 
        git clone git://github.com/GoogleCloudPlatform/gsutil.git
+       git submodule update --init --recursive
 
      To push your own changes to GitHub, click the Fork button on the
      repository page and clone the repository from your own fork.
 
-     Once checked out, enter the repository directory and check out the boto
-     code from GitHub as well:
+  7. The gsutil git repository uses git submodules to pull in external modules.
+     After checking out the repository, make sure to also pull the submodules
+     by entering into the gsutil top-level directory and run:
 
-       git clone git://github.com/boto/boto.git
+       git submodule update --init --recursive
 
-  7. Please make sure to run all tests against your modified code. To
+  8. Please make sure to run all tests against your modified code. To
      do this, change directories into the gsutil top-level directory and run:
 
        ./gsutil test
@@ -93,21 +95,21 @@ _detailed_help_text = ("""
 
        ./gsutil test -u
 
-    If you made mods to boto please run the boto tests. For these tests you
+    If you made changes to boto, please run the boto tests. For these tests you
     need to use HMAC credentials (from gsutil config -a), because the current
     boto test suite doesn't import the OAuth2 handler. You'll also need to
-    install some python modules: change directories into the top-level gsutil
-    directory and run:
+    install some python modules. Change directories into the boto root directory
+    at third_party/boto and run:
 
-      pip install -r boto/requirements.txt
+      pip install -r requirements.txt
 
     (You probably need to run this command using sudo.)
     Make sure each of the individual installations succeeded. If they don't
     you may need to run the install command again.
 
     Then ensure your .boto file has HMAC credentials defined (the boto tests
-    don't load the OAUTH2 plugin), and then change directories into boto/tests
-    and run:
+    don't load the OAUTH2 plugin), and then change directories into boto's tests
+    directory and run:
 
       python test.py unit
       python test.py -t s3 -t gs -t ssl

@@ -24,9 +24,9 @@ from distutils.core import setup
 from pkg_util import parse_manifest
 
 print '''
-NOTE: Enterprise mode (installing gsutil via setup.py) is no longer officially 
-supported - unpacking the zip file into a directory is the preferred method 
-for installing gsutil for both shared and private configurations. See README 
+NOTE: Enterprise mode (installing gsutil via setup.py) is no longer officially
+supported - unpacking the zip file into a directory is the preferred method
+for installing gsutil for both shared and private configurations. See README.md
 and README.pkg for further details.
 '''
 

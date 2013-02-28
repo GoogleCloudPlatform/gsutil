@@ -643,12 +643,12 @@ class Command(object):
               'Your gsutil is configured with OAuth2 authentication '
               'credentials.\nHowever, OAuth2 is only supported when running '
               'under Python 2.6 or later\n(unless additional dependencies are '
-              'installed, see README for details); you are running Python %s.' %
-              sys.version)
+              'installed, see README.md for details); you are running Python '
+              '%s.' % sys.version)
         raise CommandException('You have no storage service credentials in any '
                                'of the following boto config\nfiles. Please '
                                'add your credentials as described in the '
-                               'gsutil README file, or else\nre-run '
+                               'gsutil README.md file, or else\nre-run '
                                '"gsutil config" to re-create a config '
                                'file:\n%s' % self.config_file_list)
       else:
