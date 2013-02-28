@@ -17,6 +17,7 @@
 import math
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 
 import boto
 from gslib.third_party.retry_decorator import decorators
@@ -152,3 +153,24 @@ def ExtractErrorDetail(e):
   if detail_start != -1 and detail_end != -1:
     return (exc_name, e.body[detail_start+9:detail_end])
   return (exc_name, None)
+
+def UnaryDictToXml(message):
+  """Generates XML representation of a nested dict with exactly one
+  top-level entry and an arbitrary number of 2nd-level entries, e.g.
+  capturing a WebsiteConfiguration message.
+
+  Args:
+    message: The dict encoding the message.
+
+  Returns:
+    XML string representation of the input dict.
+  """
+  if len(message) != 1:
+    raise Exception("Expected dict of size 1, got size %d" % len(message))
+
+  name, content = message.items()[0]
+  T = ElementTree.Element(name)
+  for property, value in sorted(content.items()):
+    node = ElementTree.SubElement(T, property)
+    node.text = value
+  return ElementTree.tostring(T)
