@@ -112,7 +112,7 @@ class GetWebcfgCommand(Command):
         uri = blr.GetUri()
         if not uri.names_bucket():
           raise CommandException('URI %s must name a bucket for the %s command'
-                                 % (str(uri), self.command_name))
+                                 % (uri, self.command_name))
         some_matched = True
         sys.stderr.write('Getting website config on %s...\n' % uri)
         web_config_xml = UnaryDictToXml(uri.get_website_config())

@@ -148,7 +148,7 @@ class GetLoggingCommand(Command):
         uri = blr.GetUri()
         if not uri.names_bucket():
           raise CommandException('URI %s must name a bucket for the %s command'
-                                 % (str(uri), self.command_name))
+                                 % (uri, self.command_name))
         some_matched = True
         sys.stderr.write('Getting logging config on %s...\n' % uri)
         logging_config_xml = UnaryDictToXml(uri.get_logging_config())

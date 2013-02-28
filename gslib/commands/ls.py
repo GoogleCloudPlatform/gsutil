@@ -268,8 +268,8 @@ class LsCommand(Command):
         for message in [bucket_uri.get_website_config(self.headers),
                         bucket_uri.get_logging_config(self.headers)]:
           field, content = message.items()[0]  # expect only one entry in dict
-          fields[field] = ", ".join("%s: %s" % (property, value)
-                                    for property, value in sorted(content.items()))
+          fields[field] = ", ".join("%s: %s" % (property, value) for
+                                    property, value in sorted(content.items()))
 
         print("{bucket} :\n"
               "\t{object_count} objects, {bytes}\n"
