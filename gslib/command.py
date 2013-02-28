@@ -30,6 +30,7 @@ import multiprocessing
 import os
 import platform
 import re
+import signal
 import sys
 import wildcard_iterator
 import xml.dom.minidom
@@ -46,6 +47,7 @@ from gslib.project_id import ProjectIdHandler
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.thread_pool import ThreadPool
 from gslib.util import HAVE_OAUTH2
+from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 
 from gslib.wildcard_iterator import ContainsWildcard
@@ -520,7 +522,7 @@ class Command(object):
       self.THREADED_LOGGER.info('thread count: %d', thread_count)
 
     if self.parallel_operations and process_count > 1:
-      procs = []
+      self.procs = []
       # If any shared attributes passed by caller, create a dictionary of
       # shared memory variables for every element in the list of shared
       # attributes.
@@ -546,8 +548,12 @@ class Command(object):
                                     args=(func, work_queue, shard,
                                           thread_count, thr_exc_handler,
                                           shared_vars))
-        procs.append(p)
+        self.procs.append(p)
         p.start()
+
+      # Catch ^C under Linux/MacOs so we can kill the suprocesses.
+      if not IS_WINDOWS:
+        signal.signal(signal.SIGINT, self._HandleMultiProcessingControlC)
 
       last_name_expansion_result = None
       try:
@@ -570,7 +576,7 @@ class Command(object):
 
         # Wait for all spawned OS processes to finish.
         failed_process_count = 0
-        for p in procs:
+        for p in self.procs:
           p.join()
           # Count number of procs that returned non-zero exit code.
           if p.exitcode != 0:
@@ -599,6 +605,18 @@ class Command(object):
                                               _EOF_NAME_EXPANSION_RESULT)
       self._ApplyThreads(func, work_queue, 0, thread_count, thr_exc_handler,
                          None)
+
+  def _HandleMultiProcessingControlC(self, signal_num, cur_stack_frame):
+    """Called when user hits ^C during a multi-processing/multi-threaded
+       request, so we can kill the suprocesses."""
+    # Note: This only works under Linux/MacOS. See
+    # https://github.com/GoogleCloudPlatform/gsutil/issues/99 for details
+    # about why making it work correctly across OS's is harder and still open.
+    for proc in self.procs:
+      os.kill(proc.pid, signal.SIGKILL)
+    sys.stderr.write('Caught ^C - exiting\n')
+    # Simply calling sys.exit(1) doesn't work - see above bug for details.
+    os.kill(os.getpid(), signal.SIGKILL)
 
   def HaveFileUris(self, args_to_check):
     """Checks whether args_to_check contain any file URIs.
