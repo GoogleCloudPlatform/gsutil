@@ -17,11 +17,10 @@
 import math
 import re
 import sys
-import time
 import xml.etree.ElementTree as ElementTree
 
 import boto
-from third_party.retry_decorator.decorators import retry
+from gslib.third_party.retry_decorator import decorators
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default. Note: we made this static
@@ -29,7 +28,7 @@ from third_party.retry_decorator.decorators import retry
 # needs to check it.
 HAVE_OAUTH2 = False
 try:
-  from oauth2_plugin import oauth2_helper
+  from gslib.third_party.oauth2_plugin import oauth2_helper
   HAVE_OAUTH2 = True
 except ImportError:
   pass
@@ -53,7 +52,7 @@ IS_WINDOWS = 'win32' in str(sys.platform).lower()
 IS_LINUX = 'linux' in str(sys.platform).lower()
 IS_OSX = 'darwin' in str(sys.platform).lower()
 
-Retry = retry
+Retry = decorators.retry
 
 # Enum class for specifying listing style.
 class ListingStyle(object):

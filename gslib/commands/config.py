@@ -198,7 +198,7 @@ _detailed_help_text = ("""
 
 
 try:
-  from oauth2_plugin import oauth2_helper
+  from gslib.third_party.oauth2_plugin import oauth2_helper
 except ImportError:
   pass
 

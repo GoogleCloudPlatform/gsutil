@@ -48,7 +48,7 @@ import urllib2
 import urlparse
 
 from boto import cacerts
-from third_party import fancy_urllib
+from gslib.third_party import fancy_urllib
 
 try:
   import json

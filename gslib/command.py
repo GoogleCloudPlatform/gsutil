@@ -168,7 +168,7 @@ class Command(object):
   command_name = property(_GetDefaultCommandName)
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               gsutil_bin_dir, boto_lib_dir, config_file_list, gsutil_ver,
+               gsutil_bin_dir, config_file_list, gsutil_ver,
                bucket_storage_uri_class, test_method=None):
     """
     Args:
@@ -178,7 +178,6 @@ class Command(object):
       debug: Debug level to pass in to boto connection (range 0..3).
       parallel_operations: Should command operations be executed in parallel?
       gsutil_bin_dir: Bin dir from which gsutil is running.
-      boto_lib_dir: Lib dir where boto runs.
       config_file_list: Config file list returned by _GetBotoConfigFileList().
       gsutil_ver: Version string of currently running gsutil command.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
@@ -201,7 +200,6 @@ class Command(object):
     self.debug = debug
     self.parallel_operations = parallel_operations
     self.gsutil_bin_dir = gsutil_bin_dir
-    self.boto_lib_dir = boto_lib_dir
     self.config_file_list = config_file_list
     self.gsutil_ver = gsutil_ver
     self.bucket_storage_uri_class = bucket_storage_uri_class

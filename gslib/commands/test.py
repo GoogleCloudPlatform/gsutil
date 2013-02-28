@@ -56,7 +56,7 @@ TESTS_DIR = os.path.join(GSLIB_DIR, 'tests')
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil test [command command...]
+  gsutil test [-l] [-u] [-f] [command command...]
 
 
 <B>DESCRIPTION</B>
@@ -95,6 +95,13 @@ _detailed_help_text = ("""
   test file is of the format test_[name].py where [name] is the test name you
   can pass to this command. For example, running "gsutil test ls" would run the
   tests in "gslib/tests/test_ls.py".
+
+<B>OPTIONS</B>
+  -l          List available tests.
+
+  -u          Only run unit tests.
+
+  -f          Exit on first test failure.
 """)
 
 
