@@ -13,10 +13,8 @@
 # limitations under the License.
 
 import os
-import platform
 import shutil
 import signal
-import sys
 import tarfile
 import tempfile
 
@@ -38,10 +36,12 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.util import IS_WINDOWS
+
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-gsutil update [-f] [uri]
+  gsutil update [-f] [uri]
 
 
 <B>DESCRIPTION</B>
@@ -121,14 +121,12 @@ class UpdateCommand(Command):
     Raises:
       CommandException: if errors encountered.
     """
-    system = platform.system()
     # If running under Windows we don't need (or have) sudo.
-    if system.lower().startswith('windows'):
+    if IS_WINDOWS:
       return
 
     user_id = os.getuid()
-    if (os.stat(self.gsutil_bin_dir).st_uid == user_id
-        and os.stat(self.boto_lib_dir).st_uid == user_id):
+    if os.stat(self.gsutil_bin_dir).st_uid == user_id:
       return
 
     # Won't fail - this command runs after main startup code that insists on
@@ -189,12 +187,12 @@ class UpdateCommand(Command):
     for directory in dirs_to_remove:
       try:
         shutil.rmtree(directory)
-      except OSError as e:
+      except OSError:
         # Ignore errors while attempting to remove old dirs under Windows. They
         # happen because of Windows exclusive file locking, and the update
         # actually succeeds but just leaves the old versions around in the
         # user's temp dir.
-        if not platform.system().lower().startswith('windows'):
+        if not IS_WINDOWS:
           raise
 
   # Command entry point.
@@ -286,8 +284,7 @@ class UpdateCommand(Command):
     # here. Since enterprise mode is not not supported for Windows
     # users, we can skip this step when running on Windows, which
     # avoids the problem that Windows has no find or xargs command.
-    system = platform.system()
-    if not system.lower().startswith('windows'):
+    if not IS_WINDOWS:
       # Make all files and dirs in updated area readable by other
       # and make all directories executable by other. These steps
       os.system('chmod -R o+r ' + new_dir)
