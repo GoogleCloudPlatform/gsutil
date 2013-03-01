@@ -508,13 +508,13 @@ class ChAclCommand(Command):
       return
 
     # TODO: Remove the concept of forcing when boto provides access to
-    # bucket generation and meta_generation.
+    # bucket generation and metageneration.
     headers = dict(self.headers)
     force = uri.names_bucket()
     if not force:
       key = uri.get_key()
       headers['x-goog-if-generation-match'] = key.generation
-      headers['x-goog-if-metageneration-match'] = key.meta_generation
+      headers['x-goog-if-metageneration-match'] = key.metageneration
     
     # If this fails because of a precondition, it will raise a 
     # GSResponseError for @Retry to handle.

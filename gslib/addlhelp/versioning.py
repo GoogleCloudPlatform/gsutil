@@ -186,15 +186,15 @@ _detailed_help_text = ("""
   time of the upload does not match that specified.
 
   If the command you use updates object metadata, you will need to find the
-  current meta_generation for an object. To do this, use the gsutil ls -a and
+  current metageneration for an object. To do this, use the gsutil ls -a and
   -l options. For example, the command:
 
     gsutil ls -l -a gs://bucket/object
 
   will output something like:
 
-      64  2013-02-12T19:59:13  gs://bucket/object#1360699153986000  meta_generation=3
-    1521  2013-02-13T02:04:08  gs://bucket/object#1360721048778000  meta_generation=2
+      64  2013-02-12T19:59:13  gs://bucket/object#1360699153986000  metageneration=3
+    1521  2013-02-13T02:04:08  gs://bucket/object#1360721048778000  metageneration=2
 
   Given this information, you could use the following command to request setting
   the ACL on the older version of the object, such that the command will fail
@@ -211,11 +211,11 @@ _detailed_help_text = ("""
 
   If you want to experiment with how generations and metagenerations work, try
   the following. First, upload an object; then use gsutil ls -l -a to list all
-  versions of the object, along with each version's meta_generation; then re-
+  versions of the object, along with each version's metageneration; then re-
   upload the object and repeat the gsutil ls -l -a. You should see two object
-  versions, each with meta_generation=1. Now try setting the ACL, and rerun the
+  versions, each with metageneration=1. Now try setting the ACL, and rerun the
   gsutil ls -l -a. You should see the most recent object generation now has
-  meta_generation=2.
+  metageneration=2.
 
 
 <B>FOR MORE INFORMATION</B>

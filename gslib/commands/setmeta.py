@@ -230,14 +230,14 @@ class SetMetaCommand(Command):
       self.THREADED_LOGGER.info('Setting metadata on %s...', exp_src_uri)
       
       key = exp_src_uri.get_key()
-      meta_generation = key.meta_generation
+      metageneration = key.metageneration
       generation = key.generation
             
       headers = {}
       if generation:
         headers['x-goog-if-generation-match'] = generation
-      if meta_generation:
-        headers['x-goog-if-metageneration-match'] = meta_generation
+      if metageneration:
+        headers['x-goog-if-metageneration-match'] = metageneration
           
       # If this fails because of a precondition, it will raise a 
       # GSResponseError for @Retry to handle.

@@ -334,15 +334,15 @@ class LsCommand(Command):
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
       if not isinstance(obj, DeleteMarker):
         if self.all_versions:
-          print '%10s  %s  %s  meta_generation=%s' % (
-              obj.size, timestamp, uri_str.encode('utf-8'), obj.meta_generation)
+          print '%10s  %s  %s  metageneration=%s' % (
+              obj.size, timestamp, uri_str.encode('utf-8'), obj.metageneration)
         else:
           print '%10s  %s  %s' % (obj.size, timestamp, uri_str.encode('utf-8'))
         return (1, obj.size)
       else:
         if self.all_versions:
-          print '%10s  %s  %s  meta_generation=%s' % (
-              0, timestamp, uri_str.encode('utf-8'), obj.meta_generation)
+          print '%10s  %s  %s  metageneration=%s' % (
+              0, timestamp, uri_str.encode('utf-8'), obj.metageneration)
         else:
           print '%10s  %s  %s' % (0, timestamp, uri_str.encode('utf-8'))
         return (0, 1)

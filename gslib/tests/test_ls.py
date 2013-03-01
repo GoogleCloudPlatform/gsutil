@@ -87,5 +87,5 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                               return_stdout=True)
       self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
                     stdout)
-      self.assertIn('meta_generation=', stdout)
+      self.assertIn('metageneration=', stdout)
     _Check1()
