@@ -34,8 +34,8 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.util import IS_WINDOWS
 
 
@@ -76,36 +76,36 @@ class UpdateCommand(Command):
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'update',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['refresh'],
-    # Min number of args required by this command.
-    MIN_ARGS : 0,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 1,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'f',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 0,
-    # True if must configure gsutil before running command.
-    CONFIG_REQUIRED : True,
+      # Name of command.
+      COMMAND_NAME: 'update',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: ['refresh'],
+      # Min number of args required by this command.
+      MIN_ARGS: 0,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: 1,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: 'f',
+      # True if file URIs acceptable for this command.
+      FILE_URIS_OK: True,
+      # True if provider-only URIs acceptable for this command.
+      PROVIDER_URIS_OK: False,
+      # Index in args of first URI arg.
+      URIS_START_ARG: 0,
+      # True if must configure gsutil before running command.
+      CONFIG_REQUIRED: True,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'update',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['refresh'],
-    # Type of help:
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Update to the latest gsutil release',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'update',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['refresh'],
+      # Type of help:
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Update to the latest gsutil release',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }
 
   def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):
@@ -200,9 +200,16 @@ class UpdateCommand(Command):
     for cfg_var in ('is_secure', 'https_validate_certificates'):
       if (config.has_option('Boto', cfg_var)
           and not config.getboolean('Boto', cfg_var)):
-        raise CommandException('Your boto configuration has %s = False. '
-                               'The update command\ncannot be run this way, for '
-                               'security reasons.' % cfg_var)
+        raise CommandException(
+            'Your boto configuration has %s = False. The update command\n'
+            'cannot be run this way, for security reasons.' % cfg_var)
+
+    force_update = False
+    if self.sub_opts:
+      for o, unused_a in self.sub_opts:
+        if o == '-f':
+          force_update = True
+
     dirs_to_remove = []
     # Retrieve gsutil tarball and check if it's newer than installed code.
     # TODO: Store this version info as metadata on the tarball object and
@@ -212,16 +219,28 @@ class UpdateCommand(Command):
     dirs_to_remove.append(tmp_dir)
     os.chdir(tmp_dir)
     print 'Checking for software update...'
-    if len(self.args):
+    if self.args:
       update_from_uri_str = self.args[0]
       if not update_from_uri_str.endswith('.tar.gz'):
         raise CommandException(
-          'The update command only works with tar.gz files.')
+            'The update command only works with tar.gz files.')
+      for i, result in enumerate(self.WildcardIterator(update_from_uri_str)):
+        if i > 0:
+          raise CommandException(
+              'Invalid update URI. Must name a single .tar.gz file.')
+        if result.uri.names_file():
+          if not force_update:
+            raise CommandException(
+                ('"update" command does not support "file://" URIs without the '
+                 '-f option.'))
+        elif not result.uri.names_object():
+          raise CommandException(
+              'Invalid update object URI. Must name a single .tar.gz file.')
     else:
       update_from_uri_str = 'gs://pub/gsutil.tar.gz'
-    self.command_runner.RunNamedCommand('cp', [update_from_uri_str,
-                                        'file://gsutil.tar.gz'],
-                                        self.headers, self.debug)
+    self.command_runner.RunNamedCommand(
+        'cp', [update_from_uri_str, 'file://gsutil.tar.gz'], self.headers,
+        self.debug)
     # Note: tf is closed in _CleanUpUpdateCommand.
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
@@ -233,14 +252,9 @@ class UpdateCommand(Command):
     finally:
       ver_file.close()
 
-    force_update = False
-    if self.sub_opts:
-      for o, unused_a in self.sub_opts:
-        if o == '-f':
-          force_update = True
     if not force_update and self.gsutil_ver == latest_version_string:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
-      if len(self.args):
+      if self.args:
         raise CommandException('You already have %s installed.' %
                                update_from_uri_str, informational=True)
       else:
