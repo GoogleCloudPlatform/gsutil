@@ -44,7 +44,7 @@ _detailed_help_text = ("""
   rules:
 
   1. If the destination object ends with a "/" gsutil treats it as a directory.
-     For example, if you run the command:
+     For example, if you run the command::
 
        gsutil cp file gs://bucket/abc/
 
@@ -52,7 +52,7 @@ _detailed_help_text = ("""
 
   2. If you attempt to copy multiple source files to a destination URI, gsutil
      treats the destination URI as a directory. For example, if you run
-     the command:
+     the command::
 
        gsutil cp -R dir gs://bucket/abc
 
@@ -61,7 +61,7 @@ _detailed_help_text = ("""
 
   3. If neither of the above rules applies, gsutil performs a bucket listing to
      determine if the target of the operation is a prefix match to the
-     specified string. For example, if you run the command:
+     specified string. For example, if you run the command::
 
        gsutil cp file gs://bucket/abc
 
@@ -104,7 +104,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'How subdirectories work in gsutil',
+    HELP_ONE_LINE_SUMMARY : 'How Subdirectories Work',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

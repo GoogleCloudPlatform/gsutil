@@ -42,7 +42,7 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   The cat command outputs the contents of one or more URIs to stdout.
-  It is equivalent to doing:
+  It is equivalent to doing::
 
     gsutil cp uri... -
 
@@ -51,7 +51,7 @@ _detailed_help_text = ("""
 
 <B>OPTIONS</B>
   -h          Prints short header for each object. For example:
-                gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
+              gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
 """)
 
 

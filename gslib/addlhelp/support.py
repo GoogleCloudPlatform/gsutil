@@ -80,7 +80,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'How to get Google Cloud Storage support',
+    HELP_ONE_LINE_SUMMARY : 'Google Cloud Storage Support',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

@@ -32,24 +32,25 @@ _detailed_help_text = ("""
 
   Regardless of whether you have enabled versioning on a bucket, every object
   has two associated positive integer fields:
-    - the generation, which is updated when the content of an object is
-      overwritten.
-    - the meta-generation, which identifies the metadata generation. It starts
-      at 1; is updated every time the metadata (e.g., ACL or Content-Type) for a
-      given content generation is updated; and gets reset when the generation
-      number changes.
+
+  - the generation, which is updated when the content of an object is
+    overwritten.
+  - the meta-generation, which identifies the metadata generation. It starts
+    at 1; is updated every time the metadata (e.g., ACL or Content-Type) for a
+    given content generation is updated; and gets reset when the generation
+    number changes.
 
   Of these two integers, only the generation is used when working with versioned
   data. Both generation and meta-generation can be used with concurrency control
   (discussed in a later section).
 
   To work with object versioning in gsutil, you can use a flavor of storage URIs
-  that that embed the object generation, which we refer to as version-specific URIs.
-  For example, the version-less object URI:
+  that that embed the object generation, which we refer to as version-specific
+  URIs. For example, the version-less object URI::
 
     gs://bucket/object
 
-  might have have two versions, with these version-specific URIs:
+  might have have two versions, with these version-specific URIs::
 
     gs://bucket/object#1360383693690000
     gs://bucket/object#1360383802725000
@@ -60,7 +61,7 @@ _detailed_help_text = ("""
 
 <B>OBJECT VERSIONING</B>
   You can view, enable, and disable object versioning on a bucket using
-  the getversioning and setversioning commands. For example:
+  the getversioning and setversioning commands. For example::
 
     gsutil setversioning on gs://bucket
 
@@ -68,19 +69,19 @@ _detailed_help_text = ("""
   and 'gsutil help setversioning' for additional details.
 
   To see all object versions in a versioning-enabled bucket along with
-  their generation.meta-generation information, use gsutil ls -a:
+  their generation.meta-generation information, use gsutil ls -a::
 
     gsutil ls -a gs://bucket
 
   You can also specify particular objects for which you want to find the
-  version-specific URI(s), or you can use wildcards:
+  version-specific URI(s), or you can use wildcards::
 
     gsutil ls -a gs://bucket/object1 gs://bucket/images/*.jpg
 
   The generation values form a monotonically increasing sequence as you create
   additional object versions.  Because of this, the latest object version is
   always the last one listed in the gsutil ls output for a particular object.
-  For example, if a bucket contains these three versions of gs://bucket/object:
+  For example, if a bucket contains these three versions of gs://bucket/object::
 
     gs://bucket/object#1360035307075000
     gs://bucket/object#1360101007329000
@@ -90,21 +91,21 @@ _detailed_help_text = ("""
   gs://bucket/object#1360035307075000 is the oldest available version.
 
   If you specify version-less URIs with gsutil, you will operate on the
-  latest not-deleted version of an object, for example:
+  latest not-deleted version of an object, for example::
 
     gsutil cp gs://bucket/object ./dir
 
-  or
+  or::
 
     gsutil rm gs://bucket/object
 
   To operate on a specific object version, use a version-specific URI.
-  For example, suppose the output of the above gsutil ls -a command is:
+  For example, suppose the output of the above gsutil ls -a command is::
 
     gs://bucket/object#1360035307075000
     gs://bucket/object#1360101007329000
 
-  In this case, the command:
+  In this case, the command::
 
     gsutil cp gs://bucket/object#1360035307075000 ./dir
 
@@ -117,21 +118,21 @@ _detailed_help_text = ("""
   If an object has been deleted, it will not show up in a normal gsutil ls
   listing (i.e., ls without the -a option). You can restore a deleted object by
   running gsutil ls -a to find the available versions, and then copying one of
-  the version-specific URIs to the version-less URI, for example:
+  the version-specific URIs to the version-less URI, for example::
 
     gsutil cp gs://bucket/object#1360101007329000 gs://bucket/object
 
   Note that when you do this it creates a new object version, which will incur
   additional charges. You can get rid of the extra copy by deleting the older
-  version-specfic object:
+  version-specfic object::
 
     gsutil rm gs://bucket/object#1360101007329000
 
-  Or you can combine the two steps by using the gsutil mv command:
+  Or you can combine the two steps by using the gsutil mv command::
 
     gsutil mv gs://bucket/object#1360101007329000 gs://bucket/object
 
-  If you want to remove all versions of an object use the gsutil rm -a option:
+  If you want to remove all versions of an object use the gsutil rm -a option::
 
     gsutil rm -a gs://bucket/object
 
@@ -154,10 +155,11 @@ _detailed_help_text = ("""
   machines on which the job can run, which raises the possibility that two
   simultaneous runs could attempt to update an object at the same time. This
   leads to the following potential race condition:
-    - job 1 computes the new value to be written
-    - job 2 computes the new value to be written
-    - job 2 writes the new value
-    - job 1 writes the new value
+
+  - job 1 computes the new value to be written
+  - job 2 computes the new value to be written
+  - job 2 writes the new value
+  - job 1 writes the new value
 
   In this case, the value that job 1 read is no longer current by the time
   it goes to write the updated object, and writing at this point would result
@@ -167,16 +169,16 @@ _detailed_help_text = ("""
   created, and then use the information contained in that URI to specify an
   x-goog-if-generation-match header on a subsequent gsutil cp command. You can
   do this in two steps. First, use the gsutil cp -v option at upload time to get
-  the version-specific name of the object that was created, for example:
+  the version-specific name of the object that was created, for example::
 
     gsutil cp -v file gs://bucket/object
 
-  might output:
+  might output::
 
     Created: gs://bucket/object#1360432179236000
 
   You can extract the generation value from this object and then construct a
-  subsequent gsutil command like this:
+  subsequent gsutil command like this::
 
     gsutil -h x-goog-if-generation-match:1360432179236000 cp newfile \\
         gs://bucket/object
@@ -187,18 +189,18 @@ _detailed_help_text = ("""
 
   If the command you use updates object metadata, you will need to find the
   current metageneration for an object. To do this, use the gsutil ls -a and
-  -l options. For example, the command:
+  -l options. For example, the command::
 
     gsutil ls -l -a gs://bucket/object
 
-  will output something like:
+  will output something like::
 
       64  2013-02-12T19:59:13  gs://bucket/object#1360699153986000  metageneration=3
     1521  2013-02-13T02:04:08  gs://bucket/object#1360721048778000  metageneration=2
 
   Given this information, you could use the following command to request setting
   the ACL on the older version of the object, such that the command will fail
-  unless that is the current version of the data+metadata:
+  unless that is the current version of the data+metadata::
 
     gsutil -h x-goog-if-generation-match:1360699153986000 -h \\
       x-goog-if-metageneration-match:3 setacl public-read \\
@@ -236,7 +238,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working with object versions; concurrency control',
+    HELP_ONE_LINE_SUMMARY : 'Object Versioning and Concurrency Control',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

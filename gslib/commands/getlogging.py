@@ -41,61 +41,26 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   If logging is enabled for the specified bucket uri, the server responds
-  with a <Logging> XML element that looks something like this:
+  with a <Logging> XML element that looks something like this::
 
-  <?xml version="1.0" ?>
-  <Logging>
-      <LogBucket>
-          logs-bucket
-      </LogBucket>
-      <LogObjectPrefix>
-          my-logs-enabled-bucket
-      </LogObjectPrefix>
-  </Logging>
+    <?xml version="1.0" ?>
+    <Logging>
+        <LogBucket>
+            logs-bucket
+        </LogBucket>
+        <LogObjectPrefix>
+            my-logs-enabled-bucket
+        </LogObjectPrefix>
+    </Logging>
 
   If logging is not enabled, an empty <Logging> element is returned.
 
   You can download log data from your log bucket using the gsutil cp command.
 
 
-<B>ACCESS LOG FIELDS</B>
-  Field               Type     Description
-  time_micros         integer  The time that the request was completed, in
-                                microseconds since the Unix epoch.
-  c_ip                string   The IP address from which the request was made.
-                               The "c" prefix indicates that this is information
-                               about the client.
-  c_ip_type           integer  The type of IP in the c_ip field:
-                               A value of 1 indicates an IPV4 address.
-                               A value of 2 indicates an IPV6 address.
-  c_ip_region         string   Reserved for future use.
-  cs_method           string   The HTTP method of this request. The "cs" prefix
-                               indicates that this information was sent from the
-                               client to the server.
-  cs_uri              string   The URI of the request.
-  sc_status           integer  The HTTP status code the server sent in response.
-                               The "sc" prefix indicates that this information
-                               was sent from the server to the client.
-  cs_bytes            integer  The number of bytes sent in the request.
-  sc_bytes            integer  The number of bytes sent in the response.
-  time_taken_micros   integer  The time it took to serve the request in
-                               microseconds.
-  cs_host             string   The host in the original request.
-  cs_referrer         string   The HTTP referrer for the request.
-  cs_user_agent       string   The User-Agent of the request.
-  s_request_id        string   The request identifier.
-  cs_operation        string   The Google Cloud Storage operation e.g.
-                               GET_Object.
-  cs_bucket           string   The bucket specified in the request. If this is a
-                               list buckets request, this can be null.
-  cs_object           string   The object specified in this request. This can be
-                               null.
-
-
-<B>STORAGE DATA FIELDS</B>
-  Field               Type     Description
-  bucket              string   The name of the bucket.
-  storage_byte_hours  integer  Average size in bytes/per hour of that bucket.
+<B>ACCESS LOG AND STORAGE DATA FIELDS</B>
+  For a complete list of access log fields and storage data fields, see:
+  https://developers.google.com/storage/docs/accesslogs#reviewing
 """)
 
 

@@ -43,14 +43,14 @@ _detailed_help_text = ("""
   The gsutil getversioning command gets the versioning configuration for a
   bucket, and displays an XML representation of the configuration.
 
-  In Google Cloud Storage, this would look like:
+  In Google Cloud Storage, this would look like::
 
-  <?xml version="1.0" ?>
-  <VersioningConfiguration>
-    <Status>
-      Enabled
-    </Status>
-  </VersioningConfiguration>
+    <?xml version="1.0" ?>
+    <VersioningConfiguration>
+      <Status>
+        Enabled
+      </Status>
+    </VersioningConfiguration>
 """)
 
 class GetVersioningCommand(Command):

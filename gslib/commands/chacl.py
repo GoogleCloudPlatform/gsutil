@@ -270,10 +270,11 @@ _detailed_help_text = ("""
 <B>SYNOPSIS</B>
   gsutil chacl [-R] -u|-g|-d <grant>... uri...
 
-  where each <grant> is one of the following forms:
-  -u <id|email>:<perm>
-  -g <id|email|domain|All|AllAuth>:<perm>
-  -d <id|email|domain|All|AllAuth>
+  where each <grant> is one of the following forms::
+
+    -u <id|email>:<perm>
+    -g <id|email|domain|All|AllAuth>:<perm>
+    -d <id|email|domain|All|AllAuth>
 
 <B>DESCRIPTION</B>
   The chacl command updates access control lists, similar in spirit to the Linux
@@ -294,41 +295,41 @@ _detailed_help_text = ("""
 <B>EXAMPLES</B>
 
   Grant the user john.doe@example.com WRITE access to the bucket
-  example-bucket:
+  example-bucket::
 
     gsutil chacl -u john.doe@example.com:WRITE gs://example-bucket
 
   Grant the group admins@example.com FULL_CONTROL access to all jpg files in
-  the top level of example-bucket:
+  the top level of example-bucket::
 
     gsutil chacl -g admins@example.com:FC gs://example-bucket/*.jpg
 
   Grant the user with the specified canonical ID READ access to all objects in
-  example-bucket that begin with folder/:
+  example-bucket that begin with folder/::
 
     gsutil chacl -R \\
       -u 84fac329bceSAMPLE777d5d22b8SAMPLE77d85ac2SAMPLE2dfcf7c4adf34da46:R \\
       gs://example-bucket/folder/
 
   Grant all users from my-domain.org READ access to the bucket
-  gcs.my-domain.org:
+  gcs.my-domain.org::
 
     gsutil chacl -g my-domain.org:R gs://gcs.my-domain.org
 
   Remove any current access by john.doe@example.com from the bucket
-  example-bucket:
+  example-bucket::
 
     gsutil chacl -d john.doe@example.com gs://example-bucket
 
   If you have a large number of objects to update, enabling multi-threading with
   the gsutil -m flag can significantly improve performance. The following
-  command adds FULL_CONTROL for admin@example.org using multi-threading:
+  command adds FULL_CONTROL for admin@example.org using multi-threading::
 
     gsutil -m chacl -R -u admin@example.org:FC gs://example-bucket
 
   Grant READ access to everyone from my-domain.org and to all authenticated
   users, and grant FULL_CONTROL to admin@mydomain.org, for the buckets
-  my-bucket and my-other-bucket, with multi-threading enabled:
+  my-bucket and my-other-bucket, with multi-threading enabled::
 
     gsutil -m chacl -R -g my-domain.org:R -g AllAuth:R \\
       -u admin@mydomain.org:FC gs://my-bucket/ gs://my-other-bucket
@@ -359,11 +360,11 @@ _detailed_help_text = ("""
 
 <B>PERMISSIONS</B>
   You may specify the following permissions with either their shorthand or
-  their full name:
+  their full name::
 
-  R: READ
-  W: WRITE
-  FC: FULL_CONTROL
+    R: READ
+    W: WRITE
+    FC: FULL_CONTROL
 
 
 <B>OPTIONS</B>

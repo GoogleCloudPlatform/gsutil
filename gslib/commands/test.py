@@ -65,29 +65,29 @@ _detailed_help_text = ("""
   the integration tests send requests to the production service.
 
   To run both the unit tests and integration tests, run the command with no
-  arguments:
+  arguments::
 
     gsutil test
 
-  To run the unit tests only (which run quickly):
+  To run the unit tests only (which run quickly)::
 
     gsutil test -u
 
-  To see additional details for test failures:
+  To see additional details for test failures::
 
     gsutil -d test
 
-  To have the tests stop running immediately when an error occurs:
+  To have the tests stop running immediately when an error occurs::
 
     gsutil test -f
 
   To run tests for one or more individual commands add those commands as
   arguments. For example, the following command will run the cp and mv command
-  tests:
+  tests::
 
     gsutil test cp mv
 
-  To list available tests, run the test command with the -l argument:
+  To list available tests, run the test command with the -l argument::
 
     gsutil test -l
 

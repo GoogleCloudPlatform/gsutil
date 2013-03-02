@@ -56,8 +56,8 @@ from gslib.util import Percentile
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil perfdiag [-i in.json] [-o out.json]
-                  [-n iterations] [-c concurrency] [-s size] [-t tests] uri...
+  gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c concurrency]
+  [-s size] [-t tests] uri...
 
 
 <B>DESCRIPTION</B>
@@ -81,7 +81,7 @@ _detailed_help_text = ("""
 <B>PROVIDING DIAGNOSTIC OUTPUT TO GOOGLE CLOUD STORAGE TEAM</B>
   If the Google Cloud Storage Team asks you to run a performance diagnostic
   please use the following command, and email the output file (output.json)
-  to gs-team@google.com:
+  to gs-team@google.com::
 
     gsutil perfdiag -o output.json gs://your-bucket
 
@@ -102,15 +102,19 @@ _detailed_help_text = ("""
               run all diagnostic tests. Must be a comma-separated list
               containing one or more of the following:
 
-                  lat: Runs N iterations (set with -n) of writing the file,
-                       retrieving its metadata, reading the file, and deleting
-                       the file. Records the latency of each operation.
+              lat
+                 Runs N iterations (set with -n) of writing the file,
+                 retrieving its metadata, reading the file, and deleting
+                 the file. Records the latency of each operation.
 
-                rthru: Runs N (set with -n) read operations, with at most C
-                       (set with -c) reads outstanding at any given time.
+              rthru
+                 Runs N (set with -n) read operations, with at most C
+                 (set with -c) reads outstanding at any given time.
 
-                wthru: Runs N (set with -n) write operations, with at most C
-                       (set with -c) writes outstanding at any given time.
+              wthru
+                 Runs N (set with -n) write operations, with at most C
+                 (set with -c) writes outstanding at any given time.
+
 
   -o          Writes the results of the diagnostic to an output file. The output
               is a JSON file containing system information and performance

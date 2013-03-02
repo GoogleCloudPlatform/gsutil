@@ -29,7 +29,7 @@ _detailed_help_text = ("""
   gsutil supports separate options for the top-level gsutil command and
   the individual sub-commands (like cp, rm, etc.) The top-level options
   control behavior of gsutil that apply across commands. For example, in
-  the command:
+  the command::
 
     gsutil -m cp -p file gs://bucket/obj
 
@@ -46,7 +46,7 @@ _detailed_help_text = ("""
   -DD         Shows HTTP requests/headers plus additional debug info plus HTTP
               upstream payload.
 
-  -h          Allows you to specify additional HTTP headers, for example:
+  -h          Allows you to specify additional HTTP headers, for example::
 
                 gsutil -h "Cache-Control:public,max-age=3600" \\
                        -h "Content-Type:text/html" cp ...
@@ -58,14 +58,16 @@ _detailed_help_text = ("""
 
               Note that because the -h option allows you to specify any HTTP
               header, it is both powerful and potentially dangerous:
-                - It is powerful because it allows you to specify headers that
-                  gsutil doesn't currently know about (e.g., to request
-                  service features from a different storage service provider
-                  than Google); or to override the values gsutil would normally
-                  send with different values.
-                - It is potentially dangerous because you can specify headers
-                  that cause gsutil to send invalid requests, or that in
-                  other ways change the behavior of requests.
+
+              - It is powerful because it allows you to specify headers that
+                gsutil doesn't currently know about (e.g., to request
+                service features from a different storage service provider
+                than Google); or to override the values gsutil would normally
+                send with different values.
+              - It is potentially dangerous because you can specify headers
+                that cause gsutil to send invalid requests, or that in
+                other ways change the behavior of requests.
+
               Thus, you should be sure you understand the underlying storage
               service HTTP API (and what impact the headers you specify will
               have) before using the gsutil -h option.
@@ -110,7 +112,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'gsutil-level command line options',
+    HELP_ONE_LINE_SUMMARY : 'Top-Level Command-Line Options',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

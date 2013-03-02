@@ -45,7 +45,7 @@ _detailed_help_text = ("""
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
   If you run gsutil ls without URIs, it lists all of the Google Cloud Storage
-  buckets under your default project ID:
+  buckets under your default project ID::
 
     gsutil ls
 
@@ -53,16 +53,16 @@ _detailed_help_text = ("""
   option in the OPTIONS section below.)
 
   If you specify one or more provider URIs, gsutil ls will list buckets at
-  each listed provider:
+  each listed provider::
 
     gsutil ls gs://
 
   If you specify bucket URIs, gsutil ls will list objects at the top level of
-  each bucket, along with the names of each subdirectory. For example:
+  each bucket, along with the names of each subdirectory. For example::
 
     gsutil ls gs://bucket
 
-  might produce output like:
+  might produce output like::
 
     gs://bucket/obj1.htm
     gs://bucket/obj2.htm
@@ -70,12 +70,12 @@ _detailed_help_text = ("""
     gs://bucket/images2/
 
   The "/" at the end of the last 2 URIs tells you they are subdirectories,
-  which you can list using:
+  which you can list using::
 
     gsutil ls gs://bucket/images*
 
   If you specify object URIs, gsutil ls will list the specified objects. For
-  example:
+  example::
 
     gsutil ls gs://bucket/*.txt
 
@@ -88,7 +88,7 @@ _detailed_help_text = ("""
 <B>DIRECTORY BY DIRECTORY, FLAT, and RECURSIVE LISTINGS</B>
   Listing a bucket or subdirectory (as illustrated near the end of the previous
   section) only shows the objects and names of subdirectories it contains. You
-  can list all objects in a bucket by using the -R option. For example:
+  can list all objects in a bucket by using the -R option. For example::
 
     gsutil ls -R gs://bucket
 
@@ -96,23 +96,23 @@ _detailed_help_text = ("""
   buckets under gs://bucket/images1, then those under gs://bucket/images2, etc.
 
   If you want to see all objects in the bucket in one "flat" listing use the
-  recursive ("**") wildcard, like:
+  recursive ("**") wildcard, like::
 
     gsutil ls -R gs://bucket/**
 
-  or, for a flat listing of a subdirectory:
+  or, for a flat listing of a subdirectory::
 
     gsutil ls -R gs://bucket/dir/**
 
 
 <B>LISTING OBJECT DETAILS</B>
   If you specify the -l option, gsutil will output additional information
-  about each matching provider, bucket, subdirectory, or object. For example,
+  about each matching provider, bucket, subdirectory, or object. For example::
 
     gsutil ls -l gs://bucket/*.txt
 
   will print the object size, creation time stamp, and name of each matching
-  object, along with the total count and sum of sizes of all matching objects:
+  object, along with the total count and sum of sizes of all matching objects::
 
        2276224  2012-03-02T19:25:17  gs://bucket/obj1
        3914624  2012-03-02T19:30:27  gs://bucket/obj2
@@ -123,16 +123,16 @@ _detailed_help_text = ("""
   Google Cloud Storage.
 
   You can get a listing of all the objects in the top-level bucket directory
-  (along with the total count and sum of sizes) using a command like:
+  (along with the total count and sum of sizes) using a command like::
 
     gsutil ls -l gs://bucket
 
   To print additional detail about objects and buckets use the gsutil ls -L
-  option. For example:
+  option. For example::
 
     gsutil ls -L gs://bucket/obj1
 
-  will print something like:
+  will print something like::
 
     gs://bucket/obj1:
             Creation Time:      Fri, 02 Mar 2012 19:25:17 GMT
@@ -153,11 +153,11 @@ _detailed_help_text = ("""
 
 <B>LISTING BUCKET DETAILS</B>
   If you want to see information about the bucket itself, use the -b
-  option. For example:
+  option. For example::
 
     gsutil ls -L -b gs://bucket
 
-  will print something like:
+  will print something like::
 
     gs://bucket/ :
             24 objects, 29.83 KB

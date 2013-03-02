@@ -32,15 +32,15 @@ _detailed_help_text = ("""
 <B>PROJECT MEMBERS AND PERMISSIONS</B>
   There are three groups of users associated with each project:
 
-    - Project Owners are allowed to list, create, and delete buckets,
-      and can also perform administrative tasks like adding and removing team
-      members and changing billing. The project owners group is the owner
-      of all buckets within a project, regardless of who may be the original
-      bucket creator.
+  - Project Owners are allowed to list, create, and delete buckets,
+    and can also perform administrative tasks like adding and removing team
+    members and changing billing. The project owners group is the owner
+    of all buckets within a project, regardless of who may be the original
+    bucket creator.
 
-    - Project Editors are allowed to list, create, and delete buckets.
+  - Project Editors are allowed to list, create, and delete buckets.
 
-    - All Project Team Members are allowed to list buckets within a project.
+  - All Project Team Members are allowed to list buckets within a project.
 
   These projects make it easy to set up a bucket and start uploading objects
   with access control appropriate for a project at your company, as the three
@@ -52,47 +52,47 @@ _detailed_help_text = ("""
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>
   When you create a bucket without specifying an ACL the bucket is given a
   "project-private" ACL, which grants the permissions described in the previous
-  section. Here's an example of such an ACL:
+  section. Here's an example of such an ACL::
 
-  <AccessControlList>
-    <Owner>
-      <ID>
-        00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-      </ID>
-    </Owner>
-    <Entries>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-          </ID>
-        </Scope>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-      </Entry>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
-          </ID>
-        </Scope>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-      </Entry>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
-          </ID>
-        </Scope>
-        <Permission>
-          READ
-        </Permission>
-      </Entry>
-    </Entries>
-  </AccessControlList>
+    <AccessControlList>
+      <Owner>
+        <ID>
+          00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
+        </ID>
+      </Owner>
+      <Entries>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
+            </ID>
+          </Scope>
+          <Permission>
+            FULL_CONTROL
+          </Permission>
+        </Entry>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
+            </ID>
+          </Scope>
+          <Permission>
+            FULL_CONTROL
+          </Permission>
+        </Entry>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
+            </ID>
+          </Scope>
+          <Permission>
+            READ
+          </Permission>
+        </Entry>
+      </Entries>
+    </AccessControlList>
 
   The three "GroupById" scopes are the canonical IDs for the Project Owners,
   Project Editors, and All Project Team Members groups.
@@ -124,7 +124,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working with projects',
+    HELP_ONE_LINE_SUMMARY : 'Working with Projects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

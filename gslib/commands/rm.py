@@ -42,12 +42,12 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   The gsutil rm command removes objects.
-  For example, the command:
+  For example, the command::
 
     gsutil rm gs://bucket/subdir/*
 
   will remove all objects in gs://bucket/subdir, but not in any of its
-  sub-directories. In contrast:
+  sub-directories. In contrast::
 
     gsutil rm gs://bucket/subdir/**
 
@@ -55,19 +55,19 @@ _detailed_help_text = ("""
   subdirectories.
 
   You can also use the -R option to specify recursive object deletion. Thus, for
-  example, the following two commands will both remove all objects in a bucket:
+  example, the following two commands will both remove all objects in a bucket::
 
     gsutil rm gs://bucket/**
     gsutil rm -R gs://bucket
 
   If you have a large number of objects to remove you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
-  removes:
+  removes::
 
     gsutil -m rm -R gs://my_bucket/subdir
 
   Note that gsutil rm will refuse to remove files from the local
-  file system. For example this will fail:
+  file system. For example this will fail::
 
     gsutil rm *.txt
 

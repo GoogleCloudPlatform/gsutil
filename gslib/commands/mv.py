@@ -34,7 +34,6 @@ from gslib.util import NO_MAX
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
   gsutil mv [-p] src_uri dst_uri
-    - or -
   gsutil mv [-p] uri... dst_uri
 
 
@@ -42,19 +41,19 @@ _detailed_help_text = ("""
   The gsutil mv command allows you to move data between your local file
   system and the cloud, move data within the cloud, and move data between
   cloud storage providers. For example, to move all objects from a
-  bucket to a local directory you could use:
+  bucket to a local directory you could use::
 
     gsutil mv gs://my_bucket dir
 
   Similarly, to move all objects from a local directory to a bucket you could
-  use:
+  use::
 
     gsutil mv ./dir gs://my_bucket
 
 
 <B>RENAMING BUCKET SUBDIRECTORIES</B>
   You can use the gsutil mv command to rename subdirectories. For example,
-  the command:
+  the command::
 
     gsutil mv gs://my_bucket/olddir gs://my_bucket/newdir
 
@@ -65,12 +64,12 @@ _detailed_help_text = ("""
   should use the -p option (see OPTIONS).
 
   Note that when using mv to rename bucket subdirectories you cannot specify
-  the source URI using wildcards. You need to spell out the complete name:
+  the source URI using wildcards. You need to spell out the complete name::
 
     gsutil mv gs://my_bucket/olddir gs://my_bucket/newdir
 
   If you have a large number of files to move you might want to use the
-  gsutil -m option, to perform a multi-threaded/multi-processing move:
+  gsutil -m option, to perform a multi-threaded/multi-processing move::
 
     gsutil -m mv gs://my_bucket/olddir gs://my_bucket/newdir
 

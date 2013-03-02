@@ -48,13 +48,17 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  Running:
+  Running::
+
     gsutil help
+
   will provide a summary of all commands and additional topics on which
   help is available.
 
-  Running:
+  Running::
+
     gsutil help command or topic
+
   will provide help about the specified command or topic.
 
   If you set the PAGER environment variable to the path to a pager program

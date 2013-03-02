@@ -44,22 +44,22 @@ _detailed_help_text = ("""
   can get the CORS settings for only one bucket at a time. The output from
   getcors can be redirected into a file, edited and then updated via the
   setcors sub-command. The CORS configuration is expressed by an XML document
-  with the following structure:
+  with the following structure::
 
-  <?xml version="1.0" ?>
-  <CorsConfig>
-      <Cors>
-          <Origins>
-              <Origin>origin1.example.com</Origin>
-          </Origins>
-          <Methods>
-              <Method>GET</Method>
-          </Methods>
-          <ResponseHeaders>
-              <ResponseHeader>Content-Type</ResponseHeader>
-          </ResponseHeaders>
-      </Cors>
-  </CorsConfig>
+    <?xml version="1.0" ?>
+    <CorsConfig>
+        <Cors>
+            <Origins>
+                <Origin>origin1.example.com</Origin>
+            </Origins>
+            <Methods>
+                <Method>GET</Method>
+            </Methods>
+            <ResponseHeaders>
+                <ResponseHeader>Content-Type</ResponseHeader>
+            </ResponseHeaders>
+        </Cors>
+    </CorsConfig>
 
   For more info about CORS, see http://www.w3.org/TR/cors/.
 """)

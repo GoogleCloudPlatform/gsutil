@@ -33,22 +33,22 @@ _detailed_help_text = ("""
   Storage imposes other requirements on bucket naming. At a minimum, your
   bucket names must meet the following requirements:
 
-    - Bucket names must contain only lowercase letters, numbers, dashes (-), and
-      dots (.).
+  - Bucket names must contain only lowercase letters, numbers, dashes (-), and
+    dots (.).
 
-    - Bucket names must start and end with a number or letter.
+  - Bucket names must start and end with a number or letter.
 
-    - Bucket names must contain 3 to 63 characters. Names containing dots can
-      contain up to 222 characters, but each dot-separated component can be
-      no longer than 63 characters.
+  - Bucket names must contain 3 to 63 characters. Names containing dots can
+    contain up to 222 characters, but each dot-separated component can be
+    no longer than 63 characters.
 
-    - Bucket names cannot be represented as an IPv4 address in dotted-decimal
-      notation (for example, 192.168.5.4).
+  - Bucket names cannot be represented as an IPv4 address in dotted-decimal
+    notation (for example, 192.168.5.4).
 
-    - Bucket names cannot begin with the "goog" prefix.
+  - Bucket names cannot begin with the "goog" prefix.
 
-    - For DNS compliance, you should not have a period adjacent to another
-      period or dash. For example, ".." or "-." or ".-" are not acceptable.
+  - For DNS compliance, you should not have a period adjacent to another
+    period or dash. For example, ".." or "-." or ".-" are not acceptable.
 
 
 <B>OBJECT NAME REQUIREMENTS</B>
@@ -68,6 +68,7 @@ _detailed_help_text = ("""
 
   Before you can create a bucket name containing one or more '.' characters,
   the following rules apply:
+
   - If the name is a syntactically valid DNS name ending with a
     currently-recognized top-level domain (such as .com), you will be required
     to verify domain ownership.
@@ -99,6 +100,7 @@ _detailed_help_text = ("""
   "downloads.example.com", and other domain-named buckets.
 
   Site-Based Verification
+  -----------------------
 
   If you have administrative control over the HTML files that make up a site,
   you can use one of the site-based verification methods to verify that you
@@ -111,13 +113,14 @@ _detailed_help_text = ("""
   ownership of the following domains: abc.def.example.com, def.example.com,
   and example.com. In this case, Google Cloud Storage lets you create a bucket
   named abc.def.example.com if you verify that you own or control any of the
-  following sites:
+  following sites::
 
-  http://abc.def.example.com
-  http://def.example.com
-  http://example.com
+    http://abc.def.example.com
+    http://def.example.com
+    http://example.com
 
   Domain-Based Verification
+  -------------------------
 
   If you have administrative control over a domain's DNS configuration, you can
   use the DNS TXT record verification method to verify that you own or control a
@@ -167,7 +170,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Object and bucket naming',
+    HELP_ONE_LINE_SUMMARY : 'Object and Bucket Naming',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

@@ -43,22 +43,22 @@ _detailed_help_text = ("""
   Sets the Cross-Origin Resource Sharing (CORS) configuration on one or more
   buckets. This command is supported for buckets only, not objects. The
   cors-xml-file specified on the command line should be a path to a local
-  file containing an XML document with the following structure:
+  file containing an XML document with the following structure::
 
-  <?xml version="1.0" ?>
-  <CorsConfig>
-      <Cors>
-          <Origins>
-              <Origin>http://origin1.example.com</Origin>
-          </Origins>
-          <Methods>
-              <Method>GET</Method>
-          </Methods>
-          <ResponseHeaders>
-              <ResponseHeader>Content-Type</ResponseHeader>
-          </ResponseHeaders>
-      </Cors>
-  </CorsConfig>
+    <?xml version="1.0" ?>
+    <CorsConfig>
+        <Cors>
+            <Origins>
+                <Origin>http://origin1.example.com</Origin>
+            </Origins>
+            <Methods>
+                <Method>GET</Method>
+            </Methods>
+            <ResponseHeaders>
+                <ResponseHeader>Content-Type</ResponseHeader>
+            </ResponseHeaders>
+        </Cors>
+    </CorsConfig>
 
   The above XML document explicitly allows cross-origin GET requests from
   http://origin1.example.com and may include the Content-Type response header.

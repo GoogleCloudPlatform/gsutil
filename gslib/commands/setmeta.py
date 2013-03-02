@@ -52,14 +52,14 @@ _detailed_help_text = ("""
   or more objects. It takes one or more header arguments followed by one or
   more URIs, where each header argument is in one of two forms:
 
-    - if you specify header:value, it will set the given header on all
-      named objects.
+  - if you specify header:value, it will set the given header on all
+    named objects.
 
-    - if you specify header (with no value), it will remove the given header
-      from all named objects.
+  - if you specify header (with no value), it will remove the given header
+    from all named objects.
 
   For example, the following command would set the Content-Type and
-  Cache-Control and remove the Content-Disposition on the specified objects:
+  Cache-Control and remove the Content-Disposition on the specified objects::
 
     gsutil setmeta -h "Content-Type:text/html" \\
       -h "Cache-Control:public, max-age=3600" \\
@@ -67,7 +67,7 @@ _detailed_help_text = ("""
 
   If you have a large number of objects to update you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
-  update:
+  update::
 
     gsutil -m setmeta -h "Content-Type:text/html" \\
       -h "Cache-Control:public, max-age=3600" \\
@@ -106,17 +106,17 @@ _detailed_help_text = ("""
   be removed.
 
   With this older syntax, the setmeta command accepts a single metadata
-  argument in one of two forms:
+  argument in one of two forms::
 
     gsutil setmeta [-n] header:value uri...
 
-  or
+  or::
 
     gsutil setmeta [-n] '"header:value","-header",...' uri...
 
   The first form allows you to specify a single header name and value to
   set. For example, the following command would set the Content-Type and
-  Cache-Control and remove the Content-Disposition on the specified objects:
+  Cache-Control and remove the Content-Disposition on the specified objects::
 
     gsutil setmeta -h "Content-Type:text/html" \\
       -h "Cache-Control:public, max-age=3600" \\
@@ -135,14 +135,15 @@ _detailed_help_text = ("""
   On Linux or MacOS you need to surround the entire argument in single quotes
   to avoid having the shell interpret/strip out the double-quotes in the CSV
   data. For example, the following command would set the Content-Type and
-  Cache-Control and remove the Content-Disposition on the specified objects:
+  Cache-Control and remove the Content-Disposition on the specified objects::
 
     gsutil setmeta '"Content-Type:text/html","Cache-Control:public, max-age=3600","-Content-Disposition"' gs://bucket/*.html
 
   To pass CSV data on Windows you need two sets of double quotes around
   each header/value pair, and one set of double quotes around the entire
   expression. For example, the following command would set the Content-Type
-  and Cache-Control and remove the Content-Disposition on the specified objects:
+  and Cache-Control and remove the Content-Disposition on the specified
+  objects::
 
     gsutil setmeta "\""Content-Type:text/html"",""Cache-Control:public, max-age=3600"",""-Content-Disposition""\" gs://bucket/*.html
 

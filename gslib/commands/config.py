@@ -94,7 +94,7 @@ _detailed_help_text = ("""
 
   You can also set up a path of configuration files, by setting the BOTO_PATH
   environment variable to contain a ":" delimited path. For example setting
-  the BOTO_PATH environment variable to:
+  the BOTO_PATH environment variable to::
 
     /etc/projects/my_group_project.boto.cfg:/home/mylogin/.boto
 
@@ -127,35 +127,36 @@ _detailed_help_text = ("""
   listed in your current file, see the section below on Updating to the Latest
   Configuration File.
 
-  The currently supported settings, are, by section:
-  [Boto]
-    proxy
-    proxy_port
-    proxy_user
-    proxy_pass
-    is_secure
-    https_validate_certificates
-    send_crlf_after_proxy_auth_headers
-    debug
-    num_retries
+  The currently supported settings, are, by section::
 
-  [GSUtil]
-    resumable_threshold
-    resumable_tracker_dir
-    parallel_process_count
-    parallel_thread_count
-    default_api_version
-    default_project_id
-    use_magicfile
+    [Boto]
+      proxy
+      proxy_port
+      proxy_user
+      proxy_pass
+      is_secure
+      https_validate_certificates
+      send_crlf_after_proxy_auth_headers
+      debug
+      num_retries
 
-  [OAuth2]
-    token_cache
-    token_cache
-    client_id
-    client_secret
-    provider_label
-    provider_authorization_uri
-    provider_token_uri
+    [GSUtil]
+      resumable_threshold
+      resumable_tracker_dir
+      parallel_process_count
+      parallel_thread_count
+      default_api_version
+      default_project_id
+      use_magicfile
+
+    [OAuth2]
+      token_cache
+      token_cache
+      client_id
+      client_secret
+      provider_label
+      provider_authorization_uri
+      provider_token_uri
 
 
 <B>UPDATING TO THE LATEST CONFIGURATION FILE</B>

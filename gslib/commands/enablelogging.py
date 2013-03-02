@@ -48,7 +48,7 @@ _detailed_help_text = ("""
   The gsutil enablelogging command will enable access logging of the
   buckets named by the specified uris, outputting log files in the specified
   logging_bucket. logging_bucket must already exist, and all URIs must name
-  buckets (e.g., gs://bucket). For example, the command:
+  buckets (e.g., gs://bucket). For example, the command::
 
     gsutil enablelogging -b gs://my_logging_bucket -o AccessLog \\
         gs://my_bucket1 gs://my_bucket2
@@ -56,6 +56,11 @@ _detailed_help_text = ("""
   will cause all read and write activity to objects in gs://mybucket1 and
   gs://mybucket2 to be logged to objects prefixed with the name "AccessLog",
   with those log objects written to the bucket gs://my_logging_bucket.
+
+  Next, you need to grant cloud-storage-analytics@google.com write access to
+  the log bucket, using this command::
+
+    chacl -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
 
   Note that log data may contain sensitive information, so you should make
   sure to set an appropriate default bucket ACL to protect that data. (See

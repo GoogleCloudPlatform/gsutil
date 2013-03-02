@@ -31,17 +31,19 @@ _detailed_help_text = ("""
 
   There are two ways to set metadata on objects:
 
-    - at upload time you can specify one or more headers to associate with
-      objects, using the gsutil -h option.  For example, the following command
-      would cause gsutil to set the Content-Type and Cache-Control for each
-      of the files being uploaded:
+  - at upload time you can specify one or more headers to associate with
+    objects, using the gsutil -h option.  For example, the following command
+    would cause gsutil to set the Content-Type and Cache-Control for each
+    of the files being uploaded::
 
-        gsutil -h "Content-Type:text/html" -h "Cache-Control:public, max-age=3600" cp -r images gs://bucket/images
+      gsutil -h "Content-Type:text/html" \
+             -h "Cache-Control:public, max-age=3600" cp -r images \
+             gs://bucket/images
 
-      Note that -h is an option on the gsutil command, not the cp sub-command.
+    Note that -h is an option on the gsutil command, not the cp sub-command.
 
-    - You can set or remove metadata fields from already uploaded objects using
-      the gsutil setmeta command. See "gsutil help setmeta".
+  - You can set or remove metadata fields from already uploaded objects using
+    the gsutil setmeta command. See "gsutil help setmeta".
 
   More details about specific pieces of metadata are discussed below.
 
@@ -65,7 +67,7 @@ _detailed_help_text = ("""
   for some of your files.
 
   You can also completely suppress content type detection in gsutil, by
-  specifying an empty string on the Content-Type header:
+  specifying an empty string on the Content-Type header::
 
     gsutil -h 'Content-Type:' cp -r images gs://bucket/images
 
@@ -85,9 +87,10 @@ _detailed_help_text = ("""
   allowed to cache your objects. Cache-Control only applies to objects with
   a public-read ACL. Non-public data are not cacheable.
 
-  Here's an example of uploading an object set to allow caching:
+  Here's an example of uploading an object set to allow caching::
 
-    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read -r html gs://bucket/html
+    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \
+           -r html gs://bucket/html
 
   This command would upload all files in the html directory (and subdirectories)
   and make them publicly readable and cacheable, with cache expiration of
@@ -102,7 +105,7 @@ _detailed_help_text = ("""
 
 <B>CONTENT-ENCODING</B>
   You could specify Content-Encoding to indicate that an object is compressed,
-  using a command like:
+  using a command like::
 
     gsutil -h "Content-Encoding:gzip" cp *.gz gs://bucket/compressed
 
@@ -123,7 +126,7 @@ _detailed_help_text = ("""
 
 <B>CONTENT-DISPOSITION</B>
   You can set Content-Disposition on your objects, to specify presentation
-  information about the data being transmitted. Here's an example:
+  information about the data being transmitted. Here's an example::
 
     gsutil -h 'Content-Disposition:attachment; filename=filename.ext' \\
       cp -r attachments gs://bucket/attachments
@@ -137,7 +140,7 @@ _detailed_help_text = ("""
 
 <B>CUSTOM METADATA</B>
   You can add your own custom metadata (e.g,. for use by your application)
-  to an object by setting a header that starts with "x-goog-meta", for example:
+  to an object by setting a header that starts with "x-goog-meta", for example::
 
     gsutil -h x-goog-meta-reviewer:jane cp mycode.java gs://bucket/reviews
 
@@ -147,13 +150,14 @@ _detailed_help_text = ("""
 <B>SETTABLE FIELDS; FIELD VALUES</B>
   You can't set some metadata fields, such as ETag and Content-Length. The
   fields you can set are:
-    - Cache-Control
-    - Content-Disposition
-    - Content-Encoding
-    - Content-Language
-    - Content-MD5
-    - Content-Type
-    - Any field starting with X-GOOG-META- (i.e., custom metadata).
+
+  - Cache-Control
+  - Content-Disposition
+  - Content-Encoding
+  - Content-Language
+  - Content-MD5
+  - Content-Type
+  - Any field starting with X-GOOG-META- (i.e., custom metadata).
 
   Header names are case-insensitive.
 
@@ -162,7 +166,7 @@ _detailed_help_text = ("""
 
 
 <B>VIEWING CURRENTLY SET METADATA</B>
-  You can see what metadata is currently set on an object by using:
+  You can see what metadata is currently set on an object by using::
 
     gsutil ls -L gs://the_bucket/the_object
 """)
@@ -180,7 +184,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working with object metadata',
+    HELP_ONE_LINE_SUMMARY : 'Working with Object Metadata',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

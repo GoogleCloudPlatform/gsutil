@@ -54,7 +54,7 @@ _detailed_help_text = ("""
 
   2. Create index.html and 404.html files and upload them to the bucket.
   
-  3. Configure the bucket to have website behavior using the command:
+  3. Configure the bucket to have website behavior using the command::
 
        gsutil setwebcfg -m index.html -e 404.html gs://example.com
 
@@ -89,11 +89,11 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -m index.html        Specifies the object name to serve when a bucket listing
+  -m <index.html>      Specifies the object name to serve when a bucket listing
                        is requested via the CNAME alias to
                        c.storage.googleapis.com.
 
-  -e 404.html          Specifies the error page to serve when a request is made
+  -e <404.html>        Specifies the error page to serve when a request is made
                        for a non-existing object, via the is requested via the
                        CNAME alias to c.storage.googleapis.com.
 """)

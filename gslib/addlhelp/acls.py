@@ -36,22 +36,22 @@ _detailed_help_text = ("""
 <B>BUCKET VS OBJECT ACLS</B>
   In Google Cloud Storage, the bucket ACL works as follows:
 
-    - Users granted READ access are allowed to list the bucket contents.
+  - Users granted READ access are allowed to list the bucket contents.
 
-    - Users granted WRITE access are allowed READ access and also are
-      allowed to write and delete objects in that bucket -- including
-      overwriting previously written objects.
+  - Users granted WRITE access are allowed READ access and also are
+    allowed to write and delete objects in that bucket -- including
+    overwriting previously written objects.
 
-    - Users granted FULL_CONTROL access are allowed WRITE access and also
-      are allowed to read and write the bucket's ACL.
+  - Users granted FULL_CONTROL access are allowed WRITE access and also
+    are allowed to read and write the bucket's ACL.
 
   The object ACL works as follows:
 
-    - Users granted READ access are allowed to read the object's data and
-      metadata.
+  - Users granted READ access are allowed to read the object's data and
+    metadata.
 
-    - Users granted FULL_CONTROL access are allowed READ access and also
-      are allowed to read and write the object's ACL.
+  - Users granted FULL_CONTROL access are allowed READ access and also
+    are allowed to read and write the object's ACL.
 
   A couple of points are worth noting, that sometimes surprise users:
 
@@ -75,39 +75,38 @@ _detailed_help_text = ("""
   The simplest way to set an ACL on a bucket or object is using a "canned
   ACL". The available canned ACLs are:
 
-  project-private            Gives permission to the project team based on their
-                             roles. Anyone who is part of the team has READ
-                             permission, and project owners and project editors
-                             have FULL_CONTROL permission. This is the default
-                             ACL for newly created buckets. This is also the
-                             default ACL for newly created objects unless the
-                             default object ACL for that bucket has been
-                             changed. For more details see
-                             "gsutil help projects".
+  project-private
+    Gives permission to the project team based on their roles. Anyone who is
+    part of the team has READ permission, and project owners and project editors
+    have FULL_CONTROL permission. This is the default ACL for newly created
+    buckets. This is also the default ACL for newly created objects unless the
+    default object ACL for that bucket has been changed. For more details see
+    "gsutil help projects".
 
-  private                    Gives the requester (and only the requester)
-                             FULL_CONTROL permission for a bucket or object.
+  private
+    Gives the requester (and only the requester) FULL_CONTROL permission for a
+    bucket or object.
 
-  public-read                Gives the requester FULL_CONTROL permission and
-                             gives all users READ permission. When you apply
-                             this to an object, anyone on the Internet can
-                             read the object without authenticating.
+  public-read
+    Gives the requester FULL_CONTROL permission and gives all users READ
+    permission. When you apply this to an object, anyone on the Internet can
+    read the object without authenticating.
 
-  public-read-write          Gives the requester FULL_CONTROL permission and
-                             gives all users READ and WRITE permission. This
-                             ACL applies only to buckets.
+  public-read-write
+    Gives the requester FULL_CONTROL permission and gives all users READ and
+    WRITE permission. This ACL applies only to buckets.
 
-  authenticated-read         Gives the requester FULL_CONTROL permission and
-                             gives all authenticated Google account holders
-                             READ permission.
+  authenticated-read
+    Gives the requester FULL_CONTROL permission and gives all authenticated
+    Google account holders READ permission.
 
-  bucket-owner-read          Gives the requester FULL_CONTROL permission and
-                             gives the bucket owner READ permission. This is
-                             used only with objects.
+  bucket-owner-read
+    Gives the requester FULL_CONTROL permission and gives the bucket owner READ
+    permission. This is used only with objects.
 
-  bucket-owner-full-control  Gives the requester FULL_CONTROL permission and
-                             gives the bucket owner FULL_CONTROL
-                             permission. This is used only with objects.
+  bucket-owner-full-control
+    Gives the requester FULL_CONTROL permission and gives the bucket owner
+    FULL_CONTROL permission. This is used only with objects.
 
 
 <B>ACL XML</B>
@@ -119,47 +118,47 @@ _detailed_help_text = ("""
 
   As an example, if you create an object in a bucket that has no default
   object ACL set and then retrieve the ACL on the object, it will look
-  something like this:
+  something like this::
 
-  <AccessControlList>
-    <Owner>
-      <ID>
-        00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-      </ID>
-    </Owner>
-    <Entries>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-          </ID>
-        </Scope>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-      </Entry>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
-          </ID>
-        </Scope>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-      </Entry>
-      <Entry>
-        <Scope type="GroupById">
-          <ID>
-            00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
-          </ID>
-        </Scope>
-        <Permission>
-          READ
-        </Permission>
-      </Entry>
-    </Entries>
-  </AccessControlList>
+    <AccessControlList>
+      <Owner>
+        <ID>
+          00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
+        </ID>
+      </Owner>
+      <Entries>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
+            </ID>
+          </Scope>
+          <Permission>
+            FULL_CONTROL
+          </Permission>
+        </Entry>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
+            </ID>
+          </Scope>
+          <Permission>
+            FULL_CONTROL
+          </Permission>
+        </Entry>
+        <Entry>
+          <Scope type="GroupById">
+            <ID>
+              00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
+            </ID>
+          </Scope>
+          <Permission>
+            READ
+          </Permission>
+        </Entry>
+      </Entries>
+    </AccessControlList>
 
   The ACL consists of an Owner element and a collection of Entry elements,
   each of which specifies a Scope and a Permission. Scopes are the way you
@@ -177,28 +176,28 @@ _detailed_help_text = ("""
   help projects".
 
   Here's an example of an ACL specified using the GroupByEmail and GroupByDomain
-  scopes:
+  scopes::
 
-  <AccessControlList>
-    <Entries>
-      <Entry>
-        <Permission>
-          FULL_CONTROL
-        </Permission>
-        <Scope type="GroupByEmail">
-          <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
-        </Scope>
-      </Entry>
-      <Entry>
-        <Permission>
-          READ
-        </Permission>
-        <Scope type="GroupByDomain">
-          <Domain>example.com</Domain>
-        </Scope>
-      </Entry>
-    </Entries>
-  </AccessControlList>
+    <AccessControlList>
+      <Entries>
+        <Entry>
+          <Permission>
+            FULL_CONTROL
+          </Permission>
+          <Scope type="GroupByEmail">
+            <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
+          </Scope>
+        </Entry>
+        <Entry>
+          <Permission>
+            READ
+          </Permission>
+          <Scope type="GroupByDomain">
+            <Domain>example.com</Domain>
+          </Scope>
+        </Entry>
+      </Entries>
+    </AccessControlList>
 
   This ACL grants members of an email group FULL_CONTROL, and grants READ
   access to any user in a domain (which must be a Google Apps for Business

@@ -28,13 +28,14 @@ _detailed_help_text = ("""
   1. Before we can accept code submissions, we have to jump a couple of legal
      hurdles. Please fill out either the individual or corporate Contributor
      License Agreement:
-       - If you are an individual writing original source code and you're
-         sure you own the intellectual property,
-         then you'll need to sign an individual CLA
-         (http://code.google.com/legal/individual-cla-v1.0.html).
-       - If you work for a company that wants to allow you to contribute your
-         work to gsutil, then you'll need to sign a corporate CLA
-         (http://code.google.com/legal/corporate-cla-v1.0.html)
+
+     - If you are an individual writing original source code and you're
+       sure you own the intellectual property,
+       then you'll need to sign an individual CLA
+       (http://code.google.com/legal/individual-cla-v1.0.html).
+     - If you work for a company that wants to allow you to contribute your
+       work to gsutil, then you'll need to sign a corporate CLA
+       (http://code.google.com/legal/corporate-cla-v1.0.html)
 
      Follow either of the two links above to access the appropriate CLA and
      instructions for how to sign and return it. Once we receive it, we'll
@@ -64,11 +65,11 @@ _detailed_help_text = ("""
      Cloud Storage. If you do make such changes we recommend including someone
      with knowledge of the specific provider as a code reviewer (see below).
 
-  6. You can check out the gsutil code from the GitHub repository:
+  6. You can check out the gsutil code from the GitHub repository::
 
        https://github.com/GoogleCloudPlatform/gsutil
 
-     To clone a read-only copy of the repository:
+     To clone a read-only copy of the repository::
 
        git clone git://github.com/GoogleCloudPlatform/gsutil.git
        git submodule update --init --recursive
@@ -78,12 +79,12 @@ _detailed_help_text = ("""
 
   7. The gsutil git repository uses git submodules to pull in external modules.
      After checking out the repository, make sure to also pull the submodules
-     by entering into the gsutil top-level directory and run:
+     by entering into the gsutil top-level directory and run::
 
        git submodule update --init --recursive
 
   8. Please make sure to run all tests against your modified code. To
-     do this, change directories into the gsutil top-level directory and run:
+     do this, change directories into the gsutil top-level directory and run::
 
        ./gsutil test
 
@@ -91,44 +92,45 @@ _detailed_help_text = ("""
      the production service. The gsutil test command has a -u argument that will
      only run unit tests. These run quickly, as they are executed with an
      in-memory mock storage service implementation. To run only the unit tests,
-     run:
+     run::
 
        ./gsutil test -u
 
-    If you made changes to boto, please run the boto tests. For these tests you
-    need to use HMAC credentials (from gsutil config -a), because the current
-    boto test suite doesn't import the OAuth2 handler. You'll also need to
-    install some python modules. Change directories into the boto root directory
-    at third_party/boto and run:
+     If you made changes to boto, please run the boto tests. For these tests you
+     need to use HMAC credentials (from gsutil config -a), because the current
+     boto test suite doesn't import the OAuth2 handler. You'll also need to
+     install some python modules. Change directories into the boto root
+     directory at third_party/boto and run::
 
-      pip install -r requirements.txt
+       pip install -r requirements.txt
 
-    (You probably need to run this command using sudo.)
-    Make sure each of the individual installations succeeded. If they don't
-    you may need to run the install command again.
+     (You probably need to run this command using sudo.)
+     Make sure each of the individual installations succeeded. If they don't
+     you may need to run the install command again.
 
-    Then ensure your .boto file has HMAC credentials defined (the boto tests
-    don't load the OAUTH2 plugin), and then change directories into boto's tests
-    directory and run:
+     Then ensure your .boto file has HMAC credentials defined (the boto tests
+     don't load the OAUTH2 plugin), and then change directories into boto's
+     tests directory and run::
 
-      python test.py unit
-      python test.py -t s3 -t gs -t ssl
+       python test.py unit
+       python test.py -t s3 -t gs -t ssl
 
   8. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
 
   9. When it's time to send us code, please use the Rietveld code review tool
      rather than simply sending us a code patch. Do this as follows:
-      - Check out the gsutil code from your fork of the gsutil repository and
-        apply your changes.
-      - Download the "upload.py" script from
-        http://code.google.com/p/rietveld/wiki/UploadPyUsage
-      - Run upload.py from your git directory with the changes.
-      - Click the codereview.appspot.com link it generates, click "Edit Issue",
-        and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
-      - Click Publish+Mail Comments.
-      - Once your changes are accepted, submit a pull request on GitHub and we
-        will merge your commits.
+
+     - Check out the gsutil code from your fork of the gsutil repository and
+       apply your changes.
+     - Download the "upload.py" script from
+       http://code.google.com/p/rietveld/wiki/UploadPyUsage
+     - Run upload.py from your git directory with the changes.
+     - Click the codereview.appspot.com link it generates, click "Edit Issue",
+       and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
+     - Click Publish+Mail Comments.
+     - Once your changes are accepted, submit a pull request on GitHub and we
+       will merge your commits.
 """)
 
 
@@ -145,7 +147,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Making modifications to gsutil',
+    HELP_ONE_LINE_SUMMARY : 'Contributing',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
