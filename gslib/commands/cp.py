@@ -21,8 +21,8 @@ import mimetypes
 import os
 import platform
 import re
-import subprocess
 import stat
+import subprocess
 import sys
 import tempfile
 import threading
@@ -277,7 +277,11 @@ _detailed_help_text = ("""
                 -D option to copy data between buckets.
                 Note: Daisy chain mode is automatically used when copying
                 between providers (e.g., to copy data from Google Cloud Storage
-                to another provider).
+                to another provider). However, gsutil requires you to specify
+                cp -D explicitly when copying between different locations or
+                between different storage classes, to make sure it's clear that
+                you're using a slower, more expensive option than the normal
+                copy-in-the-cloud case.
 
   -e            Exclude symlinks. When specified, symbolic links will not be
                 copied.
@@ -657,7 +661,7 @@ class CpCommand(Command):
       src_key: Source Key.
       src_uri: Source StorageUri.
       dst_uri: Destination StorageUri.
-      headers: A copy of the headers dictionary.
+      headers: A copy of the top-level headers dictionary.
 
     Returns:
       (elapsed_time, bytes_transferred, dst_uri) excluding overhead like initial
@@ -710,7 +714,7 @@ class CpCommand(Command):
       if (exc_name == 'GSResponseError'
           and ('Copy-in-the-cloud disallowed' in error_detail)):
           raise CommandException('%s.\nNote: you can copy between locations '
-                                 'and between storage classes by using the '
+                                 'or between storage classes by using the '
                                  'gsutil cp -D option.' % error_detail)
       else:
         raise
@@ -793,7 +797,7 @@ class CpCommand(Command):
     Args:
       fp: The file whose contents to upload.
       dst_uri: Destination StorageUri.
-      headers: A copy of the headers dictionary.
+      headers: A copy of the top-level headers dictionary.
       canned_acl: Optional canned ACL to set on the object.
 
     Returns (elapsed_time, bytes_transferred, version-specific dst_uri).
@@ -1094,7 +1098,7 @@ class CpCommand(Command):
       src_key: Source Key.
       src_uri: Source StorageUri.
       dst_uri: Destination StorageUri.
-      headers: A copy of the headers dictionary.
+      headers: A copy of the top-level headers dictionary.
 
     Returns:
       (elapsed_time, bytes_transferred, version-specific dst_uri) excluding
@@ -1103,7 +1107,32 @@ class CpCommand(Command):
     Raises:
       CommandException: if errors encountered.
     """
+    # Start with copy of input headers, so we'll include any headers that need
+    # to be set from higher up in call stack (like x-goog-if-generation-match).
+    headers = headers.copy()
+    # Now merge headers from src_key so we'll preserve metadata.
+    # Unfortunately boto separates headers into ones it puts in the metadata
+    # dict and ones it pulls out into specific key fields, so we need to walk
+    # through the latter list to find the headers that we copy over to the dest
+    # object.
+    for header_name, field_name in (
+        ('Cache-Control', 'cache_control'),
+        ('Content-Type', 'content_type'),
+        ('Content-Language', 'content_language'),
+        ('Content-Encoding', 'content_encoding'),
+        ('Content-Disposition', 'content_disposition')):
+      value = getattr(src_key, field_name, None)
+      if value:
+        headers[header_name] = value
+    # Boto represents x-goog-meta-* headers in metadata dict with the
+    # x-goog-meta- or x-amx-meta- prefix stripped. Turn these back into headers
+    # for the destination object.
+    for name, value in src_key.metadata.items():
+      header_name = '%smeta-%s' % (dst_uri.get_provider().header_prefix, name)
+      headers[header_name] = value
+    # Set content type if specified in '-h Content-Type' option.
     self._SetContentTypeHeader(src_uri, headers)
+
     self._LogCopyOperation(src_uri, dst_uri, headers)
     canned_acl = None
     if self.sub_opts:

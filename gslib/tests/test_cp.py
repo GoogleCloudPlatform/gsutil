@@ -39,7 +39,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
     self.assertEqual(key_uri.get_contents_as_string(), 'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath], 
+    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
     with open(fpath, 'r') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
@@ -49,12 +49,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)], 
+    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying'), 1)
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(bucket2_uri, 
+    self.assertIn('Skipping existing item: %s' % suri(bucket2_uri,
                   key_uri.object_name), stderr)
 
   def test_streaming(self):
@@ -293,13 +293,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket(
         storage_class='DURABLE_REDUCED_AVAILABILITY')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)], 
+    # Check that copy-in-the-cloud is disallowed.
+    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True, expected_status=1)
     self.assertIn('Copy-in-the-cloud disallowed', stderr)
-    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-    stderr = self.RunGsUtil(['cp', '-D', suri(key_uri), suri(bucket2_uri)], 
+    # Set some headers on source object so we can verify that headers are
+    # presereved by daisy-chain copy.
+    self.RunGsUtil(['setmeta', '-h', 'Cache-Control:public,max-age=12',
+                    '-h', 'Content-Type:image/gif',
+                    '-h', 'x-goog-meta-1:abcd', suri(key_uri)])
+    # Perform daisy-chain copy and verify that it wasn't disallowed and that
+    # source object headers were preserved.
+    stderr = self.RunGsUtil(['cp', '-D', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check():
+      stdout = self.RunGsUtil([
+          'ls', '-L', suri(bucket2_uri, key_uri.object_name)],
+          return_stdout=True)
+      self.assertIn('Cache-Control:\tpublic,max-age=12', stdout)
+      self.assertIn('Content-Type:\timage/gif', stdout)
+      self.assertIn('x-goog-meta-1:\tabcd', stdout)
+    _Check()
+
 
   def test_cp_key_to_local_stream(self):
     bucket_uri = self.CreateBucket()
@@ -322,7 +339,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_bucket_uri = self.CreateVersionedBucket()
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj0',
                       contents='abc')
-    self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1', 
+    self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1',
                       contents='def')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
@@ -345,7 +362,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_dir = self.CreateTempDir()
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj0',
                       contents='abc')
-    self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1', 
+    self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1',
                       contents='def')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
