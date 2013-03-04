@@ -50,9 +50,10 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
+from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import ExtractErrorDetail
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
@@ -609,11 +610,7 @@ class CpCommand(Command):
         cb = self._FileCopyCallbackHandler(upload).call
         num_cb = int(size / TWO_MB)
 
-      resumable_tracker_dir = config.get(
-          'GSUtil', 'resumable_tracker_dir',
-          os.path.expanduser('~' + os.sep + '.gsutil'))
-      if not os.path.exists(resumable_tracker_dir):
-        os.makedirs(resumable_tracker_dir)
+      resumable_tracker_dir = CreateTrackerDirIfNeeded()
 
       if upload:
         # Encode the dest bucket and object name into the tracker file name.

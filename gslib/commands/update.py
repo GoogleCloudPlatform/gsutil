@@ -34,14 +34,16 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.help_provider import HELP_TYPE
+from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IS_WINDOWS
+from gslib.util import LookUpGsutilVersion
 
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil update [-f] [uri]
+  gsutil update [-f] [-n] [uri]
 
 
 <B>DESCRIPTION</B>
@@ -59,16 +61,24 @@ _detailed_help_text = ("""
   directory to run the command. We advise against doing that, for this reason.)
 
   By default gsutil update will retrieve the new code from
-  gs://pub/gsutil.tar.gz, but you can optionally specify a URI to use
+  %s, but you can optionally specify a URI to use
   instead. This is primarily used for distributing pre-release versions of
   the code to a small group of early test users.
+
+  Note: gustil periodically checks whether a more recent software update is
+  available.  By default this check is performed every 30 days; you can change
+  (or disable) this check by editing the software_update_check_period variable
+  in the .boto config file.
 
 
 <B>OPTIONS</B>
   -f          Forces the update command to offer to let you update, even if you
               have the most current copy already. This can be useful if you have
               a corrupted local copy.
-""")
+
+  -n          Causes update command to run without prompting [Y/n] whether to
+              continue if an update is available.
+""" % GSUTIL_PUB_TARBALL)
 
 
 class UpdateCommand(Command):
@@ -85,7 +95,7 @@ class UpdateCommand(Command):
       # Max number of args required by this command, or NO_MAX.
       MAX_ARGS: 1,
       # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'f',
+      SUPPORTED_SUB_ARGS: 'fn',
       # True if file URIs acceptable for this command.
       FILE_URIS_OK: True,
       # True if provider-only URIs acceptable for this command.
@@ -178,11 +188,12 @@ class UpdateCommand(Command):
     """Cleans up temp files etc. from running update command.
 
     Args:
-      tf: Opened TarFile.
+      tf: Opened TarFile, or None if none currently open.
       dirs_to_remove: List of directories to remove.
 
     """
-    tf.close()
+    if tf:
+      tf.close()
     self._EnsureDirsSafeForUpdate(dirs_to_remove)
     for directory in dirs_to_remove:
       try:
@@ -205,20 +216,21 @@ class UpdateCommand(Command):
             'cannot be run this way, for security reasons.' % cfg_var)
 
     force_update = False
+    no_prompt = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-f':
           force_update = True
+        if o == '-n':
+          no_prompt = True
 
     dirs_to_remove = []
-    # Retrieve gsutil tarball and check if it's newer than installed code.
-    # TODO: Store this version info as metadata on the tarball object and
-    # change this command's implementation to check that metadata instead of
-    # downloading the tarball to check the version info.
     tmp_dir = tempfile.mkdtemp()
     dirs_to_remove.append(tmp_dir)
     os.chdir(tmp_dir)
-    print 'Checking for software update...'
+
+    if not no_prompt:
+      print 'Checking for software update...'
     if self.args:
       update_from_uri_str = self.args[0]
       if not update_from_uri_str.endswith('.tar.gz'):
@@ -237,22 +249,23 @@ class UpdateCommand(Command):
           raise CommandException(
               'Invalid update object URI. Must name a single .tar.gz file.')
     else:
-      update_from_uri_str = 'gs://pub/gsutil.tar.gz'
-    self.command_runner.RunNamedCommand(
-        'cp', [update_from_uri_str, 'file://gsutil.tar.gz'], self.headers,
-        self.debug)
-    # Note: tf is closed in _CleanUpUpdateCommand.
-    tf = tarfile.open('gsutil.tar.gz')
-    tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
-    tf.extract('./gsutil/VERSION')
+      update_from_uri_str = GSUTIL_PUB_TARBALL
+    
+    # Try to retrieve version info from tarball metadata; failing that; download
+    # the tarball and extract the VERSION file. The version lookup will fail
+    # when running the update system test, because it retrieves the tarball from
+    # a temp file rather than a cloud URI (files lack the version metadata).
+    tarball_version = LookUpGsutilVersion(
+        self.suri_builder.StorageUri(update_from_uri_str))
+    if tarball_version:
+      tf = None
+    else:
+      tf = self._FetchAndOpenGsutilTarball(update_from_uri_str)
+      tf.extract('./gsutil/VERSION')
+      with open(os.path.join('gsutil', 'VERSION'), 'r') as ver_file:
+        tarball_version = ver_file.read().strip()
 
-    ver_file = open('gsutil/VERSION', 'r')
-    try:
-      latest_version_string = ver_file.read().rstrip('\n')
-    finally:
-      ver_file.close()
-
-    if not force_update and self.gsutil_ver == latest_version_string:
+    if not force_update and self.gsutil_ver == tarball_version:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       if self.args:
         raise CommandException('You already have %s installed.' %
@@ -261,14 +274,21 @@ class UpdateCommand(Command):
         raise CommandException('You already have the latest gsutil release '
                                'installed.', informational=True)
 
-    print(('This command will update to the "%s" version of\ngsutil at %s') %
-          (latest_version_string, self.gsutil_bin_dir))
+    if not no_prompt:
+      print(('This command will update to the "%s" version of\ngsutil at %s') %
+            (tarball_version, self.gsutil_bin_dir))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove)
 
-    answer = raw_input('Proceed? [y/N] ')
+    if no_prompt:
+      answer = 'y'
+    else:
+      answer = raw_input('Proceed? [y/N] ')
     if not answer or answer.lower()[0] != 'y':
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       raise CommandException('Not running update.', informational=True)
+
+    if not tf:
+      tf = self._FetchAndOpenGsutilTarball(update_from_uri_str)
 
     # Ignore keyboard interrupts during the update to reduce the chance someone
     # hitting ^C leaves gsutil in a broken state.
@@ -314,3 +334,12 @@ class UpdateCommand(Command):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     print 'Update complete.'
     return 0
+
+  def _FetchAndOpenGsutilTarball(self, update_from_uri_str):
+    self.command_runner.RunNamedCommand(
+        'cp', [update_from_uri_str, 'file://gsutil.tar.gz'], self.headers,
+        self.debug)
+    # Note: tf is closed in _CleanUpUpdateCommand.
+    tf = tarfile.open('gsutil.tar.gz')
+    tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.
+    return tf

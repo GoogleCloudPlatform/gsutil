@@ -15,11 +15,14 @@
 """Static data and helper functions."""
 
 import math
+import os
 import re
 import sys
+import time
 import xml.etree.ElementTree as ElementTree
 
 import boto
+from boto import config
 from gslib.third_party.retry_decorator import decorators
 
 # We don't use the oauth2 authentication plugin directly; importing it here
@@ -40,17 +43,22 @@ NO_MAX = sys.maxint
 # Binary exponentiation strings.
 _EXP_STRINGS = [
   (0, 'B', 'bit'),
-  (10, 'KB', 'kbit'),
+  (10, 'KB', 'Kbit'),
   (20, 'MB', 'Mbit'),
   (30, 'GB', 'Gbit'),
   (40, 'TB', 'Tbit'),
   (50, 'PB', 'Pbit'),
+  (60, 'EB', 'Ebit'),
 ]
+
+SECONDS_PER_DAY = 3600 * 24
 
 # Detect platform types.
 IS_WINDOWS = 'win32' in str(sys.platform).lower()
 IS_LINUX = 'linux' in str(sys.platform).lower()
 IS_OSX = 'darwin' in str(sys.platform).lower()
+
+GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
 Retry = decorators.retry
 
@@ -59,6 +67,27 @@ class ListingStyle(object):
   SHORT = 'SHORT'
   LONG = 'LONG'
   LONG_LONG = 'LONG_LONG'
+
+
+def CreateTrackerDirIfNeeded():
+  """Looks up the configured directory where gsutil keeps its resumable
+     transfer tracker files, and creates it if it doesn't already exist.
+
+  Returns:
+    The pathname to the tracker directory.
+  """
+  tracker_dir = config.get(
+      'GSUtil', 'resumable_tracker_dir',
+      os.path.expanduser('~' + os.sep + '.gsutil'))
+  if not os.path.exists(tracker_dir):
+    os.makedirs(tracker_dir)
+  return tracker_dir
+
+
+# Name of file where we keep the timestamp for the last time we checked whether
+# a new version of gsutil is available.
+LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
+    os.path.join(CreateTrackerDirIfNeeded(), '.last_software_update_check'))
 
 
 def HasConfiguredCredentials():
@@ -174,3 +203,19 @@ def UnaryDictToXml(message):
     node = ElementTree.SubElement(T, property)
     node.text = value
   return ElementTree.tostring(T)
+
+def LookUpGsutilVersion(uri):
+  """Looks up the gustil version of the specified gsutil tarball URI, from the
+     metadata field set on that object.
+
+  Args:
+    URI: gsutil URI tarball (such as gs://pub/gsutil.tar.gz).
+
+  Returns:
+    Version string if URI is a cloud URI containing x-goog-meta-gsutil-version
+    metadata, else None.
+  """
+  if uri.is_cloud_uri():
+    obj = uri.get_key(False)
+    if obj.metadata and 'gsutil_version' in obj.metadata:
+      return obj.metadata['gsutil_version']

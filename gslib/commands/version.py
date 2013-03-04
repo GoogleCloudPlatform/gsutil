@@ -119,6 +119,8 @@ class VersionCommand(Command):
         'config path: %s\ngsutil path: %s\n' % (
         self.gsutil_ver, cur_checksum, checksum_ok_str,
         boto.__version__, sys.version, path, os.path.realpath(sys.argv[0])))
+    sys.stderr.write('Note: a log of gsutil release changes is available at:\n'
+                     'gs://pub/gsutil_ReleaseNotes.txt\n')
 
     return 0
 

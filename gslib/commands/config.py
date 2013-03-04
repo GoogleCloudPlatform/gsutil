@@ -293,6 +293,12 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'resumable_tracker_dir' specifies the base location where resumable
 # transfer tracker files are saved. By default they're in ~/.gsutil
 #resumable_tracker_dir = <file path>
+# gsutil also saves a file called .last_software_update_check in this directory,
+# that tracks the last time a check was made whether a new version of the gsutil
+# software is available. 'software_update_check_period' specifies the number of
+# days between such checks. The default is 30. Setting the value to 0 disables
+# periodic software update checks.
+#software_update_check_period = 30
 
 # 'parallel_process_count' and 'parallel_thread_count' specify the number
 # of OS processes and Python threads, respectively, to use when executing

@@ -18,12 +18,21 @@
 
 import boto
 import os
+import sys
+import textwrap
+import time
 
 from boto.storage_uri import BucketStorageUri
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.exception import CommandException
+from gslib.storage_uri_builder import StorageUriBuilder
+from gslib.util import CreateTrackerDirIfNeeded
+from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
+from gslib.util import LookUpGsutilVersion
+from gslib.util import SECONDS_PER_DAY
 
 
 class CommandRunner(object):
@@ -79,6 +88,10 @@ class CommandRunner(object):
       Raises:
         CommandException: if errors encountered.
     """
+    if self._MaybeCheckForAndOfferSoftwareUpdate(command_name, debug):
+      command_name = 'update'
+      args = ['-n']
+
     if not args:
       args = []
 
@@ -99,3 +112,57 @@ class CommandRunner(object):
         self.config_file_list, self.gsutil_ver, self.bucket_storage_uri_class,
         test_method)
     return command_inst.RunCommand()
+
+
+  def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
+    """Checks the last time we checked for an update, and if it's been longer
+       than the configured threshold offers the user to update gsutil.
+
+      Args:
+        command_name: The name of the command being run.
+        debug: Debug level to pass in to boto connection (range 0..3).
+
+      Returns:
+        True if the user decides to update.
+    """
+    # Don't try to interact with user if gsutil is not connected to a tty (e.g.,
+    # if being run from cron), or if they are running the update command (which
+    # could otherwise cause an additional note that an update is available when
+    # they are already trying to perform an update).
+    if (not sys.stdout.isatty() or not sys.stderr.isatty()
+        or not sys.stdin.isatty() or command_name == 'update'):
+      return False
+
+    software_update_check_period = boto.config.get(
+        'GSUtil', 'software_update_check_period', 30)
+    # Setting software_update_check_period to 0 means periodic software
+    # update checking is disabled.
+    if software_update_check_period == 0:
+      return False
+
+    cur_ts = int(time.time())
+    if not os.path.isfile(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE):
+      # Set last_checked_ts from date of VERSION file, so if the user installed
+      # an old copy of gsutil it will get noticed (and an update offered) the
+      # first time they try to run it.
+      last_checked_ts = int(
+          os.path.getmtime(os.path.join(self.gsutil_bin_dir, 'VERSION')))
+      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
+        f.write(str(last_checked_ts))
+    else:
+      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'r') as f:
+        last_checked_ts = int(f.readline())
+
+    if (cur_ts - last_checked_ts
+        > software_update_check_period * SECONDS_PER_DAY):
+      suri_builder = StorageUriBuilder(debug, self.bucket_storage_uri_class)
+      cur_ver = LookUpGsutilVersion(suri_builder.StorageUri(GSUTIL_PUB_TARBALL))
+      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
+        f.write(str(cur_ts))
+      if self.gsutil_ver != cur_ver:
+        answer = raw_input('\n'.join(textwrap.wrap(
+            'A newer version of gsutil (%s) is available than the version you '
+            'are running (%s). Would you like to update [Y/n]?' %
+            (cur_ver, self.gsutil_ver), width=78)) + ' ')
+        return answer.lower()[0] != 'n'
+    return False
