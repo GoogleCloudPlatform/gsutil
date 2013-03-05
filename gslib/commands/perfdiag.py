@@ -22,6 +22,7 @@ import json
 import math
 import multiprocessing
 import os
+import random
 import re
 import socket
 import string
@@ -29,6 +30,7 @@ import subprocess
 import tempfile
 import time
 
+import boto
 import boto.gs.connection
 
 from gslib.command import Command
@@ -125,6 +127,18 @@ _detailed_help_text = ("""
               a formatted description of the results.
 
 
+<B>MEASURING AVAILABILITY</B>
+  The perfdiag command ignores the boto num_retries configuration parameter.
+  Instead, it always retries on HTTP errors in the 500 range and keeps track of
+  how many 500 errors were encountered during the test. The availability
+  measurement is reported at the end of the test.
+
+  Note that HTTP responses are only recorded when the request was made in a
+  single process. When using a concurrency value greater than 1, read and write
+  throughput measurements are performed in an external process, so the
+  availability numbers reported won't include the throughput measurements.
+
+
 <B>NOTE</B>
   The perfdiag command collects system information. It collects your IP address,
   executes DNS queries to Google servers and collects the results, and collects
@@ -185,6 +199,12 @@ class PerfDiagCommand(Command):
 
   # Google Cloud Storage API endpoint host.
   GOOGLE_API_HOST = boto.gs.connection.GSConnection.DefaultHost
+
+  # Maximum number of times to retry requests on 5xx errors.
+  MAX_SERVER_ERROR_RETRIES = 5
+  # Maximum number of times to retry requests on more serious errors like
+  # the socket breaking.
+  MAX_TOTAL_RETRIES = 10
 
   def _WindowedExec(self, cmd, n, w, raise_on_error=True):
     """Executes a command n times with a window size of w.
@@ -257,24 +277,6 @@ class PerfDiagCommand(Command):
                              "subprocess '%s'." % (p.returncode, ' '.join(cmd)))
     return stdoutdata if return_output else p.returncode
 
-  def _GsUtil(self, cmd, raise_on_error=True, return_output=False,
-              mute_stderr=False):
-    """Executes a gsutil command in a subprocess.
-
-    Args:
-      cmd: A list containing the arguments to the gsutil program, e.g. ['ls',
-          'gs://foo'].
-      raise_on_error: see _Exec.
-      return_output: see _Exec.
-      mute_stderr: see _Exec.
-
-    Returns:
-      The return code of the process or the stdout if return_output is set.
-    """
-    cmd = self.gsutil_exec_list + cmd
-    return self._Exec(cmd, raise_on_error=raise_on_error,
-                      return_output=return_output, mute_stderr=mute_stderr)
-
   def _SetUp(self):
     """Performs setup operations needed before diagnostics can be run."""
 
@@ -286,6 +288,12 @@ class PerfDiagCommand(Command):
     self.file_sizes = {}
     # Maps each test file to its contents as a string.
     self.file_contents = {}
+    # Total number of HTTP requests made.
+    self.total_requests = 0
+    # Total number of HTTP 5xx errors.
+    self.request_errors = 0
+    # Total number of socket errors.
+    self.connection_breaks = 0
 
     def _MakeFile(file_size):
       """Creates a temporary file of the given size and returns its path."""
@@ -305,6 +313,12 @@ class PerfDiagCommand(Command):
       fpath = _MakeFile(file_size)
       self.latency_files.append(fpath)
 
+    # Creating a file for warming up the TCP connection.
+    self.tcp_warmup_file = _MakeFile(5 * 1024 * 1024)  # 5 Megabytes.
+    # Remote file to use for TCP warmup.
+    self.tcp_warmup_remote_file = (str(self.bucket_uri) +
+                                   os.path.basename(self.tcp_warmup_file))
+
     # Local file on disk for write throughput tests.
     self.thru_local_file = _MakeFile(self.thru_filesize)
     # Remote file to write/read from during throughput tests.
@@ -319,8 +333,20 @@ class PerfDiagCommand(Command):
       except OSError:
         pass
 
-    self._GsUtil(['rm', self.thru_remote_file], raise_on_error=False,
-                 mute_stderr=True)
+    cleanup_files = [self.thru_local_file, self.tcp_warmup_file]
+    for f in cleanup_files:
+
+      def _Delete():
+        k = self.bucket.key_class(self.bucket)
+        k.name = os.path.basename(f)
+        try:
+          k.delete()
+        except boto.exception.BotoServerError as e:
+          # Ignore not found errors since it's already gone.
+          if e.status != 404:
+            raise
+
+      self._RunOperation(_Delete)
 
   @contextlib.contextmanager
   def _Time(self, key, bucket):
@@ -343,6 +369,52 @@ class PerfDiagCommand(Command):
     t1 = time.time()
     bucket[key].append(t1 - t0)
     print key, 'done.'
+
+  def _RunOperation(self, func):
+    """Runs an operation with retry logic.
+
+    Args:
+      func: The function to run.
+
+    Returns:
+      True if the operation succeeds, False if aborted.
+    """
+    # We retry on httplib exceptions that can happen if the socket was closed
+    # by the remote party or the connection broke because of network issues.
+    # Only the BotoServerError is counted as a 5xx error towards the retry
+    # limit.
+    exceptions = list(self.bucket.connection.http_exceptions)
+    exceptions.append(boto.exception.BotoServerError)
+
+    success = False
+    server_error_retried = 0
+    total_retried = 0
+    i = 0
+    while not success:
+      next_sleep = random.random() * (2 ** i) + 1
+      try:
+        func()
+        self.total_requests += 1
+        success = True
+      except tuple(exceptions) as e:
+        total_retried += 1
+        if total_retried > self.MAX_TOTAL_RETRIES:
+          print 'Reached maximum total retries. Not retrying.'
+          break
+        if isinstance(e, boto.exception.BotoServerError):
+          if e.status >= 500:
+            self.total_requests += 1
+            self.request_errors += 1
+            server_error_retried += 1
+            time.sleep(next_sleep)
+          else:
+            raise
+          if server_error_retried > self.MAX_SERVER_ERROR_RETRIES:
+            print 'Reached maximum server error retries. Not retrying.'
+            break
+        else:
+          self.connection_breaks += 1
+    return success
 
   def _RunLatencyTests(self):
     """Runs latency tests."""
@@ -369,14 +441,25 @@ class PerfDiagCommand(Command):
         k = self.bucket.key_class(self.bucket)
         k.key = basename
 
-        with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
-          k.set_contents_from_string(self.file_contents[fpath])
-        with self._Time('METADATA_%d' % file_size, self.results['latency']):
-          k.exists()
-        with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
-          k.get_contents_as_string()
-        with self._Time('DELETE_%d' % file_size, self.results['latency']):
-          k.delete()
+        def _Upload():
+          with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
+            k.set_contents_from_string(self.file_contents[fpath])
+        self._RunOperation(_Upload)
+
+        def _Metadata():
+          with self._Time('METADATA_%d' % file_size, self.results['latency']):
+            k.exists()
+        self._RunOperation(_Metadata)
+
+        def _Download():
+          with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
+            k.get_contents_as_string()
+        self._RunOperation(_Download)
+
+        def _Delete():
+          with self._Time('DELETE_%d' % file_size, self.results['latency']):
+            k.delete()
+        self._RunOperation(_Delete)
 
   def _RunReadThruTests(self):
     """Runs read throughput tests."""
@@ -384,26 +467,47 @@ class PerfDiagCommand(Command):
                                        'num_times': self.num_iterations,
                                        'concurrency': self.concurrency}
 
+    # Copy the TCP warmup file.
+    warmup_key = self.bucket.key_class(self.bucket)
+    warmup_key.key = os.path.basename(self.tcp_warmup_file)
+
+    def _Upload1():
+      warmup_key.set_contents_from_string(
+          self.file_contents[self.tcp_warmup_file])
+    self._RunOperation(_Upload1)
+
     # Copy the file to remote location before reading.
-    self._GsUtil(['cp', self.thru_local_file, self.thru_remote_file])
+    k = self.bucket.key_class(self.bucket)
+    k.key = os.path.basename(self.thru_local_file)
+
+    def _Upload2():
+      k.set_contents_from_string(self.file_contents[self.thru_local_file])
+    self._RunOperation(_Upload2)
 
     if self.concurrency == 1:
-      k = self.bucket.key_class(self.bucket)
-      k.key = os.path.basename(self.thru_local_file)
-      # Warm up the TCP connection by transferring a couple times first.
-      for i in range(2):
+
+      # Warm up the TCP connection.
+      def _Warmup():
+        warmup_key.get_contents_as_string()
+      self._RunOperation(_Warmup)
+
+      times = []
+
+      def _Download():
+        t0 = time.time()
         k.get_contents_as_string()
-      t0 = time.time()
-      for i in range(self.num_iterations):
-        k.get_contents_as_string()
-      t1 = time.time()
+        t1 = time.time()
+        times.append(t1 - t0)
+      for _ in range(self.num_iterations):
+        self._RunOperation(_Download)
+      time_took = sum(times)
     else:
       cmd = self.gsutil_exec_list + ['cp', self.thru_remote_file, os.devnull]
       t0 = time.time()
       self._WindowedExec(cmd, self.num_iterations, self.concurrency)
       t1 = time.time()
+      time_took = t1 - t0
 
-    time_took = t1 - t0
     total_bytes_copied = self.thru_filesize * self.num_iterations
     bytes_per_second = total_bytes_copied / time_took
 
@@ -418,23 +522,37 @@ class PerfDiagCommand(Command):
                                         'concurrency': self.concurrency}
 
     if self.concurrency == 1:
+      # Warm up the TCP connection.
+      warmup_key = self.bucket.key_class(self.bucket)
+      warmup_key.key = os.path.basename(self.tcp_warmup_file)
+
+      def _Warmup():
+        warmup_key.set_contents_from_string(
+            self.file_contents[self.tcp_warmup_file])
+      self._RunOperation(_Warmup)
+
       k = self.bucket.key_class(self.bucket)
       k.key = os.path.basename(self.thru_local_file)
-      # Warm up the TCP connection by transferring a couple times first.
-      for i in range(2):
+
+      times = []
+
+      def _Upload():
+        t0 = time.time()
         k.set_contents_from_string(self.file_contents[self.thru_local_file])
-      t0 = time.time()
-      for i in range(self.num_iterations):
-        k.set_contents_from_string(self.file_contents[self.thru_local_file])
-      t1 = time.time()
+        t1 = time.time()
+        times.append(t1 - t0)
+      for _ in range(self.num_iterations):
+        self._RunOperation(_Upload)
+      time_took = sum(times)
+
     else:
       cmd = self.gsutil_exec_list + ['cp', self.thru_local_file,
                                      self.thru_remote_file]
       t0 = time.time()
       self._WindowedExec(cmd, self.num_iterations, self.concurrency)
       t1 = time.time()
+      time_took = t1 - t0
 
-    time_took = t1 - t0
     total_bytes_copied = self.thru_filesize * self.num_iterations
     bytes_per_second = total_bytes_copied / time_took
 
@@ -621,6 +739,24 @@ class PerfDiagCommand(Command):
                                  '\n' in attr_value):
         sysinfo['gsutil_config'][attr] = attr_value
 
+    sysinfo['tcp_proc_values'] = {}
+    stats_to_check = [
+        '/proc/sys/net/core/rmem_default',
+        '/proc/sys/net/core/rmem_max',
+        '/proc/sys/net/core/wmem_default',
+        '/proc/sys/net/core/wmem_max',
+        '/proc/sys/net/ipv4/tcp_timestamps',
+        '/proc/sys/net/ipv4/tcp_sack',
+        '/proc/sys/net/ipv4/tcp_window_scaling',
+    ]
+    for fname in stats_to_check:
+      try:
+        with open(fname, 'r') as f:
+          value = f.read()
+        sysinfo['tcp_proc_values'][os.path.basename(fname)] = value.strip()
+      except IOError:
+        pass
+
     self.results['sysinfo'] = sysinfo
 
   def _DisplayStats(self, trials):
@@ -774,6 +910,26 @@ class PerfDiagCommand(Command):
             print str(delta).rjust(8),
           print
 
+      if 'tcp_proc_values' in info:
+        print 'TCP /proc values:\n',
+        for item in info['tcp_proc_values'].iteritems():
+          print '   %s = %s' % item
+
+    if 'request_errors' in self.results and 'total_requests' in self.results:
+      print
+      print '-' * 78
+      print 'In-Process HTTP Statistics'.center(78)
+      print '-' * 78
+      total = int(self.results['total_requests'])
+      numerrors = int(self.results['request_errors'])
+      numbreaks = int(self.results['connection_breaks'])
+      availability = (((total - numerrors) / float(total)) * 100
+                      if total > 0 else 100)
+      print 'Total HTTP requests made: %d' % total
+      print 'HTTP 5xx errors: %d' % numerrors
+      print 'HTTP connections broken: %d' % numbreaks
+      print 'Availability: %.7g%%' % availability
+
     if self.output_file:
       with open(self.output_file, 'w') as f:
         json.dump(self.results, f, indent=2)
@@ -870,6 +1026,8 @@ class PerfDiagCommand(Command):
       self._DisplayResults()
       return 0
 
+    boto.config.set('Boto', 'num_retries', '0')
+
     print 'Number of iterations to run: %d' % self.num_iterations
     print 'Base bucket URI: %s' % self.bucket_uri
     print 'Concurrency level: %d' % self.concurrency
@@ -899,6 +1057,10 @@ class PerfDiagCommand(Command):
       self.results['sysinfo']['netstat_end'] = self._GetTcpStats()
       if IS_LINUX:
         self.results['sysinfo']['disk_counters_end'] = self._GetDiskCounters()
+
+      self.results['total_requests'] = self.total_requests
+      self.results['request_errors'] = self.request_errors
+      self.results['connection_breaks'] = self.connection_breaks
 
       self._DisplayResults()
     finally:
