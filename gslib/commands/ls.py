@@ -184,7 +184,7 @@ _detailed_help_text = ("""
 
   -a          Includes non-current object versions / generations in the listing
               (only useful with a versioning-enabled bucket). If combined with
-              -l option also prints meta-generation for each listed object.
+              -l option also prints metageneration for each listed object.
 """)
 
 class LsCommand(Command):

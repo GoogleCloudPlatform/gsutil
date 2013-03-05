@@ -35,13 +35,13 @@ _detailed_help_text = ("""
 
   - the generation, which is updated when the content of an object is
     overwritten.
-  - the meta-generation, which identifies the metadata generation. It starts
+  - the metageneration, which identifies the metadata generation. It starts
     at 1; is updated every time the metadata (e.g., ACL or Content-Type) for a
     given content generation is updated; and gets reset when the generation
     number changes.
 
   Of these two integers, only the generation is used when working with versioned
-  data. Both generation and meta-generation can be used with concurrency control
+  data. Both generation and metageneration can be used with concurrency control
   (discussed in a later section).
 
   To work with object versioning in gsutil, you can use a flavor of storage URIs
@@ -69,7 +69,7 @@ _detailed_help_text = ("""
   and 'gsutil help setversioning' for additional details.
 
   To see all object versions in a versioning-enabled bucket along with
-  their generation.meta-generation information, use gsutil ls -a::
+  their generation.metageneration information, use gsutil ls -a::
 
     gsutil ls -a gs://bucket
 
