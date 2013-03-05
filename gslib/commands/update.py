@@ -66,9 +66,12 @@ _detailed_help_text = ("""
   the code to a small group of early test users.
 
   Note: gustil periodically checks whether a more recent software update is
-  available.  By default this check is performed every 30 days; you can change
+  available. By default this check is performed every 30 days; you can change
   (or disable) this check by editing the software_update_check_period variable
-  in the .boto config file.
+  in the .boto config file. Note also that gsutil will only check for software
+  updates if stdin, stdout, and stderr are all connected to a TTY, to avoid
+  interfering with cron jobs, streaming transfers, and other cases where gsutil
+  input or output are redirected from/to files or pipes.
 
 
 <B>OPTIONS</B>
