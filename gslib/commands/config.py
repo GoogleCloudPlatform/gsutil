@@ -326,7 +326,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 
 # 'content_language' specifies the ISO 639-1 language code of the content, to be
 # passed in the Content-Language header. By default no Content-Language is sent.
-# See the ISO 631-1 column of
+# See the ISO 639-1 column of
 # http://www.loc.gov/standards/iso639-2/php/code_list.php for a list of
 # language codes.
 content_language = en

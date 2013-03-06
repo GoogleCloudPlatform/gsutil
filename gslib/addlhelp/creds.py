@@ -100,7 +100,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Credential types supporting various use cases',
+    HELP_ONE_LINE_SUMMARY : 'Credential Types Supporting Various Use Cases',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
