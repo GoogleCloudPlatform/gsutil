@@ -22,6 +22,21 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
 
   def test_cat_range(self):
     key_uri = self.CreateObject(contents='0123456789')
+    # Test various invalid ranges.
+    stderr = self.RunGsUtil(['cat', '-r -', suri(key_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid range', stderr)
+    stderr = self.RunGsUtil(['cat', '-r a-b', suri(key_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid range', stderr)
+    stderr = self.RunGsUtil(['cat', '-r 1-2-3', suri(key_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid range', stderr)
+    stderr = self.RunGsUtil(['cat', '-r 1.7-3', suri(key_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid range', stderr)
+
+    # Test various valid ranges.
     stdout = self.RunGsUtil(['cat', '-r 1-3', suri(key_uri)],
                             return_stdout=True)
     self.assertEqual('123', stdout)

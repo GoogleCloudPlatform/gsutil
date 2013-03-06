@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import sys
 
 from gslib.command import Command
@@ -50,21 +51,28 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -h          Prints short header for each object. For example:
-              gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
+  -h          Prints short header for each object. For example::
+
+                gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
 
   -r range    Causes gsutil to output just the specified byte range of the
-              object. Ranges are can be of these forms:
+              object. Ranges are can be of these forms::
+
                 start-end (e.g., -r 256-5939)
                 start-    (e.g., -r 256-)
                 -numbytes (e.g., -r -5)
+
               where offsets start at 0, start-end means to return bytes start
               through end (inclusive), start- means to return bytes start
               through the end of the object, and -numbytes means to return the
-              last numbytes of the object. For example,
+              last numbytes of the object. For example::
+
                 gsutil cat -r 256-939 gs://bucket/object
-              returns bytes 256 through 939, while
+
+              returns bytes 256 through 939, while::
+
                 gsutil cat -r -5 gs://bucket/object
+
               returns the final 5 bytes of the object.
 """)
 
@@ -115,7 +123,9 @@ class CatCommand(Command):
         if o == '-h':
           show_header = True
         elif o == '-r':
-          range = a
+          range = a.strip()
+          if not re.match('^[0-9]+-[0-9]*$|^-[0-9]+$', range):
+            raise CommandException('Invalid range (%s)' % range)
         elif o == '-v':
           self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
                                     ' needed, and will eventually be removed.\n'
