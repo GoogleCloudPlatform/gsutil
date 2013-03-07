@@ -266,11 +266,13 @@ class OAuth2Client(object):
   """Common logic for OAuth2 clients."""
   
   def __init__(self, access_token_cache=None,
-               datetime_strategy=datetime.datetime):    
+               datetime_strategy=datetime.datetime,
+               disable_ssl_certificate_validation=False):
     # datetime_strategy is used to invoke utcnow() on; it is injected into the
     # constructor for unit testing purposes.
     self.datetime_strategy = datetime_strategy
     self.access_token_cache = access_token_cache or InMemoryTokenCache()
+    self.disable_ssl_certificate_validation = disable_ssl_certificate_validation
   
   def GetAccessToken(self, refresh_token=None):
     """Given a RefreshToken, obtains a corresponding access token.
@@ -305,7 +307,7 @@ class OAuth2Client(object):
       LOG.debug('GetAccessToken: token from cache: %s', access_token)
       if access_token is None or access_token.ShouldRefresh():
         LOG.info('GetAccessToken: fetching fresh access token...')
-        access_token = self.FetchAccessToken(refresh_token)          
+        access_token = self.FetchAccessToken(refresh_token)
         LOG.debug('GetAccessToken: fresh access token: %s', access_token)
         self.access_token_cache.PutToken(cache_key, access_token)
       return access_token
@@ -319,9 +321,11 @@ class OAuth2Client(object):
 class OAuth2ServiceAccountClient(OAuth2Client):
   
   def __init__(self, client_id, private_key, password, access_token_cache=None,
-               datetime_strategy=datetime.datetime):
-    super(OAuth2ServiceAccountClient, self).__init__(access_token_cache, 
-                                                     datetime_strategy)
+               datetime_strategy=datetime.datetime,
+               disable_ssl_certificate_validation=False):
+    super(OAuth2ServiceAccountClient, self).__init__(
+        access_token_cache, datetime_strategy,
+        disable_ssl_certificate_validation=disable_ssl_certificate_validation)
     self.client_id = client_id
     self.private_key = private_key
     self.password = password     
@@ -333,7 +337,10 @@ class OAuth2ServiceAccountClient(OAuth2Client):
     ca_certs = os.path.join(
         os.path.dirname(os.path.abspath(cacerts.__file__ )), "cacerts.txt")
     
-    http = httplib2.Http(ca_certs=ca_certs)
+    http = httplib2.Http(
+        ca_certs=ca_certs,
+        disable_ssl_certificate_validation
+            = self.disable_ssl_certificate_validation)
     credentials.authorize(http)
     credentials.refresh(http)
 
@@ -348,7 +355,8 @@ class OAuth2UserAccountClient(OAuth2Client):
                url_opener=None,
                proxy=None,
                access_token_cache=None,
-               datetime_strategy=datetime.datetime):
+               datetime_strategy=datetime.datetime,
+               disable_ssl_certificate_validation=False):
     """Creates an OAuth2Client.
 
     Args:
@@ -369,10 +377,13 @@ class OAuth2UserAccountClient(OAuth2Client):
       access_token_cache: An optional instance of a TokenCache. If omitted or
           None, an InMemoryTokenCache is used.
       datetime_strategy: datetime module strategy to use.
+      disable_ssl_certificate_validation: True if certifications should not be
+          validated.
     """
     super(OAuth2UserAccountClient, self).__init__(
         access_token_cache=access_token_cache,
-        datetime_strategy=datetime_strategy)
+        datetime_strategy=datetime_strategy,
+        disable_ssl_certificate_validation=disable_ssl_certificate_validation)
     self.provider = provider
     self.client_id = client_id
     self.client_secret = client_secret
@@ -419,7 +430,8 @@ class OAuth2UserAccountClient(OAuth2Client):
       if self._proxy:
         request.set_proxy(self._proxy, 'http')
 
-      request.set_ssl_info(ca_certs=self.ca_certs_file)
+      if not self.disable_ssl_certificate_validation:
+        request.set_ssl_info(ca_certs=self.ca_certs_file)
       result = self.url_opener.open(request)
       resp_body = result.read()
       LOG.debug('_TokenRequest response: %s', resp_body)

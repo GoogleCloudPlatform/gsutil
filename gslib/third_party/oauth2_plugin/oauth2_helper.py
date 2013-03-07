@@ -71,7 +71,10 @@ def OAuth2ClientFromBotoConfig(config,
       private_key = private_key_file.read()
     
     return oauth2_client.OAuth2ServiceAccountClient(service_client_id, 
-        private_key, key_file_pass, access_token_cache=token_cache)
+        private_key, key_file_pass, access_token_cache=token_cache,
+        disable_ssl_certificate_validation=not(config.getbool(
+            'Boto', 'https_validate_certificates', True)))
+
   elif creds_type == CredsTypes.OAUTH2_USER_ACCOUNT:
     provider_label = config.get(
         'OAuth2', 'provider_label', GOOGLE_OAUTH2_PROVIDER_LABEL)
@@ -83,11 +86,12 @@ def OAuth2ClientFromBotoConfig(config,
     client_id = config.get('OAuth2', 'client_id', GSUTIL_CLIENT_ID)
     client_secret = config.get(
         'OAuth2', 'client_secret', GSUTIL_CLIENT_NOTSOSECRET)
-    return oauth2_client.OAuth2UserAccountClient(
-        oauth2_client.OAuth2Provider(
+    return oauth2_client.OAuth2UserAccountClient(oauth2_client.OAuth2Provider(
             provider_label, provider_authorization_uri, provider_token_uri),
-        client_id, client_secret,
-        proxy=proxy, access_token_cache=token_cache)
+            client_id, client_secret, proxy=proxy,
+            access_token_cache=token_cache,
+            disable_ssl_certificate_validation=not(config.getbool(
+                'Boto', 'https_validate_certificates', True)))
   else:
     raise Exception('You have attempted to create an OAuth2 client without '
         'setting up OAuth2 credentials. Please run "gsutil config" to set up '
@@ -101,8 +105,9 @@ def OAuth2ApprovalFlow(oauth2_client, scopes, launch_browser=False):
     sys.stdout.write(
         'Attempting to launch a browser with the OAuth2 approval dialog at '
         'URL: %s\n\n'
-        '[Note: due to a Python bug, you may see a spurious error message "object is not\n'
-        'callable [...] in [...] Popen.__del__" which can be ignored.]\n\n' % approval_url)
+        '[Note: due to a Python bug, you may see a spurious error message '
+        '"object is not\ncallable [...] in [...] Popen.__del__" which can be '
+        'ignored.]\n\n' % approval_url)
   else:
     sys.stdout.write(
         'Please navigate your browser to the following URL:\n%s\n' %
