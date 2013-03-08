@@ -92,20 +92,23 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k1g2 = k1_uri.generation
     k2g2 = k2_uri.generation
 
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
-                            return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 4)
-    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
-    self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
-    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
-    self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
-    def _Check1():
+    def _Check(stderr_lines):
+      stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+                              return_stderr=True)
+      stderr_lines.update(set(stderr.splitlines()))
+      stderr = '\n'.join(stderr_lines)
+      self.assertEqual(stderr.count('Removing gs://'), 4)
+      self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
+      self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
+      self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
+      self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stdout=True)
       self.assertEqual(stdout, '')
-    _Check1()
+    all_stderr_lines = set()
+    _Check(all_stderr_lines)
 
   def test_remove_all_versions_recursive_on_subdir(self):
     """Test that 'rm -ar' works on subdir."""
