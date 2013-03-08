@@ -117,6 +117,14 @@ _detailed_help_text = ("""
                  Runs N (set with -n) write operations, with at most C
                  (set with -c) writes outstanding at any given time.
 
+  -m          Adds metadata to the result JSON file. Multiple -m values can be
+              specified. Example::
+
+                  gsutil perfdiag -m "key1:value1" -m "key2:value2" \
+                                  gs://bucketname/
+
+              Each metadata key will be added to the top-level "metadata"
+              dictionary in the output JSON file.
 
   -o          Writes the results of the diagnostic to an output file. The output
               is a JSON file containing system information and performance
@@ -161,7 +169,7 @@ class PerfDiagCommand(Command):
       # Max number of args required by this command, or NO_MAX.
       MAX_ARGS: 1,
       # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'n:c:s:t:i:o:',
+      SUPPORTED_SUB_ARGS: 'n:c:s:t:m:i:o:',
       # True if file URIs acceptable for this command.
       FILE_URIS_OK: False,
       # True if provider-only URIs acceptable for this command.
@@ -327,7 +335,8 @@ class PerfDiagCommand(Command):
 
   def _TearDown(self):
     """Performs operations to clean things up after performing diagnostics."""
-    for fpath in self.latency_files + [self.thru_local_file]:
+    for fpath in self.latency_files + [self.thru_local_file,
+                                       self.tcp_warmup_file]:
       try:
         os.remove(fpath)
       except OSError:
@@ -973,6 +982,8 @@ class PerfDiagCommand(Command):
     self.output_file = None
     # From -i.
     self.input_file = None
+    # From -m.
+    self.metadata_keys = {}
 
     if self.sub_opts:
       for o, a in self.sub_opts:
@@ -992,6 +1003,13 @@ class PerfDiagCommand(Command):
               raise CommandException("List of test names (-t) contains invalid "
                                      "test name '%s'." % test_name)
             self.diag_tests.append(test_name)
+        if o == '-m':
+          pieces = a.split(':')
+          if len(pieces) != 2:
+            raise CommandException(
+                "Invalid metadata key-value combination '%s'." % a)
+          key, value = pieces
+          self.metadata_keys[key] = value
         if o == '-o':
           self.output_file = os.path.abspath(a)
         if o == '-i':
@@ -1045,6 +1063,8 @@ class PerfDiagCommand(Command):
         self.results['sysinfo']['disk_counters_start'] = self._GetDiskCounters()
       # Record bucket URI.
       self.results['bucket_uri'] = str(self.bucket_uri)
+      self.results['json_format'] = 'perfdiag'
+      self.results['metadata'] = self.metadata_keys
 
       if 'lat' in self.diag_tests:
         self._RunLatencyTests()
