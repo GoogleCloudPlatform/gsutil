@@ -1565,7 +1565,7 @@ class CpCommand(Command):
     else:
       if len(self.args) < 2:
         raise CommandException('Wrong number of arguments for "cp" command.')
-      uri_strs = self.args[0:len(self.args)-1]
+      uri_strs = self.args[:-1]
 
     (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
          self.args[-1])
