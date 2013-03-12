@@ -203,6 +203,9 @@ class _NameExpansionIterator(object):
     self.have_existing_dst_container = have_existing_dst_container
     self.flat = flat
     self.all_versions = all_versions
+    # Check self.uri_strs.has_plurality() at start because its value can change
+    # if uri_strs is itself an iterator.
+    self.uri_strs.has_plurality = self.uri_strs.has_plurality()
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -243,7 +246,7 @@ class _NameExpansionIterator(object):
       wc = self._flatness_wildcard[self.flat]
       src_uri_expands_to_multi = (post_step1_iter.has_plurality()
                                   or post_step2_iter.has_plurality())
-      is_multi_src_request = (self.uri_strs.has_plurality()
+      is_multi_src_request = (self.uri_strs.has_plurality
                               or src_uri_expands_to_multi)
 
       if post_step2_iter.is_empty():
