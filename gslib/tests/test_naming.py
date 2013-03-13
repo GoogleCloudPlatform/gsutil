@@ -73,6 +73,18 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].object_name)
 
+  def testCopyingMultipleFilesToBucket(self):
+    """Tests copying multiple files to a bucket"""
+    src_file0 = self.CreateTempFile(file_name='f0')
+    src_file1 = self.CreateTempFile(file_name='f1')
+    dst_bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', [src_file0, src_file1, suri(dst_bucket_uri)])
+    actual = list(self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '**')).IterUris())
+    self.assertEqual(2, len(actual))
+    self.assertEqual('f0', actual[0].object_name)
+    self.assertEqual('f1', actual[1].object_name)
+
   def testCopyingAbsolutePathDirToBucket(self):
     """Tests recursively copying absolute path directory to a bucket"""
     dst_bucket_uri = self.CreateBucket()

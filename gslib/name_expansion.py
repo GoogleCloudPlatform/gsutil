@@ -278,7 +278,7 @@ class _NameExpansionIterator(object):
             self._WildcardIterator(uri_to_iterate))
         src_uri_expands_to_multi = (src_uri_expands_to_multi
                                     or wc_iter.has_plurality())
-        is_multi_src_request = (self.uri_strs.has_plurality()
+        is_multi_src_request = (self.uri_strs.has_plurality
                                 or src_uri_expands_to_multi)
         for blr in wc_iter:
           yield NameExpansionResult(uri_str, is_multi_src_request,
