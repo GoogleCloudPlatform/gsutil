@@ -18,7 +18,7 @@ import sys
 import time
 import webbrowser
 
-from gslib.commands.creds_types import CredsTypes
+from gslib.commands.cred_types import CredTypes
 import oauth2_client
 
 
@@ -40,7 +40,7 @@ GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
 OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
 def OAuth2ClientFromBotoConfig(config, 
-    creds_type=CredsTypes.OAUTH2_USER_ACCOUNT):
+    cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
   token_cache = None
   token_cache_type = config.get('OAuth2', 'token_cache', 'file_system')
   if token_cache_type == 'file_system':
@@ -62,7 +62,7 @@ def OAuth2ClientFromBotoConfig(config,
     proxy = "%s:%s" % (config.get('Boto', 'proxy'),
         config.get('Boto', 'proxy_port'))
   
-  if creds_type == CredsTypes.OAUTH2_SERVICE_ACCOUNT:
+  if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
     service_client_id = config.get('Credentials', 'gs_service_client_id', '')
     private_key_filename = config.get('Credentials', 'gs_service_key_file', '')
     key_file_pass = config.get('Credentials', 'gs_service_key_file_password',
@@ -75,7 +75,7 @@ def OAuth2ClientFromBotoConfig(config,
         disable_ssl_certificate_validation=not(config.getbool(
             'Boto', 'https_validate_certificates', True)))
 
-  elif creds_type == CredsTypes.OAUTH2_USER_ACCOUNT:
+  elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
     provider_label = config.get(
         'OAuth2', 'provider_label', GOOGLE_OAUTH2_PROVIDER_LABEL)
     provider_authorization_uri = config.get(

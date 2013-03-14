@@ -34,7 +34,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.commands.creds_types import CredsTypes
+from gslib.commands.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
@@ -490,7 +490,7 @@ class ConfigCommand(Command):
 
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
       oauth2_scopes=[SCOPE_FULL_CONTROL], 
-      creds_type=CredsTypes.OAUTH2_USER_ACCOUNT):
+      cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
     """Creates a boto config file interactively.
 
     Needed credentials are obtained interactively, either by asking the user for
@@ -500,7 +500,7 @@ class ConfigCommand(Command):
     Args:
       config_file: File object to which the resulting config file will be
           written.
-      creds_type: There are three options:
+      cred_type: There are three options:
         - for HMAC, ask the user for access key and secret
         - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow 
           and produce a config with an oauth2_refresh_token credential. 
@@ -517,7 +517,7 @@ class ConfigCommand(Command):
     uri_map = {'aws': 's3', 'google': 'gs'}
     key_ids = {}
     sec_keys = {}
-    if creds_type == CredsTypes.OAUTH2_SERVICE_ACCOUNT:
+    if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
       gs_service_client_id = raw_input('What is your service account email '
                                        'address? ')
       gs_service_key_file = raw_input('What is the full path to your private '
@@ -526,12 +526,12 @@ class ConfigCommand(Command):
           "service key file? If you haven't set one explicitly, leave this "
           "line blank. ")
       self._CheckPrivateKeyFilePermissions(gs_service_key_file)
-    elif creds_type == CredsTypes.OAUTH2_USER_ACCOUNT:
+    elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
         oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config, 
-            creds_type)
+            cred_type)
         oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(oauth2_client,
             oauth2_scopes, launch_browser)
-    elif creds_type == CredsTypes.HMAC:
+    elif cred_type == CredTypes.HMAC:
       got_creds = False
       for provider in provider_map:
         if provider == 'google':
@@ -557,7 +557,7 @@ class ConfigCommand(Command):
 
     # Write the config file Credentials section.
     config_file.write('[Credentials]\n\n')
-    if creds_type == CredsTypes.OAUTH2_SERVICE_ACCOUNT:
+    if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
         config_file.write('# Google OAuth2 service account credentials '
             '(for "gs://" URIs):\n')
         config_file.write('gs_service_client_id = %s\n' 
@@ -576,7 +576,7 @@ class ConfigCommand(Command):
         else:
           config_file.write('gs_service_key_file_password = %s\n\n' 
                             % gs_service_key_file_password)
-    elif creds_type == CredsTypes.OAUTH2_USER_ACCOUNT:
+    elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
       config_file.write('# Google OAuth2 credentials (for "gs://" URIs):\n'
           '# The following OAuth2 account is authorized for scope(s):\n')
       for scope in oauth2_scopes:
@@ -622,7 +622,7 @@ class ConfigCommand(Command):
 # version to use. If not set below gsutil defaults to API version 1.
 """)
     api_version = 2
-    if creds_type == CredsTypes.HMAC: api_version = 1
+    if cred_type == CredTypes.HMAC: api_version = 1
 
     config_file.write('default_api_version = %d\n' % api_version)
 
@@ -676,19 +676,19 @@ class ConfigCommand(Command):
   # Command entry point.
   def RunCommand(self):
     scopes = []
-    creds_type = CredsTypes.OAUTH2_USER_ACCOUNT
+    cred_type = CredTypes.OAUTH2_USER_ACCOUNT
     launch_browser = False
     output_file_name = None
     has_a = False
     has_e = False
     for opt, opt_arg in self.sub_opts:
       if opt == '-a':
-        creds_type = CredsTypes.HMAC
+        cred_type = CredTypes.HMAC
         has_a = True
       elif opt == '-b':
         launch_browser = True
       elif opt == '-e':
-        creds_type = CredsTypes.OAUTH2_SERVICE_ACCOUNT
+        cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
         has_e = True
       elif opt == '-f':
         scopes.append(SCOPE_FULL_CONTROL)
@@ -761,7 +761,7 @@ class ConfigCommand(Command):
     try:
       self._WriteBotoConfigFile(output_file,
           launch_browser=launch_browser, oauth2_scopes=scopes,
-          creds_type=creds_type)
+          cred_type=cred_type)
     except Exception as e:
       user_aborted = isinstance(e, AbortException)
       if user_aborted:

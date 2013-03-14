@@ -2,7 +2,7 @@ from boto.auth_handler import AuthHandler
 from boto.auth_handler import NotReadyToAuthenticate 
 import oauth2_client
 import oauth2_helper
-from gslib.commands.creds_types import CredsTypes
+from gslib.commands.cred_types import CredTypes
 
 IS_SERVICE_ACCOUNT = False
 
@@ -33,7 +33,7 @@ class OAuth2ServiceAccountAuth(AuthHandler):
         and config.has_option('Credentials', 'gs_service_client_id') 
         and config.has_option('Credentials', 'gs_service_key_file')):
       self.oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(config, 
-          creds_type=CredsTypes.OAUTH2_SERVICE_ACCOUNT)
+          cred_type=CredTypes.OAUTH2_SERVICE_ACCOUNT)
       # The gs_service_client_id field is just being used as a constant
       # specific to the service account to compute the hash for the name
       # of the cache file.
