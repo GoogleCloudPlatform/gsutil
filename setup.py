@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding=utf8
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,128 +14,124 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Distutils setup.py script for Google Cloud Storage command line tool.'''
+"""Setup installation module for gsutil."""
 
-import glob
-import sys
 import os
-import platform
-from distutils.core import setup
-from pkg_util import parse_manifest
+from setuptools import setup, find_packages
+from setuptools.command import build_py
 
-print '''
-NOTE: Enterprise mode (installing gsutil via setup.py) is no longer officially
-supported - unpacking the zip file into a directory is the preferred method
-for installing gsutil for both shared and private configurations. See README.md
-and README.pkg for further details.
-'''
+long_desc = """
+gsutil is a Python application that lets you access Google Cloud Storage from
+the command line. You can use gsutil to do a wide range of bucket and object
+management tasks, including:
+ * Creating and deleting buckets.
+ * Uploading, downloading, and deleting objects.
+ * Listing buckets and objects.
+ * Moving, copying, and renaming objects.
+ * Editing object and bucket ACLs.
+"""
 
-# Command name and target directory.
-NAME = 'gsutil'
-TARGET = '/usr/share/gsutil'
-BINDIR = '/usr/bin'
+requires = [
+    'boto==2.8.0-dev',
+    'httplib2>=0.8',
+    'python-gflags>=2.0',
+    'google-api-python-client>=1.1',
+    'pyOpenSSL>=0.13',
+]
 
-# Enterprise mode (shared/central) installation is not supported
-# on Windows.
-system = platform.system()
-if system.lower().startswith('windows'):
-  error = 'ERROR: enterprise (shared/central) installation is not ' \
-          'supported on Windows.'
-  exit(error)
+dependency_links = [
+    'https://github.com/boto/boto/archive/8a95cd0eae.tar.gz#egg=boto-2.8.0-dev',
+]
 
-def walk(dir, paths):
-  '''Do a recursive file tree walk, adding files found to passed dict.'''
-  for file in os.listdir(dir):
-    # Skip "dot files".
-    if file[0] == '.':
-      continue
-    path = dir + '/' + file
-    if os.path.isdir(path):
-      walk(path, paths)
-    else:
-      if dir not in paths:
-        paths[dir] = []
-      paths[dir].append(path)
+CURDIR = os.path.abspath(os.path.dirname(__file__))
+BOTO_DIR = os.path.join(CURDIR, 'third_party', 'boto')
 
-def first_token(filename):
-  '''Open file, read first line, parse & return first token to caller.'''
-  token = None
-  f = open(filename, 'r')
-  line = f.readline().strip()
-  tokens = line.split()
-  token = tokens[0]
-  f.close()
-  return token
+with open(os.path.join(CURDIR, 'VERSION'), 'r') as f:
+  VERSION = f.read().strip()
 
-# Validate python version.
-if sys.version_info <= (2, 6):
-  error = 'ERROR: gsutil requires Python Version 2.6 or above...exiting.'
-  exit(error)
+with open(os.path.join(CURDIR, 'CHECKSUM'), 'r') as f:
+  CHECKSUM = f.read()
 
-# Rather than hard-coding package contents here, we read the manifest 
-# file to obtain the list of files and directories to include.
-files = []
-dirs = []
-parse_manifest(files, dirs)
+class CustomBuildPy(build_py.build_py):
 
-# Build list of data files dynamically.
-data_files = [(TARGET, files)]
-paths = {}
-for dir in dirs:
-  walk(dir, paths)
-for path in paths:
-  data_files += (os.path.join(TARGET, path), paths[path]),
+  def byte_compile(self, files):
+    for filename in files:
+      # Note: we exclude the update command here because binary distributions
+      # (built via setup.py bdist command) don't abide by the MANIFEST file.
+      # For source distributions (built via setup.py sdist), the update command
+      # will be excluded by the MANIFEST file.
+      if 'gslib/commands/update.py' in filename:
+        os.unlink(filename)
+    build_py.build_py.byte_compile(self, files)
 
-long_desc = '''
-GSUtil is a Python application that lets you access Google Cloud Storage 
-from the command line. You can use GSUtil to do a wide range of bucket and 
-object management tasks, including:
-- Creating and deleting buckets.
-- Uploading, downloading, and deleting objects.
-- Listing buckets and objects.
-- Moving, copying, and renaming objects.
-- Setting object and bucket ACLs.
-'''
+  def run(self):
+    if not self.dry_run:
+      target_dir = os.path.join(self.build_lib, 'gslib')
+      self.mkpath(target_dir)
 
-VERSION = first_token('VERSION')
-if not VERSION:
-  error = 'ERROR: can\'t find gsutil version...exiting.'
-  exit(error)
+      # Copy over the gsutil root VERSION file into gslib module.
+      with open(os.path.join(target_dir, 'VERSION'), 'w') as f:
+        f.write(VERSION)
 
-# This is the main function call that installs the gsutil package. See
-# distutil documentation for details on this function and its arguments.
-setup(name = NAME,
-      version = VERSION,
-      license = 'Apache 2.0',
-      author = 'Google',
-      author_email = 'gs-team@google.com',
-      url = 'http://code.google.com/apis/storage/docs/gsutil.html',
-      description = 'gsutil - command line utility for Google Cloud Storage',
-      long_description = long_desc,
-      data_files = data_files,
-      # Dependency on boto commented out for now because initially we plan to 
-      # bundle boto with this package, however, when we're ready to depend on 
-      # a separate boto rpm package, this line should be uncommented.
-      #requires = ['boto (>=2.0)'],
-      )
+      # Copy over the gsutil root CHECKSUM file into gslib module.
+      with open(os.path.join(target_dir, 'CHECKSUM'), 'w') as f:
+        f.write(CHECKSUM)
 
-# Create symlink from /usr/bin/gsutil to /usr/share/gsutil/gsutil but
-# only run directly in enterprise mode (see README.pkg). When run by
-# rpmbuild we don't want to create this link because it's done by the 
-# rpm spec file slightly differently (using a relative link). Same story 
-# for permission setting, which is only needed if not run by rpmbuild.
-if not os.environ.get('RPM_BUILD_ROOT'):
-  link = os.path.join(BINDIR, NAME)
-  dest = os.path.join(TARGET, NAME)
-  if not os.path.exists(link):
-    os.symlink(dest, link)
-  # Make all files and dirs in install area readable by other
-  # and make all directories executable by other. These steps
-  # are performed in support of the enterprise (shared/central)
-  # installation mode, in which users with different user/group
-  # than the installation user/group must be able to run gsutil.
-  os.system('chmod -R o+r ' + TARGET)
-  os.system('find ' + TARGET + ' -type d | xargs chmod o+x')
-  # Make main gsutil script readable and executable by other.
-  os.system('chmod o+rx ' + os.path.join(TARGET, NAME))
+      # Copy over the Boto test module required by gsutil unit tests.
+      tests_dir = os.path.join(target_dir, 'tests')
+      self.mkpath(tests_dir)
+      mock_storage_dst = os.path.join(tests_dir, 'mock_storage_service.py')
+      mock_storage_src = os.path.join(
+          BOTO_DIR, 'tests', 'integration', 's3', 'mock_storage_service.py')
+      if not os.path.isfile(mock_storage_src):
+        raise Exception('Unable to find required boto test source file at %s.'
+                        % mock_storage_src)
+      with open(mock_storage_src, 'r') as f:
+        mock_storage_contents = f.read()
+      with open(mock_storage_dst, 'w') as f:
+        f.write('#\n'
+                '# This file was copied during gsutil package generation from\n'
+                '# the Boto test suite, originally located at:\n'
+                '#   tests/integration/s3/mock_storage_service.py\n'
+                '# DO NOT MODIFY\n'
+                '#\n\n')
+        f.write(mock_storage_contents)
 
+    build_py.build_py.run(self)
+
+setup(
+    name='gsutil',
+    version=VERSION,
+    url='https://developers.google.com/storage/docs/gsutil',
+    download_url='https://developers.google.com/storage/docs/gsutil_install',
+    license='Apache 2.0',
+    author='Google Inc.',
+    author_email='gs-team@google.com',
+    description=('A command line tool for interacting with cloud storage '
+                 'services.'),
+    long_description=long_desc,
+    zip_safe=False,
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: Apache Software License',
+        'Natural Language :: English',
+        'Topic :: System :: Filesystems',
+        'Topic :: Utilities',
+    ],
+    platforms='any',
+    packages=find_packages(exclude=['third_party']),
+    include_package_data=True,
+    entry_points={
+        'console_scripts': [
+            'gsutil = gslib.__main__:main',
+        ],
+    },
+    install_requires=requires,
+    dependency_links=dependency_links,
+    cmdclass={
+        'build_py': CustomBuildPy,
+    }
+)

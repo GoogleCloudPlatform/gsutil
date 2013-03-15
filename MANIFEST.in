@@ -1,5 +1,9 @@
-include gsutil COPYING VERSION LICENSE.third_party README.md setup.py pkg_util.py
+include COPYING
+include LICENSE.third_party
+include README.md
+include VERSION
+include gsutil
+include setup.py
 recursive-include gslib *
-recursive-include oauth2_plugin *
-recursive-include third_party *
-recursive-include boto *
+global-exclude *.pyc
+exclude gslib/commands/update.py

@@ -25,9 +25,16 @@ from gslib.command_runner import CommandRunner
 from gslib.project_id import ProjectIdHandler
 import gslib.tests.util as util
 from gslib.tests.util import unittest
-from tests.integration.s3 import mock_storage_service
 import base
 
+# The mock storage service comes from the Boto library, but it is not
+# distributed with Boto when installed as a package. To get around this, we
+# copy the file to gslib/tests/mock_storage_service.py when building the gsutil
+# package. Try and import from both places here.
+try:
+  from gslib.tests import mock_storage_service
+except ImportError:
+  from tests.integration.s3 import mock_storage_service
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
 TESTS_DIR = os.path.split(CURDIR)[0]
@@ -63,9 +70,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     config_file_list = boto.pyami.config.BotoConfigLocations
     # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
     # sent via HTTP because we're using MockStorageService here.
-    cls.command_runner = CommandRunner(
-        GSUTIL_DIR, config_file_list, 'gsutil_test_commands',
-        cls.mock_bucket_storage_uri)
+    cls.command_runner = CommandRunner(config_file_list,
+                                       cls.mock_bucket_storage_uri)
 
   def setUp(self):
     super(GsUtilUnitTestCase, self).setUp()

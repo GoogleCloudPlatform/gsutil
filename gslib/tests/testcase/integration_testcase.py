@@ -15,13 +15,13 @@
 """Contains gsutil base integration test case class."""
 
 import logging
-import os.path
 import subprocess
 import sys
 
 import boto
 from boto.exception import GSResponseError
 
+import gslib
 from gslib.project_id import ProjectIdHandler
 import gslib.tests.util as util
 from gslib.tests.util import unittest
@@ -30,11 +30,6 @@ from gslib.util import Retry
 import base
 
 
-CURDIR = os.path.abspath(os.path.dirname(__file__))
-TESTS_DIR = os.path.split(CURDIR)[0]
-GSLIB_DIR = os.path.split(TESTS_DIR)[0]
-GSUTIL_DIR = os.path.split(GSLIB_DIR)[0]
-GSUTIL_PATH = os.path.join(GSUTIL_DIR, 'gsutil')
 LOGGER = logging.getLogger('integration-test')
 
 
@@ -165,7 +160,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A tuple containing the desired return values specified by the return_*
       arguments.
     """
-    cmd = [GSUTIL_PATH] + cmd
+    cmd = [gslib.GSUTIL_PATH] + cmd
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

@@ -24,6 +24,7 @@ import textwrap
 import time
 
 from boto.storage_uri import BucketStorageUri
+import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -38,26 +39,22 @@ from gslib.util import SECONDS_PER_DAY
 
 class CommandRunner(object):
 
-  def __init__(self, gsutil_bin_dir, config_file_list,
-               gsutil_ver, bucket_storage_uri_class=BucketStorageUri):
+  def __init__(self, config_file_list,
+                bucket_storage_uri_class=BucketStorageUri):
     """
     Args:
-      gsutil_bin_dir: Bin dir from which gsutil is running.
       config_file_list: Config file list returned by _GetBotoConfigFileList().
-      gsutil_ver: Version string of currently running gsutil command.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
     """
-    self.gsutil_bin_dir = gsutil_bin_dir
     self.config_file_list = config_file_list
-    self.gsutil_ver = gsutil_ver
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.command_map = self._LoadCommandMap()
 
   def _LoadCommandMap(self):
     """Returns dict mapping each command_name to implementing class."""
     # Walk gslib/commands and find all commands.
-    commands_dir = os.path.join(self.gsutil_bin_dir, 'gslib', 'commands')
+    commands_dir = os.path.join(gslib.GSLIB_DIR, 'commands')
     for f in os.listdir(commands_dir):
       # Handles no-extension files, etc.
       (module_name, ext) = os.path.splitext(f)
@@ -114,9 +111,8 @@ class CommandRunner(object):
       command_name = 'help'
     command_class = self.command_map[command_name]
     command_inst = command_class(
-        self, args, headers, debug, parallel_operations, self.gsutil_bin_dir,
-        self.config_file_list, self.gsutil_ver, self.bucket_storage_uri_class,
-        test_method)
+        self, args, headers, debug, parallel_operations, self.config_file_list,
+        self.bucket_storage_uri_class, test_method)
     return command_inst.RunCommand()
 
 
@@ -134,7 +130,7 @@ class CommandRunner(object):
     # Don't try to interact with user if gsutil is not connected to a tty (e.g.,
     # if being run from cron), or if they are running the update command (which
     # could otherwise cause an additional note that an update is available when
-    # they are already trying to perform an update).
+    # they are already trying to perform an update)
     if (not sys.stdout.isatty() or not sys.stderr.isatty()
         or not sys.stdin.isatty() or command_name == 'update'):
       return False
@@ -151,8 +147,7 @@ class CommandRunner(object):
       # Set last_checked_ts from date of VERSION file, so if the user installed
       # an old copy of gsutil it will get noticed (and an update offered) the
       # first time they try to run it.
-      last_checked_ts = int(
-          os.path.getmtime(os.path.join(self.gsutil_bin_dir, 'VERSION')))
+      last_checked_ts = int(os.path.getmtime(gslib.VERSION_FILE))
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(last_checked_ts))
     else:
@@ -165,10 +160,12 @@ class CommandRunner(object):
       cur_ver = LookUpGsutilVersion(suri_builder.StorageUri(GSUTIL_PUB_TARBALL))
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(cur_ts))
-      if self.gsutil_ver != cur_ver:
-        answer = raw_input('\n'.join(textwrap.wrap(
+      if gslib.VERSION != cur_ver:
+        print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
-            'are running (%s). Would you like to update [Y/n]?' %
-            (cur_ver, self.gsutil_ver), width=78)) + ' ')
+            'are running (%s).' % (cur_ver, gslib.VERSION), width=78))
+        if gslib.IS_PACKAGE_INSTALL:
+          return False
+        answer = raw_input('Would you like to update [Y/n]? ')
         return answer.lower()[0] != 'n'
     return False

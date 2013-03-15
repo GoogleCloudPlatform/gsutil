@@ -19,6 +19,7 @@ import re
 import sys
 
 from boto.pyami.config import BotoConfigLocations
+import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -101,12 +102,7 @@ class VersionCommand(Command):
         else:
           path = "no config found"
 
-    try:
-      f = open(os.path.join(self.gsutil_bin_dir, 'CHECKSUM'))
-      shipped_checksum = f.read().strip()
-      f.close()
-    except IOError:
-      shipped_checksum = 'MISSING'
+    shipped_checksum = gslib.CHECKSUM
     try:
       cur_checksum = self._ComputeCodeChecksum()
     except IOError:
@@ -120,7 +116,7 @@ class VersionCommand(Command):
         'boto version %s\npython version %s\n'
         'config path: %s\ngsutil path: %s\n'
         'compiled crcmod: %s\n' % (
-        self.gsutil_ver, cur_checksum, checksum_ok_str,
+        gslib.VERSION, cur_checksum, checksum_ok_str,
         boto.__version__, sys.version, path, os.path.realpath(sys.argv[0]),
         UsingCrcmodExtension(crcmod)))
     sys.stderr.write('Note: a log of gsutil release changes is available at:\n'
@@ -136,12 +132,9 @@ class VersionCommand(Command):
     gsutil so we can reduce possible variables.)
     """
     m = md5()
-    # Checksum gsutil and all .py files under gsutil bin (including bundled
-    # libs). Although we will eventually make gsutil allow use of a centrally
-    # installed boto (once boto shifts to more frequent releases), in that case
-    # the local copies still should not have any user modifications.
-    files_to_checksum = [os.path.join(self.gsutil_bin_dir, 'gsutil')]
-    for root, sub_folders, files in os.walk(self.gsutil_bin_dir):
+    # Checksum gsutil and all .py files under gslib directory.
+    files_to_checksum = [gslib.GSUTIL_PATH]
+    for root, sub_folders, files in os.walk(gslib.GSLIB_DIR):
       for file in files:
         if file[-3:] == '.py':
           files_to_checksum.append(os.path.join(root, file))

@@ -27,6 +27,7 @@ import subprocess
 import sys
 import tarfile
 
+import gslib
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
@@ -40,6 +41,13 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
 
   def test_update(self):
     """Tests that the update command works or throws proper exceptions."""
+
+    if gslib.IS_PACKAGE_INSTALL:
+      # The update command is not present when installed via package manager.
+      stderr = self.RunGsUtil(['update'], return_stderr=True, expected_status=1)
+      self.assertIn('Invalid command', stderr)
+      return
+
     # Create two temp directories, one of which we will run 'gsutil update' in
     # to pull the changes from the other.
     tmpdir_src = self.CreateTempDir()

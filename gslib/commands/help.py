@@ -199,12 +199,12 @@ class HelpCommand(Command):
                       help name->HelpProvider dict,
                      )."""
     # Walk gslib/commands and gslib/addlhelp to find all HelpProviders.
-    for f in os.listdir(os.path.join(self.gsutil_bin_dir, 'gslib', 'commands')):
+    for f in os.listdir(os.path.join(gslib.GSLIB_DIR, 'commands')):
       # Handles no-extension files, etc.
       (module_name, ext) = os.path.splitext(f)
       if ext == '.py':
         __import__('gslib.commands.%s' % module_name)
-    for f in os.listdir(os.path.join(self.gsutil_bin_dir, 'gslib', 'addlhelp')):
+    for f in os.listdir(os.path.join(gslib.GSLIB_DIR, 'addlhelp')):
       (module_name, ext) = os.path.splitext(f)
       if ext == '.py':
         __import__('gslib.addlhelp.%s' % module_name)

@@ -103,7 +103,6 @@ def CreateTrackerDirIfNeeded():
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
     os.path.join(CreateTrackerDirIfNeeded(), '.last_software_update_check'))
 
-
 def HasConfiguredCredentials():
   """Determines if boto credential/config file exists."""
   config = boto.config

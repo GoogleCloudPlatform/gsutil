@@ -15,11 +15,10 @@
 """Base class for gsutil commands.
 
 In addition to base class code, this file contains helpers that depend on base
-class state (such as GetAclCommandHelper, which depends on self.gsutil_bin_dir,
-self.bucket_storage_uri_class, etc.) In general, functions that depend on class
-state and that are used by multiple commands belong in this file. Functions that
-don't depend on class state belong in util.py, and non-shared helpers belong in
-individual subclasses.
+class state (such as GetAclCommandHelper) In general, functions that depend on
+class state and that are used by multiple commands belong in this file.
+Functions that don't depend on class state belong in util.py, and non-shared
+helpers belong in individual subclasses.
 """
 
 import boto
@@ -28,7 +27,6 @@ import gslib
 import logging
 import multiprocessing
 import os
-import platform
 import re
 import signal
 import sys
@@ -171,8 +169,7 @@ class Command(object):
   command_name = property(_GetDefaultCommandName)
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               gsutil_bin_dir, config_file_list, gsutil_ver,
-               bucket_storage_uri_class, test_method=None):
+               config_file_list, bucket_storage_uri_class, test_method=None):
     """
     Args:
       command_runner: CommandRunner (for commands built atop other commands).
@@ -180,9 +177,7 @@ class Command(object):
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
       parallel_operations: Should command operations be executed in parallel?
-      gsutil_bin_dir: Bin dir from which gsutil is running.
       config_file_list: Config file list returned by _GetBotoConfigFileList().
-      gsutil_ver: Version string of currently running gsutil command.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       test_method: Optional general purpose method for testing purposes.
@@ -202,9 +197,7 @@ class Command(object):
     self.headers = headers
     self.debug = debug
     self.parallel_operations = parallel_operations
-    self.gsutil_bin_dir = gsutil_bin_dir
     self.config_file_list = config_file_list
-    self.gsutil_ver = gsutil_ver
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.test_method = test_method
     self.exclude_symlinks = False
@@ -266,11 +259,11 @@ class Command(object):
     # Cross-platform list containing gsutil path for use with subprocess.
     self.gsutil_exec_list = []
     # If running on Windows, invoke python interpreter explicitly.
-    if platform.system() == "Windows":
+    if gslib.util.IS_WINDOWS:
       self.gsutil_cmd += 'python '
       self.gsutil_exec_list += ['python']
     # Add full path to gsutil to make sure we test the correct version.
-    self.gsutil_path = os.path.join(self.gsutil_bin_dir, 'gsutil')
+    self.gsutil_path = gslib.GSUTIL_PATH
     self.gsutil_cmd += self.gsutil_path
     self.gsutil_exec_list += [self.gsutil_path]
 

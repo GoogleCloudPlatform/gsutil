@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 
 from boto import config
+import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -140,7 +141,7 @@ class UpdateCommand(Command):
       return
 
     user_id = os.getuid()
-    if os.stat(self.gsutil_bin_dir).st_uid == user_id:
+    if os.stat(gslib.GSUTIL_DIR).st_uid == user_id:
       return
 
     # Won't fail - this command runs after main startup code that insists on
@@ -212,6 +213,13 @@ class UpdateCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+
+    if gslib.IS_PACKAGE_INSTALL:
+      raise CommandException(
+          'Update command is only available for gsutil installed from a '
+          'tarball. If you installed gsutil via another method, use the same '
+          'method to update it.')
+
     for cfg_var in ('is_secure', 'https_validate_certificates'):
       if (config.has_option('Boto', cfg_var)
           and not config.getboolean('Boto', cfg_var)):
@@ -269,7 +277,7 @@ class UpdateCommand(Command):
       with open(os.path.join('gsutil', 'VERSION'), 'r') as ver_file:
         tarball_version = ver_file.read().strip()
 
-    if not force_update and self.gsutil_ver == tarball_version:
+    if not force_update and gslib.VERSION == tarball_version:
       self._CleanUpUpdateCommand(tf, dirs_to_remove)
       if self.args:
         raise CommandException('You already have %s installed.' %
@@ -280,7 +288,7 @@ class UpdateCommand(Command):
 
     if not no_prompt:
       print(('This command will update to the "%s" version of\ngsutil at %s') %
-            (tarball_version, self.gsutil_bin_dir))
+            (tarball_version, gslib.GSUTIL_DIR))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove)
 
     if no_prompt:
@@ -298,13 +306,14 @@ class UpdateCommand(Command):
     # hitting ^C leaves gsutil in a broken state.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    # self.gsutil_bin_dir lists the path where the code should end up (like
+    # gslib.GSUTIL_DIR lists the path where the code should end up (like
     # /usr/local/gsutil), which is one level down from the relative path in the
     # tarball (since the latter creates files in ./gsutil). So, we need to
     # extract at the parent directory level.
-    gsutil_bin_parent_dir = os.path.dirname(self.gsutil_bin_dir)
+    gsutil_bin_parent_dir = os.path.normpath(
+        os.path.join(gslib.GSUTIL_DIR, '..'))
 
-    # Extract tarball to a temporary directory in a sibling to gsutil_bin_dir.
+    # Extract tarball to a temporary directory in a sibling to GSUTIL_DIR.
     old_dir = tempfile.mkdtemp(dir=gsutil_bin_parent_dir)
     new_dir = tempfile.mkdtemp(dir=gsutil_bin_parent_dir)
     dirs_to_remove.append(old_dir)
@@ -332,8 +341,8 @@ class UpdateCommand(Command):
       os.system('chmod o+rx ' + os.path.join(new_dir, 'gsutil'))
 
     # Move old installation aside and new into place.
-    os.rename(self.gsutil_bin_dir, old_dir + os.sep + 'old')
-    os.rename(new_dir + os.sep + 'gsutil', self.gsutil_bin_dir)
+    os.rename(gslib.GSUTIL_DIR, os.path.join(old_dir, 'old'))
+    os.rename(os.path.join(new_dir, 'gsutil'), gslib.GSUTIL_DIR)
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     self.logger.info('Update complete.')

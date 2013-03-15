@@ -75,18 +75,10 @@ def main():
   # instantiated first those parts would have the old value of boto.UserAgent,
   # so we wouldn't be guaranteed that all code paths send the correct user
   # agent.)
-  ver_file_path = os.path.join(GSUTIL_DIR, 'VERSION')
-  if not os.path.isfile(ver_file_path):
-    raise gslib.exception.CommandException(
-        '%s not found. Please reinstall gsutil from scratch' % ver_file_path)
-  ver_file = open(ver_file_path, 'r')
-  gsutil_ver = ver_file.read().rstrip()
-  ver_file.close()
-  boto.UserAgent += ' gsutil/%s (%s)' % (gsutil_ver, sys.platform)
+  boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 
   config_file_list = _GetBotoConfigFileList()
-  command_runner = CommandRunner(
-      GSUTIL_DIR, config_file_list, gsutil_ver)
+  command_runner = CommandRunner(config_file_list)
   headers = {}
   parallel_operations = False
   quiet = False
