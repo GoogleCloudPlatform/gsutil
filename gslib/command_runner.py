@@ -17,6 +17,7 @@
 """Class that runs a named gsutil command."""
 
 import boto
+import difflib
 import os
 import sys
 import textwrap
@@ -102,6 +103,11 @@ class CommandRunner(object):
     headers['x-goog-api-version'] = api_version
 
     if command_name not in self.command_map:
+      close_matches = difflib.get_close_matches(
+          command_name, self.command_map.keys(), n=1)
+      if len(close_matches):
+        print >> sys.stderr, 'Did you mean this?'
+        print >> sys.stderr, '\t%s' % close_matches[0]
       raise CommandException('Invalid command "%s".' % command_name)
     if '--help' in args:
       args = [command_name]
