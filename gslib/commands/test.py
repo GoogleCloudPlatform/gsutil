@@ -219,9 +219,9 @@ class TestCommand(Command):
       suite = loader.discover(TESTS_DIR)
 
     if logging.getLogger().getEffectiveLevel() <= logging.INFO:
-      verbosity = 2
-    else:
       verbosity = 1
+    else:
+      verbosity = 2
       logging.disable(logging.ERROR)
 
     total_tests = suite.countTestCases()

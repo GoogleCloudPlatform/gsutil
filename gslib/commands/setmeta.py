@@ -221,14 +221,14 @@ class SetMetaCommand(Command):
 
     def _SetMetadataExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      self.THREADED_LOGGER.error(str(e))
+      self.logger.error(str(e))
       self.everything_set_okay = False
 
     @Retry(GSResponseError, tries=3, delay=1, backoff=2)
     def _SetMetadataFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
-      self.THREADED_LOGGER.info('Setting metadata on %s...', exp_src_uri)
+      self.logger.info('Setting metadata on %s...', exp_src_uri)
       
       key = exp_src_uri.get_key()
       metageneration = key.metageneration
@@ -247,8 +247,8 @@ class SetMetaCommand(Command):
       
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.bucket_storage_uri_class, uri_args, self.recursion_requested,
-        self.recursion_requested)
+        self.logger, self.bucket_storage_uri_class, uri_args,
+        self.recursion_requested, self.recursion_requested)
 
     try:
       # Perform requests in parallel (-m) mode, if requested, using
@@ -338,10 +338,9 @@ class SetMetaCommand(Command):
     return (metadata_minus, metadata_plus)
 
   def _ParseMetadataSpec(self, spec):
-    self.THREADED_LOGGER.info('WARNING: metadata spec syntax (%s)\nis '
-                              'deprecated and will eventually be removed.\n'
-                              'Please see "gsutil help setmeta" for current '
-                              'syntax' % spec)
+    self.logger.warning('WARNING: metadata spec syntax (%s)\nis deprecated '
+                        'and will eventually be removed.\nPlease see '
+                        '"gsutil help setmeta" for current syntax' % spec)
     metadata_minus = set()
     cust_metadata_minus = set()
     metadata_plus = {}

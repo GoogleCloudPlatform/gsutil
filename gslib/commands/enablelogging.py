@@ -143,7 +143,7 @@ class EnableLoggingCommand(Command):
         if uri.names_object():
           raise CommandException('enablelogging cannot be applied to objects')
         did_some_work = True
-        print 'Enabling logging on %s...' % uri
+        self.logger.info('Enabling logging on %s...', uri)
         self.proj_id_handler.FillInProjectHeaderIfNeeded(
             'enablelogging', storage_uri, self.headers)
         uri.enable_logging(target_bucket_uri.bucket_name, target_prefix, False,

@@ -231,14 +231,14 @@ class PerfDiagCommand(Command):
       non-zero return code.
     """
     if self.debug:
-      print 'Running command:', cmd
+      self.logger.info('Running command: %s', cmd)
     devnull_f = open(os.devnull, 'w')
     num_finished = 0
     running = []
     while len(running) or num_finished < n:
       # Fires off new commands that can be executed.
       while len(running) < w and num_finished + len(running) < n:
-        print 'Starting concurrent command: %s' % (' '.join(cmd))
+        self.logger.info('Starting concurrent command: %s', (' '.join(cmd)))
         p = subprocess.Popen(cmd, stdout=devnull_f, stderr=devnull_f)
         running.append(p)
 
@@ -276,7 +276,7 @@ class PerfDiagCommand(Command):
       non-zero return code.
     """
     if self.debug:
-      print 'Running command:', cmd
+      self.logger.info('Running command: %s', cmd)
     stderr = subprocess.PIPE if mute_stderr else None
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr)
     (stdoutdata, stderrdata) = p.communicate()
@@ -372,12 +372,12 @@ class PerfDiagCommand(Command):
     Yields:
       For the context manager.
     """
-    print key, 'starting...'
+    self.logger.info('%s starting...', key)
     t0 = time.time()
     yield
     t1 = time.time()
     bucket[key].append(t1 - t0)
-    print key, 'done.'
+    self.logger.info('%s done.', key)
 
   def _RunOperation(self, func):
     """Runs an operation with retry logic.
@@ -408,7 +408,7 @@ class PerfDiagCommand(Command):
       except tuple(exceptions) as e:
         total_retried += 1
         if total_retried > self.MAX_TOTAL_RETRIES:
-          print 'Reached maximum total retries. Not retrying.'
+          self.logger.info('Reached maximum total retries. Not retrying.')
           break
         if isinstance(e, boto.exception.BotoServerError):
           if e.status >= 500:
@@ -418,8 +418,9 @@ class PerfDiagCommand(Command):
             time.sleep(next_sleep)
           else:
             raise
-          if server_error_retried > self.MAX_SERVER_ERROR_RETRIES:
-            print 'Reached maximum server error retries. Not retrying.'
+          if (server_error_retried > self.MAX_SERVER_ERROR_RETRIES):
+            self.logger.info(
+                'Reached maximum server error retries. Not retrying.')
             break
         else:
           self.connection_breaks += 1
@@ -431,8 +432,7 @@ class PerfDiagCommand(Command):
     self.results['latency'] = defaultdict(list)
 
     for i in range(self.num_iterations):
-      print
-      print 'Running latency iteration %d...' % (i+1)
+      self.logger.info('\nRunning latency iteration %d...', i+1)
       for fpath in self.latency_files:
         basename = os.path.basename(fpath)
         gsbucket = str(self.bucket_uri)
@@ -440,12 +440,10 @@ class PerfDiagCommand(Command):
         file_size = self.file_sizes[fpath]
         readable_file_size = MakeHumanReadable(file_size)
 
-        print
-        print ("File of size %(size)s located on disk at '%(fpath)s' being "
-               "diagnosed in the cloud at '%(gsuri)s'."
-               % {'size': readable_file_size,
-                  'fpath': fpath,
-                  'gsuri': gsuri})
+        self.logger.info(
+            "\nFile of size %(size)s located on disk at '%(fpath)s' being "
+            "diagnosed in the cloud at '%(gsuri)s'."
+            % {'size': readable_file_size, 'fpath': fpath, 'gsuri': gsuri})
 
         k = self.bucket.key_class(self.bucket)
         k.key = basename
@@ -1019,7 +1017,7 @@ class PerfDiagCommand(Command):
           try:
             with open(self.input_file, 'r') as f:
               self.results = json.load(f)
-              print "Read input file: '%s'." % self.input_file
+              self.logger.info("Read input file: '%s'.", self.input_file)
           except ValueError:
             raise CommandException("Could not decode input file (-i): '%s'." %
                                    a)
@@ -1046,11 +1044,17 @@ class PerfDiagCommand(Command):
 
     boto.config.set('Boto', 'num_retries', '0')
 
-    print 'Number of iterations to run: %d' % self.num_iterations
-    print 'Base bucket URI: %s' % self.bucket_uri
-    print 'Concurrency level: %d' % self.concurrency
-    print 'Throughput file size: %s' % MakeHumanReadable(self.thru_filesize)
-    print 'Diagnostics to run: %s' % (', '.join(self.diag_tests))
+    self.logger.info(
+        'Number of iterations to run: %d\n'
+        'Base bucket URI: %s\n'
+        'Concurrency level: %d\n'
+        'Throughput file size: %s\n'
+        'Diagnostics to run: %s',
+        self.num_iterations,
+        self.bucket_uri,
+        self.concurrency,
+        MakeHumanReadable(self.thru_filesize),
+        (', '.join(self.diag_tests)))
 
     try:
       self._SetUp()

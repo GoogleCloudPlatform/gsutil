@@ -379,3 +379,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name,
                                     "obj1"), dir_list[1])
     _CopyAndCheck()
+
+  def test_copy_quiet(self):
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    stderr = self.RunGsUtil(['-q', 'cp', suri(key_uri),
+                             suri(bucket_uri.clone_replace_name('o2'))],
+                            return_stderr=True)
+    self.assertEqual(stderr.count('Copying '), 0)

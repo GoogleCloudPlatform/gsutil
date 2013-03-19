@@ -127,9 +127,9 @@ class CatCommand(Command):
           if not re.match('^[0-9]+-[0-9]*$|^-[0-9]+$', range):
             raise CommandException('Invalid range (%s)' % range)
         elif o == '-v':
-          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
-                                    ' needed, and will eventually be removed.\n'
-                                    % self.command_name)
+          self.logger.info('WARNING: The %s -v option is no longer'
+                           ' needed, and will eventually be removed.\n'
+                           % self.command_name)
 
     printed_one = False
     # We manipulate the stdout so that all other data other than the Object

@@ -22,12 +22,11 @@ from gslib.util import Retry
 
 class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
   """Tests gslib.commands.chacl."""
-  logger = ThreadedLogger()
 
   def setUp(self):
     super(ChaclIntegrationTest, self).setUp()
     self.sample_uri = self.CreateBucket()
-    self.logger = ThreadedLogger()
+    self.logger = ThreadedLogger('chacl')
 
   def testAclChangeWithUserId(self):
     change = chacl.AclChange(self.USER_TEST_ID + ':r',

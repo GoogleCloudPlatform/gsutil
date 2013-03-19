@@ -152,7 +152,7 @@ class MbCommand(Command):
                                'bucket.\n"%s" is not valid.' % bucket_uri)
       self.proj_id_handler.FillInProjectHeaderIfNeeded('mb', bucket_uri,
                                                        headers)
-      print 'Creating %s...' % bucket_uri
+      self.logger.info('Creating %s...', bucket_uri)
       # Pass storage_class param only if this is a GCS bucket. (In S3 the
       # storage class is specified on the key object.)
       if bucket_uri.scheme == 'gs':

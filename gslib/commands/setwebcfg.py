@@ -182,7 +182,7 @@ class SetWebcfgCommand(Command):
           raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
-        print 'Setting website config on %s...' % uri
+        self.logger.info('Setting website config on %s...', uri)
         uri.set_website_config(main_page_suffix, error_page)
     if not some_matched:
       raise CommandException('No URIs matched')

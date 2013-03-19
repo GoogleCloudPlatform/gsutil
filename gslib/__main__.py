@@ -89,6 +89,7 @@ def main():
       GSUTIL_DIR, config_file_list, gsutil_ver)
   headers = {}
   parallel_operations = False
+  quiet = False
   debug = 0
 
   # If user enters no commands just print the usage info.
@@ -103,16 +104,16 @@ def main():
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:m',
+    opts, args = getopt.getopt(sys.argv[1:], 'dDvh:mq',
                                ['debug', 'detailedDebug', 'version', 'help',
-                                'header', 'multithreaded'])
+                                'header', 'multithreaded', 'quiet'])
   except getopt.GetoptError as e:
     _HandleCommandException(gslib.exception.CommandException(e.msg))
   for o, a in opts:
     if o in ('-d', '--debug'):
       # Passing debug=2 causes boto to include httplib header output.
       debug = 2
-    if o in ('-D', '--detailedDebug'):
+    elif o in ('-D', '--detailedDebug'):
       # We use debug level 3 to ask gsutil code to output more detailed
       # debug output. This is a bit of a hack since it overloads the same
       # flag that was originally implemented for boto use. And we use -DD
@@ -121,15 +122,17 @@ def main():
         debug = 4
       else:
         debug = 3
-    if o in ('-?', '--help'):
+    elif o in ('-?', '--help'):
       _OutputUsageAndExit(command_runner)
-    if o in ('-h', '--header'):
+    elif o in ('-h', '--header'):
       (hdr_name, unused_ptn, hdr_val) = a.partition(':')
       if not hdr_name:
         _OutputUsageAndExit(command_runner)
       headers[hdr_name] = hdr_val
-    if o in ('-m', '--multithreaded'):
+    elif o in ('-m', '--multithreaded'):
       parallel_operations = True
+    elif o in ('-q', '--quiet'):
+      quiet = True
   httplib2.debuglevel = debug
   if debug > 1:
     sys.stderr.write(
@@ -142,7 +145,7 @@ def main():
         '*** output, or have revoked your credentials.\n'
         '***************************** WARNING *****************************\n')
   if debug == 2:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
   elif debug > 2:
     logging.basicConfig(level=logging.DEBUG)
     command_runner.RunNamedCommand('ver')
@@ -154,8 +157,10 @@ def main():
       pass
     sys.stderr.write('config_file_list: %s\n' % config_file_list)
     sys.stderr.write('config: %s\n' % str(config_items))
+  elif quiet:
+    logging.basicConfig(level=logging.WARNING)
   else:
-    logging.basicConfig()
+    logging.basicConfig(level=logging.INFO)
 
   if not args:
     command_name = 'help'

@@ -137,9 +137,9 @@ class RmCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
-                                    ' needed, and will eventually be removed.\n'
-                                    % self.command_name)
+          self.logger.info('WARNING: The %s -v option is no longer'
+                           ' needed, and will eventually be removed.\n'
+                           % self.command_name)
 
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
@@ -153,8 +153,9 @@ class RmCommand(Command):
       # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
       name_expansion_iterator = NameExpansionIterator(
           self.command_name, self.proj_id_handler, self.headers, self.debug,
-          self.bucket_storage_uri_class, self.args, self.recursion_requested,
-          flat=self.recursion_requested, all_versions=self.all_versions)
+          self.logger, self.bucket_storage_uri_class, self.args,
+          self.recursion_requested, flat=self.recursion_requested,
+          all_versions=self.all_versions)
 
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
@@ -190,8 +191,8 @@ class RmCommand(Command):
         try:
           name_expansion_iterator = NameExpansionIterator(
               self.command_name, self.proj_id_handler, self.headers, self.debug,
-              self.bucket_storage_uri_class, folder_object_wildcards,
-              self.recursion_requested, flat=True,
+              self.logger, self.bucket_storage_uri_class,
+              folder_object_wildcards, self.recursion_requested, flat=True,
               all_versions=self.all_versions)
           self.Apply(remove_func, name_expansion_iterator, exception_handler)
         except CommandException as e:
@@ -204,7 +205,7 @@ class RmCommand(Command):
   def _MkRemoveExceptionHandler(self):
     def RemoveExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      self.THREADED_LOGGER.error(str(e))
+      self.logger.error(str(e))
       self.everything_removed_okay = False
     return RemoveExceptionHandler
 
@@ -224,8 +225,7 @@ class RmCommand(Command):
                                '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
 
       # Perform delete.
-      self.THREADED_LOGGER.info('Removing %s...',
-                                name_expansion_result.expanded_uri_str)
+      self.logger.info('Removing %s...', name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
 

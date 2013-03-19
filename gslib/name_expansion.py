@@ -139,7 +139,7 @@ class _NameExpansionIterator(object):
     CommandException: if errors encountered.
   """
 
-  def __init__(self, command_name, proj_id_handler, headers, debug,
+  def __init__(self, command_name, proj_id_handler, headers, debug, logger,
                bucket_storage_uri_class, uri_strs, recursion_requested,
                have_existing_dst_container=None, flat=True,
                all_versions=False, for_all_version_delete=False):
@@ -149,6 +149,7 @@ class _NameExpansionIterator(object):
       proj_id_handler: ProjectIdHandler to use for current command.
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
+      logger: logging.Logger object.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
           Settable for testing/mocking.
       uri_strs: PluralityCheckableIterator of URI strings needing expansion.
@@ -196,6 +197,7 @@ class _NameExpansionIterator(object):
     self.proj_id_handler = proj_id_handler
     self.headers = headers
     self.debug = debug
+    self.logger = logger
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
     self.uri_strs = uri_strs
@@ -265,7 +267,8 @@ class _NameExpansionIterator(object):
             desc = 'directory'
           else:
             desc = 'bucket'
-          print 'Omitting %s "%s". (Did you mean to do %s -R?)' % (
+          self.logger.info(
+              'Omitting %s "%s". (Did you mean to do %s -R?)',
               desc, blr.GetUri(), self.command_name)
           continue
         if blr.GetUri().is_file_uri():
@@ -304,7 +307,7 @@ class _NameExpansionIterator(object):
 
 
 def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
-                          bucket_storage_uri_class, uri_strs,
+                          logger, bucket_storage_uri_class, uri_strs,
                           recursion_requested,
                           have_existing_dst_container=None, flat=True,
                           all_versions=False,
@@ -320,6 +323,7 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
     proj_id_handler: ProjectIdHandler to use for current command.
     headers: Dictionary containing optional HTTP headers to pass to boto.
     debug: Debug level to pass in to boto connection (range 0..3).
+    logger: logging.Logger object.
     bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
         Settable for testing/mocking.
     uri_strs: PluralityCheckableIterator of URI strings needing expansion.
@@ -365,9 +369,10 @@ def NameExpansionIterator(command_name, proj_id_handler, headers, debug,
   """
   uri_strs = PluralityCheckableIterator(uri_strs)
   name_expansion_iterator = _NameExpansionIterator(
-      command_name, proj_id_handler, headers, debug, bucket_storage_uri_class,
-      uri_strs, recursion_requested, have_existing_dst_container, flat,
-      all_versions=all_versions, for_all_version_delete=for_all_version_delete)
+      command_name, proj_id_handler, headers, debug, logger,
+      bucket_storage_uri_class, uri_strs, recursion_requested,
+      have_existing_dst_container, flat, all_versions=all_versions,
+      for_all_version_delete=for_all_version_delete)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.is_empty():
     raise CommandException('No URIs matched')

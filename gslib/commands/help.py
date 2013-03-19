@@ -67,7 +67,7 @@ _detailed_help_text = ("""
 """)
 
 top_level_usage_string = (
-    "Usage: gsutil [-d][-D] [-h header]... [-m] [command [opts...] args...]"
+    "Usage: gsutil [-d][-D] [-h header]... [-m] [command [opts...] args...] [-q]"
 )
 
 class HelpCommand(Command):
@@ -140,8 +140,14 @@ class HelpCommand(Command):
     return 0
 
   def _OutputHelp(self, str):
-    """Outputs simply formatted string, paginating if long and PAGER defined"""
-    # Replace <B> and </B> with terminal formatting strings.
+    """Outputs simply formatted string, paginating if long and PAGER defined and
+       output is a tty"""
+    # Replace <B> and </B> with terminal formatting strings if connected to tty.
+    if not sys.stdout.isatty():
+      str = re.sub('<B>', '', str)
+      str = re.sub('</B>', '', str)
+      print str
+      return
     str = re.sub('<B>', '\033[1m', str)
     str = re.sub('</B>', '\033[0;0m', str)
     num_lines = len(str.split('\n'))

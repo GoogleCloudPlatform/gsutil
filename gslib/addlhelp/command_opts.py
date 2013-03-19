@@ -97,6 +97,12 @@ _detailed_help_text = ("""
               1000 files have been transferred), you will need to restart the
               entire transfer.
 
+  -q          Causes gsutil to perform operations quietly, i.e., without
+              reporting progress indicators of files being copied or removed,
+              etc. Errors are still reported. This option can be useful for
+              running gsutil from a cron job that logs its output to a file, for
+              which the only information desired in the log is failures.
+
   -s          Tells gsutil to use a simulated storage provider (for testing).
 """)
 

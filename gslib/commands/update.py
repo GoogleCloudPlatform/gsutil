@@ -233,7 +233,7 @@ class UpdateCommand(Command):
     os.chdir(tmp_dir)
 
     if not no_prompt:
-      print 'Checking for software update...'
+      self.logger.info('Checking for software update...')
     if self.args:
       update_from_uri_str = self.args[0]
       if not update_from_uri_str.endswith('.tar.gz'):
@@ -335,7 +335,7 @@ class UpdateCommand(Command):
     os.rename(new_dir + os.sep + 'gsutil', self.gsutil_bin_dir)
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    print 'Update complete.'
+    self.logger.info('Update complete.')
     return 0
 
   def _FetchAndOpenGsutilTarball(self, update_from_uri_str):

@@ -463,7 +463,7 @@ class ConfigCommand(Command):
     
     st = os.stat(file_path)
     if bool((stat.S_IRGRP | stat.S_IROTH) & st.st_mode):
-      print(
+      self.logger.warn(
           '\nYour private key file is readable by people other than yourself.\n'
           'This is a security risk, since anyone with this information can use '
           'your service account.\n')
@@ -472,16 +472,18 @@ class ConfigCommand(Command):
       if fix_it in ('y', 'Y'):
         try:
           os.chmod(file_path, 0400)
-          print('\nThe permissions on your file have been successfully '
+          self.logger.info(
+              '\nThe permissions on your file have been successfully '
               'modified.'
               '\nThe only access allowed is readability by the user '
               '(permissions 0400 in chmod).')
         except Exception as e:
-          print('\nWe were unable to modify the permissions on your file.\n'
-                'If you would like to fix this yourself, consider running:\n'
-                '"sudo chmod 400 </path/to/key>" for improved security.')
+          self.logger.warn(
+              '\nWe were unable to modify the permissions on your file.\n'
+              'If you would like to fix this yourself, consider running:\n'
+              '"sudo chmod 400 </path/to/key>" for improved security.')
       else: 
-        print(
+        self.logger.info(
             '\nYou have chosen to allow this file to be readable by others.\n'
             'If you would like to fix this yourself, consider running:\n'
             '"sudo chmod 400 </path/to/key>" for improved security.')

@@ -199,11 +199,10 @@ class AclChange(object):
     uri: The URI object to change.
     current_acl: An instance of boto.gs.acl.ACL to permute.
     """
-    self.logger.debug('Executing {0} on {1}'
-                      .format(self.raw_descriptor, uri))
+    self.logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
 
     if self.perm == 'WRITE' and uri.names_object():
-      self.logger.warn(
+      self.logger.warning(
           'Skipping {0} on {1}, as WRITE does not apply to objects'
           .format(self.raw_descriptor, uri))
       return 0
@@ -256,8 +255,7 @@ class AclDel(AclChange):
         yield entry
 
   def Execute(self, uri, current_acl):
-    self.logger.debug('Executing {0} on {1}'
-                      .format(self.raw_descriptor, uri))
+    self.logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:
       current_acl.entries.entry_list.remove(entry)
@@ -429,12 +427,12 @@ class ChAclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-g':
           self.changes.append(AclChange(a, scope_type=ChangeType.GROUP,
-                                        logger=self.THREADED_LOGGER))
+                                        logger=self.logger))
         if o == '-u':
           self.changes.append(AclChange(a, scope_type=ChangeType.USER,
-                                        logger=self.THREADED_LOGGER))
+                                        logger=self.logger))
         if o == '-d':
-          self.changes.append(AclDel(a, logger=self.THREADED_LOGGER))
+          self.changes.append(AclDel(a, logger=self.logger))
 
     if not self.changes:
       raise CommandException(
@@ -463,7 +461,8 @@ class ChAclCommand(Command):
     try:
       name_expansion_iterator = name_expansion.NameExpansionIterator(
           self.command_name, self.proj_id_handler, self.headers, self.debug,
-          self.bucket_storage_uri_class, bulk_uris, self.recursion_requested)
+          self.logger, self.bucket_storage_uri_class, bulk_uris,
+          self.recursion_requested)
     except CommandException as e:
       # NameExpansionIterator will complain if there are no URIs, but we don't
       # want to throw an error if we handled bucket URIs.
@@ -482,7 +481,7 @@ class ChAclCommand(Command):
     return 0
 
   def _ApplyExceptionHandler(self, exception):
-    self.THREADED_LOGGER.error('Encountered a problem: {0}'.format(exception))
+    self.logger.error('Encountered a problem: {0}'.format(exception))
     self.everything_set_okay = False
 
   @Retry(GSResponseError, tries=3, delay=1, backoff=2)
@@ -500,15 +499,15 @@ class ChAclCommand(Command):
       if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
           and e.status == 403:
         self._WarnServiceAccounts()
-      self.THREADED_LOGGER.warning('Failed to set acl for {0}: {1}'
-                                   .format(uri, e.reason))
+      self.logger.warning('Failed to set acl for {0}: {1}'
+                          .format(uri, e.reason))
       return
 
     modification_count = 0
     for change in self.changes:
       modification_count += change.Execute(uri, current_acl)
     if modification_count == 0:
-      self.THREADED_LOGGER.info('No changes to {0}'.format(uri))
+      self.logger.info('No changes to {0}'.format(uri))
       return
 
     # TODO: Remove the concept of forcing when boto provides access to
@@ -523,5 +522,4 @@ class ChAclCommand(Command):
     # If this fails because of a precondition, it will raise a 
     # GSResponseError for @Retry to handle.
     uri.set_acl(current_acl, uri.object_name, False, headers)
-    self.THREADED_LOGGER.info('Updated ACL on {0}'.format(uri))
-    
+    self.logger.info('Updated ACL on {0}'.format(uri))

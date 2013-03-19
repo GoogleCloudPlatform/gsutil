@@ -103,10 +103,10 @@ class SetVersioningCommand(Command):
                                  % (str(uri), self.command_name))
         some_matched = True
         if versioning_arg == 'on':
-          print 'Enabling versioning for %s...' % uri
+          self.logger.info('Enabling versioning for %s...', uri)
           uri.configure_versioning(True)
         else:
-          print 'Suspending versioning for %s...' % uri
+          self.logger.info('Suspending versioning for %s...', uri)
           uri.configure_versioning(False)
     if not some_matched:
       raise CommandException('No URIs matched')

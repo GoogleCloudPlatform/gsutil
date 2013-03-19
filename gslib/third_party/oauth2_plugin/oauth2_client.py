@@ -122,13 +122,13 @@ class InMemoryTokenCache(TokenCache):
     self.cache = dict()
 
   def PutToken(self, key, value):
-    LOG.info('InMemoryTokenCache.PutToken: key=%s', key)
+    LOG.debug('InMemoryTokenCache.PutToken: key=%s', key)
     self.cache[key] = value
 
   def GetToken(self, key):
     value = self.cache.get(key, None)
-    LOG.info('InMemoryTokenCache.GetToken: key=%s%s present',
-             key, ' not' if value is None else '')
+    LOG.debug('InMemoryTokenCache.GetToken: key=%s%s present',
+              key, ' not' if value is None else '')
     return value
 
 
@@ -197,8 +197,8 @@ class FileSystemTokenCache(TokenCache):
     """
 
     cache_file = self.CacheFileName(key)
-    LOG.info('FileSystemTokenCache.PutToken: key=%s, cache_file=%s',
-             key, cache_file)
+    LOG.debug('FileSystemTokenCache.PutToken: key=%s, cache_file=%s',
+              key, cache_file)
     try:
       os.unlink(cache_file)
     except:
@@ -242,8 +242,8 @@ class FileSystemTokenCache(TokenCache):
                   'Failed to read cache file %s (possibly corrupted): %s',
                   cache_file, e)
 
-    LOG.info('FileSystemTokenCache.GetToken: key=%s%s present (cache_file=%s)',
-             key, ' not' if value is None else '', cache_file)
+    LOG.debug('FileSystemTokenCache.GetToken: key=%s%s present (cache_file=%s)',
+              key, ' not' if value is None else '', cache_file)
     return value
 
 
@@ -302,11 +302,11 @@ class OAuth2Client(object):
     token_exchange_lock.acquire()
     try:
       cache_key = refresh_token.CacheKey()
-      LOG.info('GetAccessToken: checking cache for key %s', cache_key)
+      LOG.debug('GetAccessToken: checking cache for key %s', cache_key)
       access_token = self.access_token_cache.GetToken(cache_key)
       LOG.debug('GetAccessToken: token from cache: %s', access_token)
       if access_token is None or access_token.ShouldRefresh():
-        LOG.info('GetAccessToken: fetching fresh access token...')
+        LOG.debug('GetAccessToken: fetching fresh access token...')
         access_token = self.FetchAccessToken(refresh_token)
         LOG.debug('GetAccessToken: fresh access token: %s', access_token)
         self.access_token_cache.PutToken(cache_key, access_token)

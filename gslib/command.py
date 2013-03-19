@@ -32,6 +32,7 @@ import platform
 import re
 import signal
 import sys
+import textwrap
 import wildcard_iterator
 import xml.dom.minidom
 
@@ -52,8 +53,9 @@ from gslib.wildcard_iterator import ContainsWildcard
 from oauth2client.client import HAS_CRYPTO
 
 
-def _ThreadedLogger():
-  """Creates a logger that resembles 'print' output, but is thread safe.
+def _ThreadedLogger(command_name):
+  """Creates a logger that resembles 'print' output, but is thread safe and
+     abides by gsutil -q option.
 
   The logger will display all messages logged with level INFO or above. Log
   propagation is disabled.
@@ -61,12 +63,15 @@ def _ThreadedLogger():
   Returns:
     A logger object.
   """
-  log = logging.getLogger('threaded-logging')
+  log = logging.getLogger(command_name)
   log.propagate = False
-  log.setLevel(logging.INFO)
+  log.setLevel(logging.root.level)
   log_handler = logging.StreamHandler()
   log_handler.setFormatter(logging.Formatter('%(message)s'))
-  log.addHandler(log_handler)
+  # Commands that call other commands (like mv) would cause log handlers to be
+  # added more than once, so avoid adding if one is already present.
+  if not log.handlers:
+    log.addHandler(log_handler)
   return log
 
 # command_spec key constants.
@@ -84,9 +89,6 @@ _EOF_NAME_EXPANSION_RESULT = ("EOF")
 
 
 class Command(object):
-  # Global instance of a threaded logger object.
-  THREADED_LOGGER = _ThreadedLogger()
-
   REQUIRED_SPEC_KEYS = [COMMAND_NAME]
 
   # Each subclass must define the following map, minimally including the
@@ -208,6 +210,10 @@ class Command(object):
     self.exclude_symlinks = False
     self.recursion_requested = False
     self.all_versions = False
+
+    # Global instance of a threaded logger object.
+    self.logger = _ThreadedLogger(self.command_name)
+
 
     # Process sub-command instance specifications.
     # First, ensure subclass implementation sets all required keys.
@@ -357,7 +363,7 @@ class Command(object):
 
     def _SetAclExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      self.THREADED_LOGGER.error(str(e))
+      self.logger.error(str(e))
       self.everything_set_okay = False
 
     def _SetAclFunc(name_expansion_result):
@@ -365,8 +371,8 @@ class Command(object):
           name_expansion_result.GetExpandedUriStr())
       # We don't do bucket operations multi-threaded (see comment below).
       assert self.command_name != 'setdefacl'
-      self.THREADED_LOGGER.info('Setting ACL on %s...' %
-                                name_expansion_result.expanded_uri_str)
+      self.logger.info('Setting ACL on %s...' %
+                       name_expansion_result.expanded_uri_str)
       if self.canned:
         exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
                             self.headers)
@@ -395,8 +401,9 @@ class Command(object):
 
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.bucket_storage_uri_class, uri_args, self.recursion_requested,
-        self.recursion_requested, all_versions=self.all_versions)
+        self.logger, self.bucket_storage_uri_class, uri_args,
+        self.recursion_requested, self.recursion_requested,
+        all_versions=self.all_versions)
     # Perform requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
@@ -414,13 +421,13 @@ class Command(object):
         some_matched = True
         uri = blr.GetUri()
         if self.command_name == 'setdefacl':
-          print 'Setting default object ACL on %s...' % uri
+          self.logger.info('Setting default object ACL on %s...', uri)
           if self.canned:
             uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
           else:
             uri.set_def_xml_acl(acl_arg, False, self.headers)
         else:
-          print 'Setting ACL on %s...' % uri
+          self.logger.info('Setting ACL on %s...', uri)
           if self.canned:
             uri.set_acl(acl_arg, uri.object_name, False, self.headers)
           else:
@@ -439,13 +446,13 @@ class Command(object):
     if IS_SERVICE_ACCOUNT:
       # This method is only called when canned ACLs are used, so the warning
       # definitely applies.
-      print('It appears that your service account has been denied access while'
-            '\nattemptingto perform a metadata operation. If you believe that\n'
-            'you should have access to this metadata (i.e., if it is associated'
-            '\nwith your account), please make sure that your service '
-            'account''s\nemail address is listed as an Owner in the Team tab of'
-            ' the API console.\nSee "gsutil help creds" for further '
-            'information.\n')
+      self.logger.warning('\n'.join(textwrap.wrap(
+          'It appears that your service account has been denied access while '
+          'attempting to perform a metadata operation. If you believe that you '
+          'should have access to this metadata (i.e., if it is associated with '
+          'your account), please make sure that your service account''s email '
+          'address is listed as an Owner in the Team tab of the API console. '
+          'See "gsutil help creds" for further information.\n')))
 
   def GetAclCommandHelper(self):
     """Common logic for getting ACLs. Gets the standard ACL or the default
@@ -535,8 +542,8 @@ class Command(object):
       thread_count = 1
 
     if self.debug:
-      self.THREADED_LOGGER.info('process count: %d', process_count)
-      self.THREADED_LOGGER.info('thread count: %d', thread_count)
+      self.logger.info('process count: %d', process_count)
+      self.logger.info('thread count: %d', thread_count)
 
     if self.parallel_operations and process_count > 1:
       self.procs = []
@@ -560,7 +567,7 @@ class Command(object):
       for shard in range(process_count):
         # Spawn a separate OS process for each shard.
         if self.debug:
-          self.THREADED_LOGGER.info('spawning process for shard %d', shard)
+          self.logger.info('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
                                     args=(func, work_queue, shard,
                                           thread_count, thr_exc_handler,
@@ -729,11 +736,11 @@ class Command(object):
         exp_src_uri = self.suri_builder.StorageUri(
             name_expansion_result.GetExpandedUriStr())
         if self.debug:
-          self.THREADED_LOGGER.info('process %d shard %d is handling uri %s',
-                                    os.getpid(), shard, exp_src_uri)
+          self.logger.info('process %d shard %d is handling uri %s',
+                           os.getpid(), shard, exp_src_uri)
         if (self.exclude_symlinks and exp_src_uri.is_file_uri()
             and os.path.islink(exp_src_uri.object_name)):
-          self.THREADED_LOGGER.info('Skipping symbolic link %s...', exp_src_uri)
+          self.logger.info('Skipping symbolic link %s...', exp_src_uri)
         elif num_threads > 1:
           thread_pool.AddTask(func, name_expansion_result)
         else:

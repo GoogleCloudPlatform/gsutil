@@ -137,7 +137,7 @@ class SetCorsCommand(Command):
           raise CommandException('URI %s must name a bucket for the %s command'
                                  % (str(uri), self.command_name))
         some_matched = True
-        print 'Setting CORS on %s...' % uri
+        self.logger.info('Setting CORS on %s...', uri)
         uri.set_cors(cors_obj, False, self.headers)
     if not some_matched:
       raise CommandException('No URIs matched')

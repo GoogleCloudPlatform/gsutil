@@ -182,3 +182,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout, '')
     _Check1()
+
+  def test_rm_quiet(self):
+    """Test that 'rm -q' outputs no progress indications."""
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    stderr = self.RunGsUtil(['-q', 'rm', suri(key_uri)], return_stderr=True)
+    self.assertEqual(stderr.count('Removing '), 0)

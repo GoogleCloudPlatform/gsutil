@@ -132,9 +132,9 @@ class SetAclCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          self.THREADED_LOGGER.info('WARNING: The %s -v option is no longer'
-                                    ' needed, and will eventually be removed.\n'
-                                    % self.command_name)
+          self.logger.warning('WARNING: The %s -v option is no longer'
+                              ' needed, and will eventually be '
+                              'removed.\n' % self.command_name)
     try:
       self.SetAclCommandHelper()
     except GSResponseError as e:

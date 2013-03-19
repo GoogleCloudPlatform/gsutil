@@ -95,7 +95,7 @@ class RbCommand(Command):
         if uri.object_name:
           raise CommandException('"rb" command requires a URI with no object '
                                  'name')
-        print 'Removing %s...' % uri
+        self.logger.info('Removing %s...', uri)
         try:
           uri.delete_bucket(self.headers)
         except GSResponseError as e:

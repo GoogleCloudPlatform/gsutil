@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import logging
 import time
 
 from boto import config
@@ -327,11 +328,7 @@ _detailed_help_text = ("""
                 Note that it's not valid to specify both the -a and -p options
                 together.
 
-  -q            Causes copies to be performed quietly, i.e., without reporting
-                progress indicators of files being copied. Errors are still
-                reported. This option can be useful for running gsutil from a
-                cron job that logs its output to a file, for which the only
-                information desired in the log is failures.
+  -q            Deprecated. Please use gsutil -q cp ... instead.
 
   -R, -r        Causes directories, buckets, and bucket subdirectories to be
                 copied recursively. If you neglect to use this option for
@@ -450,7 +447,8 @@ class CpCommand(Command):
     if hasattr(key, 'md5') and key.md5:
       file_md5 = key.md5
     else:
-      print 'Computing MD5 from scratch for resumed download'
+      self.logger.info(
+          'Computing MD5 from scratch for resumed download')
 
       # Open file in binary mode to avoid surprises in Windows.
       fp = open(file_name, 'rb')
@@ -460,7 +458,8 @@ class CpCommand(Command):
         fp.close()
 
     if self.debug:
-      print 'Checking file md5 against etag. (%s/%s)' % (file_md5, obj_md5)
+      self.logger.info(
+          'Checking file md5 against etag. (%s/%s)', file_md5, obj_md5)
     if file_md5 != obj_md5:
       # Checksums don't match - remove file and raise exception.
       os.unlink(file_name)
@@ -608,9 +607,8 @@ class CpCommand(Command):
         pass
 
     if size >= resumable_threshold and not dst_is_special:
-      if not self.quiet:
-        cb = self._FileCopyCallbackHandler(upload).call
-        num_cb = int(size / TWO_MB)
+      cb = self._FileCopyCallbackHandler(upload).call
+      num_cb = int(size / TWO_MB)
 
       resumable_tracker_dir = CreateTrackerDirIfNeeded()
 
@@ -640,16 +638,14 @@ class CpCommand(Command):
     """
     Logs copy operation being performed, including Content-Type if appropriate.
     """
-    if self.quiet:
-      return
     if 'Content-Type' in headers and dst_uri.is_cloud_uri():
       content_type_msg = ' [Content-Type=%s]' % headers['Content-Type']
     else:
       content_type_msg = ''
     if src_uri.is_stream():
-      self.THREADED_LOGGER.info('Copying from <STDIN>%s...', content_type_msg)
+      self.logger.info('Copying from <STDIN>%s...', content_type_msg)
     else:
-      self.THREADED_LOGGER.info('Copying %s%s...', src_uri, content_type_msg)
+      self.logger.info('Copying %s%s...', src_uri, content_type_msg)
 
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
@@ -803,10 +799,7 @@ class CpCommand(Command):
     """
     start_time = time.time()
 
-    if self.quiet:
-      cb = None
-    else:
-      cb = self._StreamCopyCallbackHandler().call
+    cb = self._StreamCopyCallbackHandler().call
     dst_uri.set_contents_from_stream(
         fp, headers, policy=canned_acl, cb=cb)
     try:
@@ -883,10 +876,11 @@ class CpCommand(Command):
             raise CommandException('Invalid canned ACL "%s".' % a)
           canned_acl = a
         elif o == '-t':
-          print('Warning: -t is deprecated, and will be removed in the future. '
-                'Content type\ndetection is '
-                'now performed by default, unless inhibited by specifying '
-                'a\nContent-Type header via the -h option.')
+          self.logger.warning(
+              'Warning: -t is deprecated, and will be removed in the future. '
+              'Content type\ndetection is '
+              'now performed by default, unless inhibited by specifying '
+              'a\nContent-Type header via the -h option.')
         elif o == '-z':
           gzip_exts = a.split(',')
 
@@ -902,7 +896,7 @@ class CpCommand(Command):
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
       if self.debug:
-        print 'Compressing %s (to tmp)...' % src_key
+        self.logger.info('Compressing %s (to tmp)...', src_key)
       (gzip_fh, gzip_path) = tempfile.mkstemp()
       gzip_fp = None
       try:
@@ -1039,9 +1033,9 @@ class CpCommand(Command):
     if need_to_unzip:
       # Log that we're uncompressing if the file is big enough that
       # decompressing would make it look like the transfer "stalled" at the end.
-      if not self.quiet and bytes_transferred > 10 * 1024 * 1024:
-        self.THREADED_LOGGER.info('Uncompressing downloaded tmp file to %s...',
-                                  file_name)
+      if bytes_transferred > 10 * 1024 * 1024:
+        self.logger.info('Uncompressing downloaded tmp file to %s...',
+                         file_name)
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
       f_in = gzip.open(download_file_name, 'rb')
       f_out = open(file_name, 'wb')
@@ -1194,9 +1188,7 @@ class CpCommand(Command):
         # In order to save on unnecessary uploads/downloads we perform both
         # checks. However, this may come at the cost of additional HTTP calls.
         if dst_uri.exists(headers):
-          if not self.quiet:
-            self.THREADED_LOGGER.info('Skipping existing item: %s' %
-                                      dst_uri.uri)
+          self.logger.info('Skipping existing item: %s' % dst_uri.uri)
           return (0, 0, None)
         if dst_uri.is_cloud_uri() and dst_uri.scheme == 'gs':
           headers['x-goog-if-generation-match'] = '0'
@@ -1447,7 +1439,7 @@ class CpCommand(Command):
     # Inner funcs.
     def _CopyExceptionHandler(e):
       """Simple exception handler to allow post-completion status."""
-      self.THREADED_LOGGER.error(str(e))
+      self.logger.error(str(e))
       self.copy_failure_count += 1
 
     def _CopyFunc(name_expansion_result):
@@ -1519,12 +1511,10 @@ class CpCommand(Command):
             self._PerformCopy(exp_src_uri, dst_uri))
       except Exception, e:
         if self._IsNoClobberServerException(e):
-          if not self.quiet:
-            self.THREADED_LOGGER.info('Rejected (noclobber): %s' % dst_uri.uri)
+          self.logger.info('Rejected (noclobber): %s' % dst_uri.uri)
         elif self.continue_on_error:
-          if not self.quiet:
-            self.THREADED_LOGGER.error('Error copying %s: %s' % (src_uri.uri,
-              str(e)))
+          self.logger.error('Error copying %s: %s' % (src_uri.uri,
+                                                               str(e)))
           self.copy_failure_count += 1
         else:
           raise
@@ -1532,18 +1522,16 @@ class CpCommand(Command):
         # Some cases don't return a version-specific URI (e.g., if destination
         # is a file).
         if hasattr(result_uri, 'version_specific_uri'):
-          self.THREADED_LOGGER.info('Created: %s' %
-                                    result_uri.version_specific_uri)
+          self.logger.info('Created: %s' % result_uri.version_specific_uri)
         else:
-          self.THREADED_LOGGER.info('Created: %s' % result_uri.uri)
+          self.logger.info('Created: %s' % result_uri.uri)
 
       # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
       # since we call copy internally from move and don't specify the -n flag)
       # we'll need to only remove the source when we have not skipped the
       # destination.
       if self.perform_mv:
-        if not self.quiet:
-          self.THREADED_LOGGER.info('Removing %s...', exp_src_uri)
+        self.logger.info('Removing %s...', exp_src_uri)
         exp_src_uri.delete_key(validate=False, headers=self.headers)
       stats_lock.acquire()
       self.total_elapsed_time += elapsed_time
@@ -1571,7 +1559,7 @@ class CpCommand(Command):
          self.args[-1])
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.bucket_storage_uri_class, uri_strs,
+        self.logger, self.bucket_storage_uri_class, uri_strs,
         self.recursion_requested or self.perform_mv,
         have_existing_dst_container)
 
@@ -1595,7 +1583,8 @@ class CpCommand(Command):
     self.Apply(_CopyFunc, name_expansion_iterator, _CopyExceptionHandler,
                shared_attrs)
     if self.debug:
-      print 'total_bytes_transferred:' + str(self.total_bytes_transferred)
+      self.logger.info(
+          'total_bytes_transferred: %d', self.total_bytes_transferred)
 
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time
@@ -1616,10 +1605,10 @@ class CpCommand(Command):
       # - not any transfers for doing wildcard expansion, the initial HEAD
       # request boto performs when doing a bucket.get_key() operation, etc.
       if self.total_bytes_transferred != 0:
-        self.THREADED_LOGGER.info(
+        self.logger.info(
             'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
-                self.total_bytes_transferred, self.total_elapsed_time,
-                MakeHumanReadable(self.total_bytes_per_second))
+            self.total_bytes_transferred, self.total_elapsed_time,
+            MakeHumanReadable(self.total_bytes_per_second))
     if self.copy_failure_count:
       plural_str = ''
       if self.copy_failure_count > 1:
@@ -1632,7 +1621,6 @@ class CpCommand(Command):
   def _ParseArgs(self):
     self.perform_mv = False
     self.exclude_symlinks = False
-    self.quiet = False
     self.no_clobber = False
     self.continue_on_error = False
     self.daisy_chain = False
@@ -1659,7 +1647,10 @@ class CpCommand(Command):
         elif o == '-n':
           self.no_clobber = True
         elif o == '-q':
-          self.quiet = True
+          self.logger.warning(
+              'Warning: -q is deprecated, and will be removed in the future.'
+              '\nPlease use gsutil -q cp ... instead.')
+          logging.basicConfig(level=logging.WARNING)
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
@@ -1683,11 +1674,11 @@ class CpCommand(Command):
       raise CommandException('No URIs matched')
     if self.debug == 3:
       if self.total_bytes_transferred != 0:
-        self.THREADED_LOGGER.info(
+        self.logger.info(
             'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
-                self.total_bytes_transferred, self.total_elapsed_time,
-                 MakeHumanReadable(float(self.total_bytes_transferred) /
-                                   float(self.total_elapsed_time)))
+            self.total_bytes_transferred, self.total_elapsed_time,
+            MakeHumanReadable(float(self.total_bytes_transferred) /
+                              float(self.total_elapsed_time)))
 
   def _StdinIterator(self):
     """A generator function that returns lines from stdin."""

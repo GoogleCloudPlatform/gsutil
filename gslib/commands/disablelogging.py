@@ -91,7 +91,7 @@ class DisableLoggingCommand(Command):
         if uri.names_object():
           raise CommandException('disablelogging cannot be applied to objects')
         did_some_work = True
-        print 'Disabling logging on %s...' % uri
+        self.logger.info('Disabling logging on %s...', uri)
         self.proj_id_handler.FillInProjectHeaderIfNeeded('disablelogging',
                                                          uri, self.headers)
         uri.disable_logging(False, self.headers)

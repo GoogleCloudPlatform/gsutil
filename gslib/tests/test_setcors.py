@@ -157,10 +157,10 @@ class TestSetCors(testcase.GsUtilIntegrationTestCase):
     wildcard = '%s*' % common_prefix
 
     fpath = self.CreateTempFile(contents=self.cors_doc)
-    stdout = self.RunGsUtil(['setcors', fpath, wildcard], return_stdout=True)
-    self.assertIn('Setting CORS on %s/...' % suri(bucket1_uri), stdout)
-    self.assertIn('Setting CORS on %s/...' % suri(bucket2_uri), stdout)
-    self.assertEqual(stdout.count('Setting CORS'), 2)
+    stderr = self.RunGsUtil(['setcors', fpath, wildcard], return_stderr=True)
+    self.assertIn('Setting CORS on %s/...' % suri(bucket1_uri), stderr)
+    self.assertIn('Setting CORS on %s/...' % suri(bucket2_uri), stderr)
+    self.assertEqual(stderr.count('Setting CORS'), 2)
 
     stdout = self.RunGsUtil(['getcors', suri(bucket1_uri)], return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
