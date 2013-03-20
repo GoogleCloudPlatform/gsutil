@@ -39,3 +39,15 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['perfdiag', '-o', outpath, '-n', '1', '-t', 'lat',
                     suri(bucket_uri)])
     self.RunGsUtil(['perfdiag', '-i', outpath])
+
+  def test_invalid_size(self):
+    stderr = self.RunGsUtil(
+        ['perfdiag', '-n', '1', '-s', 'foo', '-t', 'wthru', 'gs://foobar'],
+        expected_status=1, return_stderr=True)
+    self.assertIn('Invalid -s', stderr)
+
+  def test_toobig_size(self):
+    stderr = self.RunGsUtil(
+        ['perfdiag', '-n', '1', '-s', '3pb', '-t', 'wthru', 'gs://foobar'],
+        expected_status=1, return_stderr=True)
+    self.assertIn('Maximum throughput file size', stderr)

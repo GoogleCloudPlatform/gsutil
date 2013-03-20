@@ -55,6 +55,7 @@ from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
 from gslib.util import MakeHumanReadable
 from gslib.util import Percentile
+from gslib.util import HumanReadableToBytes
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -98,7 +99,8 @@ _detailed_help_text = ("""
               or write operation concurrently.
 
   -s          Sets the size (in bytes) of the test file used to perform read
-              and write throughput tests. The default is 1 MiB.
+              and write throughput tests. The default is 1 MiB. This can also
+              be specified using byte suffixes. Examples: 1M, 500KB, etc.
 
   -t          Sets the list of diagnostic tests to perform. The default is to
               run all diagnostic tests. Must be a comma-separated list
@@ -992,8 +994,13 @@ class PerfDiagCommand(Command):
           self.concurrency = self._ParsePositiveInteger(
               a, 'The -c parameter must be a positive integer.')
         if o == '-s':
-          self.thru_filesize = self._ParsePositiveInteger(
-              a, 'The -s parameter must be a positive integer.')
+          try:
+            self.thru_filesize = HumanReadableToBytes(a)
+          except ValueError:
+            raise CommandException('Invalid -s parameter.')
+          if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GB.
+            raise CommandException(
+              'Maximum throughput file size parameter (-s) is 20GB.')
         if o == '-t':
           self.diag_tests = []
           for test_name in a.strip().split(','):

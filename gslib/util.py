@@ -18,7 +18,6 @@ import math
 import os
 import re
 import sys
-import time
 import xml.etree.ElementTree as ElementTree
 
 import boto
@@ -35,13 +34,29 @@ NO_MAX = sys.maxint
 # Binary exponentiation strings.
 _EXP_STRINGS = [
   (0, 'B', 'bit'),
-  (10, 'KB', 'Kbit'),
-  (20, 'MB', 'Mbit'),
-  (30, 'GB', 'Gbit'),
-  (40, 'TB', 'Tbit'),
-  (50, 'PB', 'Pbit'),
-  (60, 'EB', 'Ebit'),
+  (10, 'KB', 'Kbit', 'K'),
+  (20, 'MB', 'Mbit', 'M'),
+  (30, 'GB', 'Gbit', 'G'),
+  (40, 'TB', 'Tbit', 'T'),
+  (50, 'PB', 'Pbit', 'P'),
+  (60, 'EB', 'Ebit', 'E'),
 ]
+
+
+def _GenerateSuffixRegex():
+  human_bytes_re = r'(?P<num>\d*\.\d+|\d+)\s*(?P<suffix>%s)?'
+  suffixes = []
+  suffix_to_si = {}
+  for i, si in enumerate(_EXP_STRINGS):
+    si_suffixes = [s.lower() for s in list(si)[1:]]
+    for suffix in si_suffixes:
+      suffix_to_si[suffix] = i
+    suffixes.extend(si_suffixes)
+  human_bytes_re = human_bytes_re % '|'.join(suffixes)
+  matcher = re.compile(human_bytes_re)
+  return suffix_to_si, matcher
+
+SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 SECONDS_PER_DAY = 3600 * 24
 
@@ -105,6 +120,7 @@ def _RoundToNearestExponent(num):
     i += 1
   return i, round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
 
+
 def MakeHumanReadable(num):
   """Generates human readable string for a number of bytes.
 
@@ -115,7 +131,8 @@ def MakeHumanReadable(num):
     A string form of the number using size abbreviations (KB, MB, etc.).
   """
   i, rounded_val = _RoundToNearestExponent(num)
-  return '%s %s' % (rounded_val, _EXP_STRINGS[i][1])
+  return '%g %s' % (rounded_val, _EXP_STRINGS[i][1])
+
 
 def MakeBitsHumanReadable(num):
   """Generates human readable string for a number of bits.
@@ -127,7 +144,28 @@ def MakeBitsHumanReadable(num):
     A string form of the number using bit size abbreviations (kbit, Mbit, etc.)
   """
   i, rounded_val = _RoundToNearestExponent(num)
-  return '%s %s' % (rounded_val, _EXP_STRINGS[i][2])
+  return '%g %s' % (rounded_val, _EXP_STRINGS[i][2])
+
+
+def HumanReadableToBytes(human_string):
+  """Tries to convert a human-readable string to a number of bytes.
+
+  Args:
+    human_string: A string supplied by user, e.g. '1M', '3 GB'.
+  Returns:
+    An integer containing the number of bytes.
+  """
+  human_string = human_string.lower()
+  m = MATCH_HUMAN_BYTES.match(human_string)
+  if m:
+    num = float(m.group('num'))
+    if m.group('suffix'):
+      power = _EXP_STRINGS[SUFFIX_TO_SI[m.group('suffix')]][0]
+      num *= (2.0 ** power)
+    num = int(round(num))
+    return num
+  raise ValueError('Invalid byte string specified: %s' % human_string)
+
 
 def Percentile(values, percent, key=lambda x:x):
   """Find the percentile of a list of values.
@@ -155,6 +193,7 @@ def Percentile(values, percent, key=lambda x:x):
   d1 = key(values[int(c)]) * (k-f)
   return d0 + d1
 
+
 def ExtractErrorDetail(e):
   """Extract <Details> text from XML content.
 
@@ -178,6 +217,7 @@ def ExtractErrorDetail(e):
     return (exc_name, e.body[detail_start+9:detail_end])
   return (exc_name, None)
 
+
 def UnaryDictToXml(message):
   """Generates XML representation of a nested dict with exactly one
   top-level entry and an arbitrary number of 2nd-level entries, e.g.
@@ -198,6 +238,7 @@ def UnaryDictToXml(message):
     node = ElementTree.SubElement(T, property)
     node.text = value
   return ElementTree.tostring(T)
+
 
 def LookUpGsutilVersion(uri):
   """Looks up the gustil version of the specified gsutil tarball URI, from the
