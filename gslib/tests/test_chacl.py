@@ -13,8 +13,8 @@
 # limitations under the License.
 
 
+from gslib import aclhelpers
 from gslib.command import _ThreadedLogger as ThreadedLogger
-import gslib.commands.chacl as chacl
 import gslib.tests.testcase as case
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
@@ -29,85 +29,85 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
     self.logger = ThreadedLogger('chacl')
 
   def testAclChangeWithUserId(self):
-    change = chacl.AclChange(self.USER_TEST_ID + ':r',
-                             scope_type=chacl.ChangeType.USER,
-                             logger=self.logger)
+    change = aclhelpers.AclChange(self.USER_TEST_ID + ':r',
+                                  scope_type=aclhelpers.ChangeType.USER,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'UserById', self.USER_TEST_ID)
 
   def testAclChangeWithGroupId(self):
-    change = chacl.AclChange(self.GROUP_TEST_ID + ':r',
-                             scope_type=chacl.ChangeType.GROUP,
-                             logger=self.logger)
+    change = aclhelpers.AclChange(self.GROUP_TEST_ID + ':r',
+                                  scope_type=aclhelpers.ChangeType.GROUP,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'GroupById', self.GROUP_TEST_ID)
 
   def testAclChangeWithUserEmail(self):
-    change = chacl.AclChange(self.USER_TEST_ADDRESS + ':r',
-                             scope_type=chacl.ChangeType.USER,
-                             logger=self.logger)
+    change = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':r',
+                                  scope_type=aclhelpers.ChangeType.USER,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclChangeWithGroupEmail(self):
-    change = chacl.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
-                             scope_type=chacl.ChangeType.GROUP,
-                             logger=self.logger)
+    change = aclhelpers.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
+                                  scope_type=aclhelpers.ChangeType.GROUP,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'FULL_CONTROL', 'GroupByEmail',
                     self.GROUP_TEST_ADDRESS)
 
   def testAclChangeWithDomain(self):
-    change = chacl.AclChange(self.DOMAIN_TEST + ':READ',
-                             scope_type=chacl.ChangeType.GROUP,
-                             logger=self.logger)
+    change = aclhelpers.AclChange(self.DOMAIN_TEST + ':READ',
+                                  scope_type=aclhelpers.ChangeType.GROUP,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'GroupByDomain', self.DOMAIN_TEST)
 
   def testAclChangeWithAllUsers(self):
-    change = chacl.AclChange('AllUsers:WRITE',
-                             scope_type=chacl.ChangeType.GROUP,
-                             logger=self.logger)
+    change = aclhelpers.AclChange('AllUsers:WRITE',
+                                  scope_type=aclhelpers.ChangeType.GROUP,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'WRITE', 'AllUsers')
 
   def testAclChangeWithAllAuthUsers(self):
-    change = chacl.AclChange('AllAuthenticatedUsers:READ',
-                             scope_type=chacl.ChangeType.GROUP,
-                             logger=self.logger)
+    change = aclhelpers.AclChange('AllAuthenticatedUsers:READ',
+                                  scope_type=aclhelpers.ChangeType.GROUP,
+                                  logger=self.logger)
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'AllAuthenticatedUsers')
 
   def testAclDelWithUser(self):
-    add = chacl.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                          scope_type=chacl.ChangeType.USER,
-                          logger=self.logger)
+    add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
+                               scope_type=aclhelpers.ChangeType.USER,
+                               logger=self.logger)
     acl = self.sample_uri.get_acl()
     add.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
-    remove = chacl.AclDel(self.USER_TEST_ADDRESS,
-                          logger=self.logger)
+    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS,
+                               logger=self.logger)
     remove.Execute(self.sample_uri, acl)
     self._AssertHasNo(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclDelWithGroup(self):
-    add = chacl.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                          scope_type=chacl.ChangeType.GROUP,
-                          logger=self.logger)
+    add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
+                               scope_type=aclhelpers.ChangeType.GROUP,
+                               logger=self.logger)
     acl = self.sample_uri.get_acl()
     add.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'GroupByEmail', self.USER_TEST_ADDRESS)
 
-    remove = chacl.AclDel(self.USER_TEST_ADDRESS,
-                          logger=self.logger)
+    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS,
+                               logger=self.logger)
     remove.Execute(self.sample_uri, acl)
     self._AssertHasNo(acl, 'READ', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 
@@ -139,8 +139,7 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
         elif scope in ['AllUsers', 'AllAuthenticatedUsers']:
           yield entry
         else:
-          raise CommandException('Found an unrecognized ACL '
-                                 'entry type, aborting.')
+          raise Exception('Found an unrecognized ACL entry type, aborting.')
 
   def _MakeScopeRegex(self, scope_type, email_address, perm):
     template_regex = (
@@ -237,3 +236,11 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
 
     xml = self.RunGsUtil(['getacl', obj_v2], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
+
+  def testBadRequestAclChange(self):
+    stdout, stderr = self.RunGsUtil(
+        ['chacl', '-u', 'invalid_$$@hello.com:R', suri(self.sample_uri)],
+        return_stdout=True, return_stderr=True, expected_status=1)
+    self.assertIn('Bad Request', stderr)
+    self.assertNotIn('Retrying', stdout)
+    self.assertNotIn('Retrying', stderr)
