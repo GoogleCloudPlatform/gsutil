@@ -130,7 +130,7 @@ _detailed_help_text = ("""
   listed in your current file, see the section below on Updating to the Latest
   Configuration File.
 
-  The currently supported settings, are, by section::
+  The currently supported settings, are, by section:
 
     [Boto]
       proxy

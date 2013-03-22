@@ -52,7 +52,7 @@ _detailed_help_text = ("""
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>
   When you create a bucket without specifying an ACL the bucket is given a
   "project-private" ACL, which grants the permissions described in the previous
-  section. Here's an example of such an ACL::
+  section. Here's an example of such an ACL:
 
     <AccessControlList>
       <Owner>

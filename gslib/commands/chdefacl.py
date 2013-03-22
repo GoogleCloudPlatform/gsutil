@@ -50,12 +50,12 @@ _detailed_help_text = ("""
 <B>EXAMPLES</B>
 
   Add the user john.doe@example.com to the default object ACL on bucket
-  example-bucket with WRITE access::
+  example-bucket with WRITE access:
 
     gsutil chdefacl -u john.doe@example.com:WRITE gs://example-bucket
 
   Add the group admins@example.com to the default object ACL on bucket
-  example-bucket with FULL_CONTROL access::
+  example-bucket with FULL_CONTROL access:
 
     gsutil chdefacl -g admins@example.com:FC gs://example-bucket
 

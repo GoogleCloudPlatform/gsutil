@@ -50,7 +50,7 @@ _detailed_help_text = ("""
   The gsutil getwebcfg command gets the web semantics configuration for a
   bucket, and displays an XML representation of the configuration.
 
-  In Google Cloud Storage, this would look like::
+  In Google Cloud Storage, this would look like:
 
     <?xml version="1.0" ?>
     <WebsiteConfiguration>

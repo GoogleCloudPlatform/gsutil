@@ -43,7 +43,7 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   The cat command outputs the contents of one or more URIs to stdout.
-  It is equivalent to doing::
+  It is equivalent to doing:
 
     gsutil cp uri... -
 
@@ -51,12 +51,12 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -h          Prints short header for each object. For example::
+  -h          Prints short header for each object. For example:
 
                 gsutil cat -h gs://bucket/meeting_notes/2012_Feb/*.txt
 
   -r range    Causes gsutil to output just the specified byte range of the
-              object. Ranges are can be of these forms::
+              object. Ranges are can be of these forms:
 
                 start-end (e.g., -r 256-5939)
                 start-    (e.g., -r 256-)
@@ -65,11 +65,11 @@ _detailed_help_text = ("""
               where offsets start at 0, start-end means to return bytes start
               through end (inclusive), start- means to return bytes start
               through the end of the object, and -numbytes means to return the
-              last numbytes of the object. For example::
+              last numbytes of the object. For example:
 
                 gsutil cat -r 256-939 gs://bucket/object
 
-              returns bytes 256 through 939, while::
+              returns bytes 256 through 939, while:
 
                 gsutil cat -r -5 gs://bucket/object
 

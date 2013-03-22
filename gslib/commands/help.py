@@ -48,14 +48,14 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  Running::
+  Running:
 
     gsutil help
 
   will provide a summary of all commands and additional topics on which
   help is available.
 
-  Running::
+  Running:
 
     gsutil help command or topic
 
@@ -142,10 +142,6 @@ class HelpCommand(Command):
   def _OutputHelp(self, str):
     """Outputs simply formatted string, paginating if long and PAGER defined and
        output is a tty"""
-    # Replace :: in doc strings with :. The double colons are needed for the
-    # auto-generated web docs under
-    # https://developers.google.com/storage/docs/gsutil
-    str = re.sub(r'::\\n', ':', str)
     # Replace <B> and </B> with terminal formatting strings if connected to tty.
     if not sys.stdout.isatty():
       str = re.sub('<B>', '', str)

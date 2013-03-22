@@ -113,7 +113,7 @@ _detailed_help_text = ("""
   ownership of the following domains: abc.def.example.com, def.example.com,
   and example.com. In this case, Google Cloud Storage lets you create a bucket
   named abc.def.example.com if you verify that you own or control any of the
-  following sites::
+  following sites:
 
     http://abc.def.example.com
     http://def.example.com

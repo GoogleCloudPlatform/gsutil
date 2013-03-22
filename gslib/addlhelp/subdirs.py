@@ -44,14 +44,14 @@ _detailed_help_text = ("""
   rules:
 
   1. If the destination object ends with a "/" gsutil treats it as a directory.
-     For example, if you run the command::
+     For example, if you run the command:
 
        gsutil cp file gs://bucket/abc/
 
      gsutil will create the object gs://bucket/abc/file.
 
   2. If the destination object is XYZ and an object exists called XYZ_$folder$
-     gsutil treats XYZ as a directory. For example, if you run the command::
+     gsutil treats XYZ as a directory. For example, if you run the command:
 
        gsutil cp file gs://bucket/abc
 
@@ -60,7 +60,7 @@ _detailed_help_text = ("""
 
   3. If you attempt to copy multiple source files to a destination URI, gsutil
      treats the destination URI as a directory. For example, if you run
-     the command::
+     the command:
 
        gsutil cp -R dir gs://bucket/abc
 
@@ -69,7 +69,7 @@ _detailed_help_text = ("""
 
   4. If none of the above rules applies, gsutil performs a bucket listing to
      determine if the target of the operation is a prefix match to the
-     specified string. For example, if you run the command::
+     specified string. For example, if you run the command:
 
        gsutil cp file gs://bucket/abc
 

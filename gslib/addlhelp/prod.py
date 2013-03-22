@@ -95,7 +95,7 @@ _detailed_help_text = ("""
      For data uploads, another technique would be to move local files from a "to
      be processed" area to a "done" area as your script successfully copies
      files to the cloud. You can do this in parallel batches by using a command
-     like::
+     like:
 
        gsutil -m cp -R to_upload/subdir_$i gs://bucket/subdir_$i
 

@@ -54,7 +54,7 @@ _detailed_help_text = ("""
 
   2. Create index.html and 404.html files and upload them to the bucket.
   
-  3. Configure the bucket to have website behavior using the command::
+  3. Configure the bucket to have website behavior using the command:
 
        gsutil setwebcfg -m index.html -e 404.html gs://example.com
 

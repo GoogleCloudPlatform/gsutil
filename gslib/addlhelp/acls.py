@@ -118,7 +118,7 @@ _detailed_help_text = ("""
 
   As an example, if you create an object in a bucket that has no default
   object ACL set and then retrieve the ACL on the object, it will look
-  something like this::
+  something like this:
 
     <AccessControlList>
       <Owner>
@@ -176,7 +176,7 @@ _detailed_help_text = ("""
   help projects".
 
   Here's an example of an ACL specified using the GroupByEmail and GroupByDomain
-  scopes::
+  scopes:
 
     <AccessControlList>
       <Entries>

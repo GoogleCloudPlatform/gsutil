@@ -65,11 +65,11 @@ _detailed_help_text = ("""
      Cloud Storage. If you do make such changes we recommend including someone
      with knowledge of the specific provider as a code reviewer (see below).
 
-  6. You can check out the gsutil code from the GitHub repository::
+  6. You can check out the gsutil code from the GitHub repository:
 
        https://github.com/GoogleCloudPlatform/gsutil
 
-     To clone a read-only copy of the repository::
+     To clone a read-only copy of the repository:
 
        git clone git://github.com/GoogleCloudPlatform/gsutil.git
        git submodule update --init --recursive
@@ -79,12 +79,12 @@ _detailed_help_text = ("""
 
   7. The gsutil git repository uses git submodules to pull in external modules.
      After checking out the repository, make sure to also pull the submodules
-     by entering into the gsutil top-level directory and run::
+     by entering into the gsutil top-level directory and run:
 
        git submodule update --init --recursive
 
   8. Please make sure to run all tests against your modified code. To
-     do this, change directories into the gsutil top-level directory and run::
+     do this, change directories into the gsutil top-level directory and run:
 
        ./gsutil test
 
@@ -92,7 +92,7 @@ _detailed_help_text = ("""
      the production service. The gsutil test command has a -u argument that will
      only run unit tests. These run quickly, as they are executed with an
      in-memory mock storage service implementation. To run only the unit tests,
-     run::
+     run:
 
        ./gsutil test -u
 
@@ -100,7 +100,7 @@ _detailed_help_text = ("""
      need to use HMAC credentials (from gsutil config -a), because the current
      boto test suite doesn't import the OAuth2 handler. You'll also need to
      install some python modules. Change directories into the boto root
-     directory at third_party/boto and run::
+     directory at third_party/boto and run:
 
        pip install -r requirements.txt
 
@@ -110,7 +110,7 @@ _detailed_help_text = ("""
 
      Then ensure your .boto file has HMAC credentials defined (the boto tests
      don't load the OAUTH2 plugin), and then change directories into boto's
-     tests directory and run::
+     tests directory and run:
 
        python test.py unit
        python test.py -t s3 -t gs -t ssl

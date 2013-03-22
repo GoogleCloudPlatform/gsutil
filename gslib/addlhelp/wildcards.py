@@ -22,7 +22,7 @@ from gslib.help_provider import HELP_TYPE
 
 _detailed_help_text = ("""
 <B>DESCRIPTION</B>
-  gsutil supports URI wildcards. For example, the command::
+  gsutil supports URI wildcards. For example, the command:
 
     gsutil cp gs://bucket/data/abc* .
 
@@ -38,14 +38,14 @@ _detailed_help_text = ("""
   (gs://bucket/data/abc/def) the above gsutil cp command would match the
   first 3 object names but not the last one.
 
-  If you want matches to span directory boundaries, use a '**' wildcard::
+  If you want matches to span directory boundaries, use a '**' wildcard:
 
     gsutil cp gs://bucket/data/abc** .
 
   will match all four objects above.
 
   Note that gsutil supports the same wildcards for both objects and file names.
-  Thus, for example::
+  Thus, for example:
 
     gsutil cp data/abc* gs://bucket
 
@@ -54,13 +54,13 @@ _detailed_help_text = ("""
   is expanding the matches before running gsutil. However, most shells do not
   support recursive wildcards ('**'), and you can cause gsutil's wildcarding
   support to work for such shells by single-quoting the arguments so they
-  don't get interpreted by the shell before being passed to gsutil::
+  don't get interpreted by the shell before being passed to gsutil:
 
     gsutil cp 'data/abc**' gs://bucket
 
 
 <B>BUCKET WILDCARDS</B>
-  You can specify wildcards for bucket names. For example::
+  You can specify wildcards for bucket names. For example:
 
     gsutil ls gs://data*.example.com
 
@@ -69,7 +69,7 @@ _detailed_help_text = ("""
 
   You can also combine bucket and object name wildcards. For example this
   command will remove all ".txt" files in any of your Google Cloud Storage
-  buckets::
+  buckets:
 
     gsutil rm gs://*/**.txt
 
@@ -91,18 +91,18 @@ _detailed_help_text = ("""
     "gs://bucket/[a-m].txt" matches objects that contain letters
     a, b, c, ... or m, and end with .txt.
 
-  You can combine wildcards to provide more powerful matches, for example::
+  You can combine wildcards to provide more powerful matches, for example:
 
     gs://bucket/[a-m]??.j*g
 
 
 <B>EFFICIENCY CONSIDERATION: USING WILDCARDS OVER MANY OBJECTS</B>
   It is more efficient, faster, and less network traffic-intensive
-  to use wildcards that have a non-wildcard object-name prefix, like::
+  to use wildcards that have a non-wildcard object-name prefix, like:
 
     gs://bucket/abc*.txt
 
-  than it is to use wildcards as the first part of the object name, like::
+  than it is to use wildcards as the first part of the object name, like:
 
     gs://bucket/*abc.txt
 
@@ -120,7 +120,7 @@ _detailed_help_text = ("""
 
 
 <B>EFFICIENCY CONSIDERATION: USING MID-PATH WILDCARDS</B>
-  Suppose you have a bucket with these objects::
+  Suppose you have a bucket with these objects:
 
     gs://bucket/obj1
     gs://bucket/obj2
@@ -129,12 +129,12 @@ _detailed_help_text = ("""
     gs://bucket/dir1/obj5
     gs://bucket/dir2/obj6
 
-  If you run the command::
+  If you run the command:
 
     gsutil ls gs://bucket/*/obj5
 
   gsutil will perform a /-delimited top-level bucket listing and then one bucket
-  listing for each subdirectory, for a total of 3 bucket listings::
+  listing for each subdirectory, for a total of 3 bucket listings:
 
     GET /bucket/?delimiter=/
     GET /bucket/?prefix=dir1/obj5&delimiter=/
@@ -150,7 +150,7 @@ _detailed_help_text = ("""
     request per 1000 results, specifying markers for each).
 
   If you want to use a mid-path wildcard, you might try instead using a
-  recursive wildcard, for example::
+  recursive wildcard, for example:
 
     gsutil ls gs://bucket/**/obj5
 

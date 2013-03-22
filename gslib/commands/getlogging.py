@@ -41,7 +41,7 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   If logging is enabled for the specified bucket uri, the server responds
-  with a <Logging> XML element that looks something like this::
+  with a <Logging> XML element that looks something like this:
 
     <?xml version="1.0" ?>
     <Logging>

@@ -29,7 +29,7 @@ _detailed_help_text = ("""
   gsutil supports separate options for the top-level gsutil command and
   the individual sub-commands (like cp, rm, etc.) The top-level options
   control behavior of gsutil that apply across commands. For example, in
-  the command::
+  the command:
 
     gsutil -m cp -p file gs://bucket/obj
 
@@ -46,7 +46,7 @@ _detailed_help_text = ("""
   -DD         Shows HTTP requests/headers plus additional debug info plus HTTP
               upstream payload.
 
-  -h          Allows you to specify additional HTTP headers, for example::
+  -h          Allows you to specify additional HTTP headers, for example:
 
                 gsutil -h "Cache-Control:public,max-age=3600" \\
                        -h "Content-Type:text/html" cp ...

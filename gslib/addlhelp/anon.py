@@ -25,7 +25,7 @@ _detailed_help_text = ("""
   gsutil users can access publicly readable data without obtaining
   credentials. For example, the gs://uspto-pair bucket contains a number
   of publicly readable objects, so any user can run the following command
-  without first obtaining credentials::
+  without first obtaining credentials:
 
     gsutil ls gs://uspto-pair/applications/0800401*
 

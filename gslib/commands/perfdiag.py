@@ -84,7 +84,7 @@ _detailed_help_text = ("""
 <B>PROVIDING DIAGNOSTIC OUTPUT TO GOOGLE CLOUD STORAGE TEAM</B>
   If the Google Cloud Storage Team asks you to run a performance diagnostic
   please use the following command, and email the output file (output.json)
-  to gs-team@google.com::
+  to gs-team@google.com:
 
     gsutil perfdiag -o output.json gs://your-bucket
 
@@ -120,7 +120,7 @@ _detailed_help_text = ("""
                  (set with -c) writes outstanding at any given time.
 
   -m          Adds metadata to the result JSON file. Multiple -m values can be
-              specified. Example::
+              specified. Example:
 
                   gsutil perfdiag -m "key1:value1" -m "key2:value2" \
                                   gs://bucketname/
