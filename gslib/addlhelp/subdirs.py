@@ -50,7 +50,15 @@ _detailed_help_text = ("""
 
      gsutil will create the object gs://bucket/abc/file.
 
-  2. If you attempt to copy multiple source files to a destination URI, gsutil
+  2. If the destination object is XYZ and an object exists called XYZ_$folder$
+     gsutil treats XYZ as a directory. For example, if you run the command::
+
+       gsutil cp file gs://bucket/abc
+
+     and there exists an object called abc_$folder$, gsutil will create the
+     object gs://bucket/abc/file.
+
+  3. If you attempt to copy multiple source files to a destination URI, gsutil
      treats the destination URI as a directory. For example, if you run
      the command::
 
@@ -59,7 +67,7 @@ _detailed_help_text = ("""
      gsutil will create objects like gs://bucket/abc/dir/file1, etc. (assuming
      file1 is a file under the source dir).
 
-  3. If neither of the above rules applies, gsutil performs a bucket listing to
+  4. If none of the above rules applies, gsutil performs a bucket listing to
      determine if the target of the operation is a prefix match to the
      specified string. For example, if you run the command::
 

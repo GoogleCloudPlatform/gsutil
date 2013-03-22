@@ -199,8 +199,6 @@ _detailed_help_text = ("""
   "gsutil help setdefacl").  You can override this behavior with the -p
   option (see OPTIONS below).
 
-  gsutil does not preserve metadata when copying objects between providers.
-
 
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload
