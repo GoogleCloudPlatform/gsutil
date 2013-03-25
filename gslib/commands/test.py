@@ -91,10 +91,27 @@ _detailed_help_text = ("""
 
     gsutil test -l
 
-  Note: the tests are defined in the code under the gslib/tests module. Each
-  test file is of the format test_[name].py where [name] is the test name you
-  can pass to this command. For example, running "gsutil test ls" would run the
+  The tests are defined in the code under the gslib/tests module. Each test
+  file is of the format test_[name].py where [name] is the test name you can
+  pass to this command. For example, running "gsutil test ls" would run the
   tests in "gslib/tests/test_ls.py".
+
+  You can also run an individual test class or function name by passing the
+  the test module followed by the class name and optionally a test name. For
+  example, to run the an entire test class by name:
+
+    gsutil test naming.GsutilNamingTests
+
+  or an individual test function:
+
+    gsutil test cp.TestCp.test_streaming
+
+  You can list the available tests under a module or class by passing arguments
+  with the -l option. For example, to list all available test functions in the
+  cp module:
+
+    gsutil test -l cp
+
 
 <B>OPTIONS</B>
   -l          List available tests.
@@ -186,7 +203,7 @@ class TestCommand(Command):
         elif o == '-l':
           list_tests = True
 
-    if list_tests:
+    if list_tests and not self.args:
       test_files = os.listdir(TESTS_DIR)
       matcher = re.compile(r'^test_(?P<name>.*).py$')
       test_names = []
@@ -202,11 +219,13 @@ class TestCommand(Command):
     commands_to_test = []
     if self.args:
       for name in self.args:
-        test_file = os.path.join(TESTS_DIR, 'test_%s.py' % name)
-        if not os.path.exists(test_file):
-          raise CommandException('The requested test, "%s", was not found at '
-                                 '"%s".' % (name, test_file))
-        commands_to_test.append('gslib.tests.test_%s' % name)
+        if os.path.exists(os.path.join(TESTS_DIR, 'test_%s.py' % name)):
+          commands_to_test.append('gslib.tests.test_%s' % name)
+        elif os.path.exists(
+            os.path.join(TESTS_DIR, 'test_%s.py' % name.split('.')[0])):
+          commands_to_test.append('gslib.tests.test_%s' % name)
+        else:
+          commands_to_test.append(name)
 
     # Installs a ctrl-c handler that tries to cleanly tear down tests.
     unittest.installHandler()
@@ -214,9 +233,26 @@ class TestCommand(Command):
     loader = unittest.TestLoader()
 
     if commands_to_test:
-      suite = loader.loadTestsFromNames(commands_to_test)
+      try:
+        suite = loader.loadTestsFromNames(commands_to_test)
+      except (ImportError, AttributeError) as e:
+        raise CommandException('Invalid test argument name: %s' % e)
     else:
       suite = loader.discover(TESTS_DIR)
+
+    if list_tests:
+      suites = [suite]
+      test_names = []
+      while suites:
+        suite = suites.pop()
+        for test in suite:
+          if isinstance(test, unittest.TestSuite):
+            suites.append(test)
+          else:
+            test_names.append(test.id().lstrip('gslib.tests.test_'))
+      print 'Found %d test names:' % len(test_names)
+      print ' ', '\n  '.join(sorted(test_names))
+      return 0
 
     if logging.getLogger().getEffectiveLevel() <= logging.INFO:
       verbosity = 1
