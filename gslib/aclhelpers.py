@@ -211,9 +211,9 @@ class AclChange(object):
 class AclDel(AclChange):
   """Represents a logical change from an access control list."""
   scope_regexes = {
-      r'All(Users)?': 'AllUsers',
-      r'AllAuth(enticatedUsers)?': 'AllAuthenticatedUsers',
-      }
+      r'All(Users)?$': 'AllUsers',
+      r'AllAuth(enticatedUsers)?$': 'AllAuthenticatedUsers',
+  }
 
   def __init__(self, identifier, logger):
     self.raw_descriptor = '-d {0}'.format(identifier)

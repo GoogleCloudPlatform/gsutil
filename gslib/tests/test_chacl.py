@@ -84,6 +84,9 @@ class ChaclIntegrationTest(case.GsUtilIntegrationTestCase):
     acl = self.sample_uri.get_acl()
     change.Execute(self.sample_uri, acl)
     self._AssertHas(acl, 'READ', 'AllAuthenticatedUsers')
+    remove = aclhelpers.AclDel('AllAuthenticatedUsers', logger=self.logger)
+    remove.Execute(self.sample_uri, acl)
+    self._AssertHasNo(acl, 'READ', 'AllAuthenticatedUsers')
 
   def testAclDelWithUser(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',

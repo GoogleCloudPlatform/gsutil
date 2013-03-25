@@ -72,3 +72,9 @@ class ChdefaclIntegrationTest(case.GsUtilIntegrationTestCase):
     xml = self.RunGsUtil(['getdefacl', suri(bucket)], return_stdout=True)
     self.assertRegexpMatches(xml, test_regex_group)
     self.assertRegexpMatches(xml, test_regex_user)
+
+  def testEmptyDefAcl(self):
+    bucket = self.CreateBucket()
+    self.RunGsUtil(['setdefacl', 'private', suri(bucket)])
+    self.RunGsUtil(['chdefacl', '-u', self.USER_TEST_ADDRESS+':fc',
+                    suri(bucket)])
