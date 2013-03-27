@@ -89,3 +89,47 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                     stdout)
       self.assertIn('metageneration=', stdout)
     _Check1()
+
+  def test_list_sizes(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, contents='x' * 2048)
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn('2048', stdout)
+    _Check1()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn('2048', stdout)
+    _Check2()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check3():
+      stdout = self.RunGsUtil(['ls', '-al', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn('2048', stdout)
+    _Check3()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check4():
+      stdout = self.RunGsUtil(['ls', '-lh', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn('2 KB', stdout)
+    _Check4()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check5():
+      stdout = self.RunGsUtil(['ls', '-alh', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn('2 KB', stdout)
+    _Check5()

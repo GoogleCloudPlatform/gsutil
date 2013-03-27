@@ -180,6 +180,9 @@ _detailed_help_text = ("""
 
   -b          Prints info about the bucket when used with a bucket URI.
 
+  -h          When used with -l, prints object sizes in human readable format
+              (e.g., 1KB, 234MB, 2GB, etc.)
+
   -p proj_id  Specifies the project ID to use for listing buckets.
 
   -R, -r      Requests a recursive listing.
@@ -203,7 +206,7 @@ class LsCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'ablLp:rR',
+    SUPPORTED_SUB_ARGS : 'ablLhp:rR',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -334,12 +337,16 @@ class LsCommand(Command):
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
+      size_string = (MakeHumanReadable(obj.size)
+                     if self.human_readable else str(obj.size))
       if not isinstance(obj, DeleteMarker):
         if self.all_versions:
           print '%10s  %s  %s  metageneration=%s' % (
-              obj.size, timestamp, uri_str.encode('utf-8'), obj.metageneration)
+              size_string, timestamp, uri_str.encode('utf-8'),
+              obj.metageneration)
         else:
-          print '%10s  %s  %s' % (obj.size, timestamp, uri_str.encode('utf-8'))
+          print '%10s  %s  %s' % (
+              size_string, timestamp, uri_str.encode('utf-8'))
         return (1, obj.size)
       else:
         if self.all_versions:
@@ -483,12 +490,15 @@ class LsCommand(Command):
     get_bucket_info = False
     self.recursion_requested = False
     self.all_versions = False
+    self.human_readable = False
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
           self.all_versions = True
         elif o == '-b':
           get_bucket_info = True
+        if o == '-h':
+          self.human_readable = True
         elif o == '-l':
           listing_style = ListingStyle.LONG
         elif o == '-L':
