@@ -33,6 +33,7 @@ import time
 import boto
 import boto.gs.connection
 
+import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -51,11 +52,11 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
 from gslib.util import MakeHumanReadable
 from gslib.util import Percentile
-from gslib.util import HumanReadableToBytes
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -155,6 +156,13 @@ _detailed_help_text = ("""
   network statistics information from the output of netstat -s. None of this
   information will be sent to Google unless you choose to send it.
 """)
+
+
+class DummyFile(object):
+  """A dummy, file-like object that throws away everything written to it."""
+
+  def write(self, *args, **kwargs):  # pylint: disable-msg=C6409
+    pass
 
 
 class PerfDiagCommand(Command):
@@ -302,6 +310,8 @@ class PerfDiagCommand(Command):
     self.total_requests = 0
     # Total number of HTTP 5xx errors.
     self.request_errors = 0
+    # Number of responses, keyed by response code.
+    self.error_responses_by_code = defaultdict(int)
     # Total number of socket errors.
     self.connection_breaks = 0
 
@@ -334,6 +344,8 @@ class PerfDiagCommand(Command):
     # Remote file to write/read from during throughput tests.
     self.thru_remote_file = (str(self.bucket_uri) +
                              os.path.basename(self.thru_local_file))
+    # Dummy file buffer to use for downloading that goes nowhere.
+    self.devnull = DummyFile()
 
   def _TearDown(self):
     """Performs operations to clean things up after performing diagnostics."""
@@ -414,13 +426,14 @@ class PerfDiagCommand(Command):
           break
         if isinstance(e, boto.exception.BotoServerError):
           if e.status >= 500:
+            self.error_responses_by_code[e.status] += 1
             self.total_requests += 1
             self.request_errors += 1
             server_error_retried += 1
             time.sleep(next_sleep)
           else:
             raise
-          if (server_error_retried > self.MAX_SERVER_ERROR_RETRIES):
+          if server_error_retried > self.MAX_SERVER_ERROR_RETRIES:
             self.logger.info(
                 'Reached maximum server error retries. Not retrying.')
             break
@@ -462,7 +475,7 @@ class PerfDiagCommand(Command):
 
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
-            k.get_contents_as_string()
+            k.get_contents_to_file(self.devnull)
         self._RunOperation(_Download)
 
         def _Delete():
@@ -497,14 +510,14 @@ class PerfDiagCommand(Command):
 
       # Warm up the TCP connection.
       def _Warmup():
-        warmup_key.get_contents_as_string()
+        warmup_key.get_contents_to_file(self.devnull)
       self._RunOperation(_Warmup)
 
       times = []
 
       def _Download():
         t0 = time.time()
-        k.get_contents_as_string()
+        k.get_contents_to_file(self.devnull)
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -664,6 +677,8 @@ class PerfDiagCommand(Command):
     """Collects system information."""
     sysinfo = {}
 
+    # Find out whether HTTPS is enabled in Boto.
+    sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
     # Get the local IP address from socket lib.
     sysinfo['ip_address'] = socket.gethostbyname(socket.gethostname())
     # Record the temporary directory used since it can affect performance, e.g.
@@ -852,6 +867,9 @@ class PerfDiagCommand(Command):
       print 'IP Address: \n  %s' % info['ip_address']
       print 'Temporary Directory: \n  %s' % info['tempdir']
       print 'Bucket URI: \n  %s' % self.results['bucket_uri']
+      print 'gsutil Version: \n  %s' % self.results.get('gsutil_version',
+                                                        'Unknown')
+      print 'boto Version: \n  %s' % self.results.get('boto_version', 'Unknown')
 
       if 'gmt_timestamp' in info:
         ts_string = info['gmt_timestamp']
@@ -924,6 +942,9 @@ class PerfDiagCommand(Command):
         for item in info['tcp_proc_values'].iteritems():
           print '   %s = %s' % item
 
+      if 'boto_https_enabled' in info:
+        print 'Boto HTTPS Enabled: \n  %s' % info['boto_https_enabled']
+
     if 'request_errors' in self.results and 'total_requests' in self.results:
       print
       print '-' * 78
@@ -938,6 +959,12 @@ class PerfDiagCommand(Command):
       print 'HTTP 5xx errors: %d' % numerrors
       print 'HTTP connections broken: %d' % numbreaks
       print 'Availability: %.7g%%' % availability
+      if 'error_responses_by_code' in self.results:
+        sorted_codes = sorted(
+            self.results['error_responses_by_code'].iteritems())
+        if sorted_codes:
+          print 'Error responses by code:'
+          print '\n'.join('  %s: %s' % c for c in sorted_codes)
 
     if self.output_file:
       with open(self.output_file, 'w') as f:
@@ -1000,7 +1027,7 @@ class PerfDiagCommand(Command):
             raise CommandException('Invalid -s parameter.')
           if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GB.
             raise CommandException(
-              'Maximum throughput file size parameter (-s) is 20GB.')
+                'Maximum throughput file size parameter (-s) is 20GB.')
         if o == '-t':
           self.diag_tests = []
           for test_name in a.strip().split(','):
@@ -1091,7 +1118,10 @@ class PerfDiagCommand(Command):
 
       self.results['total_requests'] = self.total_requests
       self.results['request_errors'] = self.request_errors
+      self.results['error_responses_by_code'] = self.error_responses_by_code
       self.results['connection_breaks'] = self.connection_breaks
+      self.results['gsutil_version'] = gslib.VERSION
+      self.results['boto_version'] = boto.__version__
 
       self._DisplayResults()
     finally:
