@@ -168,9 +168,13 @@ class CommandRunner(object):
       if gslib.VERSION != cur_ver:
         print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
-            'are running (%s).' % (cur_ver, gslib.VERSION), width=78))
+            'are running (%s). A detailed log of gsutil release changes is '
+            'available at gs://pub/gsutil_ReleaseNotes.txt if you would like '
+            'to read them before updating.' % (
+                cur_ver, gslib.VERSION), width=78))
         if gslib.IS_PACKAGE_INSTALL:
           return False
+        print
         answer = raw_input('Would you like to update [Y/n]? ')
         return answer.lower()[0] != 'n'
     return False

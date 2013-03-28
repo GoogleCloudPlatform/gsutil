@@ -37,10 +37,13 @@ requires = [
     'python-gflags>=2.0',
     'google-api-python-client>=1.1',
     'pyOpenSSL>=0.13',
+    'crcmod>=1.7',
 ]
 
 dependency_links = [
-    'https://github.com/boto/boto/archive/8a95cd0eae.tar.gz#egg=boto-2.8.0-dev',
+    # Note: this commit ID should be kept in sync with the 'third_party/boto'
+    # entry in 'git submodule status'.
+    'https://github.com/boto/boto/archive/55de90efb3193f2ffbdf66890323161e626edaf3.tar.gz#egg=boto-2.8.0-dev',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))

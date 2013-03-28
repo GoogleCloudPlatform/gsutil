@@ -34,7 +34,11 @@ import base
 try:
   from gslib.tests import mock_storage_service
 except ImportError:
-  from tests.integration.s3 import mock_storage_service
+  try:
+    from tests.integration.s3 import mock_storage_service
+  except ImportError:
+    import mock_storage_service
+
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
 TESTS_DIR = os.path.split(CURDIR)[0]

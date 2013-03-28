@@ -45,8 +45,13 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  Prints information about the version of gsutil, boto, and Python being
-  run on your system.
+  Prints information about the version of gsutil.
+
+<B>OPTIONS</B>
+  -l          Prints additional information, such as the version of Python
+              being used, the version of the Boto library, a checksum of the
+              code, the path to gsutil, and the path to gsutil's configuration
+              file.
 """)
 
 
@@ -64,7 +69,7 @@ class VersionCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : 0,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : '',
+    SUPPORTED_SUB_ARGS : 'l',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -89,18 +94,20 @@ class VersionCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    long_form = False
+    if self.sub_opts:
+      for o, a in self.sub_opts:
+        if o == '-l':
+          long_form = True
+
+    config_path = 'no config found'
     for path in BotoConfigLocations:
-      f = None
       try:
-        f = open(path, 'r')
+        with open(path, 'r'):
+          config_path = path
         break
       except IOError:
         pass
-      finally:
-        if f:
-          f.close()
-        else:
-          path = "no config found"
 
     shipped_checksum = gslib.CHECKSUM
     try:
@@ -111,16 +118,27 @@ class VersionCommand(Command):
       checksum_ok_str = 'OK'
     else:
       checksum_ok_str = '!= %s' % shipped_checksum
-    sys.stderr.write(
-        'gsutil version %s\nchecksum %s (%s)\n'
-        'boto version %s\npython version %s\n'
-        'config path: %s\ngsutil path: %s\n'
-        'compiled crcmod: %s\n' % (
-        gslib.VERSION, cur_checksum, checksum_ok_str,
-        boto.__version__, sys.version, path, os.path.realpath(sys.argv[0]),
-        UsingCrcmodExtension(crcmod)))
-    sys.stderr.write('Note: a log of gsutil release changes is available at:\n'
-                     'gs://pub/gsutil_ReleaseNotes.txt\n')
+
+    sys.stdout.write('gsutil version %s\n' % gslib.VERSION)
+
+    if long_form:
+
+      long_form_output = (
+          'checksum {checksum} ({checksum_ok})\n'
+          'boto version {boto_version}\n'
+          'python version {python_version}\n'
+          'config path: {config_path}\n'
+          'gsutil path: {gsutil_path}\n'
+          'compiled crcmod: {compiled_crcmod}\n')
+
+      sys.stdout.write(long_form_output.format(
+          checksum=cur_checksum,
+          checksum_ok=checksum_ok_str,
+          boto_version=boto.__version__,
+          python_version=sys.version,
+          config_path=config_path,
+          gsutil_path=gslib.GSUTIL_PATH,
+          compiled_crcmod=UsingCrcmodExtension(crcmod)))
 
     return 0
 

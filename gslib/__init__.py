@@ -38,6 +38,10 @@ GSUTIL_DIR = os.path.dirname(GSUTIL_PATH)
 # False.
 IS_PACKAGE_INSTALL = True
 
+# Whether or not this was installed via setup.py develop mode. This creates a
+# symlink directly to the source directory.
+IS_EDITABLE_INSTALL = False
+
 # Directory where program files like VERSION and CHECKSUM will be. When
 # installed via tarball, this is the gsutil directory, but the files are moved
 # to the gslib directory when installed via setup.py.
@@ -48,6 +52,20 @@ PROGRAM_FILES_DIR = GSLIB_DIR
 if os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR:
   IS_PACKAGE_INSTALL = False
   PROGRAM_FILES_DIR = GSUTIL_DIR
+
+# If the module was installed from source using editable mode
+# (i.e. pip install -e) then the files might be one directory up.
+if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')):
+  PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
+  IS_EDITABLE_INSTALL = True
+
+# If installed via editable mode, we have to add the mock_storage_service
+# module to the Python path, since the gsutil script path munging is not
+# executed in this mode.
+if IS_EDITABLE_INSTALL:
+  mock_storage_location = os.path.join(
+      PROGRAM_FILES_DIR, 'third_party', 'boto', 'tests', 'integration', 's3')
+  sys.path.append(mock_storage_location)
 
 # Get the version file and store it.
 VERSION_FILE = os.path.join(PROGRAM_FILES_DIR, 'VERSION')

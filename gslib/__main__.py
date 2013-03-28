@@ -82,6 +82,7 @@ def main():
   headers = {}
   parallel_operations = False
   quiet = False
+  version = False
   debug = 0
 
   # If user enters no commands just print the usage info.
@@ -125,6 +126,8 @@ def main():
       parallel_operations = True
     elif o in ('-q', '--quiet'):
       quiet = True
+    elif o in ('-v', '--version'):
+      version = True
   httplib2.debuglevel = debug
   if debug > 1:
     sys.stderr.write(
@@ -140,7 +143,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
   elif debug > 2:
     logging.basicConfig(level=logging.DEBUG)
-    command_runner.RunNamedCommand('ver')
+    command_runner.RunNamedCommand('ver', ['-l'])
     config_items = []
     try:
       config_items.extend(boto.config.items('Boto'))
@@ -154,7 +157,9 @@ def main():
   else:
     logging.basicConfig(level=logging.INFO)
 
-  if not args:
+  if version:
+    command_name = 'version'
+  elif not args:
     command_name = 'help'
   else:
     command_name = args[0]

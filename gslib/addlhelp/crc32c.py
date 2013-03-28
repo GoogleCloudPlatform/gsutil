@@ -47,7 +47,7 @@ _detailed_help_text = ("""
   environment, you can inspect the output of the gsutil version command for the
   "compiled crcmod" entry::
 
-    $ gsutil version
+    $ gsutil version -l
     ...
     compiled crcmod: True
     ...
