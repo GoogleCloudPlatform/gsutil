@@ -137,20 +137,23 @@ _detailed_help_text = ("""
       proxy_port
       proxy_user
       proxy_pass
+      http_socket_timeout
       is_secure
       https_validate_certificates
-      send_crlf_after_proxy_auth_headers
       debug
       num_retries
 
     [GSUtil]
       resumable_threshold
       resumable_tracker_dir
+      software_update_check_period
       parallel_process_count
       parallel_thread_count
+      use_magicfile
+      content_language
+      check_hashes
       default_api_version
       default_project_id
-      use_magicfile
 
     [OAuth2]
       token_cache
@@ -256,6 +259,12 @@ CONFIG_BOTO_SECTION_CONTENT = """
 #proxy_port = <proxy port>
 #proxy_user = <your proxy user name>
 #proxy_pass = <your proxy password>
+
+# http_socket_timeout specifies the timeout (in seconds) used to tell httplib
+# how long to wait for socket timeouts. The default is 70 seconds. Note that
+# this timeout only applies to httplib, not to httplib2 (which is used for
+# OAuth2 refresh/access token exchanges).
+#http_socket_timeout = 70
 
 # The following two options control the use of a secure transport for requests
 # to S3 and Google Cloud Storage. It is highly recommended to set both options
