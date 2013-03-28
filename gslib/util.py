@@ -61,9 +61,11 @@ SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 SECONDS_PER_DAY = 3600 * 24
 
 # Detect platform types.
-IS_WINDOWS = 'win32' in str(sys.platform).lower()
-IS_LINUX = 'linux' in str(sys.platform).lower()
-IS_OSX = 'darwin' in str(sys.platform).lower()
+PLATFORM = str(sys.platform).lower()
+IS_WINDOWS = 'win32' in PLATFORM
+IS_CYGWIN = 'cygwin' in PLATFORM
+IS_LINUX = 'linux' in PLATFORM
+IS_OSX = 'darwin' in PLATFORM
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 

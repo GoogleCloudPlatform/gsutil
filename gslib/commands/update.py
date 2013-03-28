@@ -37,6 +37,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import IS_CYGWIN
 from gslib.util import IS_WINDOWS
 from gslib.util import LookUpGsutilVersion
 
@@ -134,8 +135,8 @@ class UpdateCommand(Command):
     Raises:
       CommandException: if errors encountered.
     """
-    # If running under Windows we don't need (or have) sudo.
-    if IS_WINDOWS:
+    # If running under Windows or Cygwin we don't need (or have) sudo.
+    if IS_CYGWIN or IS_WINDOWS:
       return
 
     user_id = os.getuid()
