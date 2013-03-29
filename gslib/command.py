@@ -339,10 +339,8 @@ class Command(object):
     # Determine whether acl_arg names a file containing XML ACL text vs. the
     # string name of a canned ACL.
     if os.path.isfile(acl_arg):
-      acl_file = open(acl_arg, 'r')
-      acl_arg = acl_file.read()
-      
-      acl_file.close()
+      with open(acl_arg, 'r') as acl_file:
+        acl_arg = acl_file.read()
       self.canned = False
     else:
       # No file exists, so expect a canned ACL string.
@@ -473,7 +471,7 @@ class Command(object):
       acl = uri.get_acl(False, self.headers)
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(acl.to_xml().encode('utf-8'))
-    print parsed_xml.toprettyxml(indent='    ')
+    print parsed_xml.toprettyxml(indent='    ').encode('utf-8')
 
   def GetXmlSubresource(self, subresource, uri_arg):
     """Print an xml subresource, e.g. logging, for a bucket/object.

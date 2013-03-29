@@ -78,6 +78,32 @@ class TestSetAcl(testcase.GsUtilIntegrationTestCase):
     self.assertNotEqual(acl_string, acl_string2)
     self.assertEqual(acl_string, acl_string3)
 
+  def test_get_and_set_valid_object_acl_with_non_ascii_chars(self):
+    """Ensures that non-ASCII chars work correctly in ACL handling."""
+    non_ascii_name = 'Test NonAscii łرح안'
+    acl_str = (
+"""<?xml version="1.0" ?>
+<AccessControlList>
+<Owner>
+    <ID>00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70</ID>
+</Owner>
+<Entries>
+    <Entry>
+        <Scope type="UserByEmail">
+            <EmailAddress>gs-team@google.com</EmailAddress>
+            <Name>%s</Name>
+        </Scope>
+        <Permission>READ</Permission>
+    </Entry>
+</Entries>
+</AccessControlList>
+""" % non_ascii_name)
+    acl_path = self.CreateTempFile(contents=acl_str)
+    obj_uri = suri(self.CreateObject(contents='foo'))
+    self.RunGsUtil(['setacl', acl_path, obj_uri])
+    res_acl_str = self.RunGsUtil(['getacl', obj_uri], return_stdout=True)
+    self.assertIn(non_ascii_name, res_acl_str)
+
   def test_invalid_canned_acl_object(self):
     """Ensures that an invalid canned ACL returns a CommandException."""
     obj_uri = suri(self.CreateObject(contents='foo'))
