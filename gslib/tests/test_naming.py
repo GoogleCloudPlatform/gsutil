@@ -1,4 +1,5 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
+# -*- coding: utf-8 -*-
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -30,7 +31,6 @@ service) are available via the gsutil test command.
 
 import gzip
 import os
-import posixpath
 import StringIO
 
 import boto
@@ -915,6 +915,17 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(bucket_uris[i], '**')).IterUris())
       self.assertEqual(actual, set())
+
+  def testUnicodeArgs(self):
+    """Tests that you can list an object with unicode characters."""
+    object_name = u'フォ'
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name=object_name,
+                      contents='foo')
+    object_name_bytes = object_name.encode('utf-8')
+    stdout = self.RunCommand('ls', [suri(bucket_uri, object_name_bytes)],
+                             return_stdout=True)
+    self.assertIn(object_name_bytes, stdout)
 
   def FinalObjNameComponent(self, uri):
     """For gs://bucket/abc/def/ghi returns ghi."""

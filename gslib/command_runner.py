@@ -109,6 +109,11 @@ class CommandRunner(object):
     if '--help' in args:
       args = [command_name]
       command_name = 'help'
+
+    # Python passes arguments from the command line as byte strings. To
+    # correctly interpret them, we decode them as utf-8 here.
+    args = [a.decode('utf-8') for a in args]
+
     command_class = self.command_map[command_name]
     command_inst = command_class(
         self, args, headers, debug, parallel_operations, self.config_file_list,
