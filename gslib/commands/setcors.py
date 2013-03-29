@@ -61,7 +61,7 @@ _detailed_help_text = ("""
     </CorsConfig>
 
   The above XML document explicitly allows cross-origin GET requests from
-  http://origin1.example.com and may include the Content-Type response header.
+  `http://origin1.example.com` and may include the Content-Type response header.
 
   For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
