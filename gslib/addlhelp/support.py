@@ -24,13 +24,12 @@ _detailed_help_text = ("""
 <B>TECHNICAL SUPPORT</B>
   If you have any questions or encounter any problems with Google Cloud Storage,
   please first read the FAQ at https://developers.google.com/storage/docs/faq.
-  If you still need help, please post your question to the gs-discussion forum
-  (https://developers.google.com/storage/forum) or to Stack Overflow with the
+  If you still need help, please post your question to Stack Overflow with the
   Google Cloud Storage tag
   (http://stackoverflow.com/questions/tagged/google-cloud-storage). Our support
-  team actively monitors these forums and we'll do our best to respond. To help
-  us diagnose any issues you encounter, please provide these details in addition
-  to the description of your problem:
+  team actively monitors questions to this tag and we'll do our best to respond.
+  To help us diagnose any issues you encounter, please provide these details in
+  addition to the description of your problem:
 
   - The resource you are attempting to access (bucket name, object name)
   - The operation you attempted (GET, PUT, etc.)
@@ -50,10 +49,6 @@ _detailed_help_text = ("""
   providing the gsutil -D output noted above. We cannot support versions
   of gsutil that include local modifications. (However, we're open to user
   contributions; see "gsutil help dev".)
-
-  As an alternative to posting to the gs-discussion forum, we also
-  actively monitor http://stackoverflow.com for questions tagged with
-  "google-cloud-storage".
 
 
 <B>BILLING AND ACCOUNT QUESTIONS</B>

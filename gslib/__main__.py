@@ -304,8 +304,7 @@ the following:
 If the above doesn't resolve your AccountProblem, please send mail to
 gs-team@google.com requesting assistance, noting the exact command you ran, the
 fact that you received a 403 AccountProblem error, and your project ID. Please
-do not post your project ID on the public discussion forum (gs-discussion) or on
-StackOverflow.
+do not post your project ID on StackOverflow.
 
 Note: It's possible to use Google Cloud Storage without enabling billing if
 you're only listing or reading objects for which you're authorized, or if
