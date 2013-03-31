@@ -34,7 +34,6 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
-from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -120,15 +119,15 @@ class CatCommand(Command):
   # Command entry point.
   def RunCommand(self):
     show_header = False
-    range = None
+    request_range = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-h':
           show_header = True
         elif o == '-r':
-          range = a.strip()
-          if not re.match('^[0-9]+-[0-9]*$|^-[0-9]+$', range):
-            raise CommandException('Invalid range (%s)' % range)
+          request_range = a.strip()
+          if not re.match('^[0-9]+-[0-9]*$|^-[0-9]+$', request_range):
+            raise CommandException('Invalid range (%s)' % request_range)
         elif o == '-v':
           self.logger.info('WARNING: The %s -v option is no longer'
                            ' needed, and will eventually be removed.\n'
@@ -154,8 +153,8 @@ class CatCommand(Command):
           printed_one = True
         key = uri.get_key(False, self.headers)
         headers = self.headers.copy()
-        if range:
-          headers['range'] = 'bytes=%s' % range
+        if request_range:
+          headers['range'] = 'bytes=%s' % str(request_range)
         key.get_file(cat_outfd, headers)
     sys.stdout = cat_outfd
     if not did_some_work:
