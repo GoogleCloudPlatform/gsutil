@@ -35,7 +35,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.commands.cred_types import CredTypes
+from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME

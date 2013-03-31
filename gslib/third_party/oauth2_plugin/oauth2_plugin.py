@@ -2,7 +2,7 @@ from boto.auth_handler import AuthHandler
 from boto.auth_handler import NotReadyToAuthenticate 
 import oauth2_client
 import oauth2_helper
-from gslib.commands.cred_types import CredTypes
+from gslib.cred_types import CredTypes
 
 IS_SERVICE_ACCOUNT = False
 

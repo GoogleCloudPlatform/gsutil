@@ -18,7 +18,7 @@ import sys
 import time
 import webbrowser
 
-from gslib.commands.cred_types import CredTypes
+from gslib.cred_types import CredTypes
 import oauth2_client
 
 
