@@ -268,7 +268,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # Check for access denied, and provide detail to users who have no boto
     # config file (who might previously have been using gsutil only for
     # accessing publicly readable buckets and objects).
-    if e.status == 403:
+    if (e.status == 403
+        or (e.status == 400 and e.code == 'MissingSecurityHeader')):
       if not util.HasConfiguredCredentials():
         _OutputAndExit(
             'You are attempting to access protected data with no configured '
