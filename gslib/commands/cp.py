@@ -486,6 +486,8 @@ class CpCommand(Command):
   }
 
   def _GetMD5FromETag(self, key):
+    if not key.etag:
+      return None
     possible_md5 = key.etag.strip('"\'').lower()
     if re.match(r'[0-9a-f]{32}', possible_md5):
       return binascii.a2b_hex(possible_md5)
@@ -1035,6 +1037,8 @@ class CpCommand(Command):
     hash_algs = {}
     check_hashes_config = config.get(
         'GSUtil', 'check_hashes', 'if_fast_else_fail')
+    if check_hashes_config == 'never':
+      return hash_algs
     if self._GetMD5FromETag(key):
       hash_algs['md5'] = md5
     if hasattr(key, 'cloud_hashes') and key.cloud_hashes:

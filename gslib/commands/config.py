@@ -349,6 +349,9 @@ content_language = en
 #       the local digest computation will run quickly, else skip the check.
 #   'always' - Always check download integrity regardless of possible
 #       performance costs.
+#   'never' - Don't perform download integrity checks. This settings is not
+#       recommended except for special cases such as measuring download
+#       performance excluding time for integrity checking.
 # This option exists to assist users who wish to download a GCS composite object
 # and are unable to install crcmod with the C-extension. CRC32c is the only
 # available integrity check for composite objects, and without the C-extension,
