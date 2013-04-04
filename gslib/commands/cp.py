@@ -639,11 +639,14 @@ class CpCommand(Command):
        only the bytes transferred.
     """
 
+    def __init__(self, logger):
+      self.logger = logger
+
     def call(self, total_bytes_transferred, total_size):
-      sys.stderr.write('Uploading: %s    \r' % (
-          MakeHumanReadable(total_bytes_transferred)))
+      self.logger.info('Uploading: %s    \r',
+                       MakeHumanReadable(total_bytes_transferred))
       if total_size and total_bytes_transferred == total_size:
-        sys.stderr.write('\n')
+        self.logger.info('\n')
 
   def _GetTransferHandlers(self, dst_uri, size, upload):
     """
@@ -877,7 +880,7 @@ class CpCommand(Command):
     """
     start_time = time.time()
 
-    cb = self._StreamCopyCallbackHandler().call
+    cb = self._StreamCopyCallbackHandler(self.logger).call
     dst_uri.set_contents_from_stream(
         fp, headers, policy=canned_acl, cb=cb)
     try:
