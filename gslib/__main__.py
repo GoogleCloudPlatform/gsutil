@@ -246,6 +246,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
                      'boto config file contain all needed credentials?')
     else:
       _OutputAndExit(str(e))
+  except boto.exception.StorageDataError as e:
+    _OutputAndExit('StorageDataError: %s.' % e.reason)
   except boto.exception.BotoClientError as e:
     _OutputAndExit('BotoClientError: %s.' % e.reason)
   except gslib.exception.CommandException as e:
