@@ -50,59 +50,62 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn('xyz', stdout)
     _Check1()
 
-  def test_missing_header(self):
-    stderr = self.RunGsUtil(['setmeta', '"Content-Type"', 'gs://foo/bar'],
-                            expected_status=1, return_stderr=True)
-    self.assertIn('Fields being added must include values', stderr)
-
-  def test_minus_header_value(self):
-    stderr = self.RunGsUtil(['setmeta', '"-Content-Type:text/html"',
-                             'gs://foo/bar'], expected_status=1,
-                            return_stderr=True)
-    self.assertIn('Removal spec may not contain ":"', stderr)
-
-  def test_plus_and_minus(self):
-    stderr = self.RunGsUtil(['setmeta', ('"Content-Type:text/html",'
-                                         '"-Content-Type"'), 'gs://foo/bar'],
-                            expected_status=1, return_stderr=True)
+  def test_duplicate_header_removal(self):
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type',
+         'gs://foo/bar'], expected_status=1, return_stderr=True)
     self.assertIn('Each header must appear at most once', stderr)
 
-  def test_non_ascii_custom_header(self):
-    stderr = self.RunGsUtil(['setmeta', '"x-goog-meta-soufflé:5"',
-                             'gs://foo/bar'], expected_status=1,
-                            return_stderr=True)
+  def test_duplicate_header(self):
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
+         'gs://foo/bar'], expected_status=1, return_stderr=True)
+    self.assertIn('Each header must appear at most once', stderr)
+
+  def test_invalid_non_ascii_custom_header(self):
+    unicode_header = u'x-goog-meta-soufflé:5'
+    unicode_header_bytes = unicode_header.encode('utf-8')
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
+        expected_status=1, return_stderr=True)
     self.assertIn('Invalid non-ASCII header', stderr)
 
-  def test_disallowed_header(self):
-    stderr = self.RunGsUtil(['setmeta', '"Content-Length:5"',
-                             'gs://foo/bar'], expected_status=1,
-                            return_stderr=True)
-    self.assertIn('Invalid or disallowed header', stderr)
-
-  def test_deprecated_syntax(self):
-    objuri = suri(self.CreateObject(contents='foo'))
-    inpath = self.CreateTempFile()
-    self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:image/gif',
-                    'cp', inpath, objuri])
-
+  def test_valid_non_ascii_custom_header(self):
+    objuri = self.CreateObject(contents='foo')
+    unicode_header = u'x-goog-meta-dessert:soufflé'
+    unicode_header_bytes = unicode_header.encode('utf-8')
+    self.RunGsUtil(['setmeta', '-h', unicode_header_bytes, suri(objuri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
-      self.assertRegexpMatches(stdout, 'x-goog-meta-xyz:\s+abc')
+      stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
+      stdout = stdout.decode('utf-8')
+      self.assertIn(u'x-goog-meta-dessert:\t\tsoufflé', stdout)
     _Check1()
 
+  def test_disallowed_header(self):
     stderr = self.RunGsUtil(
-        ['setmeta', '-n', '"Content-Type:text/html","-x-goog-meta-xyz"',
-         objuri],
+        ['setmeta', '-h', 'Content-Length:5', 'gs://foo/bar'],
+        expected_status=1, return_stderr=True)
+    self.assertIn('Invalid or disallowed header', stderr)
+
+  def test_setmeta_bucket(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', 'x-goog-meta-foo:5', suri(bucket_uri)],
+        expected_status=1, return_stderr=True)
+    self.assertIn('must name an object', stderr)
+
+  def test_setmeta_invalid_arg(self):
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', 'foo:bar:baz', 'gs://foo/bar'], expected_status=1,
         return_stderr=True)
-    self.assertIn('WARNING: metadata spec syntax', stderr)
-    self.assertIn('is deprecated and will eventually be removed', stderr)
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/html')
-      self.assertNotIn('xyz', stdout)
-    _Check2()
+    self.assertIn('must be either header or header:value', stderr)
+
+  def test_invalid_non_ascii_header_value(self):
+    unicode_header = u'Content-Type:dessert/soufflé'
+    unicode_header_bytes = unicode_header.encode('utf-8')
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
+        expected_status=1, return_stderr=True)
+    self.assertIn('Invalid non-ASCII value', stderr)

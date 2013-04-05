@@ -381,7 +381,8 @@ class LsCommand(Command):
         if obj.metadata:
           prefix = uri.get_provider().metadata_prefix
           for name in obj.metadata:
-            print '\t%s%s:\t\t%s' % (prefix, name, obj.metadata[name])
+            meta_string = '\t%s%s:\t\t%s' % (prefix, name, obj.metadata[name])
+            print meta_string.encode('utf-8')
         if hasattr(obj, 'cloud_hashes'):
           for alg in obj.cloud_hashes:
             print '\tHash (%s):\t\t%s' % (

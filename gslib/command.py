@@ -22,6 +22,7 @@ helpers belong in individual subclasses.
 """
 
 import boto
+import codecs
 import getopt
 import gslib
 import logging
@@ -339,8 +340,8 @@ class Command(object):
     # Determine whether acl_arg names a file containing XML ACL text vs. the
     # string name of a canned ACL.
     if os.path.isfile(acl_arg):
-      with open(acl_arg, 'r') as acl_file:
-        acl_arg = acl_file.read()
+      with codecs.open(acl_arg, 'r', 'utf-8') as f:
+        acl_arg = f.read()
       self.canned = False
     else:
       # No file exists, so expect a canned ACL string.

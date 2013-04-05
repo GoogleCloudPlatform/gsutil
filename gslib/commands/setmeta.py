@@ -97,55 +97,6 @@ _detailed_help_text = ("""
               all objects to have the same ACL, for which you have set a default
               ACL on the bucket(s) containing the objects. See "help gsutil
               setdefacl".
-
-
-<B>OLDER SYNTAX (DEPRECATED)</B>
-  The first version of the setmeta command used more complicated syntax
-  (described below). gsutil still supports this syntax, to avoid breaking
-  existing customer uses, but it is now deprecated and will eventually
-  be removed.
-
-  With this older syntax, the setmeta command accepts a single metadata
-  argument in one of two forms:
-
-    gsutil setmeta [-n] header:value uri...
-
-  or:
-
-    gsutil setmeta [-n] '"header:value","-header",...' uri...
-
-  The first form allows you to specify a single header name and value to
-  set. For example, the following command would set the Content-Type and
-  Cache-Control and remove the Content-Disposition on the specified objects:
-
-    gsutil setmeta -h "Content-Type:text/html" \\
-      -h "Cache-Control:public, max-age=3600" \\
-      -h "Content-Disposition" gs://bucket/*.html
-
-  This form only works if the header name and value don't contain double
-  quotes or commas, and only works for setting the header value (not for
-  removing it).
-
-  The more general form of the first argument allows both setting and removing
-  multiple fields, without any of the content restrictions noted above. For
-  this variant the first argument is a CSV-formatted list of headers to add
-  or remove. Getting the CSV-formatted list to be passed correctly into gsutil
-  requires different syntax on Linux or MacOS than it does on Windows.
-
-  On Linux or MacOS you need to surround the entire argument in single quotes
-  to avoid having the shell interpret/strip out the double-quotes in the CSV
-  data. For example, the following command would set the Content-Type and
-  Cache-Control and remove the Content-Disposition on the specified objects:
-
-    gsutil setmeta '"Content-Type:text/html","Cache-Control:public, max-age=3600","-Content-Disposition"' gs://bucket/*.html
-
-  To pass CSV data on Windows you need two sets of double quotes around
-  each header/value pair, and one set of double quotes around the entire
-  expression. For example, the following command would set the Content-Type
-  and Cache-Control and remove the Content-Disposition on the specified
-  objects:
-
-    gsutil setmeta "\""Content-Type:text/html"",""Cache-Control:public, max-age=3600"",""-Content-Disposition""\" gs://bucket/*.html
 """)
 
 
@@ -197,16 +148,11 @@ class SetMetaCommand(Command):
         elif o == '-h':
           headers.append(a)
 
-    if headers:
-      (metadata_minus, metadata_plus) = self._ParseMetadataHeaders(headers)
-      uri_args = self.args
-    else:
-      (metadata_minus, metadata_plus) = self._ParseMetadataSpec(self.args[0])
-      uri_args = self.args[1:]
+    (metadata_minus, metadata_plus) = self._ParseMetadataHeaders(headers)
 
-    if (len(uri_args) == 1
-        and not self.suri_builder.StorageUri(uri_args[0]).names_object()):
-      raise CommandException('URI (%s) must name an object' % uri_args[0])
+    if (len(self.args) == 1
+        and not self.suri_builder.StorageUri(self.args[0]).names_object()):
+      raise CommandException('URI (%s) must name an object' % self.args[0])
 
     # Used to track if any objects' metadata failed to be set.
     self.everything_set_okay = True
@@ -221,25 +167,25 @@ class SetMetaCommand(Command):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
       self.logger.info('Setting metadata on %s...', exp_src_uri)
-      
+
       key = exp_src_uri.get_key()
       metageneration = key.metageneration
       generation = key.generation
-            
+
       headers = {}
       if generation:
         headers['x-goog-if-generation-match'] = generation
       if metageneration:
         headers['x-goog-if-metageneration-match'] = metageneration
-          
+
       # If this fails because of a precondition, it will raise a 
       # GSResponseError for @Retry to handle.
       exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl, 
                                  headers=headers)
-      
+
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.logger, self.bucket_storage_uri_class, uri_args,
+        self.logger, self.bucket_storage_uri_class, self.args,
         self.recursion_requested, self.recursion_requested)
 
     try:
@@ -287,13 +233,15 @@ class SetMetaCommand(Command):
       header = header.lower()
       if value:
         if _IsCustomMeta(header):
-          # Allow non-ASCII data for custom metadata fields. Don't unicode
-          # encode other fields because that would perturb their content
-          # (e.g., adding %2F's into the middle of a Cache-Control value).
-          value = unicode(value, 'utf-8')
+          # Allow non-ASCII data for custom metadata fields.
           cust_metadata_plus[header] = value
           num_cust_metadata_plus_elems += 1
         else:
+          # Don't unicode encode other fields because that would perturb their
+          # content (e.g., adding %2F's into the middle of a Cache-Control
+          # value).
+          _InsistAsciiHeaderValue(header, value)
+          value = str(value)
           metadata_plus[header] = value
           num_metadata_plus_elems += 1
       else:
@@ -303,6 +251,7 @@ class SetMetaCommand(Command):
         else:
           metadata_minus.add(header)
           num_metadata_minus_elems += 1
+
     if (num_metadata_plus_elems != len(metadata_plus)
         or num_cust_metadata_plus_elems != len(cust_metadata_plus)
         or num_metadata_minus_elems != len(metadata_minus)
@@ -329,90 +278,21 @@ class SetMetaCommand(Command):
     metadata_minus.update(cust_metadata_minus)
     return (metadata_minus, metadata_plus)
 
-  def _ParseMetadataSpec(self, spec):
-    self.logger.warning('WARNING: metadata spec syntax (%s)\nis deprecated '
-                        'and will eventually be removed.\nPlease see '
-                        '"gsutil help setmeta" for current syntax' % spec)
-    metadata_minus = set()
-    cust_metadata_minus = set()
-    metadata_plus = {}
-    cust_metadata_plus = {}
-    # Build a count of the keys encountered from each plus and minus arg so we
-    # can check for dupe field specs.
-    num_metadata_plus_elems = 0
-    num_cust_metadata_plus_elems = 0
-    num_metadata_minus_elems = 0
-    num_cust_metadata_minus_elems = 0
 
-    mdf = StringIO.StringIO(spec)
-    for md_arg in csv.reader(mdf).next():
-      if not md_arg:
-        raise CommandException(
-            'Invalid empty metadata specification component.')
-      if md_arg[0] == '-':
-        header = md_arg[1:]
-        if header.find(':') != -1:
-          raise CommandException('Removal spec may not contain ":" (%s).' %
-                                 header)
-        _InsistAsciiHeader(header)
-        # Translate headers to lowercase to match the casing required by
-        # uri.set_metadata().
-        header = header.lower()
-        if _IsCustomMeta(header):
-          cust_metadata_minus.add(header)
-          num_cust_metadata_minus_elems += 1
-        else:
-          metadata_minus.add(header)
-          num_metadata_minus_elems += 1
-      else:
-        parts = md_arg.split(':', 1)
-        if len(parts) != 2:
-          raise CommandException(
-              'Fields being added must include values (%s).' % md_arg)
-        (header, value) = parts
-        _InsistAsciiHeader(header)
-        header = header.lower()
-        if _IsCustomMeta(header):
-          # Allow non-ASCII data for custom metadata fields. Don't unicode
-          # encode other fields because that would perturb their content
-          # (e.g., adding %2F's into the middle of a Cache-Control value).
-          value = unicode(value, 'utf-8')
-          cust_metadata_plus[header] = value
-          num_cust_metadata_plus_elems += 1
-        else:
-          metadata_plus[header] = value
-          num_metadata_plus_elems += 1
-    mdf.close()
-    if (num_metadata_plus_elems != len(metadata_plus)
-        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
-        or num_metadata_minus_elems != len(metadata_minus)
-        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
-        or metadata_minus.intersection(set(metadata_plus.keys()))):
-      raise CommandException('Each header must appear at most once.')
-    other_than_base_fields = (set(metadata_plus.keys())
-        .difference(Key.base_user_settable_fields))
-    other_than_base_fields.update(
-        metadata_minus.difference(Key.base_user_settable_fields))
-    for f in other_than_base_fields:
-      # This check is overly simple; it would be stronger to check, for each
-      # URI argument, whether f.startswith the
-      # uri.get_provider().metadata_prefix, but here we just parse the spec
-      # once, before processing any of the URIs. This means we will not
-      # detect if the user tries to set an x-goog-meta- field on an another
-      # provider's object, for example.
-      if not _IsCustomMeta(f):
-        raise CommandException('Invalid or disallowed header (%s).\n'
-                               'Only these fields (plus x-goog-meta-* fields)'
-                               ' can be set or unset:\n%s' % (f,
-                               sorted(list(Key.base_user_settable_fields))))
-    metadata_plus.update(cust_metadata_plus)
-    metadata_minus.update(cust_metadata_minus)
-    return (metadata_minus, metadata_plus)
+def _InsistAscii(string, message):
+  if not all(ord(c) < 128 for c in string):
+    raise CommandException(message)
 
 
 def _InsistAsciiHeader(header):
-  if not all(ord(c) < 128 for c in header):
-    raise CommandException('Invalid non-ASCII header (%s).' % header)
+  _InsistAscii(header, 'Invalid non-ASCII header (%s).' % header)
+
+
+def _InsistAsciiHeaderValue(header, value):
+  _InsistAscii(
+      value, ('Invalid non-ASCII value (%s) was provided for header %s.'
+              % (value, header)))
+
 
 def _IsCustomMeta(header):
   return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')

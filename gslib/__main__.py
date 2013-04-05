@@ -51,10 +51,11 @@ debug = 0
 def _OutputAndExit(message):
   if debug == 4:
     stack_trace = traceback.format_exc()
-    sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
-                     re.sub('\\n', '\n    ', stack_trace))
+    err = ('DEBUG: Exception stack trace:\n    %s\n' %
+           re.sub('\\n', '\n    ', stack_trace))
   else:
-    sys.stderr.write('%s\n' % message)
+    err = '%s\n' % message
+  sys.stderr.write(err.encode('utf-8'))
   sys.exit(1)
 
 
