@@ -69,7 +69,7 @@ class AclChange(object):
           'AllUsers': '^(AllUsers|All)$',
           'Email': r'^.+@.+\..+$',
           'Id': r'^[0-9A-Fa-f]{64}$',
-          'Domain': r'^[^@]+\..+$',
+          'Domain': r'^[^@]+\.[^@]+$',
           }
       for type_string, regex in re_map.items():
         if re.match(regex, text, re.IGNORECASE):
