@@ -1362,7 +1362,7 @@ class CpCommand(Command):
       uri = blr.GetUri()
       if uri.is_cloud_uri():
         return (uri, uri.names_bucket() or blr.HasPrefix()
-                or blr.GetKey().endswith('/'))
+                or blr.GetKey().name.endswith('/'))
       else:
         return (uri, uri.names_directory())
 

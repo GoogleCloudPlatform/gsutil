@@ -276,6 +276,17 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('obj', actual[0].object_name)
 
+  def testCopyingObjectToObjectUsingDestWildcard(self):
+    """Tests copying an object to an object using a dest wildcard"""
+    src_bucket_uri = self.CreateBucket(test_objects=['obj'])
+    dst_bucket_uri = self.CreateBucket(test_objects=['dstobj'])
+    self.RunCommand('cp', [suri(src_bucket_uri, 'obj'),
+                    '%s*' % dst_bucket_uri.uri])
+    actual = list(self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '*')).IterUris())
+    self.assertEqual(1, len(actual))
+    self.assertEqual('dstobj', actual[0].object_name)
+
   def testCopyingObjsAndFilesToDir(self):
     """Tests copying objects and files to a directory"""
     src_bucket_uri = self.CreateBucket(test_objects=['f1'])
