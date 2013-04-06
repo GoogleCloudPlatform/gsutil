@@ -36,6 +36,7 @@ import wildcard_iterator
 import xml.dom.minidom
 
 from boto import handler
+from boto.exception import GSResponseError
 from boto.storage_uri import StorageUri
 from getopt import GetoptError
 from gslib import util
@@ -365,12 +366,23 @@ class Command(object):
       assert self.command_name != 'setdefacl'
       self.logger.info('Setting ACL on %s...' %
                        name_expansion_result.expanded_uri_str)
-      if self.canned:
-        exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
-                            self.headers)
-      else:
-        exp_src_uri.set_xml_acl(acl_arg, exp_src_uri.object_name, False,
-                                self.headers)
+      try:
+        if self.canned:
+          exp_src_uri.set_acl(acl_arg, exp_src_uri.object_name, False,
+                              self.headers)
+        else:
+          exp_src_uri.set_xml_acl(acl_arg, exp_src_uri.object_name, False,
+                                  self.headers)
+      except GSResponseError as e:
+        if self.continue_on_error:
+          exc_name, error_detail = util.ExtractErrorDetail(e)
+          self.everything_set_okay = False
+          if error_detail:
+            sys.stderr.write('%s: status=%d, code=%s, reason=%s, detail=%s.\n' %
+                             (exc_name, e.status, e.code, e.reason,
+                              error_detail))
+        else:
+          raise
 
     # If user specified -R option, convert any bucket args to bucket wildcards
     # (e.g., gs://bucket/*), to prevent the operation from being  applied to
@@ -401,7 +413,7 @@ class Command(object):
     # perform requests with sequential function calls in current process.
     self.Apply(_SetAclFunc, name_expansion_iterator, _SetAclExceptionHandler)
 
-    if not self.everything_set_okay:
+    if not self.everything_set_okay and not self.continue_on_error:
       raise CommandException('ACLs for some objects could not be set.')
 
   def _RunSingleThreadedSetAcl(self, acl_arg, uri_args):

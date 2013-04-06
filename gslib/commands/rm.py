@@ -74,7 +74,8 @@ _detailed_help_text = ("""
 
 <B>OPTIONS</B>
   -f          Continues silently (without printing error messages) despite
-              errors when removing multiple objects.
+              errors when removing multiple objects. With this option the gsutil
+              exit status will be 0 even if some objects couldn't be removed.
 
   -R, -r      Causes bucket contents to be removed recursively (i.e., including
               all objects and subdirectories). Will not delete the bucket
@@ -228,7 +229,6 @@ class RmCommand(Command):
       self.logger.info('Removing %s...', name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
-
       except:
         if self.continue_on_error:
           self.everything_removed_okay = False

@@ -33,7 +33,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil setacl [-R] file-or-canned_acl_name uri...
+  gsutil setacl [-f] [-R] file-or-canned_acl_name uri...
 
 
 <B>DESCRIPTION</B>
@@ -83,6 +83,10 @@ _detailed_help_text = ("""
               specified URI.
 
   -a          Performs setacl request on all object versions.
+
+  -f          Normally gsutil stops at the first error. The -f option causes it
+              to continue when it encounters errors. With this option the gsutil
+              exit status will be 0 even if some ACLs couldn't be set.
 """)
 
 
@@ -100,7 +104,7 @@ class SetAclCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'aRrv',
+    SUPPORTED_SUB_ARGS : 'afRrv',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -125,10 +129,13 @@ class SetAclCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    self.continue_on_error = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-a':
           self.all_versions = True
+        elif o == '-f':
+          self.continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
