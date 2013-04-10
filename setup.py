@@ -38,6 +38,7 @@ requires = [
     'google-api-python-client>=1.1',
     'pyOpenSSL>=0.13',
     'crcmod>=1.7',
+    'SocksiPy-branch>=1.01',
 ]
 
 dependency_links = [

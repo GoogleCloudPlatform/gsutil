@@ -612,7 +612,7 @@ class ConfigCommand(Command):
       for scope in oauth2_scopes:
         config_file.write('#     %s\n' % scope)
       config_file.write('gs_oauth2_refresh_token = %s\n\n' %
-          oauth2_refresh_token.refresh_token)
+          oauth2_refresh_token)
     else:
       config_file.write('# To add Google OAuth2 credentials ("gs://" URIs), '
           'edit and uncomment the\n# following line:\n'

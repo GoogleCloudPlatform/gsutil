@@ -14,15 +14,12 @@ class OAuth2Auth(AuthHandler):
     if (provider.name == 'google'
         and config.has_option('Credentials', 'gs_oauth2_refresh_token')):
       self.oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(config)
-      self.refresh_token = oauth2_client.RefreshToken(
-          self.oauth2_client,
-          config.get('Credentials', 'gs_oauth2_refresh_token'))
     else:
       raise NotReadyToAuthenticate()
 
   def add_auth(self, http_request):
     http_request.headers['Authorization'] = \
-        self.refresh_token.GetAuthorizationHeader()
+        self.oauth2_client.GetAuthorizationHeader()
 
 class OAuth2ServiceAccountAuth(AuthHandler):
   
@@ -34,11 +31,6 @@ class OAuth2ServiceAccountAuth(AuthHandler):
         and config.has_option('Credentials', 'gs_service_key_file')):
       self.oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(config, 
           cred_type=CredTypes.OAUTH2_SERVICE_ACCOUNT)
-      # The gs_service_client_id field is just being used as a constant
-      # specific to the service account to compute the hash for the name
-      # of the cache file.
-      self.refresh_token = oauth2_client.RefreshToken(self.oauth2_client,
-          config.get('Credentials', 'gs_service_client_id'))
       
       # If we make it to this point, then we will later attempt to authenticate
       # as a service account based on how the boto auth plugins work. This is
@@ -52,5 +44,5 @@ class OAuth2ServiceAccountAuth(AuthHandler):
  
   def add_auth(self, http_request):
     http_request.headers['Authorization'] = \
-        self.refresh_token.GetAuthorizationHeader()
+        self.oauth2_client.GetAuthorizationHeader()
          

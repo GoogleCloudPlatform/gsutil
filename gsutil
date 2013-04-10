@@ -42,6 +42,7 @@ THIRD_PARTY_LIBS = [
     ('google-api-python-client', ''),
     ('httplib2', 'python2'),
     ('boto', ''),
+    ('socksipy-branch', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
