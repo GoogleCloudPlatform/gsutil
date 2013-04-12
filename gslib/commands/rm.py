@@ -71,6 +71,12 @@ _detailed_help_text = ("""
 
     gsutil rm *.txt
 
+  WARNING: Object removal cannot be undone. Google Cloud Storage is designed
+  to give developers a high amount of flexibility and control over their data,
+  and Google maintains strict controls over the processing and purging of
+  deleted data. To protect yourself from mistakes, you can configure object
+  versioning on your bucket(s). See 'gsutil help versioning' for details.
+
 
 <B>OPTIONS</B>
   -f          Continues silently (without printing error messages) despite
