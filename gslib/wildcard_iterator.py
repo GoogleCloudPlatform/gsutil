@@ -393,18 +393,19 @@ class FileWildcardIterator(WildcardIterator):
         remaining_wildcard = '*'
       # Skip slash(es).
       remaining_wildcard = remaining_wildcard.lstrip(os.sep)
-      filepaths = []
-      for dirpath, unused_dirnames, filenames in os.walk(base_dir):
-        filepaths.extend(
-            os.path.join(dirpath, f) for f in fnmatch.filter(filenames,
-                                                             remaining_wildcard)
-        )
+      filepaths = self._iter_dir(base_dir, remaining_wildcard)
     else:
       # Not a recursive wildcarding request.
-      filepaths = glob.glob(wildcard)
+      filepaths = glob.iglob(wildcard)
     for filepath in filepaths:
       expanded_uri = self.wildcard_uri.clone_replace_name(filepath)
       yield BucketListingRef(expanded_uri)
+
+  def _iter_dir(self, dir, wildcard):
+    """An iterator over the specified dir and wildcard."""
+    for dirpath, unused_dirnames, filenames in os.walk(dir):
+      for f in fnmatch.filter(filenames, wildcard):
+        yield os.path.join(dirpath, f)
 
   def IterKeys(self):
     """
