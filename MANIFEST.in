@@ -1,3 +1,4 @@
+include CHECKSUM
 include COPYING
 include LICENSE.third_party
 include README.md
