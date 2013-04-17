@@ -169,8 +169,8 @@ class SetMetaCommand(Command):
       self.logger.info('Setting metadata on %s...', exp_src_uri)
 
       key = exp_src_uri.get_key()
-      metageneration = key.metageneration
-      generation = key.generation
+      metageneration = getattr(key, 'metageneration', None)
+      generation = getattr(key, 'generation', None)
 
       headers = {}
       if generation:
