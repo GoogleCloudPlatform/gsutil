@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import binascii
+import re
 
 from boto.s3.deletemarker import DeleteMarker
 from gslib.bucket_listing_ref import BucketListingRef
@@ -39,6 +40,8 @@ from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
 import boto
+
+TIMESTAMP_RE = re.compile(r'(.*)\.[0-9]*Z')
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -336,7 +339,8 @@ class LsCommand(Command):
       return (1, 0)
     elif listing_style == ListingStyle.LONG:
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
-      timestamp = obj.last_modified[:19].decode('utf8').encode('ascii')
+      timestamp = TIMESTAMP_RE.sub(
+          r'\1Z', obj.last_modified.decode('utf8').encode('ascii'))
       size_string = (MakeHumanReadable(obj.size)
                      if self.human_readable else str(obj.size))
       if not isinstance(obj, DeleteMarker):
