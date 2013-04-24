@@ -237,9 +237,6 @@ class LsCommand(Command):
     Args:
       bucket_uri: StorageUri being listed.
       listing_style: ListingStyle enum describing type of output desired.
-
-    Returns:
-      Tuple (total objects, total bytes) in the bucket.
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
@@ -248,9 +245,6 @@ class LsCommand(Command):
 
     location_constraint = bucket_uri.get_location(validate=False,
                                                   headers=self.headers)
-    location_output = ''
-    if location_constraint:
-      location_output = '\n\tLocationConstraint:\t%s' % location_constraint
     storage_class = bucket_uri.get_storage_class(validate=False,
                                                  headers=self.headers)
     self.proj_id_handler.FillInProjectHeaderIfNeeded(
@@ -258,26 +252,38 @@ class LsCommand(Command):
     fields = {
         'bucket': bucket_uri,
         'storage_class': storage_class,
-        'location_output': location_output,
+        'location_constraint': location_constraint or 'None',
         'versioning': bucket_uri.get_versioning_config(self.headers),
         'acl': bucket_uri.get_acl(False, self.headers),
         'default_acl': bucket_uri.get_def_acl(False, self.headers),
     }
-    # Logging and website need a bit more work to make them human-readable.
-    for message in [bucket_uri.get_website_config(self.headers),
-                    bucket_uri.get_logging_config(self.headers)]:
-      field, content = message.items()[0]  # expect only one entry in dict
-      fields[field] = ', '.join(
-          '%s: %s' % (property, value)
-          for property, value in sorted(content.items())) or False
+    # For other configuration fields, just show them as "Present/None".
+    # website_config is a dictionary of {"WebsiteConfiguration": config}
+    website_config = bucket_uri.get_website_config(self.headers)
+    fields["website_config"] = (
+        "Present" if website_config["WebsiteConfiguration"] else "None")
+    # logging_config is a dictionary of {"Logging": config}
+    logging_config = bucket_uri.get_logging_config(self.headers)
+    fields["logging_config"] = (
+        "Present" if logging_config["Logging"] else "None")
+    # cors_config wraps a list of cors
+    cors_config = bucket_uri.get_cors(self.headers)
+    fields["cors_config"] = "Present" if cors_config.cors else "None"
+    # lifecycle_config is a list itself
+    lifecycle_config = bucket_uri.get_lifecycle_config(self.headers)
+    fields["lifecycle_config"] = (
+        "Present" if lifecycle_config else "None")
 
     print('{bucket} :\n'
-          '\tStorageClass:\t\t{storage_class}{location_output}\n'
-          '\tVersioning enabled:\t{versioning}\n'
-          '\tLogging:\t\t{Logging}\n'
-          '\tWebsiteConfiguration:\t{WebsiteConfiguration}\n'
-          '\tACL:\t\t\t{acl}\n'
-          '\tDefault ACL:\t\t{default_acl}'.format(**fields))
+          '\tStorage class:\t\t\t{storage_class}\n'
+          '\tLocation constraint:\t\t{location_constraint}\n'
+          '\tVersioning enabled:\t\t{versioning}\n'
+          '\tLogging configuration:\t\t{logging_config}\n'
+          '\tWebsite configuration:\t\t{website_config}\n'
+          '\tCORS configuration: \t\t{cors_config}\n'
+          '\tLifecycle configuration:\t{lifecycle_config}\n'
+          '\tACL:\t\t\t\t{acl}\n'
+          '\tDefault ACL:\t\t\t{default_acl}'.format(**fields))
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref, listing_style):
     """Print listing info for given bucket_listing_ref.

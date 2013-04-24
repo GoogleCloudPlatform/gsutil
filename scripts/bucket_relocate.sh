@@ -150,6 +150,7 @@ metawebcfg=$basedir/relocate-webcfg-for-
 metalogging=$basedir/relocate-logging-for-
 metacors=$basedir/relocate-cors-for-
 metavers=$basedir/relocate-vers-for-
+metalifecycle=$basedir/relocate-lifecycle-for-
 
 # This script requires Bash 4.0 or higher
 if [ ${BASH_VERSION:0:1} -lt 4 ]; then
@@ -392,8 +393,8 @@ if [ $? -ne 0 ]; then
 fi
 major=${gsutil_version:15:1}
 minor=${gsutil_version:17:2}
-if [ $major -lt 3 ] || ( [ $major -eq 3 ] && [ $minor -lt 30 ] ); then
-  EchoErr "Incorrect version of gsutil. Need 3.30 or greater. Have: $gsutil_version"
+if [ $major -lt 3 ] || ( [ $major -eq 3 ] && [ $minor -lt 32 ] ); then
+  EchoErr "Incorrect version of gsutil. Need 3.32 or greater. Have: $gsutil_version"
   exit 1
 fi
 
@@ -550,6 +551,11 @@ function Stage1 {
         exit 1
       fi
       versioning=`cat $metavers$short_name | head -1`
+      $gsutil lifecycle get $src > $metalifecycle$short_name
+      if [ $? -ne 0 ]; then
+        EchoErr "Failed to backup the lifecycle configuration for $src"
+        exit 1
+      fi
       LogStepEnd $src 7
     fi
 
@@ -676,6 +682,13 @@ function Stage2 {
           EchoErr "Failed to set the versioning configuration on $src"
           exit 1
         fi
+      fi
+
+      # lifecycle
+      $gsutil lifecycle set $metalifecycle$short_name $src
+      if [ $? -ne 0 ]; then
+        EchoErr "Failed to set the lifecycle configuration on $src"
+        exit 1
       fi
 
       LogStepEnd $src 11
