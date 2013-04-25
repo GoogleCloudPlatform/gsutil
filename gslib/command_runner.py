@@ -30,7 +30,7 @@ from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.exception import CommandException
 from gslib.storage_uri_builder import StorageUriBuilder
-from gslib.util import CreateTrackerDirIfNeeded
+from gslib.util import HasConfiguredCredentials
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
@@ -135,9 +135,11 @@ class CommandRunner(object):
     # Don't try to interact with user if gsutil is not connected to a tty (e.g.,
     # if being run from cron), or if they are running the update command (which
     # could otherwise cause an additional note that an update is available when
-    # they are already trying to perform an update)
+    # they are already trying to perform an update) or if they don't have
+    # credentials configured.
     if (not sys.stdout.isatty() or not sys.stderr.isatty()
-        or not sys.stdin.isatty() or command_name == 'update'):
+        or not sys.stdin.isatty() or command_name == 'update'
+        or not HasConfiguredCredentials()):
       return False
 
     software_update_check_period = boto.config.get(
