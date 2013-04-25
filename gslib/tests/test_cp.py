@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import boto
+import dateutil.parser
 import os
 import re
 import gslib.tests.testcase as testcase
@@ -387,3 +388,56 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri.clone_replace_name('o2'))],
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)
+
+  def test_cp_manifest_upload(self):
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
+
+    fpath = self.CreateTempFile(contents='bar')
+    logpath = self.CreateTempFile(contents='')
+    stdout = self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi],
+                            return_stdout=True)
+    with open(logpath, 'r') as f:
+      lines = f.readlines()
+    self.assertEqual(len(lines), 2)
+
+    expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
+                        'UploadId', 'Source Size', 'Bytes Transferred',
+                        'Result', 'Description']
+    self.assertEqual(expected_headers, lines[0].strip().split(','))
+    results = lines[1].strip().split(',')
+    self.assertEqual(results[0][:7], 'file://')  # source
+    self.assertEqual(results[1][:5], 'gs://')  # destination
+    start_date = dateutil.parser.parse(results[2])
+    end_date = dateutil.parser.parse(results[3])
+    self.assertEqual(end_date > start_date, True)
+    self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
+    self.assertEqual(int(results[6]), 3)  # Source Size
+    self.assertEqual(int(results[7]), 3)  # Bytes Transferred
+    self.assertEqual(results[8], 'OK')  # Result
+
+  def test_cp_manifest_download(self):
+    key_uri = self.CreateObject(contents='foo')
+    fpath = self.CreateTempFile(contents='')
+    logpath = self.CreateTempFile(contents='')
+    stdout = self.RunGsUtil(['cp', '-L', logpath, suri(key_uri), fpath],
+                            return_stdout=True)
+    with open(logpath, 'r') as f:
+      lines = f.readlines()
+    self.assertEqual(len(lines), 2)
+
+    expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
+                        'UploadId', 'Source Size', 'Bytes Transferred',
+                        'Result', 'Description']
+    self.assertEqual(expected_headers, lines[0].strip().split(','))
+    results = lines[1].strip().split(',')
+    self.assertEqual(results[0][:5], 'gs://')  # source
+    self.assertEqual(results[1][:7], 'file://')  # destination
+    start_date = dateutil.parser.parse(results[2])
+    end_date = dateutil.parser.parse(results[3])
+    self.assertEqual(end_date > start_date, True)
+    # TODO: fix this when CRC32C's are added to the manifest.
+    # self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
+    self.assertEqual(int(results[6]), 3)  # Source Size
+    self.assertEqual(int(results[7]), 3)  # Bytes Transferred
+    self.assertEqual(results[8], 'OK')  # Result
