@@ -19,6 +19,7 @@
 import os
 from setuptools import setup, find_packages
 from setuptools.command import build_py
+from setuptools.command import sdist
 
 long_desc = """
 gsutil is a Python application that lets you access Google Cloud Storage from
@@ -32,19 +33,21 @@ management tasks, including:
 """
 
 requires = [
-    'boto==2.8.0-dev',
+    'boto==2.9.0-dev',
     'httplib2>=0.8',
     'python-gflags>=2.0',
     'google-api-python-client>=1.1',
     'pyOpenSSL>=0.13',
     'crcmod>=1.7',
-    'SocksiPy-branch>=1.01',
+    # Not using 1.02 because of:
+    #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
+    'SocksiPy-branch==1.01',
 ]
 
 dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
-    'https://github.com/boto/boto/archive/55de90efb3193f2ffbdf66890323161e626edaf3.tar.gz#egg=boto-2.8.0-dev',
+    'https://github.com/boto/boto/archive/de09d40d184054e081c128a71dceb0fd75670b4f.tar.gz#egg=boto-2.9.0-dev',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
@@ -55,6 +58,45 @@ with open(os.path.join(CURDIR, 'VERSION'), 'r') as f:
 
 with open(os.path.join(CURDIR, 'CHECKSUM'), 'r') as f:
   CHECKSUM = f.read()
+
+
+def PlaceNeededFiles(self, target_dir):
+  target_dir = os.path.join(target_dir, 'gslib')
+  self.mkpath(target_dir)
+
+  # Copy the gsutil root VERSION file into gslib module.
+  with open(os.path.join(target_dir, 'VERSION'), 'w') as f:
+    f.write(VERSION)
+
+  # Copy the gsutil root CHECKSUM file into gslib module.
+  with open(os.path.join(target_dir, 'CHECKSUM'), 'w') as f:
+    f.write(CHECKSUM)
+
+  # Copy the Boto test module required by gsutil unit tests.
+  tests_dir = os.path.join(target_dir, 'tests')
+  self.mkpath(tests_dir)
+  mock_storage_dst = os.path.join(tests_dir, 'mock_storage_service.py')
+  mock_storage_src1 = os.path.join(
+      BOTO_DIR, 'tests', 'integration', 's3', 'mock_storage_service.py')
+  mock_storage_src2 = os.path.join(
+      CURDIR, 'gslib', 'tests', 'mock_storage_service.py')
+  mock_storage_src = (
+      mock_storage_src1
+      if os.path.isfile(mock_storage_src1) else mock_storage_src2)
+  if not os.path.isfile(mock_storage_src):
+    raise Exception('Unable to find required boto test source file at %s or %s.'
+                    % (mock_storage_src1, mock_storage_src2))
+  with open(mock_storage_src, 'r') as f:
+    mock_storage_contents = f.read()
+  with open(mock_storage_dst, 'w') as f:
+    f.write('#\n'
+            '# This file was copied during gsutil package generation from\n'
+            '# the Boto test suite, originally located at:\n'
+            '#   tests/integration/s3/mock_storage_service.py\n'
+            '# DO NOT MODIFY\n'
+            '#\n\n')
+    f.write(mock_storage_contents)
+
 
 class CustomBuildPy(build_py.build_py):
 
@@ -70,38 +112,16 @@ class CustomBuildPy(build_py.build_py):
 
   def run(self):
     if not self.dry_run:
-      target_dir = os.path.join(self.build_lib, 'gslib')
-      self.mkpath(target_dir)
+      PlaceNeededFiles(self, self.build_lib)
+      build_py.build_py.run(self)
 
-      # Copy over the gsutil root VERSION file into gslib module.
-      with open(os.path.join(target_dir, 'VERSION'), 'w') as f:
-        f.write(VERSION)
 
-      # Copy over the gsutil root CHECKSUM file into gslib module.
-      with open(os.path.join(target_dir, 'CHECKSUM'), 'w') as f:
-        f.write(CHECKSUM)
+class CustomSDist(sdist.sdist):
 
-      # Copy over the Boto test module required by gsutil unit tests.
-      tests_dir = os.path.join(target_dir, 'tests')
-      self.mkpath(tests_dir)
-      mock_storage_dst = os.path.join(tests_dir, 'mock_storage_service.py')
-      mock_storage_src = os.path.join(
-          BOTO_DIR, 'tests', 'integration', 's3', 'mock_storage_service.py')
-      if not os.path.isfile(mock_storage_src):
-        raise Exception('Unable to find required boto test source file at %s.'
-                        % mock_storage_src)
-      with open(mock_storage_src, 'r') as f:
-        mock_storage_contents = f.read()
-      with open(mock_storage_dst, 'w') as f:
-        f.write('#\n'
-                '# This file was copied during gsutil package generation from\n'
-                '# the Boto test suite, originally located at:\n'
-                '#   tests/integration/s3/mock_storage_service.py\n'
-                '# DO NOT MODIFY\n'
-                '#\n\n')
-        f.write(mock_storage_contents)
+  def make_release_tree(self, base_dir, files):
+    sdist.sdist.make_release_tree(self, base_dir, files)
+    PlaceNeededFiles(self, base_dir)
 
-    build_py.build_py.run(self)
 
 setup(
     name='gsutil',
@@ -137,5 +157,6 @@ setup(
     dependency_links=dependency_links,
     cmdclass={
         'build_py': CustomBuildPy,
+        'sdist': CustomSDist,
     }
 )

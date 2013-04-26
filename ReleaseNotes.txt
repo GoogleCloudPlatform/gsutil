@@ -1,3 +1,65 @@
+Release 3.27 (release-date: 2013-04-25)
+
+
+New Features
+------------
+
+  - Added a human readable option (-h) to ls command.
+  - Changed WildcardIterator not to materialize list of all matching files from
+    directory listing (so works faster when walking over large directories)
+  - Added -f option to setacl command to allow command to continue after errors
+    encountered.
+  - Add manifest log support for the cp command.
+  - Added never option for check_hashes_config; fixed bug that assumes an ETag
+    is always returned from server.
+  - Made gsutil provide friendlier error message if attempting non-public data
+    access with missing credentials.
+  - Set 70 second default socket timeout for httplib.
+  - Add ability to run a single test class or function with the test command.
+
+
+Bug Fixes
+---------
+
+  - Don't check for updates if the user has no credentials configured. This
+    fixes a bug for users without credentials trying to use gsutil for first
+    time.
+  - Fixed case where chacl command incorrectly recognized an email address as a
+    domain.
+  - Fix setmeta command for S3 objects.
+  - Fixed bug where wildcarded dest URI attempted string op on Key object.
+  - Fixed case where gsutil -q outputted progress output when doing a streaming
+    upload.
+  - Error handling for out of space during downloads.
+  - Include ISO 8601-required "Z" at end of timestamp string for gsutil ls -l,
+    to be spec-compliant.
+  - Removed deprecated setmeta syntax and fixed unicode issues.
+  - Changed update command not to suggest running sudo if running under Cygwin.
+  - Removed references to deprecated gs-discussion forum from gsutil built-in
+    help.
+  - Add literal quotes around CORS config example URL in gsutil setcors help to
+    avoid having example URL turn into an HREF in auto-generated doc.
+
+
+Other Changes
+---------
+
+  - Added proper setup.py to make gsutil installable via PyPi.
+  - Added warning to gsutil built-in help that delete operations cannot be
+    undone.
+  - Replaced gsutil's OAuth2 client implementation with oauth2client.
+  - Updates to perfdiag.
+  - Updated config help about currently supported settings.
+  - Fixes to setup.py and modified version command.
+  - Move gslib/commands/cred_types.py to gslib, so only Command subclasses live
+    in gslib/commands.
+  - Updated gsutil setmeta help no longer to warn that setmeta with versioning
+    enabled creates a new object.
+
+
+================================================================================
+
+
 Release 3.26 (release-date: 2013-03-25)
 
 

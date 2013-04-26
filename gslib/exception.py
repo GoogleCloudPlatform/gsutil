@@ -19,7 +19,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-"""gsutil exceptions."""
+"""gsutil exceptions.
+
+The exceptions in this module are for use across multiple different classes.
+"""
 
 
 class AbortException(StandardError):

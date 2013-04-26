@@ -16,6 +16,7 @@
 import binascii
 import boto
 import crcmod
+import datetime
 import errno
 import gzip
 import hashlib
@@ -338,6 +339,21 @@ _detailed_help_text = ("""
   -e            Exclude symlinks. When specified, symbolic links will not be
                 copied.
 
+  -L <file>     Outputs a manifest log file with detailed information about each
+                item that was copied. This manifest contains the following
+                information for each item:
+
+                - Source path.
+                - Destination path.
+                - Source size.
+                - Bytes transferred.
+                - MD5 hash.
+                - UTC date and time transfer was started in ISO 8601 format.
+                - UTC date and time transfer was completed in ISO 8601 format.
+                - Upload id, if a resumable upload was performed.
+                - Final result of the attempted upload, success or failure.
+                - Failure details, if any.
+
   -n            No-clobber. When specified, existing files or objects at the
                 destination will not be overwritten. Any items that are skipped
                 by this option will be reported as being skipped. This option
@@ -462,7 +478,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:cDeIMNnpqrRtvz:',
+    SUPPORTED_SUB_ARGS : 'a:cDeIL:MNnpqrRtvz:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.
@@ -832,7 +848,8 @@ class CpCommand(Command):
       (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
       return f_frsize * f_bavail
 
-  def _PerformResumableUploadIfApplies(self, fp, dst_uri, canned_acl, headers):
+  def _PerformResumableUploadIfApplies(self, fp, src_uri, dst_uri, canned_acl,
+                                       headers):
     """
     Performs resumable upload if supported by provider and file is above
     threshold, else performs non-resumable upload.
@@ -861,6 +878,10 @@ class CpCommand(Command):
       # initial value of -1 if transferring the whole file, so clamp at 0
       bytes_transferred = file_size - max(
                               res_upload_handler.upload_start_point, 0)
+      if self.use_manifest:
+        # Save the upload indentifier in the manifest file.
+        self.manifest.Set(
+            src_uri, 'upload_id', res_upload_handler.get_upload_id())
     else:
       bytes_transferred = file_size
     end_time = time.time()
@@ -998,7 +1019,7 @@ class CpCommand(Command):
       gzip_fp = open(gzip_path, 'rb')
       try:
         (elapsed_time, bytes_transferred, result_uri) = (
-            self._PerformResumableUploadIfApplies(gzip_fp, dst_uri,
+            self._PerformResumableUploadIfApplies(gzip_fp, src_uri, dst_uri,
                                                   canned_acl, headers))
       finally:
         gzip_fp.close()
@@ -1026,7 +1047,7 @@ class CpCommand(Command):
           file_uri.close()
       try:
         (elapsed_time, bytes_transferred, result_uri) = (
-            self._PerformResumableUploadIfApplies(src_key.fp, dst_uri,
+            self._PerformResumableUploadIfApplies(src_key.fp, src_uri, dst_uri,
                                                   canned_acl, headers))
       finally:
         if src_key.is_stream():
@@ -1266,8 +1287,8 @@ class CpCommand(Command):
           # We don't attempt to preserve ACLs across providers because
           # GCS and S3 support different ACLs and disjoint principals.
           raise NotImplementedError('Cross-provider cp -p not supported')
-    return self._PerformResumableUploadIfApplies(KeyFile(src_key), dst_uri,
-                                                 canned_acl, headers)
+    return self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
+                                                 dst_uri, canned_acl, headers)
 
   def _PerformCopy(self, src_uri, dst_uri):
     """Performs copy from src_uri to dst_uri, handling various special cases.
@@ -1293,6 +1314,10 @@ class CpCommand(Command):
     src_key = src_uri.get_key(False, headers)
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
+    
+    if self.use_manifest:
+      # Set the source size in the manifest.
+      self.manifest.Set(src_uri, 'size', getattr(src_key, 'size', None))
 
     # On Windows, stdin is opened as text mode instead of binary which causes
     # problems when piping a binary file, so this switches it to binary mode.
@@ -1315,8 +1340,7 @@ class CpCommand(Command):
         # In order to save on unnecessary uploads/downloads we perform both
         # checks. However, this may come at the cost of additional HTTP calls.
         if dst_uri.exists(headers):
-          self.logger.info('Skipping existing item: %s' % dst_uri.uri)
-          return (0, 0, None)
+          raise ItemExistsError()
         if dst_uri.is_cloud_uri() and dst_uri.scheme == 'gs':
           headers['x-goog-if-generation-match'] = '0'
 
@@ -1634,17 +1658,36 @@ class CpCommand(Command):
 
       elapsed_time = bytes_transferred = 0
       try:
+        if self.use_manifest:
+          self.manifest.Initialize(exp_src_uri, dst_uri)
         (elapsed_time, bytes_transferred, result_uri) = (
             self._PerformCopy(exp_src_uri, dst_uri))
+        if self.use_manifest:
+          if hasattr(dst_uri, 'md5'):
+            self.manifest.Set(exp_src_uri, 'md5', dst_uri.md5)
+          self.manifest.SetResult(exp_src_uri, bytes_transferred, 'OK')
+      except ItemExistsError:
+        message = 'Skipping existing item: %s' % dst_uri.uri
+        self.logger.info(message)
+        if self.use_manifest:
+          self.manifest.SetResult(exp_src_uri, 0, 'skip', message)
       except Exception, e:
         if self._IsNoClobberServerException(e):
-          self.logger.info('Rejected (noclobber): %s' % dst_uri.uri)
+          message = 'Rejected (noclobber): %s' % dst_uri.uri
+          self.logger.info(message)
+          if self.use_manifest:
+            self.manifest.SetResult(exp_src_uri, 0, 'skip', message)
         elif self.continue_on_error:
-          self.logger.error('Error copying %s: %s' % (src_uri.uri,
-                                                               str(e)))
+          message = 'Error copying %s: %s' % (src_uri.uri, str(e))
           self.copy_failure_count += 1
+          self.logger.error(message)
+          if self.use_manifest:
+            self.manifest.SetResult(exp_src_uri, 0, 'error', message)
         else:
+          if self.use_manifest:
+            self.manifest.SetResult(exp_src_uri, 0, 'error', str(e))
           raise
+
       if self.print_ver:
         # Some cases don't return a version-specific URI (e.g., if destination
         # is a file).
@@ -1753,10 +1796,11 @@ class CpCommand(Command):
     self.daisy_chain = False
     self.read_args_from_stdin = False
     self.print_ver = False
+    self.use_manifest = False
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     if self.sub_opts:
-      for o, unused_a in self.sub_opts:
+      for o, a in self.sub_opts:
         if o == '-c':
           self.continue_on_error = True
         elif o == '-D':
@@ -1765,6 +1809,9 @@ class CpCommand(Command):
           self.exclude_symlinks = True
         elif o == '-I':
           self.read_args_from_stdin = True
+        elif o == '-L':
+          self.use_manifest = True
+          self.manifest = self._Manifest(a)
         elif o == '-M':
           # Note that we signal to the cp command to perform a move (copy
           # followed by remove) and use directory-move naming rules by passing
@@ -1912,6 +1959,101 @@ class CpCommand(Command):
     return self.no_clobber and (
         (isinstance(e, GSResponseError) and e.status==412) or
         (isinstance(e, ResumableUploadException) and 'code 412' in e.message))
+
+  class _Manifest(object):
+    """Stores the manifest items for the CpCommand class."""
+
+    def __init__(self, path):
+      # self.items contains a dictionary of rows
+      self.items = {}
+      self.lock = threading.Lock()
+      self.manifest_fp = None
+      self._CreateManifestFile(path)
+      # Write the headers in the manifest file.
+      self.manifest_fp.write(
+          ','.join([
+              'Source',
+              'Destination',
+              'Start',
+              'End',
+              'Md5',
+              'UploadId',
+              'Source Size',
+              'Bytes Transferred',
+              'Result',
+              'Description']) + '\n')
+
+    def __del__(self):
+      if self.manifest_fp:
+        self.manifest_fp.close()
+
+    def _CreateManifestFile(self, filePath):
+      """Opens the manifest file and assigns it to the file pointer."""
+      try:
+        # This file pointer will be closed in the destructor.
+        self.manifest_fp = open(filePath, 'w', 1)  # 1 == line buffered
+      except IOError:
+        raise CommandException('Could not create manifest file.')
+
+    def Set(self, uri, key, value):
+      if value is None:
+        # In case we don't have any information to set we bail out here.
+        # This is so that we don't clobber existing information.
+        # To zero information pass '' instead of None.
+        return
+      if uri in self.items:
+        self.items[uri][key] = value
+      else:
+        self.items[uri] = {key:value}
+
+    def Initialize(self, source_uri, destination_uri):
+      # Always use the source_uri as the key for the item. This is unique.
+      self.Set(source_uri, 'source_uri', source_uri)
+      self.Set(source_uri, 'destination_uri', destination_uri)
+      self.Set(source_uri, 'start_time', datetime.datetime.utcnow())
+
+    def SetResult(self, source_uri, bytes_transferred, result,
+                  description=''):
+      self.Set(source_uri, 'bytes', bytes_transferred)
+      self.Set(source_uri, 'result', result)
+      self.Set(source_uri, 'description', description)
+      self.Set(source_uri, 'end_time', datetime.datetime.utcnow())
+      self._WriteRowToManifestFile(source_uri)
+      self._RemoveItemFromManifest(source_uri)
+
+    def _WriteRowToManifestFile(self, uri):
+      row_item = self.items[uri]
+      data = [
+        str(row_item['source_uri']),
+        str(row_item['destination_uri']),
+        '%sZ' % row_item['start_time'].isoformat(),
+        '%sZ' % row_item['end_time'].isoformat(),
+        row_item['md5'] if 'md5' in row_item else '',
+        row_item['upload_id'] if 'upload_id' in row_item else '',
+        str(row_item['size']) if 'size' in row_item else '',
+        str(row_item['bytes']) if 'bytes' in row_item else '',
+        row_item['result'],
+        row_item['description']]
+
+      # Aquire a lock to prevent multiple threads writing to the same file at
+      # the same time. This would cause a garbled mess in the manifest file.
+      self.lock.acquire()
+      try:
+        self.manifest_fp.write('%s\n' % ','.join(data))
+      finally:
+        self.lock.release()
+
+    def _RemoveItemFromManifest(self, uri):
+      # Remove the item from the dictionary since we're done with it and
+      # we don't want the dictionary to grow too large in memory for no good
+      # reason.
+      del self.items[uri]
+
+
+class ItemExistsError(Exception):
+  """Exception class for objects that are skipped because they already exist."""
+  pass
+
 
 def _GetPathBeforeFinalDir(uri):
   """
