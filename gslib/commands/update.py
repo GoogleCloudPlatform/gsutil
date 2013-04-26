@@ -262,7 +262,7 @@ class UpdateCommand(Command):
               'Invalid update object URI. Must name a single .tar.gz file.')
     else:
       update_from_uri_str = GSUTIL_PUB_TARBALL
-    
+
     # Try to retrieve version info from tarball metadata; failing that; download
     # the tarball and extract the VERSION file. The version lookup will fail
     # when running the update system test, because it retrieves the tarball from
@@ -351,7 +351,7 @@ class UpdateCommand(Command):
   def _FetchAndOpenGsutilTarball(self, update_from_uri_str):
     self.command_runner.RunNamedCommand(
         'cp', [update_from_uri_str, 'file://gsutil.tar.gz'], self.headers,
-        self.debug)
+        self.debug, skip_update_check=True)
     # Note: tf is closed in _CleanUpUpdateCommand.
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.

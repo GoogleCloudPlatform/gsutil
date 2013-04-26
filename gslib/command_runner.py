@@ -69,7 +69,8 @@ class CommandRunner(object):
     return command_map
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
-                      parallel_operations=False, test_method=None):
+                      parallel_operations=False, test_method=None,
+                      skip_update_check=False):
     """Runs the named command. Used by gsutil main, commands built atop
       other commands, and tests .
 
@@ -82,11 +83,13 @@ class CommandRunner(object):
         test_method: Optional general purpose method for testing purposes.
                      Application and semantics of this method will vary by
                      command and test type.
+        skip_update_check: Set to True to disable checking for gsutil updates.
 
       Raises:
         CommandException: if errors encountered.
     """
-    if self._MaybeCheckForAndOfferSoftwareUpdate(command_name, debug):
+    if (not skip_update_check and
+        self._MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
       args = ['-n']
 
