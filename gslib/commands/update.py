@@ -18,7 +18,6 @@ import signal
 import tarfile
 import tempfile
 
-from boto import config
 import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -35,8 +34,9 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
+from gslib.util import BOTO_IS_SECURE
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IS_CYGWIN
 from gslib.util import IS_WINDOWS
@@ -220,12 +220,11 @@ class UpdateCommand(Command):
           'tarball. If you installed gsutil via another method, use the same '
           'method to update it.')
 
-    for cfg_var in ('is_secure', 'https_validate_certificates'):
-      if (config.has_option('Boto', cfg_var)
-          and not config.getboolean('Boto', cfg_var)):
-        raise CommandException(
-            'Your boto configuration has %s = False. The update command\n'
-            'cannot be run this way, for security reasons.' % cfg_var)
+    is_secure = BOTO_IS_SECURE
+    if not is_secure[0]:
+      raise CommandException(
+          'Your boto configuration has %s = False. The update command\n'
+          'cannot be run this way, for security reasons.' % is_secure[1])
 
     force_update = False
     no_prompt = False
@@ -262,7 +261,7 @@ class UpdateCommand(Command):
               'Invalid update object URI. Must name a single .tar.gz file.')
     else:
       update_from_uri_str = GSUTIL_PUB_TARBALL
-    
+
     # Try to retrieve version info from tarball metadata; failing that; download
     # the tarball and extract the VERSION file. The version lookup will fail
     # when running the update system test, because it retrieves the tarball from

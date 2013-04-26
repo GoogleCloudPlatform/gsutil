@@ -30,6 +30,8 @@ import tarfile
 import gslib
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import unittest
+from gslib.util import BOTO_IS_SECURE
 
 
 TESTS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -39,6 +41,8 @@ GSUTIL_DIR = os.path.join(TESTS_DIR, '..', '..')
 class UpdateTest(testcase.GsUtilIntegrationTestCase):
   """Update command test suite."""
 
+  @unittest.skipUnless(BOTO_IS_SECURE[0],
+                       'Test requires boto secure connection.')
   def test_update(self):
     """Tests that the update command works or throws proper exceptions."""
 

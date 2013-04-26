@@ -22,7 +22,6 @@ import xml.etree.ElementTree as ElementTree
 
 import boto
 from boto import config
-from gslib.third_party.oauth2_plugin import oauth2_helper
 from gslib.third_party.retry_decorator import decorators
 from oauth2client.client import HAS_CRYPTO
 
@@ -71,6 +70,7 @@ GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
 Retry = decorators.retry
 
+
 # Enum class for specifying listing style.
 class ListingStyle(object):
   SHORT = 'SHORT'
@@ -103,6 +103,7 @@ def CreateTrackerDirIfNeeded():
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
     os.path.join(CreateTrackerDirIfNeeded(), '.last_software_update_check'))
 
+
 def HasConfiguredCredentials():
   """Determines if boto credential/config file exists."""
   config = boto.config
@@ -113,7 +114,7 @@ def HasConfiguredCredentials():
   has_oauth_creds = (
       config.has_option('Credentials', 'gs_oauth2_refresh_token'))
   has_service_account_creds = (HAS_CRYPTO and
-      config.has_option('Credentials', 'gs_service_client_id') 
+      config.has_option('Credentials', 'gs_service_client_id')
       and config.has_option('Credentials', 'gs_service_key_file'))
   has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
   return (has_goog_creds or has_amzn_creds or has_oauth_creds
@@ -173,7 +174,7 @@ def HumanReadableToBytes(human_string):
   raise ValueError('Invalid byte string specified: %s' % human_string)
 
 
-def Percentile(values, percent, key=lambda x:x):
+def Percentile(values, percent, key=lambda x: x):
   """Find the percentile of a list of values.
 
   Taken from: http://code.activestate.com/recipes/511478/
@@ -247,7 +248,7 @@ def UnaryDictToXml(message):
 
 
 def LookUpGsutilVersion(uri):
-  """Looks up the gustil version of the specified gsutil tarball URI, from the
+  """Looks up the gsutil version of the specified gsutil tarball URI, from the
      metadata field set on that object.
 
   Args:
@@ -261,3 +262,14 @@ def LookUpGsutilVersion(uri):
     obj = uri.get_key(False)
     if obj.metadata and 'gsutil_version' in obj.metadata:
       return obj.metadata['gsutil_version']
+
+
+def _BotoIsSecure():
+  for cfg_var in ('is_secure', 'https_validate_certificates'):
+    if (config.has_option('Boto', cfg_var)
+        and not config.getboolean('Boto', cfg_var)):
+      return False, cfg_var
+  return True, ''
+
+BOTO_IS_SECURE = _BotoIsSecure()
+

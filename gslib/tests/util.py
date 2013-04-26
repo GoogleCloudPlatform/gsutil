@@ -30,13 +30,15 @@ RUN_UNIT_TESTS = True
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False
 
+
 def _HasS3Credentials():
-    provider = Provider('aws')
-    if provider.access_key is None or provider.secret_key is None:
-      return False
-    return True
+  provider = Provider('aws')
+  if not provider.access_key or not provider.secret_key:
+    return False
+  return True
 
 HAS_S3_CREDS = _HasS3Credentials()
+
 
 def _NormalizeURI(uri):
   """Normalizes the path component of a URI.
