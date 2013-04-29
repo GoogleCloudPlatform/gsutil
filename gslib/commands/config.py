@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import boto
 import datetime
 import multiprocessing
-import platform
 import os
+import platform
 import signal
 import stat
 import sys
 import time
 import webbrowser
 
+import boto
 from boto.provider import Provider
 import gslib
 from gslib.command import Command
@@ -42,11 +42,13 @@ from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
 from oauth2client.client import HAS_CRYPTO
+import textwrap
+from textwrap import TextWrapper
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -191,16 +193,16 @@ _detailed_help_text = ("""
               the user to open the browser. This will probably not work as
               expected if you are running gsutil from an ssh window, or using
               gsutil on Windows.
-              
+
   -e          Prompt for service account credentials. This is an alternative to
-              the default OAuth2 option used for service accounts. Service 
-              accounts are useful for authenticating on behalf of a service or 
-              application (as opposed to a user). This option requires that -a 
+              the default OAuth2 option used for service accounts. Service
+              accounts are useful for authenticating on behalf of a service or
+              application (as opposed to a user). This option requires that -a
               is not set. Additionally, note that your service account will NOT
-              be considered an Owner for the purposes of API access (see 
-              "gsutil help creds" for more information about this). See 
+              be considered an Owner for the purposes of API access (see
+              "gsutil help creds" for more information about this). See
               https://developers.google.com/accounts/docs/OAuth2ServiceAccount
-              for further information on service account authentication. 
+              for further information on service account authentication.
 
   -f          Request token with full-control access (default).
 
@@ -406,41 +408,42 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 #provider_token_uri = https://accounts.google.com/o/oauth2/token
 """
 
+
 class ConfigCommand(Command):
   """Implementation of gsutil config command."""
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'config',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['cfg', 'conf', 'configure'],
-    # Min number of args required by this command.
-    MIN_ARGS : 0,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 0,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'habefwrs:o:',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 0,
-    # True if must configure gsutil before running command.
-    CONFIG_REQUIRED : False,
+      # Name of command.
+      COMMAND_NAME: 'config',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: ['cfg', 'conf', 'configure'],
+      # Min number of args required by this command.
+      MIN_ARGS: 0,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: 0,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: 'habefwrs:o:',
+      # True if file URIs acceptable for this command.
+      FILE_URIS_OK: False,
+      # True if provider-only URIs acceptable for this command.
+      PROVIDER_URIS_OK: False,
+      # Index in args of first URI arg.
+      URIS_START_ARG: 0,
+      # True if must configure gsutil before running command.
+      CONFIG_REQUIRED: False,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'config',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
-    # Type of help:
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Obtain credentials and create configuration file',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'config',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
+      # Type of help:
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Obtain credentials and create configuration file',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }
 
   def _OpenConfigFile(self, file_path):
@@ -471,24 +474,24 @@ class ConfigCommand(Command):
       raise CommandException('Failed to open %s for writing: %s' %
                              (file_path, e))
     return os.fdopen(fd, 'w')
-  
+
   def _CheckPrivateKeyFilePermissions(self, file_path):
     """Checks that the file has reasonable permissions for a private key.
-    
+
     In particular, check that the filename provided by the user is not
     world- or group-readable. If either of these are true, we issue a warning
     and offer to fix the permissions.
-    
+
     Args:
       filename: The name of the private key file.
     """
     if IS_WINDOWS:
-      # For Windows, this check doesn't work (it actually just checks whether 
+      # For Windows, this check doesn't work (it actually just checks whether
       # the file is read-only). Since Windows files have a complicated ACL
       # system, this check doesn't make much sense on Windows anyway, so we
       # just don't do it.
       return
-    
+
     st = os.stat(file_path)
     if bool((stat.S_IRGRP | stat.S_IROTH) & st.st_mode):
       self.logger.warn(
@@ -496,7 +499,7 @@ class ConfigCommand(Command):
           'This is a security risk, since anyone with this information can use '
           'your service account.\n')
       fix_it = raw_input('Would you like gsutil to change the file '
-                           'permissions for you? (y/N) ')
+                         'permissions for you? (y/N) ')
       if fix_it in ('y', 'Y'):
         try:
           os.chmod(file_path, 0400)
@@ -510,17 +513,15 @@ class ConfigCommand(Command):
               '\nWe were unable to modify the permissions on your file.\n'
               'If you would like to fix this yourself, consider running:\n'
               '"sudo chmod 400 </path/to/key>" for improved security.')
-      else: 
+      else:
         self.logger.info(
             '\nYou have chosen to allow this file to be readable by others.\n'
             'If you would like to fix this yourself, consider running:\n'
             '"sudo chmod 400 </path/to/key>" for improved security.')
-      
-    
 
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
-      oauth2_scopes=[SCOPE_FULL_CONTROL], 
-      cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
+                           oauth2_scopes=[SCOPE_FULL_CONTROL],
+                           cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
     """Creates a boto config file interactively.
 
     Needed credentials are obtained interactively, either by asking the user for
@@ -532,8 +533,8 @@ class ConfigCommand(Command):
           written.
       cred_type: There are three options:
         - for HMAC, ask the user for access key and secret
-        - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow 
-          and produce a config with an oauth2_refresh_token credential. 
+        - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow
+          and produce a config with an oauth2_refresh_token credential.
         - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for client ID,
           and private key file (and password for the file)
       launch_browser: In the OAuth2 approval flow, attempt to open a browser
@@ -552,15 +553,16 @@ class ConfigCommand(Command):
                                        'address? ')
       gs_service_key_file = raw_input('What is the full path to your private '
                                       'key file? ')
-      gs_service_key_file_password = raw_input("What is the password for your "
-          "service key file? If you haven't set one explicitly, leave this "
-          "line blank. ")
+      gs_service_key_file_password = raw_input(
+          '\n'.join(textwrap.wrap(
+              "What is the password for your service key file? If you haven't "
+              " set one explicitly, leave this line blank. ")))
       self._CheckPrivateKeyFilePermissions(gs_service_key_file)
     elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
-        oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config, 
-            cred_type)
-        oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(oauth2_client,
-            oauth2_scopes, launch_browser)
+      oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
+                                                               cred_type)
+      oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
+          oauth2_client, oauth2_scopes, launch_browser)
     elif cred_type == CredTypes.HMAC:
       got_creds = False
       for provider in provider_map:
@@ -582,39 +584,42 @@ class ConfigCommand(Command):
         '# This file was created by gsutil version %s at %s.\n'
         % (gslib.VERSION,
            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    config_file.write('#\n# You can create additional configuration files by '
+    config_file.write(
+        '#\n# You can create additional configuration files by '
         'running\n# gsutil config [options] [-o <config-file>]\n\n\n')
 
     # Write the config file Credentials section.
     config_file.write('[Credentials]\n\n')
     if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
-        config_file.write('# Google OAuth2 service account credentials '
-            '(for "gs://" URIs):\n')
-        config_file.write('gs_service_client_id = %s\n' 
-                            % gs_service_client_id)
-        config_file.write('gs_service_key_file = %s\n' % gs_service_key_file)
-        if (gs_service_key_file_password == ''):
-          config_file.write(
-              '# If you would like to set your password, you can do so using\n'
-              '# the following commands (replaced with your information):\n'
-              '# "openssl pkcs12 -in cert1.p12 -out temp_cert.pem"\n'
-              '# "openssl pkcs12 -export -in temp_cert.pem -out cert2.p12"\n'
-              '# "rm -f temp_cert.pem"\n'
-              '# Your initial password is "notasecret" - for more information,'
-              '\n# please see http://www.openssl.org/docs/apps/pkcs12.html.\n')
-          config_file.write('#gs_service_key_file_password =\n\n')
-        else:
-          config_file.write('gs_service_key_file_password = %s\n\n' 
-                            % gs_service_key_file_password)
+      config_file.write('# Google OAuth2 service account credentials '
+                        '(for "gs://" URIs):\n')
+      config_file.write('gs_service_client_id = %s\n'
+                        % gs_service_client_id)
+      config_file.write('gs_service_key_file = %s\n' % gs_service_key_file)
+      if gs_service_key_file_password:
+        config_file.write(
+            '# If you would like to set your password, you can do so using\n'
+            '# the following commands (replaced with your information):\n'
+            '# "openssl pkcs12 -in cert1.p12 -out temp_cert.pem"\n'
+            '# "openssl pkcs12 -export -in temp_cert.pem -out cert2.p12"\n'
+            '# "rm -f temp_cert.pem"\n'
+            '# Your initial password is "notasecret" - for more information,'
+            '\n# please see http://www.openssl.org/docs/apps/pkcs12.html.\n')
+        config_file.write('#gs_service_key_file_password =\n\n')
+      else:
+        config_file.write('gs_service_key_file_password = %s\n\n'
+                          % gs_service_key_file_password)
     elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
-      config_file.write('# Google OAuth2 credentials (for "gs://" URIs):\n'
+      config_file.write(
+          '# Google OAuth2 credentials (for "gs://" URIs):\n'
           '# The following OAuth2 account is authorized for scope(s):\n')
       for scope in oauth2_scopes:
         config_file.write('#     %s\n' % scope)
-      config_file.write('gs_oauth2_refresh_token = %s\n\n' %
-          oauth2_refresh_token)
+      config_file.write(
+          'gs_oauth2_refresh_token = %s\n\n' % oauth2_refresh_token)
     else:
-      config_file.write('# To add Google OAuth2 credentials ("gs://" URIs), '
+      config_file.write(
+          '# To add Google OAuth2 credentials ("gs://" URIs), '
           'edit and uncomment the\n# following line:\n'
           '#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n')
 
@@ -623,22 +628,26 @@ class ConfigCommand(Command):
       uri_scheme = uri_map[provider]
       if provider in key_ids and provider in sec_keys:
         config_file.write('# %s credentials ("%s://" URIs):\n' %
-                  (provider, uri_scheme))
+                          (provider, uri_scheme))
         config_file.write('%s_access_key_id = %s\n' %
-            (key_prefix, key_ids[provider]))
+                          (key_prefix, key_ids[provider]))
         config_file.write('%s_secret_access_key = %s\n' %
-            (key_prefix, sec_keys[provider]))
+                          (key_prefix, sec_keys[provider]))
       else:
-        config_file.write('# To add %s credentials ("%s://" URIs), edit and '
-                  'uncomment the\n# following two lines:\n'
-                  '#%s_access_key_id = <your %s access key ID>\n'
-                  '#%s_secret_access_key = <your %s secret access key>\n' %
-                  (provider, uri_scheme, key_prefix, provider, key_prefix,
-                   provider))
+        config_file.write(
+            '# To add %s credentials ("%s://" URIs), edit and '
+            'uncomment the\n# following two lines:\n'
+            '#%s_access_key_id = <your %s access key ID>\n'
+            '#%s_secret_access_key = <your %s secret access key>\n' %
+            (provider, uri_scheme, key_prefix, provider, key_prefix,
+             provider))
       host_key = Provider.HostKeyMap[provider]
-      config_file.write('# The ability to specify an alternate storage host '
-                'is primarily for cloud\n# storage service developers.\n'
-                '#%s_host = <alternate storage host address>\n\n' % host_key)
+      config_file.write(
+          '# The ability to specify an alternate storage host and port\n'
+          '# is primarily for cloud storage service developers.\n'
+          '#%s_host = <alternate storage host address>\n'
+          '#%s_port = <alternate storage host port>\n\n'
+          % (host_key, host_key))
 
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
@@ -730,7 +739,7 @@ class ConfigCommand(Command):
         scopes.append(opt_arg)
       elif opt == '-w':
         scopes.append(SCOPE_READ_WRITE)
-        
+
     if has_e:
       if has_a:
         raise CommandException('Both -a and -e cannot be specified. Please see '
@@ -740,7 +749,6 @@ class ConfigCommand(Command):
             'Service account authentication requires either\nPyOpenSSL or '
             'PyCrypto 2.6 or later. Please install either of these\nto proceed,'
             ' or configure a different type of credentials.')
-    
 
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
@@ -748,8 +756,8 @@ class ConfigCommand(Command):
     if output_file_name is None:
       # Check to see if a default config file name is requested via
       # environment variable. If so, use it, otherwise use the hard-coded
-      # default file. Then use the default config file name, if it doesn't 
-      # exist or can be moved out of the way without clobbering an existing 
+      # default file. Then use the default config file name, if it doesn't
+      # exist or can be moved out of the way without clobbering an existing
       # backup file.
       boto_config_from_env = os.environ.get('BOTO_CONFIG', None)
       if boto_config_from_env:
@@ -762,7 +770,8 @@ class ConfigCommand(Command):
       else:
         default_config_path_bak = default_config_path + '.bak'
         if os.path.exists(default_config_path_bak):
-          raise CommandException('Cannot back up existing config '
+          raise CommandException(
+              'Cannot back up existing config '
               'file "%s": backup file exists ("%s").'
               % (default_config_path, default_config_path_bak))
         else:
@@ -772,7 +781,8 @@ class ConfigCommand(Command):
                 % (default_config_path, default_config_path_bak))
             os.rename(default_config_path, default_config_path_bak)
           except e:
-            raise CommandException('Failed to back up existing config '
+            raise CommandException(
+                'Failed to back up existing config '
                 'file ("%s" -> "%s"): %s.'
                 % (default_config_path, default_config_path_bak, e))
           output_file_name = default_config_path
@@ -789,9 +799,8 @@ class ConfigCommand(Command):
     # Catch ^C so we can restore the backup.
     signal.signal(signal.SIGINT, cleanup_handler)
     try:
-      self._WriteBotoConfigFile(output_file,
-          launch_browser=launch_browser, oauth2_scopes=scopes,
-          cred_type=cred_type)
+      self._WriteBotoConfigFile(output_file, launch_browser=launch_browser,
+                                oauth2_scopes=scopes, cred_type=cred_type)
     except Exception as e:
       user_aborted = isinstance(e, AbortException)
       if user_aborted:
@@ -804,9 +813,9 @@ class ConfigCommand(Command):
         try:
           if default_config_path_bak:
             sys.stderr.write('Restoring previous backed up file (%s)\n' %
-                              default_config_path_bak)
+                             default_config_path_bak)
             os.rename(default_config_path_bak, output_file_name)
-        except Exception as e1:
+        except Exception as e:
           # Raise the original exception so that we can see what actually went
           # wrong, rather than just finding out that we died before assigning
           # a value to default_config_path_bak.
@@ -821,6 +830,7 @@ class ConfigCommand(Command):
           'that file.\n' % output_file_name)
 
     return 0
+
 
 def cleanup_handler(signalnum, handler):
   raise AbortException('User interrupted config command')
