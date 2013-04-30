@@ -33,6 +33,7 @@ from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
 import gslib.exception
 import httplib2
+import oauth2client
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
@@ -142,8 +143,10 @@ def main():
         '***************************** WARNING *****************************\n')
   if debug == 2:
     logging.basicConfig(level=logging.DEBUG)
+    oauth2client.client.logger.setLevel(logging.DEBUG)
   elif debug > 2:
     logging.basicConfig(level=logging.DEBUG)
+    oauth2client.client.logger.setLevel(logging.DEBUG)
     command_runner.RunNamedCommand('ver', ['-l'])
     config_items = []
     try:
@@ -155,8 +158,12 @@ def main():
     sys.stderr.write('config: %s\n' % str(config_items))
   elif quiet:
     logging.basicConfig(level=logging.WARNING)
+    oauth2client.client.logger.setLevel(logging.WARNING)
   else:
     logging.basicConfig(level=logging.INFO)
+    # oauth2client uses info logging in places that would better correspond to
+    # gsutil's debug logging (e.g., when refreshing access tokens).
+    oauth2client.client.logger.setLevel(logging.WARNING)
 
   if version:
     command_name = 'version'
