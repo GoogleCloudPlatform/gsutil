@@ -135,14 +135,20 @@ class CommandRunner(object):
       Returns:
         True if the user decides to update.
     """
-    # Don't try to interact with user if gsutil is not connected to a tty (e.g.,
-    # if being run from cron), or if they are running the update command (which
-    # could otherwise cause an additional note that an update is available when
-    # they are already trying to perform an update) or if they don't have
-    # credentials configured.
+    # Don't try to interact with user if:
+    # - gsutil is not connected to a tty (e.g., if being run from cron);
+    # - user is running the update command (which could otherwise cause an
+    #   additional note that an update is available when user is already trying
+    #   to perform an update);
+    # - user doesn't have credentials configured; or,
+    # - user specified gs_host (which could be a non-production different
+    #   service instance, in which case credentials won't work for checking
+    #   gsutil tarball).
+    gs_host = boto.config.get('Credentials', 'gs_host', None)
     if (not sys.stdout.isatty() or not sys.stderr.isatty()
         or not sys.stdin.isatty() or command_name == 'update'
-        or not HasConfiguredCredentials()):
+        or not HasConfiguredCredentials()
+        or gs_host):
       return False
 
     software_update_check_period = boto.config.get(
