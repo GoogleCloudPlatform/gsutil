@@ -27,6 +27,7 @@ import socket
 import sys
 import traceback
 
+import apiclient
 import boto.exception
 from gslib import util
 from gslib import wildcard_iterator
@@ -143,10 +144,8 @@ def main():
         '***************************** WARNING *****************************\n')
   if debug == 2:
     logging.basicConfig(level=logging.DEBUG)
-    oauth2client.client.logger.setLevel(logging.DEBUG)
   elif debug > 2:
     logging.basicConfig(level=logging.DEBUG)
-    oauth2client.client.logger.setLevel(logging.DEBUG)
     command_runner.RunNamedCommand('ver', ['-l'])
     config_items = []
     try:
@@ -158,12 +157,13 @@ def main():
     sys.stderr.write('config: %s\n' % str(config_items))
   elif quiet:
     logging.basicConfig(level=logging.WARNING)
-    oauth2client.client.logger.setLevel(logging.WARNING)
   else:
     logging.basicConfig(level=logging.INFO)
-    # oauth2client uses info logging in places that would better correspond to
-    # gsutil's debug logging (e.g., when refreshing access tokens).
+    # apiclient and oauth2client use info logging in places that would better
+    # correspond to gsutil's debug logging (e.g., when refreshing access
+    # tokens).
     oauth2client.client.logger.setLevel(logging.WARNING)
+    apiclient.discovery.logger.setLevel(logging.WARNING)
 
   if version:
     command_name = 'version'

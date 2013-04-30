@@ -157,6 +157,8 @@ _detailed_help_text = ("""
       check_hashes
       default_api_version
       default_project_id
+      discovery_service_url
+      json_api_version
 
     [OAuth2]
       token_cache
@@ -359,6 +361,13 @@ content_language = en
 # available integrity check for composite objects, and without the C-extension,
 # download performance can be significantly degraded by the digest computation.
 #check_hashes = if_fast_else_fail
+
+# The ability to specify an alternative discovery service URL is primarily for
+# cloud storage service developers. 
+#discovery_service_url = https://www.googleapis.com/discovery/v1/apis/{api}/{apiVersion}/rest
+# The ability to specify an alternative JSON API version is primarily for cloud
+# storage service developers.
+#json_api_version = v1beta2
 
 """ % {'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
