@@ -346,6 +346,24 @@ class OAuth2ServiceAccountClient(OAuth2Client):
                datetime_strategy=datetime.datetime,
                disable_ssl_certificate_validation=False,
                proxy_host=None, proxy_port=None):
+    """Creates an OAuth2ServiceAccountClient.
+
+    Args:
+      client_id: The OAuth2 client ID of this client.
+      private_key: The private key associated with this service account.
+      password: The private key password used for the crypto signer.
+      access_token_cache: An optional instance of a TokenCache. If omitted or
+          None, an InMemoryTokenCache is used.
+      auth_uri: The URI for OAuth2 authorization.
+      token_uri: The URI used to refresh access tokens.
+      datetime_strategy: datetime module strategy to use.
+      disable_ssl_certificate_validation: True if certifications should not be
+          validated.
+      proxy_host: An optional string specifying the host name of an HTTP proxy
+          to be used.
+      proxy_port: An optional int specifying the port number of an HTTP proxy
+          to be used.
+    """
     super(OAuth2ServiceAccountClient, self).__init__(
         cache_key_base=client_id, auth_uri=auth_uri, token_uri=token_uri,
         access_token_cache=access_token_cache,
@@ -371,27 +389,27 @@ class OAuth2UserAccountClient(OAuth2Client):
   """An OAuth2 client."""
 
   def __init__(self, token_uri, client_id, client_secret, refresh_token,
-               proxy=None, auth_uri=None,
-               access_token_cache=None,
+               auth_uri=None, access_token_cache=None,
                datetime_strategy=datetime.datetime,
                disable_ssl_certificate_validation=False,
                proxy_host=None, proxy_port=None):
-    """Creates an OAuth2Client.
+    """Creates an OAuth2UserAccountClient.
 
     Args:
-      provider: The OAuth2Provider provider this client will authenticate
-          against.
+      token_uri: The URI used to refresh access tokens.
       client_id: The OAuth2 client ID of this client.
       client_secret: The OAuth2 client secret of this client.
-      proxy: An optional string specifying a HTTP proxy to be used, in the form
-          '<proxy>:<port>'.  This option is only effective if the url_opener has
-          been configured with a fancy_urllib.FancyProxyHandler (this is the
-          case for the default url_opener).
+      refresh_token: The token used to refresh the access token.
+      auth_uri: The URI for OAuth2 authorization.
       access_token_cache: An optional instance of a TokenCache. If omitted or
           None, an InMemoryTokenCache is used.
       datetime_strategy: datetime module strategy to use.
       disable_ssl_certificate_validation: True if certifications should not be
           validated.
+      proxy_host: An optional string specifying the host name of an HTTP proxy
+          to be used.
+      proxy_port: An optional int specifying the port number of an HTTP proxy
+          to be used.
     """
     super(OAuth2UserAccountClient, self).__init__(
         cache_key_base=refresh_token, auth_uri=auth_uri, token_uri=token_uri,
