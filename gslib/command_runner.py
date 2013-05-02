@@ -187,5 +187,5 @@ class CommandRunner(object):
           return False
         print
         answer = raw_input('Would you like to update [Y/n]? ')
-        return answer.lower()[0] != 'n'
+        return not answer or answer.lower()[0] != 'n'
     return False
