@@ -129,7 +129,10 @@ class VersionCommand(Command):
           'python version {python_version}\n'
           'config path: {config_path}\n'
           'gsutil path: {gsutil_path}\n'
-          'compiled crcmod: {compiled_crcmod}\n')
+          'compiled crcmod: {compiled_crcmod}\n'
+          'installed via package manager: {is_package_install}\n'
+          'editable install: {is_editable_install}\n'
+          )
 
       sys.stdout.write(long_form_output.format(
           checksum=cur_checksum,
@@ -138,7 +141,10 @@ class VersionCommand(Command):
           python_version=sys.version,
           config_path=config_path,
           gsutil_path=gslib.GSUTIL_PATH,
-          compiled_crcmod=UsingCrcmodExtension(crcmod)))
+          compiled_crcmod=UsingCrcmodExtension(crcmod),
+          is_package_install=gslib.IS_PACKAGE_INSTALL,
+          is_editable_install=gslib.IS_EDITABLE_INSTALL,
+          ))
 
     return 0
 
