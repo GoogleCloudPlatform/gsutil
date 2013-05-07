@@ -47,7 +47,7 @@ requires = [
 dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
-    'https://github.com/boto/boto/archive/de09d40d184054e081c128a71dceb0fd75670b4f.tar.gz#egg=boto-2.9.0-dev',
+    'https://github.com/boto/boto/archive/55263e4c6775996e89ebb572123e23e558d34b87.tar.gz#egg=boto-2.9.0-dev',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
