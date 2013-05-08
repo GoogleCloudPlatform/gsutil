@@ -227,7 +227,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working with Access Control Lists',
+    HELP_ONE_LINE_SUMMARY : 'Working With Access Control Lists',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

@@ -124,7 +124,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working with Projects',
+    HELP_ONE_LINE_SUMMARY : 'Working With Projects',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }

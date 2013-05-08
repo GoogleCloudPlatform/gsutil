@@ -115,28 +115,28 @@ _detailed_help_text = ("""
        python test.py unit
        python test.py -t s3 -t gs -t ssl
 
-  8. Please consider contributing test code for your change, especially if the
+  9. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
 
-  9. When it's time to send us code, please use the Rietveld code review tool
-     rather than simply sending us a code patch. Do this as follows:
+  10. When it's time to send us code, please use the Rietveld code review tool
+      rather than simply sending us a code patch. Do this as follows:
 
-     - Check out the gsutil code from your fork of the gsutil repository and
-       apply your changes.
-     - Download the "upload.py" script from
-       http://code.google.com/p/rietveld/wiki/UploadPyUsage
-     - Run upload.py from your git directory with the changes.
-     - Click the codereview.appspot.com link it generates, click "Edit Issue",
-       and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
-     - Click Publish+Mail Comments.
-     - Once your changes are accepted, submit a pull request on GitHub and we
-       will merge your commits.
+      - Check out the gsutil code from your fork of the gsutil repository and
+        apply your changes.
+      - Download the "upload.py" script from
+        http://code.google.com/p/rietveld/wiki/UploadPyUsage
+      - Run upload.py from your git directory with the changes.
+      - Click the codereview.appspot.com link it generates, click "Edit Issue",
+        and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
+      - Click Publish+Mail Comments.
+      - Once your changes are accepted, submit a pull request on GitHub and we
+        will merge your commits.
 """)
 
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about Access Control Lists."""
+  """Additional help about contributing code to gsutil."""
 
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
@@ -147,7 +147,7 @@ class CommandOptions(HelpProvider):
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Contributing',
+    HELP_ONE_LINE_SUMMARY : 'Contributing Code to gsutil',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
