@@ -27,9 +27,9 @@ import sys
 import gslib.exception
 
 # Directory containing the gslib module.
-GSLIB_DIR = os.path.abspath(os.path.dirname(__file__))
+GSLIB_DIR = os.path.dirname(os.path.realpath(__file__))
 # Path to gsutil executable. This assumes gsutil is the running script.
-GSUTIL_PATH = os.path.normpath(os.path.abspath(sys.argv[0]))
+GSUTIL_PATH = os.path.realpath(sys.argv[0])
 # The directory that contains the gsutil executable.
 GSUTIL_DIR = os.path.dirname(GSUTIL_PATH)
 
