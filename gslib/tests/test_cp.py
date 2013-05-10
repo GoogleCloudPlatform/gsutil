@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import boto
-import dateutil.parser
+import datetime
 import os
 import re
 import gslib.tests.testcase as testcase
@@ -408,8 +408,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     results = lines[1].strip().split(',')
     self.assertEqual(results[0][:7], 'file://')  # source
     self.assertEqual(results[1][:5], 'gs://')  # destination
-    start_date = dateutil.parser.parse(results[2])
-    end_date = dateutil.parser.parse(results[3])
+    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+    start_date = datetime.datetime.strptime(results[2], date_format)
+    end_date = datetime.datetime.strptime(results[3], date_format)
     self.assertEqual(end_date > start_date, True)
     self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
@@ -433,8 +434,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     results = lines[1].strip().split(',')
     self.assertEqual(results[0][:5], 'gs://')  # source
     self.assertEqual(results[1][:7], 'file://')  # destination
-    start_date = dateutil.parser.parse(results[2])
-    end_date = dateutil.parser.parse(results[3])
+    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+    start_date = datetime.datetime.strptime(results[2], date_format)
+    end_date = datetime.datetime.strptime(results[3], date_format)
     self.assertEqual(end_date > start_date, True)
     # TODO: fix this when CRC32C's are added to the manifest.
     # self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
