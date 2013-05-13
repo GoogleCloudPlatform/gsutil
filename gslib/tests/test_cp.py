@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -443,3 +445,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(int(results[6]), 3)  # Source Size
     self.assertEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
+
+  def test_copy_unicode_non_ascii_filename(self):
+    key_uri = self.CreateObject(contents='foo')
+    # Make file large enough to cause a resumable upload (which hashes filename
+    # to construct tracker filename).
+    fpath = self.CreateTempFile(file_name=u'Аудиоархив',
+                                contents='x' * 3 * 1024 * 1024)
+    fpath_bytes = fpath.encode('utf-8')
+    stderr = self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)],
+                            return_stderr=True)
+    self.assertIn('Copying file:', stderr)
+    self.assertIn('Uploading', stderr)
+

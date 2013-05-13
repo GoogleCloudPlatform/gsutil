@@ -2104,7 +2104,9 @@ def _hash_filename(filename):
   Returns:
     shorter, hashed version of passed file name
   """
-  if not isinstance(filename, unicode):
+  if isinstance(filename, unicode):
+    filename = filename.encode('utf-8')
+  else:
     filename = unicode(filename, 'utf8').encode('utf-8')
   m = hashlib.sha1(filename)
   return "TRACKER_" + m.hexdigest() + '.' + filename[-16:]
