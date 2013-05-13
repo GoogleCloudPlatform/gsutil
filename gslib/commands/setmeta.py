@@ -77,6 +77,15 @@ _detailed_help_text = ("""
   while uploading objects, what metadata fields can be set and the meaning of
   these fields, use of custom metadata, and how to view currently set metadata.
 
+  NOTE: By default, publicly readable objects are served with a Cache-Control
+  header allowing such objects to be cached for 3600 seconds. If you need to
+  ensure that updates become visible immediately, you should set a Cache-Control
+  header of "Cache-Control:private, max-age=0, no-transform" on such objects.
+  You can do this with the command:
+
+    gsutil setmeta -h "Content-Type:text/html" \\
+      -h "Cache-Control:private, max-age=0, no-transform" gs://bucket/*.html
+
 
 <B>OPERATION COST</B>
   This command uses four operations per URI (one to read the ACL, one to read

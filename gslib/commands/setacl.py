@@ -49,6 +49,12 @@ _detailed_help_text = ("""
 
   See "gsutil help acls" for a list of all canned ACLs.
 
+  NOTE: By default, publicly readable objects are served with a Cache-Control
+  header allowing such objects to be cached for 3600 seconds. If you need to
+  ensure that updates become visible immediately, you should set a Cache-Control
+  header of "Cache-Control:private, max-age=0, no-transform" on such objects.
+  For help doing this, see 'gsutil help setmeta'.
+
   If you want to define more fine-grained control over your data, you can
   retrieve an ACL using the getacl command (see "gsutil help getacl"),
   save the output to a file, edit the file, and then use the gsutil setacl

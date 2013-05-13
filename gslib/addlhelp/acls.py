@@ -92,6 +92,12 @@ _detailed_help_text = ("""
     permission. When you apply this to an object, anyone on the Internet can
     read the object without authenticating.
 
+    NOTE: By default, publicly readable objects are served with a Cache-Control
+    header allowing such objects to be cached for 3600 seconds. If you need to
+    ensure that updates become visible immediately, you should set a
+    Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
+    such objects. For help doing this, see 'gsutil help setmeta'.
+
   public-read-write
     Gives the requester FULL_CONTROL permission and gives all users READ and
     WRITE permission. This ACL applies only to buckets.
