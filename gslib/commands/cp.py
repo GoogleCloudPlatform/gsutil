@@ -1314,7 +1314,7 @@ class CpCommand(Command):
     src_key = src_uri.get_key(False, headers)
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
-    
+
     if self.use_manifest:
       # Set the source size in the manifest.
       self.manifest.Set(src_uri, 'size', getattr(src_key, 'size', None))
@@ -1340,7 +1340,12 @@ class CpCommand(Command):
         # In order to save on unnecessary uploads/downloads we perform both
         # checks. However, this may come at the cost of additional HTTP calls.
         if dst_uri.exists(headers):
-          raise ItemExistsError()
+          if dst_uri.is_file_uri():
+            # The local file may be a partial. Check the file sizes.
+            if src_key.size == dst_uri.get_key().size:
+              raise ItemExistsError()
+          else:
+            raise ItemExistsError()
         if dst_uri.is_cloud_uri() and dst_uri.scheme == 'gs':
           headers['x-goog-if-generation-match'] = '0'
 
