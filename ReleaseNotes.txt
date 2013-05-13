@@ -1,3 +1,28 @@
+Release 3.29 (release-date: 2013-05-13)
+
+
+Bug Fixes
+---------
+
+  - Fixed incorrect package installation detection that resulted in not being
+    able to run the update command while running gsutil from a symlink.
+
+
+Other Changes
+---------
+
+  - Added a test for debug mode (gsutil -D) output.
+  - List numbering and title case fixes in additional help pages.
+  - Removed dateutil module dependency from cp command test.
+  - Updated documentation to clarify that public-read objects are cached for 1
+    hour by default.
+  - Added a filter to suppress "module was already imported" warnings that were
+    sometimes printed while running gsutil on Google Compute Engine instances.
+
+
+================================================================================
+
+
 Release 3.28 (release-date: 2013-05-07)
 
 
