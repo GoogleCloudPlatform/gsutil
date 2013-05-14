@@ -72,7 +72,7 @@ _detailed_help_text = ("""
 <B>BUCKET LOCATIONS</B>
   If you don't specify a -l option, the bucket will be created in the default
   location (US). Otherwise, you can specify one of the available locations:
-  US (United States) or EU (Europe).
+  US (United States) or EU (European Union).
 
 
 <B>OPTIONS</B>
