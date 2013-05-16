@@ -22,6 +22,7 @@ import xml.etree.ElementTree as ElementTree
 
 import boto
 from boto import config
+from boto.pyami.config import BotoConfigLocations
 from gslib.third_party.retry_decorator import decorators
 from oauth2client.client import HAS_CRYPTO
 
@@ -119,6 +120,17 @@ def HasConfiguredCredentials():
   has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
   return (has_goog_creds or has_amzn_creds or has_oauth_creds
           or has_auth_plugins or has_service_account_creds)
+  
+def GetConfigFilePath():
+  config_path = 'no config found'
+  for path in BotoConfigLocations:
+    try:
+      with open(path, 'r'):
+        config_path = path
+      break
+    except IOError:
+      pass
+  return config_path
 
 
 def _RoundToNearestExponent(num):

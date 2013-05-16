@@ -690,7 +690,7 @@ class Command(object):
               'you do not have PyOpenSSL or PyCrypto 2.6 or later installed.\n'
               'Service account authentication requires one of these '
               'libraries;\nplease install either of them to proceed, or '
-              'configure \na different type of credentials with'
+              'configure \na different type of credentials with '
               '"gsutil config".')
         raise CommandException('You have no storage service credentials in any '
                                'of the following boto config\nfiles. Please '

@@ -32,6 +32,7 @@ import boto.exception
 from gslib import util
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
+from gslib.util import GetConfigFilePath
 import gslib.exception
 import httplib2
 import oauth2client
@@ -363,6 +364,20 @@ a more specific error code.
     else:
       _HandleUnknownFailure(e)
   except Exception as e:
+    # Check for two types of errors related to service accounts. These errors
+    # appear to be the same except for their messages, but they are caused by
+    # different problems and both have unhelpful error messages. Moreover,
+    # the error type belongs to PyOpenSSL, which is not necessarily installed.
+    if 'mac verify failure' in str(e):
+      _OutputAndExit("Encountered an error while refreshing access token." +
+          " If you are using a service account,\nplease verify that the " +
+          "gs_service_key_file_password field in your config file," +
+          "\n%s, is correct." % GetConfigFilePath())
+    elif 'asn1 encoding routines' in str(e):
+      _OutputAndExit("Encountered an error while refreshing access token." +
+          " If you are using a service account,\nplease verify that the " +
+          "gs_service_key_file field in your config file,\n%s, is correct."
+          % GetConfigFilePath())
     _HandleUnknownFailure(e)
 
 

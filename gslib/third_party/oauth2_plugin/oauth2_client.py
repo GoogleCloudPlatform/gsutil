@@ -313,7 +313,6 @@ class OAuth2Client(object):
     finally:
       token_exchange_lock.release()
 
-  
   def CacheKey(self):
     """Computes a cache key.
 
@@ -380,7 +379,6 @@ class OAuth2ServiceAccountClient(OAuth2Client):
         private_key_password=self.password)
     http = self.CreateHttpRequest()
     credentials.refresh(http)
-
     return AccessToken(credentials.access_token, 
         credentials.token_expiry, datetime_strategy=self.datetime_strategy)
 

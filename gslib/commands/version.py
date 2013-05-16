@@ -18,7 +18,6 @@ import os
 import re
 import sys
 
-from boto.pyami.config import BotoConfigLocations
 import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
@@ -36,6 +35,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.util import GetConfigFilePath
 from gslib.util import UsingCrcmodExtension
 from hashlib import md5
 
@@ -100,14 +100,7 @@ class VersionCommand(Command):
         if o == '-l':
           long_form = True
 
-    config_path = 'no config found'
-    for path in BotoConfigLocations:
-      try:
-        with open(path, 'r'):
-          config_path = path
-        break
-      except IOError:
-        pass
+    config_path = GetConfigFilePath()
 
     shipped_checksum = gslib.CHECKSUM
     try:
