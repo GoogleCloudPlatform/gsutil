@@ -16,6 +16,7 @@
 import binascii
 import boto
 import crcmod
+import csv
 import datetime
 import errno
 import gzip
@@ -351,8 +352,15 @@ _detailed_help_text = ("""
                 - UTC date and time transfer was started in ISO 8601 format.
                 - UTC date and time transfer was completed in ISO 8601 format.
                 - Upload id, if a resumable upload was performed.
-                - Final result of the attempted upload, success or failure.
+                - Final result of the attempted transfer, success or failure.
                 - Failure details, if any.
+
+                If the log file already exists, gsutil will use the file as an
+                input to the copy process, and will also append log items to the
+                existing file. Files/objects that are marked in the existing log
+                file as having been successfully copied (or skipped) will be
+                ignored. Files/objects without entries will be copied and ones
+                previously marked as unsuccessful will be retried.
 
   -n            No-clobber. When specified, existing files or objects at the
                 destination will not be overwritten. Any items that are skipped
@@ -1623,6 +1631,9 @@ class CpCommand(Command):
                                          have_existing_dst_container,
                                          cmd_name)
 
+      if self.use_manifest and self.manifest.WasSuccessful(str(exp_src_uri)):
+        return
+
       if self.perform_mv:
         if name_expansion_result.NamesContainer():
           # Use recursion_requested when performing name expansion for the
@@ -1965,38 +1976,77 @@ class CpCommand(Command):
         (isinstance(e, GSResponseError) and e.status==412) or
         (isinstance(e, ResumableUploadException) and 'code 412' in e.message))
 
+
+
   class _Manifest(object):
     """Stores the manifest items for the CpCommand class."""
 
     def __init__(self, path):
       # self.items contains a dictionary of rows
-      self.items = {}
-      self.lock = threading.Lock()
       self.manifest_fp = None
+      self.items = {}
+      self.manifest_filter = {}
+      self.lock = threading.Lock()
+
+      self._ParseManifest(path)
       self._CreateManifestFile(path)
-      # Write the headers in the manifest file.
-      self.manifest_fp.write(
-          ','.join([
-              'Source',
-              'Destination',
-              'Start',
-              'End',
-              'Md5',
-              'UploadId',
-              'Source Size',
-              'Bytes Transferred',
-              'Result',
-              'Description']) + '\n')
 
     def __del__(self):
       if self.manifest_fp:
         self.manifest_fp.close()
 
-    def _CreateManifestFile(self, filePath):
+    def _ParseManifest(self, path):
+      """
+      Load and parse a manifest file. This information will be used to skip
+      any files that have a skip or OK status.
+      """
+      try:
+        if os.path.exists(path):
+          with open(path, 'rb') as f:
+            first_row = True
+            reader = csv.reader(f)
+            for row in reader:
+              if first_row:
+                try:
+                  source_index = row.index('Source')
+                  result_index = row.index('Result')
+                except ValueError:
+                  # No header and thus not a valid manifest file.
+                  raise CommandException(
+                      'Missing headers in manifest file: %s' % path)
+              first_row = False
+              source = row[source_index]
+              result = row[result_index]
+              if result in ['OK', 'skip']:
+                # We're always guaranteed to take the last result of a specific
+                # source uri.
+                self.manifest_filter[source] = result
+      except IOError as ex:
+        raise CommandException('Could not parse %s' % path)
+
+    def WasSuccessful(self, src):
+      """ Returns whether the specified src uri was marked as successful."""
+      return src in self.manifest_filter
+
+    def _CreateManifestFile(self, path):
       """Opens the manifest file and assigns it to the file pointer."""
       try:
+        if not os.path.exists(path) or os.stat(path).st_size == 0:
+          # Add headers to the new file.
+          with open(path, 'wb', 1) as f:
+            writer = csv.writer(f)
+            writer.writerow(['Source',
+                            'Destination',
+                            'Start',
+                            'End',
+                            'Md5',
+                            'UploadId',
+                            'Source Size',
+                            'Bytes Transferred',
+                            'Result',
+                            'Description'])
         # This file pointer will be closed in the destructor.
-        self.manifest_fp = open(filePath, 'w', 1)  # 1 == line buffered
+        self.manifest_fp = open(path, 'a', 1)  # 1 == line buffered
       except IOError:
         raise CommandException('Could not create manifest file.')
 
@@ -2044,7 +2094,8 @@ class CpCommand(Command):
       # the same time. This would cause a garbled mess in the manifest file.
       self.lock.acquire()
       try:
-        self.manifest_fp.write('%s\n' % ','.join(data))
+        writer = csv.writer(self.manifest_fp)
+        writer.writerow(data)
       finally:
         self.lock.release()
 

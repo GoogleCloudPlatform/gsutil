@@ -397,6 +397,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     fpath = self.CreateTempFile(contents='bar')
     logpath = self.CreateTempFile(contents='')
+    # Ensure the file is empty.
+    open(logpath, 'w').close()
     stdout = self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi],
                             return_stdout=True)
     with open(logpath, 'r') as f:
@@ -423,6 +425,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='')
     logpath = self.CreateTempFile(contents='')
+    # Ensure the file is empty.
+    open(logpath, 'w').close()
     stdout = self.RunGsUtil(['cp', '-L', logpath, suri(key_uri), fpath],
                             return_stdout=True)
     with open(logpath, 'r') as f:
