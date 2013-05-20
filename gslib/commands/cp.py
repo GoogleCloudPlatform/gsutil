@@ -513,7 +513,7 @@ class CpCommand(Command):
     if not key.etag:
       return None
     possible_md5 = key.etag.strip('"\'').lower()
-    if re.match(r'[0-9a-f]{32}', possible_md5):
+    if re.match(r'^[0-9a-f]{32}$', possible_md5):
       return binascii.a2b_hex(possible_md5)
 
   def _CheckHashes(self, key, file_name, hash_algs_to_compute):
