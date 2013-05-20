@@ -74,6 +74,20 @@ def _ThreadedLogger(command_name):
     log.addHandler(log_handler)
   return log
 
+def _UriArgChecker(command_instance, uri, shard):
+  exp_src_uri = command_instance.suri_builder.StorageUri(
+      uri.GetExpandedUriStr())
+  command_instance.logger.debug('process %d shard %d is handling uri %s',
+                                os.getpid(), shard, exp_src_uri)
+  if (command_instance.exclude_symlinks and exp_src_uri.is_file_uri()
+      and os.path.islink(exp_src_uri.object_name)):
+    command_instance.logger.info('Skipping symbolic link %s...', exp_src_uri)
+    return False
+  return True
+
+def DummyArgChecker(command_instance, arg, shard):
+  return True
+
 # command_spec key constants.
 COMMAND_NAME = 'command_name'
 COMMAND_NAME_ALIASES = 'command_name_aliases'
@@ -85,8 +99,7 @@ PROVIDER_URIS_OK = 'provider_uri_ok'
 URIS_START_ARG = 'uris_start_arg'
 CONFIG_REQUIRED = 'config_required'
 
-_EOF_NAME_EXPANSION_RESULT = ("EOF")
-
+_EOF_ARGUMENT = ("EOF")
 
 class Command(object):
   REQUIRED_SPEC_KEYS = [COMMAND_NAME]
@@ -171,7 +184,8 @@ class Command(object):
   command_name = property(_GetDefaultCommandName)
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               config_file_list, bucket_storage_uri_class, test_method=None):
+               config_file_list, bucket_storage_uri_class, test_method=None,
+               logging_filters=None):
     """
     Args:
       command_runner: CommandRunner (for commands built atop other commands).
@@ -179,12 +193,14 @@ class Command(object):
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
       parallel_operations: Should command operations be executed in parallel?
-      config_file_list: Config file list returned by _GetBotoConfigFileList().
+      config_file_list: Config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
                    command and test type.
+      logging_filters: Optional list of logging.Filters to apply to this
+                       command's logger.
 
     Implementation note: subclasses shouldn't need to define an __init__
     method, and instead depend on the shared initialization that happens
@@ -208,6 +224,9 @@ class Command(object):
 
     # Global instance of a threaded logger object.
     self.logger = _ThreadedLogger(self.command_name)
+    if logging_filters:
+      for filter in logging_filters:
+        self.logger.addFilter(filter)
 
 
     # Process sub-command instance specifications.
@@ -507,8 +526,9 @@ class Command(object):
     parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
 
-  def Apply(self, func, name_expansion_iterator, thr_exc_handler,
-            shared_attrs=None):
+  def Apply(self, func, args_list, thr_exc_handler,
+            shared_attrs=None, arg_checker=_UriArgChecker,
+            local_parallel=False, process_count=None, thread_count=None):
     """Dispatch input URI assignments across a pool of parallel OS
        processes and/or Python threads, based on options (-m or not)
        and settings in the user's config file. If non-parallel mode
@@ -520,6 +540,17 @@ class Command(object):
       name_expansion_iterator: Iterator of NameExpansionResult.
       thr_exc_handler: Exception handler for ThreadPool class.
       shared_attrs: List of attributes to manage across sub-processes.
+      arg_checker: Used to determine whether we should process the current
+                   argument or simply skip it. Also handles any logging that
+                   is specific to a particular type of argument.
+      local_parallel: The same semantics as self.parallel_operations, except
+                      that it applies only to this function call (for the
+                      purpose of determining whether to use multiple
+                      threads and/or processes).
+      process_count: The number of processes to use. If not specified, then
+                     the configured default will be used.
+      thread_count: The number of threads per process. If not speficied, then
+                    the configured default will be used.
 
     Raises:
       CommandException if invalid config encountered.
@@ -527,16 +558,18 @@ class Command(object):
 
     # Set OS process and python thread count as a function of options
     # and config.
-    if self.parallel_operations:
-      process_count = boto.config.getint(
-          'GSUtil', 'parallel_process_count',
-          gslib.commands.config.DEFAULT_PARALLEL_PROCESS_COUNT)
+    if self.parallel_operations or local_parallel:
+      if not process_count:
+        process_count = boto.config.getint(
+            'GSUtil', 'parallel_process_count',
+            gslib.commands.config.DEFAULT_PARALLEL_PROCESS_COUNT)
       if process_count < 1:
         raise CommandException('Invalid parallel_process_count "%d".' %
                                process_count)
-      thread_count = boto.config.getint(
-          'GSUtil', 'parallel_thread_count',
-          gslib.commands.config.DEFAULT_PARALLEL_THREAD_COUNT)
+      if not thread_count:
+        thread_count = boto.config.getint(
+            'GSUtil', 'parallel_thread_count',
+            gslib.commands.config.DEFAULT_PARALLEL_THREAD_COUNT)
       if thread_count < 1:
         raise CommandException('Invalid parallel_thread_count "%d".' %
                                thread_count)
@@ -545,11 +578,10 @@ class Command(object):
       process_count = 1
       thread_count = 1
 
-    if self.debug:
-      self.logger.info('process count: %d', process_count)
-      self.logger.info('thread count: %d', thread_count)
+    self.logger.debug('process count: %d', process_count)
+    self.logger.debug('thread count: %d', thread_count)
 
-    if self.parallel_operations and process_count > 1:
+    if (self.parallel_operations or local_parallel) and process_count > 1:
       self.procs = []
       # If any shared attributes passed by caller, create a dictionary of
       # shared memory variables for every element in the list of shared
@@ -566,16 +598,15 @@ class Command(object):
       # listing. This number may need tuning; it should be large enough to
       # keep workers busy (overlapping bucket list next-page retrieval with
       # operations being fed from the queue) but small enough that we don't
-      # overfill memory when runing across a slow network link.
+      # overfill memory when running across a slow network link.
       work_queue = multiprocessing.Queue(50000)
       for shard in range(process_count):
         # Spawn a separate OS process for each shard.
-        if self.debug:
-          self.logger.info('spawning process for shard %d', shard)
+        self.logger.debug('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
                                     args=(func, work_queue, shard,
                                           thread_count, thr_exc_handler,
-                                          shared_vars))
+                                          shared_vars, arg_checker))
         self.procs.append(p)
         p.start()
 
@@ -586,13 +617,13 @@ class Command(object):
       last_name_expansion_result = None
       try:
         # Feed all work into the queue being emptied by the workers.
-        for name_expansion_result in name_expansion_iterator:
-          last_name_expansion_result = name_expansion_result
-          work_queue.put(name_expansion_result)
+        for arg in args_list:
+          last_arg = arg
+          work_queue.put(arg)
       except:
         sys.stderr.write('Failed URI iteration. Last result (prior to '
                          'exception) was: %s\n'
-                         % repr(last_name_expansion_result))
+                         % repr(last_arg))
       finally:
         # We do all of the process cleanup in a finally cause in case the name
         # expansion iterator throws an exception. This will send EOF to all the
@@ -600,7 +631,7 @@ class Command(object):
 
         # Send an EOF per worker.
         for shard in range(process_count):
-          work_queue.put(_EOF_NAME_EXPANSION_RESULT)
+          work_queue.put(_EOF_ARGUMENT)
 
         # Wait for all spawned OS processes to finish.
         failed_process_count = 0
@@ -629,8 +660,7 @@ class Command(object):
       # Using just 1 process, so funnel results to _ApplyThreads using facade
       # that makes NameExpansionIterator look like a Multiprocessing.Queue
       # that sends one EOF once the iterator empties.
-      work_queue = NameExpansionIteratorQueue(name_expansion_iterator,
-                                              _EOF_NAME_EXPANSION_RESULT)
+      work_queue = NameExpansionIteratorQueue(args_list, _EOF_ARGUMENT)
       self._ApplyThreads(func, work_queue, 0, thread_count, thr_exc_handler,
                          None)
 
@@ -704,7 +734,8 @@ class Command(object):
         from gslib import no_op_auth_plugin
 
   def _ApplyThreads(self, func, work_queue, shard, num_threads,
-                    thr_exc_handler=None, shared_vars=None):
+                    thr_exc_handler=None, shared_vars=None,
+                    arg_checker=_UriArgChecker):
     """
     Perform subset of required requests across a caller specified
     number of parallel Python threads, which may be one, in which
@@ -719,6 +750,9 @@ class Command(object):
       shared_vars: Dict of shared memory variables to be managed.
                    (only relevant, and non-None, if this function is
                    run in a separate OS process).
+      arg_checker: Used to determine whether we should process the current
+                   argument or simply skip it. Also handles any logging that
+                   is specific to a particular type of argument.
     """
     # Each OS process needs to establish its own set of connections to
     # the server to avoid writes from different OS processes interleaving
@@ -734,21 +768,15 @@ class Command(object):
       thread_pool = ThreadPool(num_threads, thr_exc_handler)
     try:
       while True: # Loop until we hit EOF marker.
-        name_expansion_result = work_queue.get()
-        if name_expansion_result == _EOF_NAME_EXPANSION_RESULT:
+        args = work_queue.get()
+        if args == _EOF_ARGUMENT:
           break
-        exp_src_uri = self.suri_builder.StorageUri(
-            name_expansion_result.GetExpandedUriStr())
-        if self.debug:
-          self.logger.info('process %d shard %d is handling uri %s',
-                           os.getpid(), shard, exp_src_uri)
-        if (self.exclude_symlinks and exp_src_uri.is_file_uri()
-            and os.path.islink(exp_src_uri.object_name)):
-          self.logger.info('Skipping symbolic link %s...', exp_src_uri)
-        elif num_threads > 1:
-          thread_pool.AddTask(func, name_expansion_result)
+        if not arg_checker(self, args, shard):
+          continue
+        if num_threads > 1:
+          thread_pool.AddTask(func, args)
         else:
-          func(name_expansion_result)
+          func(args)
       # If any Python threads created, wait here for them to finish.
       if num_threads > 1:
         thread_pool.WaitCompletion()

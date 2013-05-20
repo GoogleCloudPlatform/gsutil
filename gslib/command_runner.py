@@ -43,7 +43,7 @@ class CommandRunner(object):
                 bucket_storage_uri_class=BucketStorageUri):
     """
     Args:
-      config_file_list: Config file list returned by _GetBotoConfigFileList().
+      config_file_list: Config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
     """
@@ -70,7 +70,7 @@ class CommandRunner(object):
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None,
-                      skip_update_check=False):
+                      skip_update_check=False, logging_filters=None):
     """Runs the named command. Used by gsutil main, commands built atop
       other commands, and tests .
 
@@ -84,6 +84,8 @@ class CommandRunner(object):
                      Application and semantics of this method will vary by
                      command and test type.
         skip_update_check: Set to True to disable checking for gsutil updates.
+        logging_filters: Optional list of logging.Filters to apply to this
+                         command's logger.
 
       Raises:
         CommandException: if errors encountered.
@@ -120,7 +122,7 @@ class CommandRunner(object):
     command_class = self.command_map[command_name]
     command_inst = command_class(
         self, args, headers, debug, parallel_operations, self.config_file_list,
-        self.bucket_storage_uri_class, test_method)
+        self.bucket_storage_uri_class, test_method, logging_filters)
     return command_inst.RunCommand()
 
 

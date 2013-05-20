@@ -558,9 +558,8 @@ class CpCommand(Command):
         continue
       local_hexdigest = binascii.b2a_hex(local_hashes[alg])
       cloud_hexdigest = binascii.b2a_hex(cloud_hashes[alg])
-      if self.debug:
-        self.logger.info('Comparing local vs cloud %s-checksum. (%s/%s)' % (
-            alg, local_hexdigest, cloud_hexdigest))
+      self.logger.debug('Comparing local vs cloud %s-checksum. (%s/%s)' % (
+          alg, local_hexdigest, cloud_hexdigest))
       if local_hexdigest != cloud_hexdigest:
         # Checksums don't match - remove file and raise exception.
         os.unlink(file_name)
@@ -1012,8 +1011,7 @@ class CpCommand(Command):
 
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
-      if self.debug:
-        self.logger.info('Compressing %s (to tmp)...', src_key)
+      self.logger.debug('Compressing %s (to tmp)...', src_key)
       (gzip_fh, gzip_path) = tempfile.mkstemp()
       gzip_fp = None
       try:
@@ -1775,9 +1773,8 @@ class CpCommand(Command):
     # perform requests with sequential function calls in current process.
     self.Apply(_CopyFunc, name_expansion_iterator, _CopyExceptionHandler,
                shared_attrs)
-    if self.debug:
-      self.logger.info(
-          'total_bytes_transferred: %d', self.total_bytes_transferred)
+    self.logger.debug(
+        'total_bytes_transferred: %d', self.total_bytes_transferred)
 
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time

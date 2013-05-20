@@ -32,6 +32,7 @@ import boto.exception
 from gslib import util
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
+from gslib.util import GetBotoConfigFileList
 from gslib.util import GetConfigFilePath
 import gslib.exception
 import httplib2
@@ -81,7 +82,7 @@ def main():
   # agent.)
   boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 
-  config_file_list = _GetBotoConfigFileList()
+  config_file_list = GetBotoConfigFileList()
   command_runner = CommandRunner(config_file_list)
   headers = {}
   parallel_operations = False
@@ -184,21 +185,6 @@ def main():
   return _RunNamedCommandAndHandleExceptions(command_runner, command_name,
                                              args[1:], headers, debug,
                                              parallel_operations)
-
-
-def _GetBotoConfigFileList():
-  """Returns list of boto config files that exist."""
-  config_paths = boto.pyami.config.BotoConfigLocations
-  if 'AWS_CREDENTIAL_FILE' in os.environ:
-    config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
-  config_files = {}
-  for config_path in config_paths:
-    if os.path.exists(config_path):
-      config_files[config_path] = 1
-  cf_list = []
-  for config_file in config_files:
-    cf_list.append(config_file)
-  return cf_list
 
 
 def _HandleUnknownFailure(e):

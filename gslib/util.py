@@ -133,6 +133,21 @@ def GetConfigFilePath():
   return config_path
 
 
+def GetBotoConfigFileList():
+  """Returns list of boto config files that exist."""
+  config_paths = boto.pyami.config.BotoConfigLocations
+  if 'AWS_CREDENTIAL_FILE' in os.environ:
+    config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
+  config_files = {}
+  for config_path in config_paths:
+    if os.path.exists(config_path):
+      config_files[config_path] = 1
+  cf_list = []
+  for config_file in config_files:
+    cf_list.append(config_file)
+  return cf_list
+
+
 def _RoundToNearestExponent(num):
   i = 0
   while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):

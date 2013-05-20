@@ -19,6 +19,7 @@ from collections import defaultdict
 import contextlib
 import datetime
 import json
+import logging
 import math
 import multiprocessing
 import os
@@ -38,12 +39,14 @@ from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CONFIG_REQUIRED
+from gslib.command import DummyArgChecker
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.command_runner import CommandRunner
 from gslib.commands import config
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
@@ -52,6 +55,7 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.util import GetBotoConfigFileList
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
@@ -95,9 +99,12 @@ _detailed_help_text = ("""
               uploading files during latency and throughput tests. Defaults to
               5.
 
-  -c          Sets the level of concurrency to use while running throughput
-              experiments. The default value of 1 will only run a single read
-              or write operation concurrently.
+  -c          Sets the number of processes to use while running throughput
+              experiments. The default value is 1.
+              
+  -k          Sets the number of threads per process to use while running
+              throughput experiments. Each process will receive an equal number
+              of threads. The default value is 1.
 
   -s          Sets the size (in bytes) of the test file used to perform read
               and write throughput tests. The default is 1 MiB. This can also
@@ -179,7 +186,7 @@ class PerfDiagCommand(Command):
       # Max number of args required by this command, or NO_MAX.
       MAX_ARGS: 1,
       # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'n:c:s:t:m:i:o:',
+      SUPPORTED_SUB_ARGS: 'n:c:k:s:t:m:i:o:',
       # True if file URIs acceptable for this command.
       FILE_URIS_OK: False,
       # True if provider-only URIs acceptable for this command.
@@ -224,47 +231,6 @@ class PerfDiagCommand(Command):
   # the socket breaking.
   MAX_TOTAL_RETRIES = 10
 
-  def _WindowedExec(self, cmd, n, w, raise_on_error=True):
-    """Executes a command n times with a window size of w.
-
-    Up to w instances of the command will be executed and left outstanding at a
-    time until n instances of the command have completed.
-
-    Args:
-      cmd: List containing the command to execute.
-      n: Number of times the command will be executed.
-      w: Window size of outstanding commands being executed.
-      raise_on_error: See _Exec.
-
-    Raises:
-      Exception: If raise_on_error is set to True and any process exits with a
-      non-zero return code.
-    """
-    if self.debug:
-      self.logger.info('Running command: %s', cmd)
-    devnull_f = open(os.devnull, 'w')
-    num_finished = 0
-    running = []
-    while len(running) or num_finished < n:
-      # Fires off new commands that can be executed.
-      while len(running) < w and num_finished + len(running) < n:
-        self.logger.info('Starting concurrent command: %s', (' '.join(cmd)))
-        p = subprocess.Popen(cmd, stdout=devnull_f, stderr=devnull_f)
-        running.append(p)
-
-      # Checks for finished commands.
-      prev_running = running
-      running = []
-      for p in prev_running:
-        retcode = p.poll()
-        if retcode is None:
-          running.append(p)
-        elif raise_on_error and retcode:
-          raise CommandException("Received non-zero return code (%d) from "
-                                 "subprocess '%s'." % (retcode, ' '.join(cmd)))
-        else:
-          num_finished += 1
-
   def _Exec(self, cmd, raise_on_error=True, return_output=False,
             mute_stderr=False):
     """Executes a command in a subprocess.
@@ -285,8 +251,7 @@ class PerfDiagCommand(Command):
       Exception: If raise_on_error is set to True and any process exits with a
       non-zero return code.
     """
-    if self.debug:
-      self.logger.info('Running command: %s', cmd)
+    self.logger.debug('Running command: %s', cmd)
     stderr = subprocess.PIPE if mute_stderr else None
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr)
     (stdoutdata, stderrdata) = p.communicate()
@@ -483,11 +448,29 @@ class PerfDiagCommand(Command):
             k.delete()
         self._RunOperation(_Delete)
 
+  class _CpFilter(logging.Filter):
+    def filter(self, record):
+      # Used to prevent cp._LogCopyOperation from spewing output from
+      # subprocesses about every iteration.
+      msg = record.getMessage()
+      return not (('Copying file:///' in msg) or ('Copying gs://' in msg))
+
+  def _RunCp(self, args):
+    command_runner = CommandRunner(GetBotoConfigFileList)
+    command_runner.RunNamedCommand("cp", args=args, headers=self.headers,
+        parallel_operations=False, skip_update_check=True,
+        logging_filters=[self._CpFilter()])
+
+  def _PerfdiagExceptionHandler(self, e):
+    """Simple exception handler to allow post-completion status."""
+    self.logger.error(str(e))
+
   def _RunReadThruTests(self):
     """Runs read throughput tests."""
     self.results['read_throughput'] = {'file_size': self.thru_filesize,
                                        'num_times': self.num_iterations,
-                                       'concurrency': self.concurrency}
+                                       'processes': self.processes,
+                                       'threads': self.threads}
 
     # Copy the TCP warmup file.
     warmup_key = self.bucket.key_class(self.bucket)
@@ -506,7 +489,7 @@ class PerfDiagCommand(Command):
       k.set_contents_from_string(self.file_contents[self.thru_local_file])
     self._RunOperation(_Upload2)
 
-    if self.concurrency == 1:
+    if self.processes == 1 and self.threads == 1:
 
       # Warm up the TCP connection.
       def _Warmup():
@@ -524,9 +507,17 @@ class PerfDiagCommand(Command):
         self._RunOperation(_Download)
       time_took = sum(times)
     else:
-      cmd = self.gsutil_exec_list + ['cp', self.thru_remote_file, os.devnull]
+      self.logger.addFilter(self._CpFilter())
       t0 = time.time()
-      self._WindowedExec(cmd, self.num_iterations, self.concurrency)
+      args = [(self.thru_remote_file, os.devnull)]
+      args *= self.num_iterations
+      self.Apply(self._RunCp,
+                 args,
+                 self._PerfdiagExceptionHandler,
+                 arg_checker=DummyArgChecker,
+                 local_parallel=True,
+                 process_count=self.processes,
+                 thread_count=self.threads)
       t1 = time.time()
       time_took = t1 - t0
 
@@ -541,9 +532,10 @@ class PerfDiagCommand(Command):
     """Runs write throughput tests."""
     self.results['write_throughput'] = {'file_size': self.thru_filesize,
                                         'num_copies': self.num_iterations,
-                                        'concurrency': self.concurrency}
+                                        'processes': self.processes,
+                                        'threads': self.threads}
 
-    if self.concurrency == 1:
+    if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
       warmup_key = self.bucket.key_class(self.bucket)
       warmup_key.key = os.path.basename(self.tcp_warmup_file)
@@ -568,10 +560,16 @@ class PerfDiagCommand(Command):
       time_took = sum(times)
 
     else:
-      cmd = self.gsutil_exec_list + ['cp', self.thru_local_file,
-                                     self.thru_remote_file]
       t0 = time.time()
-      self._WindowedExec(cmd, self.num_iterations, self.concurrency)
+      args = [(self.thru_local_file, self.thru_remote_file)]
+      args *= self.num_iterations
+      self.Apply(self._RunCp,
+                 args,
+                 self._PerfdiagExceptionHandler,
+                 arg_checker=DummyArgChecker,
+                 local_parallel=True,
+                 process_count=self.processes,
+                 thread_count=self.threads)
       t1 = time.time()
       time_took = t1 - t0
 
@@ -1000,7 +998,9 @@ class PerfDiagCommand(Command):
     # From -n.
     self.num_iterations = 5
     # From -c.
-    self.concurrency = 1
+    self.processes = 1
+    # From -k.
+    self.threads = 1
     # From -s.
     self.thru_filesize = 1048576
     # From -t.
@@ -1018,8 +1018,11 @@ class PerfDiagCommand(Command):
           self.num_iterations = self._ParsePositiveInteger(
               a, 'The -n parameter must be a positive integer.')
         if o == '-c':
-          self.concurrency = self._ParsePositiveInteger(
+          self.processes = self._ParsePositiveInteger(
               a, 'The -c parameter must be a positive integer.')
+        if o == '-k':
+          self.threads = self._ParsePositiveInteger(
+              a, 'The -k parameter must be a positive integer.')
         if o == '-s':
           try:
             self.thru_filesize = HumanReadableToBytes(a)
@@ -1081,12 +1084,14 @@ class PerfDiagCommand(Command):
     self.logger.info(
         'Number of iterations to run: %d\n'
         'Base bucket URI: %s\n'
-        'Concurrency level: %d\n'
+        'Number of processes: %d\n'
+        'Number of threads: %d\n'
         'Throughput file size: %s\n'
         'Diagnostics to run: %s',
         self.num_iterations,
         self.bucket_uri,
-        self.concurrency,
+        self.processes,
+        self.threads,
         MakeHumanReadable(self.thru_filesize),
         (', '.join(self.diag_tests)))
 
