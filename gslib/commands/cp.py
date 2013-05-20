@@ -643,19 +643,23 @@ class CpCommand(Command):
   class _FileCopyCallbackHandler(object):
     """Outputs progress info for large copy requests."""
 
-    def __init__(self, upload):
+    def __init__(self, upload, logger):
       if upload:
         self.announce_text = 'Uploading'
       else:
         self.announce_text = 'Downloading'
+      self.logger = logger
 
     def call(self, total_bytes_transferred, total_size):
-      sys.stderr.write('%s: %s/%s    \r' % (
-          self.announce_text,
-          MakeHumanReadable(total_bytes_transferred),
-          MakeHumanReadable(total_size)))
-      if total_bytes_transferred == total_size:
-        sys.stderr.write('\n')
+      # Use sys.stderr.write instead of self.logger.info so progress messages
+      # output on a single continuously overwriting line.
+      if self.logger.isEnabledFor(logging.INFO):
+        sys.stderr.write('%s: %s/%s    \r' % (
+            self.announce_text,
+            MakeHumanReadable(total_bytes_transferred),
+            MakeHumanReadable(total_size)))
+        if total_bytes_transferred == total_size:
+          sys.stderr.write('\n')
 
   class _StreamCopyCallbackHandler(object):
     """Outputs progress info for Stream copy to cloud.
@@ -667,10 +671,13 @@ class CpCommand(Command):
       self.logger = logger
 
     def call(self, total_bytes_transferred, total_size):
-      self.logger.info('Uploading: %s    \r',
-                       MakeHumanReadable(total_bytes_transferred))
-      if total_size and total_bytes_transferred == total_size:
-        self.logger.info('\n')
+      # Use sys.stderr.write instead of self.logger.info so progress messages
+      # output on a single continuously overwriting line.
+      if self.logger.isEnabledFor(logging.INFO):
+        sys.stderr.write('Uploading: %s    \r' %
+                         MakeHumanReadable(total_bytes_transferred))
+        if total_size and total_bytes_transferred == total_size:
+          sys.stderr.write('\n')
 
   def _GetTransferHandlers(self, dst_uri, size, upload):
     """
@@ -712,7 +719,7 @@ class CpCommand(Command):
         pass
 
     if size >= resumable_threshold and not dst_is_special:
-      cb = self._FileCopyCallbackHandler(upload).call
+      cb = self._FileCopyCallbackHandler(upload, self.logger).call
       num_cb = int(size / TWO_MB)
 
       resumable_tracker_dir = CreateTrackerDirIfNeeded()
@@ -1838,9 +1845,9 @@ class CpCommand(Command):
           self.no_clobber = True
         elif o == '-q':
           self.logger.warning(
-              'Warning: -q is deprecated, and will be removed in the future.'
-              '\nPlease use gsutil -q cp ... instead.')
-          logging.basicConfig(level=logging.WARNING)
+              'Warning: gsutil cp -q is deprecated, and will be removed in the '
+              'future.\nPlease use gsutil -q cp ... instead.')
+          self.logger.setLevel(level=logging.WARNING)
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':

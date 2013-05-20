@@ -55,10 +55,10 @@ from oauth2client.client import HAS_CRYPTO
 
 def _ThreadedLogger(command_name):
   """Creates a logger that resembles 'print' output, but is thread safe and
-     abides by gsutil -q option.
+     abides by gsutil -d/-D/-DD/-q options.
 
-  The logger will display all messages logged with level INFO or above. Log
-  propagation is disabled.
+  By default (if none of the above options is specified) the logger will display
+  all messages logged with level INFO or above. Log propagation is disabled.
 
   Returns:
     A logger object.
