@@ -32,6 +32,7 @@ import tempfile
 import time
 
 import boto
+from boto.utils import compute_md5
 import boto.gs.connection
 
 import gslib
@@ -231,6 +232,10 @@ class PerfDiagCommand(Command):
   # the socket breaking.
   MAX_TOTAL_RETRIES = 10
 
+  # The default buffer size in boto's Key object is set to 8KB. This becomes a
+  # bottleneck at high throughput rates, so we increase it.
+  KEY_BUFFER_SIZE = 16384
+
   def _Exec(self, cmd, raise_on_error=True, return_output=False,
             mute_stderr=False):
     """Executes a command in a subprocess.
@@ -271,6 +276,8 @@ class PerfDiagCommand(Command):
     self.file_sizes = {}
     # Maps each test file to its contents as a string.
     self.file_contents = {}
+    # Maps each test file to its MD5 hash.
+    self.file_md5s = {}
     # Total number of HTTP requests made.
     self.total_requests = 0
     # Total number of HTTP 5xx errors.
@@ -285,12 +292,11 @@ class PerfDiagCommand(Command):
       fd, fpath = tempfile.mkstemp(suffix='.bin', prefix='gsutil_test_file',
                                    text=False)
       self.file_sizes[fpath] = file_size
-      f = os.fdopen(fd, 'wb')
-      f.write(os.urandom(file_size))
-      f.close()
-      f = open(fpath, 'rb')
-      self.file_contents[fpath] = f.read()
-      f.close()
+      self.file_contents[fpath] = os.urandom(file_size)
+      with os.fdopen(fd, 'wb') as f:
+        f.write(self.file_contents[fpath])
+      with open(fpath, 'rb') as f:
+        self.file_md5s[fpath] = compute_md5(f)
       return fpath
 
     # Create files for latency tests.
@@ -426,11 +432,13 @@ class PerfDiagCommand(Command):
             % {'size': readable_file_size, 'fpath': fpath, 'gsuri': gsuri})
 
         k = self.bucket.key_class(self.bucket)
+        k.BufferSize = self.KEY_BUFFER_SIZE
         k.key = basename
 
         def _Upload():
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
-            k.set_contents_from_string(self.file_contents[fpath])
+            k.set_contents_from_string(self.file_contents[fpath],
+                                       md5=self.file_md5s[fpath])
         self._RunOperation(_Upload)
 
         def _Metadata():
@@ -440,7 +448,7 @@ class PerfDiagCommand(Command):
 
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
-            k.get_contents_to_file(self.devnull)
+            k.get_contents_to_file(self.devnull, hash_algs={})
         self._RunOperation(_Download)
 
         def _Delete():
@@ -478,29 +486,32 @@ class PerfDiagCommand(Command):
 
     def _Upload1():
       warmup_key.set_contents_from_string(
-          self.file_contents[self.tcp_warmup_file])
+          self.file_contents[self.tcp_warmup_file],
+          md5=self.file_md5s[self.tcp_warmup_file])
     self._RunOperation(_Upload1)
 
     # Copy the file to remote location before reading.
     k = self.bucket.key_class(self.bucket)
+    k.BufferSize = self.KEY_BUFFER_SIZE
     k.key = os.path.basename(self.thru_local_file)
 
     def _Upload2():
-      k.set_contents_from_string(self.file_contents[self.thru_local_file])
+      k.set_contents_from_string(self.file_contents[self.thru_local_file],
+                                 md5=self.file_md5s[self.thru_local_file])
     self._RunOperation(_Upload2)
 
     if self.processes == 1 and self.threads == 1:
 
       # Warm up the TCP connection.
       def _Warmup():
-        warmup_key.get_contents_to_file(self.devnull)
+        warmup_key.get_contents_to_file(self.devnull, hash_algs={})
       self._RunOperation(_Warmup)
 
       times = []
 
       def _Download():
         t0 = time.time()
-        k.get_contents_to_file(self.devnull)
+        k.get_contents_to_file(self.devnull, hash_algs={})
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -542,17 +553,20 @@ class PerfDiagCommand(Command):
 
       def _Warmup():
         warmup_key.set_contents_from_string(
-            self.file_contents[self.tcp_warmup_file])
+            self.file_contents[self.tcp_warmup_file],
+            md5=self.file_md5s[self.tcp_warmup_file])
       self._RunOperation(_Warmup)
 
       k = self.bucket.key_class(self.bucket)
+      k.BufferSize = self.KEY_BUFFER_SIZE
       k.key = os.path.basename(self.thru_local_file)
 
       times = []
 
       def _Upload():
         t0 = time.time()
-        k.set_contents_from_string(self.file_contents[self.thru_local_file])
+        k.set_contents_from_string(self.file_contents[self.thru_local_file],
+                                   md5=self.file_md5s[self.thru_local_file])
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -1079,6 +1093,8 @@ class PerfDiagCommand(Command):
       self._DisplayResults()
       return 0
 
+    # We turn off retries in the underlying boto library because the
+    # _RunOperation function handles errors manually so it can count them.
     boto.config.set('Boto', 'num_retries', '0')
 
     self.logger.info(
