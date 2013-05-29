@@ -34,7 +34,7 @@ _detailed_help_text = ("""
   and how your script needs to be implemented around this mechanism to work
   reliably. gsutil uses the resumable transfer support in the boto library
   when you attempt to upload or download a file larger than a configurable
-  threshold (by default, this threshold is 1MB). When a transfer fails
+  threshold (by default, this threshold is 2 MB). When a transfer fails
   partway through (e.g., because of an intermittent network problem),
   boto uses a randomized binary exponential backoff-and-retry strategy:
   wait a random period between [0..1] seconds and retry; if that fails,
