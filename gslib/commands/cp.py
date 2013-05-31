@@ -1992,8 +1992,9 @@ class CpCommand(Command):
       self.manifest_filter = {}
       self.lock = threading.Lock()
 
-      self._ParseManifest(path)
-      self._CreateManifestFile(path)
+      manifest_path = os.path.expanduser(path)
+      self._ParseManifest(manifest_path)
+      self._CreateManifestFile(manifest_path)
 
     def __del__(self):
       if self.manifest_fp:
