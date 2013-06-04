@@ -1310,6 +1310,12 @@ class CpCommand(Command):
     result = self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
                                                    dst_uri, canned_acl, headers)
     if preserve_acl:
+      # If user specified noclobber flag, we need to remove the
+      # x-goog-if-generation-match:0 header that was set when uploading the
+      # object, because that precondition would fail when updating the ACL on
+      # the now-existing object.
+      if self.no_clobber:
+        del headers['x-goog-if-generation-match']
       dst_uri.set_xml_acl(acl.to_xml(), dst_uri.object_name, headers=headers)
     return result
 

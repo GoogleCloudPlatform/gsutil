@@ -309,8 +309,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['setacl', 'public-read', suri(key_uri)])
     acl_xml = self.RunGsUtil(['getacl', suri(key_uri)], return_stdout=True)
     # Perform daisy-chain copy and verify that it wasn't disallowed and that
-    # source object headers and ACL were preserved.
-    stderr = self.RunGsUtil(['cp', '-Dp', suri(key_uri), suri(bucket2_uri)],
+    # source object headers and ACL were preserved. Also specify -n option to
+    # test that gsutil correctly removes the x-goog-if-generation-match:0 header
+    # that was set at uploading time when updating the ACL.
+    stderr = self.RunGsUtil(['cp', '-Dpn', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
