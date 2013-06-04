@@ -305,19 +305,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['setmeta', '-h', 'Cache-Control:public,max-age=12',
                     '-h', 'Content-Type:image/gif',
                     '-h', 'x-goog-meta-1:abcd', suri(key_uri)])
+    # Set public-read (non-default) ACL so we can verify that cp -D -p works.
+    self.RunGsUtil(['setacl', 'public-read', suri(key_uri)])
+    acl_xml = self.RunGsUtil(['getacl', suri(key_uri)], return_stdout=True)
     # Perform daisy-chain copy and verify that it wasn't disallowed and that
-    # source object headers were preserved.
-    stderr = self.RunGsUtil(['cp', '-D', suri(key_uri), suri(bucket2_uri)],
+    # source object headers and ACL were preserved.
+    stderr = self.RunGsUtil(['cp', '-Dp', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check():
-      stdout = self.RunGsUtil([
-          'ls', '-L', suri(bucket2_uri, key_uri.object_name)],
-          return_stdout=True)
+      uri = suri(bucket2_uri, key_uri.object_name)
+      stdout = self.RunGsUtil(['ls', '-L', uri], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Cache-Control:\s+public,max-age=12')
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
       self.assertRegexpMatches(stdout, 'x-goog-meta-1:\s+abcd')
+      new_acl_xml = self.RunGsUtil(['getacl', uri], return_stdout=True)
+      self.assertEqual(acl_xml, new_acl_xml)
     _Check()
 
 

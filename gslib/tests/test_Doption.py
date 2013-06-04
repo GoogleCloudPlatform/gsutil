@@ -33,7 +33,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('header: Expires: ', stderr)
     self.assertIn('header: Date: ', stderr)
-    self.assertIn('header: Cache-Control: private, max-age=0, no-transform',
+    self.assertIn('header: Cache-Control: private, max-age=0',
                   stderr)
     self.assertIn('header: Last-Modified: ', stderr)
     self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)

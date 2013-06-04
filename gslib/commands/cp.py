@@ -758,6 +758,28 @@ class CpCommand(Command):
     else:
       self.logger.info('Copying %s%s...', src_uri, content_type_msg)
 
+  def _ProcessCopyObjectToObjectOptions(self, headers):
+    """
+    Common option processing between _CopyObjToObjInTheCloud and
+    _CopyObjToObjDaisyChainMode.
+    """
+    preserve_acl = False
+    canned_acl = None
+    if self.sub_opts:
+      for o, a in self.sub_opts:
+        if o == '-a':
+          canned_acls = dst_uri.canned_acls()
+          if a not in canned_acls:
+            raise CommandException('Invalid canned ACL "%s".' % a)
+          canned_acl = a
+          headers[dst_uri.get_provider().acl_header] = canned_acl
+        if o == '-p':
+          preserve_acl = True
+    if preserve_acl and canned_acl:
+      raise CommandException(
+          'Specifying both the -p and -a options together is invalid.')
+    return (preserve_acl, canned_acl, headers)
+
   # We pass the headers explicitly to this call instead of using self.headers
   # so we can set different metadata (like Content-Type type) for each object.
   def _CopyObjToObjInTheCloud(self, src_key, src_uri, dst_uri, headers):
@@ -784,21 +806,8 @@ class CpCommand(Command):
     # x-<provider>-copy-source metadata HTTP header to request copying at the
     # server).
     src_bucket = src_uri.get_bucket(False, headers)
-    preserve_acl = False
-    canned_acl = None
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o == '-a':
-          canned_acls = dst_uri.canned_acls()
-          if a not in canned_acls:
-            raise CommandException('Invalid canned ACL "%s".' % a)
-          canned_acl = a
-          headers[dst_uri.get_provider().acl_header] = canned_acl
-        if o == '-p':
-          preserve_acl = True
-    if preserve_acl and canned_acl:
-      raise CommandException(
-          'Specifying both the -p and -a options together is invalid.')
+    (preserve_acl, canned_acl, headers) = (
+        self._ProcessCopyObjectToObjectOptions(headers))
     start_time = time.time()
     # Pass headers in headers param not metadata param, so boto will copy
     # existing key's metadata and just set the additional headers specified
@@ -812,7 +821,7 @@ class CpCommand(Command):
 
     try:
       dst_key = dst_uri.copy_key(
-          src_bucket.name, src_uri.object_name, preserve_acl=False,
+          src_bucket.name, src_uri.object_name, preserve_acl=preserve_acl,
           headers=headers, src_version_id=src_uri.version_id,
           src_generation=src_uri.generation)
     except GSResponseError as e:
@@ -1286,22 +1295,23 @@ class CpCommand(Command):
       headers[header_name] = value
     # Set content type if specified in '-h Content-Type' option.
     self._SetContentTypeHeader(src_uri, headers)
-
     self._LogCopyOperation(src_uri, dst_uri, headers)
-    canned_acl = None
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o == '-a':
-          canned_acls = dst_uri.canned_acls()
-          if a not in canned_acls:
-            raise CommandException('Invalid canned ACL "%s".' % a)
-          canned_acl = a
-        elif o == '-p':
-          # We don't attempt to preserve ACLs across providers because
-          # GCS and S3 support different ACLs and disjoint principals.
-          raise NotImplementedError('Cross-provider cp -p not supported')
-    return self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
-                                                 dst_uri, canned_acl, headers)
+    (preserve_acl, canned_acl, headers) = (
+        self._ProcessCopyObjectToObjectOptions(headers))
+    if preserve_acl:
+      if src_uri.get_provider() != dst_uri.get_provider():
+        # We don't attempt to preserve ACLs across providers because
+        # GCS and S3 support different ACLs and disjoint principals.
+        raise NotImplementedError('Cross-provider cp -p not supported')
+      # We need to read and write the ACL manually because the
+      # Key.set_contents_from_file() API doesn't provide a preserve_acl
+      # parameter (unlike the Bucket.copy_key() API).
+      acl = src_uri.get_acl(headers=headers)
+    result = self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
+                                                   dst_uri, canned_acl, headers)
+    if preserve_acl:
+      dst_uri.set_xml_acl(acl.to_xml(), dst_uri.object_name, headers=headers)
+    return result
 
   def _PerformCopy(self, src_uri, dst_uri):
     """Performs copy from src_uri to dst_uri, handling various special cases.
