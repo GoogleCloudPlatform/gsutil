@@ -14,6 +14,7 @@
 
 """Static data and helper functions."""
 
+import errno
 import math
 import os
 import re
@@ -95,7 +96,16 @@ def CreateTrackerDirIfNeeded():
       'GSUtil', 'resumable_tracker_dir',
       os.path.expanduser('~' + os.sep + '.gsutil'))
   if not os.path.exists(tracker_dir):
-    os.makedirs(tracker_dir)
+    try:
+      # Unfortunately, even though we catch and ignore EEXIST, this call will
+      # will output a (needless) error message (no way to avoid that in Python).
+      os.makedirs(tracker_dir)
+    # Ignore 'already exists' in case user tried to start up several
+    # resumable uploads concurrently from a machine where no tracker dir had
+    # yet been created.
+    except OSError as e:
+      if e.errno != errno.EEXIST:
+        raise
   return tracker_dir
 
 
