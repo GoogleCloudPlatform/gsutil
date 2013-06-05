@@ -193,6 +193,8 @@ _detailed_help_text = ("""
   -a          Includes non-current object versions / generations in the listing
               (only useful with a versioning-enabled bucket). If combined with
               -l option also prints metageneration for each listed object.
+
+  -e          Include ETag in long listing (-l) output.
 """)
 
 class LsCommand(Command):
@@ -209,7 +211,7 @@ class LsCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'ablLhp:rR',
+    SUPPORTED_SUB_ARGS : 'aeblLhp:rR',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -242,53 +244,43 @@ class LsCommand(Command):
     Returns:
       Tuple (total objects, total bytes) in the bucket.
     """
-    bucket_objs = 0
-    bucket_bytes = 0
-    if listing_style == ListingStyle.SHORT:
+    if (listing_style == ListingStyle.SHORT or
+        listing_style == ListingStyle.LONG):
       print bucket_uri
-    else:
-      for obj in self.WildcardIterator(
-          bucket_uri.clone_replace_name('**')).IterKeys():
-        bucket_objs += 1
-        bucket_bytes += obj.size
-      if listing_style == ListingStyle.LONG:
-        print '%s : %s objects, %s' % (
-            bucket_uri, bucket_objs, MakeHumanReadable(bucket_bytes))
-      else:  # listing_style == ListingStyle.LONG_LONG:
-        location_constraint = bucket_uri.get_location(validate=False,
-                                                      headers=self.headers)
-        location_output = ''
-        if location_constraint:
-          location_output = '\n\tLocationConstraint: %s' % location_constraint
-        storage_class = bucket_uri.get_storage_class(validate=False,
-                                                     headers=self.headers)
-        self.proj_id_handler.FillInProjectHeaderIfNeeded(
-            'get_acl', bucket_uri, self.headers)
-        fields = { "bucket": bucket_uri,
-                   "object_count": bucket_objs,
-                   "bytes": MakeHumanReadable(bucket_bytes),
-                   "storage_class": storage_class,
-                   "location_output": location_output,
-                   "versioning": bucket_uri.get_versioning_config(self.headers),
-                   "acl": bucket_uri.get_acl(False, self.headers),
-                   "default_acl": bucket_uri.get_def_acl(False, self.headers) }
-        # Logging and website need a bit more work to make them human-readable
-        for message in [bucket_uri.get_website_config(self.headers),
-                        bucket_uri.get_logging_config(self.headers)]:
-          field, content = message.items()[0]  # expect only one entry in dict
-          fields[field] = ", ".join("%s: %s" % (property, value) for
-                                    property, value in sorted(content.items()))
+      return
 
-        print("{bucket} :\n"
-              "\t{object_count} objects, {bytes}\n"
-              "\tStorageClass: {storage_class}{location_output}\n"
-              "\tVersioning enabled: {versioning}\n"
-              "\tLogging: {Logging}\n"
-              "\tWebsiteConfiguration: {WebsiteConfiguration}\n"
-              "\tACL: {acl}\n"
-              "\tDefault ACL: {default_acl}".format(**fields))
+    location_constraint = bucket_uri.get_location(validate=False,
+                                                  headers=self.headers)
+    location_output = ''
+    if location_constraint:
+      location_output = '\n\tLocationConstraint:\t%s' % location_constraint
+    storage_class = bucket_uri.get_storage_class(validate=False,
+                                                 headers=self.headers)
+    self.proj_id_handler.FillInProjectHeaderIfNeeded(
+        'get_acl', bucket_uri, self.headers)
+    fields = {
+        'bucket': bucket_uri,
+        'storage_class': storage_class,
+        'location_output': location_output,
+        'versioning': bucket_uri.get_versioning_config(self.headers),
+        'acl': bucket_uri.get_acl(False, self.headers),
+        'default_acl': bucket_uri.get_def_acl(False, self.headers),
+    }
+    # Logging and website need a bit more work to make them human-readable.
+    for message in [bucket_uri.get_website_config(self.headers),
+                    bucket_uri.get_logging_config(self.headers)]:
+      field, content = message.items()[0]  # expect only one entry in dict
+      fields[field] = ', '.join(
+          '%s: %s' % (property, value)
+          for property, value in sorted(content.items())) or False
 
-    return (bucket_objs, bucket_bytes)
+    print('{bucket} :\n'
+          '\tStorageClass:\t\t{storage_class}{location_output}\n'
+          '\tVersioning enabled:\t{versioning}\n'
+          '\tLogging:\t\t{Logging}\n'
+          '\tWebsiteConfiguration:\t{WebsiteConfiguration}\n'
+          '\tACL:\t\t\t{acl}\n'
+          '\tDefault ACL:\t\t{default_acl}'.format(**fields))
 
   def _UriStrForObj(self, uri, obj):
     """Constructs a URI string for the given object.
@@ -341,24 +333,33 @@ class LsCommand(Command):
       # Exclude timestamp fractional secs (example: 2010-08-23T12:46:54.187Z).
       timestamp = TIMESTAMP_RE.sub(
           r'\1Z', obj.last_modified.decode('utf8').encode('ascii'))
-      size_string = (MakeHumanReadable(obj.size)
-                     if self.human_readable else str(obj.size))
-      if not isinstance(obj, DeleteMarker):
-        if self.all_versions:
-          print '%10s  %s  %s  metageneration=%s' % (
-              size_string, timestamp, uri_str.encode('utf-8'),
-              obj.metageneration)
-        else:
-          print '%10s  %s  %s' % (
-              size_string, timestamp, uri_str.encode('utf-8'))
-        return (1, obj.size)
+
+      if isinstance(obj, DeleteMarker):
+        size_string = '0'
+        numbytes = 0
+        numobjs = 0
       else:
-        if self.all_versions:
-          print '%10s  %s  %s  metageneration=%s' % (
-              0, timestamp, uri_str.encode('utf-8'), obj.metageneration)
-        else:
-          print '%10s  %s  %s' % (0, timestamp, uri_str.encode('utf-8'))
-        return (0, 1)
+        size_string = (MakeHumanReadable(obj.size)
+                       if self.human_readable else str(obj.size))
+        numbytes = obj.size
+        numobjs = 1
+
+      printstr = '%(size)10s  %(timestamp)s  %(uri)s'
+      if self.all_versions:
+        printstr += '  metageneration=%(metageneration)s'
+      if self.include_etag:
+        printstr += '  etag=%(etag)s'
+      format_args = {
+          'size': size_string,
+          'timestamp': timestamp,
+          'uri': uri_str.encode('utf-8'),
+          'metageneration': obj.metageneration,
+          'etag': obj.etag,
+      }
+      print printstr % format_args
+
+      return (numobjs, numbytes)
+
     elif listing_style == ListingStyle.LONG_LONG:
       # Run in a try/except clause so we can continue listings past
       # access-denied errors (which can happen because user may have READ
@@ -495,11 +496,14 @@ class LsCommand(Command):
     get_bucket_info = False
     self.recursion_requested = False
     self.all_versions = False
+    self.include_etag = False
     self.human_readable = False
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
           self.all_versions = True
+        if o == '-e':
+          self.include_etag = True
         elif o == '-b':
           get_bucket_info = True
         if o == '-h':
@@ -526,19 +530,22 @@ class LsCommand(Command):
       if uri.names_provider():
         # Provider URI: use bucket wildcard to list buckets.
         for uri in self.WildcardIterator('%s://*' % uri.scheme).IterUris():
-          (bucket_objs, bucket_bytes) = self._PrintBucketInfo(uri,
-                                                              listing_style)
-          total_bytes += bucket_bytes
-          total_objs += bucket_objs
+          self._PrintBucketInfo(uri, listing_style)
       elif uri.names_bucket():
         # Bucket URI -> list the object(s) in that bucket.
         if get_bucket_info:
           # ls -b bucket listing request: List info about bucket(s).
+
+          if (listing_style != ListingStyle.LONG_LONG and
+              not ContainsWildcard(uri)):
+            # At this point, we haven't done any validation that the bucket URI
+            # actually exists. If the listing style is short, the
+            # _PrintBucketInfo doesn't do any RPCs, so check to make sure the
+            # bucket actually exists by fetching it.
+            uri.get_bucket(validate=True)
+
           for uri in self.WildcardIterator(uri).IterUris():
-            (bucket_objs, bucket_bytes) = self._PrintBucketInfo(uri,
-                                                                listing_style)
-            total_bytes += bucket_bytes
-            total_objs += bucket_objs
+            self._PrintBucketInfo(uri, listing_style)
         else:
           # Not -b request: List objects in the bucket(s).
           (no, nb) = self._ExpandUriAndPrintInfo(uri, listing_style,

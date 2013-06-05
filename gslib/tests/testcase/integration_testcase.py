@@ -42,6 +42,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   USER_TEST_ADDRESS = 'gs-team@google.com'
   USER_TEST_ID = '00b4903a9703325c6bfc98992d72e75600387a64b3b6bee9ef74613ef8842080'
   DOMAIN_TEST = 'google.com'
+  # No one can create this bucket without owning the google.com domain, and we
+  # won't create this bucket, so it shouldn't exist.
+  NONEXISTENT_BUCKET_NAME = 'nonexistent-bucket-foobar.google.com'
 
   def setUp(self):
     super(GsUtilIntegrationTestCase, self).setUp()

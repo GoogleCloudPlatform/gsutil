@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import posixpath
+
 import gslib.tests.testcase as testcase
 from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
@@ -41,6 +43,66 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                               return_stdout=True)
       self.assertEqual('%s/\n' % suri(bucket_uri), stdout)
     _Check1()
+
+  def test_bucket_with_Lb(self):
+    bucket_uri = self.CreateBucket()
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn(suri(bucket_uri), stdout)
+      self.assertNotIn('TOTAL:', stdout)
+    _Check1()
+
+  def test_bucket_with_lb(self):
+    bucket_uri = self.CreateBucket()
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-lb', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn(suri(bucket_uri), stdout)
+      self.assertNotIn('TOTAL:', stdout)
+    _Check1()
+
+  def test_bucket_list_wildcard(self):
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    # This just double checks that the common prefix of the two buckets is what
+    # we think it should be (based on implementation detail of CreateBucket).
+    # We want to be careful when setting a wildcard on buckets to make sure we
+    # don't step outside the test buckets to affect other buckets.
+    common_prefix = posixpath.commonprefix([suri(bucket1_uri),
+                                            suri(bucket2_uri)])
+    self.assertTrue(common_prefix.startswith(
+        'gs://gsutil-test-test_bucket_list_wildcard-bucket-'))
+    wildcard = '%s*' % common_prefix
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-b', wildcard], return_stdout=True)
+      expected = set([suri(bucket1_uri) + '/', suri(bucket2_uri) + '/'])
+      actual = set(stdout.split())
+      self.assertEqual(expected, actual)
+    _Check1()
+
+  def test_nonexistent_bucket_with_ls(self):
+    stderr = self.RunGsUtil(
+        ['ls', '-lb', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        return_stderr=True, expected_status=1)
+    self.assertIn('404', stderr)
+
+    stderr = self.RunGsUtil(
+        ['ls', '-Lb', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        return_stderr=True, expected_status=1)
+    self.assertIn('404', stderr)
+
+    stderr = self.RunGsUtil(
+        ['ls', '-b', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        return_stderr=True, expected_status=1)
+    self.assertIn('404', stderr)
 
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket(test_objects=1)
@@ -88,6 +150,27 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
                     stdout)
       self.assertIn('metageneration=', stdout)
+    _Check1()
+
+  def test_etag(self):
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    etag = obj_uri.get_key().etag
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertNotIn(etag, stdout)
+
+      stdout = self.RunGsUtil(['ls', '-le', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn(etag, stdout)
+
+      stdout = self.RunGsUtil(['ls', '-ale', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertIn(etag, stdout)
+
     _Check1()
 
   def test_list_sizes(self):
