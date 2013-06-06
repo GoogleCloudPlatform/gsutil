@@ -8,3 +8,4 @@ include setup.py
 recursive-include gslib *
 global-exclude *.pyc
 exclude gslib/commands/update.py
+include scripts/bucket_relocate.sh

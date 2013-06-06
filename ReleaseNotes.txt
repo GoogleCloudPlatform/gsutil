@@ -1,3 +1,52 @@
+Release 3.30 (release-date: 2013-06-10)
+
+
+New Features
+------------
+
+  - Implemented consumption of manifest files for cp.
+  - Add ETag to ls -l and make ls -b variants more efficient.
+  - Expand the manifest path to allow for tildes in paths.
+  - Added bucket_relocate.sh script to gsutil.
+
+
+Bug Fixes
+---------
+
+  - Fix gsutil cp -R to copy all versioned objects.
+  - Fixed bug where gsutil cp -D -n caused precondition failure.
+  - Fixed gsutil daisy-chain copy to allow preserving ACLs when copying within
+    same provider.
+  - Fix identification of non-MD5 ETags.
+  - Fixed bugs where gsutil -q cp and gsutil cp -q sometimes weren't quiet.
+  - Fixed unicode error when constructing tracker filename from non-ASCII
+    Unicode filename.
+  - Fixed that noclobber would not resume partial resumable downloads.
+  - Fixed bug when running gsutil cp -Dp by user other than object owner.
+  - Properly encode metageneration and etag in ls output with -a and -e.
+  - Update resumable threshold stated in gsutil help prod.
+
+
+Other Changes
+-------------
+
+  - Catch and ignore EEXIST error when creating gsutil tracker dir.
+  - Add note to gsutil update doc about auto-update checks being disabled with
+    gsutil -q option.
+  - Disable hashing and increase buffer size in perfdiag.
+  - Added better error messages for service account auth.
+  - Make perfdiag behave more like normal gsutil, with multi-threading option.
+  - Changed so auto-update check/prompt aren't made if gsutil -q specified.
+  - Changed gsutil mb command to clarify that EU means European Union.
+  - Added doc warnings about losing version ordering if using gsutil -m cp
+    between versioned buckets; removed trailing whitespace.
+  - Added to gsutil cp -L doc to describe how to build a reliable script for
+    copying many objects.
+
+
+================================================================================
+
+
 Release 3.29 (release-date: 2013-05-13)
 
 
@@ -9,7 +58,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Added a test for debug mode (gsutil -D) output.
   - List numbering and title case fixes in additional help pages.
@@ -41,7 +90,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Add packaging information to version output.
   - Removed fancy_urllib, since it is no longer used.
@@ -100,7 +149,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Added proper setup.py to make gsutil installable via PyPi.
   - Added warning to gsutil built-in help that delete operations cannot be
@@ -184,7 +233,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Refactored gsutil main function into gslib, with gsutil being a thin
     wrapper.
@@ -236,7 +285,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Refactored retry logic from setmeta and chacl to use @Retry decorator.
 
@@ -356,7 +405,7 @@ Bug Fixes
 
 
 Other Changes
----------
+-------------
 
   - Reworked versioned object handling:
     - Removed need for commands to specify -v option to parse

@@ -44,3 +44,10 @@ To install gsutil take the following steps:
 
 For more information on installing and using gsutil, see
 https://developers.google.com/storage/docs/gsutil
+
+## Additional script for bucket relocation
+
+The scripts directory contains a bash script (built atop gsutil) called
+bucket_relocate.sh, that can be used to migrate one or more buckets to a
+different location and/or storage class. Detailed instructions are provided
+if you run the script with no arguments.
