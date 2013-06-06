@@ -102,7 +102,7 @@ _detailed_help_text = ("""
 
   -c          Sets the number of processes to use while running throughput
               experiments. The default value is 1.
-              
+
   -k          Sets the number of threads per process to use while running
               throughput experiments. Each process will receive an equal number
               of threads. The default value is 1.

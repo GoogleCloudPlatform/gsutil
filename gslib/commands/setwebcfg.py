@@ -53,14 +53,14 @@ _detailed_help_text = ("""
      section of "gsutil help naming" for details about creating such buckets).
 
   2. Create index.html and 404.html files and upload them to the bucket.
-  
+
   3. Configure the bucket to have website behavior using the command:
 
        gsutil setwebcfg -m index.html -e 404.html gs://example.com
 
   4. Add a DNS CNAME record for example.com pointing to c.storage.googleapis.com
      (ask your DNS administrator for help with this).
-     
+
   Now if you open a browser and navigate to http://example.com, it will display
   the main page instead of the default bucket listing. Note: It can take time
   for DNS updates to propagate because of caching used by the DNS, so it may

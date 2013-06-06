@@ -59,7 +59,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['rm', suri(key_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 1)
     self.assertIn('Removing %s...' % suri(key_uri), stderr)
-    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)], 
+    stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)

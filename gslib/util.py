@@ -130,7 +130,7 @@ def HasConfiguredCredentials():
   has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
   return (has_goog_creds or has_amzn_creds or has_oauth_creds
           or has_auth_plugins or has_service_account_creds)
-  
+
 def GetConfigFilePath():
   config_path = 'no config found'
   for path in BotoConfigLocations:

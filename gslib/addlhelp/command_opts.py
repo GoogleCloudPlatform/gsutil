@@ -97,6 +97,12 @@ _detailed_help_text = ("""
               1000 files have been transferred), you will need to restart the
               entire transfer.
 
+              WARNING: If you use the gsutil -m option when copying data
+              between versioned buckets, object version ordering will not be
+              preserved. For more information see the
+              "COPYING VERSIONED BUCKETS" section under
+              'gsutil help versioning'.
+
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,
               etc. Errors are still reported. This option can be useful for

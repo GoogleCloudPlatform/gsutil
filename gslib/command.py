@@ -457,15 +457,15 @@ class Command(object):
             uri.set_xml_acl(acl_arg, uri.object_name, False, self.headers)
     if not some_matched:
       raise CommandException('No URIs matched')
-    
+
   def _WarnServiceAccounts(self):
     """Warns service account users who have received an AccessDenied error for
-    one of the metadata-related commands to make sure that they are listed as 
+    one of the metadata-related commands to make sure that they are listed as
     Owners in the API console."""
-    
+
     # Import this here so that the value will be set first in oauth2_plugin.
     from gslib.third_party.oauth2_plugin.oauth2_plugin import IS_SERVICE_ACCOUNT
-    
+
     if IS_SERVICE_ACCOUNT:
       # This method is only called when canned ACLs are used, so the warning
       # definitely applies.

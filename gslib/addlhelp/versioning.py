@@ -54,7 +54,7 @@ _detailed_help_text = ("""
 
     gs://bucket/object#1360383693690000
     gs://bucket/object#1360383802725000
-  
+
   The following sections discuss how to work with versioning and concurrency
   control.
 
@@ -142,6 +142,41 @@ _detailed_help_text = ("""
   you want to retain.
 
 
+<B>COPYING VERSIONED BUCKETS</B>
+  You can copy data between two versioned buckets, using a command like:
+
+    gsutil cp -R gs://bucket1/* gs://bucket2
+
+  When run using versioned buckets, this command will cause every object version
+  to be copied. The copies made in gs://bucket2 will have different generation
+  numbers (since a new generation is assigned when the object copy is made),
+  but the object sort order will remain consistent. For example, gs://bucket1
+  might contain:
+
+    % gsutil ls -la gs://bucket1 10  2013-06-06T02:33:11Z
+    53  2013-02-02T22:30:57Z  gs://bucket1/file#1359844257574000  metageneration=1
+    12  2013-02-02T22:30:57Z  gs://bucket1/file#1359844257615000  metageneration=1
+    97  2013-02-02T22:30:57Z  gs://bucket1/file#1359844257665000  metageneration=1
+
+  and after the copy, gs://bucket2 might contain:
+
+    % gsutil ls -la gs://bucket2
+    53  2013-06-06T02:33:11Z  gs://bucket2/file#1370485991580000  metageneration=1
+    12  2013-06-06T02:33:14Z  gs://bucket2/file#1370485994328000  metageneration=1
+    97  2013-06-06T02:33:17Z  gs://bucket2/file#1370485997376000  metageneration=1
+
+  Note that the object versions are in the same order (as can be seen by the
+  same sequence of sizes in both listings), but the generation numbers (and
+  timestamps) are newer in gs://bucket2.
+
+  WARNING: If you use the gsutil -m option when copying the objects (to parallel
+  copy the data), object version ordering will NOT be preserved. All object
+  versions will be copied, but (for example) the latest/live version in the
+  destination bucket might be from one of the earlier versions in the source
+  bucket (and similarly, other versions may be out of order). When copying
+  versioned data it is advisable not to use the gsutil -m option.
+
+
 <B>CONCURRENCY CONTROL</B>
   If you are building an application using Google Cloud Storage, you may need to
   be careful about concurrency control. Normally gsutil itself isn't used for
@@ -195,8 +230,8 @@ _detailed_help_text = ("""
 
   will output something like:
 
-      64  2013-02-12T19:59:13  gs://bucket/object#1360699153986000  metageneration=3
-    1521  2013-02-13T02:04:08  gs://bucket/object#1360721048778000  metageneration=2
+      64  2013-02-12T19:59:13Z  gs://bucket/object#1360699153986000  metageneration=3
+    1521  2013-02-13T02:04:08Z  gs://bucket/object#1360721048778000  metageneration=2
 
   Given this information, you could use the following command to request setting
   the ACL on the older version of the object, such that the command will fail

@@ -363,7 +363,7 @@ content_language = en
 #check_hashes = if_fast_else_fail
 
 # The ability to specify an alternative discovery service URL is primarily for
-# cloud storage service developers. 
+# cloud storage service developers.
 #discovery_service_url = https://www.googleapis.com/discovery/v1/apis/{api}/{apiVersion}/rest
 # The ability to specify an alternative JSON API version is primarily for cloud
 # storage service developers.

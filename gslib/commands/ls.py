@@ -119,8 +119,8 @@ _detailed_help_text = ("""
   will print the object size, creation time stamp, and name of each matching
   object, along with the total count and sum of sizes of all matching objects:
 
-       2276224  2012-03-02T19:25:17  gs://bucket/obj1
-       3914624  2012-03-02T19:30:27  gs://bucket/obj2
+       2276224  2012-03-02T19:25:17Z  gs://bucket/obj1
+       3914624  2012-03-02T19:30:27Z  gs://bucket/obj2
     TOTAL: 2 objects, 6190848 bytes (5.9 MB)
 
   Note that the total listed in parentheses above is in mebibytes (or gibibytes,

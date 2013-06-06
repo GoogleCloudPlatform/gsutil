@@ -18,7 +18,7 @@ class MockDateTime:
 
   def utcnow(self):
     return self.mock_now
-  
+
 class MockOAuth2ServiceAccountClient(oauth2_client.OAuth2ServiceAccountClient):
   def __init__(self, client_id, private_key, password, auth_uri, token_uri,
                datetime_strategy):
@@ -26,10 +26,10 @@ class MockOAuth2ServiceAccountClient(oauth2_client.OAuth2ServiceAccountClient):
         client_id, private_key, password, auth_uri=auth_uri,
         token_uri=token_uri, datetime_strategy=datetime_strategy)
     self.Reset()
-  
+
   def Reset(self):
     self.fetched_token = False
-    
+
   def FetchAccessToken(self):
     self.fetched_token = True
     return oauth2_client.AccessToken(
@@ -45,7 +45,7 @@ class MockOAuth2UserAccountClient(oauth2_client.OAuth2UserAccountClient):
         token_uri, client_id, client_secret, refresh_token, auth_uri=auth_uri,
         datetime_strategy=datetime_strategy)
     self.Reset()
-    
+
   def Reset(self):
     self.fetched_token = False
 
@@ -55,7 +55,7 @@ class MockOAuth2UserAccountClient(oauth2_client.OAuth2UserAccountClient):
         ACCESS_TOKEN,
         GetExpiry(self.datetime_strategy, 3600),
         datetime_strategy=self.datetime_strategy)
-    
+
 def GetExpiry(datetime_strategy, lengthInSeconds):
   token_expiry = (datetime_strategy.utcnow()
                   + datetime.timedelta(seconds=lengthInSeconds))
@@ -65,7 +65,7 @@ def CreateMockUserAccountClient(start_time, mock_datetime):
   return MockOAuth2UserAccountClient(
         TOKEN_URI, 'clid', 'clsecret', 'ref_token_abc123', AUTH_URI,
         mock_datetime)
-  
+
 def CreateMockServiceAccountClient(start_time, mock_datetime):
   return MockOAuth2ServiceAccountClient(
       'clid', 'private_key', 'password', AUTH_URI, TOKEN_URI,

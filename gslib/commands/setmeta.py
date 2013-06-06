@@ -187,9 +187,9 @@ class SetMetaCommand(Command):
       if metageneration:
         headers['x-goog-if-metageneration-match'] = metageneration
 
-      # If this fails because of a precondition, it will raise a 
+      # If this fails because of a precondition, it will raise a
       # GSResponseError for @Retry to handle.
-      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl, 
+      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl,
                                  headers=headers)
 
     name_expansion_iterator = NameExpansionIterator(
