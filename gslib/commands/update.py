@@ -73,7 +73,9 @@ _detailed_help_text = ("""
   in the .boto config file. Note also that gsutil will only check for software
   updates if stdin, stdout, and stderr are all connected to a TTY, to avoid
   interfering with cron jobs, streaming transfers, and other cases where gsutil
-  input or output are redirected from/to files or pipes.
+  input or output are redirected from/to files or pipes. Software update
+  periodic checks are also disabled by the gsutil -q option (see
+  'gsutil help options')
 
 
 <B>OPTIONS</B>

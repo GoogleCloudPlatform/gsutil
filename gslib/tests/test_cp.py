@@ -221,6 +221,46 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
+  def test_recursive_copying_versioned_bucket(self):
+    # Tests that cp -R between versioned buckets copies all versions and
+    # preserves version order.
+    bucket1_uri = self.CreateVersionedBucket()
+    bucket2_uri = self.CreateVersionedBucket()
+    # Write two versions of an object to the bucket1.
+    k_uri = self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
+                              contents='data0')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
+                      contents='longer_data1')
+    # Recursively copy to second versioned bucket.
+    self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'), suri(bucket2_uri)])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
+                                return_stdout=True).split('\n')
+      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
+                                return_stdout=True).split('\n')
+      # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
+      self.assertEquals(len(listing1), 4)
+      self.assertEquals(len(listing2), 4)
+
+      # First object in each bucket should match in size and version-less name.
+      size1, _, uri_str1, _ = listing1[0].split()
+      self.assertEquals(size1, str(len('data0')))
+      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+      size2, _, uri_str2, _ = listing2[0].split()
+      self.assertEquals(size2, str(len('data0')))
+      self.assertEquals(storage_uri(uri_str2).object_name, 'k')
+
+      # Similarly for second object in each bucket.
+      size1, _, uri_str1, _ = listing1[1].split()
+      self.assertEquals(size1, str(len('longer_data1')))
+      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+      size2, _, uri_str2, _ = listing2[1].split()
+      self.assertEquals(size2, str(len('longer_data1')))
+      self.assertEquals(storage_uri(uri_str2).object_name, 'k')
+    _Check1()
+
   def test_cp_v_option(self):
     # Tests that cp -v option returns the created object's version-specific URI.
     bucket_uri = self.CreateVersionedBucket()

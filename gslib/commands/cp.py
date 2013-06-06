@@ -900,7 +900,7 @@ class CpCommand(Command):
       # ResumableUploadHandler does not update upload_start_point from its
       # initial value of -1 if transferring the whole file, so clamp at 0
       bytes_transferred = file_size - max(
-                              res_upload_handler.upload_start_point, 0)
+          res_upload_handler.upload_start_point, 0)
       if self.use_manifest:
         # Save the upload indentifier in the manifest file.
         self.manifest.Set(
@@ -1305,7 +1305,8 @@ class CpCommand(Command):
         raise NotImplementedError('Cross-provider cp -p not supported')
       # We need to read and write the ACL manually because the
       # Key.set_contents_from_file() API doesn't provide a preserve_acl
-      # parameter (unlike the Bucket.copy_key() API).
+      # parameter (unlike the Bucket.copy_key() API used
+      # by_CopyObjToObjInTheCloud).
       acl = src_uri.get_acl(headers=headers)
     result = self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
                                                    dst_uri, canned_acl, headers)
@@ -1570,8 +1571,12 @@ class CpCommand(Command):
       # exp_src_uri=gs://bucket/src_subdir/obj, dst_key_name should be
       # src_subdir/obj.
       src_uri_path_sans_final_dir = _GetPathBeforeFinalDir(src_uri)
-      dst_key_name = exp_src_uri.uri[
-         len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
+      if exp_src_uri.is_cloud_uri():
+        dst_key_name = exp_src_uri.versionless_uri[
+           len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
+      else:
+        dst_key_name = exp_src_uri.uri[
+           len(src_uri_path_sans_final_dir):].lstrip(src_uri.delim)
       # Handle case where dst_uri is a non-existent subdir.
       if not have_existing_dest_subdir:
         dst_key_name = dst_key_name.partition(src_uri.delim)[-1]
@@ -1764,11 +1769,19 @@ class CpCommand(Command):
 
     (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
          self.args[-1])
+    # If the destination bucket has versioning enabled iterate with
+    # all_versions=True. That way we'll copy all versions if the source bucket
+    # is versioned; and by leaving all_versions=False if the destination bucket
+    # has versioning disabled we will avoid copying old versions all to the same
+    # un-versioned destination object.
+    all_versions = (exp_dst_uri.names_bucket()
+                    and exp_dst_uri.get_versioning_config(self.headers))
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.logger, self.bucket_storage_uri_class, uri_strs,
         self.recursion_requested or self.perform_mv,
-        have_existing_dst_container)
+        have_existing_dst_container=have_existing_dst_container,
+        all_versions=all_versions)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
