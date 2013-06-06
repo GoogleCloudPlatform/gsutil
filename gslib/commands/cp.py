@@ -757,7 +757,7 @@ class CpCommand(Command):
     else:
       self.logger.info('Copying %s%s...', src_uri, content_type_msg)
 
-  def _ProcessCopyObjectToObjectOptions(self, headers):
+  def _ProcessCopyObjectToObjectOptions(self, dst_uri, headers):
     """
     Common option processing between _CopyObjToObjInTheCloud and
     _CopyObjToObjDaisyChainMode.
@@ -806,7 +806,7 @@ class CpCommand(Command):
     # server).
     src_bucket = src_uri.get_bucket(False, headers)
     (preserve_acl, canned_acl, headers) = (
-        self._ProcessCopyObjectToObjectOptions(headers))
+        self._ProcessCopyObjectToObjectOptions(dst_uri, headers))
     start_time = time.time()
     # Pass headers in headers param not metadata param, so boto will copy
     # existing key's metadata and just set the additional headers specified
@@ -1296,7 +1296,7 @@ class CpCommand(Command):
     self._SetContentTypeHeader(src_uri, headers)
     self._LogCopyOperation(src_uri, dst_uri, headers)
     (preserve_acl, canned_acl, headers) = (
-        self._ProcessCopyObjectToObjectOptions(headers))
+        self._ProcessCopyObjectToObjectOptions(dst_uri, headers))
     if preserve_acl:
       if src_uri.get_provider() != dst_uri.get_provider():
         # We don't attempt to preserve ACLs across providers because
