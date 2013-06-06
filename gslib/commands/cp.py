@@ -1317,7 +1317,12 @@ class CpCommand(Command):
       # the now-existing object.
       if self.no_clobber:
         del headers['x-goog-if-generation-match']
-      dst_uri.set_xml_acl(acl.to_xml(), dst_uri.object_name, headers=headers)
+      # Remove the owner field from the ACL in case we're copying from an object
+      # that is owned by a different user. If we left that other user in the
+      # ACL, attempting to set the ACL would result in a 400 (Bad Request).
+      if hasattr(acl, 'owner'):
+        del acl.owner
+      dst_uri.set_acl(acl, dst_uri.object_name, headers=headers)
     return result
 
   def _PerformCopy(self, src_uri, dst_uri):
