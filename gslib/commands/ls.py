@@ -353,8 +353,8 @@ class LsCommand(Command):
           'size': size_string,
           'timestamp': timestamp,
           'uri': uri_str.encode('utf-8'),
-          'metageneration': obj.metageneration,
-          'etag': obj.etag,
+          'metageneration': str(obj.metageneration),
+          'etag': obj.etag.encode('utf-8'),
       }
       print printstr % format_args
 

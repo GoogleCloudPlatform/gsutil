@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -216,3 +218,18 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                               return_stdout=True)
       self.assertIn('2 KB', stdout)
     _Check5()
+
+  def test_list_unicode_filename(self):
+    object_name = u'Аудиоархив'
+    object_name_bytes = object_name.encode('utf-8')
+    bucket_uri = self.CreateVersionedBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
+                                object_name=object_name)
+    stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)],
+                            return_stdout=True)
+    self.assertIn(object_name_bytes, stdout)
+    self.assertIn(key_uri.generation, stdout)
+    self.assertIn(
+        'metageneration=%s' % key_uri.get_key().metageneration, stdout)
+    self.assertIn(
+        'etag=%s' % key_uri.get_key().etag, stdout)
