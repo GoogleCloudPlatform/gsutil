@@ -360,7 +360,23 @@ _detailed_help_text = ("""
                 existing file. Files/objects that are marked in the existing log
                 file as having been successfully copied (or skipped) will be
                 ignored. Files/objects without entries will be copied and ones
-                previously marked as unsuccessful will be retried.
+                previously marked as unsuccessful will be retried. This can be
+                used in conjunction with the -c option to build a script that
+                copies a large number of objects reliable, using a bash script
+                like the following:
+
+                    status=1
+                    while [ $status -ne 0 ] ; do
+                        gsutil cp -c -L cp.log -R ./dir gs://bucket
+                        status=$?
+                    done
+
+                The -c option will cause copying to continue after failures
+                occur, and the -L option will allow gsutil to pick up where it
+                left off without duplicating work. The loop will continue
+                running as long as gsutil exits with a non-zero status (such a
+                status indicates there was at least one failure during the
+                gsutil run).
 
   -n            No-clobber. When specified, existing files or objects at the
                 destination will not be overwritten. Any items that are skipped
@@ -369,23 +385,6 @@ _detailed_help_text = ("""
                 exists before attempting to upload the data. This will save
                 retransmitting data, but the additional HTTP requests may make
                 small object transfers slower and more expensive.
-
-                This option can be combined with the -c option to build a script
-                that copies a large number of objects, allowing retries when
-                some failures occur from which gsutil doesn't automatically
-                recover, using a bash script like the following:
-
-                    status=1
-                    while [ $status -ne 0 ] ; do
-                        gsutil cp -c -n -R ./dir gs://bucket
-                        status=$?
-                    done
-
-                The -c option will cause copying to continue after failures
-                occur, and the -n option will cause objects already copied to be
-                skipped on subsequent iterations. The loop will continue running
-                as long as gsutil exits with a non-zero status (such a status
-                indicates there was at least one failure during the gsutil run).
 
   -p            Causes ACLs to be preserved when copying in the cloud. Note that
                 this option has performance and cost implications, because it
