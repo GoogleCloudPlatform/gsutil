@@ -472,6 +472,8 @@ class CpCommand(Command):
   # Set default Content-Type type.
   DEFAULT_CONTENT_TYPE = 'application/octet-stream'
   USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
+  # Chunk size to use while unzipping gzip files.
+  GUNZIP_CHUNK_SIZE = 8192
 
   # Command specification (processed by parent class).
   command_spec = {
@@ -515,10 +517,23 @@ class CpCommand(Command):
     if re.match(r'^[0-9a-f]{32}$', possible_md5):
       return binascii.a2b_hex(possible_md5)
 
-  def _CheckHashes(self, key, file_name, hash_algs_to_compute):
-    """
-    Checks that etag from server agrees with md5 computed after the
-    download completes.
+  def _CheckHashes(self, key, file_name, hash_algs_to_compute,
+                   computed_hashes=None):
+    """Validates integrity by comparing cloud digest to local digest.
+
+    Args:
+      key: Instance of boto Key object.
+      file_name: Name of downloaded file on local disk.
+      hash_algs_to_compute: Dictionary mapping hash algorithm names to digester
+                            objects.
+      computed_hashes: If specified, use this dictionary mapping hash algorithm
+                       names to the calculated digest. If not specified, the
+                       key argument will be checked for local_digests property.
+                       If neither exist, the local file will be opened and
+                       digests calculated on-demand.
+
+    Raises:
+      CommandException: if cloud digests don't match local digests.
     """
     cloud_hashes = {}
     if hasattr(key, 'cloud_hashes'):
@@ -531,12 +546,13 @@ class CpCommand(Command):
     local_hashes = {}
     # If we've already computed a valid local hash, use that, else calculate an
     # md5 or crc32c depending on what we have available to compare against.
-    if hasattr(key, 'local_hashes') and key.local_hashes:
+    if computed_hashes:
+      local_hashes = computed_hashes
+    elif hasattr(key, 'local_hashes') and key.local_hashes:
       local_hashes = key.local_hashes
     elif 'md5' in cloud_hashes and 'md5' in hash_algs_to_compute:
       self.logger.info(
           'Computing MD5 from scratch for resumed download')
-      print 'Computing MD5 from scratch for resumed download'
 
       # Open file in binary mode to avoid surprises in Windows.
       with open(file_name, 'rb') as fp:
@@ -560,12 +576,10 @@ class CpCommand(Command):
       self.logger.debug('Comparing local vs cloud %s-checksum. (%s/%s)' % (
           alg, local_hexdigest, cloud_hexdigest))
       if local_hexdigest != cloud_hexdigest:
-        # Checksums don't match - remove file and raise exception.
-        os.unlink(file_name)
         raise CommandException(
-            'File changed during download: %s signature doesn\'t match '
-            'cloud-supplied digest (incorrect downloaded file deleted).'
-            % alg)
+            '%s signature computed for local file (%s) doesn\'t match '
+            'cloud-supplied digest (%s). Local file (%s) deleted.' % (
+            alg, local_hexdigest, cloud_hexdigest, file_name))
 
   def _CheckForDirFileConflict(self, exp_src_uri, dst_uri):
     """Checks whether copying exp_src_uri into dst_uri is not possible.
@@ -1145,10 +1159,9 @@ class CpCommand(Command):
       except OSError, e:
         if e.errno != errno.EEXIST:
           raise
-    # For gzipped objects not named *.gz download to a temp file and unzip.
+    # For gzipped objects, download to a temp file and unzip.
     if (hasattr(src_key, 'content_encoding')
-        and src_key.content_encoding == 'gzip'
-        and not file_name.endswith('.gz')):
+        and src_key.content_encoding == 'gzip'):
       # We can't use tempfile.mkstemp() here because we need a predictable
       # filename for resumable downloads.
       download_file_name = '%s_.gztmp' % file_name
@@ -1158,6 +1171,9 @@ class CpCommand(Command):
       need_to_unzip = False
 
     hash_algs = self._GetHashAlgs(src_key)
+
+    # Add additional headers for download operation.
+    self.AddAdditionalDownloadHeaders(headers)
 
     fp = None
     try:
@@ -1187,37 +1203,75 @@ class CpCommand(Command):
       if fp:
         fp.close()
 
+    if (not need_to_unzip and
+        hasattr(src_key, 'content_encoding')
+        and src_key.content_encoding == 'gzip'):
+      # TODO: HEAD requests are currently not returning proper Content-Encoding
+      # headers when an object is gzip-encoded on-the-fly. Remove this once
+      # it's fixed.
+      renamed_file_name = '%s_.gztmp' % file_name
+      os.rename(download_file_name, renamed_file_name)
+      download_file_name = renamed_file_name
+      need_to_unzip = True
+
     # Discard all hashes if we are resuming a partial download.
     if res_download_handler and res_download_handler.download_start_point:
       src_key.local_hashes = {}
 
     # Verify downloaded file checksum matched source object's checksum.
-    self._CheckHashes(src_key, download_file_name, hash_algs)
+    digest_verified = True
+    computed_hashes = None
+    try:
+      self._CheckHashes(src_key, download_file_name, hash_algs)
+    except CommandException, e:
+      # If the digest doesn't match, we'll try checking it again after
+      # unzipping.
+      if (not need_to_unzip or
+          'doesn\'t match cloud-supplied digest' not in str(e)):
+        os.unlink(download_file_name)
+        raise
+      digest_verified = False
+      computed_hashes = dict(
+          (alg, digester())
+          for alg, digester in self._GetHashAlgs(src_key).iteritems())
 
     if res_download_handler:
       bytes_transferred = (
           src_key.size - res_download_handler.download_start_point)
     else:
       bytes_transferred = src_key.size
+
     if need_to_unzip:
       # Log that we're uncompressing if the file is big enough that
       # decompressing would make it look like the transfer "stalled" at the end.
       if bytes_transferred > 10 * 1024 * 1024:
         self.logger.info('Uncompressing downloaded tmp file to %s...',
                          file_name)
+
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
-      f_in = gzip.open(download_file_name, 'rb')
-      f_out = open(file_name, 'wb')
-      try:
-        while True:
-          data = f_in.read(8192)
-          if not data:
-            break
-          f_out.write(data)
-      finally:
-        f_out.close()
-        f_in.close()
-        os.unlink(download_file_name)
+      with gzip.open(download_file_name, 'rb') as f_in:
+        with open(file_name, 'wb') as f_out:
+          data = f_in.read(self.GUNZIP_CHUNK_SIZE)
+          while data:
+            f_out.write(data)
+            if computed_hashes:
+              # Compute digests again on the uncompressed data.
+              for alg in computed_hashes.itervalues():
+                alg.update(data)
+            data = f_in.read(self.GUNZIP_CHUNK_SIZE)
+
+      os.unlink(download_file_name)
+
+      if not digest_verified:
+        computed_hashes = dict((alg, digester.digest())
+                               for alg, digester in computed_hashes.iteritems())
+        try:
+          self._CheckHashes(
+              src_key, file_name, hash_algs, computed_hashes=computed_hashes)
+        except CommandException, e:
+          os.unlink(file_name)
+          raise
+
     return (end_time - start_time, bytes_transferred, dst_uri)
 
   def _PerformDownloadToStream(self, src_key, src_uri, str_fp, headers):
@@ -1340,12 +1394,12 @@ class CpCommand(Command):
     """
     # Make a copy of the input headers each time so we can set a different
     # content type for each object.
-    if self.headers:
-      headers = self.headers.copy()
-    else:
-      headers = {}
+    headers = self.headers.copy() if self.headers else {}
+    download_headers = headers.copy()
+    # Add additional headers for download operation.
+    self.AddAdditionalDownloadHeaders(download_headers)
 
-    src_key = src_uri.get_key(False, headers)
+    src_key = src_uri.get_key(False, download_headers)
     if not src_key:
       raise CommandException('"%s" does not exist.' % src_uri)
 
@@ -1373,10 +1427,10 @@ class CpCommand(Command):
         #    uploaded.
         # In order to save on unnecessary uploads/downloads we perform both
         # checks. However, this may come at the cost of additional HTTP calls.
-        if dst_uri.exists(headers):
+        if dst_uri.exists(download_headers):
           if dst_uri.is_file_uri():
             # The local file may be a partial. Check the file sizes.
-            if src_key.size == dst_uri.get_key().size:
+            if src_key.size == dst_uri.get_key(headers=download_headers).size:
               raise ItemExistsError()
           else:
             raise ItemExistsError()
@@ -1390,11 +1444,13 @@ class CpCommand(Command):
         return self._CopyObjToObjDaisyChainMode(src_key, src_uri, dst_uri,
                                                 headers)
     elif src_uri.is_file_uri() and dst_uri.is_cloud_uri():
-      return self._UploadFileToObject(src_key, src_uri, dst_uri, headers)
+      return self._UploadFileToObject(src_key, src_uri, dst_uri,
+                                      download_headers)
     elif src_uri.is_cloud_uri() and dst_uri.is_file_uri():
-      return self._DownloadObjectToFile(src_key, src_uri, dst_uri, headers)
+      return self._DownloadObjectToFile(src_key, src_uri, dst_uri,
+                                        download_headers)
     elif src_uri.is_file_uri() and dst_uri.is_file_uri():
-      return self._CopyFileToFile(src_key, src_uri, dst_uri, headers)
+      return self._CopyFileToFile(src_key, src_uri, dst_uri, download_headers)
     else:
       raise CommandException('Unexpected src/dest case')
 

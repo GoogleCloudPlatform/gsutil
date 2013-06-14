@@ -493,7 +493,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # TODO: fix this when CRC32C's are added to the manifest.
     # self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
-    self.assertEqual(int(results[7]), 3)  # Bytes Transferred
+    # Bytes transferred might be more than 3 if the file was gzipped, since
+    # the minimum gzip header is 10 bytes.
+    self.assertGreaterEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
 
   def test_copy_unicode_non_ascii_filename(self):
@@ -508,3 +510,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file:', stderr)
     self.assertIn('Uploading', stderr)
 
+  def test_gzip_upload_and_download(self):
+    key_uri = self.CreateObject()
+    contents = 'x' * 10000
+    fpath1 = self.CreateTempFile(file_name='test.html', contents=contents)
+    self.RunGsUtil(['cp', '-z', 'html', suri(fpath1), suri(key_uri)])
+    fpath2 = self.CreateTempFile()
+    self.RunGsUtil(['cp', suri(key_uri), suri(fpath2)])
+    with open(fpath2, 'r') as f:
+      self.assertEqual(f.read(), contents)
