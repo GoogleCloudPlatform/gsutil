@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import stat
 import shutil
 import signal
 import tarfile
@@ -334,12 +335,17 @@ class UpdateCommand(Command):
     # avoids the problem that Windows has no find or xargs command.
     if not IS_WINDOWS:
       # Make all files and dirs in updated area readable by other
-      # and make all directories executable by other. These steps
-      os.system('chmod -R o+r ' + new_dir)
-      os.system('find ' + new_dir + ' -type d | xargs chmod o+x')
+      # and make all directories executable by other.
+      for dir, _, files in os.walk(new_dir):
+        os.chmod(dir, os.stat(dir).st_mode | stat.S_IROTH | stat.S_IXOTH)
+        for file in files:
+          file = os.path.join(dir, file)
+          os.chmod(file, os.stat(file).st_mode | stat.S_IROTH)
 
       # Make main gsutil script readable and executable by other.
-      os.system('chmod o+rx ' + os.path.join(new_dir, 'gsutil'))
+      new_gsutil_script = os.path.join(new_dir, 'gsutil')
+      os.chmod(new_gsutil_script,
+               os.stat(new_gsutil_script).st_mode | stat.S_IROTH | stat.S_IXOTH)
 
     # Move old installation aside and new into place.
     os.rename(gslib.GSUTIL_DIR, os.path.join(old_dir, 'old'))
