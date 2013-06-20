@@ -156,7 +156,7 @@ class CommandRunner(object):
         or gs_host):
       return False
 
-    software_update_check_period = boto.config.get(
+    software_update_check_period = boto.config.getint(
         'GSUtil', 'software_update_check_period', 30)
     # Setting software_update_check_period to 0 means periodic software
     # update checking is disabled.
@@ -172,8 +172,11 @@ class CommandRunner(object):
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(last_checked_ts))
     else:
-      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'r') as f:
-        last_checked_ts = int(f.readline())
+      try:
+        with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'r') as f:
+          last_checked_ts = int(f.readline())
+      except (TypeError, ValueError), ex:
+        return False
 
     if (cur_ts - last_checked_ts
         > software_update_check_period * SECONDS_PER_DAY):
