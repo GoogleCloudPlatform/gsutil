@@ -102,26 +102,37 @@ _detailed_help_text = ("""
   force a cached object to expire globally (unlike the way you can force your
   browser to refresh its cache).
 
+  Another use of the Cache-Control header is through the "no-transform" value,
+  which instructs Google Cloud Storage to not apply any content transformations
+  based on specifics of a download request, such such as removing gzip
+  content-encoding for incompatible clients.
+
 
 <B>CONTENT-ENCODING</B>
-  You could specify Content-Encoding to indicate that an object is compressed,
-  using a command like:
+  You can specify a Content-Encoding to indicate that an object is compressed
+  (for example, with gzip compression) while maintaining its Content-Type.
+  You will need to ensure that the files have been compressed using the
+  specified Content-Encoding before using gsutil to upload them. Consider the
+  following example for Linux:
 
-    gsutil -h "Content-Encoding:gzip" cp *.gz gs://bucket/compressed
+    echo "Highly compressible text" | gzip > foo.txt
+    gsutil -h "Content-Encoding:gzip" -h "Content-Type:text/plain" \\
+      cp foo.txt gs://bucket/compressed
 
-  Note that Google Cloud Storage does not compress or decompress objects. If
-  you use this header to specify a compression type or compression algorithm
-  (for example, deflate), Google Cloud Storage preserves the header but does
-  not compress or decompress the object.  Instead, you need to ensure that
-  the files have been compressed using the specified Content-Encoding before
-  using gsutil to upload them.
+  Note that this is different from uploading a gzipped object foo.txt.gz with
+  Content-Type: application/x-gzip because most browsers are able to
+  dynamically decompress and process objects served with Content-Encoding: gzip
+  based on the underlying Content-Type.
 
-  For compressible content, using Content-Encoding:gzip saves network and
-  storage costs, and improves content serving performance (since most browsers
-  are able to decompress objects served this way).
+  For compressible content, using Content-Encoding: gzip saves network and
+  storage costs, and improves content serving performance. However, for content
+  that is already inherently compressed (archives and many media formats, for
+  instance) applying another level of compression via Content-Encoding is
+  typically detrimental to both object size and performance and should be
+  avoided.
 
   Note also that gsutil provides an easy way to cause content to be compressed
-  and stored with Content-Encoding:gzip: see the -z option in "gsutil help cp".
+  and stored with Content-Encoding: gzip: see the -z option in "gsutil help cp".
 
 
 <B>CONTENT-DISPOSITION</B>

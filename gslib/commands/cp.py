@@ -362,7 +362,7 @@ _detailed_help_text = ("""
                 ignored. Files/objects without entries will be copied and ones
                 previously marked as unsuccessful will be retried. This can be
                 used in conjunction with the -c option to build a script that
-                copies a large number of objects reliable, using a bash script
+                copies a large number of objects reliably, using a bash script
                 like the following:
 
                     status=1
@@ -416,20 +416,19 @@ _detailed_help_text = ("""
                 object version doesn't match the version-specific URI. See
                 'gsutil help versioning' for more details.
 
-  -z <ext,...>  Compresses file uploads with the given extensions. If you are
-                uploading a large file with compressible content, such as
-                a .js, .css, or .html file, you can gzip-compress the file
-                during the upload process by specifying the -z <extensions>
-                option. Compressing data before upload saves on usage charges
-                because you are uploading a smaller amount of data.
+  -z <ext,...>  Applies gzip content-encoding to file uploads with the given
+                extensions. This is useful when uploading files with
+                compressible content (such as .js, .css, or .html files) because
+                it saves network bandwidth and space in Google Cloud Storage,
+                which in turn reduces storage costs.
 
                 When you specify the -z option, the data from your files is
                 compressed before it is uploaded, but your actual files are left
                 uncompressed on the local disk. The uploaded objects retain the
-                original content type and name as the original files but are
-                given a Content-Encoding header with the value "gzip" to
-                indicate that the object data stored are compressed on the
-                Google Cloud Storage servers.
+                Content-Type and name of the original files but are given a
+                Content-Encoding header with the value "gzip" to indicate that
+                the object data stored are compressed on the Google Cloud
+                Storage servers.
 
                 For example, the following command:
 
