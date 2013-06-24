@@ -1,53 +1,47 @@
 # gsutil
 
-This directory contains the Python command line tool gsutil, which Google
-has released as open source, to demonstrate the Google Cloud Storage API and to
-provide a tool for manipulating data in the system.
+gsutil is a Python application that lets you access Google Cloud Storage from
+the command line. You can use gsutil to do a wide range of bucket and object
+management tasks, including:
 
-## Prerequisites
+* Creating and deleting buckets.
+* Uploading, downloading, and deleting objects.
+* Listing buckets and objects.
+* Moving, copying, and renaming objects.
+* Editing object and bucket ACLs.
 
-Gsutil requires Python 2.6 or later.
+## Installation
 
-To install gsutil take the following steps:
+For installation instructions, please see:
 
-1. Pick a place where you want to install the software. You can
-   install the code wherever you prefer; for brevity the instructions below
-   assume you want to install in `$HOME/gsutil`.
+https://developers.google.com/storage/docs/gsutil_install
 
-2. To install gsutil on Linux/Unix or MacOS, open a shell window, change
-   directories to where you downloaded the gsutil.tar.gz file, and do this:
+## Testing / Development
 
-   ```
-   tar xfz gsutil.tar.gz -C $HOME
-   ```
+For information on developing gsutil and instructions for running the gsutil
+test suite, run the "gsutil help dev" command. Instructions are also available
+online at:
 
-   Then add the following line to your `$HOME/.bashrc` shell initialization
-   file:
+https://developers.google.com/storage/docs/gsutil/addlhelp/ContributingCodetogsutil
 
-   ```
-   export PATH=${PATH}:$HOME/gsutil
-   ```
+## Help and Support
 
-   The next time you start a shell you should be able to run gsutil from
-   the command line.
+Run the "gsutil help" command for a list of the built-in gsutil help topics.
 
-3. To install gsutil on Windows, install [cygwin](http://www.cygwin.com/),
-   with at least version 2.6.5 of Python. Once you have that, start a shell
-   and follow the Linux instructions above for unpacking and installing gsutil.
+You can also browse the help pages online at:
 
-4. The first time you try to run gsutil, it will detect that you have no
-   configuration file containing your credentials, interactively prompt you,
-   and create the file.  
-
-   After this you can use the tool.  Running gsutil with with no arguments
-   will print a help summary.
-
-For more information on installing and using gsutil, see
 https://developers.google.com/storage/docs/gsutil
 
-## Additional script for bucket relocation
+For community support, visit:
 
-The scripts directory contains a bash script (built atop gsutil) called
-bucket_relocate.sh, that can be used to migrate one or more buckets to a
+https://developers.google.com/storage/docs/resources-support#community
+
+## Scripts
+
+The scripts directory contains useful scripts built atop gsutil.
+
+### Bucket Relocation
+
+The `bucket_relocate.sh` script can be used to migrate one or more buckets to a
 different location and/or storage class. Detailed instructions are provided
 if you run the script with no arguments.
