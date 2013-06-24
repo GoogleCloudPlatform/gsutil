@@ -100,9 +100,12 @@ _detailed_help_text = ("""
   Windows
   -------
 
-  On Windows, only the pure-Python version of crcmod is supported. If you have a
-  compiler installed, you can compile crcmod's C extension, but we do not
-  support this installation method.
+  An installer is available for the compiled version of crcmod from the Python
+  Package Index (PyPi) at the following URL:
+
+  https://pypi.python.org/pypi/crcmod/1.7
+
+  MSI installers are available for the 32-bit versions of Python 2.6 and 2.7.
 
 """)
 
