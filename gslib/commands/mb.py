@@ -74,15 +74,36 @@ _detailed_help_text = ("""
 <B>BUCKET LOCATIONS</B>
   If you don't specify a -l option, the bucket will be created in the default
   location (US). Otherwise, you can specify one of the available locations:
-  US (United States) or EU (European Union).
+
+    EU - European Union
+
+    US - United States
+
+    US-EAST1    - Eastern United States*
+
+    US-EAST2    - Eastern United States*
+
+    US-EAST3    - Eastern United States*
+
+    US-CENTRAL1 - Central United States*
+
+    US-CENTRAL2 - Central United States*
+
+    US-WEST1    - Western United States*
+
+  *These locations are for `Regional Buckets
+  <https://developers.google.com/storage/docs/regional-buckets>`_.
+  Regional Buckets is an experimental feature and data stored in these
+  locations is not subject to the usual SLA. See the documentation for
+  additional information.
 
 
 <B>OPTIONS</B>
   -c storage_class  Can be DRA (or DURABLE_REDUCED_AVAILABILITY) or S (or
                     STANDARD). Default is STANDARD.
 
-  -l location       Can be US or EU. Default is US. Locations are case
-                    insensitive.
+  -l location       Can be any of the locations described above. Default is US.
+                    Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
 """)
