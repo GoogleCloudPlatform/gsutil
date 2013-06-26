@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import posixpath
+import re
 
 import gslib.tests.testcase as testcase
 from gslib.util import Retry
@@ -233,3 +234,23 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         'metageneration=%s' % key_uri.get_key().metageneration, stdout)
     self.assertIn(
         'etag=%s' % key_uri.get_key().etag, stdout)
+
+  def test_list_gzip_content_length(self):
+    file_size = 10000
+    file_contents = 'x' * file_size
+    fpath = self.CreateTempFile(contents=file_contents, file_name='foo.txt')
+    key_uri = self.CreateObject()
+    self.RunGsUtil(['cp', '-z', 'txt', suri(fpath), suri(key_uri)])
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
+      self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+      find_content_length_re = r'Content-Length:\s+(?P<num>\d)'
+      self.assertRegexpMatches(stdout, find_content_length_re)
+      m = re.search(find_content_length_re, stdout)
+      content_length = int(m.group('num'))
+      self.assertGreater(content_length, 0)
+      self.assertLess(content_length, file_size)
+    _Check1()

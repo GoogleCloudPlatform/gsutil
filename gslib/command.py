@@ -691,8 +691,8 @@ class Command(object):
     return False
 
   @staticmethod
-  def AddAdditionalDownloadHeaders(headers):
-    """Adds additional headers that should be sent with download requests."""
+  def AddAcceptEncoding(headers):
+    """Adds accept-encoding:gzip to the dictionary of headers."""
     # Check for an existing Accept-Encoding header, case insensitive.
     # If Accept-Encoding is not already set, set it to enable gzip.
     if not any(k.lower() == 'accept-encoding' for k in headers):

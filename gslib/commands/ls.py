@@ -369,7 +369,12 @@ class LsCommand(Command):
       try:
         print '%s:' % uri_str.encode('utf-8')
         suri = self.suri_builder.StorageUri(uri_str)
-        obj = suri.get_key(False)
+
+        headers = self.headers.copy()
+        # Add accept encoding so that the HEAD request matches what would be
+        # sent for a GET request.
+        self.AddAcceptEncoding(headers)
+        obj = suri.get_key(False, headers=headers)
         print '\tCreation time:\t\t%s' % obj.last_modified
         if obj.cache_control:
           print '\tCache-Control:\t\t%s' % obj.cache_control

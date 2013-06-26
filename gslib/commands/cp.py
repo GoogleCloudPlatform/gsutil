@@ -1171,8 +1171,8 @@ class CpCommand(Command):
 
     hash_algs = self._GetHashAlgs(src_key)
 
-    # Add additional headers for download operation.
-    self.AddAdditionalDownloadHeaders(headers)
+    # Add accept encoding for download operation.
+    self.AddAcceptEncoding(headers)
 
     fp = None
     try:
@@ -1395,8 +1395,8 @@ class CpCommand(Command):
     # content type for each object.
     headers = self.headers.copy() if self.headers else {}
     download_headers = headers.copy()
-    # Add additional headers for download operation.
-    self.AddAdditionalDownloadHeaders(download_headers)
+    # Add accept encoding for download operation.
+    self.AddAcceptEncoding(download_headers)
 
     src_key = src_uri.get_key(False, download_headers)
     if not src_key:
