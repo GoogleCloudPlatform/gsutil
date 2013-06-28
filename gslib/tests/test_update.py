@@ -61,7 +61,18 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     gsutil_src = os.path.join(tmpdir_src, 'gsutil')
     gsutil_dst = os.path.join(tmpdir_dst, 'gsutil')
     shutil.copytree(GSUTIL_DIR, gsutil_src)
-    shutil.copytree(GSUTIL_DIR, gsutil_dst)
+    # Copy specific files rather than all of GSUTIL_DIR so we don't pick up temp
+    # working files left in top-level directory by gsutil developers (like tags,
+    # .git*, etc.)
+    os.makedirs(gsutil_dst)
+    for comp in ('CHANGES.md', 'CHECKSUM', 'COPYING', 'gslib', 'gsutil',
+                 'LICENSE.third_party', 'MANIFEST.in', 'README.md', 'scripts',
+                 'setup.py', 'third_party', 'VERSION'):
+      if os.path.isdir(os.path.join(GSUTIL_DIR, comp)):
+        func = shutil.copytree
+      else:
+        func = shutil.copyfile
+      func(os.path.join(GSUTIL_DIR, comp), os.path.join(gsutil_dst, comp))
 
     # Create a fake version number in the source so we can verify it in the
     # destination.
@@ -111,6 +122,21 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     (_, stderr) = p.communicate()
     self.assertEqual(p.returncode, 1)
     self.assertIn('command does not support', stderr)
+
+    # Run with a file present that was not distributed with gsutil.
+    with open(os.path.join(gsutil_dst, 'userdata.txt'), 'w') as fp:
+      fp.write('important data\n')
+    p = subprocess.Popen(prefix + ['gsutil', 'update', '-f', suri(src_tarball)],
+                         cwd=gsutil_dst, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    (_, stderr) = p.communicate()
+    # Clean up before next test, and before assertions so failure doesn't leave
+    # this file around.
+    os.unlink(os.path.join(gsutil_dst, 'userdata.txt'))
+    self.assertEqual(p.returncode, 1)
+    self.assertIn(
+        'The update command cannot run with user data in the gsutil directory',
+        stderr.replace('\n', ' '))
 
     # Now do the real update, which should succeed.
     p = subprocess.Popen(prefix + ['gsutil', 'update', '-f', suri(src_tarball)],

@@ -17,6 +17,7 @@ import shutil
 import signal
 import tarfile
 import tempfile
+import textwrap
 
 import gslib
 from gslib.command import Command
@@ -61,6 +62,8 @@ _detailed_help_text = ("""
   not to store data in the gsutil directory, since that data will be lost
   when you update gsutil. (Some users change directories into the gsutil
   directory to run the command. We advise against doing that, for this reason.)
+  Note also that the gsutil update command will refuse to run if it finds user
+  data in the gsutil directory.
 
   By default gsutil update will retrieve the new code from
   %s, but you can optionally specify a URI to use
@@ -124,6 +127,54 @@ class UpdateCommand(Command):
       # The full help text.
       HELP_TEXT: _detailed_help_text,
   }
+
+  def _DisallowUpdataIfDataInGsutilDir(self):
+    """
+    Disallows the update command from running if files other than those
+    distributed with gsutil are found. This prevents users from losing data if
+    they are in the habit of running gsutil from the gsutil directory, and
+    leaving data in that directory.
+
+    This will also detect someone attempting to run gsutil update from a git
+    repo, since the top-level directory will contain git files and dirs (like
+    .git) that are not distributed with gsutil.
+
+    Raises:
+      CommandException: if files other than those distributed with gsutil found.
+    """
+    # Manifest includes recursive-includes of gslib and scripts. Directly add
+    # those to the list here so we will skip them in os.listdir() loop without
+    # having to build deeper handling of the MANIFEST file here. Also include
+    # 'third_party', which isn't present in manifest but gets added to the
+    # gsutil distro by the gsutil submodule configuration; and the MANIFEST.in
+    # and CHANGES.md files.
+    manifest_lines = ['gslib', 'scripts', 'third_party', 'MANIFEST.in',
+                      'CHANGES.md']
+    
+    try:
+      with open(os.path.join(gslib.GSUTIL_DIR, 'MANIFEST.in'), 'r') as fp:
+        for line in fp.readlines():
+          if line.startswith('include '):
+            manifest_lines.append(line.split()[-1])
+    except IOError:
+      self.logger.warn('MANIFEST.in not found in %s.\nSkipping user data '
+                       'check.\n', gslib.GSUTIL_DIR)
+      return
+
+    # Look just at top-level directory. We don't try to catch data dropped into
+    # subdirs (like gslib) because that would require deeper parsing of
+    # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
+    # level directory.
+    for file in os.listdir(gslib.GSUTIL_DIR):
+      if file[-4:] == '.pyc':
+        # Ignore compiled code.
+        continue
+      if file not in manifest_lines:
+        raise CommandException('\n'.join(textwrap.wrap(
+            'A file (%s) that is not distributed with gsutil was found in '
+            'the gsutil directory. The update command cannot run with user '
+            'data in the gsutil directory.' %
+            os.path.join(gslib.GSUTIL_DIR, file))))
 
   def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):
     """Explains what to do if sudo needed to update gsutil software.
@@ -227,6 +278,8 @@ class UpdateCommand(Command):
       raise CommandException(
           'Your boto configuration has %s = False. The update command\n'
           'cannot be run this way, for security reasons.' % is_secure[1])
+
+    self._DisallowUpdataIfDataInGsutilDir()
 
     force_update = False
     no_prompt = False
@@ -334,7 +387,7 @@ class UpdateCommand(Command):
     # avoids the problem that Windows has no find or xargs command.
     if not IS_WINDOWS:
       # Make all files and dirs in updated area readable by other
-      # and make all directories executable by other. These steps
+      # and make all directories executable by other.
       os.system('chmod -R o+r ' + new_dir)
       os.system('find ' + new_dir + ' -type d | xargs chmod o+x')
 
