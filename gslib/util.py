@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ElementTree
 import boto
 from boto import config
 from boto.pyami.config import BotoConfigLocations
+from gslib.exception import CommandException
 from gslib.third_party.retry_decorator import decorators
 from oauth2client.client import HAS_CRYPTO
 
@@ -309,4 +310,3 @@ def _BotoIsSecure():
   return True, ''
 
 BOTO_IS_SECURE = _BotoIsSecure()
-

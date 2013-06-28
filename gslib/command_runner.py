@@ -31,8 +31,8 @@ from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.exception import CommandException
 from gslib.storage_uri_builder import StorageUriBuilder
-from gslib.util import HasConfiguredCredentials
 from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import HasConfiguredCredentials
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
 from gslib.util import SECONDS_PER_DAY
@@ -69,6 +69,36 @@ class CommandRunner(object):
         command_map[command_name_aliases] = command
     return command_map
 
+  def _ConfigureNoOpAuthIfNeeded(self):
+    """
+    Sets up no-op auth handler if no boto credentials are configured.
+
+    Args:
+      config_file_list: Config file list returned by GetBotoConfigFileList().
+    """
+    config = boto.config
+    if not HasConfiguredCredentials():
+      if self.config_file_list:
+        if (config.has_option('Credentials', 'gs_service_client_id')
+            and not HAS_CRYPTO):
+          raise CommandException(
+              'Your gsutil is configured with an OAuth2 service account,\nbut '
+              'you do not have PyOpenSSL or PyCrypto 2.6 or later installed.\n'
+              'Service account authentication requires one of these '
+              'libraries;\nplease install either of them to proceed, or '
+              'configure \na different type of credentials with '
+              '"gsutil config".')
+        raise CommandException('You have no storage service credentials in any '
+                               'of the following boto config\nfiles. Please '
+                               'add your credentials as described in the '
+                               'gsutil README.md file, or else\nre-run '
+                               '"gsutil config" to re-create a config '
+                               'file:\n%s' % self.config_file_list)
+      else:
+        # With no boto config file the user can still access publicly readable
+        # buckets and objects.
+        from gslib import no_op_auth_plugin
+
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None,
                       skip_update_check=False, logging_filters=None):
@@ -91,6 +121,7 @@ class CommandRunner(object):
       Raises:
         CommandException: if errors encountered.
     """
+    self._ConfigureNoOpAuthIfNeeded()
     if (not skip_update_check and
         self._MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
@@ -126,7 +157,6 @@ class CommandRunner(object):
         self.bucket_storage_uri_class, test_method, logging_filters)
     return command_inst.RunCommand()
 
-
   def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update, and if it's been longer
        than the configured threshold offers the user to update gsutil.
@@ -144,7 +174,6 @@ class CommandRunner(object):
     # - user is running the update command (which could otherwise cause an
     #   additional note that an update is available when user is already trying
     #   to perform an update);
-    # - user doesn't have credentials configured; or,
     # - user specified gs_host (which could be a non-production different
     #   service instance, in which case credentials won't work for checking
     #   gsutil tarball).
@@ -152,7 +181,6 @@ class CommandRunner(object):
     if (not sys.stdout.isatty() or not sys.stderr.isatty()
         or not sys.stdin.isatty() or command_name == 'update'
         or not logging.getLogger().isEnabledFor(logging.INFO)
-        or not HasConfiguredCredentials()
         or gs_host):
       return False
 

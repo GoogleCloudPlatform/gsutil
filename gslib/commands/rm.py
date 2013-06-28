@@ -18,7 +18,6 @@ from boto.exception import GSResponseError
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CONFIG_REQUIRED
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
@@ -113,8 +112,6 @@ class RmCommand(Command):
     PROVIDER_URIS_OK : False,
     # Index in args of first URI arg.
     URIS_START_ARG : 0,
-    # True if must configure gsutil before running command.
-    CONFIG_REQUIRED : True,
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
