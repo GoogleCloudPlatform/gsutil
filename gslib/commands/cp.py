@@ -758,8 +758,8 @@ class CpCommand(Command):
     """
     Logs copy operation being performed, including Content-Type if appropriate.
     """
-    if 'Content-Type' in headers and dst_uri.is_cloud_uri():
-      content_type_msg = ' [Content-Type=%s]' % headers['Content-Type']
+    if 'content-type' in headers and dst_uri.is_cloud_uri():
+      content_type_msg = ' [Content-Type=%s]' % headers['content-type']
     else:
       content_type_msg = ''
     if src_uri.is_stream():
@@ -949,12 +949,12 @@ class CpCommand(Command):
     Sets content type header to value specified in '-h Content-Type' option (if
     specified); else sets using Content-Type detection.
     """
-    if 'Content-Type' in headers:
+    if 'content-type' in headers:
       # If empty string specified (i.e., -h "Content-Type:") set header to None,
       # which will inhibit boto from sending the CT header. Otherwise, boto will
       # pass through the user specified CT header.
-      if not headers['Content-Type']:
-        headers['Content-Type'] = None
+      if not headers['content-type']:
+        headers['content-type'] = None
       # else we'll keep the value passed in via -h option (not performing
       # content type detection).
     else:
@@ -981,7 +981,7 @@ class CpCommand(Command):
             content_type = mimetypes.guess_type(object_name)[0]
         if not content_type:
           content_type = self.DEFAULT_CONTENT_TYPE
-        headers['Content-Type'] = content_type
+        headers['content-type'] = content_type
 
   def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers,
                           should_log=True):
@@ -1022,10 +1022,10 @@ class CpCommand(Command):
     if should_log:
       self._LogCopyOperation(src_uri, dst_uri, headers)
 
-    if 'Content-Language' not in headers:
+    if 'content-language' not in headers:
        content_language = config.get_value('GSUtil', 'content_language')
        if content_language:
-         headers['Content-Language'] = content_language
+         headers['content-language'] = content_language
 
     fname_parts = src_uri.object_name.split('.')
     if len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
@@ -1046,7 +1046,7 @@ class CpCommand(Command):
         if gzip_fp:
           gzip_fp.close()
         os.close(gzip_fh)
-      headers['Content-Encoding'] = 'gzip'
+      headers['content-encoding'] = 'gzip'
       gzip_fp = open(gzip_path, 'rb')
       try:
         (elapsed_time, bytes_transferred, result_uri) = (
@@ -1328,11 +1328,11 @@ class CpCommand(Command):
     # through the latter list to find the headers that we copy over to the dest
     # object.
     for header_name, field_name in (
-        ('Cache-Control', 'cache_control'),
-        ('Content-Type', 'content_type'),
-        ('Content-Language', 'content_language'),
-        ('Content-Encoding', 'content_encoding'),
-        ('Content-Disposition', 'content_disposition')):
+        ('cache-control', 'cache_control'),
+        ('content-type', 'content_type'),
+        ('content-language', 'content_language'),
+        ('content-encoding', 'content_encoding'),
+        ('content-disposition', 'content_disposition')):
       value = getattr(src_key, field_name, None)
       if value:
         headers[header_name] = value

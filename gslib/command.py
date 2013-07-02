@@ -97,6 +97,7 @@ SUPPORTED_SUB_ARGS = 'supported_sub_args'
 FILE_URIS_OK = 'file_uri_ok'
 PROVIDER_URIS_OK = 'provider_uri_ok'
 URIS_START_ARG = 'uris_start_arg'
+CONFIG_REQUIRED = 'config_required'
 
 _EOF_ARGUMENT = ("EOF")
 
@@ -123,6 +124,8 @@ class Command(object):
     PROVIDER_URIS_OK : False,
     # Index in args of first URI arg.
     URIS_START_ARG : 0,
+    # True if must configure gsutil before running command.
+    CONFIG_REQUIRED : True,
   }
   _default_command_spec = command_spec
   help_spec = HelpProvider.help_spec
@@ -266,6 +269,8 @@ class Command(object):
             self.args[self.command_spec[URIS_START_ARG]:])):
       raise CommandException('"%s" command does not support provider-only '
                              'URIs.' % self.command_name)
+    if self.command_spec[CONFIG_REQUIRED]:
+      self._ConfigureNoOpAuthIfNeeded()
 
     self.proj_id_handler = ProjectIdHandler()
     self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
@@ -688,9 +693,8 @@ class Command(object):
   @staticmethod
   def AddAcceptEncoding(headers):
     """Adds accept-encoding:gzip to the dictionary of headers."""
-    # Check for an existing Accept-Encoding header, case insensitive.
     # If Accept-Encoding is not already set, set it to enable gzip.
-    if not any(k.lower() == 'accept-encoding' for k in headers):
+    if 'accept-encoding' not in headers:
       headers['accept-encoding'] = 'gzip'
 
   ######################
@@ -710,6 +714,31 @@ class Command(object):
       if re.match('^[a-z]+://$', uri_str):
         return True
     return False
+
+  def _ConfigureNoOpAuthIfNeeded(self):
+    """Sets up no-op auth handler if no boto credentials are configured."""
+    config = boto.config
+    if not util.HasConfiguredCredentials():
+      if self.config_file_list:
+        if (config.has_option('Credentials', 'gs_service_client_id')
+            and not HAS_CRYPTO):
+          raise CommandException(
+              'Your gsutil is configured with an OAuth2 service account,\nbut '
+              'you do not have PyOpenSSL or PyCrypto 2.6 or later installed.\n'
+              'Service account authentication requires one of these '
+              'libraries;\nplease install either of them to proceed, or '
+              'configure \na different type of credentials with '
+              '"gsutil config".')
+        raise CommandException('You have no storage service credentials in any '
+                               'of the following boto config\nfiles. Please '
+                               'add your credentials as described in the '
+                               'gsutil README.md file, or else\nre-run '
+                               '"gsutil config" to re-create a config '
+                               'file:\n%s' % self.config_file_list)
+      else:
+        # With no boto config file the user can still access publicly readable
+        # buckets and objects.
+        from gslib import no_op_auth_plugin
 
   def _ApplyThreads(self, func, work_queue, shard, num_threads,
                     thr_exc_handler=None, shared_vars=None,

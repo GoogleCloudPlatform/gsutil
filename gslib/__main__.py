@@ -126,7 +126,7 @@ def main():
       (hdr_name, unused_ptn, hdr_val) = a.partition(':')
       if not hdr_name:
         _OutputUsageAndExit(command_runner)
-      headers[hdr_name] = hdr_val
+      headers[hdr_name.lower()] = hdr_val
     elif o in ('-m', '--multithreaded'):
       parallel_operations = True
     elif o in ('-q', '--quiet'):

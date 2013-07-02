@@ -90,28 +90,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check2()
 
-  def test_content_type_override_default(self):
-    bucket_uri = self.CreateBucket()
-    dsturi = suri(bucket_uri, 'foo')
-
-    self.RunGsUtil(['-h', 'Content-Type:', 'cp',
-                    self._get_test_file('test.mp3'), dsturi])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
-    _Check1()
-
-    self.RunGsUtil(['-h', 'Content-Type:', 'cp',
-                    self._get_test_file('test.gif'), dsturi])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
-    _Check2()
-
   def test_content_type_override(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -179,6 +157,32 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check3()
+
+  def test_content_type_header_case_insensitive(self):
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+
+    self.RunGsUtil(['-h', 'content-Type:text/plain', 'cp',
+                    fpath, dsturi])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/plain')
+      self.assertNotRegexpMatches(stdout, 'image/gif')
+    _Check1()
+
+    self.RunGsUtil(['-h', 'CONTENT-TYPE:image/gif',
+                    '-h', 'content-type:image/gif',
+                    'cp', fpath, dsturi])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertNotRegexpMatches(stdout, 'image/gif,\s*image/gif')
+    _Check2()
 
   def test_versioning(self):
     bucket_uri = self.CreateVersionedBucket()
