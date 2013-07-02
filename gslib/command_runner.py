@@ -20,6 +20,8 @@ import boto
 import difflib
 import logging
 import os
+import re
+import string
 import sys
 import textwrap
 import time
@@ -36,6 +38,9 @@ from gslib.util import HasConfiguredCredentials
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
 from gslib.util import SECONDS_PER_DAY
+
+
+VERSION_MATCHER = re.compile(r'^(?P<num>\d+\.?\d*)(?P<suffix>.*)')
 
 
 class CommandRunner(object):
@@ -157,6 +162,35 @@ class CommandRunner(object):
         self.bucket_storage_uri_class, test_method, logging_filters)
     return command_inst.RunCommand()
 
+  @classmethod
+  def _IsVersionGreater(cls, first, second):
+    """Tests that the first version string is greater than the second.
+
+    For example, 3.33 > 3.7. Does not handle multiple periods (e.g. 3.3.4) or
+    complicated suffixes (e.g. 3.3RC4 vs. 3.3RC5). A version string with a
+    suffix is treated as less than its non-suffix counterpart
+    (e.g. 3.32 > 3.32pre).
+
+    Returns:
+      True if known to be greater, otherwise False.
+    """
+    m1 = VERSION_MATCHER.match(str(first))
+    m2 = VERSION_MATCHER.match(str(second))
+
+    # If passed strings we don't know how to handle, be conservative.
+    if not m1 or not m2:
+      return False
+
+    vers1 = float(m1.group('num'))
+    vers2 = float(m2.group('num'))
+
+    if vers1 > vers2:
+      return True
+    elif vers1 == vers2 and m2.group('suffix') and not m1.group('suffix'):
+      return True
+
+    return False
+
   def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update, and if it's been longer
        than the configured threshold offers the user to update gsutil.
@@ -203,7 +237,7 @@ class CommandRunner(object):
       try:
         with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'r') as f:
           last_checked_ts = int(f.readline())
-      except (TypeError, ValueError), ex:
+      except (TypeError, ValueError):
         return False
 
     if (cur_ts - last_checked_ts
@@ -212,7 +246,7 @@ class CommandRunner(object):
       cur_ver = LookUpGsutilVersion(suri_builder.StorageUri(GSUTIL_PUB_TARBALL))
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(cur_ts))
-      if gslib.VERSION != cur_ver:
+      if self._IsVersionGreater(cur_ver, gslib.VERSION):
         print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
