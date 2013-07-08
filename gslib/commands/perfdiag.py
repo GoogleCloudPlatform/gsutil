@@ -689,7 +689,10 @@ class PerfDiagCommand(Command):
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
     # Get the local IP address from socket lib.
-    sysinfo['ip_address'] = socket.gethostbyname(socket.gethostname())
+    try:
+      sysinfo['ip_address'] = socket.gethostbyname(socket.gethostname())
+    except socket.gaierror:
+      sysinfo['ip_address'] = ''
     # Record the temporary directory used since it can affect performance, e.g.
     # when on a networked filesystem.
     sysinfo['tempdir'] = tempfile.gettempdir()
@@ -701,9 +704,12 @@ class PerfDiagCommand(Command):
     # Execute a CNAME lookup on Google DNS to find what Google server
     # it's routing to.
     cmd = ['nslookup', '-type=CNAME', self.GOOGLE_API_HOST]
-    nslookup_cname_output = self._Exec(cmd, return_output=True)
-    m = re.search(r' = (?P<googserv>[^.]+)\.', nslookup_cname_output)
-    sysinfo['googserv_route'] = m.group('googserv') if m else None
+    try:
+      nslookup_cname_output = self._Exec(cmd, return_output=True)
+      m = re.search(r' = (?P<googserv>[^.]+)\.', nslookup_cname_output)
+      sysinfo['googserv_route'] = m.group('googserv') if m else None
+    except OSError:
+      sysinfo['googserv_route'] = ''
 
     # Look up IP addresses for Google Server.
     (hostname, aliaslist, ipaddrlist) = socket.gethostbyname_ex(
@@ -717,10 +723,13 @@ class PerfDiagCommand(Command):
       sysinfo['googserv_hostnames'].append(hostname)
 
     # Query o-o to find out what the Google DNS thinks is the user's IP.
-    cmd = ['nslookup', '-type=TXT', 'o-o.myaddr.google.com.']
-    nslookup_txt_output = self._Exec(cmd, return_output=True)
-    m = re.search(r'text\s+=\s+"(?P<dnsip>[\.\d]+)"', nslookup_txt_output)
-    sysinfo['dns_o-o_ip'] = m.group('dnsip') if m else None
+    try:
+      cmd = ['nslookup', '-type=TXT', 'o-o.myaddr.google.com.']
+      nslookup_txt_output = self._Exec(cmd, return_output=True)
+      m = re.search(r'text\s+=\s+"(?P<dnsip>[\.\d]+)"', nslookup_txt_output)
+      sysinfo['dns_o-o_ip'] = m.group('dnsip') if m else None
+    except OSError:
+      sysinfo['dns_o-o_ip'] = ''
 
     # Try and find the number of CPUs in the system if available.
     try:
