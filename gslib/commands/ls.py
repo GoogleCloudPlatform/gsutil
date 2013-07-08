@@ -164,13 +164,13 @@ _detailed_help_text = ("""
   will print something like:
 
     gs://bucket/ :
-            24 objects, 29.83 KB
-            StorageClass: STANDARD
-            LocationConstraint: US
-            Versioning enabled: True
-            ACL: <Owner:00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7, <<GroupById: 00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7>: u'FULL_CONTROL'>>
-            Default ACL: <>
-    TOTAL: 24 objects, 30544 bytes (29.83 KB)
+            StorageClass:           STANDARD
+            LocationConstraint:     US
+            Versioning enabled:     True
+            Logging:                False
+            WebsiteConfiguration:   False
+            ACL:                    <Owner:00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7, <<GroupById: 00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7>: u'FULL_CONTROL'>>
+            Default ACL:            <>
 
 
 <B>OPTIONS</B>
@@ -279,33 +279,6 @@ class LsCommand(Command):
           '\tACL:\t\t\t{acl}\n'
           '\tDefault ACL:\t\t{default_acl}'.format(**fields))
 
-  def _UriStrForObj(self, uri, obj):
-    """Constructs a URI string for the given object.
-
-    For example if we were iterating gs://*, obj could be an object in one
-    of the user's buckets enumerated by the ls command.
-
-    Args:
-      uri: base StorageUri being iterated.
-      obj: object (Key) being listed.
-
-    Returns:
-      URI string.
-    """
-    version_info = ''
-    if self.all_versions:
-      if uri.get_provider().name == 'google' and obj.generation:
-        version_info = '#%s' % obj.generation
-      elif uri.get_provider().name == 'aws' and obj.version_id:
-        if isinstance(obj, DeleteMarker):
-          version_info = '#<DeleteMarker>' + str(obj.version_id)
-        else:
-          version_info = '#' + str(obj.version_id)
-      else:
-        version_info = ''
-    return '%s://%s/%s%s' % (uri.scheme, obj.bucket.name, obj.name,
-                             version_info)
-
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref, listing_style):
     """Print listing info for given bucket_listing_ref.
 
@@ -322,7 +295,7 @@ class LsCommand(Command):
     """
     uri = bucket_listing_ref.GetUri()
     obj = bucket_listing_ref.GetKey()
-    uri_str = self._UriStrForObj(uri, obj)
+    uri_str = UriStrForObj(uri, obj, self.all_versions)
     if listing_style == ListingStyle.SHORT:
       print uri_str.encode('utf-8')
       return (1, 0)
@@ -453,7 +426,7 @@ class LsCommand(Command):
         # This BLR didn't come from a bucket listing. This case happens for
         # BLR's instantiated from a user-provided URI.
         blr_iterator = PluralityCheckableIterator(
-            _UriOnlyBlrExpansionIterator(
+            UriOnlyBlrExpansionIterator(
                 self, blr, all_versions=self.all_versions))
         if blr_iterator.is_empty() and not ContainsWildcard(uri):
           raise CommandException('No such object %s' % uri)
@@ -504,11 +477,11 @@ class LsCommand(Command):
       for o, a in self.sub_opts:
         if o == '-a':
           self.all_versions = True
-        if o == '-e':
+        elif o == '-e':
           self.include_etag = True
         elif o == '-b':
           get_bucket_info = True
-        if o == '-h':
+        elif o == '-h':
           self.human_readable = True
         elif o == '-l':
           listing_style = ListingStyle.LONG
@@ -575,7 +548,7 @@ class LsCommand(Command):
     return 0
 
 
-class _UriOnlyBlrExpansionIterator:
+class UriOnlyBlrExpansionIterator:
   """
   Iterator that expands a BucketListingRef that contains only a URI (i.e.,
   didn't come from a bucket listing), yielding BucketListingRefs to which it
@@ -623,3 +596,32 @@ class _UriOnlyBlrExpansionIterator:
       if (blr.GetRStrippedUriString()
           == rstripped_versionless_uri_str):
         yield blr
+
+
+def UriStrForObj(uri, obj, all_versions):
+  """Constructs a URI string for the given object.
+
+  For example if we were iterating gs://*, obj could be an object in one
+  of the user's buckets enumerated by the ls command.
+
+  Args:
+    uri: base StorageUri being iterated.
+    obj: object (Key) being listed.
+    all_versions: Whether or not to include versioning.
+
+  Returns:
+    URI string.
+  """
+  version_info = ''
+  if all_versions:
+    if uri.get_provider().name == 'google' and obj.generation:
+      version_info = '#%s' % obj.generation
+    elif uri.get_provider().name == 'aws' and obj.version_id:
+      if isinstance(obj, DeleteMarker):
+        version_info = '#<DeleteMarker>' + str(obj.version_id)
+      else:
+        version_info = '#' + str(obj.version_id)
+    else:
+      version_info = ''
+  return '%s://%s/%s%s' % (uri.scheme, obj.bucket.name, obj.name,
+                           version_info)
