@@ -938,6 +938,15 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                              return_stdout=True)
     self.assertIn(object_name_bytes, stdout)
 
+  def testRecursiveListTrailingSlash(self):
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='/', contents='foo')
+    stdout = self.RunCommand('ls', ['-R', suri(bucket_uri)], return_stdout=True)
+    # Note: The suri function normalizes the URI, so the double slash gets
+    # removed.
+    self.assertEqual(stdout.splitlines(), [suri(obj_uri) + '/'])
+
   def FinalObjNameComponent(self, uri):
     """For gs://bucket/abc/def/ghi returns ghi."""
     return uri.uri.rpartition('/')[-1]

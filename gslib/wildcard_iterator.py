@@ -156,6 +156,8 @@ class CloudWildcardIterator(WildcardIterator):
           # which causes the request to fail.
           uri_str = '%s://%s' % (self.wildcard_uri.scheme,
                                  urllib.quote_plus(str(b.name)))
+          # TODO: Move bucket_uris to a separate generator function that yields
+          # values instead of pre-computing the list.
           bucket_uris.append(
               boto.storage_uri(
                   uri_str, debug=self.debug,
@@ -180,7 +182,7 @@ class CloudWildcardIterator(WildcardIterator):
           uri_to_yield = bucket_uri.clone_replace_name(
               self.wildcard_uri.object_name)
           yield BucketListingRef(uri_to_yield, key=None, prefix=None,
-                          headers=self.headers)
+                                 headers=self.headers)
         else:
           # URI contains a wildcard. Expand iteratively by building
           # prefix/delimiter bucket listing request, filtering the results per
@@ -206,8 +208,11 @@ class CloudWildcardIterator(WildcardIterator):
               # Check that the prefix regex matches rstripped key.name (to
               # correspond with the rstripped prefix_wildcard from
               # _BuildBucketFilterStrings()).
-              if prog.match(key.name.rstrip('/')):
-                if suffix_wildcard and key.name.rstrip('/') != suffix_wildcard:
+              keyname = key.name
+              if isinstance(key, Prefix):
+                keyname = keyname.rstrip('/')
+              if prog.match(keyname):
+                if suffix_wildcard and keyname != suffix_wildcard:
                   if isinstance(key, Prefix):
                     # There's more wildcard left to expand.
                     uris_needing_expansion.append(
