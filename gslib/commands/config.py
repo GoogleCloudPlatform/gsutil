@@ -602,7 +602,7 @@ class ConfigCommand(Command):
       config_file.write('gs_service_client_id = %s\n'
                         % gs_service_client_id)
       config_file.write('gs_service_key_file = %s\n' % gs_service_key_file)
-      if gs_service_key_file_password:
+      if not gs_service_key_file_password:
         config_file.write(
             '# If you would like to set your password, you can do so using\n'
             '# the following commands (replaced with your information):\n'
