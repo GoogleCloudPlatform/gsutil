@@ -233,6 +233,10 @@ class PerfDiagCommand(Command):
   # bottleneck at high throughput rates, so we increase it.
   KEY_BUFFER_SIZE = 16384
 
+  # The maximum number of bytes to generate pseudo-randomly before beginning
+  # to repeat bytes. This number was chosen as the next prime larger than 5 MB.
+  MAX_UNIQUE_RANDOM_BYTES = 5242883
+
   def _Exec(self, cmd, raise_on_error=True, return_output=False,
             mute_stderr=False):
     """Executes a command in a subprocess.
@@ -289,7 +293,14 @@ class PerfDiagCommand(Command):
       fd, fpath = tempfile.mkstemp(suffix='.bin', prefix='gsutil_test_file',
                                    text=False)
       self.file_sizes[fpath] = file_size
-      self.file_contents[fpath] = os.urandom(file_size)
+      random_bytes = os.urandom(min(file_size, self.MAX_UNIQUE_RANDOM_BYTES))
+      total_bytes = 0
+      file_contents = ""
+      while total_bytes < file_size:
+        num_bytes = min(self.MAX_UNIQUE_RANDOM_BYTES, file_size - total_bytes)
+        file_contents += random_bytes[:num_bytes]
+        total_bytes += num_bytes
+      self.file_contents[fpath] = file_contents
       with os.fdopen(fd, 'wb') as f:
         f.write(self.file_contents[fpath])
       with open(fpath, 'rb') as f:
