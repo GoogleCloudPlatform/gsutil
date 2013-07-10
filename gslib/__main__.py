@@ -297,6 +297,15 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     _OutputAndExit('NotReadyToAuthenticate')
   except OSError as e:
     _OutputAndExit('OSError: %s.' % e.strerror)
+  except IOError as e:
+    if e.errno == errno.EPIPE and not sys.stdout.isatty():
+      # If we get a pipe error, this just means that the pipe to stdout or
+      # stderr is broken. This can happen if the user pipes gsutil to a command
+      # that doesn't use the entire output stream. Instead of raising an error,
+      # just swallow it up and exit cleanly.
+      sys.exit(0)
+    else:
+      raise
   except wildcard_iterator.WildcardException as e:
     _OutputAndExit(e.reason)
   except boto.exception.StorageResponseError as e:

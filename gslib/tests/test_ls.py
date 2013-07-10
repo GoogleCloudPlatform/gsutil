@@ -16,7 +16,10 @@
 
 import posixpath
 import re
+import subprocess
+import sys
 
+import gslib
 import gslib.tests.testcase as testcase
 from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
@@ -254,3 +257,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertGreater(content_length, 0)
       self.assertLess(content_length, file_size)
     _Check1()
+
+  def test_output_chopped(self):
+    bucket_uri = self.CreateBucket(test_objects=2)
+
+    # Run Python with the -u flag so output is not buffered.
+    gsutil_cmd = [
+        sys.executable, '-u', gslib.GSUTIL_PATH, 'ls', suri(bucket_uri)]
+    # Set bufsize to 0 to make sure output is not buffered.
+    p = subprocess.Popen(gsutil_cmd, stdout=subprocess.PIPE, bufsize=0)
+    # Immediately close the stdout pipe so that gsutil gets a broken pipe error.
+    p.stdout.close()
+    p.wait()
+    # Make sure it still exited cleanly.
+    self.assertEqual(p.returncode, 0)
