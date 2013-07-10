@@ -222,6 +222,44 @@ def _HandleSigQuit(signal_num, cur_stack_frame):
   import pdb
   pdb.set_trace()
 
+def _ConstructAclHelp(default_project_id):
+  acct_help_part_1 = (
+"""Your request resulted in an AccountProblem (403) error. Usually this happens
+if you attempt to create a bucket or upload an object without having first
+enabled billing for the project you are using. To remedy this problem, please do
+the following:
+
+1. Navigate to the Google APIs console (https://code.google.com/apis/console),
+and ensure the drop-down selector beneath "Google APIs" shows the project
+you're attempting to use.
+
+""")
+  acct_help_part_2 = '\n'
+  if default_project_id:
+    acct_help_part_2 = (
+"""2. Click "Google Cloud Storage" on the left hand pane, and then check that
+the value listed for "x-goog-project-id" on this page matches the project ID
+(%s) from your boto config file.
+
+""" % default_project_id)
+  acct_help_part_3 = (
+"""Check whether there's an "!" next to Billing. If so, click Billing and then
+enable billing for this project. Note that it can take up to one hour after
+enabling billing for the project to become activated for creating buckets and
+uploading objects.
+
+If the above doesn't resolve your AccountProblem, please send mail to
+gs-team@google.com requesting assistance, noting the exact command you ran, the
+fact that you received a 403 AccountProblem error, and your project ID. Please
+do not post your project ID on StackOverflow.
+
+Note: It's possible to use Google Cloud Storage without enabling billing if
+you're only listing or reading objects for which you're authorized, or if
+you're uploading objects to a bucket billed to a project that has billing
+enabled. But if you're attempting to create buckets or upload objects to a
+bucket owned by your own project, you must first enable billing for that
+project.""")
+  return (acct_help_part_1, acct_help_part_2, acct_help_part_3)
 
 def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
                                         headers=None, debug=0,
@@ -279,42 +317,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
             and ','.join(args).find('gs://') != -1):
         default_project_id = boto.config.get_value('GSUtil',
                                                    'default_project_id')
-        acct_help_part_1 = (
-"""Your request resulted in an AccountProblem (403) error. Usually this happens
-if you attempt to create a bucket or upload an object without having first
-enabled billing for the project you are using. To remedy this problem, please do
-the following:
-
-1. Navigate to the Google APIs console (https://code.google.com/apis/console),
-   and ensure the drop-down selector beneath "Google APIs" shows the project
-   you're attempting to use.
-
-""")
-        acct_help_part_2 = '\n'
-        if default_project_id:
-          acct_help_part_2 = (
-"""2. Click "Google Cloud Storage" on the left hand pane, and then check that
-   the value listed for "x-goog-project-id" on this page matches the project ID
-   (%s) from your boto config file.
-
-""" % default_project_id)
-        acct_help_part_3 = (
-"""Check whether there's an "!" next to Billing. If so, click Billing and then
-   enable billing for this project. Note that it can take up to one hour after
-   enabling billing for the project to become activated for creating buckets and
-   uploading objects.
-
-If the above doesn't resolve your AccountProblem, please send mail to
-gs-team@google.com requesting assistance, noting the exact command you ran, the
-fact that you received a 403 AccountProblem error, and your project ID. Please
-do not post your project ID on StackOverflow.
-
-Note: It's possible to use Google Cloud Storage without enabling billing if
-you're only listing or reading objects for which you're authorized, or if
-you're uploading objects to a bucket billed to a project that has billing
-enabled. But if you're attempting to create buckets or upload objects to a
-bucket owned by your own project, you must first enable billing for that
-project.""")
+        (acct_help_part_1, acct_help_part_2, acct_help_part_3) = (
+            _ConstructAclHelp(default_project_id))
         if default_project_id:
           _OutputAndExit(acct_help_part_1 + acct_help_part_2 + '3. ' +
                          acct_help_part_3)

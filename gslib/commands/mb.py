@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import boto
+import textwrap
+
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -153,8 +156,20 @@ class MbCommand(Command):
       # Pass storage_class param only if this is a GCS bucket. (In S3 the
       # storage class is specified on the key object.)
       if bucket_uri.scheme == 'gs':
-        bucket_uri.create_bucket(headers=headers, location=location,
-                                 storage_class=storage_class)
+        try:
+          bucket_uri.create_bucket(headers=headers, location=location,
+                                   storage_class=storage_class)
+        except boto.exception.StorageResponseError as e:
+          if e.status == 400 and e.code == 'DotfulBucketNameNotUnderTld':
+            bucket_name = bucket_uri.bucket_name
+            final_comp = bucket_name[bucket_name.rfind('.')+1:]
+            raise CommandException('\n'.join(textwrap.wrap(
+              'Buckets with "." in the name must be valid DNS names. The bucket'
+              ' you are attempting to create (%s) is not a valid DNS name,'
+              ' because the final component (%s) is not currently a valid part'
+              ' of the top-level DNS tree.' % (bucket_name, final_comp))))
+          else:
+            raise
       else:
         bucket_uri.create_bucket(headers=headers, location=location)
 
