@@ -697,12 +697,16 @@ class PerfDiagCommand(Command):
     """Collects system information."""
     sysinfo = {}
 
+    # All exceptions that might be thrown from socket module calls.
+    socket_errors = (
+        socket.error, socket.herror, socket.gaierror, socket.timeout)
+
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
     # Get the local IP address from socket lib.
     try:
       sysinfo['ip_address'] = socket.gethostbyname(socket.gethostname())
-    except socket.gaierror:
+    except socket_errors:
       sysinfo['ip_address'] = ''
     # Record the temporary directory used since it can affect performance, e.g.
     # when on a networked filesystem.
@@ -723,15 +727,21 @@ class PerfDiagCommand(Command):
       sysinfo['googserv_route'] = ''
 
     # Look up IP addresses for Google Server.
-    (hostname, aliaslist, ipaddrlist) = socket.gethostbyname_ex(
-        self.GOOGLE_API_HOST)
-    sysinfo['googserv_ips'] = ipaddrlist
+    try:
+      (hostname, aliaslist, ipaddrlist) = socket.gethostbyname_ex(
+          self.GOOGLE_API_HOST)
+      sysinfo['googserv_ips'] = ipaddrlist
+    except socket_errors:
+      sysinfo['googserv_ips'] = []
 
     # Reverse lookup the hostnames for the Google Server IPs.
     sysinfo['googserv_hostnames'] = []
     for googserv_ip in ipaddrlist:
-      (hostname, aliaslist, ipaddrlist) = socket.gethostbyaddr(googserv_ip)
-      sysinfo['googserv_hostnames'].append(hostname)
+      try:
+        (hostname, aliaslist, ipaddrlist) = socket.gethostbyaddr(googserv_ip)
+        sysinfo['googserv_hostnames'].append(hostname)
+      except socket_errors:
+        pass
 
     # Query o-o to find out what the Google DNS thinks is the user's IP.
     try:
