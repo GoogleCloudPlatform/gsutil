@@ -269,8 +269,10 @@ class _NameExpansionIterator(object):
         if not self.recursion_requested:
           if blr.GetUri().is_file_uri():
             desc = 'directory'
-          else:
+          elif blr.GetUri().names_bucket():
             desc = 'bucket'
+          else:
+            desc = 'bucket subdir'
           if self.cmd_supports_recursion:
             self.logger.info(
                 'Omitting %s "%s". (Did you mean to do %s -R?)',
