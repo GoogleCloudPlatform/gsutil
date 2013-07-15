@@ -19,6 +19,7 @@ import math
 import os
 import re
 import sys
+import textwrap
 import xml.etree.ElementTree as ElementTree
 
 import boto
@@ -128,9 +129,29 @@ def HasConfiguredCredentials():
   has_service_account_creds = (HAS_CRYPTO and
       config.has_option('Credentials', 'gs_service_client_id')
       and config.has_option('Credentials', 'gs_service_key_file'))
-  has_auth_plugins = config.has_option('Plugin', 'plugin_directory')
   return (has_goog_creds or has_amzn_creds or has_oauth_creds
-          or has_auth_plugins or has_service_account_creds)
+          or has_service_account_creds)
+
+
+def ConfigureNoOpAuthIfNeeded():
+  """
+  Sets up no-op auth handler if no boto credentials are configured.
+  """
+  config = boto.config
+  if not HasConfiguredCredentials():
+    if (config.has_option('Credentials', 'gs_service_client_id')
+        and not HAS_CRYPTO):
+      raise CommandException('\n'.join(textwrap.wrap(
+          'Your gsutil is configured with an OAuth2 service account, but you '
+          'do not have PyOpenSSL or PyCrypto 2.6 or later installed.  Service '
+          'account authentication requires one of these libraries; please '
+          'install either of them to proceed, or configure  a different type '
+          'of credentials with "gsutil config".')))
+    else:
+      # With no boto config file the user can still access publicly readable
+      # buckets and objects.
+      from gslib import no_op_auth_plugin
+
 
 def GetConfigFilePath():
   config_path = 'no config found'

@@ -25,6 +25,7 @@ import re
 import signal
 import socket
 import sys
+import textwrap
 import traceback
 
 import apiclient
@@ -34,6 +35,7 @@ from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetConfigFilePath
+from gslib.util import HasConfiguredCredentials
 import gslib.exception
 import httplib2
 import oauth2client
@@ -314,14 +316,14 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # accessing publicly readable buckets and objects).
     if (e.status == 403
         or (e.status == 400 and e.code == 'MissingSecurityHeader')):
-      if not util.HasConfiguredCredentials():
-        _OutputAndExit(
+      if not HasConfiguredCredentials():
+        _OutputAndExit('\n'.join(textwrap.wrap(
             'You are attempting to access protected data with no configured '
-            'credentials.\nPlease see '
-            'http://code.google.com/apis/storage/docs/signup.html for\ndetails '
+            'credentials. Please see '
+            'http://code.google.com/apis/storage/docs/signup.html for details '
             'about activating the Google Cloud Storage service and then run '
-            'the\n"gsutil config" command to configure gsutil to use these '
-            'credentials.')
+            'the "gsutil config" command to configure gsutil to use these '
+            'credentials.')))
       elif (e.error_code == 'AccountProblem'
             and ','.join(args).find('gs://') != -1):
         default_project_id = boto.config.get_value('GSUtil',

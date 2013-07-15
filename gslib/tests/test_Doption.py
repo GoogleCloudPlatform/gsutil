@@ -21,7 +21,7 @@ from gslib.tests.util import ObjectToURI as suri
 class TestCat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil -D option."""
 
-  def test_cat_minus_D(self):
+  def test_minus_D_cat(self):
     key_uri = self.CreateObject(contents='0123456789')
     (stdout, stderr) = self.RunGsUtil(['-D', 'cat', suri(key_uri)],
                                       return_stdout=True, return_stderr=True)
@@ -43,7 +43,6 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('header: Content-Length: 10', stderr)
     self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
     self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
-    self.assertIn('DEBUG:oauth2_client:GetAccessToken: checking cache ', stderr)
     self.assertIn('gsutil version %s' % gslib.VERSION, stdout)
     self.assertRegexpMatches(stdout, r'.*checksum [0-9a-f]{32}.*')
     self.assertIn('boto version ', stdout)
