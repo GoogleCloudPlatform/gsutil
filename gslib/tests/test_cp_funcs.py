@@ -12,14 +12,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gslib
+from gslib.commands.cp import _GetPartitionInfo
+from gslib.commands.cp import _HashFilename
+from gslib.commands.cp import _ParseParallelUploadTrackerFile
+from gslib.commands.cp import _WriteParallelUploadTrackerFile
+from gslib.commands.cp import ObjectFromTracker
+from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 
-
-class TestCp(gslib.tests.testcase.unit_testcase.GsUtilUnitTestCase):
+class TestCp(GsUtilUnitTestCase):
   """Unit tests for functions in cp command."""
 
-  def test_hash_filename(self):
-    # Tests that _hash_filename function works for both string and unicode
+  def test_HashFilename(self):
+    # Tests that _HashFilename function works for both string and unicode
     # filenames (without raising any Unicode encode/decode errors).
-    gslib.commands.cp._hash_filename('file1')
-    gslib.commands.cp._hash_filename(u'file1')
+    _HashFilename('file1')
+    _HashFilename(u'file1')
+
+  def test_GetPartitionInfo(self):
+    # Simplest case - threshold divides file_size.
+    (num_components, component_size) = _GetPartitionInfo(300, 200, 10)
+    self.assertEqual(30, num_components)
+    self.assertEqual(10, component_size)
+
+    # Threshold = 1 (mod file_size).
+    (num_components, component_size) = _GetPartitionInfo(301, 200, 10)
+    self.assertEqual(31, num_components)
+    self.assertEqual(10, component_size)
+
+    # Threshold = -1 (mod file_size).
+    (num_components, component_size) = _GetPartitionInfo(299, 200, 10)
+    self.assertEqual(30, num_components)
+    self.assertEqual(10, component_size)
+
+    # Too many components needed.
+    (num_components, component_size) = _GetPartitionInfo(301, 2, 10)
+    self.assertEqual(2, num_components)
+    self.assertEqual(151, component_size)
+
+    # Test num_components with huge numbers.
+    (num_components, component_size) = _GetPartitionInfo((10 ** 150) + 1,
+                                                         10 ** 200,
+                                                         10)
+    self.assertEqual((10 ** 149) + 1, num_components)
+    self.assertEqual(10, component_size)
+
+    # Test component_size with huge numbers.
+    (num_components, component_size) = _GetPartitionInfo((10 ** 150) + 1,       
+                                                         10,
+                                                         10)
+    self.assertEqual(10, num_components)
+    self.assertEqual((10 ** 149) + 1, component_size)
+
+    # Test component_size > file_size (make sure we get at least two components.
+    (num_components, component_size) = _GetPartitionInfo(100, 500, 51)
+    self.assertEquals(2, num_components)
+    self.assertEqual(50, component_size)
+
+  def test_ParseParallelUploadTrackerFile(self):
+    random_prefix = '123'
+    objects = ['obj1', '42', 'obj2', '314159']
+    contents = '\n'.join([random_prefix] + objects)
+    fpath = self.CreateTempFile(file_name='foo',
+                                contents=contents)
+    expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
+                       for i in range(0, len(objects) / 2)]
+    (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(fpath)
+    self.assertEqual(random_prefix, actual_prefix)
+    self.assertEqual(expected_objects, actual_objects)
+
+  def test_WriteParallelUploadTrackerFile(self):
+    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    random_prefix = '123'
+    objects = ['obj1', '42', 'obj2', '314159']
+    expected_contents = [(str + '\n') for str in ([random_prefix] + objects)]
+    objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
+                       for i in range(0, len(objects) / 2)]
+    _WriteParallelUploadTrackerFile(tracker_file, random_prefix, objects)
+    with open(tracker_file, 'rb') as f:
+      lines = f.readlines()
+    self.assertEqual(expected_contents, lines)

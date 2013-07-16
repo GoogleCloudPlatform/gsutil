@@ -60,6 +60,9 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
   def connect(self, access_key_id=None, secret_access_key=None):
     return mock_connection
 
+  def compose(self, components, headers=None):
+    """Dummy implementation to allow parallel uploads with tests."""
+    return self.new_key()
 
 @unittest.skipUnless(util.RUN_UNIT_TESTS,
                      'Not running integration tests.')

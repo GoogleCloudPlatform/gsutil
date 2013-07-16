@@ -19,10 +19,19 @@ import datetime
 import os
 import re
 import gslib.tests.testcase as testcase
+
+from boto import storage_uri
+from boto.storage_uri import BucketStorageUri
+from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
+from gslib.commands.cp import FilterExistingComponents
+from gslib.commands.cp import MakeGsUri
+from gslib.commands.cp import ObjectFromTracker
+from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
+from gslib.storage_uri_builder import StorageUriBuilder
+from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.util import Retry
 from gslib.util import TWO_MB
-from boto import storage_uri
-from gslib.tests.util import ObjectToURI as suri
 
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
@@ -35,6 +44,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def _get_test_file(self, name):
     return os.path.join(TEST_DATA_DIR, name)
 
+  @PerformsFileToObjectUpload
   def test_noclobber(self):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='bar')
@@ -60,6 +70,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping existing item: %s' % suri(bucket2_uri,
                   key_uri.object_name), stderr)
 
+  @PerformsFileToObjectUpload
   def test_streaming(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
@@ -70,6 +81,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   # TODO: Implement a way to test both with and without using magic file.
 
+  @PerformsFileToObjectUpload
   def test_detect_content_type(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -112,6 +124,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
     _Check2()
 
+  @PerformsFileToObjectUpload
   def test_foo_noct(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -127,6 +140,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % content_type)
     _Check1()
 
+  @PerformsFileToObjectUpload
   def test_content_type_mismatches(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -158,6 +172,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
     _Check3()
 
+  @PerformsFileToObjectUpload
   def test_content_type_header_case_insensitive(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -184,6 +199,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNotRegexpMatches(stdout, 'image/gif,\s*image/gif')
     _Check2()
 
+  @PerformsFileToObjectUpload
   def test_versioning(self):
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
@@ -265,6 +281,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(storage_uri(uri_str2).object_name, 'k')
     _Check1()
 
+  @PerformsFileToObjectUpload
   def test_cp_v_option(self):
     # Tests that cp -v option returns the created object's version-specific URI.
     bucket_uri = self.CreateVersionedBucket()
@@ -317,6 +334,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(created_uri, lines[-2])
     _Check1()
 
+  @PerformsFileToObjectUpload
   def test_stdin_args(self):
     tmpdir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
@@ -369,7 +387,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       new_acl_xml = self.RunGsUtil(['getacl', uri], return_stdout=True)
       self.assertEqual(acl_xml, new_acl_xml)
     _Check()
-
 
   def test_cp_key_to_local_stream(self):
     bucket_uri = self.CreateBucket()
@@ -441,6 +458,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)
 
+  @PerformsFileToObjectUpload
   def test_cp_manifest_upload(self):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
@@ -466,11 +484,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     start_date = datetime.datetime.strptime(results[2], date_format)
     end_date = datetime.datetime.strptime(results[3], date_format)
     self.assertEqual(end_date > start_date, True)
-    self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
+    if self.RunGsUtil == testcase.GsUtilIntegrationTestCase.RunGsUtil:
+      # Check that we didn't do automatic parallel uploads - compose doesn't
+      # calculate the MD5 hash. Since RunGsUtil is overriden in
+      # TestCpParallelUploads to force parallel uploads, we can check which
+      # method was used.
+      self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
     self.assertEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
 
+  @PerformsFileToObjectUpload
   def test_cp_manifest_download(self):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='')
@@ -502,6 +526,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertGreaterEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
 
+  @PerformsFileToObjectUpload
   def test_copy_unicode_non_ascii_filename(self):
     key_uri = self.CreateObject(contents='foo')
     # Make file large enough to cause a resumable upload (which hashes filename
@@ -512,7 +537,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)],
                             return_stderr=True)
     self.assertIn('Copying file:', stderr)
-    self.assertIn('Uploading', stderr)
 
   def test_gzip_upload_and_download(self):
     key_uri = self.CreateObject()
@@ -523,3 +547,113 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(key_uri), suri(fpath2)])
     with open(fpath2, 'r') as f:
       self.assertEqual(f.read(), contents)
+
+  def test_filter_existing_components_non_versioned(self):
+    bucket_name = 'filter_existing_components_bucket_non_versioned'
+
+    bucket_uri = self.CreateBucket(bucket_name=bucket_name)
+
+    # Already uploaded, contents still match, component still used.
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents='1')
+    key_uploaded_correctly = self.CreateObject(object_name='foo1', contents='1',
+                                               bucket_uri=bucket_uri)
+    args_uploaded_correctly = PerformResumableUploadIfAppliesArgs(
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly,
+        key_uploaded_correctly, '', {})
+
+    # Not yet uploaded, but needed.
+    fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents='2')
+    key_not_uploaded = self.CreateObject(object_name='foo2', contents='2',
+                                         bucket_uri=bucket_uri)
+    args_not_uploaded = PerformResumableUploadIfAppliesArgs(
+        fpath_not_uploaded, 0, 1, fpath_not_uploaded, key_not_uploaded, '', {})
+
+    # Already uploaded, but contents no longer match. Even though the contents
+    # differ, we don't delete this since the bucket is not versioned and it
+    # will be overwritten anyway.
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    key_wrong_contents = self.CreateObject(object_name='foo4', contents='_',
+                             bucket_uri=bucket_uri)
+    args_wrong_contents = PerformResumableUploadIfAppliesArgs(
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
+        '', {})
+
+    # Exists in tracker file, but component object no longer exists.
+    fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents='5')
+    args_remote_deleted = PerformResumableUploadIfAppliesArgs(
+        fpath_remote_deleted, 0, 1, fpath_remote_deleted, '', '', {})
+
+    # Exists in tracker file and already uploaded, but no longer needed.
+    fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
+    key_no_longer_used = self.CreateObject(object_name='foo6', contents='6',
+                             bucket_uri=bucket_uri)
+
+    dst_args = {fpath_uploaded_correctly:args_uploaded_correctly,
+                fpath_not_uploaded:args_not_uploaded,
+                fpath_wrong_contents:args_wrong_contents,
+                fpath_remote_deleted:args_remote_deleted}
+
+    existing_components = [ObjectFromTracker(fpath_uploaded_correctly, ''),
+                           ObjectFromTracker(fpath_wrong_contents, ''),
+                           ObjectFromTracker(fpath_remote_deleted, ''),
+                           ObjectFromTracker(fpath_no_longer_used, '')]
+
+    suri_builder = StorageUriBuilder(0, BucketStorageUri)
+
+    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
+        FilterExistingComponents(dst_args, existing_components,
+                                 bucket_uri.bucket_name, suri_builder))
+
+    for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
+      self.assertTrue(arg in components_to_upload)
+    self.assertEqual(str([args_uploaded_correctly.dst_uri]),
+                     str(uploaded_components))
+    self.assertEqual(
+        str([MakeGsUri(bucket_name, fpath_no_longer_used, suri_builder)]),
+        str(existing_objects_to_delete))
+
+  def test_filter_existing_components_versioned(self):
+    bucket_name = 'filter_existing_components_bucket_versioned'
+    bucket_uri = self.CreateVersionedBucket(bucket_name=bucket_name)
+
+    # Already uploaded, contents still match, component still used.
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents='1')
+    key_uploaded_correctly = self.CreateObject(object_name='foo1', contents='1',
+                             bucket_uri=bucket_uri)
+    args_uploaded_correctly = PerformResumableUploadIfAppliesArgs(
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly,
+        key_uploaded_correctly, key_uploaded_correctly.generation, {})
+
+    # Already uploaded, but contents no longer match.
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    key_wrong_contents = self.CreateObject(object_name='foo4', contents='_',
+                             bucket_uri=bucket_uri)
+
+    args_wrong_contents = PerformResumableUploadIfAppliesArgs(
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
+        key_wrong_contents.generation, {})
+
+    dst_args = {fpath_uploaded_correctly:args_uploaded_correctly,
+                fpath_wrong_contents:args_wrong_contents}
+
+    existing_components = [ObjectFromTracker(fpath_uploaded_correctly,
+                                             key_uploaded_correctly.generation),
+                           ObjectFromTracker(fpath_wrong_contents,
+                                             key_wrong_contents.generation)]
+
+    suri_builder = StorageUriBuilder(0, BucketStorageUri)
+
+    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
+        FilterExistingComponents(dst_args, existing_components,
+                                 bucket_uri.bucket_name, suri_builder))
+
+    self.assertEqual([args_wrong_contents], components_to_upload)
+    self.assertEqual(str([args_uploaded_correctly.dst_uri]),
+                     str(uploaded_components))
+    expected_to_delete = [(args_wrong_contents.dst_uri.object_name,
+                           args_wrong_contents.dst_uri.generation)]
+    for uri in existing_objects_to_delete:
+      self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
+    self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))

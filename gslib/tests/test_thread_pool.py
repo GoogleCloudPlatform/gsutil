@@ -53,12 +53,10 @@ class GsutilThreadPoolTests(testcase.GsUtilUnitTestCase):
     for data in xrange(expected_call_count):
       pool.AddTask(_Dummy, data)
 
-    pool.WaitCompletion()
+    pool.Shutdown()
     self.assertEqual(self.actual_call_count, expected_call_count)
-
     self.assertEqual(self.actual_result, expected_result)
 
-    pool.Shutdown()
     for thread in pool.threads:
       self.assertFalse(thread.is_alive())
 
@@ -86,7 +84,6 @@ class GsutilThreadPoolTests(testcase.GsUtilUnitTestCase):
       raise TypeError('gsutil')
 
     pool.AddTask(_Dummy)
-    pool.WaitCompletion()
     pool.Shutdown()
 
     self.assertTrue(self.exception_raised)

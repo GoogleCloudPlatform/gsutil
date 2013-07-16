@@ -35,6 +35,7 @@ class Worker(threading.Thread):
     self.tasks = tasks
     self.daemon = True
     self.exception_handler = exception_handler
+    self.results = []
     self.start()
 
   def run(self):
@@ -46,7 +47,9 @@ class Worker(threading.Thread):
         break
 
       try:
-        func(*args, **kargs)
+        result = func(*args, **kargs)
+        if result is not None:
+          self.results.append(result)
       except Exception, e:
         self.exception_handler(e)
       finally:
@@ -66,14 +69,15 @@ class ThreadPool(object):
     """Add a task to the queue."""
     self.tasks.put((func, args, kargs))
 
-  def WaitCompletion(self):
-    """Wait for completion of all the tasks in the queue."""
-    self.tasks.join()
-
-  def Shutdown(self):
+  def Shutdown(self, should_return_results=False):
     """Shutdown the thread pool."""
+    self.tasks.join()
     for thread in self.threads:
       self.tasks.put(_THREAD_EXIT_MAGIC)
 
+    results = []
     for thread in self.threads:
       thread.join()
+      if should_return_results:
+        results += thread.results
+    return results

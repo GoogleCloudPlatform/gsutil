@@ -23,15 +23,29 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['perfdiag', '-n', '1', '-t', 'lat', suri(bucket_uri)])
 
-  def test_write_throughput(self):
+  def _run_basic_wthru_or_rthru(self, test_name, num_processes, num_threads):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['perfdiag', '-n', '1', '-s', '1024', '-t', 'wthru',
-                    suri(bucket_uri)])
+    self.RunGsUtil(['perfdiag', '-n', str(num_processes * num_threads),
+                    '-s', '1024', '-c', str(num_processes),
+                    '-k', str(num_threads), '-t', test_name, suri(bucket_uri)])
 
-  def test_read_throughput(self):
-    bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['perfdiag', '-n', '1', '-s', '1024', '-t', 'rthru',
-                    suri(bucket_uri)])
+  def test_write_throughput_single_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('wthru', 1, 2)
+
+  def test_write_throughput_multi_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('wthru', 2, 1)
+
+  def test_write_throughput_multi_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('wthru', 2, 2)
+
+  def test_read_throughput_single_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('rthru', 1, 2)
+
+  def test_read_throughput_multi_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('rthru', 2, 1)
+
+  def test_read_throughput_multi_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('rthru', 2, 2)
 
   def test_input_output(self):
     outpath = self.CreateTempFile()

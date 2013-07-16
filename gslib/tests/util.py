@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import boto
+import functools
+import os
 import posixpath
-import os.path
 import urlparse
 
 import unittest
@@ -29,6 +31,8 @@ RUN_UNIT_TESTS = True
 
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False
+
+PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG = '/tmp/.boto.parallel_upload_test_config'
 
 
 def _HasS3Credentials():
@@ -86,3 +90,33 @@ def ObjectToURI(obj, *suffixes):
   if uri.endswith('/'):
     uri = uri[:-1]
   return uri
+
+def PerformsFileToObjectUpload(func):
+  """Decorator used to indicate that a test performs an upload from a local
+     file to an object. This forces the test to run once normally, and again
+     with a special .boto config file that will ensure that the test follows
+     the parallel composite upload code path.
+  """
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    try:
+      old_boto_config = os.environ['BOTO_CONFIG']
+      boto_config_was_set = True
+    except KeyError as e:
+      boto_config_was_set = False
+    try:
+      # Run the test normally once.
+      func(*args, **kwargs)
+
+      # Try again, forcing parallel composite uploads.
+      boto.config.set('GSUtil', 'parallel_composite_upload_threshold', '1')
+      os.environ['BOTO_CONFIG'] = PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG
+
+      # Write a new config file corresponding to the new BOTO_CONFIG.
+      with open(PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG, 'w') as f:
+        boto.config.write(f)
+      func(*args, **kwargs)
+    finally:
+      if boto_config_was_set:
+        os.environ['BOTO_CONFIG'] = old_boto_config
+  return wrapper

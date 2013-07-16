@@ -28,10 +28,12 @@ import gslib
 import logging
 import multiprocessing
 import os
+import Queue
 import re
 import signal
 import sys
 import textwrap
+import threading
 import wildcard_iterator
 import xml.dom.minidom
 
@@ -522,32 +524,75 @@ class Command(object):
     # Pretty-print the XML to make it more easily human editable.
     parsed_xml = xml.dom.minidom.parseString(xml_str.encode('utf-8'))
     print parsed_xml.toprettyxml(indent='    ')
+    
+  def _AccountForWindowsResourceLimitations(self, concurrency, is_main_thread):
+    """In order to avoid the max number of files limit imposed by Windows
+       (which apparently cannot be changed), we need to be careful not to
+       create too many threads/processes. 
+    """
+    if IS_WINDOWS and not is_main_thread:
+      # It seems that the most common limit to the number of open files is
+      # 512, so try to stay under 400 in order to account for the top-level
+      # threads/processes. This number might need some tweaking, as it
+      # was obtained experimentally in one Windows 7 envrionment.
+      concurrency = max(min(concurrency, 400 / concurrency), 2)
+    return concurrency
 
-  def Apply(self, func, args_list, thr_exc_handler,
+  def Apply(self, func, args_iterator, thr_exc_handler,
             shared_attrs=None, arg_checker=_UriArgChecker,
-            local_parallel=False, process_count=None, thread_count=None):
-    """Dispatch input URI assignments across a pool of parallel OS
+            parallel_operations_override=False, process_count=None,
+            thread_count=None, queue_class=NameExpansionIteratorQueue,
+            should_return_results=False, ignore_subprocess_failures=False,
+            is_main_thread=True):
+    """Dispatch input arguments across a pool of parallel OS
        processes and/or Python threads, based on options (-m or not)
        and settings in the user's config file. If non-parallel mode
        or only one OS process requested, execute requests sequentially
        in the current OS process.
 
+       For a non-recursive call to Apply, the following will happen:
+       - If process_count is 1, then any necessary threads will be created
+         by the current process by _ApplyThreads.
+       - If thread_count is 1, then we will create any necessary processes,
+         and each such process will execute func in its main thread.
+       - If process_count > 1, then new processes will be created to call the
+         _ApplyThreads method.
+       - If thread_count > 1, then the _ApplyThreads method will create a thread
+         pool with which to execute the calls to func.
+
+       If this function is called recursively (indicated by is_main_thread
+       being False), then the following will happen:
+       - If process_count or thread_count is 1, then the logic does not change.
+       - If process_count > 1 or thread_count > 1, then we will simply behave as
+         though process_count == 1. This prevents us from creating processes in
+         threads created by other processes, which exposes a Python bug. The
+         issue is recorded at http://bugs.python.org/issue1731717, but it is
+         called out in the multiprocessing source code as not having been fixed.
+
     Args:
       func: Function to call to process each URI.
-      name_expansion_iterator: Iterator of NameExpansionResult.
+      args_iterator: Iterable collection of arguments to be put into the
+                     work queue.
       thr_exc_handler: Exception handler for ThreadPool class.
       shared_attrs: List of attributes to manage across sub-processes.
       arg_checker: Used to determine whether we should process the current
                    argument or simply skip it. Also handles any logging that
                    is specific to a particular type of argument.
-      local_parallel: The same semantics as self.parallel_operations, except
-                      that it applies only to this function call (for the
-                      purpose of determining whether to use multiple
-                      threads and/or processes).
+      parallel_operations_override: Used to override self.parallel_operations.
+                                    This allows the caller to safely override
+                                    the top-level flag for a single call.
       process_count: The number of processes to use. If not specified, then
                      the configured default will be used.
       thread_count: The number of threads per process. If not speficied, then
                     the configured default will be used.
+      queue_class: A class that behaves like a multiprocessing.Queue(), except
+                   that it returns and "EOF" value forever once the queue is
+                   empty.
+      should_return_results: If true, then return the results of all successful
+                             calls to func in a list.
+      ignore_subprocess_failures: An exception will be raised upon failure in
+                                  a subprocess iff this flag is False.
+      is_main_thread: True iff this function was called from the main thread.
 
     Raises:
       CommandException if invalid config encountered.
@@ -555,7 +600,7 @@ class Command(object):
 
     # Set OS process and python thread count as a function of options
     # and config.
-    if self.parallel_operations or local_parallel:
+    if self.parallel_operations or parallel_operations_override:
       if not process_count:
         process_count = boto.config.getint(
             'GSUtil', 'parallel_process_count',
@@ -578,7 +623,13 @@ class Command(object):
     self.logger.debug('process count: %d', process_count)
     self.logger.debug('thread count: %d', thread_count)
 
-    if (self.parallel_operations or local_parallel) and process_count > 1:
+    if ((self.parallel_operations or parallel_operations_override)
+        and process_count > 1 and (is_main_thread or thread_count == 1)):
+      # We know that thread_count == 1 if we're not in the main thread, so
+      # limit the process_count.
+      process_count = self._AccountForWindowsResourceLimitations(process_count,
+                                                                 is_main_thread)
+      return_values = []
       self.procs = []
       # If any shared attributes passed by caller, create a dictionary of
       # shared memory variables for every element in the list of shared
@@ -590,31 +641,44 @@ class Command(object):
             shared_vars = {}
           shared_vars[name] = multiprocessing.Value('i', 0)
       # Construct work queue for parceling out work to multiprocessing workers,
-      # setting the max queue length of 50k so we will block if workers don't
+      # setting the max queue length of 32.5k so we will block if workers don't
       # empty the queue as fast as we can continue iterating over the bucket
       # listing. This number may need tuning; it should be large enough to
       # keep workers busy (overlapping bucket list next-page retrieval with
       # operations being fed from the queue) but small enough that we don't
-      # overfill memory when running across a slow network link.
-      work_queue = multiprocessing.Queue(50000)
+      # overfill memory when running across a slow network link. There also
+      # appear to be default limits on some system configurations e.g., some
+      # versions of OS X) that prevent setting this value above 32768.
+      work_queue = multiprocessing.Queue(32500)
+      manager = multiprocessing.Manager()
+      result_list = manager.list()
       for shard in range(process_count):
         # Spawn a separate OS process for each shard.
         self.logger.debug('spawning process for shard %d', shard)
         p = multiprocessing.Process(target=self._ApplyThreads,
                                     args=(func, work_queue, shard,
                                           thread_count, thr_exc_handler,
-                                          shared_vars, arg_checker))
+                                          shared_vars, arg_checker,
+                                          result_list, should_return_results))
         self.procs.append(p)
         p.start()
 
       # Catch ^C under Linux/MacOs so we can kill the suprocesses.
-      if not IS_WINDOWS:
-        signal.signal(signal.SIGINT, self._HandleMultiProcessingControlC)
+      if not IS_WINDOWS and is_main_thread:
+        try:
+          signal.signal(signal.SIGINT, self._HandleMultiProcessingControlC)
+        except ValueError, e:
+          # This can happen if signal() is called from a thread other than the
+          # main thread, which can currently only happen in a special case of
+          # perfdiag.
+          # TODO: Remove this when Apply() has been refactored to not create
+          # multiple recursive levels of threads and processes.
+          self.logger.warn(e)
 
       last_name_expansion_result = None
       try:
         # Feed all work into the queue being emptied by the workers.
-        for arg in args_list:
+        for arg in args_iterator:
           last_arg = arg
           work_queue.put(arg)
       except:
@@ -638,6 +702,10 @@ class Command(object):
           if p.exitcode != 0:
             failed_process_count += 1
 
+        # result_list is a ListProxy - copy it into a normal list.
+        for result in result_list:
+          return_values.append(result)
+
         # Propagate shared variables back to caller's attributes.
         if shared_vars:
           for (name, var) in shared_vars.items():
@@ -650,20 +718,32 @@ class Command(object):
         plural_str = ''
         if failed_process_count > 1:
           plural_str = 'es'
-        raise Exception('unexpected failure in %d sub-process%s, '
-                        'aborting...' % (failed_process_count, plural_str))
+        message = ('unexpected failure in %d sub-process%s, '
+                   'aborting...' % (failed_process_count, plural_str))
+        if ignore_subprocess_failures:
+          logging.warning(message)
+        else:
+          raise Exception(message)
+      return return_values
 
     else:
-      # Using just 1 process, so funnel results to _ApplyThreads using facade
-      # that makes NameExpansionIterator look like a Multiprocessing.Queue
-      # that sends one EOF once the iterator empties.
-      work_queue = NameExpansionIteratorQueue(args_list, _EOF_ARGUMENT)
-      self._ApplyThreads(func, work_queue, 0, thread_count, thr_exc_handler,
-                         None)
+      # In this case, we're not going to create any new processes, so we only
+      # need to limit the thread_count.
+      thread_count = self._AccountForWindowsResourceLimitations(thread_count,
+                                                                is_main_thread)
+
+      # We're not creating a new process, so funnel arguments to _ApplyThreads
+      # using a thread-safe queue class that will send one EOF once the
+      # iterator empties.
+      work_queue = queue_class(args_iterator, _EOF_ARGUMENT)
+      return self._ApplyThreads(func, work_queue, 0, thread_count,
+                                thr_exc_handler, None, arg_checker,
+                                should_return_results=should_return_results,
+                                use_thr_exc_handler=ignore_subprocess_failures)
 
   def _HandleMultiProcessingControlC(self, signal_num, cur_stack_frame):
     """Called when user hits ^C during a multi-processing/multi-threaded
-       request, so we can kill the suprocesses."""
+       request, so we can kill the subprocesses."""
     # Note: This only works under Linux/MacOS. See
     # https://github.com/GoogleCloudPlatform/gsutil/issues/99 for details
     # about why making it work correctly across OS's is harder and still open.
@@ -714,15 +794,16 @@ class Command(object):
 
   def _ApplyThreads(self, func, work_queue, shard, num_threads,
                     thr_exc_handler=None, shared_vars=None,
-                    arg_checker=_UriArgChecker):
+                    arg_checker=_UriArgChecker, result_list=None,
+                    should_return_results=False, use_thr_exc_handler=False):
     """
     Perform subset of required requests across a caller specified
     number of parallel Python threads, which may be one, in which
     case the requests are processed in the current thread.
 
     Args:
-      func: Function to call for each request.
-      work_queue: shared queue of NameExpansionResult to process.
+      func: Function to call for each argument.
+      work_queue: shared queue of arguments to process.
       shard: Assigned subset (shard number) for this function.
       num_threads: Number of Python threads to spawn to process this shard.
       thr_exc_handler: Exception handler for ThreadPool class.
@@ -732,6 +813,18 @@ class Command(object):
       arg_checker: Used to determine whether we should process the current
                    argument or simply skip it. Also handles any logging that
                    is specific to a particular type of argument.
+      result_list: A thread- and process-safe shared list in which to store
+                   the return values from all calls to func. If result_list
+                   is None (the default), then no return values will be stored.
+      should_return_results: If False (the default), then return no values from
+                             result_list.
+      use_thr_exc_handler: If true, then use thr_exc_handler to process any
+                           exceptions from func. Otherwise, exceptions from
+                           func are propagated normally.
+
+    Returns:
+      return_values: A list of the return values from all calls to func. Or,
+                     if return_results is False (the default), an empty list.
     """
     # Each OS process needs to establish its own set of connections to
     # the server to avoid writes from different OS processes interleaving
@@ -742,6 +835,8 @@ class Command(object):
     if connection_pool:
       for i in connection_pool:
         connection_pool[i].connection.close()
+
+    return_values = []
 
     if num_threads > 1:
       thread_pool = ThreadPool(num_threads, thr_exc_handler)
@@ -755,15 +850,59 @@ class Command(object):
         if num_threads > 1:
           thread_pool.AddTask(func, args)
         else:
-          func(args)
+          try:
+            return_value = func(args)
+            if should_return_results:
+              return_values.append(return_value)
+              if (result_list is not None) and should_return_results:
+                result_list.append(return_value)
+          except Exception as e:
+            if use_thr_exc_handler:
+              thr_exc_handler(e)
+            else:
+              raise e
+
       # If any Python threads created, wait here for them to finish.
-      if num_threads > 1:
-        thread_pool.WaitCompletion()
     finally:
       if num_threads > 1:
-        thread_pool.Shutdown()
+        # We provide return values both in the normal way and in the
+        # result_list so that we can use the result_list (which is quite slow)
+        # for IPC, where it's necessary, and just return the values normally
+        # when we're calling this function from a single process.
+        return_values = thread_pool.Shutdown(should_return_results)
+        if (result_list is not None) and should_return_results:
+          for value in return_values:
+              result_list.append(value)
     # If any shared variables (which means we are running in a separate OS
     # process), increment value for each shared variable.
     if shared_vars:
       for (name, var) in shared_vars.items():
         var.value += getattr(self, name)
+    return return_values
+
+class EofWorkQueue(Queue.Queue):
+  """Thread-safe queue used to behave like a multiprocessing.Queue for the
+     single-process case of command.Apply(). The only difference in
+     functionality is that this object knows to always send a "final object"
+     after the queue is empty, which will indicate that there is no more work
+     to be done.
+  """
+  def __init__(self, args_list, final_argument):
+    """Args:
+         args_list: A list of all arguments that should be in the queue.
+         final_argument: The "EOF" argument used by Apply() to indicate that
+                         the process reading this queue has no more work to do.
+    """
+    self.queue = Queue.Queue(len(args_list))
+    self.final_argument = final_argument
+    for arg in args_list:
+      self.queue.put(arg)
+
+  def get(self):
+    if self.queue.empty():
+      # Apply assumes that the queue will continue to return
+      # self.final_argument forever, so that each process running
+      # _ApplyThreads will know that it has no more work to do.
+      return self.final_argument
+    else:
+      return self.queue.get()

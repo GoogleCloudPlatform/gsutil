@@ -40,6 +40,7 @@ from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import DummyArgChecker
+from gslib.command import EofWorkQueue
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
@@ -64,8 +65,8 @@ from gslib.util import Percentile
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c concurrency]
-  [-s size] [-t tests] uri...
+  gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c processes]
+  [-k threads] [-s size] [-t tests] uri...
 
 
 <B>DESCRIPTION</B>
@@ -152,7 +153,7 @@ _detailed_help_text = ("""
   measurement is reported at the end of the test.
 
   Note that HTTP responses are only recorded when the request was made in a
-  single process. When using a concurrency value greater than 1, read and write
+  single process. When using multiple processes or threads, read and write
   throughput measurements are performed in an external process, so the
   availability numbers reported won't include the throughput measurements.
 
@@ -471,12 +472,6 @@ class PerfDiagCommand(Command):
       msg = record.getMessage()
       return not (('Copying file:///' in msg) or ('Copying gs://' in msg))
 
-  def _RunCp(self, args):
-    command_runner = CommandRunner(GetBotoConfigFileList)
-    command_runner.RunNamedCommand("cp", args=args, headers=self.headers,
-        parallel_operations=False, skip_update_check=True,
-        logging_filters=[self._CpFilter()])
-
   def _PerfdiagExceptionHandler(self, e):
     """Simple exception handler to allow post-completion status."""
     self.logger.error(str(e))
@@ -526,17 +521,22 @@ class PerfDiagCommand(Command):
         self._RunOperation(_Download)
       time_took = sum(times)
     else:
+      def _Download(key):
+        key.get_contents_to_file(self.devnull, hash_algs={})
+
+      args = [k] * self.num_iterations
       self.logger.addFilter(self._CpFilter())
+
       t0 = time.time()
-      args = [(self.thru_remote_file, os.devnull)]
-      args *= self.num_iterations
-      self.Apply(self._RunCp,
+      self.Apply(_Download,
                  args,
                  self._PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
-                 local_parallel=True,
+                 parallel_operations_override=True,
                  process_count=self.processes,
-                 thread_count=self.threads)
+                 is_main_thread=True,
+                 thread_count=self.threads,
+                 queue_class=EofWorkQueue)
       t1 = time.time()
       time_took = t1 - t0
 
@@ -554,6 +554,9 @@ class PerfDiagCommand(Command):
                                         'processes': self.processes,
                                         'threads': self.threads}
 
+    k = self.bucket.key_class(self.bucket)
+    k.BufferSize = self.KEY_BUFFER_SIZE
+    k.key = os.path.basename(self.thru_local_file)
     if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
       warmup_key = self.bucket.key_class(self.bucket)
@@ -564,10 +567,6 @@ class PerfDiagCommand(Command):
             self.file_contents[self.tcp_warmup_file],
             md5=self.file_md5s[self.tcp_warmup_file])
       self._RunOperation(_Warmup)
-
-      k = self.bucket.key_class(self.bucket)
-      k.BufferSize = self.KEY_BUFFER_SIZE
-      k.key = os.path.basename(self.thru_local_file)
 
       times = []
 
@@ -582,16 +581,23 @@ class PerfDiagCommand(Command):
       time_took = sum(times)
 
     else:
+      def _Upload(key):
+        return key.set_contents_from_string(
+            self.file_contents[self.thru_local_file],
+            md5=self.file_md5s[self.thru_local_file])
+
+      args = [k] * self.num_iterations
+
       t0 = time.time()
-      args = [(self.thru_local_file, self.thru_remote_file)]
-      args *= self.num_iterations
-      self.Apply(self._RunCp,
+      self.Apply(_Upload,
                  args,
                  self._PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
-                 local_parallel=True,
+                 parallel_operations_override=True,
                  process_count=self.processes,
-                 thread_count=self.threads)
+                 is_main_thread=True,
+                 thread_count=self.threads,
+                 queue_class=EofWorkQueue)
       t1 = time.time()
       time_took = t1 - t0
 

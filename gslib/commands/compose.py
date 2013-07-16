@@ -31,6 +31,7 @@ from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
 from boto import storage_uri_for_key
 
+MAX_COMPONENT_COUNT = 32
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -39,10 +40,9 @@ _detailed_help_text = ("""
 
 <B>DESCRIPTION</B>
   The compose command creates a new object whose content is the concatenation
-  of a given sequence of up to 32 component objects under the same
-  bucket. This is useful for parallel uploading and limited append
-  functionality. For more information, please see:
-  https://developers.google.com/storage/docs/composite-objects
+  of a given sequence of component objects under the same bucket. This is useful
+  for parallel uploading and limited append functionality. For more information,
+  please see: https://developers.google.com/storage/docs/composite-objects
 
   To upload in parallel, split your file into smaller pieces, upload them using
   "gsutil -m cp", compose the results, and delete the pieces:
@@ -59,6 +59,11 @@ _detailed_help_text = ("""
   higher performance by spreading the files across multiple disks and/or
   running the parallel upload from multiple machines.
 
+  Note also that the gsutil cp command will automatically split uploads for
+  large files into multiple component objects, upload them in parallel, and
+  compose them into a final object (which will also be subject to the component
+  count limit). See the 'PARALLEL COMPOSITE UPLOADS'" section under
+  'gsutil help cp' for details.
 
   Appending simply entails uploading your new data to a temporary object,
   composing it with the growing append-target, and deleting the temporary
@@ -69,10 +74,10 @@ _detailed_help_text = ("""
         gs://bucket/append-target
     $ gsutil rm gs://bucket/data-to-append
 
-  Note that there is a limit (currently 32) to the number of components for a
-  given composite object. This means you can append to each object at most 31
+  Note that there is a limit (currently %d) to the number of components for a
+  given composite object. This means you can append to each object at most %d
   times.
-""")
+""" % (MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1))
 
 class ComposeCommand(Command):
   """Implementation of gsutil compose command."""
@@ -145,4 +150,4 @@ class ComposeCommand(Command):
     self.logger.info(
         'Composing %s from %d component objects.' %
         (target_suri, len(components)))
-    target_suri.compose(components)
+    target_suri.compose(components, headers=self.headers)

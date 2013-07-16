@@ -34,6 +34,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
@@ -151,6 +152,8 @@ _detailed_help_text = ("""
       software_update_check_period
       parallel_process_count
       parallel_thread_count
+      parallel_composite_upload_threshold
+      parallel_composite_upload_component_size
       use_magicfile
       content_language
       check_hashes
@@ -254,6 +257,9 @@ else:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
   DEFAULT_PARALLEL_THREAD_COUNT = 24
 
+DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '150M'
+DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
+
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
 
@@ -329,6 +335,25 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d
 
+# 'parallel_composite_upload_threshold' specifies the maximum size of a file to
+# upload in a single stream. Files larger than this threshold will be
+# partitioned into component parts and uploaded in parallel and then composed
+# into a single object.
+# The number of components will be the smaller of
+# ceil(file_size / parallel_composite_upload_component_size) and
+# MAX_COMPONENT_COUNT. The current value of MAX_COMPONENT_COUNT is
+# %(max_component_count)d.
+# If 'parallel_composite_upload_threshold' is set to 0, then automatic parallel
+# uploads will never occur.
+# 'parallel_composite_upload_component_size' specifies the ideal size of a
+# component in bytes, which will act as an upper bound to the size of the
+# components if ceil(file_size / parallel_composite_upload_component_size) is
+# less than MAX_COMPONENT_COUNT.
+# Values can be provided either in bytes or as human-readable values
+# (e.g., "150M" to represent 150 megabytes)
+#parallel_composite_upload_threshold = %(parallel_composite_upload_threshold)s
+#parallel_composite_upload_component_size = %(parallel_composite_upload_component_size)s
+
 # 'use_magicfile' specifies if the 'file --mime-type <filename>' command should
 # be used to guess content types instead of the default filename extension-based
 # mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
@@ -370,7 +395,12 @@ content_language = en
 
 """ % {'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
-       'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT}
+       'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
+       'parallel_composite_upload_threshold': (
+          DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
+       'parallel_composite_upload_component_size': (
+          DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
+       'max_component_count': MAX_COMPONENT_COUNT}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]
@@ -602,6 +632,7 @@ class ConfigCommand(Command):
       config_file.write('gs_service_client_id = %s\n'
                         % gs_service_client_id)
       config_file.write('gs_service_key_file = %s\n' % gs_service_key_file)
+
       if not gs_service_key_file_password:
         config_file.write(
             '# If you would like to set your password, you can do so using\n'

@@ -15,15 +15,21 @@
 
 import binascii
 import boto
+import copy
 import crcmod
 import csv
 import datetime
 import errno
+import gslib
 import gzip
 import hashlib
+import logging
 import mimetypes
+import mmap
+import multiprocessing
 import os
 import platform
+import random
 import re
 import stat
 import subprocess
@@ -31,13 +37,21 @@ import sys
 import tempfile
 import textwrap
 import threading
-import logging
 import time
+
+try:
+  # This module doesn't necessarily exist on Windows.
+  import resource
+  HAS_RESOURCE_MODULE = True
+except ImportError, e:
+  HAS_RESOURCE_MODULE = False
 
 try:
   from hashlib import md5
 except ImportError:
   from md5 import md5
+
+import md5 as parallel_upload_md5
 
 from boto import config
 from boto.exception import GSResponseError
@@ -46,16 +60,24 @@ from boto.gs.resumable_upload_handler import ResumableUploadHandler
 from boto.s3.keyfile import KeyFile
 from boto.s3.resumable_download_handler import ResumableDownloadHandler
 from boto.storage_uri import BucketStorageUri
+from boto.storage_uri import StorageUri
+from collections import namedtuple
+from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import Command
+from gslib.command import EofWorkQueue
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.commands.compose import MAX_COMPONENT_COUNT
+from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
+from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.exception import CommandException
+from gslib.file_part import FilePart
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
@@ -65,12 +87,14 @@ from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
 from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import ExtractErrorDetail
+from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import TWO_MB
 from gslib.util import UsingCrcmodExtension
 from gslib.wildcard_iterator import ContainsWildcard
+from gslib.name_expansion import NameExpansionResult
 
 
 SLOW_CRC_WARNING = """
@@ -114,13 +138,32 @@ checks. To force integrity checking, see the "check_hashes" option in your boto
 config file.
 """
 
-_detailed_help_text = ("""
+PARALLEL_UPLOAD_TEMP_NAMESPACE = (
+    u'/gsutil/tmp/parallel_composite_uploads/do_NOT/use_this_prefix')
+
+PARALLEL_UPLOAD_STATIC_SALT = u"""
+PARALLEL_UPLOAD_SALT_TO_PREVENT_COLLISIONS.
+The theory is that no user will have prepended this to the front of
+one of their object names and then done an MD5 hash of the name, and
+then prepended PARALLEL_UPLOAD_TEMP_NAMESPACE to the front of their object
+name. Note that there will be no problems with object name length since we
+hash the original name.
+"""
+
+# In order to prevent people from uploading thousands of tiny files in parallel
+# (which, apart from being useless, is likely to cause them to be throttled
+# for the compose calls), don't allow files smaller than this to use parallel
+# composite uploads.
+MIN_PARALLEL_COMPOSITE_FILE_SIZE = 20971520 # 20 MB
+
+SYNOPSIS_TEXT = """
 <B>SYNOPSIS</B>
   gsutil cp [OPTION]... src_uri dst_uri
   gsutil cp [OPTION]... src_uri... dst_uri
   gsutil cp [OPTION]... -I dst_uri
+"""
 
-
+DESCRIPTION_TEXT = """
 <B>DESCRIPTION</B>
   The gsutil cp command allows you to copy data between your local file
   system and the cloud, copy data within the cloud, and copy data between
@@ -151,8 +194,9 @@ _detailed_help_text = ("""
 
   The contents of STDIN can name files, cloud URIs, and wildcards of files
   and cloud URIs.
+"""
 
-
+NAME_CONSTRUCTION_TEXT = """
 <B>HOW NAMES ARE CONSTRUCTED</B>
   The gsutil cp command strives to name objects in a way consistent with how
   Linux cp works, which causes names to be constructed in varying ways depending
@@ -193,8 +237,9 @@ _detailed_help_text = ("""
   will create objects named like gs://my_bucket/subdir/dir2/a/b/c. In contrast,
   if gs://my_bucket/subdir does not exist, this same gsutil cp command will
   create objects named like gs://my_bucket/subdir/a/b/c.
+"""
 
-
+SUBDIRECTORIES_TEXT = """
 <B>COPYING TO/FROM SUBDIRECTORIES; DISTRIBUTING TRANSFERS ACROSS MACHINES</B>
   You can use gsutil to copy to and from subdirectories by using a command
   like:
@@ -233,8 +278,9 @@ _detailed_help_text = ("""
   be a directory mounted off of a shared file server; whether the latter
   performs acceptably may depend on a number of things, so we recommend
   you experiment and find out what works best for you.
+"""
 
-
+COPY_IN_CLOUD_TEXT = """
 <B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
   If both the source and destination URI are cloud URIs from the same
   provider, gsutil copies data "in the cloud" (i.e., without downloading
@@ -250,8 +296,9 @@ _detailed_help_text = ("""
   ACL to the new object, and instead will use the default bucket ACL (see
   "gsutil help setdefacl").  You can override this behavior with the -p
   option (see OPTIONS below).
+"""
 
-
+RESUMABLE_TRANSFERS_TEXT = """
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload
   feature whenever you use the cp command to upload an object that is larger
@@ -270,8 +317,9 @@ _detailed_help_text = ("""
 
   See also "gsutil help prod" for details on using resumable transfers
   in production.
+"""
 
-
+STREAMING_TRANSFERS_TEXT = """
 <B>STREAMING TRANSFERS</B>
   Use '-' in place of src_uri or dst_uri to perform a streaming
   transfer. For example:
@@ -281,8 +329,45 @@ _detailed_help_text = ("""
   Streaming transfers do not support resumable uploads/downloads.
   (The Google resumable transfer protocol has a way to support streaming
   transers, but gsutil doesn't currently implement support for this.)
+"""
 
+PARALLEL_COMPOSITE_UPLOADS_TEXT = (("""
+<B>PARALLEL COMPOSITE UPLOADS</B>
+  gsutil automatically uses
+  `object composition <https://developers.google.com/storage/docs/composite-objects>`_
+  to perform uploads in parallel for large, local files being uploaded to
+  Google Cloud Storage. This means that, by default, a large file will be split
+  into component pieces that will be uploaded in parallel. Those components will
+  then be composed in the cloud, and the temporary components in the cloud will
+  be deleted after successful composition. No additional local disk space is
+  required for this operation.
 
+  Any file whose size exceeds the "parallel_composite_upload_threshold" config
+  variable will trigger this feature by default. The ideal size of a
+  component can also be set with the "parallel_composite_upload_component_size"
+  config variable. See the .boto config file or details about how these values
+  are used.
+
+  If the transfer fails prior to composition, running the command again will
+  take advantage of resumable uploads for those components that failed, and
+  the component objects will be deleted after the first successful attempt.
+  Any temporary objects that were uploaded successfully before gsutil failed
+  will still exist until the upload is completed successfully.
+
+  One important caveat is that files uploaded in this fashion are still subject
+  to the maximum number of components limit. For example, if you upload two
+  large files that each get split into %d components, then you will not be able
+  to compose those two objects into a single object since it would exceed the
+  component limit. If you wish to compose an object later, it is recommended
+  that you disable parallel composite uploads for that transfer. Also, note
+  that an object uploaded using this feature will have a CRC32C hash, but it
+  will not have an MD5 hash. For details see 'gsutil help crc32c'.
+
+  Note that this feature can be completely disabled by setting the
+  "parallel_composite_upload_threshold" variable in the .boto config file to 0.
+""") % ((MAX_COMPONENT_COUNT / 2) + 1))
+
+CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
   gsutil writes data to a temporary directory in several cases:
 
@@ -310,8 +395,9 @@ _detailed_help_text = ("""
   Computer -> System -> Advanced System Settings -> Environment Variables.
   You need to reboot after making this change for it to take effect. (Rebooting
   is not necessary after running the export command on Linux and MacOS.)
+"""
 
-
+OPTIONS_TEXT = """
 <B>OPTIONS</B>
   -a canned_acl  Sets named canned_acl when uploaded objects created. See
                  'gsutil help acls' for further details.
@@ -444,7 +530,34 @@ _detailed_help_text = ("""
                   browser will know to uncompress the data based on the
                   Content-Encoding header, and to render it as HTML based on
                   the Content-Type header.
-""")
+"""
+
+_detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
+                                   DESCRIPTION_TEXT,
+                                   NAME_CONSTRUCTION_TEXT,
+                                   SUBDIRECTORIES_TEXT,
+                                   COPY_IN_CLOUD_TEXT,
+                                   RESUMABLE_TRANSFERS_TEXT,
+                                   STREAMING_TRANSFERS_TEXT,
+                                   PARALLEL_COMPOSITE_UPLOADS_TEXT,
+                                   CHANGING_TEMP_DIRECTORIES_TEXT,
+                                   OPTIONS_TEXT])
+
+
+# This tuple is used only to encapsulate the arguments needed for
+# _PerformResumableUploadIfApplies, so that the arguments fit the model of
+# command.Apply().
+PerformResumableUploadIfAppliesArgs = namedtuple(
+    'PerformResumableUploadIfAppliesArgs',
+    'filename file_start file_length src_uri dst_uri canned_acl headers')
+
+ObjectFromTracker = namedtuple('ObjectFromTracker',
+                               'object_name generation')
+
+class TrackerFileType(object):
+  UPLOAD = 1
+  DOWNLOAD = 2
+  PARALLEL_UPLOAD = 3
 
 class CpCommand(Command):
   """
@@ -466,6 +579,10 @@ class CpCommand(Command):
   the list up front limits scalability (compared with the current approach
   of processing the bucket listing iterator on the fly).
   """
+
+  # TODO: Refactor this file to be less cumbersome. In particular, some of the
+  # different paths (e.g., uploading a file to an object vs. downloading an
+  # object to a file) could be split into separate files.
 
   # Set default Content-Type type.
   DEFAULT_CONTENT_TYPE = 'application/octet-stream'
@@ -730,22 +847,12 @@ class CpCommand(Command):
       cb = self._FileCopyCallbackHandler(upload, self.logger).call
       num_cb = int(size / TWO_MB)
 
-      resumable_tracker_dir = CreateTrackerDirIfNeeded()
-
       if upload:
-        # Encode the dest bucket and object name into the tracker file name.
-        res_tracker_file_name = (
-            re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
-                   (dst_uri.bucket_name, dst_uri.object_name)))
+        tracker_file_type = TrackerFileType.UPLOAD
       else:
-        # Encode the fully-qualified dest file name into the tracker file name.
-        res_tracker_file_name = (
-            re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
-                   (os.path.realpath(dst_uri.object_name))))
+        tracker_file_type = TrackerFileType.DOWNLOAD
+      tracker_file = self._GetTrackerFile(dst_uri, tracker_file_type)
 
-      res_tracker_file_name = _hash_filename(res_tracker_file_name)
-      tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
-                                 res_tracker_file_name)
       if upload:
         if dst_uri.scheme == 'gs':
           transfer_handler = ResumableUploadHandler(tracker_file)
@@ -753,6 +860,30 @@ class CpCommand(Command):
         transfer_handler = ResumableDownloadHandler(tracker_file)
 
     return (cb, num_cb, transfer_handler)
+
+  def _GetTrackerFile(self, dst_uri, tracker_file_type, src_uri=None):
+    resumable_tracker_dir = CreateTrackerDirIfNeeded()
+    if tracker_file_type == TrackerFileType.UPLOAD:
+      # Encode the dest bucket and object name into the tracker file name.
+      res_tracker_file_name = (
+          re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
+                 (dst_uri.bucket_name, dst_uri.object_name)))
+    elif tracker_file_type == TrackerFileType.DOWNLOAD:
+      # Encode the fully-qualified dest file name into the tracker file name.
+      res_tracker_file_name = (
+          re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
+                 (os.path.realpath(dst_uri.object_name))))
+    elif tracker_file_type == TrackerFileType.PARALLEL_UPLOAD:
+      # Encode the dest bucket and object names as well as the source file name
+      # into the tracker file name.
+      res_tracker_file_name = (
+          re.sub('[/\\\\]', '_', 'parallel_upload__%s__%s__%s.url' %
+                 (dst_uri.bucket_name, dst_uri.object_name, src_uri)))
+
+    res_tracker_file_name = _HashFilename(res_tracker_file_name)
+    tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
+                               res_tracker_file_name)
+    return tracker_file
 
   def _LogCopyOperation(self, src_uri, dst_uri, headers):
     """
@@ -881,7 +1012,7 @@ class CpCommand(Command):
       return f_frsize * f_bavail
 
   def _PerformResumableUploadIfApplies(self, fp, src_uri, dst_uri, canned_acl,
-                                       headers):
+                                       headers, file_size, already_split=False):
     """
     Performs resumable upload if supported by provider and file is above
     threshold, else performs non-resumable upload.
@@ -889,12 +1020,6 @@ class CpCommand(Command):
     Returns (elapsed_time, bytes_transferred, version-specific dst_uri).
     """
     start_time = time.time()
-    # Determine file size different ways for case where fp is actually a wrapper
-    # around a Key vs an actual file.
-    if isinstance(fp, KeyFile):
-      file_size = fp.getkey().size
-    else:
-      file_size = os.path.getsize(fp.name)
     (cb, num_cb, res_upload_handler) = self._GetTransferHandlers(
         dst_uri, file_size, True)
     if dst_uri.scheme == 'gs':
@@ -910,8 +1035,9 @@ class CpCommand(Command):
       # initial value of -1 if transferring the whole file, so clamp at 0
       bytes_transferred = file_size - max(
           res_upload_handler.upload_start_point, 0)
-      if self.use_manifest:
-        # Save the upload indentifier in the manifest file.
+      if self.use_manifest and not already_split:
+        # Save the upload indentifier in the manifest file, unless we're
+        # uploading a temporary component for parallel composite uploads.
         self.manifest.Set(
             src_uri, 'upload_id', res_upload_handler.get_upload_id())
     else:
@@ -983,8 +1109,23 @@ class CpCommand(Command):
           content_type = self.DEFAULT_CONTENT_TYPE
         headers['content-type'] = content_type
 
+  def _GetFileSize(self, fp):
+    """Determines file size different ways for case where fp is actually a
+       wrapper around a Key vs an actual file.
+
+       Args:
+         The file whose size we wish to determine.
+
+       Returns:
+         The size of the file, in bytes.
+    """
+    if isinstance(fp, KeyFile):
+      return fp.getkey().size
+    else:
+      return os.path.getsize(fp.name)
+
   def _UploadFileToObject(self, src_key, src_uri, dst_uri, headers,
-                          should_log=True):
+                          should_log=True, allow_splitting=True):
     """Uploads a local file to an object.
 
     Args:
@@ -1049,9 +1190,11 @@ class CpCommand(Command):
       headers['content-encoding'] = 'gzip'
       gzip_fp = open(gzip_path, 'rb')
       try:
+        file_size = self._GetFileSize(gzip_fp)
         (elapsed_time, bytes_transferred, result_uri) = (
             self._PerformResumableUploadIfApplies(gzip_fp, src_uri, dst_uri,
-                                                  canned_acl, headers))
+                                                  canned_acl, headers,
+                                                  file_size))
       finally:
         gzip_fp.close()
       try:
@@ -1077,15 +1220,23 @@ class CpCommand(Command):
         finally:
           file_uri.close()
       try:
-        (elapsed_time, bytes_transferred, result_uri) = (
-            self._PerformResumableUploadIfApplies(src_key.fp, src_uri, dst_uri,
-                                                  canned_acl, headers))
+        fp = src_uri.get_key().fp
+        file_size = self._GetFileSize(fp)
+        if self._ShouldDoParallelCompositeUpload(allow_splitting, src_key,
+                                                 dst_uri, file_size):
+          (elapsed_time, bytes_transferred, result_uri) = (
+              self._DoParallelCompositeUpload(fp, src_uri, dst_uri, headers,
+                                              canned_acl, file_size))
+        else:
+          (elapsed_time, bytes_transferred, result_uri) = (
+              self._PerformResumableUploadIfApplies(
+                  src_key.fp, src_uri, dst_uri, canned_acl, headers,
+                  self._GetFileSize(src_key.fp)))
       finally:
         if src_key.is_stream():
           tmp.close()
         else:
           src_key.close()
-
     return (elapsed_time, bytes_transferred, result_uri)
 
   def _GetHashAlgs(self, key):
@@ -1357,8 +1508,10 @@ class CpCommand(Command):
       # parameter (unlike the Bucket.copy_key() API used
       # by_CopyObjToObjInTheCloud).
       acl = src_uri.get_acl(headers=headers)
-    result = self._PerformResumableUploadIfApplies(KeyFile(src_key), src_uri,
-                                                   dst_uri, canned_acl, headers)
+    fp = KeyFile(src_key)
+    result = self._PerformResumableUploadIfApplies(fp, src_uri,
+                                                   dst_uri, canned_acl, headers,
+                                                   self._GetFileSize(fp))
     if preserve_acl:
       # If user specified noclobber flag, we need to remove the
       # x-goog-if-generation-match:0 header that was set when uploading the
@@ -1374,12 +1527,14 @@ class CpCommand(Command):
       dst_uri.set_acl(acl, dst_uri.object_name, headers=headers)
     return result
 
-  def _PerformCopy(self, src_uri, dst_uri):
+  def _PerformCopy(self, src_uri, dst_uri, allow_splitting=True):
     """Performs copy from src_uri to dst_uri, handling various special cases.
 
     Args:
       src_uri: Source StorageUri.
       dst_uri: Destination StorageUri.
+      allow_splitting: Whether to allow the file to be split into component
+                       pieces for an parallel composite upload.
 
     Returns:
       (elapsed_time, bytes_transferred, version-specific dst_uri) excluding
@@ -1449,6 +1604,218 @@ class CpCommand(Command):
       return self._CopyFileToFile(src_key, src_uri, dst_uri, download_headers)
     else:
       raise CommandException('Unexpected src/dest case')
+
+  def _PartitionFile(self, fp, file_size, src_uri, headers, canned_acl, bucket,
+                     random_prefix):
+    """Partitions a file into FilePart objects to be uploaded and later composed
+       into an object matching the original file. This entails splitting the
+       file into parts, naming and forming a destination URI for each part,
+       and also providing the PerformResumableUploadIfAppliesArgs object
+       corresponding to each part.
+
+       Args:
+         fp: The file object to be partitioned.
+         file_size: The size of fp, in bytes.
+         src_uri: The source StorageUri fromed from the original command.
+         headers: The headers which ultimately passed to boto.
+         canned_acl: The user-provided canned_acl, if applicable.
+         bucket: The name of the destination bucket, of the form gs://bucket
+
+       Returns:
+         dst_args: The destination URIs for the temporary component objects.
+    """
+    parallel_composite_upload_component_size = HumanReadableToBytes(
+        boto.config.get('GSUtil', 'parallel_composite_upload_component_size',
+                        DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE))
+    (num_components, component_size) = _GetPartitionInfo(file_size,
+        MAX_COMPONENT_COUNT, parallel_composite_upload_component_size)
+
+    # Make sure that the temporary objects don't already exist.
+    tmp_object_headers = copy.deepcopy(headers)
+    tmp_object_headers['x-goog-if-generation-match'] = '0'
+
+    uri_strs = []  # Used to create a NameExpansionIterator.
+    dst_args = {}  # Arguments to create commands and pass to subprocesses.
+    file_names = []  # Used for the 2-step process of forming dst_args.
+    for i in range(num_components):
+      # "Salt" the object name with something a user is very unlikely to have
+      # used in an object name, then hash the extended name to make sure
+      # we don't run into problems with name length. Using a deterministic
+      # naming scheme for the temporary components allows users to take
+      # advantage of resumable uploads for each component.
+      encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode('utf-8')
+      digest = parallel_upload_md5.new(encoded_name).hexdigest()
+      temp_file_name = (random_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
+                        digest + '_' + str(i))
+      tmp_dst_uri = MakeGsUri(bucket, temp_file_name, self.suri_builder)
+
+      if i < (num_components - 1):
+        # Every component except possibly the last is the same size.
+        file_part_length = component_size
+      else:
+        # The last component just gets all of the remaining bytes.
+        file_part_length = (file_size - ((num_components -1) * component_size))
+      offset = i * component_size
+      func_args = PerformResumableUploadIfAppliesArgs(
+          fp.name, offset, file_part_length, src_uri, tmp_dst_uri, canned_acl,
+          headers)
+      file_names.append(temp_file_name)
+      dst_args[temp_file_name] = func_args
+      uri_strs.append(self._MakeGsUriStr(bucket, temp_file_name))
+
+    return dst_args
+
+  def _MakeFileUri(self, filename):
+    """Returns a StorageUri for a local file."""
+    return self.suri_builder.StorageUri(filename)
+
+  def _MakeGsUriStr(self, bucket, filename):
+    """Returns a string of the form gs://bucket/filename, used to indicate an
+       object in Google Cloud Storage.
+    """
+    return 'gs://' + bucket + '/' + filename
+
+  def _PerformResumableUploadIfAppliesWrapper(self, args):
+    """A wrapper for cp._PerformResumableUploadIfApplies, which takes in a
+       PerformResumableUploadIfAppliesArgs, extracts the arguments to form the
+       arguments for the wrapped function, and then calls the wrapped function.
+       This was designed specifically for use with command.Apply().
+    """
+    fp = FilePart(args.filename, args.file_start, args.file_length)
+    with fp:
+      already_split = True
+      ret = self._PerformResumableUploadIfApplies(
+          fp, args.src_uri, args.dst_uri, args.canned_acl, args.headers,
+          fp.length, already_split)
+    return ret
+
+  def _DoParallelCompositeUpload(self, fp, src_uri, dst_uri, headers,
+                                 canned_acl, file_size):
+    """Uploads a local file to an object in the cloud for the Parallel Composite
+       Uploads feature. The file is partitioned into parts, and then the parts
+       are uploaded in parallel, composed to form the original destination
+       object, and deleted.
+
+       Args:
+         fp: The file object to be uploaded.
+         src_uri: The StorageURI of the local file.
+         dst_uri: The StorageURI of the destination file.
+         headers: The headers to pass to boto, if any.
+         canned_acl: The canned acl to apply to the object, if any.
+         file_size: The size of the source file in bytes.    
+    """
+    start_time = time.time()
+    gs_prefix = 'gs://'
+    bucket = gs_prefix + dst_uri.bucket_name
+    if 'content-type' in headers and not headers['content-type']:
+      del headers['content-type']
+
+    # Determine which components, if any, have already been successfully
+    # uploaded.
+    tracker_file = self._GetTrackerFile(dst_uri,
+                                        TrackerFileType.PARALLEL_UPLOAD,
+                                        src_uri)
+    (random_prefix, existing_components) = (
+        _ParseParallelUploadTrackerFile(tracker_file))
+
+    # Get the set of all components that should be uploaded.
+    dst_args = self._PartitionFile(fp, file_size, src_uri, headers, canned_acl,
+                                   bucket, random_prefix)
+
+    (components_to_upload, existing_components, existing_objects_to_delete) = (
+        FilterExistingComponents(dst_args, existing_components, bucket,
+                                      self.suri_builder))
+
+    # In parallel, copy all of the file parts that haven't already been
+    # uploaded to temporary objects.
+    cp_results = self.Apply(self._PerformResumableUploadIfAppliesWrapper,
+                            components_to_upload,
+                            self._CopyExceptionHandler,
+                            ('copy_failure_count', 'total_bytes_transferred'),
+                            arg_checker=gslib.command.DummyArgChecker,
+                            parallel_operations_override=True,
+                            queue_class=EofWorkQueue,
+                            should_return_results=True,
+                            ignore_subprocess_failures=True,
+                            is_main_thread=(not self.parallel_operations))
+
+    uploaded_components = []
+    total_bytes_uploaded = 0
+    for cp_result in cp_results:
+      total_bytes_uploaded += cp_result[1]
+      uploaded_components.append(cp_result[2])
+    components = uploaded_components + existing_components
+
+    if len(components) == len(dst_args):
+      # Only try to compose if all of the components were uploaded successfully.
+
+      # Sort the components so that they will be composed in the correct order.
+      components = sorted(
+          components, key=lambda component:
+              int(component.object_name[component.object_name.rfind('_')+1:]))
+      result_uri = dst_uri.compose(components, headers=headers)
+
+      try:
+        # Make sure only to delete things that we know were successfully
+        # uploaded (as opposed to all of the objects that we attempted to
+        # create) so that we don't delete any preexisting objects, except for
+        # those that were uploaded by a previous, failed run and have since
+        # changed (but still have an old generation lying around).
+        objects_to_delete = components + existing_objects_to_delete
+        self.Apply(_DeleteKeyFn, objects_to_delete, self._RmExceptionHandler,
+                   arg_checker=gslib.command.DummyArgChecker,
+                   parallel_operations_override=True, queue_class=EofWorkQueue,
+                   is_main_thread=(not self.parallel_operations))
+      except Exception, e:
+        if (e.message and ('unexpected failure in' in e.message)
+            and ('sub-processes, aborting' in e.message)):
+          # If some of the delete calls fail, don't cause the whole command to
+          # fail. The copy was successful iff the compose call succeeded, so
+          # just raise whatever exception (if any) happened before this instead,
+          # and reduce this to a warning.
+          logging.warning(
+              'Failed to delete some of the following temporary objects:\n' +
+              '\n'.join(dst_args.keys()))
+        else:
+          raise e
+      finally:
+        if os.path.exists(tracker_file):
+          os.unlink(tracker_file)
+    else:
+      # Some of the components failed to upload. In this case, we want to write
+      # the tracker file and then exit without deleting the objects.
+      _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components)
+      raise CommandException(
+          'Some temporary components were not uploaded successfully. '
+          'Please retry this upload.')
+
+    return (time.time() - start_time, total_bytes_uploaded, result_uri)
+
+  def _ShouldDoParallelCompositeUpload(self, allow_splitting, src_key, dst_uri,
+                                       file_size):
+    """Returns True iff a parallel upload should be performed on the source key.
+
+       Args:
+         allow_splitting: If false, then this function returns false.
+         src_key: Corresponding to a local file.
+         dst_uri: Corresponding to an object in the cloud.
+         file_size: The size of the source file, in bytes.
+    """
+    # TODO: Currently, parallel composite uploads are disabled when the
+    # -m flag is present such that we don't spawn off an uncontrollable amount
+    # of subprocesses. We should either refactor cp such that there is not a
+    # nested call to command.Apply() in the parallel upload code, or find a
+    # way to dynamically control the global number of processes by looking at
+    # the inputs ahead of time.
+    parallel_composite_upload_threshold = HumanReadableToBytes(boto.config.get(
+        'GSUtil', 'parallel_composite_upload_threshold',
+        DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))
+    return (allow_splitting  # Don't split the pieces multiple times.
+            and not src_key.is_stream()  # We can't partition streams.
+            and dst_uri.scheme == 'gs'  # Compose is only for gs.
+            and parallel_composite_upload_threshold > 0
+            and file_size >= parallel_composite_upload_threshold
+            and file_size >= MIN_PARALLEL_COMPOSITE_FILE_SIZE)
 
   def _ExpandDstUri(self, dst_uri_str):
     """
@@ -1679,15 +2046,19 @@ class CpCommand(Command):
       dst_uri = self.suri_builder.StorageUri(trans_uri_str)
     return dst_uri
 
+  def _CopyExceptionHandler(self, e):
+    """Simple exception handler to allow post-completion status."""
+    self.logger.error(str(e))
+    self.copy_failure_count += 1
+
+  def _RmExceptionHandler(self, e):
+    """Simple exception handler to allow post-completion status."""
+    self.logger.error(str(e))
+
   # Command entry point.
   def RunCommand(self):
 
     # Inner funcs.
-    def _CopyExceptionHandler(e):
-      """Simple exception handler to allow post-completion status."""
-      self.logger.error(str(e))
-      self.copy_failure_count += 1
-
     def _CopyFunc(name_expansion_result):
       """Worker function for performing the actual copy (and rm, for mv)."""
       if self.perform_mv:
@@ -1703,7 +2074,6 @@ class CpCommand(Command):
       have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
       have_existing_dest_subdir = (
           name_expansion_result.HaveExistingDstContainer())
-
       if src_uri.names_provider():
         raise CommandException(
             'The %s command does not allow provider-only source URIs (%s)' %
@@ -1809,6 +2179,25 @@ class CpCommand(Command):
     # Start of RunCommand code.
     self._ParseArgs()
 
+    # If possible (this will fail on Windows), set the maximum number of open
+    # files to avoid hitting the limit imposed by the OS. This number was
+    # obtained experimentally and may need tweaking.
+    new_soft_max_file_limit = 10000
+    # Try to set this with both resource names - RLIMIT_NOFILE for most Unix
+    # platforms, and RLIMIT_OFILE for BSD. Ignore AttributeError because the
+    # "resource" module is not guaranteed to know about these names.
+    if HAS_RESOURCE_MODULE:
+      try:
+        self._SetSoftMaxFileLimitForResource(resource.RLIMIT_NOFILE,
+                                             new_soft_max_file_limit)
+      except AttributeError, e:
+        pass
+      try:
+        self._SetSoftMaxFileLimitForResource(resource.RLIMIT_OFILE,
+                                             new_soft_max_file_limit)
+      except AttributeError, e:
+        pass
+
     self.total_elapsed_time = self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       self._HandleStreamingDownload()
@@ -1838,6 +2227,7 @@ class CpCommand(Command):
         self.recursion_requested or self.perform_mv,
         have_existing_dst_container=have_existing_dst_container,
         all_versions=all_versions)
+    self.have_existing_dst_container = have_existing_dst_container
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1856,7 +2246,7 @@ class CpCommand(Command):
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(_CopyFunc, name_expansion_iterator, _CopyExceptionHandler,
+    self.Apply(_CopyFunc, name_expansion_iterator, self._CopyExceptionHandler,
                shared_attrs)
     self.logger.debug(
         'total_bytes_transferred: %d', self.total_bytes_transferred)
@@ -1893,6 +2283,18 @@ class CpCommand(Command):
 
     return 0
 
+  def _SetSoftMaxFileLimitForResource(self, resource_name, new_soft_limit):
+    """Sets a new soft limit for the maximum number of open files.    
+       The soft limit is used for this process (and its children), but the
+       hard limit is set by the system and cannot be exceeded.
+    """
+    try:
+      (soft_limit, hard_limit) = resource.getrlimit(resource_name)
+      soft_limit = max(new_soft_limit, soft_limit)
+      resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
+    except (resource.error, ValueError), e:
+      pass
+
   def _ParseArgs(self):
     self.perform_mv = False
     self.exclude_symlinks = False
@@ -1902,6 +2304,7 @@ class CpCommand(Command):
     self.read_args_from_stdin = False
     self.print_ver = False
     self.use_manifest = False
+
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     if self.sub_opts:
@@ -2227,7 +2630,7 @@ def _GetPathBeforeFinalDir(uri):
   # Else it names a bucket subdir.
   return uri.uri.rstrip(sep).rpartition(sep)[0]
 
-def _hash_filename(filename):
+def _HashFilename(filename):
   """
   Apply a hash function (SHA1) to shorten the passed file name. The spec
   for the hashed file name is as follows:
@@ -2251,3 +2654,217 @@ def _hash_filename(filename):
     filename = unicode(filename, 'utf8').encode('utf-8')
   m = hashlib.sha1(filename)
   return "TRACKER_" + m.hexdigest() + '.' + filename[-16:]
+
+def _DivideAndCeil(dividend, divisor):
+  """Returns ceil(dividend / divisor), taking care to avoid the pitfalls of
+     floating point arithmetic that could otherwise yield the wrong result
+     for large numbers.
+  """
+  quotient = dividend // divisor
+  if (dividend % divisor) != 0:
+    quotient += 1
+  return quotient
+
+def _GetPartitionInfo(file_size, max_components, default_component_size):
+  """
+  Args:
+    file_size: The number of bytes in the file to be partitioned.
+    max_components: The maximum number of components that can be composed.
+    default_component_size: The size of a component, assuming that 
+                            max_components is infinite.
+  Returns:
+    The number of components in the partitioned file, and the size of each
+    component (except the last, which will have a different size iff
+    file_size != 0 (mod num_components)).
+  """
+  # num_components = ceil(file_size / default_component_size)
+  num_components = _DivideAndCeil(file_size, default_component_size)
+  
+  # num_components must be in the range [2, max_components]
+  num_components = max(min(num_components, max_components), 2)
+
+  # component_size = ceil(file_size / num_components)
+  component_size = _DivideAndCeil(file_size, num_components)
+  return (num_components, component_size)
+
+def _DeleteKeyFn(key):
+  """Wrapper function to be used with command.Apply()."""
+  return key.delete_key()
+
+def _ParseParallelUploadTrackerFile(tracker_file):
+  """Parse the tracker file (if any) from the last parallel composite upload
+     attempt. The tracker file is of the format described in
+     _WriteParallelUploadTrackerFile. If the file doesn't exist or cannot be
+     read, then the upload will start from the beginning.
+
+     Args:
+       tracker_file: The name of the file to parse.
+
+     Returns:
+       random_prefix: A randomly-generated prefix to the name of the
+                      temporary components.
+       existing_objects: A list of ObjectFromTracker objects representing
+                         the set of files that have already been uploaded.
+  """
+  existing_objects = []
+  try:
+    f = open(tracker_file, 'r')
+    lines = f.readlines()
+    lines = [line.strip() for line in lines]
+    f.close()
+  except IOError as e:
+    # We can't read the tracker file, so generate a new random prefix.
+    lines = [str(random.randint(1, (10 ** 10) - 1))]
+
+    # Ignore non-existent file (happens first time an upload
+    # is attempted on a file), but warn user for other errors.
+    if e.errno != errno.ENOENT:
+      # Will restart because we failed to read in the file.
+      print('Couldn\'t read parallel upload tracker file (%s): %s. '
+            'Restarting upload from scratch.' % (tracker_file, e.strerror))
+
+  # The first line contains the randomly-generated prefix.
+  random_prefix = lines[0]
+
+  # The remaining lines were written in pairs to describe a single component
+  # in the form:
+  #   object_name (without random prefix)
+  #   generation
+  # Newlines are used as the delimiter because only newlines and carriage
+  # returns are invalid characters in object names, and users can specify
+  # a custom prefix in the config file.
+  i = 1
+  while i < len(lines):
+    (name, generation) = (lines[i], lines[i+1])
+    if generation == '':
+      generation = None
+    existing_objects.append(ObjectFromTracker(name, generation))
+    i += 2
+  return (random_prefix, existing_objects)
+
+def _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components):
+  """Writes information about components that were successfully uploaded so
+     that the upload can be resumed at a later date. The tracker file has
+     the format:
+       random_prefix
+       temp_object_1_name
+       temp_object_1_generation
+       .
+       .
+       .
+       temp_object_N_name
+       temp_object_N_generation
+     where N is the number of components that have been successfully uploaded.
+     
+     Args:
+       tracker_file: The name of the parallel upload tracker file.
+       random_prefix: The randomly-generated prefix that was used for
+                      for uploading any existing components.
+       components: A list of ObjectFromTracker objects that were uploaded.
+  """
+  lines = [random_prefix]
+  for component in components:
+    generation = None
+    generation = component.generation
+    if not generation:
+      generation = ''
+    lines += [component.object_name, generation]
+  lines = [line + '\n' for line in lines]
+  open(tracker_file, 'w').close()  # Clear the file.
+  with open(tracker_file, 'w') as f:
+    f.writelines(lines)
+
+def FilterExistingComponents(dst_args, existing_components,
+                             bucket_name, suri_builder):
+  """Given the list of all target objects based on partitioning the file and
+     the list of objects that have already been uploaded successfully,
+     this function determines which objects should be uploaded, which
+     existing components are still valid, and which existing components should
+     be deleted.
+
+     Args:
+       dst_args: The map of file_name -> PerformResumableUploadIfAppliesArgs
+                 calculated by partitioning the file.
+       existing_components: A list of ObjectFromTracker objects that have been
+                            uploaded in the past.
+       bucket_name: The name of the bucket in which the components exist.
+
+     Returns:
+       components_to_upload: List of components that need to be uploaded.
+       uploaded_components: List of components that have already been
+                            uploaded and are still valid.
+       existing_objects_to_delete: List of components that have already
+                                   been uploaded, but are no longer valid
+                                   and are in a versioned bucket, and
+                                   therefore should be deleted.
+  """
+  components_to_upload = []
+  existing_component_names = [component.object_name
+                              for component in existing_components]
+  for component_name in dst_args:
+    if not (component_name in existing_component_names):
+      components_to_upload.append(dst_args[component_name])
+
+  # Don't reuse any temporary components whose MD5 doesn't match the current
+  # MD5 of the corresponding part of the file. If the bucket is versioned,
+  # also make sure that we delete the existing temporary version.
+  existing_objects_to_delete = []
+  uploaded_components = []
+  for tracker_object in existing_components:
+    if not tracker_object.object_name in dst_args.keys():
+      # This could happen if the component size has changed.
+      uri = MakeGsUri(bucket_name, tracker_object.object_name, suri_builder)
+      uri.generation = tracker_object.generation
+      existing_objects_to_delete.append(uri)
+      continue
+    dst_arg = dst_args[tracker_object.object_name]
+    file_part = FilePart(dst_arg.filename, dst_arg.file_start,
+                         dst_arg.file_length)
+    # TODO: calculate MD5's in parallel when possible.
+    md5 = _CalculateMd5FromContents(file_part)
+
+    try:
+      # Get the MD5 of the currently-existing component.
+      blr = BucketListingRef(dst_arg.dst_uri)
+      etag = blr.GetKey().etag
+    except Exception as e:
+      # We don't actually care what went wrong - we couldn't retrieve the
+      # object to check the MD5, so just upload it again.
+      etag = None
+    if etag != (('"%s"') % md5):
+      components_to_upload.append(dst_arg)
+      if tracker_object.generation:
+        # If the old object doesn't have a generation (i.e., it isn't in a
+        # versioned bucket), then we will just overwrite it anyway.
+        invalid_component_with_generation = copy.deepcopy(dst_arg.dst_uri)
+        invalid_component_with_generation.generation = tracker_object.generation
+        existing_objects_to_delete.append(invalid_component_with_generation)
+    else:
+      uri = copy.deepcopy(dst_arg.dst_uri)
+      uri.generation = tracker_object.generation
+      uploaded_components.append(uri)
+  if uploaded_components:
+    logging.info(("Found %d existing temporary components to reuse.")
+                  % len(uploaded_components))
+  return (components_to_upload, uploaded_components,
+          existing_objects_to_delete)
+
+def MakeGsUri(bucket, filename, suri_builder):
+  """Returns a StorageUri for an object in GCS."""
+  return suri_builder.StorageUri(bucket + '/' + filename)
+
+def _CalculateMd5FromContents(file):
+  """Calculates the MD5 hash of the contents of a file.
+
+     Args:
+       file: An already-open file object.
+  """
+  current_md5 = parallel_upload_md5.md5()
+  file.seek(0)
+  while True:
+    data = file.read(8192)
+    if not data:
+      break
+    current_md5.update(data)
+  file.seek(0)
+  return current_md5.hexdigest()
