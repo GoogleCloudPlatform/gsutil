@@ -46,9 +46,9 @@ _detailed_help_text = ("""
 
 
 <B>DESCRIPTION</B>
-  The du command can be used to display the amount of space (in bytes) being
-  used by the objects for a given URI. The syntax emulates the Linux du command
-  (which stands for disk usage) and can be used to estimate disk space usage.
+  The du command displays the amount of space (in bytes) being used by the
+  objects for a given URI. The syntax emulates the Linux du command (which
+  stands for disk usage).
 
 
 <B>OPTIONS</B>
@@ -65,7 +65,7 @@ _detailed_help_text = ("""
               exclude any object that ends in ".o". Can be specified multiple
               times.
 
-  -h          Prints object sizes in human readable format (e.g., 1KB, 234MB,
+  -h          Prints object sizes in human-readable format (e.g., 1KB, 234MB,
               2GB, etc.)
 
   -s          Display only a summary total for each argument.
@@ -87,7 +87,7 @@ _detailed_help_text = ("""
 
     gsutil du -ch gs://bucketname
 
-  To see a summary of the total amount of bytes in the two given buckets:
+  To see a summary of the total bytes in the two given buckets:
 
     gsutil du -s gs://bucket1 gs://bucket2
 
