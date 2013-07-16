@@ -345,7 +345,7 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = (("""
   Any file whose size exceeds the "parallel_composite_upload_threshold" config
   variable will trigger this feature by default. The ideal size of a
   component can also be set with the "parallel_composite_upload_component_size"
-  config variable. See the .boto config file or details about how these values
+  config variable. See the .boto config file for details about how these values
   are used.
 
   If the transfer fails prior to composition, running the command again will

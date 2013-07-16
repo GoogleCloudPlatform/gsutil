@@ -6,6 +6,7 @@ include VERSION
 include gsutil
 include setup.py
 recursive-include gslib *
+global-exclude .git*
 global-exclude *.pyc
 exclude gslib/commands/update.py
 recursive-include scripts *
