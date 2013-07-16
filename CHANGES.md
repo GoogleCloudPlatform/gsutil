@@ -1,3 +1,65 @@
+Release 3.32 (release-date: 2013-07-16)
+=======================================
+
+New Features
+------------
+
+- Added support for getting and setting lifecycle configuration for buckets.
+- Implemented Parallel Composite Uploads.
+- Added a new du command that displays object size, similar to Linux du.
+
+
+Bug Fixes
+---------
+
+- Fixed a bug when using ls -R on objects with trailing slashes. Closes #93.
+- Fixed so won't crash in perfdiag when nslookup is missing or gethostbyname
+  fails.
+- Smartly compare version strings during autoupdate check.
+- Made header handling for upload case-insensitive.
+- Re-enabled software update check for users with no credentials configured.
+- Fixed incorrectly-generated password editing comment in service account
+  config. Fixes #146.
+
+
+Other Changes
+-------------
+
+- Improved flow when encounter auth failure for GCE service account with no
+  configured storage scopes:
+    1. Changed HasConfiguredCredentials() logic not to include
+       has_auth_plugins as part of the evaluated expression, since that will
+       always evaluate to true under GCE (since GCE configures its internal
+       service account plugin under /etc/boto.cfg).
+    2. Changed ConfigureNoOpAuthIfNeeded logic so we configure no-op auth
+       plugin even if there is a config_file list, since GCE always configures
+       /etc/boto.cfg, even if user has no storage scopes configured.
+    3. Additional changes:
+      a. Removed assertion of oauth access token cache check log from
+         test_Doption.py, which may not be true sometimes (e.g., if user is
+         using HMAC creds).
+      b. Removed remnants of CONFIG_REQUIRED left over from earlier CL.
+      c. Merged dupe _ConfigureNoOpAuthIfNeeded functions from two code files,
+         moved to util.py.
+- Fixed confusing gsutil rm "Omitting" message.
+- Wrapped long gsutil update message.
+- Silenced additional possible perfdiag errors.
+- Improved perfdiag performance by only generating one chunk of random file.
+- Changed to swallow broken pipe errors when piping gsutil to other programs.
+- Made DotfulBucketNameNotUnderTld error message more user friendly.
+- Extracted function for building ACL error text from main try/except loop,
+  for better readability.
+- Disallowed gsutil update when user data present in gsutil dir.
+- Plumbed accept-encoding into HEAD requests in ls -L command.
+- Updated README and moved ReleaseNotes.txt to CHANGES.md.
+- Updated crcmod docs with link to Windows installer.
+- Updated documentation regarding gzip content-encoding.
+- Removed StorageUri parse check for lone ':' (interferes with using filenames
+  containing ':')
+- Added tests for gsutil update check and fixed bug for bad file contents.
+- Set accept-encoding and handle gzip on-the-fly encoding.
+
+
 Release 3.31 (release-date: 2013-06-10)
 =======================================
 
@@ -30,6 +92,8 @@ Bug Fixes
 Other Changes
 -------------
 
+- ls -Lb no longer shows total # files/total size of bucket, so that ls -Lb
+  instead provides an efficient way to view just the metadata for large buckets.
 - Catch and ignore EEXIST error when creating gsutil tracker dir.
 - Add note to gsutil update doc about auto-update checks being disabled with
   gsutil -q option.
