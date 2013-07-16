@@ -1,3 +1,16 @@
+Release 3.33 (release-date: 2013-07-16)
+=======================================
+
+Bug Fixes
+---------
+
+- Added .git* to MANIFEST.in exlcudes and fixed cp doc typo. This was needed to
+  overcome problem caused by accidental inclusion of .git* files in release,
+  which caused the update command no longer to allow updates (since starting
+  in 3.32 it checks whether the user has any extraneous files in the gsutil
+  directory before updating)
+
+
 Release 3.32 (release-date: 2013-07-16)
 =======================================
 
