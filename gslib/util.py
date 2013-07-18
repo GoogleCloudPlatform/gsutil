@@ -23,7 +23,11 @@ import textwrap
 import xml.etree.ElementTree as ElementTree
 
 import boto
+import boto.auth
 from boto import config
+from boto.exception import NoAuthHandlerFound
+from boto.gs.connection import GSConnection
+from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 from gslib.exception import CommandException
 from gslib.third_party.retry_decorator import decorators
@@ -129,8 +133,17 @@ def HasConfiguredCredentials():
   has_service_account_creds = (HAS_CRYPTO and
       config.has_option('Credentials', 'gs_service_client_id')
       and config.has_option('Credentials', 'gs_service_key_file'))
+
+  valid_auth_handler = None
+  try:
+    valid_auth_handler = boto.auth.get_auth_handler(
+        GSConnection.DefaultHost, config, Provider('google'),
+        requested_capability=['s3'])
+  except NoAuthHandlerFound:
+    pass
+
   return (has_goog_creds or has_amzn_creds or has_oauth_creds
-          or has_service_account_creds)
+          or has_service_account_creds or valid_auth_handler)
 
 
 def ConfigureNoOpAuthIfNeeded():

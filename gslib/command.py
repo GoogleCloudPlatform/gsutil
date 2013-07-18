@@ -49,7 +49,6 @@ from gslib.name_expansion import NameExpansionIteratorQueue
 from gslib.project_id import ProjectIdHandler
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.thread_pool import ThreadPool
-from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
@@ -269,7 +268,6 @@ class Command(object):
             self.args[self.command_spec[URIS_START_ARG]:])):
       raise CommandException('"%s" command does not support provider-only '
                              'URIs.' % self.command_name)
-    ConfigureNoOpAuthIfNeeded()
 
     self.proj_id_handler = ProjectIdHandler()
     self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
