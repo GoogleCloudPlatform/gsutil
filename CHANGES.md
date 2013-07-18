@@ -1,3 +1,14 @@
+Release 3.34 (release-date: 2013-07-18)
+=======================================
+
+Bug Fixes
+---------
+
+- Fixed a bug where the no-op authentication handler was being loaded after
+  other authentication plugins, causing the no-op handler to be chosen instead
+  of other valid credentials.
+
+
 Release 3.33 (release-date: 2013-07-16)
 =======================================
 
