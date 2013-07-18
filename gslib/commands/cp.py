@@ -51,8 +51,6 @@ try:
 except ImportError:
   from md5 import md5
 
-import md5 as parallel_upload_md5
-
 from boto import config
 from boto.exception import GSResponseError
 from boto.exception import ResumableUploadException
@@ -1644,7 +1642,9 @@ class CpCommand(Command):
       # naming scheme for the temporary components allows users to take
       # advantage of resumable uploads for each component.
       encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode('utf-8')
-      digest = parallel_upload_md5.new(encoded_name).hexdigest()
+      content_md5 = md5()
+      content_md5.update(encoded_name)
+      digest = content_md5.hexdigest()
       temp_file_name = (random_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
                         digest + '_' + str(i))
       tmp_dst_uri = MakeGsUri(bucket, temp_file_name, self.suri_builder)
@@ -2821,7 +2821,7 @@ def FilterExistingComponents(dst_args, existing_components,
     file_part = FilePart(dst_arg.filename, dst_arg.file_start,
                          dst_arg.file_length)
     # TODO: calculate MD5's in parallel when possible.
-    md5 = _CalculateMd5FromContents(file_part)
+    content_md5 = _CalculateMd5FromContents(file_part)
 
     try:
       # Get the MD5 of the currently-existing component.
@@ -2831,7 +2831,7 @@ def FilterExistingComponents(dst_args, existing_components,
       # We don't actually care what went wrong - we couldn't retrieve the
       # object to check the MD5, so just upload it again.
       etag = None
-    if etag != (('"%s"') % md5):
+    if etag != (('"%s"') % content_md5):
       components_to_upload.append(dst_arg)
       if tracker_object.generation:
         # If the old object doesn't have a generation (i.e., it isn't in a
@@ -2859,7 +2859,7 @@ def _CalculateMd5FromContents(file):
      Args:
        file: An already-open file object.
   """
-  current_md5 = parallel_upload_md5.md5()
+  current_md5 = md5()
   file.seek(0)
   while True:
     data = file.read(8192)
