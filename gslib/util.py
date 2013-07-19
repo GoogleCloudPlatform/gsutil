@@ -139,6 +139,12 @@ def HasConfiguredCredentials():
     valid_auth_handler = boto.auth.get_auth_handler(
         GSConnection.DefaultHost, config, Provider('google'),
         requested_capability=['s3'])
+    # Exclude the no-op auth handler as indicating credentials are configured.
+    # Note we can't use isinstance() here because the no-op module may not be
+    # imported so we can't get a reference to the class type.
+    if getattr(getattr(valid_auth_handler, '__class__', None),
+               '__name__', None) == 'NoOpAuth':
+      valid_auth_handler = None
   except NoAuthHandlerFound:
     pass
 
