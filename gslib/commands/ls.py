@@ -321,7 +321,7 @@ class LsCommand(Command):
         numobjs = 1
 
       printstr = '%(size)10s  %(timestamp)s  %(uri)s'
-      if self.all_versions:
+      if self.all_versions and hasattr(obj, 'metageneration'):
         printstr += '  metageneration=%(metageneration)s'
       if self.include_etag:
         printstr += '  etag=%(etag)s'
@@ -329,7 +329,7 @@ class LsCommand(Command):
           'size': size_string,
           'timestamp': timestamp,
           'uri': uri_str.encode('utf-8'),
-          'metageneration': str(obj.metageneration),
+          'metageneration': str(getattr(obj, 'metageneration', '')),
           'etag': obj.etag.encode('utf-8'),
       }
       print printstr % format_args
