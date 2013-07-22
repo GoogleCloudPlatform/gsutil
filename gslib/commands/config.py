@@ -46,6 +46,8 @@ from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
+from httplib import ResponseNotReady
+from httplib2 import ServerNotFoundError
 from oauth2client.client import HAS_CRYPTO
 import textwrap
 from textwrap import TextWrapper
@@ -262,13 +264,6 @@ DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
-
-# To use a proxy, edit and uncomment the proxy and proxy_port lines. If you
-# need a user/password with this proxy, edit and uncomment those lines as well.
-#proxy = <proxy host>
-#proxy_port = <proxy port>
-#proxy_user = <your proxy user name>
-#proxy_pass = <your proxy password>
 
 # http_socket_timeout specifies the timeout (in seconds) used to tell httplib
 # how long to wait for socket timeouts. The default is 70 seconds. Note that
@@ -555,6 +550,73 @@ class ConfigCommand(Command):
             'If you would like to fix this yourself, consider running:\n'
             '"sudo chmod 400 </path/to/key>" for improved security.')
 
+  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(self, varname, prompt):
+    """Prompts user for one proxy configuration line, and saves to boto.config
+       if not empty.
+
+    Args:
+      varname: The config variable name.
+      prompt: The prompt to output to the user.
+    """
+    value = raw_input(prompt)
+    if value:
+      boto.config.set('Boto', varname, value)
+
+  def _PromptForProxyConfig(self):
+    """
+    Prompts user for proxy configuration data, and loads non-empty values into
+    boto.config.
+    """
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy', 'What is your proxy host? ')
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy_port', 'What is your proxy port? ')
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy_user', 'What is your proxy user (leave blank if not used)? ')
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy_pass', 'What is your proxy pass (leave blank if not used)? ')
+
+  def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
+    """Writes proxy name/value pair to config file if value is not None, else
+       writes comment line.
+
+    Args:
+      name: The config variable name.
+      value: The value, or None.
+      desc: Human readable description (for comment).
+      config_file: File object to which the resulting config file will be
+          written.
+    """
+    if not value:
+      name = '#%s' % name
+      value = '<%s>' % desc
+    config_file.write('%s = %s\n' % (name, value))
+
+  def _WriteProxyConfigFileSection(self, config_file):
+    """Writes proxy section of configuration file.
+
+    Args:
+      config_file: File object to which the resulting config file will be
+          written.
+    """
+    config = boto.config
+    config_file.write(
+"""# To use a proxy, edit and uncomment the proxy and proxy_port lines. If you
+# need a user/password with this proxy, edit and uncomment those lines as well.
+""")
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy', config.get_value('Boto', 'proxy', None),
+        'proxy host')
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
+        'proxy port')
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy_user', config.get_value('Boto', 'proxy_user', None),
+        'proxy user')
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy_pass', config.get_value('Boto', 'proxy_pass', None),
+        'proxy password')
+
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
                            oauth2_scopes=[SCOPE_FULL_CONTROL],
                            cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
@@ -578,7 +640,6 @@ class ConfigCommand(Command):
       oauth2_scopes: A list of OAuth2 scopes to request authorization for, when
           using OAuth2.
     """
-
     # Collect credentials
     provider_map = {'aws': 'aws', 'google': 'gs'}
     uri_map = {'aws': 's3', 'google': 'gs'}
@@ -597,8 +658,25 @@ class ConfigCommand(Command):
     elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
       oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
                                                                cred_type)
-      oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
-          oauth2_client, oauth2_scopes, launch_browser)
+      try:
+        oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
+            oauth2_client, oauth2_scopes, launch_browser)
+      except (ResponseNotReady, ServerNotFoundError) as e:
+        # TODO: Determine condition to check for in the ResponseNotReady
+        # exception so we only run proxy config flow if failure was caused by
+        # request being blocked because it wasn't sent through proxy. (This
+        # error could also happen if gsutil or the oauth2 client had a bug that
+        # attempted to incorrectly reuse an HTTP connection, for example.)
+        sys.stdout.write('\n'.join(textwrap.wrap(
+            "Unable to connect to accounts.google.com during OAuth2 flow. This "
+            "can happen if your site uses a proxy. If you are using gsutil "
+            "through a proxy, please enter the proxy's information; otherwise "
+            "leave the following fields blank.")) + '\n')
+        self._PromptForProxyConfig()
+        oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
+                                                                 cred_type)
+        oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
+            oauth2_client, oauth2_scopes, launch_browser)
     elif cred_type == CredTypes.HMAC:
       got_creds = False
       for provider in provider_map:
@@ -688,6 +766,7 @@ class ConfigCommand(Command):
 
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
+    self._WriteProxyConfigFileSection(config_file)
 
     # Write the config file GSUtil section that doesn't depend on user input.
     config_file.write(CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT)
@@ -861,10 +940,11 @@ class ConfigCommand(Command):
 
     if output_file_name != '-':
       output_file.close()
-      sys.stderr.write(
-          '\nBoto config file "%s" created.\nIf you need to use a proxy to '
-          'use a proxy to access the Internet please see the instructions in '
-          'that file.\n' % output_file_name)
+      if not boto.config.has_option('Boto', 'proxy'):
+        sys.stderr.write('\n' + '\n'.join(textwrap.wrap(
+            'Boto config file "%s" created.\nIf you need to use a proxy to '
+            'access the Internet please see the instructions in that file.'
+            % output_file_name)) + '\n')
 
     return 0
 

@@ -175,6 +175,13 @@ class CommandRunner(object):
     # Don't try to interact with user if:
     # - gsutil is not connected to a tty (e.g., if being run from cron);
     # - user is running gsutil -q
+    # - user is running the config command (which could otherwise attempt to
+    #   check for an update for a user running behind a proxy, who has not yet
+    #   configured gsutil to go through the proxy; for such users we need the
+    #   first connection attempt to be made by the gsutil config command).
+    # - user is running the version command (which gets run when using
+    #   gsutil -D, which would prevent users with proxy config problems from
+    #   sending us gsutil -D output).
     # - user is running the update command (which could otherwise cause an
     #   additional note that an update is available when user is already trying
     #   to perform an update);
@@ -183,7 +190,8 @@ class CommandRunner(object):
     #   gsutil tarball).
     gs_host = boto.config.get('Credentials', 'gs_host', None)
     if (not sys.stdout.isatty() or not sys.stderr.isatty()
-        or not sys.stdin.isatty() or command_name == 'update'
+        or not sys.stdin.isatty()
+        or command_name in ('config', 'update', 'ver', 'version')
         or not logging.getLogger().isEnabledFor(logging.INFO)
         or gs_host):
       return False
@@ -220,9 +228,10 @@ class CommandRunner(object):
         print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
-            'available at gs://pub/gsutil_ReleaseNotes.txt if you would like '
-            'to read them before updating.' % (
-                cur_ver, gslib.VERSION), width=78))
+            'available at '
+            'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt if you '
+            'would like to read them before updating.' % (
+                cur_ver, gslib.VERSION)))
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print

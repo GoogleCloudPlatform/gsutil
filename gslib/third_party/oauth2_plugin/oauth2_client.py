@@ -261,7 +261,8 @@ class OAuth2Client(object):
     if proxy_host and proxy_port:
       self._proxy_info = httplib2.ProxyInfo(socks.PROXY_TYPE_HTTP,
                                             proxy_host,
-                                            proxy_port)
+                                            proxy_port,
+                                            proxy_rdns=True)
     else:
       self._proxy_info = None
       
