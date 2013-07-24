@@ -97,6 +97,11 @@ _detailed_help_text = ("""
   locations is not subject to the usual SLA. See the documentation for
   additional information.
 
+  Note that creating a regional bucket can only be done using the
+  DURABLE_REDUCED_AVAILABILITY storage class - for example:
+
+    gsutil mb -c DRA -l US-CENTRAL1 gs://some-bucket
+
 
 <B>OPTIONS</B>
   -c storage_class  Can be DRA (or DURABLE_REDUCED_AVAILABILITY) or S (or
