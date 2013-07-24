@@ -457,7 +457,8 @@ class PerfDiagCommand(Command):
 
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
-            k.get_contents_to_file(self.devnull, hash_algs={})
+            k.get_contents_to_file(self.devnull,
+                                   **self.get_contents_to_file_args)
         self._RunOperation(_Download)
 
         def _Delete():
@@ -507,14 +508,15 @@ class PerfDiagCommand(Command):
 
       # Warm up the TCP connection.
       def _Warmup():
-        warmup_key.get_contents_to_file(self.devnull, hash_algs={})
+        warmup_key.get_contents_to_file(self.devnull,
+                                        **self.get_contents_to_file_args)
       self._RunOperation(_Warmup)
 
       times = []
 
       def _Download():
         t0 = time.time()
-        k.get_contents_to_file(self.devnull, hash_algs={})
+        k.get_contents_to_file(self.devnull, **self.get_contents_to_file_args)
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -522,7 +524,8 @@ class PerfDiagCommand(Command):
       time_took = sum(times)
     else:
       def _Download(key):
-        key.get_contents_to_file(self.devnull, hash_algs={})
+        key.get_contents_to_file(self.devnull,
+                                 **self.get_contents_to_file_args)
 
       args = [k] * self.num_iterations
       self.logger.addFilter(self._CpFilter())
@@ -1116,6 +1119,13 @@ class PerfDiagCommand(Command):
                              'specifies a bucket.\n"%s" is not '
                              'valid.' % self.bucket_uri)
     self.bucket = self.bucket_uri.get_bucket()
+
+    # TODO: Add MD5 argument support to get_contents_to_file()
+    # and pass the file md5 as a parameter to avoid any unnecessary
+    # computation.
+    self.get_contents_to_file_args = {}
+    if self.bucket_uri.scheme == 'gs':
+      self.get_contents_to_file_args = {'hash_algs': {}}
 
   # Command entry point.
   def RunCommand(self):
