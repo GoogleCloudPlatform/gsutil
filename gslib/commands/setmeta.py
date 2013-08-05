@@ -92,7 +92,7 @@ _detailed_help_text = ("""
 
   For cases where you want all objects to have the same ACL you can avoid half
   these operations by setting a default ACL on the bucket(s) containing the
-  named objects, and using the setmeta -n option. See "help gsutil setdefacl".
+  named objects, and using the setmeta -n option. See "help gsutil defacl".
 
 
 <B>OPTIONS</B>
@@ -104,7 +104,7 @@ _detailed_help_text = ("""
               the operations. This option makes sense for cases where you want
               all objects to have the same ACL, for which you have set a default
               ACL on the bucket(s) containing the objects. See "help gsutil
-              setdefacl".
+              defacl".
 """)
 
 

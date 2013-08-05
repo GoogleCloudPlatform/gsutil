@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This module provides the notifyconfig command to gsutil."""
+"""This module provides the notification command to gsutil."""
 
 import getopt
 import uuid
@@ -40,16 +40,16 @@ from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil notifyconfig watchbucket [-i id] [-t token] app_url bucket_uri...
-  gsutil notifyconfig stopchannel channel_id resource_id
+  gsutil notification watchbucket [-i id] [-t token] app_url bucket_uri...
+  gsutil notification stopchannel channel_id resource_id
 
 
 <B>DESCRIPTION</B>
-  The notifyconfig command can be used to configure notifications.
+  The notification command can be used to configure notifications.
   For more information on the Object Change Notification feature, please see:
   https://developers.google.com/storage/docs/object-change-notification
 
-  The notifyconfig command has two sub-commands:
+  The notification command has two sub-commands:
 
   watchbucket
     The watchbucket sub-command can be used to watch a bucket for object
@@ -79,23 +79,23 @@ _detailed_help_text = ("""
   Watch the bucket example-bucket for changes and send notifications to an
   application server running at example.com:
 
-    gsutil notifyconfig watchbucket https://example.com/notify \\
+    gsutil notification watchbucket https://example.com/notify \\
       gs://example-bucket
 
   Assign identifier my-channel-id to the created notification channel:
 
-    gsutil notifyconfig watchbucket -i my-channel-id \\
+    gsutil notification watchbucket -i my-channel-id \\
       https://example.com/notify gs://example-bucket
 
   Set a custom client token that will be included with each notification event:
 
-    gsutil notifyconfig watchbucket -t my-client-token \\
+    gsutil notification watchbucket -t my-client-token \\
       https://example.com/notify gs://example-bucket
 
   Stop the notification event channel with channel identifier channel1 and
   resource identifier SoGqan08XDIFWr1Fv_nGpRJBHh8:
 
-    gsutil notifyconfig stopchannel channel1 SoGqan08XDIFWr1Fv_nGpRJBHh8
+    gsutil notification stopchannel channel1 SoGqan08XDIFWr1Fv_nGpRJBHh8
 
 """)
 
@@ -106,15 +106,16 @@ JSON_API_VERSION = boto.config.get_value(
     'GSUtil', 'json_api_version', 'v1beta2')
 
 
-class NotifyConfigCommand(Command):
-  """Implementation of gsutil notifyconfig command."""
+class NotificationCommand(Command):
+  """Implementation of gsutil notification command."""
 
   # Command specification (processed by parent class).
   command_spec = {
       # Name of command.
-      COMMAND_NAME: 'notifyconfig',
+      COMMAND_NAME: 'notification',
       # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['notify', 'notification', 'notifications'],
+      COMMAND_NAME_ALIASES: ['notify', 'notifyconfig', 'notifications',
+                             'notif'],
       # Min number of args required by this command.
       MIN_ARGS: 3,
       # Max number of args required by this command, or NO_MAX.
@@ -130,9 +131,9 @@ class NotifyConfigCommand(Command):
   }
   help_spec = {
       # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'notifyconfig',
+      HELP_NAME: 'notification',
       # List of help name aliases.
-      HELP_NAME_ALIASES: ['watchbucket', 'stopchannel'],
+      HELP_NAME_ALIASES: ['watchbucket', 'stopchannel', 'notifyconfig'],
       # Type of help:
       HELP_TYPE: HelpType.COMMAND_HELP,
       # One line summary of this help.

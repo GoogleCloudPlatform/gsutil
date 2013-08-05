@@ -102,6 +102,24 @@ URIS_START_ARG = 'uris_start_arg'
 
 _EOF_ARGUMENT = ("EOF")
 
+# Map from deprecated aliases to the current command and subcommands that
+# provide the same behavior.
+OLD_ALIAS_MAP = {'chacl': ['acl', 'ch'],
+                 'getacl': ['acl', 'get'],
+                 'setacl': ['acl', 'set'],
+                 'getcors': ['cors', 'get'],
+                 'setcors': ['cors', 'set'],
+                 'chdefacl': ['defacl', 'ch'],
+                 'getdefacl': ['defacl', 'get'],
+                 'setdefacl': ['defacl', 'set'],
+                 'disablelogging': ['logging', 'set', 'off'],
+                 'enablelogging': ['logging', 'set', 'on'],
+                 'getlogging': ['logging', 'get'],
+                 'getversioning': ['versioning', 'get'],
+                 'setversioning': ['versioning', 'set'],
+                 'getwebcfg': ['web', 'get'],
+                 'setwebcfg': ['web', 'set']}
+
 class Command(object):
   REQUIRED_SPEC_KEYS = [COMMAND_NAME]
 
@@ -128,6 +146,7 @@ class Command(object):
   }
   _default_command_spec = command_spec
   help_spec = HelpProvider.help_spec
+  _commands_with_subcommands_and_subopts = ['acl', 'defacl', 'logging', 'web']
 
   """Define an empty test specification, which derived classes must populate.
 
@@ -181,10 +200,34 @@ class Command(object):
   def _GetDefaultCommandName(self):
     return self.command_spec[COMMAND_NAME]
   command_name = property(_GetDefaultCommandName)
+  
+  def _CalculateUrisStartArg(self):
+    """Calculate the index in args of the first URI arg. By default, just use
+       the value from command_spec.
+    """
+    return self.command_spec[URIS_START_ARG]
+
+  def _TranslateDeprecatedAliases(self, args):
+    """For commands that have deprecated aliases, this will map the aliases to
+       the corresponding new command and also warn the user about deprecation.
+    """
+    new_command_args = OLD_ALIAS_MAP.get(self.command_alias_used, None)
+    if new_command_args:
+      # Prepend any subcommands for the new command. The command name itself
+      # is not part of the args, so leave it out.
+      args = new_command_args[1:] + args
+      self.logger.warn('\n'.join(textwrap.wrap((
+          'You are using a deprecated alias, "%(used_alias)s", for the '
+          '"%(command_name)s" command. Please use "%(command_name)s" with the '
+          'appropriate sub-command in the future. See "gsutil help '
+          '%(command_name)s" for details.') %
+          {'used_alias': self.command_alias_used,
+           'command_name': self.command_name })))
+    return args
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
                config_file_list, bucket_storage_uri_class, test_method=None,
-               logging_filters=None):
+               logging_filters=None, command_alias_used=None):
     """
     Args:
       command_runner: CommandRunner (for commands built atop other commands).
@@ -200,6 +243,9 @@ class Command(object):
                    command and test type.
       logging_filters: Optional list of logging.Filters to apply to this
                        command's logger.
+      command_alias_used: The alias that was actually used when running this
+                          command (as opposed to the "official" command name,
+                          which will always correspond to the file name).
 
     Implementation note: subclasses shouldn't need to define an __init__
     method, and instead depend on the shared initialization that happens
@@ -209,7 +255,6 @@ class Command(object):
     """
     # Save class values from constructor params.
     self.command_runner = command_runner
-    self.args = args
     self.unparsed_args = args
     self.headers = headers
     self.debug = debug
@@ -220,13 +265,13 @@ class Command(object):
     self.exclude_symlinks = False
     self.recursion_requested = False
     self.all_versions = False
+    self.command_alias_used = command_alias_used
 
     # Global instance of a threaded logger object.
     self.logger = _ThreadedLogger(self.command_name)
     if logging_filters:
       for filter in logging_filters:
         self.logger.addFilter(filter)
-
 
     # Process sub-command instance specifications.
     # First, ensure subclass implementation sets all required keys.
@@ -248,27 +293,24 @@ class Command(object):
       pass
 
     # Parse and validate args.
+    args = self._TranslateDeprecatedAliases(args)
     try:
       (self.sub_opts, self.args) = getopt.getopt(
           args, self.command_spec[SUPPORTED_SUB_ARGS])
     except GetoptError, e:
       raise CommandException('%s for "%s" command.' % (e.msg,
                                                        self.command_name))
+    self.command_spec[URIS_START_ARG] = self._CalculateUrisStartArg()
+    
     if (len(self.args) < self.command_spec[MIN_ARGS]
         or len(self.args) > self.command_spec[MAX_ARGS]):
       raise CommandException('Wrong number of arguments for "%s" command.' %
                              self.command_name)
-    if (not self.command_spec[FILE_URIS_OK]
-        and self.HaveFileUris(self.args[self.command_spec[URIS_START_ARG]:])):
-      raise CommandException('"%s" command does not support "file://" URIs. '
-                             'Did you mean to use a gs:// URI?' %
-                             self.command_name)
-    if (not self.command_spec[PROVIDER_URIS_OK]
-        and self._HaveProviderUris(
-            self.args[self.command_spec[URIS_START_ARG]:])):
-      raise CommandException('"%s" command does not support provider-only '
-                             'URIs.' % self.command_name)
 
+    if not (self.command_name in
+            self._commands_with_subcommands_and_subopts):
+      self.CheckArguments()
+    
     self.proj_id_handler = ProjectIdHandler()
     self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
@@ -292,6 +334,29 @@ class Command(object):
         if o == '-r' or o == '-R':
           self.recursion_requested = True
           break
+
+  def CheckArguments(self):
+    """Checks that the arguments provided on the command line fit the
+       expectations of the command_spec. Any commands in
+       self._commands_with_subcommands_and_subopts are responsible for calling
+       this method after handling initial parsing of their arguments.
+       This prevents commands with sub-commands as well as options from breaking
+       the parsing of getopt.
+
+       TODO: Provide a function to parse commands and sub-commands more
+       intelligently once we stop allowing the deprecated command versions.
+    """
+
+    if (not self.command_spec[FILE_URIS_OK]
+        and self.HaveFileUris(self.args[self.command_spec[URIS_START_ARG]:])):
+      raise CommandException('"%s" command does not support "file://" URIs. '
+                             'Did you mean to use a gs:// URI?' %
+                             self.command_name)
+    if (not self.command_spec[PROVIDER_URIS_OK]
+        and self._HaveProviderUris(
+            self.args[self.command_spec[URIS_START_ARG]:])):
+      raise CommandException('"%s" command does not support provider-only '
+                             'URIs.' % self.command_name)
 
   def WildcardIterator(self, uri_or_str, all_versions=False):
     """
@@ -379,7 +444,7 @@ class Command(object):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())
       # We don't do bucket operations multi-threaded (see comment below).
-      assert self.command_name != 'setdefacl'
+      assert self.command_name != 'defacl'
       self.logger.info('Setting ACL on %s...' %
                        name_expansion_result.expanded_uri_str)
       try:
@@ -440,7 +505,7 @@ class Command(object):
           continue
         some_matched = True
         uri = blr.GetUri()
-        if self.command_name == 'setdefacl':
+        if self.command_name == 'defacl':
           self.logger.info('Setting default object ACL on %s...', uri)
           if self.canned:
             uri.set_def_acl(acl_arg, uri.object_name, False, self.headers)
@@ -494,7 +559,7 @@ class Command(object):
     if not uri.names_bucket() and not uri.names_object():
       raise CommandException('"%s" command must specify a bucket or '
                              'object.' % self.command_name)
-    if self.command_name == 'getdefacl':
+    if self.command_name == 'defacl':
       acl = uri.get_def_acl(False, self.headers)
     else:
       acl = uri.get_acl(False, self.headers)

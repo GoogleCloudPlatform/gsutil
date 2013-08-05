@@ -25,6 +25,7 @@ from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
+from gslib.command import OLD_ALIAS_MAP
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
@@ -133,6 +134,14 @@ class HelpCommand(Command):
           help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
         output.append('\n\n')
         output.append(help_prov.help_spec[HELP_TEXT].strip('\n'))
+        new_alias = OLD_ALIAS_MAP.get(arg, [None])[0]
+        if new_alias:
+          deprecation_warning = """
+  The "%s" alias is deprecated, and will eventually be removed completely.
+  Please use the "%s" command instead.""" % (arg, new_alias)
+
+          output.append('\n\n\n<B>DEPRECATION WARNING</B>\n')
+          output.append(deprecation_warning)
     self._OutputHelp(''.join(output))
     return 0
 

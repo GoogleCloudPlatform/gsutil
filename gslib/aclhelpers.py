@@ -44,7 +44,8 @@ class AclChange(object):
     """Creates an AclChange object.
 
     Args:
-      acl_change_descriptor: An acl change as described in chacl help.
+      acl_change_descriptor: An acl change as described in the "ch" section of
+                             the "acl" command's help.
       scope_type: Either ChangeType.USER or ChangeType.GROUP, specifying the
                   extent of the scope.
       logger: An instance of logging.Logger.

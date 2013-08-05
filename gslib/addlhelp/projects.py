@@ -97,7 +97,7 @@ _detailed_help_text = ("""
   The three "GroupById" scopes are the canonical IDs for the Project Owners,
   Project Editors, and All Project Team Members groups.
 
-  You can edit the bucket ACL if you want to (see "gsutil help setacl"),
+  You can edit the bucket ACL if you want to (see "gsutil help acl"),
   but for many cases you'll never need to, and instead can change group
   membership via the APIs console.
 

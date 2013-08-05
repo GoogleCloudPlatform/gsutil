@@ -75,10 +75,11 @@ _detailed_help_text = ("""
               See also "gsutil help setmeta" for the ability to set metadata
               fields on objects after they have been uploaded.
 
-  -m          Causes supported operations (cp, mv, rm, setacl, setmeta) to run
-              in parallel. This can significantly improve performance if you are
-              uploading, downloading, moving, removing, or changing ACLs on
-              a large number of files over a fast network connection.
+  -m          Causes supported operations (acl ch, acl set, cp, mv, rm,
+              and setmeta) to run in parallel. This can significantly improve
+              performance if you are uploading, downloading, moving, removing,
+              or changing ACLs on a large number of files over a fast network
+              connection.
 
               gsutil performs the specified operation using a combination of
               multi-threading and multi-processing, using a number of threads
@@ -101,7 +102,7 @@ _detailed_help_text = ("""
               between versioned buckets, object version ordering will not be
               preserved. For more information see the
               "COPYING VERSIONED BUCKETS" section under
-              'gsutil help versioning'.
+              'gsutil help versions'.
 
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,

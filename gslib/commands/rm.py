@@ -74,7 +74,7 @@ _detailed_help_text = ("""
   to give developers a high amount of flexibility and control over their data,
   and Google maintains strict controls over the processing and purging of
   deleted data. To protect yourself from mistakes, you can configure object
-  versioning on your bucket(s). See 'gsutil help versioning' for details.
+  versioning on your bucket(s). See 'gsutil help versions' for details.
 
 
 <B>OPTIONS</B>

@@ -57,7 +57,7 @@ through and you will need to change the object ACLs and re-run the script.
 
 If you need to change ACLs you can do so using a command like:
 
-  gsutil chacl -u scriptuser@gmail.com:FC gs://bucket/object1 gs://bucket/object2 ...
+  gsutil acl ch -u scriptuser@gmail.com:FC gs://bucket/object1 gs://bucket/object2 ...
 
 where scriptuser@agmail.com is the identity for which your credentials are
 configured.
@@ -93,7 +93,7 @@ Examples:
 
 STAGE
    The stage determines what stage should be executed:
-   -1            run stage 1 - during this stge users can still add objects to
+   -1            run stage 1 - during this stage users can still add objects to
                  the bucket(s) being migrated.
    -2            run stage 2 - during this stage no users should add or modify
                  any objects in the bucket(s) being migrated.
@@ -169,7 +169,7 @@ fi
 
 
 function ParallelIfNoVersioning() {
-  versioning=`$gsutil getversioning $1 | head -1`
+  versioning=`$gsutil versioning get $1 | head -1`
   if [ "$versioning" == '' ]; then
     EchoErr "Failed to retrieve versioning information for $1"
     exit 1
@@ -250,7 +250,7 @@ function CheckBucketExists() {
   # Strip out gs://, so can use bucket name as part of filename.
   bucket=`echo $1 | sed 's/.....//'`
   # Redirect stderr so we can check for permission denied.
-  $gsutil getversioning $1 &> $basedir/bucketcheck.$bucket
+  $gsutil versioning get $1 &> $basedir/bucketcheck.$bucket
   if [ $? -eq 0 ]; then
     result="Exist"
   else
@@ -491,7 +491,7 @@ function Stage1 {
     if [ `LastStep "$src"` -eq 4 ]; then
       # If the source has versioning, so should the temporary bucket.
       LogStepStart "Step 5: ($src) - Turn on versioning on the temporary bucket (if needed)."
-      versioning=`$gsutil getversioning $src | head -1`
+      versioning=`$gsutil versioning get $src | head -1`
       if [ "$versioning" == '' ]; then
         EchoErr "Failed to retrieve versioning information for $src"
         exit 1
@@ -500,7 +500,7 @@ function Stage1 {
       versioning=${versioning:vpos}
       if [ "$versioning" == 'Enabled' ]; then
         # We need to turn this on when we are copying versioned objects.
-        $gsutil setversioning on $dst
+        $gsutil versioning set on $dst
         if [ $? -ne 0 ]; then
           EchoErr "Failed to turn on versioning on the temporary bucket: $dst"
           exit 1
@@ -525,27 +525,27 @@ function Stage1 {
     if [ `LastStep "$src"` -eq 6 ]; then
       short_name=${src:5}
       LogStepStart "Step 7: ($src) - Backup the bucket metadata."
-      $gsutil getdefacl $src > $metadefacl$short_name
+      $gsutil defacl get $src > $metadefacl$short_name
       if [ $? -ne 0 ]; then
         EchoErr "Failed to backup the default ACL configuration for $src"
         exit 1
       fi
-      $gsutil getwebcfg $src > $metawebcfg$short_name
+      $gsutil web get $src > $metawebcfg$short_name
       if [ $? -ne 0 ]; then
         EchoErr "Failed to backup the web configuration for $src"
         exit 1
       fi
-      $gsutil getlogging $src > $metalogging$short_name
+      $gsutil logging get $src > $metalogging$short_name
       if [ $? -ne 0 ]; then
         EchoErr "Failed to backup the logging configuration for $src"
         exit 1
       fi
-      $gsutil getcors $src > $metacors$short_name
+      $gsutil cors get $src > $metacors$short_name
       if [ $? -ne 0 ]; then
         EchoErr "Failed to backup the CORS configuration for $src"
         exit 1
       fi
-      $gsutil getversioning $src > $metavers$short_name
+      $gsutil versioning get $src > $metavers$short_name
       if [ $? -ne 0 ]; then
         EchoErr "Failed to backup the versioning configuration for $src"
         exit 1
@@ -627,7 +627,7 @@ function Stage2 {
       LogStepStart "Step 11: ($src) - Restore the bucket metadata."
 
       # defacl
-      $gsutil setdefacl $metadefacl$short_name $src
+      $gsutil defacl set $metadefacl$short_name $src
       if [ $? -ne 0 ]; then
         EchoErr "Failed to set the default ACL configuration on $src"
         exit 1
@@ -642,7 +642,7 @@ function Stage2 {
           grep -o "<NotFoundPage>.*</NotFoundPage>" |\
           sed -e 's/<NotFoundPage>//g' -e 's/<\/NotFoundPage>//g'`
       if [ "$error_page" != '' ]; then error_page="-e $error_page"; fi
-      $gsutil setwebcfg $page_suffix $error_page $src
+      $gsutil web set $page_suffix $error_page $src
       if [ $? -ne 0 ]; then
         EchoErr "Failed to set the website configuration on $src"
         exit 1
@@ -658,7 +658,7 @@ function Stage2 {
           sed -e 's/<LogObjectPrefix>//g' -e 's/<\/LogObjectPrefix>//g'`
       if [ "$log_prefix" != '' ]; then log_prefix="-o $log_prefix"; fi
       if [ "$log_prefix" != '' ] && [ "$log_bucket" != '' ]; then
-        $gsutil enablelogging $log_bucket $log_prefix $src
+        $gsutil logging set on $log_bucket $log_prefix $src
         if [ $? -ne 0 ]; then
           EchoErr "Failed to set the logging configuration on $src"
           exit 1
@@ -666,7 +666,7 @@ function Stage2 {
       fi
 
       # cors
-      $gsutil setcors $metacors$short_name $src
+      $gsutil cors set $metacors$short_name $src
       if [ $? -ne 0 ]; then
         EchoErr "Failed to set the CORS configuration on $src"
         exit 1
@@ -677,7 +677,7 @@ function Stage2 {
       vpos=$((${#src} + 2))
       versioning=${versioning:vpos}
       if [ "$versioning" == 'Enabled' ]; then
-        $gsutil setversioning on $src
+        $gsutil versioning set on $src
         if [ $? -ne 0 ]; then
           EchoErr "Failed to set the versioning configuration on $src"
           exit 1

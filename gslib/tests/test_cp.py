@@ -368,8 +368,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                     '-h', 'Content-Type:image/gif',
                     '-h', 'x-goog-meta-1:abcd', suri(key_uri)])
     # Set public-read (non-default) ACL so we can verify that cp -D -p works.
-    self.RunGsUtil(['setacl', 'public-read', suri(key_uri)])
-    acl_xml = self.RunGsUtil(['getacl', suri(key_uri)], return_stdout=True)
+    self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
+    acl_xml = self.RunGsUtil(['acl', 'get', suri(key_uri)], return_stdout=True)
     # Perform daisy-chain copy and verify that it wasn't disallowed and that
     # source object headers and ACL were preserved. Also specify -n option to
     # test that gsutil correctly removes the x-goog-if-generation-match:0 header
@@ -384,7 +384,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, 'Cache-Control:\s+public,max-age=12')
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
       self.assertRegexpMatches(stdout, 'x-goog-meta-1:\s+abcd')
-      new_acl_xml = self.RunGsUtil(['getacl', uri], return_stdout=True)
+      new_acl_xml = self.RunGsUtil(['acl', 'get', uri], return_stdout=True)
       self.assertEqual(acl_xml, new_acl_xml)
     _Check()
 

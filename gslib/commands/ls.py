@@ -152,7 +152,7 @@ _detailed_help_text = ("""
   each individual object (rather than just parsing the information it needs
   out of a single bucket listing, the way the -l option does).
 
-  See also "gsutil help getacl" for getting a more readable version of the ACL.
+  See also "gsutil help acl" for getting a more readable version of the ACL.
 
 
 <B>LISTING BUCKET DETAILS</B>

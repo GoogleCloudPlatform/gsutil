@@ -33,26 +33,44 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil setversioning [on|off] bucket_uri...
+  gsutil versioning set [on|off] bucket_uri...
+  gsutil versioning get bucket_uri
 
 
 <B>DESCRIPTION</B>
   The Versioning Configuration feature enables you to configure a Google Cloud
   Storage bucket to keep old versions of objects.
-
-  The gsutil setversioning command allows you to enable or suspend versioning
-  on one or more buckets.
+  
+  The gsutil versioning command has two sub-commands:
+  
+  set
+    The "set" sub-command requires an additional sub-command, either "on" or
+    "off", which, respectively, will enable or disable versioning for the
+    specified bucket(s).
+  
+  get
+    The "get" sub-command gets the versioning configuration for a
+    bucket and displays an XML representation of the configuration.
+  
+    In Google Cloud Storage, this would look like:
+  
+      <?xml version="1.0" ?>
+      <VersioningConfiguration>
+        <Status>
+          Enabled
+        </Status>
+      </VersioningConfiguration>
 """)
 
-class SetVersioningCommand(Command):
-  """Implementation of gsutil setversioning command."""
+class VersioningCommand(Command):
+  """Implementation of gsutil versioning command."""
 
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
-    COMMAND_NAME : 'setversioning',
+    COMMAND_NAME : 'versioning',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : [],
+    COMMAND_NAME_ALIASES : ['setversioning', 'getversioning'],
     # Min number of args required by this command.
     MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
@@ -64,13 +82,13 @@ class SetVersioningCommand(Command):
     # True if provider-only URIs acceptable for this command.
     PROVIDER_URIS_OK : False,
     # Index in args of first URI arg.
-    URIS_START_ARG : 1,
+    URIS_START_ARG : 2,
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'setversioning',
+    HELP_NAME : 'versioning',
     # List of help name aliases.
-    HELP_NAME_ALIASES : [],
+    HELP_NAME_ALIASES : ['getversioning', 'setversioning'],
     # Type of help)
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
@@ -80,12 +98,16 @@ class SetVersioningCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
+  def _CalculateUrisStartArg(self):
+    if (self.args[0].lower() == 'set'):
+      return 2
+    else:
+      return 1
 
-  # Command entry point.
-  def RunCommand(self):
+  def _SetVersioning(self):
     versioning_arg = self.args[0].lower()
     if not versioning_arg in ('on', 'off'):
-      raise CommandException('Argument to %s must be either [on|off]'
+      raise CommandException('Argument to "%s set" must be either [on|off]'
                              % (self.command_name))
     uri_args = self.args[1:]
 
@@ -107,5 +129,39 @@ class SetVersioningCommand(Command):
           uri.configure_versioning(False)
     if not some_matched:
       raise CommandException('No URIs matched')
+    
+  def _GetVersioning(self):
+    uri_args = self.args
 
+    # Iterate over URIs, expanding wildcards, and getting the website
+    # configuration on each.
+    some_matched = False
+    for uri_str in uri_args:
+      for blr in self.WildcardIterator(uri_str):
+        uri = blr.GetUri()
+        if not uri.names_bucket():
+          raise CommandException('URI %s must name a bucket for the %s command'
+                                 % (str(uri), self.command_name))
+        some_matched = True
+        uri_str = '%s://%s' % (uri.scheme, uri.bucket_name)
+        if uri.get_versioning_config():
+          print '%s: Enabled' % uri_str
+        else:
+          print '%s: Suspended' % uri_str
+    if not some_matched:
+      raise CommandException('No URIs matched')
+
+  # Command entry point.
+  def RunCommand(self):
+    action_subcommand = self.args.pop(0)
+    if action_subcommand == 'get':
+      func = self._GetVersioning
+    elif action_subcommand == 'set':
+      func = self._SetVersioning
+    else:
+      raise CommandException((
+          'Invalid subcommand "%s" for the %s command.\n'
+          'See "gsutil help %s".') %
+          (action_subcommand, self.command_name, self.command_name))
+    func()
     return 0

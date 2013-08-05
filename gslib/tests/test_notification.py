@@ -19,19 +19,19 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
 
-class TestNotifyConfig(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for notifyconfig command."""
+class TestNotification(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for notification command."""
 
   def test_watch_bucket(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil([
-        'notifyconfig', 'watchbucket', 'https://localhost/notify',
+        'notification', 'watchbucket', 'https://localhost/notify',
         suri(bucket_uri)])
 
     identifier = str(uuid.uuid4())
     token = str(uuid.uuid4())
     stderr = self.RunGsUtil([
-        'notifyconfig', 'watchbucket', '-i', identifier, '-t', token,
+        'notification', 'watchbucket', '-i', identifier, '-t', token,
         'https://localhost/notify', suri(bucket_uri)], return_stderr=True)
     self.assertIn('token: %s' % token, stderr)
     self.assertIn('identifier: %s' % identifier, stderr)
@@ -39,7 +39,7 @@ class TestNotifyConfig(testcase.GsUtilIntegrationTestCase):
   def test_stop_channel(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil([
-        'notifyconfig', 'watchbucket', 'https://localhost/notify',
+        'notification', 'watchbucket', 'https://localhost/notify',
         suri(bucket_uri)], return_stderr=True)
 
     channel_id = re.findall(r'channel identifier: (?P<id>.*)', stderr)
@@ -50,9 +50,9 @@ class TestNotifyConfig(testcase.GsUtilIntegrationTestCase):
     channel_id = channel_id[0]
     resource_id = resource_id[0]
 
-    self.RunGsUtil(['notifyconfig', 'stopchannel', channel_id, resource_id])
+    self.RunGsUtil(['notification', 'stopchannel', channel_id, resource_id])
 
   def test_invalid_subcommand(self):
-    stderr = self.RunGsUtil(['notifyconfig', 'foo', 'bar', 'baz'],
+    stderr = self.RunGsUtil(['notification', 'foo', 'bar', 'baz'],
                             return_stderr=True, expected_status=1)
     self.assertIn('Invalid subcommand', stderr)

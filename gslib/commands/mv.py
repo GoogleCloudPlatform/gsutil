@@ -82,10 +82,10 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -p          Causes ACL to be preserved when moving in the cloud. Note that
               this option has performance and cost implications, because it
-              is essentially performing three requests (getacl, cp, setacl).
-              (The performance issue can be mitigated to some degree by
-              using gsutil -m cp to cause multi-threaded/multi-processing
-              copying.)
+              is essentially performing three requests ('acl get', cp,
+              'acl set'). (The performance issue can be mitigated to some
+              degree by using gsutil -m cp to cause
+              multi-threaded/multi-processing copying.)
 """)
 
 

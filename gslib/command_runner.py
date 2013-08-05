@@ -31,6 +31,7 @@ import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
+from gslib.command import OLD_ALIAS_MAP
 from gslib.exception import CommandException
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import ConfigureNoOpAuthIfNeeded
@@ -115,8 +116,12 @@ class CommandRunner(object):
       close_matches = difflib.get_close_matches(
           command_name, self.command_map.keys(), n=1)
       if len(close_matches):
+        # Instead of suggesting a deprecated command alias, suggest the new
+        # name for that command.
+        translated_command_name = (
+            OLD_ALIAS_MAP.get(close_matches[0], close_matches)[0])
         print >> sys.stderr, 'Did you mean this?'
-        print >> sys.stderr, '\t%s' % close_matches[0]
+        print >> sys.stderr, '\t%s' % translated_command_name
       raise CommandException('Invalid command "%s".' % command_name)
     if '--help' in args:
       args = [command_name]
@@ -129,7 +134,8 @@ class CommandRunner(object):
     command_class = self.command_map[command_name]
     command_inst = command_class(
         self, args, headers, debug, parallel_operations, self.config_file_list,
-        self.bucket_storage_uri_class, test_method, logging_filters)
+        self.bucket_storage_uri_class, test_method, logging_filters,
+        command_alias_used=command_name)
     return command_inst.RunCommand()
 
   @classmethod

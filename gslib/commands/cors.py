@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import xml.sax
+import sys
+import xml
+
 from boto import handler
 from boto.gs.cors import Cors
 from gslib.command import Command
@@ -35,14 +37,14 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil setcors cors-xml-file uri...
+  gsutil cors set cors-xml-file uri...
+  gsutil cors get uri
 
 
 <B>DESCRIPTION</B>
-  Sets the Cross-Origin Resource Sharing (CORS) configuration on one or more
-  buckets. This command is supported for buckets only, not objects. The
-  cors-xml-file specified on the command line should be a path to a local
-  file containing an XML document with the following structure:
+  Gets or sets the Cross-Origin Resource Sharing (CORS) configuration on one or
+  more buckets. This command is supported for buckets only, not objects. A CORS
+  XML document should have the following structure:
 
     <?xml version="1.0" ?>
     <CorsConfig>
@@ -62,20 +64,32 @@ _detailed_help_text = ("""
   The above XML document explicitly allows cross-origin GET requests from
   `http://origin1.example.com` and may include the Content-Type response header.
 
+  The cors command has two sub-commands:
+
+  get
+    Gets the CORS configuration for a single bucket. The output from
+    "cors get" can be redirected into a file, edited and then updated using
+    "cors set".
+
+  set
+    Sets the CORS configuration for one or more buckets. The
+    cors-xml-file specified on the command line should be a path to a local
+    file containing an XML document as described above.
+
   For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
 
-class SetCorsCommand(Command):
-  """Implementation of gsutil setcors command."""
+class CorsCommand(Command):
+  """Implementation of gsutil cors command."""
 
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
-    COMMAND_NAME : 'setcors',
+    COMMAND_NAME : 'cors',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : [],
+    COMMAND_NAME_ALIASES : ['getcors', 'setcors'],
     # Min number of args required by this command.
-    MIN_ARGS : 2,
+    MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -89,9 +103,9 @@ class SetCorsCommand(Command):
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'setcors',
+    HELP_NAME : 'cors',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['cors', 'cross-origin'],
+    HELP_NAME_ALIASES : ['getcors', 'setcors', 'cross-origin'],
     # Type of help)
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
@@ -100,11 +114,16 @@ class SetCorsCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
-  # Command entry point.
-  def RunCommand(self):
+  def _CalculateUrisStartArg(self):
+    if (self.args[0].lower() == 'set'):
+      return 2
+    else:
+      return 1
+
+  def _SetCors(self):
     cors_arg = self.args[0]
     uri_args = self.args[1:]
-    # Disallow multi-provider setcors requests.
+    # Disallow multi-provider 'cors set' requests.
     storage_uri = self.UrisAreForSingleProvider(uri_args)
     if not storage_uri:
       raise CommandException('"%s" command spanning providers not allowed.' %
@@ -139,4 +158,34 @@ class SetCorsCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
+  def _GetCors(self):  
+    # Wildcarding is allowed but must resolve to just one bucket.
+    uris = list(self.WildcardIterator(self.args[0]).IterUris())
+    if len(uris) == 0:
+      raise CommandException('No URIs matched')
+    if len(uris) != 1:
+      raise CommandException('%s matched more than one URI, which is not\n'
+          'allowed by the %s command' % (self.args[0], self.command_name))
+    uri = uris[0]
+    if not uri.names_bucket():
+      raise CommandException('"%s" command must specify a bucket' %
+                             self.command_name)
+    cors = uri.get_cors(False, self.headers)
+    # Pretty-print the XML to make it more easily human editable.
+    parsed_xml = xml.dom.minidom.parseString(cors.to_xml().encode('utf-8'))
+    sys.stdout.write(parsed_xml.toprettyxml(indent='    '))
+
+  # Command entry point.
+  def RunCommand(self):
+    action_subcommand = self.args.pop(0)
+    self.CheckArguments()
+    if action_subcommand == 'get':
+      func = self._GetCors
+    elif action_subcommand == 'set':
+      func = self._SetCors
+    else:
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                             'See "gsutil help cors".') %
+                             (action_subcommand, self.command_name))
+    func()
     return 0

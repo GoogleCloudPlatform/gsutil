@@ -35,29 +35,41 @@ WEBCFG_ERROR = parseString(
 WEBCFG_EMPTY = parseString('<WebsiteConfiguration/>').toprettyxml()
 
 
-class TestSetWebCfg(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for setwebcfg command."""
+class TestWeb(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for the webcfg command."""
+
+  _set_cmd_prefix = ['web', 'set']
+  _get_cmd_prefix = ['web', 'get']
 
   def test_full(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-m', 'main', '-e', '404', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(
+        self._set_cmd_prefix + ['-m', 'main', '-e', '404', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_FULL)
 
   def test_main(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-m', 'main', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + ['-m', 'main', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_MAIN)
 
   def test_error(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', '-e', '404', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + ['-e', '404', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_ERROR)
-
+    
   def test_empty(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setwebcfg', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getwebcfg', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_EMPTY)
+    
+class TestWebOldAlias(TestWeb):
+  _set_cmd_prefix = ['setwebcfg']
+  _get_cmd_prefix = ['getwebcfg']

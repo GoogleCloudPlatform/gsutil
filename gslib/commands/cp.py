@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Get the system logging module, not our local logging module.
+from __future__ import absolute_import
+
 import binascii
 import boto
 import copy
@@ -292,7 +295,7 @@ COPY_IN_CLOUD_TEXT = """
 
   Note that by default, the gsutil cp command does not copy the object
   ACL to the new object, and instead will use the default bucket ACL (see
-  "gsutil help setdefacl").  You can override this behavior with the -p
+  "gsutil help defacl").  You can override this behavior with the -p
   option (see OPTIONS below).
 """
 
@@ -471,14 +474,14 @@ OPTIONS_TEXT = """
 
   -p            Causes ACLs to be preserved when copying in the cloud. Note that
                 this option has performance and cost implications, because it
-                is essentially performing three requests (getacl, cp, setacl).
-                (The performance issue can be mitigated to some degree by
-                using gsutil -m cp to cause parallel copying.)
+                is essentially performing three requests ('acl get', cp,
+                'acl set'). (The performance issue can be mitigated to some
+                degree by using gsutil -m cp to cause parallel copying.)
 
                 You can avoid the additional performance and cost of using cp -p
                 if you want all objects in the destination bucket to end up with
                 the same ACL by setting a default ACL on that bucket instead of
-                using cp -p. See "help gsutil setdefacl".
+                using cp -p. See "help gsutil defacl".
 
                 Note that it's not valid to specify both the -a and -p options
                 together.
@@ -497,7 +500,7 @@ OPTIONS_TEXT = """
                 that are safe in the face of concurrent updates, because Google
                 Cloud Storage will refuse to perform the update if the current
                 object version doesn't match the version-specific URI. See
-                'gsutil help versioning' for more details.
+                'gsutil help versions' for more details.
 
   -z <ext,...>  Applies gzip content-encoding to file uploads with the given
                 extensions. This is useful when uploading files with

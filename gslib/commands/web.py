@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import getopt
+import sys
+
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -29,11 +32,14 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
+from gslib.util import UnaryDictToXml
+from xml.dom.minidom import parseString as XmlParseString
 
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil setwebcfg [-m main_page_suffix] [-e error_page] bucket_uri...
+  gsutil web set [-m main_page_suffix] [-e error_page] bucket_uri...
+  gsutil web get bucket_uri
 
 
 <B>DESCRIPTION</B>
@@ -55,7 +61,7 @@ _detailed_help_text = ("""
 
   3. Configure the bucket to have website behavior using the command:
 
-       gsutil setwebcfg -m index.html -e 404.html gs://example.com
+       gsutil web set -m index.html -e 404.html gs://example.com
 
   4. Add a DNS CNAME record for example.com pointing to c.storage.googleapis.com
      (ask your DNS administrator for help with this).
@@ -86,15 +92,36 @@ _detailed_help_text = ("""
   3. For additional details see
      https://developers.google.com/storage/docs/website-configuration.
 
+  The web command has two sub-commands:
 
-<B>OPTIONS</B>
-  -m <index.html>      Specifies the object name to serve when a bucket listing
-                       is requested via the CNAME alias to
-                       c.storage.googleapis.com.
+  set
+    The "gsutil web set" command will allow you to set Website Configuration
+    on your bucket(s). The "set" sub-command has the following options:
 
-  -e <404.html>        Specifies the error page to serve when a request is made
-                       for a non-existing object, via the is requested via the
-                       CNAME alias to c.storage.googleapis.com.
+      -m <index.html>      Specifies the object name to serve when a bucket
+                           listing is requested via the CNAME alias to
+                           c.storage.googleapis.com.
+    
+      -e <404.html>        Specifies the error page to serve when a request
+                           is made for a non-existing object, via the is
+                           requested via the CNAME alias to
+                           c.storage.googleapis.com.
+
+  get
+    The "gsutil web get" command will gets the web semantics configuration for
+    a bucket and displays an XML representation of the configuration.
+
+    In Google Cloud Storage, this would look like:
+
+      <?xml version="1.0" ?>
+      <WebsiteConfiguration>
+        <MainPageSuffix>
+          index.html
+        </MainPageSuffix>
+        <NotFoundPage>
+          404.html
+        </NotFoundPage>
+      </WebsiteConfiguration>
 """)
 
 def BuildGSWebConfig(main_page_suffix=None, not_found_page=None):
@@ -120,15 +147,15 @@ def BuildS3WebConfig(main_page_suffix=None, error_page=None):
   config_body_l.append('</WebsiteConfiguration>')
   return "".join(config_body_l)
 
-class SetWebcfgCommand(Command):
-  """Implementation of gsutil setwebcfg command."""
+class WebCommand(Command):
+  """Implementation of gsutil web command."""
 
   # Command specification (processed by parent class).
   command_spec = {
     # Name of command.
-    COMMAND_NAME : 'setwebcfg',
+    COMMAND_NAME : 'web',
     # List of command name aliases.
-    COMMAND_NAME_ALIASES : [],
+    COMMAND_NAME_ALIASES : ['setwebcfg', 'getwebcfg'],
     # Min number of args required by this command.
     MIN_ARGS : 1,
     # Max number of args required by this command, or NO_MAX.
@@ -144,9 +171,9 @@ class SetWebcfgCommand(Command):
   }
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'setwebcfg',
+    HELP_NAME : 'web',
     # List of help name aliases.
-    HELP_NAME_ALIASES : [],
+    HELP_NAME_ALIASES : ['getwebcfg', 'setwebcfg'],
     # Type of help)
     HELP_TYPE : HelpType.COMMAND_HELP,
     # One line summary of this help.
@@ -154,10 +181,27 @@ class SetWebcfgCommand(Command):
     # The full help text.
     HELP_TEXT : _detailed_help_text,
   }
+  
+  def _GetWeb(self):
+    uri_args = self.args
 
+    # Iterate over URIs, expanding wildcards, and getting the website
+    # configuration on each.
+    some_matched = False
+    for uri_str in uri_args:
+      for blr in self.WildcardIterator(uri_str):
+        uri = blr.GetUri()
+        if not uri.names_bucket():
+          raise CommandException('URI %s must name a bucket for the %s command'
+                                 % (uri, self.command_name))
+        some_matched = True
+        sys.stderr.write('Getting website config on %s...\n' % uri)
+        web_config_xml = UnaryDictToXml(uri.get_website_config())
+        sys.stdout.write(XmlParseString(web_config_xml).toprettyxml())
+    if not some_matched:
+      raise CommandException('No URIs matched')
 
-  # Command entry point.
-  def RunCommand(self):
+  def _SetWeb(self):
     main_page_suffix = None
     error_page = None
     if self.sub_opts:
@@ -184,4 +228,19 @@ class SetWebcfgCommand(Command):
     if not some_matched:
       raise CommandException('No URIs matched')
 
+  # Command entry point.
+  def RunCommand(self):
+    action_subcommand = self.args.pop(0)
+    (self.sub_opts, self.args) = getopt.getopt(self.args,
+          self.command_spec[SUPPORTED_SUB_ARGS])
+    self.CheckArguments()
+    if action_subcommand == 'get':
+      func = self._GetWeb
+    elif action_subcommand == 'set':
+      func = self._SetWeb
+    else:
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                             'See "gsutil help web".') %
+                             (action_subcommand, self.command_name))
+    func()
     return 0

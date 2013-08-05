@@ -61,12 +61,12 @@ _detailed_help_text = ("""
 
 <B>OBJECT VERSIONING</B>
   You can view, enable, and disable object versioning on a bucket using
-  the getversioning and setversioning commands. For example:
+  the 'versioning get' and 'versioning set' commands. For example:
 
-    gsutil setversioning on gs://bucket
+    gsutil versioning set on gs://bucket
 
-  will enable versioning for the named bucket. See 'gsutil help getversioning'
-  and 'gsutil help setversioning' for additional details.
+  will enable versioning for the named bucket. See 'gsutil help versioning'
+  for additional details.
 
   To see all object versions in a versioning-enabled bucket along with
   their generation.metageneration information, use gsutil ls -a:
@@ -238,11 +238,11 @@ _detailed_help_text = ("""
   unless that is the current version of the data+metadata:
 
     gsutil -h x-goog-if-generation-match:1360699153986000 -h \\
-      x-goog-if-metageneration-match:3 setacl public-read \\
+      x-goog-if-metageneration-match:3 acl set public-read \\
       gs://bucket/object#1360699153986000
 
   Without adding these headers, the update would simply overwrite the existing
-  ACL. Note that in contrast, the gsutil chacl command uses these headers
+  ACL. Note that in contrast, the "gsutil acl ch" command uses these headers
   automatically, because it performs a read-modify-write cycle in order to edit
   ACLs.
 
@@ -266,10 +266,9 @@ class CommandOptions(HelpProvider):
 
   help_spec = {
     # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'versioning',
+    HELP_NAME : 'versions',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['concurrency', 'concurrency control', 'versioning',
-                         'versions'],
+    HELP_NAME_ALIASES : ['concurrency', 'concurrency control'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

@@ -16,8 +16,12 @@ import gslib.tests.testcase as case
 from gslib.tests.util import ObjectToURI as suri
 
 
-class ChdefaclIntegrationTest(case.GsUtilIntegrationTestCase):
-  """Tests gslib.commands.chdefacl."""
+class DefaclIntegrationTest(case.GsUtilIntegrationTestCase):
+  """Tests gslib.commands.defacl."""
+
+  _defacl_ch_prefix= ['defacl', 'ch']
+  _defacl_get_prefix = ['defacl', 'get']
+  _defacl_set_prefix = ['defacl', 'set']
 
   def _MakeScopeRegex(self, scope_type, email_address, perm):
     template_regex = (
@@ -30,12 +34,14 @@ class ChdefaclIntegrationTest(case.GsUtilIntegrationTestCase):
 
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
-    xml = self.RunGsUtil(['getdefacl', suri(bucket)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix +
+                         [suri(bucket)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
-    self.RunGsUtil(['chdefacl', '-g', self.GROUP_TEST_ADDRESS+':READ',
-                    suri(bucket)])
-    xml = self.RunGsUtil(['getdefacl', suri(bucket)], return_stdout=True)
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-g', self.GROUP_TEST_ADDRESS+':READ',  suri(bucket)])
+    xml = self.RunGsUtil(self._defacl_get_prefix +
+                         [suri(bucket)], return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
 
   def testChangeMultipleBuckets(self):
@@ -44,16 +50,21 @@ class ChdefaclIntegrationTest(case.GsUtilIntegrationTestCase):
 
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
-    xml = self.RunGsUtil(['getdefacl', suri(bucket1)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
+                         return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
-    xml = self.RunGsUtil(['getdefacl', suri(bucket2)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket2)],
+                         return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
-    self.RunGsUtil(['chdefacl', '-g', self.GROUP_TEST_ADDRESS+':READ',
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-g', self.GROUP_TEST_ADDRESS+':READ',
                     suri(bucket1), suri(bucket2)])
-    xml = self.RunGsUtil(['getdefacl', suri(bucket1)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
+                         return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
-    xml = self.RunGsUtil(['getdefacl', suri(bucket2)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket2)],
+                         return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
 
   def testChangeMultipleAcls(self):
@@ -63,18 +74,26 @@ class ChdefaclIntegrationTest(case.GsUtilIntegrationTestCase):
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
     test_regex_user = self._MakeScopeRegex(
         'UserByEmail', self.USER_TEST_ADDRESS, 'FULL_CONTROL')
-    xml = self.RunGsUtil(['getdefacl', suri(bucket)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                         return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex_group)
     self.assertNotRegexpMatches(xml, test_regex_user)
 
-    self.RunGsUtil(['chdefacl', '-g', self.GROUP_TEST_ADDRESS+':READ',
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-g', self.GROUP_TEST_ADDRESS+':READ',
                     '-u', self.USER_TEST_ADDRESS+':fc', suri(bucket)])
-    xml = self.RunGsUtil(['getdefacl', suri(bucket)], return_stdout=True)
+    xml = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                         return_stdout=True)
     self.assertRegexpMatches(xml, test_regex_group)
     self.assertRegexpMatches(xml, test_regex_user)
 
   def testEmptyDefAcl(self):
     bucket = self.CreateBucket()
-    self.RunGsUtil(['setdefacl', 'private', suri(bucket)])
-    self.RunGsUtil(['chdefacl', '-u', self.USER_TEST_ADDRESS+':fc',
-                    suri(bucket)])
+    self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-u', self.USER_TEST_ADDRESS+':fc', suri(bucket)])
+
+class DefaclOldAliasIntegrationTest(DefaclIntegrationTest):
+  _defacl_ch_prefix= ['chdefacl']
+  _defacl_get_prefix = ['getdefacl']
+  _defacl_set_prefix = ['setdefacl']

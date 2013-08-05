@@ -48,7 +48,7 @@ class ProjectIdHandler(object):
 
     # We only include the project ID header if it's a GS URI and a project_id
     # was specified and
-    # (it's an 'mb', 'disablelogging, or 'enablelogging' command or
+    # (it's an 'mb', 'logging set off', or 'logging set on' command or
     #  a boto request in integration tests or
     #  (an 'ls' command that doesn't specify a bucket or wildcarded bucket)).
     if (uri.scheme.lower() == 'gs' and self.project_id

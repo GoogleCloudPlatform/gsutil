@@ -16,29 +16,36 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
 
-class TestSetVersioning(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for setversioning command."""
+class TestVersioning(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for versioning command."""
+  
+  _set_cmd_prefix = ['versioning', 'set']
+  _get_cmd_prefix = ['versioning', 'get']
 
   def test_off_default(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(['getversioning',
-                            suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
 
   def test_turning_on(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setversioning', 'on', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getversioning',
-                            suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + ['on', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
 
   def test_turning_off(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['setversioning', 'on', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getversioning',
-                            suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + ['on', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
-    self.RunGsUtil(['setversioning', 'off', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getversioning',
-                            suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + ['off', suri(bucket_uri)])
+    stdout = self.RunGsUtil(
+        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
+
+class TestVersioningOldAlias(TestVersioning):
+  _set_cmd_prefix = ['setversioning']
+  _get_cmd_prefix = ['getversioning']

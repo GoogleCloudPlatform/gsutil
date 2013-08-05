@@ -511,34 +511,36 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.assertEqual(expected, actual)
 
   def testSetAclOnBucketRuns(self):
-    """Test that the setacl command basically runs"""
-    # We don't test reading back the acl (via getacl command) because at present
-    # MockStorageService doesn't translate canned ACLs into actual ACL XML.
+    """Test that the 'acl set' command basically runs"""
+    # We don't test reading back the acl (via 'acl get' command) because at
+    # present MockStorageService doesn't translate canned ACLs into actual ACL
+    # XML.
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('setacl', ['private', suri(src_bucket_uri)])
+    self.RunCommand('acl', ['set', 'private', suri(src_bucket_uri)])
 
   def testSetAclOnWildcardNamedBucketRuns(self):
-    """Test that setacl basically runs against wildcard-named bucket"""
-    # We don't test reading back the acl (via getacl command) because at present
-    # MockStorageService doesn't translate canned ACLs into actual ACL XML.
+    """Test that 'acl set' basically runs against wildcard-named bucket"""
+    # We don't test reading back the acl (via 'acl get' command) because at
+    # present MockStorageService doesn't translate canned ACLs into actual ACL
+    # XML.
     src_bucket_uri = self.CreateBucket(test_objects=['f0'])
-    self.RunCommand('setacl', ['private', suri(src_bucket_uri)[:-2] + '*'])
+    self.RunCommand('acl', ['set', 'private', suri(src_bucket_uri)[:-2] + '*'])
 
   def testSetAclOnObjectRuns(self):
-    """Test that the setacl command basically runs"""
+    """Test that the 'acl set' command basically runs"""
     src_bucket_uri = self.CreateBucket(test_objects=['f0'])
-    self.RunCommand('setacl', ['private', suri(src_bucket_uri, '*')])
+    self.RunCommand('acl', ['set', 'private', suri(src_bucket_uri, '*')])
 
   def testSetDefAclOnBucketRuns(self):
-    """Test that the setdefacl command basically runs"""
+    """Test that the 'defacl set' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('setdefacl', ['private', suri(src_bucket_uri)])
+    self.RunCommand('defacl', ['set', 'private', suri(src_bucket_uri)])
 
   def testSetDefAclOnObjectFails(self):
-    """Test that the setdefacl command fails when run against an object"""
+    """Test that the 'defacl set' command fails when run against an object"""
     src_bucket_uri = self.CreateBucket()
     try:
-      self.RunCommand('setdefacl', ['private', suri(src_bucket_uri, '*')])
+      self.RunCommand('defacl', ['set', 'private', suri(src_bucket_uri, '*')])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertIn('URI must name a bucket', e.reason)
@@ -975,15 +977,15 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
   """Basic sanity check tests to make sure commands run."""
 
   def testDisableLoggingCommandRuns(self):
-    """Test that the disablelogging command basically runs"""
+    """Test that the 'logging set off' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('disablelogging', [suri(src_bucket_uri)])
+    self.RunCommand('logging', ['set', 'off', suri(src_bucket_uri)])
 
   def testEnableLoggingCommandRuns(self):
-    """Test that the enablelogging command basically runs"""
+    """Test that the 'logging set on' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('enablelogging', ['-b', 'gs://log_bucket',
-                                      suri(src_bucket_uri)])
+    self.RunCommand('logging', ['set', 'on', '-b', 'gs://log_bucket',
+                                suri(src_bucket_uri)])
 
   def testHelpCommandDoesntRaise(self):
     """Test that the help command doesn't raise (sanity checks all help)"""
@@ -1000,19 +1002,19 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(stdout, 'foo')
 
   def testGetAclCommandRuns(self):
-    """Test that the getacl command basically runs"""
+    """Test that the 'acl get' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('getacl', [suri(src_bucket_uri)])
+    self.RunCommand('acl', ['get', suri(src_bucket_uri)])
 
   def testGetDefAclCommandRuns(self):
-    """Test that the getdefacl command basically runs"""
+    """Test that the 'defacl get' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('getacl', [suri(src_bucket_uri)])
+    self.RunCommand('defacl', ['get', suri(src_bucket_uri)])
 
   def testGetLoggingCommandRuns(self):
-    """Test that the getlogging command basically runs"""
+    """Test that the 'logging get' command basically runs"""
     src_bucket_uri = self.CreateBucket()
-    self.RunCommand('getlogging', [suri(src_bucket_uri)])
+    self.RunCommand('logging', ['get', suri(src_bucket_uri)])
 
   def testMakeBucketsCommand(self):
     """Test mb on existing bucket"""

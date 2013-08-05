@@ -19,8 +19,11 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
 
-class TestSetCors(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for setcors command."""
+class TestCors(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for cors command."""
+  
+  _set_cmd_prefix = ['cors', 'set']
+  _get_cmd_prefix = ['cors', 'get']
 
   empty_doc1 = parseString('<CorsConfig/>').toprettyxml(indent='    ')
 
@@ -62,85 +65,100 @@ class TestSetCors(testcase.GsUtilIntegrationTestCase):
 
   def test_default_cors(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc1)
 
   def test_set_empty_cors1(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc1)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc1)
 
   def test_set_empty_cors2(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc2)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc1)
 
   def test_set_empty_cors3(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc3)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc3)
 
   def test_set_empty_cors4(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc4)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc3)
 
   def test_non_null_cors(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_doc)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
 
   def test_bad_cors1(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_bad1)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)], expected_status=1)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                   expected_status=1)
 
   def test_bad_cors2(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_bad2)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)], expected_status=1)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                   expected_status=1)
 
   def test_bad_cors3(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_bad3)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)], expected_status=1)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                   expected_status=1)
 
   def test_bad_cors4(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_bad4)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)], expected_status=1)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                   expected_status=1)
 
   def set_cors_and_reset(self):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.cors_doc)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
-    self.RunGsUtil(['setcors', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket_uri)], return_stdout=True)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.empty_doc1)
 
   def set_multi_non_null_cors(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_doc)
-    self.RunGsUtil(['setcors', fpath, suri(bucket1_uri), suri(bucket2_uri)])
-    stdout = self.RunGsUtil(['getcors', suri(bucket1_uri)], return_stdout=True)
+    self.RunGsUtil(
+        self._set_cmd_prefix + [fpath, suri(bucket1_uri), suri(bucket2_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
-    stdout = self.RunGsUtil(['getcors', suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
 
   def test_set_wildcard_non_null_cors(self):
@@ -157,12 +175,19 @@ class TestSetCors(testcase.GsUtilIntegrationTestCase):
     wildcard = '%s*' % common_prefix
 
     fpath = self.CreateTempFile(contents=self.cors_doc)
-    stderr = self.RunGsUtil(['setcors', fpath, wildcard], return_stderr=True)
+    stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
+                            return_stderr=True)
     self.assertIn('Setting CORS on %s/...' % suri(bucket1_uri), stderr)
     self.assertIn('Setting CORS on %s/...' % suri(bucket2_uri), stderr)
     self.assertEqual(stderr.count('Setting CORS'), 2)
 
-    stdout = self.RunGsUtil(['getcors', suri(bucket1_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
-    stdout = self.RunGsUtil(['getcors', suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
+
+class TestCorsOldAlias(TestCors):
+  _set_cmd_prefix = ['setcors']
+  _get_cmd_prefix = ['getcors']

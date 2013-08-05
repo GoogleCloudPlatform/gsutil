@@ -27,10 +27,10 @@ _detailed_help_text = ("""
 
   If not specified at the time an object is uploaded (e.g., via the gsutil cp
   -a option), objects will be created with a default object ACL set on the
-  bucket (see "gsutil help setdefacl"). You can replace the ACL on an object
-  or bucket using the gsutil setacl command (see "gsutil help setacl"), or
-  modify the existing ACL using the gsutil chacl command (see "gsutil help
-  chacl").
+  bucket (see "gsutil help defacl"). You can replace the ACL on an object
+  or bucket using the "gsutil acl set" command, or
+  modify the existing ACL using the "gsutil acl ch" command (see "gsutil help
+  acl").
 
 
 <B>BUCKET VS OBJECT ACLS</B>
@@ -119,7 +119,7 @@ _detailed_help_text = ("""
   When you use a canned ACL, it is translated into an XML representation
   that can later be retrieved and edited to specify more fine-grained
   detail about who can read and write buckets and objects. By running
-  the gsutil getacl command you can retrieve the ACL XML, and edit it to
+  the "gsutil acl get" command you can retrieve the ACL XML, and edit it to
   customize the permissions.
 
   As an example, if you create an object in a bucket that has no default
@@ -228,7 +228,7 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'acls',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['acl', 'ACL', 'access control', 'access control list',
+    HELP_NAME_ALIASES : ['ACL', 'access control', 'access control list',
                          'authorization', 'canned', 'canned acl'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
