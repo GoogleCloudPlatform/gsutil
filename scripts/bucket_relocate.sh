@@ -41,7 +41,7 @@ temporary buckets by executing:
   vimdiff ls.1 ls.2
 
 Starting conditions:
-You must have at least version 4.0 of bash and version 3.30 of gsutil installed,
+You must have at least version 4.0 of bash and version 3.35 of gsutil installed,
 with credentials (in your.boto config file) that have FULL_CONTROL access to all
 buckets and objects being migrated. If this script is run using credentials that
 lack these permissions it will fail part-way through, at which point you will
@@ -393,8 +393,8 @@ if [ $? -ne 0 ]; then
 fi
 major=${gsutil_version:15:1}
 minor=${gsutil_version:17:2}
-if [ $major -lt 3 ] || ( [ $major -eq 3 ] && [ $minor -lt 32 ] ); then
-  EchoErr "Incorrect version of gsutil. Need 3.32 or greater. Have: $gsutil_version"
+if [ $major -lt 3 ] || ( [ $major -eq 3 ] && [ $minor -lt 35 ] ); then
+  EchoErr "Incorrect version of gsutil. Need 3.35 or greater. Have: $gsutil_version"
   exit 1
 fi
 
