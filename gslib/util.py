@@ -30,8 +30,12 @@ from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 from gslib.exception import CommandException
-from gslib.third_party.retry_decorator import decorators
 from oauth2client.client import HAS_CRYPTO
+try:
+  from retry_decorator import retry_decorator as decorators
+except:
+  from gslib.third_party.retry_decorator import decorators
+
 
 
 TWO_MB = 2 * 1024 * 1024
