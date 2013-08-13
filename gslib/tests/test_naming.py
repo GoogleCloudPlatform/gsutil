@@ -840,7 +840,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     for i, final_dst_char in enumerate(('', '/')):
       # Copy some files into place in dst bucket.
       self.RunCommand(
-          'cp', [suri(src_bucket_uri, 'f%df?' % i),
+          'cp', [suri(src_bucket_uri, 'f%df*' % i),
                  suri(dst_bucket_uri, 'dst_subdir%d' % i) + final_dst_char])
       # Now do the move test.
       self.RunCommand(
