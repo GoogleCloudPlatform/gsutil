@@ -329,7 +329,7 @@ STREAMING_TRANSFERS_TEXT = """
 
   Streaming transfers do not support resumable uploads/downloads.
   (The Google resumable transfer protocol has a way to support streaming
-  transers, but gsutil doesn't currently implement support for this.)
+  transfers, but gsutil doesn't currently implement support for this.)
 """
 
 PARALLEL_COMPOSITE_UPLOADS_TEXT = (("""

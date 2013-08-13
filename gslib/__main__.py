@@ -16,6 +16,7 @@
 
 """Main module for Google Cloud Storage command line tool."""
 
+import boto
 import ConfigParser
 import errno
 import getopt
@@ -52,6 +53,9 @@ except ImportError:
 GSLIB_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 GSUTIL_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
 debug = 0
+
+DEFAULT_CA_CERTS_FILE = os.path.abspath(
+    os.path.join(GSUTIL_DIR, 'gslib', 'data', 'cacerts.txt'))
 
 
 def _OutputAndExit(message):
@@ -102,6 +106,11 @@ def main():
     if not boto.config.has_section('Boto'):
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
+
+  # If ca_certificates_file is configured use it; otherwise configure boto to
+  # use the cert roots distributed with gsutil.
+  if not boto.config.get_value('Boto', 'ca_certificates_file', None):
+    boto.config.set('Boto', 'ca_certificates_file', DEFAULT_CA_CERTS_FILE)
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'dDvh:mq',
