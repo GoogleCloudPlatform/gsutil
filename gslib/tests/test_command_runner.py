@@ -105,8 +105,10 @@ class TestSoftwareUpdateCheckUnitTests(
     self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
+    # Update will not trigger for package installs.
+    expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
-        True,
+        expect,
         self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   def test_not_time_for_update_yet(self):
@@ -134,9 +136,10 @@ class TestSoftwareUpdateCheckUnitTests(
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 
-    # With regular loglevel, should return True.
+    # With regular loglevel, should return True except for package installs.
+    expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
-      True,
+      expect,
       self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
     prev_loglevel = logging.getLogger().getEffectiveLevel()
