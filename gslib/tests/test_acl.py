@@ -167,7 +167,7 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
 
     # Find out the two object version IDs.
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _GetVersions():
       stdout = self.RunGsUtil(['ls', '-a', uri.uri], return_stdout=True)
       lines = stdout.split('\n')
@@ -398,7 +398,7 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
         bucket_uri=bucket, object_name=object_name, contents='Another thing')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1, logger=self.logger)
+    @Retry(AssertionError, tries=3, timeout_secs=1, fptr=self.logger)
     def _getObjects():
       stdout = self.RunGsUtil(['ls', '-a', suri(obj)], return_stdout=True)
       lines = stdout.strip().split('\n')

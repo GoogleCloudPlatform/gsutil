@@ -28,7 +28,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:%s' % ct,
                     'cp', inpath, objuri])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % ct)
@@ -43,7 +43,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['setmeta', '-n', '-h', 'Content-Type:text/html', '-h',
                     'x-goog-meta-xyz', objuri])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+text/html')
@@ -76,7 +76,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     unicode_header_bytes = unicode_header.encode('utf-8')
     self.RunGsUtil(['setmeta', '-h', unicode_header_bytes, suri(objuri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
       stdout = stdout.decode('utf-8')

@@ -197,7 +197,7 @@ class DefAclCommand(Command):
     for uri in bucket_uris:
       self.ApplyAclChanges(uri)
 
-  @Retry(GSResponseError, tries=3, delay=1, backoff=2)
+  @Retry(GSResponseError, tries=3, timeout_secs=1)
   def ApplyAclChanges(self, uri):
     """Applies the changes in self.changes to the provided URI."""
     try:

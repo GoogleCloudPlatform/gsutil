@@ -88,7 +88,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['cp', self._get_test_file('test.mp3'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+audio/mpeg')
@@ -96,7 +96,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['cp', self._get_test_file('test.gif'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
@@ -109,7 +109,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
@@ -118,7 +118,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
                     self._get_test_file('test.gif'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
@@ -131,7 +131,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents='foo/bar\n')
     self.RunGsUtil(['cp', fpath, dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
@@ -149,7 +149,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
@@ -158,7 +158,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
                     self._get_test_file('test.gif'), dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
@@ -166,7 +166,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp', fpath, dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
@@ -181,7 +181,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'content-Type:text/plain', 'cp',
                     fpath, dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+text/plain')
@@ -192,7 +192,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                     '-h', 'content-type:image/gif',
                     'cp', fpath, dsturi])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
@@ -254,7 +254,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Recursively copy to second versioned bucket.
     self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'), suri(bucket2_uri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
                                 return_stdout=True).split('\n')
@@ -325,7 +325,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIsNotNone(match)
     created_uri = match.group(1)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', dst_str], return_stdout=True)
       lines = stdout.split('\n')
@@ -343,7 +343,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-I', suri(bucket_uri)],
                    stdin='\n'.join((fpath1, fpath2)))
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertIn(os.path.basename(fpath1), stdout)
@@ -377,7 +377,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', '-Dpn', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       uri = suri(bucket2_uri, key_uri.object_name)
       stdout = self.RunGsUtil(['ls', '-L', uri], return_stdout=True)
@@ -412,7 +412,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1',
                       contents='def')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _CopyAndCheck():
       self.RunGsUtil(['cp', '-R', suri(src_bucket_uri),
                       suri(dst_bucket_uri)])
@@ -435,7 +435,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj1',
                       contents='def')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _CopyAndCheck():
       self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
       dir_list = []

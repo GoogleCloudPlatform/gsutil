@@ -24,14 +24,14 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     # Create two buckets, one with 2 objects and one with 0 objects, and verify.
     bucket1_uri = self.CreateBucket(test_objects=2)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
       self.assertNumLines(stdout, 2)
     _Check1()
     bucket2_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
       self.assertNumLines(stdout, 0)
@@ -47,7 +47,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     # Verify objects were moved.
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
       self.assertNumLines(stdout, 0)
@@ -63,7 +63,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     # Verify there are now 1 and 0 objects.
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check4():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
       self.assertNumLines(stdout, 0)
@@ -81,7 +81,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     # Verify object moved.
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check5():
       stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
       self.assertNumLines(stdout, 1)

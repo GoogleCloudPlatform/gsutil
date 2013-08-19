@@ -34,7 +34,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_empty_bucket(self):
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual('', stdout)
@@ -43,7 +43,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_empty_bucket_with_b(self):
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)],
                               return_stdout=True)
@@ -53,7 +53,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_bucket_with_Lb(self):
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stdout=True)
@@ -64,7 +64,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_bucket_with_lb(self):
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-lb', suri(bucket_uri)],
                               return_stdout=True)
@@ -86,7 +86,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     wildcard = '%s*' % common_prefix
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-b', wildcard], return_stdout=True)
       expected = set([suri(bucket1_uri) + '/', suri(bucket2_uri) + '/'])
@@ -115,7 +115,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     objuri = [suri(bucket_uri.clone_replace_name(key.name))
               for key in bucket_uri.list_bucket()][0]
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual('%s\n' % objuri, stdout)
@@ -128,7 +128,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     k2_uri = bucket_uri.clone_replace_name('dir/foo')
     k2_uri.set_contents_from_string('bar')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
                               return_stdout=True)
@@ -146,7 +146,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)],
                               return_stdout=True)
@@ -163,7 +163,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     etag = obj_uri.get_key().etag
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
                               return_stdout=True)
@@ -184,7 +184,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket_uri, contents='x' * 2048)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
                               return_stdout=True)
@@ -192,7 +192,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
                               return_stdout=True)
@@ -200,7 +200,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', '-al', suri(bucket_uri)],
                               return_stdout=True)
@@ -208,7 +208,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check3()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check4():
       stdout = self.RunGsUtil(['ls', '-lh', suri(bucket_uri)],
                               return_stdout=True)
@@ -216,7 +216,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check4()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check5():
       stdout = self.RunGsUtil(['ls', '-alh', suri(bucket_uri)],
                               return_stdout=True)
@@ -246,7 +246,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath), suri(key_uri)])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
       self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
