@@ -197,7 +197,7 @@ class NotificationCommand(Command):
 
     channel_id = response['id']
     resource_id = response['resourceId']
-    client_token = response['token']
+    client_token = response.get('token', '')
     self.logger.info('Successfully created watch notification channel.')
     self.logger.info('Watch channel identifier: %s', channel_id)
     self.logger.info('Canonicalized resource identifier: %s', resource_id)

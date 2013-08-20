@@ -15,32 +15,44 @@
 import re
 import uuid
 
+import boto
+
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import unittest
+
+
+def _LoadNotificationUrl():
+  return boto.config.get_value('GSUtil', 'test_notification_url')
+
+NOTIFICATION_URL = _LoadNotificationUrl()
 
 
 class TestNotification(testcase.GsUtilIntegrationTestCase):
   """Integration tests for notification command."""
 
+  @unittest.skipUnless(NOTIFICATION_URL,
+                       'Test requires notification URL configuration.')
   def test_watch_bucket(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil([
-        'notification', 'watchbucket', 'https://localhost/notify',
-        suri(bucket_uri)])
+        'notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)])
 
     identifier = str(uuid.uuid4())
     token = str(uuid.uuid4())
     stderr = self.RunGsUtil([
         'notification', 'watchbucket', '-i', identifier, '-t', token,
-        'https://localhost/notify', suri(bucket_uri)], return_stderr=True)
+        NOTIFICATION_URL, suri(bucket_uri)], return_stderr=True)
     self.assertIn('token: %s' % token, stderr)
     self.assertIn('identifier: %s' % identifier, stderr)
 
+  @unittest.skipUnless(NOTIFICATION_URL,
+                       'Test requires notification URL configuration.')
   def test_stop_channel(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil([
-        'notification', 'watchbucket', 'https://localhost/notify',
-        suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
+        return_stderr=True)
 
     channel_id = re.findall(r'channel identifier: (?P<id>.*)', stderr)
     self.assertEqual(len(channel_id), 1)
