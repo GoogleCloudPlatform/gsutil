@@ -345,15 +345,9 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
         else:
           _OutputAndExit(acct_help_part_1 + '2. ' + acct_help_part_3)
 
-    if not e.body:
-      e.body = ''
-    exc_name, error_detail = util.ExtractErrorDetail(e)
-    if error_detail:
-      _OutputAndExit('%s: status=%d, code=%s, reason=%s, detail=%s.' %
-                     (exc_name, e.status, e.code, e.reason, error_detail))
-    else:
-      _OutputAndExit('%s: status=%d, code=%s, reason=%s.' %
-                     (exc_name, e.status, e.code, e.reason))
+    exc_name, message, detail = util.ParseErrorDetail(e)
+    _OutputAndExit(util.FormatErrorMessage(
+        exc_name, e.status, e.code, e.reason, message, detail))
   except boto.exception.ResumableUploadException as e:
     _OutputAndExit('ResumableUploadException: %s.' % e.message)
   except socket.error as e:

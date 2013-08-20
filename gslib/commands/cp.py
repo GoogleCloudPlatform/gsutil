@@ -87,7 +87,7 @@ from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
 from gslib.util import CreateTrackerDirIfNeeded
-from gslib.util import ExtractErrorDetail
+from gslib.util import ParseErrorDetail
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
@@ -966,12 +966,12 @@ class CpCommand(Command):
           headers=headers, src_version_id=src_uri.version_id,
           src_generation=src_uri.generation)
     except GSResponseError as e:
-      exc_name, error_detail = ExtractErrorDetail(e)
+      exc_name, message, detail = ParseErrorDetail(e)
       if (exc_name == 'GSResponseError'
-          and ('Copy-in-the-cloud disallowed' in error_detail)):
+          and ('Copy-in-the-cloud disallowed' in detail)):
           raise CommandException('%s.\nNote: you can copy between locations '
                                  'or between storage classes by using the '
-                                 'gsutil cp -D option.' % error_detail)
+                                 'gsutil cp -D option.' % detail)
       else:
         raise
     end_time = time.time()

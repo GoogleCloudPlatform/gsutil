@@ -279,14 +279,15 @@ def Percentile(values, percent, key=lambda x: x):
   return d0 + d1
 
 
-def ExtractErrorDetail(e):
-  """Extract <Details> text from XML content.
+def ParseErrorDetail(e):
+  """Parse <Message> and/or <Details> text from XML content.
 
   Args:
     e: The GSResponseError that includes XML to be parsed.
 
   Returns:
-    (exception_name, d), where d is <Details> text or None if not found.
+    (exception_name, m, d), where m is <Message> text or None,
+                            and d is <Details> text or None.
   """
   exc_name_parts = re.split("[\.']", str(type(e)))
   if len(exc_name_parts) < 2:
@@ -296,12 +297,25 @@ def ExtractErrorDetail(e):
     exc_name = exc_name_parts[-2]
   if not hasattr(e, 'body'):
     return (exc_name, None)
-  detail_start = e.body.find('<Details>')
-  detail_end = e.body.find('</Details>')
-  if detail_start != -1 and detail_end != -1:
-    return (exc_name, e.body[detail_start+9:detail_end])
-  return (exc_name, None)
+  match = re.search(r'<Message>(?P<message>.*)</Message>', e.body)
+  m = match.group('message') if match else None
+  match = re.search(r'<Details>(?P<details>.*)</Details>', e.body)
+  d = match.group('details') if match else None
+  return (exc_name, m, d)
 
+def FormatErrorMessage(exc_name, status, code, reason, message, detail):
+  """Formats an error message from components parsed by ParseErrorDetail."""
+  if message and detail:
+    return('%s: status=%d, code=%s, reason="%s", message="%s", detail="%s"' %
+           (exc_name, status, code, reason, message, detail))
+  if message:
+    return('%s: status=%d, code=%s, reason="%s", message="%s"' %
+           (exc_name, status, code, reason, message))
+  if detail:
+    return('%s: status=%d, code=%s, reason="%s", detail="%s"' %
+           (exc_name, status, code, reason, detail))
+  return('%s: status=%d, code=%s, reason="%s"' %
+         (exc_name, status, code, reason))
 
 def UnaryDictToXml(message):
   """Generates XML representation of a nested dict with exactly one

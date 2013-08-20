@@ -456,12 +456,10 @@ class Command(object):
                                   self.headers)
       except GSResponseError as e:
         if self.continue_on_error:
-          exc_name, error_detail = util.ExtractErrorDetail(e)
+          exc_name, message, detail = util.ParseErrorDetail(e)
           self.everything_set_okay = False
-          if error_detail:
-            sys.stderr.write('%s: status=%d, code=%s, reason=%s, detail=%s.\n' %
-                             (exc_name, e.status, e.code, e.reason,
-                              error_detail))
+          sys.stderr.write(util.FormatErrorMessage(
+            exc_name, e.status, e.code, e.reason, message, detail))
         else:
           raise
 
