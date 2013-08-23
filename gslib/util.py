@@ -29,6 +29,7 @@ from boto.exception import NoAuthHandlerFound
 from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
+import gslib
 from gslib.exception import CommandException
 from gslib.third_party.retry_decorator import decorators
 from oauth2client.client import HAS_CRYPTO
@@ -354,6 +355,11 @@ def LookUpGsutilVersion(uri):
     obj = uri.get_key(False)
     if obj.metadata and 'gsutil_version' in obj.metadata:
       return obj.metadata['gsutil_version']
+
+
+def GetGsutilVersionModifiedTime():
+  """Returns unix timestamp of when the VERSION file was last modified."""
+  return int(os.path.getmtime(gslib.VERSION_FILE))
 
 
 def _BotoIsSecure():

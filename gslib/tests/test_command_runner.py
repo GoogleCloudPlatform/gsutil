@@ -46,6 +46,11 @@ class TestSoftwareUpdateCheckUnitTests(
     # Mock out raw_input to trigger yes prompt.
     command_runner.raw_input = lambda p: 'y'
 
+    # Mock out the modified time of the VERSION file.
+    self.version_mod_time = 0
+    self.previous_version_mod_time = command_runner.GetGsutilVersionModifiedTime
+    command_runner.GetGsutilVersionModifiedTime = lambda: self.version_mod_time
+
     # Create a fake pub tarball that will be used to check for gsutil version.
     self.pub_bucket_uri = self.CreateBucket('pub')
     self.gsutil_tarball_uri = self.CreateObject(
@@ -63,6 +68,8 @@ class TestSoftwareUpdateCheckUnitTests(
     command_runner.LookUpGsutilVersion = gslib.util.LookUpGsutilVersion
     command_runner.raw_input = raw_input
 
+    command_runner.GetGsutilVersionModifiedTime = self.previous_version_mod_time
+
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()
 
@@ -77,13 +84,24 @@ class TestSoftwareUpdateCheckUnitTests(
     self.boto_configs.append((section, name, prev_value))
     boto.config.set(section, name, value)
 
-  def test_no_tracker_file(self):
-    """Tests when no timestamp file exists."""
+  def test_no_tracker_file_version_recent(self):
+    """Tests when no timestamp file exists and VERSION file is recent."""
     if os.path.exists(self.timestamp_file):
       os.remove(self.timestamp_file)
     self.assertFalse(os.path.exists(self.timestamp_file))
+    self.version_mod_time = time.time()
     self.assertEqual(
         False,
+        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+
+  def test_no_tracker_file_version_old(self):
+    """Tests when no timestamp file exists and VERSION file is old."""
+    if os.path.exists(self.timestamp_file):
+      os.remove(self.timestamp_file)
+    self.assertFalse(os.path.exists(self.timestamp_file))
+    self.version_mod_time = 0
+    self.assertEqual(
+        True,
         self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   def test_invalid_commands(self):

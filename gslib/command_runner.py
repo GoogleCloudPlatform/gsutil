@@ -21,7 +21,6 @@ import difflib
 import logging
 import os
 import re
-import string
 import sys
 import textwrap
 import time
@@ -35,6 +34,7 @@ from gslib.command import OLD_ALIAS_MAP
 from gslib.exception import CommandException
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import ConfigureNoOpAuthIfNeeded
+from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
@@ -214,7 +214,7 @@ class CommandRunner(object):
       # Set last_checked_ts from date of VERSION file, so if the user installed
       # an old copy of gsutil it will get noticed (and an update offered) the
       # first time they try to run it.
-      last_checked_ts = int(os.path.getmtime(gslib.VERSION_FILE))
+      last_checked_ts = GetGsutilVersionModifiedTime()
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(last_checked_ts))
     else:
