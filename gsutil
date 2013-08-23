@@ -80,4 +80,4 @@ if not UsingCrcmodExtension(crcmod):
   sys.path.insert(0, local_crcmod_path)
 
 import gslib.__main__
-gslib.__main__.main()
+sys.exit(gslib.__main__.main())

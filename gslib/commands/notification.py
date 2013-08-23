@@ -17,6 +17,7 @@ import getopt
 import uuid
 
 from apiclient import discovery
+from apiclient import errors as apiclient_errors
 import boto
 
 from gslib.command import Command
@@ -56,7 +57,10 @@ _detailed_help_text = ("""
     changes.
 
     The app_url parameter must be an HTTPS URL to an application that will be
-    notified of changes to any object in the bucket.
+    notified of changes to any object in the bucket. The URL endpoint must be
+    a verified domain on your project. See
+    `Notification Authorization<https://developers.google.com/storage/docs/object-change-notification#_Authorization>`_
+    for details.
 
     The optional id parameter can be used to assign a unique identifier to the
     created notification channel. If not provided, a random UUID string will be
@@ -99,6 +103,20 @@ _detailed_help_text = ("""
 
 """)
 
+NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE = """
+Watch bucket attempt failed:
+  {watch_error}
+
+You attempted to watch a bucket with an application URL of:
+
+  {watch_uri}
+
+which is not authorized for your project. Notification endpoint URLs must be
+whitelisted in your Cloud Console project. To do that, the domain must also be
+verified using Google Webmaster Tools. For instructions, please see:
+
+  https://developers.google.com/storage/docs/object-change-notification#_Authorization
+"""
 
 DISCOVERY_SERVICE_URL = boto.config.get_value(
     'GSUtil', 'discovery_service_url', None)
@@ -193,7 +211,15 @@ class NotificationCommand(Command):
       body['token'] = client_token
     request = service.objects().watchAll(body=body, bucket=bucket.name)
     request.headers['authorization'] = oauth2_client.GetAuthorizationHeader()
-    response = request.execute()
+    try:
+      response = request.execute()
+    except apiclient_errors.HttpError, e:
+      if e.resp.status == 401 and 'Unauthorized' in str(e):
+        self.logger.warn(NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE.format(
+            watch_error=str(e), watch_uri=watch_uri))
+        return 1
+      else:
+        raise
 
     channel_id = response['id']
     resource_id = response['resourceId']
@@ -240,7 +266,7 @@ class NotificationCommand(Command):
     try:
       (self.sub_opts, self.args) = getopt.getopt(
           self.args, self.command_spec[SUPPORTED_SUB_ARGS])
-      func()
+      return func()
     except getopt.GetoptError, e:
       raise CommandException('%s for "%s" command.' % (e.msg,
                                                        self.command_name))
