@@ -21,6 +21,7 @@ import boto
 import gslib
 from boto.pyami.config import Config, BotoConfigLocations
 from gslib import command_runner
+from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import SECONDS_PER_DAY
@@ -41,7 +42,13 @@ class TestSoftwareUpdateCheckUnitTests(
         self.timestamp_file)
 
     # Mock out the gsutil version checker.
-    command_runner.LookUpGsutilVersion = lambda u: float(gslib.VERSION) + 1
+    base_version = unicode(gslib.VERSION)
+    while not base_version.isnumeric():
+      if not base_version:
+        raise CommandException(
+            'Version number (%s) is not numeric.' % gslib.VERSION)
+      base_version = base_version[:-1]
+    command_runner.LookUpGsutilVersion = lambda u: float(base_version) + 1
 
     # Mock out raw_input to trigger yes prompt.
     command_runner.raw_input = lambda p: 'y'
