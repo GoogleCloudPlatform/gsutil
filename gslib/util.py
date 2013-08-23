@@ -362,6 +362,11 @@ def GetGsutilVersionModifiedTime():
   return int(os.path.getmtime(gslib.VERSION_FILE))
 
 
+def IsRunningInteractively():
+  """Returns True if currently running interactively on a TTY."""
+  return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
+
+
 def _BotoIsSecure():
   for cfg_var in ('is_secure', 'https_validate_certificates'):
     if (config.has_option('Boto', cfg_var)

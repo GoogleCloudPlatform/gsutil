@@ -36,6 +36,7 @@ from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
 from gslib.util import SECONDS_PER_DAY
@@ -195,8 +196,7 @@ class CommandRunner(object):
     #   service instance, in which case credentials won't work for checking
     #   gsutil tarball).
     gs_host = boto.config.get('Credentials', 'gs_host', None)
-    if (not sys.stdout.isatty() or not sys.stderr.isatty()
-        or not sys.stdin.isatty()
+    if (not IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logging.getLogger().isEnabledFor(logging.INFO)
         or gs_host):

@@ -46,6 +46,10 @@ class TestSoftwareUpdateCheckUnitTests(
     # Mock out raw_input to trigger yes prompt.
     command_runner.raw_input = lambda p: 'y'
 
+    # Mock out TTY check to pretend we're on a TTY even if we're not.
+    self.running_interactively = True
+    command_runner.IsRunningInteractively = lambda: self.running_interactively
+
     # Mock out the modified time of the VERSION file.
     self.version_mod_time = 0
     self.previous_version_mod_time = command_runner.GetGsutilVersionModifiedTime
@@ -70,6 +74,8 @@ class TestSoftwareUpdateCheckUnitTests(
 
     command_runner.GetGsutilVersionModifiedTime = self.previous_version_mod_time
 
+    command_runner.IsRunningInteractively = gslib.util.IsRunningInteractively
+
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()
 
@@ -83,6 +89,16 @@ class TestSoftwareUpdateCheckUnitTests(
     prev_value = boto.config.get(section, name, None)
     self.boto_configs.append((section, name, prev_value))
     boto.config.set(section, name, value)
+
+  def test_not_interactive(self):
+    """Tests that update is not triggered if not running interactively."""
+    self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
+    with open(self.timestamp_file, 'w') as f:
+      f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
+    self.running_interactively = False
+    self.assertEqual(
+        False,
+        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   def test_no_tracker_file_version_recent(self):
     """Tests when no timestamp file exists and VERSION file is recent."""

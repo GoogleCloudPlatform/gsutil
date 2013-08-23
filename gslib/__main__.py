@@ -37,6 +37,7 @@ from gslib.command_runner import CommandRunner
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetConfigFilePath
 from gslib.util import HasConfiguredCredentials
+from gslib.util import IsRunningInteractively
 import gslib.exception
 import httplib2
 import oauth2client
@@ -309,7 +310,7 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
   except OSError as e:
     _OutputAndExit('OSError: %s.' % e.strerror)
   except IOError as e:
-    if e.errno == errno.EPIPE and not sys.stdout.isatty():
+    if e.errno == errno.EPIPE and not IsRunningInteractively():
       # If we get a pipe error, this just means that the pipe to stdout or
       # stderr is broken. This can happen if the user pipes gsutil to a command
       # that doesn't use the entire output stream. Instead of raising an error,

@@ -39,6 +39,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import MAX_HELP_NAME_LEN
+from gslib.util import IsRunningInteractively
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -149,7 +150,7 @@ class HelpCommand(Command):
     """Outputs simply formatted string, paginating if long and PAGER defined and
        output is a tty"""
     # Replace <B> and </B> with terminal formatting strings if connected to tty.
-    if not sys.stdout.isatty():
+    if not IsRunningInteractively():
       str = re.sub('<B>', '', str)
       str = re.sub('</B>', '', str)
       print str
