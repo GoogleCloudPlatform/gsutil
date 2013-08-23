@@ -2222,8 +2222,20 @@ class CpCommand(Command):
     # is versioned; and by leaving all_versions=False if the destination bucket
     # has versioning disabled we will avoid copying old versions all to the same
     # un-versioned destination object.
-    all_versions = (exp_dst_uri.names_bucket()
-                    and exp_dst_uri.get_versioning_config(self.headers))
+    try:
+      all_versions = (exp_dst_uri.names_bucket()
+                      and exp_dst_uri.get_versioning_config(self.headers))
+    except GSResponseError as e:
+      # This happens if the user doesn't have OWNER access on the bucket (needed
+      # to check if versioning is enabled). In this case fall back to copying
+      # all versions (which can be inefficient for the reason noted in the
+      # comment above). We don't try to warn the user because that would result
+      # in false positive warnings (since we can't check if versioning is
+      # enabled on the destination bucket).
+      if e.status == 403:
+        all_versions = True
+      else:
+        raise
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.logger, self.bucket_storage_uri_class, uri_strs,
