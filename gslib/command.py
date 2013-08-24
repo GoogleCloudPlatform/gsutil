@@ -828,13 +828,6 @@ class Command(object):
         return True
     return False
 
-  @staticmethod
-  def AddAcceptEncoding(headers):
-    """Adds accept-encoding:gzip to the dictionary of headers."""
-    # If Accept-Encoding is not already set, set it to enable gzip.
-    if 'accept-encoding' not in headers:
-      headers['accept-encoding'] = 'gzip'
-
   ######################
   # Private functions. #
   ######################

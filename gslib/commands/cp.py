@@ -42,6 +42,8 @@ import textwrap
 import threading
 import time
 
+from gslib.util import AddAcceptEncoding
+
 try:
   # This module doesn't necessarily exist on Windows.
   import resource
@@ -1321,7 +1323,7 @@ class CpCommand(Command):
     hash_algs = self._GetHashAlgs(src_key)
 
     # Add accept encoding for download operation.
-    self.AddAcceptEncoding(headers)
+    AddAcceptEncoding(headers)
 
     fp = None
     try:
@@ -1549,7 +1551,7 @@ class CpCommand(Command):
     headers = self.headers.copy() if self.headers else {}
     download_headers = headers.copy()
     # Add accept encoding for download operation.
-    self.AddAcceptEncoding(download_headers)
+    AddAcceptEncoding(download_headers)
 
     src_key = src_uri.get_key(False, download_headers)
     if not src_key:

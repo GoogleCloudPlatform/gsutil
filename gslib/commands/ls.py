@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import binascii
 import re
 
 from boto.s3.deletemarker import DeleteMarker
@@ -36,6 +35,7 @@ from gslib.help_provider import HELP_TYPE
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
+from gslib.util import PrintFullInfoAboutUri
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
 import boto
@@ -333,56 +333,9 @@ class LsCommand(Command):
           'etag': obj.etag.encode('utf-8'),
       }
       print printstr % format_args
-
       return (numobjs, numbytes)
-
     elif listing_style == ListingStyle.LONG_LONG:
-      # Run in a try/except clause so we can continue listings past
-      # access-denied errors (which can happen because user may have READ
-      # permission on object and thus see the bucket listing data, but lack
-      # FULL_CONTROL over individual objects and thus not be able to read
-      # their ACLs).
-      try:
-        print '%s:' % uri_str.encode('utf-8')
-        suri = self.suri_builder.StorageUri(uri_str)
-
-        headers = self.headers.copy()
-        # Add accept encoding so that the HEAD request matches what would be
-        # sent for a GET request.
-        self.AddAcceptEncoding(headers)
-        obj = suri.get_key(False, headers=headers)
-        print '\tCreation time:\t\t%s' % obj.last_modified
-        if obj.cache_control:
-          print '\tCache-Control:\t\t%s' % obj.cache_control
-        if obj.content_disposition:
-          print '\tContent-Disposition:\t\t%s' % obj.content_disposition
-        if obj.content_encoding:
-          print '\tContent-Encoding:\t\t%s' % obj.content_encoding
-        if obj.content_language:
-          print '\tContent-Language:\t%s' % obj.content_language
-        print '\tContent-Length:\t\t%s' % obj.size
-        print '\tContent-Type:\t\t%s' % obj.content_type
-        if hasattr(obj, 'component_count') and obj.component_count:
-          print '\tComponent-Count:\t%d' % obj.component_count
-        if obj.metadata:
-          prefix = uri.get_provider().metadata_prefix
-          for name in obj.metadata:
-            meta_string = '\t%s%s:\t\t%s' % (prefix, name, obj.metadata[name])
-            print meta_string.encode('utf-8')
-        if hasattr(obj, 'cloud_hashes'):
-          for alg in obj.cloud_hashes:
-            print '\tHash (%s):\t\t%s' % (
-                alg, binascii.b2a_hex(obj.cloud_hashes[alg]))
-        print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
-        print '\tACL:\t\t%s' % (suri.get_acl(False, self.headers))
-        return (1, obj.size)
-      except boto.exception.GSResponseError as e:
-        if e.status == 403:
-          print ('\tACL:\t\t\tACCESS DENIED. Note: you need FULL_CONTROL '
-                 'permission\n\t\t\ton the object to read its ACL.')
-          return (1, obj.size)
-        else:
-          raise e
+      return PrintFullInfoAboutUri(uri, True, self.headers)
     else:
       raise Exception('Unexpected ListingStyle(%s)' % listing_style)
 
