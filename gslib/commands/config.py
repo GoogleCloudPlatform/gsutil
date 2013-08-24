@@ -814,16 +814,12 @@ class ConfigCommand(Command):
 # you set in the API Console. Either of these defaults can be overridden
 # by specifying the -p option to the 'mb' and 'ls' commands.
 """
-    if default_project_id:
-      config_file.write('%sdefault_project_id = %s\n\n\n' %
-                        (project_id_section_prelude, default_project_id))
-    else:
-      sys.stderr.write('No default project ID entered. You will need to edit '
-                       'the default_project_id value\nin your boto config file '
-                       'before using "gsutil ls gs://" or "mb" commands'
-                       'with the\ndefault API version (2).\n')
-      config_file.write('%s#default_project_id = <value>\n\n\n' %
-                        project_id_section_prelude)
+    if not default_project_id:
+      raise CommandException(
+          'No default project ID entered. The default project ID is needed by '
+          'the\nls and mb commands; please try again.')
+    config_file.write('%sdefault_project_id = %s\n\n\n' %
+                      (project_id_section_prelude, default_project_id))
 
     # Write the config file OAuth2 section.
     config_file.write(CONFIG_OAUTH2_CONFIG_CONTENT)
