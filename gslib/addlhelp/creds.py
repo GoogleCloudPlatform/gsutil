@@ -64,11 +64,31 @@ _detailed_help_text = ("""
     default for the purposes of API access, rather than an Owner. In particular,
     the fact that Editors have full_control access in the default object and
     bucket ACLs, but the canned ACL options remove full_control access from
-    Editors, can lead to unexpected results. The solution to this problem
-    is to visit https://code.google.com/apis/console/, find the email address
-    for your service account under "API Access", and then add that email address
-    as an Owner under the "Team" tab. For further information about account
-    roles, see: https://developers.google.com/console/help/#DifferentRoles
+    Editors, can lead to unexpected results. The solution to this problem is to
+    add the email address for your service account as a project Owner. To find
+    the email address, visit the
+    `Google Cloud Console<https://cloud.google.com/console#/project>`_, click on
+    the project you're using, click "APIs", and click "All registered apps" in
+    the top left; service accounts will appear as something like
+    "Service Account-<service account id>", which you can click to view the
+    email address.
+
+    To create a service account, visit the Google Cloud Console and then:
+
+       - Click the APIs tab on the left
+
+       - Click "All Registered Apps"
+
+       - Click the red "Register App" button
+
+       - Create a "Web Application" type
+
+       - Once that's created, click on the "Certificate" area
+
+       - Click the "Generate Certificate" button.
+
+    For further information about account roles, see:
+      https://developers.google.com/console/help/#DifferentRoles
 
     For more details about OAuth2 service accounts, see:
       https://developers.google.com/accounts/docs/OAuth2ServiceAccount

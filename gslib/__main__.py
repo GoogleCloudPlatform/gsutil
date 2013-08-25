@@ -241,9 +241,9 @@ if you attempt to create a bucket or upload an object without having first
 enabled billing for the project you are using. To remedy this problem, please do
 the following:
 
-1. Navigate to the Google APIs console (https://code.google.com/apis/console),
-and ensure the drop-down selector beneath "Google APIs" shows the project
-you're attempting to use.
+1. Navigate to the https://cloud.google.com/console#/project, click on the
+   project you will use, and then copy the Project Number listed under that
+   project.
 
 """)
   acct_help_part_2 = '\n'
@@ -336,11 +336,10 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
       if not HasConfiguredCredentials():
         _OutputAndExit('\n'.join(textwrap.wrap(
             'You are attempting to access protected data with no configured '
-            'credentials. Please see '
-            'http://code.google.com/apis/storage/docs/signup.html for details '
-            'about activating the Google Cloud Storage service and then run '
-            'the "gsutil config" command to configure gsutil to use these '
-            'credentials.')))
+            'credentials. Please visit '
+            'https://cloud.google.com/console#/project and sign up for an '
+            'account, and then run the "gsutil config" command to configure '
+            'gsutil to use these credentials.')))
       elif (e.error_code == 'AccountProblem'
             and ','.join(args).find('gs://') != -1):
         default_project_id = boto.config.get_value('GSUtil',

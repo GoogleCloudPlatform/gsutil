@@ -24,10 +24,6 @@ _detailed_help_text = ("""
 <B>OVERVIEW</B>
   This section discusses how to work with projects in Google Cloud Storage.
 
-  For more information about using the Google APIs Console to administer
-  project memberships (which are automatically included in ACLs for buckets
-  you create) see https://code.google.com/apis/console#:storage:access.
-
 
 <B>PROJECT MEMBERS AND PERMISSIONS</B>
   There are three groups of users associated with each project:
@@ -45,8 +41,8 @@ _detailed_help_text = ("""
   These projects make it easy to set up a bucket and start uploading objects
   with access control appropriate for a project at your company, as the three
   group memberships can be configured by your administrative staff. Control
-  over projects and their associated memberships is provided by the Google
-  APIs Console (https://code.google.com/apis/console).
+  over projects and their associated memberships is provided by the 
+  `Google Cloud Console<https://cloud.google.com/console#/project>`_.
 
 
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>
@@ -99,15 +95,17 @@ _detailed_help_text = ("""
 
   You can edit the bucket ACL if you want to (see "gsutil help acl"),
   but for many cases you'll never need to, and instead can change group
-  membership via the APIs console.
+  membership via the
+  `Google Cloud Console<https://cloud.google.com/console#/project>`_.
+
 
 <B>IDENTIFYING PROJECTS WHEN CREATING AND LISTING BUCKETS</B>
   When you create a bucket or list your buckets, you need to provide the
   project ID that want to create or list (using the gsutil mb -p option or
   the gsutil ls -p option, respectively). The project's name shown in the
-  Google APIs Console is a user-friendly name that you can choose; this is
+  Google Cloud Console is a user-friendly name that you can choose; this is
   not the project ID required by the gsutil mb and ls commands. To find the
-  project ID, go to the Storage Access pane in the Google APIs Console. Your
+  project ID, go to the Storage Access pane in the Google Cloud Console. Your
   project ID is listed under Identifying your project.
 """)
 
@@ -119,8 +117,8 @@ class CommandOptions(HelpProvider):
     # Name of command or auxiliary help info for which this help applies.
     HELP_NAME : 'projects',
     # List of help name aliases.
-    HELP_NAME_ALIASES : ['apis console', 'console', 'dev console', 'project',
-                         'proj', 'project-id'],
+    HELP_NAME_ALIASES : ['apis console', 'cloud console', 'console',
+                         'dev console', 'project', 'proj', 'project-id'],
     # Type of help:
     HELP_TYPE : HelpType.ADDITIONAL_HELP,
     # One line summary of this help.

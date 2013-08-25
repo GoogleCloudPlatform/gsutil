@@ -53,13 +53,13 @@ _detailed_help_text = ("""
 
 <B>BILLING AND ACCOUNT QUESTIONS</B>
   For questions about billing or account issues, please visit
-  http://code.google.com/apis/console-help/#billing.  If you want to cancel
-  billing, you can do so on the Billing pane of the Google APIs Console. For
-  more information, see
-  http://code.google.com/apis/console-help/#BillingCancelled. Caution: When you
-  disable billing, you also disable the Google Cloud Storage service. Make sure
-  you want to disable the Google Cloud Storage service before you disable
-  billing.
+  https://developers.google.com/storage/docs/pricing-and-terms.
+  If you want to cancel billing, visit the
+  `Google Cloud Console<https://cloud.google.com/console#/project>`_, click on
+  the project you're using, click the gear in the upper right corner, and select
+  "Billing" from the drop-down. Caution: When you disable billing, you also
+  disable the Google Cloud Storage service. Make sure you want to disable the
+  Google Cloud Storage service before you disable billing.
 """)
 
 

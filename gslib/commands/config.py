@@ -228,7 +228,7 @@ try:
 except ImportError:
   pass
 
-GOOG_API_CONSOLE_URI = 'http://code.google.com/apis/console'
+GOOG_CLOUD_CONSOLE_URI = 'https://cloud.google.com/console#/project'
 
 SCOPE_FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
 SCOPE_READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
@@ -785,34 +785,32 @@ class ConfigCommand(Command):
     # project ID input from the user.
     if launch_browser:
       sys.stdout.write(
-          'Attempting to launch a browser to open the Google API console at '
+          'Attempting to launch a browser to open the Google Cloud Console at '
           'URL: %s\n\n'
           '[Note: due to a Python bug, you may see a spurious error message '
           '"object is not\n callable [...] in [...] Popen.__del__" which can '
-          'be ignored.]\n\n' % GOOG_API_CONSOLE_URI)
+          'be ignored.]\n\n' % GOOG_CLOUD_CONSOLE_URI)
       sys.stdout.write(
-          'In your browser you should see the API Console. Click "Storage" and '
-          'look for the value under "Identifying your project\n\n')
-      if not webbrowser.open(GOOG_API_CONSOLE_URI, new=1, autoraise=True):
+          'In your browser you should see the Cloud Console. Click on the '
+          'project you will\nuse, and then copy the Project Number listed under '
+          'that project.\n\n')
+      if not webbrowser.open(GOOG_CLOUD_CONSOLE_URI, new=1, autoraise=True):
         sys.stdout.write(
             'Launching browser appears to have failed; please navigate a '
-            'browser to the following URL:\n%s\n' % GOOG_API_CONSOLE_URI)
+            'browser to the following URL:\n%s\n' % GOOG_CLOUD_CONSOLE_URI)
       # Short delay; webbrowser.open on linux insists on printing out a message
       # which we don't want to run into the prompt for the auth code.
       time.sleep(2)
     else:
       sys.stdout.write(
-          '\nPlease navigate your browser to %s,\nthen click "Services" on the '
-          'left side panel and ensure you have Google Cloud\nStorage'
-          'activated, then click "Google Cloud Storage" on the left side '
-          'panel and\nfind the "x-goog-project-id" on that page.\n' %
-          GOOG_API_CONSOLE_URI)
+          '\nPlease navigate your browser to %s,\nthen click on the project '
+          'you will use, and then copy the Project Number listed\nunder that '
+          'project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
     default_project_id = raw_input('What is your project-id? ')
     project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
-# use with the 'mb' and 'ls' commands. If defined it overrides the default value
-# you set in the API Console. Either of these defaults can be overridden
-# by specifying the -p option to the 'mb' and 'ls' commands.
+# use with the 'mb' and 'ls' commands. This default can be overridden by
+# specifying the -p option to the 'mb' and 'ls' commands.
 """
     if not default_project_id:
       raise CommandException(

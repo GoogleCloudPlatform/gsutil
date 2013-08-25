@@ -15,7 +15,7 @@
 """An OAuth2 client library.
 
 This library provides a client implementation of the OAuth2 protocol (see
-http://code.google.com/apis/accounts/docs/OAuth2.html).
+https://developers.google.com/storage/docs/authentication.html#oauth).
 
 **** Experimental API ****
 
