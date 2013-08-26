@@ -2633,7 +2633,10 @@ def _GetPathBeforeFinalDir(uri):
     String name of above-described path, sans final path separator.
   """
   sep = uri.delim
-  assert not uri.names_file()
+  # If the source uri argument had a wildcard and wasn't expanded by the
+  # shell, then uri.names_file() will always be true, so we check for
+  # this case explicitly.
+  assert ((not uri.names_file()) or ContainsWildcard(uri.object_name))
   if uri.names_directory():
     past_scheme = uri.uri[len('file://'):]
     if past_scheme.find(sep) == -1:

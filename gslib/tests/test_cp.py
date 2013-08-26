@@ -548,6 +548,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(fpath2, 'r') as f:
       self.assertEqual(f.read(), contents)
 
+  def test_upload_with_subdir_and_unexpanded_wildcard(self):
+    fpath1 = self.CreateTempFile(file_name=('tmp', 'x', 'y', 'z'))
+    bucket_uri = self.CreateBucket()
+    wildcard_uri = '%s*' % fpath1[:-5]
+    stderr = self.RunGsUtil(['cp', '-R', wildcard_uri, suri(bucket_uri)],
+                            return_stderr=True)
+    self.assertIn('Copying file:', stderr)
+
   def test_filter_existing_components_non_versioned(self):
     bucket_name = 'filter_existing_components_bucket_non_versioned'
 
