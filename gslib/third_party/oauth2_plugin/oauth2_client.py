@@ -63,9 +63,6 @@ LOG = logging.getLogger('oauth2_client')
 # operation doesn't attempt concurrent refreshes.
 token_exchange_lock = threading.Lock()
 
-# SHA1 sum of the CA certificates file imported from boto.
-CACERTS_FILE_SHA1SUM = '183c495586bf93d2effe9b3a43d45b1b4fa14ff3'
-
 GSUTIL_DEFAULT_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control'
 
 
@@ -247,7 +244,7 @@ class OAuth2Client(object):
   def __init__(self, cache_key_base, access_token_cache=None,
                datetime_strategy=datetime.datetime, auth_uri=None,
                token_uri=None, disable_ssl_certificate_validation=False,
-               proxy_host=None, proxy_port=None):
+               proxy_host=None, proxy_port=None, ca_certs_file=None):
     # datetime_strategy is used to invoke utcnow() on; it is injected into the
     # constructor for unit testing purposes.
     self.auth_uri = auth_uri
@@ -256,8 +253,7 @@ class OAuth2Client(object):
     self.datetime_strategy = datetime_strategy
     self.access_token_cache = access_token_cache or InMemoryTokenCache()
     self.disable_ssl_certificate_validation = disable_ssl_certificate_validation
-    self.ca_certs_file = os.path.join(
-        os.path.dirname(os.path.abspath(cacerts.__file__)), 'cacerts.txt')
+    self.ca_certs_file = ca_certs_file
     if proxy_host and proxy_port:
       self._proxy_info = httplib2.ProxyInfo(socks.PROXY_TYPE_HTTP,
                                             proxy_host,
@@ -266,16 +262,6 @@ class OAuth2Client(object):
     else:
       self._proxy_info = None
       
-    # Check that the cert file distributed with boto has not been tampered  
-    # with.  
-    h = sha1()  
-    h.update(file(self.ca_certs_file).read())  
-    actual_sha1 = h.hexdigest()  
-    if actual_sha1 != CACERTS_FILE_SHA1SUM:  
-      raise Error(  
-          'CA certificates file does not have expected SHA1 sum; '  
-          'expected: %s, actual: %s' % (CACERTS_FILE_SHA1SUM, actual_sha1)) 
-  
   def CreateHttpRequest(self):
     return httplib2.Http(
         ca_certs=self.ca_certs_file,
@@ -345,7 +331,7 @@ class OAuth2ServiceAccountClient(OAuth2Client):
                access_token_cache=None, auth_uri=None, token_uri=None,
                datetime_strategy=datetime.datetime,
                disable_ssl_certificate_validation=False,
-               proxy_host=None, proxy_port=None):
+               proxy_host=None, proxy_port=None, ca_certs_file=None):
     """Creates an OAuth2ServiceAccountClient.
 
     Args:
@@ -363,13 +349,15 @@ class OAuth2ServiceAccountClient(OAuth2Client):
           to be used.
       proxy_port: An optional int specifying the port number of an HTTP proxy
           to be used.
+      ca_certs_file: The cacerts.txt file to use.
     """
     super(OAuth2ServiceAccountClient, self).__init__(
         cache_key_base=client_id, auth_uri=auth_uri, token_uri=token_uri,
         access_token_cache=access_token_cache,
         datetime_strategy=datetime_strategy,
         disable_ssl_certificate_validation=disable_ssl_certificate_validation,
-        proxy_host=proxy_host, proxy_port=proxy_port)
+        proxy_host=proxy_host, proxy_port=proxy_port,
+        ca_certs_file=ca_certs_file)
     self.client_id = client_id
     self.private_key = private_key
     self.password = password
@@ -391,7 +379,7 @@ class OAuth2UserAccountClient(OAuth2Client):
                auth_uri=None, access_token_cache=None,
                datetime_strategy=datetime.datetime,
                disable_ssl_certificate_validation=False,
-               proxy_host=None, proxy_port=None):
+               proxy_host=None, proxy_port=None, ca_certs_file=None):
     """Creates an OAuth2UserAccountClient.
 
     Args:
@@ -409,13 +397,15 @@ class OAuth2UserAccountClient(OAuth2Client):
           to be used.
       proxy_port: An optional int specifying the port number of an HTTP proxy
           to be used.
+      ca_certs_file: The cacerts.txt file to use.
     """
     super(OAuth2UserAccountClient, self).__init__(
         cache_key_base=refresh_token, auth_uri=auth_uri, token_uri=token_uri,
         access_token_cache=access_token_cache,
         datetime_strategy=datetime_strategy,
         disable_ssl_certificate_validation=disable_ssl_certificate_validation,
-        proxy_host=proxy_host, proxy_port=proxy_port)
+        proxy_host=proxy_host, proxy_port=proxy_port,
+        ca_certs_file=ca_certs_file)
     self.token_uri = token_uri
     self.client_id = client_id
     self.client_secret = client_secret

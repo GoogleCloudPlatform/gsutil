@@ -11,6 +11,8 @@ LOG = logging.getLogger('test_oauth2_client')
 ACCESS_TOKEN = 'abc123'
 TOKEN_URI = 'https://provider.example.com/oauth/provider?mode=token'
 AUTH_URI = 'https://provider.example.com/oauth/provider?mode=authorize'
+DEFAULT_CA_CERTS_FILE = os.path.abspath(
+    os.path.join('gslib', 'data', 'cacerts.txt'))
 
 class MockDateTime:
   def __init__(self):
@@ -24,7 +26,8 @@ class MockOAuth2ServiceAccountClient(oauth2_client.OAuth2ServiceAccountClient):
                datetime_strategy):
     super(MockOAuth2ServiceAccountClient, self).__init__(
         client_id, private_key, password, auth_uri=auth_uri,
-        token_uri=token_uri, datetime_strategy=datetime_strategy)
+        token_uri=token_uri, datetime_strategy=datetime_strategy,
+        ca_certs_file=DEFAULT_CA_CERTS_FILE)
     self.Reset()
 
   def Reset(self):
@@ -43,7 +46,8 @@ class MockOAuth2UserAccountClient(oauth2_client.OAuth2UserAccountClient):
                auth_uri, datetime_strategy):
     super(MockOAuth2UserAccountClient, self).__init__(
         token_uri, client_id, client_secret, refresh_token, auth_uri=auth_uri,
-        datetime_strategy=datetime_strategy)
+        datetime_strategy=datetime_strategy,
+        ca_certs_file=DEFAULT_CA_CERTS_FILE)
     self.Reset()
 
   def Reset(self):

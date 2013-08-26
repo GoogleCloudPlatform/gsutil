@@ -31,6 +31,8 @@ import traceback
 
 import apiclient
 import boto.exception
+from gslib import GSUTIL_DIR
+from gslib import GSLIB_DIR
 from gslib import util
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
@@ -51,12 +53,10 @@ except ImportError:
   pass
 
 
-GSLIB_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
-GSUTIL_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
 debug = 0
 
 DEFAULT_CA_CERTS_FILE = os.path.abspath(
-    os.path.join(GSUTIL_DIR, 'gslib', 'data', 'cacerts.txt'))
+    os.path.join(GSLIB_DIR, 'data', 'cacerts.txt'))
 
 
 def _OutputAndExit(message):

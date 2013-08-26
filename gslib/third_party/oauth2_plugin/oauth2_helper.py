@@ -14,6 +14,7 @@
 
 """Helper routines to facilitate use of oauth2_client in gsutil."""
 
+import boto
 import sys
 import time
 import webbrowser
@@ -99,7 +100,8 @@ def OAuth2ClientFromBotoConfig(config,
             access_token_cache=token_cache,
             disable_ssl_certificate_validation=not(config.getbool(
                 'Boto', 'https_validate_certificates', True)),
-            proxy_host=proxy_host, proxy_port=proxy_port)
+            proxy_host=proxy_host, proxy_port=proxy_port,
+            ca_certs_file=config.get_value('Boto', 'ca_certificates_file'))
   else:
     raise Exception('You have attempted to create an OAuth2 client without '
         'setting up OAuth2 credentials. Please run "gsutil config" to set up '
