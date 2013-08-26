@@ -78,9 +78,9 @@ def _OutputUsageAndExit(command_runner):
 def main():
   global debug
 
-  if sys.version_info[:3] < (2, 6):
+  if not (2, 6) <= sys.version_info[:3] < (3,):
     raise gslib.exception.CommandException(
-        'gsutil requires Python 2.6 or higher.')
+        'gsutil requires python 2.6 or 2.7.')
 
   # Load the gsutil version number and append it to boto.UserAgent so the value
   # is set before anything instantiates boto. (If parts of boto were
