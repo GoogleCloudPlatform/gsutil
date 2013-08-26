@@ -23,7 +23,11 @@ class GsUtilTestCase(unittest.TestCase):
   def assertNumLines(self, text, numlines):
     self.assertEqual(text.count('\n'), numlines)
 
-  def MakeTempName(self, kind):
+  def MakeRandomTestString(self):
+    """Creates a random string of hex characters 8 characters long."""
+    return '%08x' % random.randrange(256**4)
+
+  def MakeTempName(self, kind, prefix=''):
     """Creates a temporary name that is most-likely unique.
 
     Args:
@@ -32,9 +36,9 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The temporary name.
     """
-    name = 'gsutil-test-%s-%s' % (self._testMethodName, kind)
+    name = '%sgsutil-test-%s-%s' % (prefix, self._testMethodName, kind)
     name = name[:MAX_BUCKET_LENGTH-9]
-    name = '%s-%08x' % (name, random.randrange(256**4))
+    name = '%s-%s' % (name, self.MakeRandomTestString())
     return name
 
   def CreateTempDir(self, test_files=0):

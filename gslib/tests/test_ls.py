@@ -73,8 +73,11 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_bucket_list_wildcard(self):
-    bucket1_uri = self.CreateBucket()
-    bucket2_uri = self.CreateBucket()
+    random_prefix = self.MakeRandomTestString()
+    bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
+    bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)
+    bucket1_uri = self.CreateBucket(bucket_name=bucket1_name)
+    bucket2_uri = self.CreateBucket(bucket_name=bucket2_name)
     # This just double checks that the common prefix of the two buckets is what
     # we think it should be (based on implementation detail of CreateBucket).
     # We want to be careful when setting a wildcard on buckets to make sure we
@@ -82,7 +85,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     common_prefix = posixpath.commonprefix([suri(bucket1_uri),
                                             suri(bucket2_uri)])
     self.assertTrue(common_prefix.startswith(
-        'gs://gsutil-test-test_bucket_list_wildcard-bucket-'))
+        'gs://%sgsutil-test-test_bucket_list_wildcard-bucket-' % random_prefix))
     wildcard = '%s*' % common_prefix
 
     # Use @Retry as hedge against bucket listing eventual consistency.

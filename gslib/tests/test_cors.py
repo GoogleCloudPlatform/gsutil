@@ -15,6 +15,7 @@
 import posixpath
 from xml.dom.minidom import parseString
 
+from gslib.util import Retry
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
@@ -162,24 +163,42 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stdout, self.cors_doc)
 
   def test_set_wildcard_non_null_cors(self):
-    bucket1_uri = self.CreateBucket()
-    bucket2_uri = self.CreateBucket()
+    random_prefix = self.MakeRandomTestString()
+    bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
+    bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)
+    bucket1_uri = self.CreateBucket(bucket_name=bucket1_name)
+    bucket2_uri = self.CreateBucket(bucket_name=bucket2_name)
     # This just double checks that the common prefix of the two buckets is what
     # we think it should be (based on implementation detail of CreateBucket).
     # We want to be careful when setting a wildcard on buckets to make sure we
-    # don't step outside the test buckets to effect other buckets.
+    # don't step outside the test buckets to affect other buckets.
     common_prefix = posixpath.commonprefix([suri(bucket1_uri),
                                             suri(bucket2_uri)])
     self.assertTrue(common_prefix.startswith(
-        'gs://gsutil-test-test_set_wildcard_non_null_cors-bucket-'))
+        'gs://%sgsutil-test-test_set_wildcard_non_null_cors-' % random_prefix))
     wildcard = '%s*' % common_prefix
 
     fpath = self.CreateTempFile(contents=self.cors_doc)
-    stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
-                            return_stderr=True)
-    self.assertIn('Setting CORS on %s/...' % suri(bucket1_uri), stderr)
-    self.assertIn('Setting CORS on %s/...' % suri(bucket2_uri), stderr)
-    self.assertEqual(stderr.count('Setting CORS'), 2)
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    expected = set(['Setting CORS on %s/...' % suri(bucket1_uri),
+                    'Setting CORS on %s/...' % suri(bucket2_uri)])
+    actual = set()
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
+                              return_stderr=True)
+      outlines = stderr.splitlines()
+      for line in outlines:
+        # Ignore the deprecation warnings from running the old cors command.
+        if ('You are using a deprecated alias' in line or
+            'gsutil help cors' in line or
+            'Please use "cors" with the appropriate sub-command' in line):
+          continue
+        actual.add(line)
+      self.assertEqual(expected, actual)
+      self.assertEqual(stderr.count('Setting CORS'), 2)
+    _Check1()
 
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
                             return_stdout=True)
