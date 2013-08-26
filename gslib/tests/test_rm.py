@@ -13,8 +13,10 @@
 # limitations under the License.
 
 import gslib.tests.testcase as testcase
-from gslib.util import Retry
+from boto.exception import GSResponseError
+from gslib.exception import CommandException
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
 
 
 class TestRm(testcase.GsUtilIntegrationTestCase):
@@ -173,15 +175,49 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('foobar')
     folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
-    stderr = self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)],
-                            return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 2)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
     def _Check1():
+      self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)])
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout, '')
     _Check1()
+    # Bucket should not be deleted (Should not get GSResponseError).
+    bucket_uri.get_location(validate=False)
+
+  def test_recusive_bucket_rm(self):
+    """Test for 'rm -r' of a bucket."""
+    bucket_uri = self.CreateBucket(cleanup=False)
+    self.CreateObject(bucket_uri) 
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check1():
+      self.RunGsUtil(['rm', '-r', suri(bucket_uri)])
+      # Bucket should be deleted.
+      stderr = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('bucket does not exist', stderr)
+    _Check1()
+
+    # Now try same thing, but for a versioned bucket with multiple versions of
+    # an object present.
+    bucket_uri = self.CreateVersionedBucket(cleanup=False)
+    self.CreateObject(bucket_uri, 'obj', 'z') 
+    self.CreateObject(bucket_uri, 'obj', 'z') 
+    self.CreateObject(bucket_uri, 'obj', 'z') 
+    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('versioning enabled', stderr)
+
+    # Now try with rm -ra.
+    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    def _Check2():
+      self.RunGsUtil(['rm', '-ra', suri(bucket_uri)])
+      # Bucket should be deleted.
+      stderr = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('bucket does not exist', stderr)
+    _Check2()
 
   def test_rm_quiet(self):
     """Test that 'rm -q' outputs no progress indications."""

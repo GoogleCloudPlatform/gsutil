@@ -71,7 +71,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
+                   cleanup=True):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -82,6 +83,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
       storage_class: storage class to use. If not provided we us standard.
+      cleanup: Indicates bucket should be removed at end of test.
 
     Returns:
       StorageUri for the created bucket.
@@ -97,14 +99,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         'test', bucket_uri, headers)
 
     bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
-    self.bucket_uris.append(bucket_uri)
+    if cleanup:
+      self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
                         object_name=self.MakeTempName('obj'),
                         contents='test %d' % i)
     return bucket_uri
 
-  def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
+  def CreateVersionedBucket(self, bucket_name=None, test_objects=0,
+                            cleanup=True):
     """Creates a versioned test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -114,12 +118,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
+      cleanup: Indicates bucket should be removed at end of test.
 
     Returns:
       StorageUri for the created bucket with versioning enabled.
     """
     bucket_uri = self.CreateBucket(bucket_name=bucket_name,
-                               test_objects=test_objects)
+                                   test_objects=test_objects, cleanup=cleanup)
     bucket_uri.configure_versioning(True)
     return bucket_uri
 

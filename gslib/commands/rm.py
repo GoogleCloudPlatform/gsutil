@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import boto
+import textwrap
 
 from boto.exception import GSResponseError
 from gslib.command import Command
@@ -54,10 +55,21 @@ _detailed_help_text = ("""
   subdirectories.
 
   You can also use the -R option to specify recursive object deletion. Thus, for
-  example, the following two commands will both remove all objects in a bucket:
+  example, either of the following two commands will remove gs://bucket/subdir
+  and all objects and subdirectories under it:
+
+    gsutil rm gs://bucket/subdir**
+    gsutil rm -R gs://bucket/subdir
+
+  Running gsutil rm -R on a bucket will delete all objects in the bucket, and
+  then delete the bucket:
+
+    gsutil rm -R gs://bucket
+
+  If you want to delete all objects in the bucket, but not the bucket itself,
+  this command will work:
 
     gsutil rm gs://bucket/**
-    gsutil rm -R gs://bucket
 
   If you have a large number of objects to remove you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
@@ -83,9 +95,9 @@ _detailed_help_text = ("""
               exit status will be 0 even if some objects couldn't be removed.
 
   -R, -r      Causes bucket contents to be removed recursively (i.e., including
-              all objects and subdirectories). Will not delete the bucket
-              itself; you need to run the gsutil rb command separately to do
-              that.
+              all objects and subdirectories). If used with a bucket-only URI
+              (like gs://bucket), after deleting objects and subdirectories
+              gsutil will delete the bucket.
 
   -a          Delete all versions of an object.
 """)
@@ -145,6 +157,14 @@ class RmCommand(Command):
                            ' needed, and will eventually be removed.\n'
                            % self.command_name)
 
+    if self.recursion_requested and not self.all_versions:
+      for uri_str in self.args:
+        if self.suri_builder.StorageUri(uri_str).get_versioning_config():
+          raise CommandException(
+              'Running gsutil rm -R on versioning-enabled buckets will not '
+              'work\nwithout specifying the -a flag. Please try again, '
+              'using:\n\tgsutil rm -Ra %s' % ' '.join(self.args))
+
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
@@ -152,6 +172,13 @@ class RmCommand(Command):
 
     remove_func = self._MkRemoveFunc()
     exception_handler = self._MkRemoveExceptionHandler()
+
+    bucket_uris_to_delete = []
+    if self.recursion_requested:
+      for uri_str in self.args:
+        uri = self.suri_builder.StorageUri(uri_str)
+        if uri.names_bucket():
+          bucket_uris_to_delete.append(uri)
 
     try:
       # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
@@ -172,7 +199,10 @@ class RmCommand(Command):
     # This assumption that rm -a is only called for versioned buckets should be
     # corrected, but the fix is non-trivial.
     except CommandException as e:
-      if not self.continue_on_error:
+      # Don't raise if there are buckets to delete -- it's valid to say:
+      #   gsutil rm -r gs://some_bucket
+      # if the bucket is empty.
+      if not bucket_uris_to_delete and not self.continue_on_error:
         raise
     except GSResponseError, e:
       if not self.continue_on_error:
@@ -204,6 +234,10 @@ class RmCommand(Command):
           if not e.reason.startswith('No URIs matched:'):
             raise
 
+    # Now that all data has been deleted, delete any bucket URIs.
+    for uri in bucket_uris_to_delete:
+      uri.delete_bucket(self.headers)
+
     return 0
 
   def _MkRemoveExceptionHandler(self):
@@ -218,17 +252,6 @@ class RmCommand(Command):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr(),
           is_latest=name_expansion_result.is_latest)
-      if exp_src_uri.names_container():
-        if exp_src_uri.is_cloud_uri():
-          # Before offering advice about how to do rm + rb, ensure those
-          # commands won't fail because of bucket naming problems.
-          boto.s3.connection.check_lowercase_bucketname(exp_src_uri.bucket_name)
-        uri_str = exp_src_uri.object_name.rstrip('/')
-        raise CommandException('"rm" command will not remove buckets. To '
-                               'delete this/these bucket(s) do:\n\tgsutil rm '
-                               '%s/*\n\tgsutil rb %s' % (uri_str, uri_str))
-
-      # Perform delete.
       self.logger.info('Removing %s...', name_expansion_result.expanded_uri_str)
       try:
         exp_src_uri.delete_key(validate=False, headers=self.headers)
