@@ -159,11 +159,13 @@ class RmCommand(Command):
 
     if self.recursion_requested and not self.all_versions:
       for uri_str in self.args:
-        if self.suri_builder.StorageUri(uri_str).get_versioning_config():
+        uri = self.suri_builder.StorageUri(uri_str)
+        if uri.names_bucket() and uri.get_versioning_config():
           raise CommandException(
-              'Running gsutil rm -R on versioning-enabled buckets will not '
-              'work\nwithout specifying the -a flag. Please try again, '
-              'using:\n\tgsutil rm -Ra %s' % ' '.join(self.args))
+              'Running gsutil rm -R on a bucket-only URI (%s)\nwith versioning '
+              'enabled will not work without specifying the -a flag. Please '
+              'try\nagain, using:\n\tgsutil rm -Ra %s'
+              % (uri_str,' '.join(self.args)))
 
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True

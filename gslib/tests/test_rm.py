@@ -106,9 +106,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
       self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
       self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
-      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertEqual(stdout, '')
+      # Bucket should no longer exist.
+      stderr = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('bucket does not exist', stderr)
     all_stderr_lines = set()
     _Check(all_stderr_lines)
 
@@ -187,7 +188,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
   def test_recusive_bucket_rm(self):
     """Test for 'rm -r' of a bucket."""
-    bucket_uri = self.CreateBucket(cleanup=False)
+    bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri) 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, delay=1, backoff=1)
@@ -201,7 +202,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
     # Now try same thing, but for a versioned bucket with multiple versions of
     # an object present.
-    bucket_uri = self.CreateVersionedBucket(cleanup=False)
+    bucket_uri = self.CreateVersionedBucket()
     self.CreateObject(bucket_uri, 'obj', 'z') 
     self.CreateObject(bucket_uri, 'obj', 'z') 
     self.CreateObject(bucket_uri, 'obj', 'z') 

@@ -63,7 +63,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     while self.bucket_uris:
       bucket_uri = self.bucket_uris[-1]
-      bucket_list = list(bucket_uri.list_bucket(all_versions=True))
+      try:
+        bucket_list = list(bucket_uri.list_bucket(all_versions=True))
+      except GSResponseError as e:
+        # This can happen for tests of rm -r command, which for bucket-only
+        # URIs delete the bucket at the end.
+        if e.status == 404:
+          self.bucket_uris.pop()
+          continue
+        else:
+          raise
       while bucket_list:
         for k in bucket_list:
           k.delete()
@@ -71,8 +80,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
-                   cleanup=True):
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -83,7 +91,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
       storage_class: storage class to use. If not provided we us standard.
-      cleanup: Indicates bucket should be removed at end of test.
 
     Returns:
       StorageUri for the created bucket.
@@ -99,16 +106,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         'test', bucket_uri, headers)
 
     bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
-    if cleanup:
-      self.bucket_uris.append(bucket_uri)
+    self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
                         object_name=self.MakeTempName('obj'),
                         contents='test %d' % i)
     return bucket_uri
 
-  def CreateVersionedBucket(self, bucket_name=None, test_objects=0,
-                            cleanup=True):
+  def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
     """Creates a versioned test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -118,13 +123,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
-      cleanup: Indicates bucket should be removed at end of test.
 
     Returns:
       StorageUri for the created bucket with versioning enabled.
     """
     bucket_uri = self.CreateBucket(bucket_name=bucket_name,
-                                   test_objects=test_objects, cleanup=cleanup)
+                                   test_objects=test_objects)
     bucket_uri.configure_versioning(True)
     return bucket_uri
 
