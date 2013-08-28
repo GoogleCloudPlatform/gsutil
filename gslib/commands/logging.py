@@ -26,38 +26,34 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 from gslib.util import UnaryDictToXml
 from xml.dom.minidom import parseString as XmlParseString
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_SET_SYNOPSIS = """
   gsutil logging set on -b logging_bucket [-o log_object_prefix] uri...
   gsutil logging set off uri...
+"""
+
+_GET_SYNOPSIS = """
   gsutil logging get uri
+"""
 
+_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS + '\n'
 
-<B>DESCRIPTION</B>
-  Google Cloud Storage offers access logs and storage data in the form of
-  CSV files that you can download and view. Access logs provide information
-  for all of the requests made on a specified bucket in the last 24 hours,
-  while the storage logs provide information about the storage consumption of
-  that bucket for the last 24 hour period. The logs and storage data files
-  are automatically created as new objects in a bucket that you specify, in
-  24 hour intervals.
-
-  The logging command has two sub-commands:
-
-  set
+_SET_DESCRIPTION = """
+  <B>SET</B>
     The set sub-command has two sub-commands:
 
-    on
+    <B>ON</B>
       The "gsutil set on" command will enable access logging of the
       buckets named by the specified uris, outputting log files in the specified
       logging_bucket. logging_bucket must already exist, and all URIs must name
@@ -82,7 +78,7 @@ _detailed_help_text = ("""
       sure to set an appropriate default bucket ACL to protect that data. (See
       "gsutil help defacl".)
 
-    off
+    <B>OFF</B>
       This command will disable access logging of the buckets named by the
       specified uris. All URIs must name buckets (e.g., gs://bucket).
   
@@ -90,7 +86,10 @@ _detailed_help_text = ("""
       but Google Cloud Storage will stop delivering new logs once you have
       run this command.
 
-  get
+"""
+
+_GET_DESCRIPTION = """
+  <B>GET</B>
     If logging is enabled for the specified bucket uri, the server responds
     with a <Logging> XML element that looks something like this:
 
@@ -108,10 +107,29 @@ _detailed_help_text = ("""
 
     You can download log data from your log bucket using the gsutil cp command.
 
+"""
+
+_DESCRIPTION = """
+  Google Cloud Storage offers access logs and storage data in the form of
+  CSV files that you can download and view. Access logs provide information
+  for all of the requests made on a specified bucket in the last 24 hours,
+  while the storage logs provide information about the storage consumption of
+  that bucket for the last 24 hour period. The logs and storage data files
+  are automatically created as new objects in a bucket that you specify, in
+  24 hour intervals.
+
+  The logging command has two sub-commands:
+""" + _SET_DESCRIPTION + _GET_DESCRIPTION + """
+
 <B>ACCESS LOG AND STORAGE DATA FIELDS</B>
   For a complete list of access log fields and storage data fields, see:
   https://developers.google.com/storage/docs/accesslogs#reviewing
-""")
+"""
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 
 class LoggingCommand(Command):
@@ -148,6 +166,9 @@ class LoggingCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Configure or retrieve logging on buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text},
   }
 
   def _Get(self):

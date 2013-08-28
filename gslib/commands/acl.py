@@ -27,19 +27,26 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 from gslib.util import Retry
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_SET_SYNOPSIS = """
   gsutil acl set [-f] [-R] [-a] file-or-canned_acl_name uri...
+"""
+
+_GET_SYNOPSIS = """
   gsutil acl get uri
+"""
+
+_CH_SYNOPSIS = """
   gsutil acl ch [-R] -u|-g|-d <grant>... uri...
 
   where each <grant> is one of the following forms:
@@ -47,16 +54,15 @@ _detailed_help_text = ("""
     -u <id|email>:<perm>
     -g <id|email|domain|All|AllAuth>:<perm>
     -d <id|email|domain|All|AllAuth>
+"""
 
-<B>DESCRIPTION</B>
-
-  The acl command has three sub-commands:
-
+_GET_DESCRIPTION = """
   <B>GET</B>
     The "acl get" command gets the ACL XML for a bucket or object, which you can
     save and edit for the setacl command.
+"""
 
-
+_SET_DESCRIPTION = """
   <B>SET</B>
     The "acl set" command allows you to set an Access Control List on one or
     more buckets and objects. The simplest way to use it is to specify one of
@@ -100,6 +106,8 @@ _detailed_help_text = ("""
     refer to objects. gsutil -m acl set gs://bucket1 gs://bucket2 will run the
     acl set operations sequentially.
 
+
+  <B>SET OPTIONS</B>
     The "set" sub-command has the following options:
       -R, -r      Performs "acl set" request recursively, to all objects under
                   the specified URI.
@@ -110,8 +118,9 @@ _detailed_help_text = ("""
                   it to continue when it encounters errors. With this option the
                   gsutil exit status will be 0 even if some ACLs couldn't be
                   set.
+"""
 
-
+_CH_DESCRIPTION = """
   <B>CH</B>
     The "acl ch" (or "acl change") command updates access control lists, similar
     in spirit to the Linux chmod command. You can specify multiple access grant
@@ -124,20 +133,7 @@ _detailed_help_text = ("""
     permission to be granted). A more formal description is provided in a later
     section; below we provide examples.
 
-    The "ch" sub-command has the following options:
-      -R, -r      Performs chacl request recursively, to all objects under the
-                  specified URI.
-
-      -u          Add or modify a user permission as specified in the SCOPES
-                  and PERMISSIONS sections.
-
-      -g          Add or modify a group permission as specified in the SCOPES
-                  and PERMISSIONS sections.
-
-      -d          Remove all permissions associated with the matching argument,
-                  as specified in the SCOPES and PERMISSIONS sections
-
-
+  <B>CH EXAMPLES</B>
     Examples for "ch" sub-command:
 
       Grant the user john.doe@example.com WRITE access to the bucket
@@ -181,7 +177,7 @@ _detailed_help_text = ("""
         gsutil -m acl ch -R -g my-domain.org:R -g AllAuth:R \\
           -u admin@mydomain.org:FC gs://my-bucket/ gs://my-other-bucket
 
-
+  <B>CH PERMISSIONS</B>
     Permissions:
       You may specify the following permissions with either their shorthand or
       their full name:
@@ -190,7 +186,7 @@ _detailed_help_text = ("""
         W: WRITE
         FC: FULL_CONTROL
 
-
+  <B>CH SCOPES</B>
     Scopes:
       There are four different scopes: Users, Groups, All Authenticated Users,
       and All Users.
@@ -212,7 +208,33 @@ _detailed_help_text = ("""
       Many scopes can be specified on the same command line, allowing bundled
       changes to be executed in a single run. This will reduce the number of
       requests made to the server.
-""")
+
+  <B>CH OPTIONS</B>
+    The "ch" sub-command has the following options:
+      -R, -r      Performs chacl request recursively, to all objects under the
+                  specified URI.
+
+      -u          Add or modify a user permission as specified in the SCOPES
+                  and PERMISSIONS sections.
+
+      -g          Add or modify a group permission as specified in the SCOPES
+                  and PERMISSIONS sections.
+
+      -d          Remove all permissions associated with the matching argument,
+                  as specified in the SCOPES and PERMISSIONS sections
+"""
+
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS + _CH_SYNOPSIS + '\n\n'
+
+_DESCRIPTION = ("""
+  The acl command has three sub-commands:
+""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
+_ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 
 class AclCommand(Command):
@@ -248,6 +270,10 @@ class AclCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Get, set, or change bucket and/or object ACLs',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text,
+                            'ch' : _ch_help_text},
   }
 
   def _CalculateUrisStartArg(self):

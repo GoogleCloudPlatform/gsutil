@@ -27,21 +27,41 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
-  gsutil cors set cors-xml-file uri...
-  gsutil cors get uri
+_GET_SYNOPSIS = """
+gsutil cors get uri
+"""
 
+_SET_SYNOPSIS = """
+gsutil cors set cors-xml-file uri...
+"""
 
-<B>DESCRIPTION</B>
+_GET_DESCRIPTION = """
+  <B>GET</B>
+    Gets the CORS configuration for a single bucket. The output from
+    "cors get" can be redirected into a file, edited and then updated using
+    "cors set".
+"""
+
+_SET_DESCRIPTION = """
+  <B>SET</B>
+    Sets the CORS configuration for one or more buckets. The
+    cors-xml-file specified on the command line should be a path to a local
+    file containing an XML document as described above.
+"""
+
+_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS + '\n\n'
+
+_DESCRIPTION = ("""
   Gets or sets the Cross-Origin Resource Sharing (CORS) configuration on one or
   more buckets. This command is supported for buckets only, not objects. A CORS
   XML document should have the following structure:
@@ -65,19 +85,14 @@ _detailed_help_text = ("""
   `http://origin1.example.com` and may include the Content-Type response header.
 
   The cors command has two sub-commands:
-
-  get
-    Gets the CORS configuration for a single bucket. The output from
-    "cors get" can be redirected into a file, edited and then updated using
-    "cors set".
-
-  set
-    Sets the CORS configuration for one or more buckets. The
-    cors-xml-file specified on the command line should be a path to a local
-    file containing an XML document as described above.
-
-  For more info about CORS, see http://www.w3.org/TR/cors/.
+""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION]) + """
+For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 class CorsCommand(Command):
   """Implementation of gsutil cors command."""
@@ -112,6 +127,9 @@ class CorsCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Set a CORS XML document for one or more buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text},
   }
 
   def _CalculateUrisStartArg(self):

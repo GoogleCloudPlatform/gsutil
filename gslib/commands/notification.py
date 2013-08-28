@@ -31,28 +31,28 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_WATCHBUCKET_SYNOPSIS = """
   gsutil notification watchbucket [-i id] [-t token] app_url bucket_uri...
+"""
+
+_STOPCHANNEL_SYNOPSIS = """
   gsutil notification stopchannel channel_id resource_id
+"""
 
+_SYNOPSIS = _WATCHBUCKET_SYNOPSIS + _STOPCHANNEL_SYNOPSIS
 
-<B>DESCRIPTION</B>
-  The notification command can be used to configure notifications.
-  For more information on the Object Change Notification feature, please see:
-  https://developers.google.com/storage/docs/object-change-notification
-
-  The notification command has two sub-commands:
-
-  watchbucket
+_WATCHBUCKET_DESCRIPTION = """
+  <B>WATCHBUCKET</B>
     The watchbucket sub-command can be used to watch a bucket for object
     changes.
 
@@ -70,13 +70,25 @@ _detailed_help_text = ("""
     To do this, set this custom token and store it to later verify that
     notification events contain the client token you expect.
 
-  stopchannel
+"""
+
+_STOPCHANNEL_DESCRIPTION = """
+  <B>STOPCHANNEL</B>
     The stopchannel sub-command can be used to stop sending change events to a
     notification channel.
 
     The channel_id and resource_id parameters should match the values from the
     response of a bucket watch request.
 
+"""
+
+_DESCRIPTION = """
+  The notification command can be used to configure notifications.
+  For more information on the Object Change Notification feature, please see:
+  https://developers.google.com/storage/docs/object-change-notification
+
+  The notification command has two sub-commands:
+""" + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
 
 <B>EXAMPLES</B>
 
@@ -101,7 +113,7 @@ _detailed_help_text = ("""
 
     gsutil notification stopchannel channel1 SoGqan08XDIFWr1Fv_nGpRJBHh8
 
-""")
+"""
 
 NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE = """
 Watch bucket attempt failed:
@@ -117,6 +129,13 @@ verified using Google Webmaster Tools. For instructions, please see:
 
   https://developers.google.com/storage/docs/object-change-notification#_Authorization
 """
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_watchbucket_help_text = (
+    CreateHelpText(_WATCHBUCKET_SYNOPSIS, _WATCHBUCKET_DESCRIPTION))
+_stopchannel_help_text = (
+    CreateHelpText(_STOPCHANNEL_SYNOPSIS, _STOPCHANNEL_DESCRIPTION))
 
 DISCOVERY_SERVICE_URL = boto.config.get_value(
     'GSUtil', 'discovery_service_url', None)
@@ -158,6 +177,9 @@ class NotificationCommand(Command):
       HELP_ONE_LINE_SUMMARY: 'Configure object change notification',
       # The full help text.
       HELP_TEXT: _detailed_help_text,
+      # Help text for sub-commands.
+      SUBCOMMAND_HELP_TEXT : {'watchbucket' : _watchbucket_help_text,
+                              'stopchannel' : _stopchannel_help_text},
   }
 
   def _WatchBucket(self):

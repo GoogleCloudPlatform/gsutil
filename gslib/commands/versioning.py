@@ -22,33 +22,37 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_SET_SYNOPSIS = """
   gsutil versioning set [on|off] bucket_uri...
+"""
+
+_GET_SYNOPSIS = """
   gsutil versioning get bucket_uri
+"""
 
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS
 
-<B>DESCRIPTION</B>
-  The Versioning Configuration feature enables you to configure a Google Cloud
-  Storage bucket to keep old versions of objects.
-  
-  The gsutil versioning command has two sub-commands:
-  
-  set
+_SET_DESCRIPTION = """
+  <B>SET</B>
     The "set" sub-command requires an additional sub-command, either "on" or
     "off", which, respectively, will enable or disable versioning for the
     specified bucket(s).
-  
-  get
+
+"""
+
+_GET_DESCRIPTION = """
+  <B>GET</B>
     The "get" sub-command gets the versioning configuration for a
     bucket and displays an XML representation of the configuration.
   
@@ -60,7 +64,20 @@ _detailed_help_text = ("""
           Enabled
         </Status>
       </VersioningConfiguration>
-""")
+
+"""
+
+_DESCRIPTION = """
+  The Versioning Configuration feature enables you to configure a Google Cloud
+  Storage bucket to keep old versions of objects.
+  
+  The gsutil versioning command has two sub-commands:
+""" + _SET_DESCRIPTION + _GET_DESCRIPTION
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 class VersioningCommand(Command):
   """Implementation of gsutil versioning command."""
@@ -96,6 +113,9 @@ class VersioningCommand(Command):
                             'buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text},
   }
 
   def _CalculateUrisStartArg(self):

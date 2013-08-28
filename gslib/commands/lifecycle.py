@@ -28,37 +28,50 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+
+_GET_SYNOPSIS = """
   gsutil lifecycle get uri
+"""
+
+_SET_SYNOPSIS = """
   gsutil lifecycle set config-xml-file uri...
+"""
 
+_SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS + '\n'
 
-<B>DESCRIPTION</B>
+_GET_DESCRIPTION = """
+  <B>GET</B>
+    Gets the lifecycle configuration for a given bucket. You can get the
+    lifecycle configuration for only one bucket at a time. The output can be
+    redirected into a file, edited and then updated via the set sub-command.
+
+"""
+
+_SET_DESCRIPTION = """
+  <B>SET</B>
+    Sets the lifecycle configuration on one or more buckets. The config-xml-file
+    specified on the command line should be a path to a local file containing
+    the lifecycle congfiguration XML document.
+
+"""
+
+_DESCRIPTION = """
   The lifecycle command can be used to get or set lifecycle management policies
   for the given bucket(s). This command is supported for buckets only, not
   objects. For more information on object lifecycle management, please see the
   `developer guide <https://developers.google.com/storage/docs/lifecycle>`_.
 
   The lifecycle command has two sub-commands:
-
-  get
-    Gets the lifecycle configuration for a given bucket. You can get the
-    lifecycle configuration for only one bucket at a time. The output can be
-    redirected into a file, edited and then updated via the set sub-command.
-
-  set
-    Sets the lifecycle configuration on one or more buckets. The config-xml-file
-    specified on the command line should be a path to a local file containing
-    the lifecycle congfiguration XML document.
-
+""" + _GET_DESCRIPTION + _SET_DESCRIPTION + """
 <B>EXAMPLES</B>
   The following lifecycle configuration XML document specifies that all objects
   that are more than 365 days old will be deleted automatically:
@@ -74,7 +87,13 @@ _detailed_help_text = ("""
             </Condition>
         </Rule>
     </LifecycleConfiguration>
-""")
+"""
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
+
 
 class LifecycleCommand(Command):
   """Implementation of gsutil lifecycle command."""
@@ -109,6 +128,9 @@ class LifecycleCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Get or set lifecycle configuration for a bucket',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text},
   }
 
   # Get lifecycle configuration

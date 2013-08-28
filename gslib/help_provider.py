@@ -26,6 +26,7 @@ HELP_NAME_ALIASES = 'help_name_aliases'
 HELP_TYPE = 'help_type'
 HELP_ONE_LINE_SUMMARY = 'help_one_line_summary'
 HELP_TEXT = 'help_text'
+SUBCOMMAND_HELP_TEXT = 'subcommand_help_text'
 
 # Constants enforced by SanityCheck
 MAX_HELP_NAME_LEN = 15
@@ -34,6 +35,12 @@ MAX_ONE_LINE_SUMMARY_LEN = 80 - MAX_HELP_NAME_LEN
 
 REQUIRED_SPEC_KEYS = [HELP_NAME, HELP_NAME_ALIASES, HELP_TYPE,
                       HELP_ONE_LINE_SUMMARY, HELP_TEXT]
+
+DESCRIPTION_PREFIX = """
+<B>DESCRIPTION</B>"""
+
+SYNOPSIS_PREFIX = """
+<B>SYNOPSIS</B>"""
 
 class HelpProvider(object):
   """Interface for providing help."""
@@ -79,3 +86,7 @@ def SanityCheck(help_provider, help_name_map):
           'Duplicate help name/alias "%s" found while loading help from %s. '
           'That name/alias was already taken by %s' % (name_or_alias,
           help_provider.__module__, help_name_map[name_or_alias].__module__))
+      
+def CreateHelpText(synopsis, description):
+  """Helper for adding help text headers given synopsis and description."""
+  return SYNOPSIS_PREFIX + synopsis + DESCRIPTION_PREFIX + description

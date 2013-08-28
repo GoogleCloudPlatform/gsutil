@@ -25,24 +25,66 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 from gslib.util import UnaryDictToXml
 from xml.dom.minidom import parseString as XmlParseString
 
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_SET_SYNOPSIS = """
   gsutil web set [-m main_page_suffix] [-e error_page] bucket_uri...
+"""
+
+_GET_SYNOPSIS = """
   gsutil web get bucket_uri
+"""
 
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS
 
-<B>DESCRIPTION</B>
+_SET_DESCRIPTION = """
+  <B>SET</B>
+    The "gsutil web set" command will allow you to set Website Configuration
+    on your bucket(s). The "set" sub-command has the following options:
+
+    <B>SET OPTIONS</B>
+      -m <index.html>      Specifies the object name to serve when a bucket
+                           listing is requested via the CNAME alias to
+                           c.storage.googleapis.com.
+
+      -e <404.html>        Specifies the error page to serve when a request
+                           is made for a non-existing object, via the is
+                           requested via the CNAME alias to
+                           c.storage.googleapis.com.
+
+"""
+
+_GET_DESCRIPTION = """
+  <B>GET</B>
+    The "gsutil web get" command will gets the web semantics configuration for
+    a bucket and displays an XML representation of the configuration.
+
+    In Google Cloud Storage, this would look like:
+
+      <?xml version="1.0" ?>
+      <WebsiteConfiguration>
+        <MainPageSuffix>
+          index.html
+        </MainPageSuffix>
+        <NotFoundPage>
+          404.html
+        </NotFoundPage>
+      </WebsiteConfiguration>
+
+"""
+
+_DESCRIPTION = """
   The Website Configuration feature enables you to configure a Google Cloud
   Storage bucket to behave like a static website. This means requests made via a
   domain-named bucket aliased using a Domain Name System "CNAME" to
@@ -93,36 +135,13 @@ _detailed_help_text = ("""
      https://developers.google.com/storage/docs/website-configuration.
 
   The web command has two sub-commands:
+""" + _SET_DESCRIPTION + _GET_DESCRIPTION
 
-  set
-    The "gsutil web set" command will allow you to set Website Configuration
-    on your bucket(s). The "set" sub-command has the following options:
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
-      -m <index.html>      Specifies the object name to serve when a bucket
-                           listing is requested via the CNAME alias to
-                           c.storage.googleapis.com.
-    
-      -e <404.html>        Specifies the error page to serve when a request
-                           is made for a non-existing object, via the is
-                           requested via the CNAME alias to
-                           c.storage.googleapis.com.
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
-  get
-    The "gsutil web get" command will gets the web semantics configuration for
-    a bucket and displays an XML representation of the configuration.
-
-    In Google Cloud Storage, this would look like:
-
-      <?xml version="1.0" ?>
-      <WebsiteConfiguration>
-        <MainPageSuffix>
-          index.html
-        </MainPageSuffix>
-        <NotFoundPage>
-          404.html
-        </NotFoundPage>
-      </WebsiteConfiguration>
-""")
 
 def BuildGSWebConfig(main_page_suffix=None, not_found_page=None):
   config_body_l = ['<WebsiteConfiguration>']
@@ -180,6 +199,9 @@ class WebCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Set a main page and/or error page for one or more buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text},
   }
   
   def _GetWeb(self):

@@ -26,25 +26,30 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.exception import CommandException
+from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import NO_MAX
 from gslib.util import Retry
 
-_detailed_help_text = ("""
-<B>SYNOPSIS</B>
+_SET_SYNOPSIS = """
   gsutil defacl set file-or-canned_acl_name uri...
+"""
+
+_GET_SYNOPSIS = """
   gsutil defacl get uri
+"""
+
+_CH_SYNOPSIS = """
   gsutil defacl ch -u|-g|-d <grant>... uri...
+"""
 
-
-<B>DESCRIPTION</B>
-  The defacl command has three sub-commands:
-
+_SET_DESCRIPTION = """
   <B>SET</B>
     The "defacl set" command sets default object ACLs for the specified buckets.
     If you specify a default object ACL for a certain bucket, Google Cloud
@@ -65,11 +70,15 @@ _detailed_help_text = ("""
     for which you forgot to set the ACL at object upload time (which can
     happen if you don't set a default object ACL on a bucket, and get the
     default project-private ACL).
+"""
 
+_GET_DESCRIPTION = """
   <B>GET</B>
     Gets the default ACL XML for a bucket, which you can save and edit
     for use with the "defacl set" command.
+"""
 
+_CH_DESCRIPTION = """
   <B>CH</B>
     The "defacl ch" (or "defacl change") command updates the default object
     access control list for a bucket. The syntax is shared with the "acl ch"
@@ -86,7 +95,19 @@ _detailed_help_text = ("""
       example-bucket with FULL_CONTROL access:
 
         gsutil defacl ch -g admins@example.com:FC gs://example-bucket
-""")
+"""
+
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS + _CH_SYNOPSIS + '\n\n'
+
+_DESCRIPTION = """
+  The defacl command has three sub-commands:
+""" + '\n'.join([_SET_DESCRIPTION + _GET_DESCRIPTION + _CH_DESCRIPTION])
+
+_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
+_ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 
 class DefAclCommand(Command):
@@ -122,6 +143,10 @@ class DefAclCommand(Command):
     HELP_ONE_LINE_SUMMARY : 'Get, set, or change default ACL on buckets',
     # The full help text.
     HELP_TEXT : _detailed_help_text,
+    # Help text for sub-commands.
+    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
+                            'set' : _set_help_text,
+                            'ch' : _ch_help_text},
   }
 
   def _CalculateUrisStartArg(self):
