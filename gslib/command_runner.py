@@ -46,6 +46,49 @@ from gslib.util import SECONDS_PER_DAY
 VERSION_MATCHER = re.compile(r'^(?P<num>\d+\.?\d*)(?P<suffix>.*)')
 
 
+def HandleArgCoding(args):
+  """
+  Handles coding of command-line args.
+
+  Args:
+    args: array of command-line args.
+
+  Returns:
+    array of command-line args.
+
+  Raises:
+    CommandException: if errors encountered.
+  """
+  # Python passes arguments from the command line as byte strings. To
+  # correctly interpret them, we decode ones other than -h and -p args (which
+  # will be passed as headers, and thus per HTTP spec should not be encoded) as
+  # utf-8. The exception is x-goog-meta-* headers, which are allowed to contain
+  # non-ASCII content (and hence, should be decoded), per
+  # https://developers.google.com/storage/docs/gsutil/addlhelp/WorkingWithObjectMetadata
+  processing_header = False
+  for i in range(len(args)):
+    arg = args[i]
+    decoded = arg.decode('utf-8')
+    if processing_header:
+      if arg.lower().startswith('x-goog-meta'):
+        args[i] = decoded
+      else:
+        try:
+          # Try to encode as ASCII to check for invalid header values (which
+          # can't be sent over HTTP).
+          decoded.encode('ascii')
+        except UnicodeEncodeError:
+          # Raise the CommandException using the decoded value because
+          # _OutputAndExit function re-encodes at the end.
+          raise CommandException(
+              'Invalid non-ASCII header value (%s).\nOnly ASCII characters are '
+              'allowed in headers other than x-goog-meta- headers' % decoded)
+    else:
+      args[i] = decoded
+    processing_header = (arg in ('-h', '-p'))
+  return args
+
+
 class CommandRunner(object):
 
   def __init__(self, config_file_list,
@@ -137,9 +180,7 @@ class CommandRunner(object):
       args = new_args
       command_name = 'help'
 
-    # Python passes arguments from the command line as byte strings. To
-    # correctly interpret them, we decode them as utf-8 here.
-    args = [a.decode('utf-8') for a in args]
+    args = HandleArgCoding(args)
 
     command_class = self.command_map[command_name]
     command_inst = command_class(

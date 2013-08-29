@@ -1,4 +1,5 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
+#coding=utf8
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,18 +22,19 @@ import boto
 import gslib
 from boto.pyami.config import Config, BotoConfigLocations
 from gslib import command_runner
+from gslib.command_runner import HandleArgCoding
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import SECONDS_PER_DAY
 
 
-class TestSoftwareUpdateCheckUnitTests(
+class TestCommandRunnerUnitTests(
     testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil update check in command_runner module."""
 
   def setUp(self):
-    super(TestSoftwareUpdateCheckUnitTests, self).setUp()
+    super(TestCommandRunnerUnitTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
     self.previous_update_file = (
@@ -72,7 +74,7 @@ class TestSoftwareUpdateCheckUnitTests(
     self.boto_configs = []
 
   def tearDown(self):
-    super(TestSoftwareUpdateCheckUnitTests, self).tearDown()
+    super(TestCommandRunnerUnitTests, self).tearDown()
 
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
         self.previous_update_file)
@@ -214,13 +216,59 @@ class TestSoftwareUpdateCheckUnitTests(
     self.assertFalse(self.command_runner._IsVersionGreater('foobar', 'baz'))
     self.assertFalse(self.command_runner._IsVersionGreater('3.32', 'baz'))
 
-class TestSoftwareUpdateCheckIntegrationTests(
+  def test_valid_arg_coding(self):
+    """
+    Tests that gsutil encodes valid args correctly.
+    """
+    # Args other than -h and -p should be utf-8 decoded.
+    args = HandleArgCoding(['ls', '-l'])
+    self.assertIs(type(args[0]), unicode)
+    self.assertIs(type(args[1]), unicode)
+
+    # -p and -h args other than x-goog-meta should not be decoded.
+    args = HandleArgCoding(['ls', '-p', 'abc:def', 'gs://bucket'])
+    self.assertIs(type(args[0]), unicode)
+    self.assertIs(type(args[1]), unicode)
+    self.assertIsNot(type(args[2]), unicode)
+    self.assertIs(type(args[3]), unicode)
+
+    args = HandleArgCoding(['gsutil', '-h', 'content-type:text/plain', 'cp',
+                            'a', 'gs://bucket'])
+    self.assertIs(type(args[0]), unicode)
+    self.assertIs(type(args[1]), unicode)
+    self.assertIsNot(type(args[2]), unicode)
+    self.assertIs(type(args[3]), unicode)
+    self.assertIs(type(args[4]), unicode)
+    self.assertIs(type(args[5]), unicode)
+
+    # -h x-goog-meta args should be decoded.
+    args = HandleArgCoding(['gsutil', '-h', 'x-goog-meta-abc', '1234'])
+    self.assertIs(type(args[0]), unicode)
+    self.assertIs(type(args[1]), unicode)
+    self.assertIs(type(args[2]), unicode)
+    self.assertIs(type(args[3]), unicode)
+
+    # -p and -h args with non-ASCII content should raise CommandException.
+    try:
+      HandleArgCoding(['ls', '-p', '碼'])
+      # Ensure exception is raised.
+      self.assertTrue(False)
+    except CommandException as e:
+      self.assertIn('Invalid non-ASCII header', e.reason)
+    try:
+      HandleArgCoding(['-h', '碼', 'ls'])
+      # Ensure exception is raised.
+      self.assertTrue(False)
+    except CommandException as e:
+      self.assertIn('Invalid non-ASCII header', e.reason)
+
+
+class TestCommandRunnerIntegrationTests(
     testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil update check in command_runner module."""
 
-
   def setUp(self):
-    super(TestSoftwareUpdateCheckIntegrationTests, self).setUp()
+    super(TestCommandRunnerIntegrationTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
     self.previous_update_file = (
@@ -243,7 +291,7 @@ class TestSoftwareUpdateCheckIntegrationTests(
     self.command_runner = command_runner.CommandRunner(config_file)
 
   def tearDown(self):
-    super(TestSoftwareUpdateCheckIntegrationTests, self).tearDown()
+    super(TestCommandRunnerIntegrationTests, self).tearDown()
 
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
         self.previous_update_file)

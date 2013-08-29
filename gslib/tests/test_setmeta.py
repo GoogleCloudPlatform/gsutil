@@ -108,4 +108,4 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
         expected_status=1, return_stderr=True)
-    self.assertIn('Invalid non-ASCII value', stderr)
+    self.assertIn('Invalid non-ASCII header', stderr)
