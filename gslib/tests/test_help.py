@@ -52,6 +52,11 @@ class HelpTest(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('ls', ['--help'], return_stdout=True)
     self.assertIn('ls - List providers, buckets', stdout)
 
+  def test_subcommand_help_arg(self):
+    stdout = self.RunCommand('web', ['set', '--help'], return_stdout=True)
+    self.assertIn('gsutil web set', stdout)
+    self.assertNotIn('gsutil web get', stdout)
+
   def test_command_args_with_help(self):
     stdout = self.RunCommand('cp', ['foo', 'bar', '--help'], return_stdout=True)
     self.assertIn('cp - Copy files and objects', stdout)

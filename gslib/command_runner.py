@@ -32,6 +32,7 @@ from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import OLD_ALIAS_MAP
 from gslib.exception import CommandException
+from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
@@ -125,7 +126,15 @@ class CommandRunner(object):
         print >> sys.stderr, '\t%s' % translated_command_name
       raise CommandException('Invalid command "%s".' % command_name)
     if '--help' in args:
-      args = [command_name]
+      new_args = [command_name]
+      original_command_class = self.command_map[command_name]
+      subcommands = original_command_class.help_spec.get(
+          SUBCOMMAND_HELP_TEXT, {}).keys()
+      for arg in args:
+        if arg in subcommands:
+          new_args.append(arg)
+          break  # Take the first match and throw away the rest.
+      args = new_args
       command_name = 'help'
 
     # Python passes arguments from the command line as byte strings. To
