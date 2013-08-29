@@ -405,6 +405,7 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
   # permission on object and thus see the bucket listing data, but lack
   # FULL_CONTROL over individual objects and thus not be able to read
   # their ACLs).
+  # TODO: Switch this code to use string formatting instead of tabs.
   try:
     print '%s:' % uri.uri.encode('utf-8')
     headers = headers.copy()
@@ -418,7 +419,7 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
     if obj.content_disposition:
       print '\tContent-Disposition:\t\t%s' % obj.content_disposition
     if obj.content_encoding:
-      print '\tContent-Encoding:\t\t%s' % obj.content_encoding
+      print '\tContent-Encoding:\t%s' % obj.content_encoding
     if obj.content_language:
       print '\tContent-Language:\t%s' % obj.content_language
     print '\tContent-Length:\t\t%s' % obj.size
@@ -428,7 +429,7 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
     if obj.metadata:
       prefix = uri.get_provider().metadata_prefix
       for name in obj.metadata:
-        meta_string = '\t%s%s:\t\t%s' % (prefix, name, obj.metadata[name])
+        meta_string = '\t%s%s:\t%s' % (prefix, name, obj.metadata[name])
         print meta_string.encode('utf-8')
     if hasattr(obj, 'cloud_hashes'):
       for alg in obj.cloud_hashes:
