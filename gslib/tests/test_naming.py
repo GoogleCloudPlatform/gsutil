@@ -943,9 +943,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     for i, final_src_char in enumerate(('', '/')):
       # Test removing all objects via rm -R.
       self.RunCommand('rm', ['-R', suri(bucket_uris[i]) + final_src_char])
-      actual = set(str(u) for u in self._test_wildcard_iterator(
-          suri(bucket_uris[i], '**')).IterUris())
-      self.assertEqual(actual, set())
+      try:
+        self.RunCommand('ls', [suri(bucket_uris[i])])
+        # Ensure exception is raised.
+        self.assertTrue(False)
+      except boto.exception.StorageResponseError, e:
+        self.assertEqual(e.status, 404)
 
   def testUnicodeArgs(self):
     """Tests that you can list an object with unicode characters."""
