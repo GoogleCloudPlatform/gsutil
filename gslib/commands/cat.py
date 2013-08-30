@@ -33,6 +33,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.util import NO_MAX
+from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -113,6 +114,15 @@ class CatCommand(Command):
     HELP_TEXT : _detailed_help_text,
   }
 
+  def _UriIterator(self, uri_str):
+    # Generator that returns URI(s) for uri_str. If uri_str is a wildcard we
+    # iterate over matches, else we return a single URI.
+    if not ContainsWildcard(uri_str):
+      yield self.suri_builder.StorageUri(uri_str)
+    else:
+      for uri in self.WildcardIterator(uri_str).IterUris():
+        yield uri
+
   # Command entry point.
   def RunCommand(self):
     show_header = False
@@ -138,7 +148,7 @@ class CatCommand(Command):
     did_some_work = False
 
     for uri_str in self.args:
-      for uri in self.WildcardIterator(uri_str).IterUris():
+      for uri in self._UriIterator(uri_str):
         if not uri.names_object():
           raise CommandException('"%s" command must specify objects.' %
                                  self.command_name)

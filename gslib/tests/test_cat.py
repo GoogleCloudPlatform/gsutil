@@ -46,3 +46,24 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['cat', '-r -3', suri(key_uri)],
                             return_stdout=True)
     self.assertEqual('789', stdout)
+
+  def test_cat_version(self):
+    bucket_uri = self.CreateVersionedBucket()
+    # Create 2 versions of an object.
+    uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                             object_name=uri1.object_name, contents='data2')
+    stdout = self.RunGsUtil(['cat', suri(uri1)], return_stdout=True)
+    # Last version written should be live.
+    self.assertEqual('data2', stdout)
+    # Using either version-specific URI should work.
+    stdout = self.RunGsUtil(['cat', uri1.version_specific_uri],
+                             return_stdout=True)
+    self.assertEqual('data1', stdout)
+    stdout = self.RunGsUtil(['cat', uri2.version_specific_uri],
+                             return_stdout=True)
+    self.assertEqual('data2', stdout)
+    # Attempting to cat invalid version should result in an error.
+    stderr = self.RunGsUtil(['cat', uri2.version_specific_uri + '23'],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('InvalidUriError', stderr)
