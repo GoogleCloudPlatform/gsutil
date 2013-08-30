@@ -788,12 +788,14 @@ class ConfigCommand(Command):
           'Attempting to launch a browser to open the Google Cloud Console at '
           'URL: %s\n\n'
           '[Note: due to a Python bug, you may see a spurious error message '
-          '"object is not\n callable [...] in [...] Popen.__del__" which can '
+          '"object is not\ncallable [...] in [...] Popen.__del__" which can '
           'be ignored.]\n\n' % GOOG_CLOUD_CONSOLE_URI)
       sys.stdout.write(
-          'In your browser you should see the Cloud Console. Click on the '
-          'project you will\nuse, and then copy the Project Number listed under '
-          'that project.\n\n')
+          'In your browser you should see the Cloud Console. Find the project '
+          'you will\nuse, and then copy the Project ID string from the second '
+          'column. Older projects do\nnot have Project ID strings. For such '
+          'projects, click the project and then copy the\nProject Number '
+          'listed under that project.\n\n')
       if not webbrowser.open(GOOG_CLOUD_CONSOLE_URI, new=1, autoraise=True):
         sys.stdout.write(
             'Launching browser appears to have failed; please navigate a '
@@ -803,10 +805,12 @@ class ConfigCommand(Command):
       time.sleep(2)
     else:
       sys.stdout.write(
-          '\nPlease navigate your browser to %s,\nthen click on the project '
-          'you will use, and then copy the Project Number listed\nunder that '
-          'project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
-    default_project_id = raw_input('What is your project-id? ')
+          '\nPlease navigate your browser to %s,\nthen find on the project '
+          'you will\nuse, and copy the Project ID string from the second '
+          'column. Older projects do\nnot have Project ID strings. For such '
+          'projects, click the project and then copy the\nProject Number '
+          'listed under that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
+    default_project_id = raw_input('What is your project-id? ').strip()
     project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
 # use with the 'mb' and 'ls' commands. This default can be overridden by

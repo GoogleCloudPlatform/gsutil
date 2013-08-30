@@ -57,9 +57,22 @@ _detailed_help_text = ("""
   CarriageReturnLineFeed, or the XML-disallowed surrogate blocks (xFFFE
   or xFFFF).
 
-  We highly recommend that you avoid using control characters that are illegal
-  in XML 1.0 in your object names. These characters will cause XML listing
-  issues when you try to list your objects.
+  We strongly recommend that you abide by the following object naming
+  conventions:
+
+  - Avoid using control characters that are illegal in XML 1.0 in your object
+    names. These characters will cause XML listing issues when you try to list
+    your objects.
+
+  - Avoid using "#" in your object names. gsutil interprets object names ending
+    with #<numeric string> as version identifiers, so including "#" in object
+    names can make it difficult or impossible to perform various operations on
+    such objects using gsutil (see 'gsutil help versions').
+
+  - Avoid using "[", "]", "*", or "?". gsutil interprets these characters as
+    wildcards, so including any of these characters in object names can make it
+    difficult or impossible to perform various wildcard operations using gsutil
+    (see 'gsutil help wildcards').
 
 
 <B>DOMAIN NAMED BUCKETS</B>
