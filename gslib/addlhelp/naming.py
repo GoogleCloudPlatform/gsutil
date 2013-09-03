@@ -61,18 +61,18 @@ _detailed_help_text = ("""
   conventions:
 
   - Avoid using control characters that are illegal in XML 1.0 in your object
-    names. These characters will cause XML listing issues when you try to list
-    your objects.
+    names (#x7F-#x84 and #x86-#x9F). These characters will cause XML listing
+    issues when you try to list your objects.
 
   - Avoid using "#" in your object names. gsutil interprets object names ending
     with #<numeric string> as version identifiers, so including "#" in object
     names can make it difficult or impossible to perform various operations on
     such objects using gsutil (see 'gsutil help versions').
 
-  - Avoid using "[", "]", "*", or "?". gsutil interprets these characters as
-    wildcards, so including any of these characters in object names can make it
-    difficult or impossible to perform various wildcard operations using gsutil
-    (see 'gsutil help wildcards').
+  - Avoid using "[", "]", "*", or "?" in your object names. gsutil interprets
+    these characters as wildcards, so including any of these characters in
+    object names can make it difficult or impossible to perform various wildcard
+    operations using gsutil (see 'gsutil help wildcards').
 
 
 <B>DOMAIN NAMED BUCKETS</B>
