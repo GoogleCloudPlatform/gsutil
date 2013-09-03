@@ -178,10 +178,10 @@ function ParallelIfNoVersioning() {
   versioning=${versioning:vpos}
   if [ "$versioning" == 'Enabled' ]; then
     echo "$src has versioning enabled, so we have to copy all objects "\
-         "sequentially, to preserve the object version ordering." > /dev/tty
-    echo ""
+         "sequentially, to preserve the object version ordering."
+    parallel_if_no_versioning=""
   else
-   echo "-m"
+    parallel_if_no_versioning="-m"
   fi
 }
 
@@ -512,8 +512,8 @@ function Stage1 {
     # Copy the objects from the source bucket to the temp bucket
     if [ `LastStep "$src"` -eq 5 ]; then
       LogStepStart "Step 6: ($src) - Copy objects from source to the temporary bucket ($dst) via local machine."
-      parallel=`ParallelIfNoVersioning $src`
-      $gsutil $parallel cp -R -p -L $bman -D $src/* $dst/
+      ParallelIfNoVersioning $src
+      $gsutil $parallel_if_no_versioning cp -R -p -L $bman -D $src/* $dst/
       if [ $? -ne 0 ]; then
         EchoErr "Failed to copy objects from $src to $dst."
         exit 1
@@ -596,8 +596,8 @@ function Stage2 {
     # Catch up with any new files.
     if [ `LastStep "$src"` -eq 7 ]; then
       LogStepStart "Step 8: ($src) - Catch up any new objects that weren't copied."
-      parallel=`ParallelIfNoVersioning $src`
-      $gsutil $parallel cp -R -p -L $bman -D $src/* $dst/
+      ParallelIfNoVersioning $src
+      $gsutil $parallel_if_no_versioning cp -R -p -L $bman -D $src/* $dst/
       if [ $? -ne 0 ]; then
         EchoErr "Failed to copy any new objects from $src to $dst"
         exit 1
@@ -696,8 +696,8 @@ function Stage2 {
 
     if [ `LastStep "$src"` -eq 11 ]; then
       LogStepStart "Step 12: ($src) - Copy all objects back to the original bucket (copy in the cloud)."
-      parallel=`ParallelIfNoVersioning $src`
-      $gsutil $parallel cp -Rp $dst/* $src/
+      ParallelIfNoVersioning $src
+      $gsutil $parallel_if_no_versioning cp -Rp $dst/* $src/
       if [ $? -ne 0 ]; then
         EchoErr "Failed to copy the objects back to the original bucket: $src"
         exit 1
