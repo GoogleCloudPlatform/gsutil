@@ -19,9 +19,6 @@
 [submodule "third_party/socksipy-branch"]
 	path = third_party/socksipy-branch
 	url = git://github.com/gsutil-mirrors/socksipy-branch.git
-[submodule "third_party/retry_decorator"]
-    path = third_party/retry_decorator
-    url = git://github.com/pnpnpn/retry-decorator.git
 [submodule "third_party/retry-decorator"]
 	path = third_party/retry-decorator
 	url = https://github.com/pnpnpn/retry-decorator.git
