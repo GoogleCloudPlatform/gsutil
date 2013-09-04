@@ -32,7 +32,7 @@ from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 import gslib
 from gslib.exception import CommandException
-from gslib.third_party.retry_decorator import decorators
+from retry_decorator import retry_decorator 
 from oauth2client.client import HAS_CRYPTO
 
 
@@ -78,7 +78,7 @@ IS_OSX = 'darwin' in PLATFORM
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
-Retry = decorators.retry
+Retry = retry_decorator.retry
 
 
 # Enum class for specifying listing style.
