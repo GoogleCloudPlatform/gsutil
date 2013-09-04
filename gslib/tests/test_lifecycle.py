@@ -156,7 +156,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
         'Setting lifecycle configuration on %s/...' % suri(bucket1_uri),
         'Setting lifecycle configuration on %s/...' % suri(bucket2_uri)])
     actual = set()
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stderr = self.RunGsUtil(['lifecycle', 'set', fpath, wildcard],
                               return_stderr=True)

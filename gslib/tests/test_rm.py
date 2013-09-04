@@ -31,7 +31,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('baz')
     g2 = key_uri.generation
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1(stderr_lines):
       stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
                               return_stderr=True)
@@ -43,7 +43,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     all_stderr_lines = set()
     _Check1(all_stderr_lines)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stdout=True)
@@ -67,7 +67,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stdout=True)
@@ -95,7 +95,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2g2 = k2_uri.generation
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check(stderr_lines):
       stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
                               return_stderr=True)
@@ -135,7 +135,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stdout=True)
@@ -162,7 +162,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             % suri(bucket_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing gs://'), 2)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stdout=True)
@@ -177,7 +177,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)])
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
@@ -191,7 +191,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri) 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       self.RunGsUtil(['rm', '-r', suri(bucket_uri)])
       # Bucket should be deleted.
@@ -211,7 +211,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('versioning enabled', stderr)
 
     # Now try with rm -ra.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       self.RunGsUtil(['rm', '-ra', suri(bucket_uri)])
       # Bucket should be deleted.

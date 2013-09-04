@@ -184,7 +184,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     expected = set(['Setting CORS on %s/...' % suri(bucket1_uri),
                     'Setting CORS on %s/...' % suri(bucket2_uri)])
     actual = set()
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
                               return_stderr=True)
