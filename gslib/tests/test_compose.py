@@ -14,7 +14,7 @@
 
 import gslib.tests.testcase as testcase
 
-from gslib.commands.compose import MAX_COMPONENT_COUNT
+from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
@@ -37,11 +37,19 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(composite.get_contents_as_string(), ''.join(data_list))
 
   def test_compose_too_many_fails(self):
-    components = ['gs://b/component-obj'] * (MAX_COMPONENT_COUNT + 1)
+    components = ['gs://b/component-obj'] * (MAX_COMPOSE_ARITY + 1)
     stderr = self.RunGsUtil(['compose'] + components + ['gs://b/composite-obj'],
                             expected_status=1, return_stderr=True)
     self.assertEquals(
         'CommandException: Wrong number of arguments for "compose" command.\n',
+        stderr)
+
+  def test_compose_too_few_fails(self):
+    stderr = self.RunGsUtil(
+        ['compose', 'gs://b/component-obj', 'gs://b/composite-obj'],
+        expected_status=1, return_stderr=True)
+    self.assertEquals(
+        'CommandException: "compose" requires at least 2 component objects.\n',
         stderr)
 
   def test_compose_between_buckets_fails(self):
@@ -85,7 +93,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.check_n_ary_compose(2)
 
   def test_maximal_compose(self):
-    self.check_n_ary_compose(MAX_COMPONENT_COUNT)
+    self.check_n_ary_compose(MAX_COMPOSE_ARITY)
 
   def test_compose_with_wildcard(self):
     bucket_uri = self.CreateBucket()

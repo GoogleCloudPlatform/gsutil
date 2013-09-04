@@ -31,7 +31,8 @@ from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
 from boto import storage_uri_for_key
 
-MAX_COMPONENT_COUNT = 32
+MAX_COMPONENT_COUNT = 1024
+MAX_COMPOSE_ARITY = 32
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -91,7 +92,7 @@ class ComposeCommand(Command):
     # Min number of args required by this command.
     MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 33,
+    MAX_ARGS : MAX_COMPOSE_ARITY + 1,
     # Getopt-style string specifying acceptable sub args.
     SUPPORTED_SUB_ARGS : '',
     # True if file URIs acceptable for this command.
@@ -142,10 +143,11 @@ class ComposeCommand(Command):
       components.append(suri)
       # Avoid expanding too many components, and sanity check each name
       # expansion result.
-      if len(components) > self.command_spec[MAX_ARGS] - 1:
+      if len(components) > MAX_COMPOSE_ARITY:
         raise CommandException('"compose" called with too many component '
-                               'arguments. Limit is %d.'
-                               % (self.command_spec[MAX_ARGS] - 1))
+                               'objects. Limit is %d.' % MAX_COMPOSE_ARITY)
+    if len(components) < 2:
+      raise CommandException('"compose" requires at least 2 component objects.')
 
     self.logger.info(
         'Composing %s from %d component objects.' %

@@ -77,6 +77,7 @@ from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
 from gslib.commands.compose import MAX_COMPONENT_COUNT
+from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.exception import CommandException
@@ -334,7 +335,7 @@ STREAMING_TRANSFERS_TEXT = """
   transfers, but gsutil doesn't currently implement support for this.)
 """
 
-PARALLEL_COMPOSITE_UPLOADS_TEXT = (("""
+PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
   gsutil automatically uses
   `object composition <https://developers.google.com/storage/docs/composite-objects>`_
@@ -358,17 +359,19 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = (("""
   will still exist until the upload is completed successfully.
 
   One important caveat is that files uploaded in this fashion are still subject
-  to the maximum number of components limit. For example, if you upload two
-  large files that each get split into %d components, then you will not be able
-  to compose those two objects into a single object since it would exceed the
-  component limit. If you wish to compose an object later, it is recommended
-  that you disable parallel composite uploads for that transfer. Also, note
-  that an object uploaded using this feature will have a CRC32C hash, but it
-  will not have an MD5 hash. For details see 'gsutil help crc32c'.
+  to the maximum number of components limit. For example, if you upload a large
+  file that gets split into %d components, and try to compose it with another
+  object with %d components, the operation will fail because it exceeds the %d
+  component limit. If you wish to compose an object later and the component
+  limit is a concern, it is recommended that you disable parallel composite
+  uploads for that transfer.
+
+  Also note that an object uploaded using this feature will have a CRC32C hash,
+  but it will not have an MD5 hash. For details see 'gsutil help crc32c'.
 
   Note that this feature can be completely disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
-""") % ((MAX_COMPONENT_COUNT / 2) + 1))
+""" % (10, MAX_COMPONENT_COUNT - 9, MAX_COMPONENT_COUNT)
 
 CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
@@ -1631,7 +1634,7 @@ class CpCommand(Command):
         boto.config.get('GSUtil', 'parallel_composite_upload_component_size',
                         DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE))
     (num_components, component_size) = _GetPartitionInfo(file_size,
-        MAX_COMPONENT_COUNT, parallel_composite_upload_component_size)
+        MAX_COMPOSE_ARITY, parallel_composite_upload_component_size)
 
     # Make sure that the temporary objects don't already exist.
     tmp_object_headers = copy.deepcopy(headers)
