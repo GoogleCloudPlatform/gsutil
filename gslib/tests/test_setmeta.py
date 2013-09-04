@@ -80,7 +80,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
       stdout = stdout.decode('utf-8')
-      self.assertIn(u'x-goog-meta-dessert:\t\tsoufflé', stdout)
+      self.assertIn(u'x-goog-meta-dessert:\tsoufflé', stdout)
     _Check1()
 
   def test_disallowed_header(self):
