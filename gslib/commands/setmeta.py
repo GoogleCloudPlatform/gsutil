@@ -168,7 +168,7 @@ class SetMetaCommand(Command):
       self.logger.error(str(e))
       self.everything_set_okay = False
 
-    @Retry(GSResponseError, tries=3, delay=1, backoff=2)
+    @Retry(GSResponseError, tries=3, timeout_secs=1)
     def _SetMetadataFunc(name_expansion_result):
       exp_src_uri = self.suri_builder.StorageUri(
           name_expansion_result.GetExpandedUriStr())

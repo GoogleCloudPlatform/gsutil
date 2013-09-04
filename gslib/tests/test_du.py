@@ -36,7 +36,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_object(self):
     obj_uri = self.CreateObject(contents='foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(obj_uri)], return_stdout=True)
       self.assertEqual(stdout, '%-10s  %s\n' % (3, suri(obj_uri)))
@@ -46,7 +46,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout, '%-10s  %s\n' % (3, suri(obj_uri)))
@@ -56,7 +56,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri, obj_uris = self._create_nested_subdir()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(bucket_uri)], return_stdout=True)
       self.assertSetEqual(set(stdout.splitlines()), set([
@@ -74,7 +74,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='foo2')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(obj_uri1), suri(obj_uri2)],
                               return_stdout=True)
@@ -89,7 +89,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', '-c', suri(bucket_uri)],
                               return_stdout=True)
@@ -103,7 +103,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_human_readable(self):
     obj_uri = self.CreateObject(contents='x' * 2048)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', '-h', suri(obj_uri)], return_stdout=True)
       self.assertEqual(stdout, '%-10s  %s\n' % ('2 KB', suri(obj_uri)))
@@ -114,7 +114,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri2, _ = self._create_nested_subdir()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-s', suri(bucket_uri1), suri(bucket_uri2)], return_stdout=True)
@@ -132,14 +132,14 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
         bucket_uri=bucket_uri, object_name='foo', contents='foo2')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['du', suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout, '%-10s  %s\n' % (4, suri(object_uri2)))
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['du', '-a', suri(bucket_uri)],
                               return_stdout=True)
@@ -156,7 +156,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', '-0c', suri(bucket_uri)],
                               return_stdout=True)
@@ -172,7 +172,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri, obj_uris = self._create_nested_subdir()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-e', '*sub2/five*', '-e', '*sub1/four',
@@ -190,7 +190,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents='*sub2/five*\n*sub1/four')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, delay=1, backoff=1)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-X', fpath, suri(bucket_uri)], return_stdout=True)

@@ -380,7 +380,7 @@ class AclCommand(Command):
     self.logger.error('Encountered a problem: {0}'.format(exception))
     self.everything_set_okay = False
 
-  @Retry(GSResponseError, tries=3, delay=1, backoff=2)
+  @Retry(GSResponseError, tries=3, timeout_secs=1)
   def ApplyAclChanges(self, uri_or_expansion_result):
     """Applies the changes in self.changes to the provided URI."""
     if isinstance(uri_or_expansion_result, name_expansion.NameExpansionResult):
