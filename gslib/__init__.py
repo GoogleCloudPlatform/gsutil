@@ -49,7 +49,8 @@ PROGRAM_FILES_DIR = GSLIB_DIR
 
 # The gslib directory will be underneath the gsutil directory when installed
 # from a tarball, but somewhere else on the machine if installed via setup.py.
-if os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR:
+if (not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')) and
+    os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR):
   IS_PACKAGE_INSTALL = False
   PROGRAM_FILES_DIR = GSUTIL_DIR
 
