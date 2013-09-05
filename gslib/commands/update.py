@@ -36,11 +36,15 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
+from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import BOTO_IS_SECURE
+from gslib.util import CompareVersions
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IS_CYGWIN
 from gslib.util import IS_WINDOWS
 from gslib.util import LookUpGsutilVersion
+from gslib.util import LookUpGsutilVersion
+from gslib.util import RELEASE_NOTES_URL
 
 
 _detailed_help_text = ("""
@@ -318,6 +322,7 @@ class UpdateCommand(Command):
     # the tarball and extract the VERSION file. The version lookup will fail
     # when running the update system test, because it retrieves the tarball from
     # a temp file rather than a cloud URI (files lack the version metadata).
+    suri_builder = StorageUriBuilder(self.debug, self.bucket_storage_uri_class)
     tarball_version = LookUpGsutilVersion(
         self.suri_builder.StorageUri(update_from_uri_str))
     if tarball_version:
@@ -338,8 +343,17 @@ class UpdateCommand(Command):
                                'installed.', informational=True)
 
     if not no_prompt:
-      print(('This command will update to the "%s" version of\ngsutil at %s') %
-            (tarball_version, gslib.GSUTIL_DIR))
+      (g, m) = CompareVersions(tarball_version, gslib.VERSION)
+      if m:
+        print('\n'.join(textwrap.wrap(
+            'This command will update to the "%s" version of gsutil at %s. '
+            'NOTE: This a major new version, so it is strongly recommended '
+            'that you review the release note details at %s before updating to '
+            'this version, especially if you use gsutil in scripts.'
+            % (tarball_version, gslib.GSUTIL_DIR, RELEASE_NOTES_URL))))
+      else:
+        print('This command will update to the "%s" version of\ngsutil at %s'
+              % (tarball_version, gslib.GSUTIL_DIR))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove)
 
     if no_prompt:

@@ -195,27 +195,6 @@ class TestCommandRunnerUnitTests(
     finally:
       logging.getLogger().setLevel(prev_loglevel)
 
-  def test_version_comparisons(self):
-    self.assertTrue(self.command_runner._IsVersionGreater('3.37', '3.2'))
-    self.assertTrue(self.command_runner._IsVersionGreater('7', '2'))
-    self.assertTrue(self.command_runner._IsVersionGreater('3.32', '3.32pre'))
-    self.assertTrue(self.command_runner._IsVersionGreater('3.32pre', '3.31'))
-    self.assertTrue(self.command_runner._IsVersionGreater('3.4pre', '3.3pree'))
-
-    self.assertFalse(self.command_runner._IsVersionGreater('3.2', '3.37'))
-    self.assertFalse(self.command_runner._IsVersionGreater('2', '7'))
-    self.assertFalse(self.command_runner._IsVersionGreater('3.32pre', '3.32'))
-    self.assertFalse(self.command_runner._IsVersionGreater('3.31', '3.32pre'))
-    self.assertFalse(self.command_runner._IsVersionGreater('3.3pre', '3.3pre'))
-
-    self.assertTrue(self.command_runner._IsVersionGreater(3.37, 3.2))
-    self.assertTrue(self.command_runner._IsVersionGreater(7, 2))
-    self.assertFalse(self.command_runner._IsVersionGreater(3.2, 3.37))
-    self.assertFalse(self.command_runner._IsVersionGreater(2, 7))
-
-    self.assertFalse(self.command_runner._IsVersionGreater('foobar', 'baz'))
-    self.assertFalse(self.command_runner._IsVersionGreater('3.32', 'baz'))
-
   def test_valid_arg_coding(self):
     """
     Tests that gsutil encodes valid args correctly.

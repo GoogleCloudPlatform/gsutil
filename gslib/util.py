@@ -35,10 +35,13 @@ from gslib.exception import CommandException
 from retry_decorator import retry_decorator 
 from oauth2client.client import HAS_CRYPTO
 
-
 TWO_MB = 2 * 1024 * 1024
 
 NO_MAX = sys.maxint
+
+VERSION_MATCHER = re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?')
+
+RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
@@ -448,3 +451,39 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
       raise e
   return (numobjs, numbytes)
 
+def CompareVersions(first, second):
+  """Compares the first and second gsutil version strings.
+
+  For example, 3.33 > 3.7, and 4.1 is a greater major version than 3.33.
+  Does not handle multiple periods (e.g. 3.3.4) or complicated suffixes
+  (e.g., 3.3RC4 vs. 3.3RC5). A version string with a suffix is treated as
+  less than its non-suffix counterpart (e.g. 3.32 > 3.32pre).
+
+  Returns:
+    (g, m):
+       g is True if first known to be greater than second, else False.
+       m is True if first known to be greater by at least 1 major version,
+         else False.
+  """
+  m1 = VERSION_MATCHER.match(str(first))
+  m2 = VERSION_MATCHER.match(str(second))
+
+  # If passed strings we don't know how to handle, be conservative.
+  if not m1 or not m2:
+    return (False, False)
+
+  major_ver1 = int(m1.group('maj'))
+  minor_ver1 = int(m1.group('min')) if m1.group('min') else 0
+  suffix_ver1 = m1.group('suffix')
+  major_ver2 = int(m2.group('maj'))
+  minor_ver2 = int(m2.group('min')) if m2.group('min') else 0
+  suffix_ver2 = m2.group('suffix')
+
+  if major_ver1 > major_ver2:
+    return (True, True)
+  elif major_ver1 == major_ver2:
+    if minor_ver1 > minor_ver2:
+      return (True, False)
+    elif minor_ver1 == minor_ver2:
+      return (bool(suffix_ver2) and not suffix_ver1, False)
+  return (False, False)

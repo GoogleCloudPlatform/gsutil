@@ -22,6 +22,7 @@
 """Tests for gsutil utility functions."""
 
 from gslib import util
+from gslib.util import CompareVersions
 import gslib.tests.testcase as testcase
 
 
@@ -64,3 +65,59 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(util.HumanReadableToBytes('1T'), 1024 ** 4)
     self.assertEqual(util.HumanReadableToBytes('1\t   pb'), 1024 ** 5)
     self.assertEqual(util.HumanReadableToBytes('1e'), 1024 ** 6)
+
+  def test_CompareVersions(self):
+    # CompareVersions(first, second) returns (g, m), where
+    #   g is True if first known to be greater than second, else False.
+    #   m is True if first known to be greater by at least 1 major version,
+    (g, m) = CompareVersions('3.37', '3.2')
+    self.assertTrue(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('7', '2')
+    self.assertTrue(g)
+    self.assertTrue(m)
+    (g, m) = CompareVersions('3.32', '3.32pre')
+    self.assertTrue(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.32pre', '3.31')
+    self.assertTrue(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.4pre', '3.3pree')
+    self.assertTrue(g)
+    self.assertFalse(m)
+
+    (g, m) = CompareVersions('3.2', '3.37')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('2', '7')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.32pre', '3.32')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.31', '3.32pre')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.3pre', '3.3pre')
+    self.assertFalse(g)
+    self.assertFalse(m)
+
+    (g, m) = CompareVersions('foobar', 'baz')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.32', 'baz')
+    self.assertFalse(g)
+    self.assertFalse(m)
+
+    (g, m) = CompareVersions('3.4', '3.3')
+    self.assertTrue(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('3.3', '3.4')
+    self.assertFalse(g)
+    self.assertFalse(m)
+    (g, m) = CompareVersions('4.1', '3.33')
+    self.assertTrue(g)
+    self.assertTrue(m)
+    (g, m) = CompareVersions('3.10', '3.1')
+    self.assertTrue(g)
+    self.assertFalse(m)

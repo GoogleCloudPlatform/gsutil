@@ -20,7 +20,6 @@ import boto
 import difflib
 import logging
 import os
-import re
 import sys
 import textwrap
 import time
@@ -34,16 +33,15 @@ from gslib.command import OLD_ALIAS_MAP
 from gslib.exception import CommandException
 from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.storage_uri_builder import StorageUriBuilder
+from gslib.util import CompareVersions
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
+from gslib.util import RELEASE_NOTES_URL
 from gslib.util import SECONDS_PER_DAY
-
-
-VERSION_MATCHER = re.compile(r'^(?P<num>\d+\.?\d*)(?P<suffix>.*)')
 
 
 def HandleArgCoding(args):
@@ -189,35 +187,6 @@ class CommandRunner(object):
         command_alias_used=command_name)
     return command_inst.RunCommand()
 
-  @classmethod
-  def _IsVersionGreater(cls, first, second):
-    """Tests that the first version string is greater than the second.
-
-    For example, 3.33 > 3.7. Does not handle multiple periods (e.g. 3.3.4) or
-    complicated suffixes (e.g. 3.3RC4 vs. 3.3RC5). A version string with a
-    suffix is treated as less than its non-suffix counterpart
-    (e.g. 3.32 > 3.32pre).
-
-    Returns:
-      True if known to be greater, otherwise False.
-    """
-    m1 = VERSION_MATCHER.match(str(first))
-    m2 = VERSION_MATCHER.match(str(second))
-
-    # If passed strings we don't know how to handle, be conservative.
-    if not m1 or not m2:
-      return False
-
-    vers1 = float(m1.group('num'))
-    vers2 = float(m2.group('num'))
-
-    if vers1 > vers2:
-      return True
-    elif vers1 == vers2 and m2.group('suffix') and not m1.group('suffix'):
-      return True
-
-    return False
-
   def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update, and if it's been longer
        than the configured threshold offers the user to update gsutil.
@@ -280,14 +249,25 @@ class CommandRunner(object):
       cur_ver = LookUpGsutilVersion(suri_builder.StorageUri(GSUTIL_PUB_TARBALL))
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(cur_ts))
-      if self._IsVersionGreater(cur_ver, gslib.VERSION):
+      (g, m) = CompareVersions(cur_ver, gslib.VERSION)
+      if m:
+        print '\n'.join(textwrap.wrap(
+            'A newer version of gsutil (%s) is available than the version you '
+            'are running (%s). NOTE: This is a major new version, so it is '
+            'strongly recommended that you review the release note details at %s '
+            'before updating to this version, especially if you use gsutil in '
+            'scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+        if gslib.IS_PACKAGE_INSTALL:
+          return False
+        print
+        answer = raw_input('Would you like to update [y/N]? ')
+        return answer and answer.lower()[0] == 'y'
+      elif g:
         print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
-            'available at '
-            'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt if you '
-            'would like to read them before updating.' % (
-                cur_ver, gslib.VERSION)))
+            'available at %s if you would like to read them before updating.'
+            % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print
