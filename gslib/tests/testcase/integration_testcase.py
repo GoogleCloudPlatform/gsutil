@@ -80,7 +80,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
+                   provider=None):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -91,19 +92,25 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
       storage_class: storage class to use. If not provided we us standard.
+      provider: Provider to use - either "gs" (the default) or "s3".
 
     Returns:
       StorageUri for the created bucket.
     """
+    if not provider:
+      provider = 'gs'
     bucket_name = bucket_name or self.MakeTempName('bucket')
 
-    bucket_uri = boto.storage_uri('gs://%s' % bucket_name.lower(),
+    bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
                                   suppress_consec_slashes=False)
-
-    # Apply API version and project ID headers if necessary.
-    headers = {'x-goog-api-version': self.api_version}
-    self.proj_id_handler.FillInProjectHeaderIfNeeded(
-        'test', bucket_uri, headers)
+    
+    if provider == 'gs':
+      # Apply API version and project ID headers if necessary.
+      headers = {'x-goog-api-version': self.api_version}
+      self.proj_id_handler.FillInProjectHeaderIfNeeded(
+          'test', bucket_uri, headers)
+    else:
+      headers = {}
 
     bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
     self.bucket_uris.append(bucket_uri)

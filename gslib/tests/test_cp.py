@@ -19,6 +19,8 @@ import datetime
 import os
 import re
 import gslib.tests.testcase as testcase
+from gslib.tests.util import HAS_S3_CREDS
+from gslib.tests.util import unittest
 
 from boto import storage_uri
 from boto.storage_uri import BucketStorageUri
@@ -69,15 +71,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(bucket2_uri,
                   key_uri.object_name), stderr)
-
-  @PerformsFileToObjectUpload
-  def test_streaming(self):
-    bucket_uri = self.CreateBucket()
+    
+  def _run_streaming_test(self, provider):
+    bucket_uri = self.CreateBucket(provider=provider)
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
                             stdin='bar', return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
     key_uri = bucket_uri.clone_replace_name('foo')
     self.assertEqual(key_uri.get_contents_as_string(), 'bar')
+
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires S3 credentials.')
+  def test_streaming_s3(self):
+    self._run_streaming_test('s3')
+    
+
+  @PerformsFileToObjectUpload
+  def test_streaming_gs(self):
+    self._run_streaming_test('gs')
 
   # TODO: Implement a way to test both with and without using magic file.
 

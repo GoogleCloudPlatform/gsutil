@@ -41,6 +41,7 @@ import tempfile
 import textwrap
 import threading
 import time
+import traceback
 
 from gslib.util import AddAcceptEncoding
 
@@ -1216,7 +1217,7 @@ class CpCommand(Command):
                                        canned_acl))
     else:
       if src_key.is_stream():
-        # For Providers that doesn't support chunked Transfers
+        # For Providers that don't support chunked Transfers
         tmp = tempfile.NamedTemporaryFile()
         file_uri = self.suri_builder.StorageUri('file://%s' % tmp.name)
         try:
@@ -1226,7 +1227,7 @@ class CpCommand(Command):
         finally:
           file_uri.close()
       try:
-        fp = src_uri.get_key().fp
+        fp = src_key.fp
         file_size = self._GetFileSize(fp)
         if self._ShouldDoParallelCompositeUpload(allow_splitting, src_key,
                                                  dst_uri, file_size):
@@ -2058,6 +2059,8 @@ class CpCommand(Command):
     """Simple exception handler to allow post-completion status."""
     self.logger.error(str(e))
     self.copy_failure_count += 1
+    self.logger.debug(('\n\nEncountered exception while copying:\n%s\n' %
+                       traceback.format_exc()))
 
   def _RmExceptionHandler(self, e):
     """Simple exception handler to allow post-completion status."""

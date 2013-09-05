@@ -914,7 +914,7 @@ class Command(object):
             if use_thr_exc_handler:
               thr_exc_handler(e)
             else:
-              raise e
+              raise
 
       # If any Python threads created, wait here for them to finish.
     finally:
