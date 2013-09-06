@@ -57,7 +57,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
-  @Retry(GSResponseError, fptr=LOGGER)
+  @Retry(GSResponseError, tries=3, timeout_secs=1)
   def tearDown(self):
     super(GsUtilIntegrationTestCase, self).tearDown()
 
