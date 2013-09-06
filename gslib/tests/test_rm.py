@@ -98,11 +98,15 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check(stderr_lines):
-      stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
-                              return_stderr=True)
-      stderr_lines.update(set(stderr.splitlines()))
+      status = self.RunGsUtil(['ls', '-b', suri(bucket_uri)],
+                              return_status=True, expected_status=None)
+      if status == 0:
+        # If ls succeeded, the bucket exists, so try and delete.
+        stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+                                return_stderr=True)
+        stderr_lines.update(set(stderr.splitlines()))
       stderr = '\n'.join(stderr_lines)
-      self.assertEqual(stderr.count('Removing gs://'), 4)
+      self.assertEqual(stderr.count('Removing gs://'), 5)
       self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
       self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
       self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
