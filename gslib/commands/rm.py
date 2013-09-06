@@ -159,13 +159,15 @@ class RmCommand(Command):
 
     if self.recursion_requested and not self.all_versions:
       for uri_str in self.args:
-        uri = self.suri_builder.StorageUri(uri_str)
-        if uri.names_bucket() and uri.get_versioning_config():
-          raise CommandException(
-              'Running gsutil rm -R on a bucket-only URI (%s)\nwith versioning '
-              'enabled will not work without specifying the -a flag. Please '
-              'try\nagain, using:\n\tgsutil rm -Ra %s'
-              % (uri_str,' '.join(self.args)))
+        # WildcardIterator returns BucketListingRefs.
+        for blr in self.WildcardIterator(uri_str):
+          uri = blr.GetUri()
+          if uri.names_bucket() and uri.get_versioning_config():
+            raise CommandException(
+                'Running gsutil rm -R on a bucket-only URI (%s)\nwith '
+                'versioning enabled will not work without specifying the -a '
+                'flag. Please try\nagain, using:\n\tgsutil rm -Ra %s'
+                % (uri_str,' '.join(self.args)))
 
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
@@ -178,9 +180,10 @@ class RmCommand(Command):
     bucket_uris_to_delete = []
     if self.recursion_requested:
       for uri_str in self.args:
-        uri = self.suri_builder.StorageUri(uri_str)
-        if uri.names_bucket():
-          bucket_uris_to_delete.append(uri)
+        for blr in self.WildcardIterator(uri_str):
+          uri = blr.GetUri()
+          if uri.names_bucket():
+            bucket_uris_to_delete.append(uri)
 
     try:
       # Expand wildcards, dirs, buckets, and bucket subdirs in URIs.
@@ -238,6 +241,7 @@ class RmCommand(Command):
 
     # Now that all data has been deleted, delete any bucket URIs.
     for uri in bucket_uris_to_delete:
+      self.logger.info('Removing %s...', uri)
       uri.delete_bucket(self.headers)
 
     return 0

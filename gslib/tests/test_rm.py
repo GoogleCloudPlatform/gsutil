@@ -15,6 +15,7 @@
 import gslib.tests.testcase as testcase
 from boto.exception import GSResponseError
 from gslib.exception import CommandException
+from gslib.tests.testcase.base import MAX_BUCKET_LENGTH
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 
@@ -186,7 +187,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     # Bucket should not be deleted (Should not get GSResponseError).
     bucket_uri.get_location(validate=False)
 
-  def test_recusive_bucket_rm(self):
+  def test_recursive_bucket_rm(self):
     """Test for 'rm -r' of a bucket."""
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri) 
@@ -219,6 +220,27 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True, expected_status=1)
       self.assertIn('bucket does not exist', stderr)
     _Check2()
+
+  def test_recursive_bucket_rm_with_wildcarding(self):
+    """Tests removing all objects and buckets matching a bucket wildcard"""
+    buri_base = 'gsutil-test-%s' % self._testMethodName
+    buri_base = buri_base[:MAX_BUCKET_LENGTH-20]
+    buri_base = '%s-%s' % (buri_base, self.MakeRandomTestString())
+    buri1 = self.CreateBucket(bucket_name='%s-tbuck1' % buri_base)
+    buri2 = self.CreateBucket(bucket_name='%s-tbuck2' % buri_base)
+    buri3 = self.CreateBucket(bucket_name='%s-tb3' % buri_base)
+    ouri1 = self.CreateObject(bucket_uri=buri1, object_name='o1', contents='z')
+    ouri2 = self.CreateObject(bucket_uri=buri2, object_name='o2', contents='z')
+    ouri3 = self.CreateObject(bucket_uri=buri3, object_name='o3', contents='z')
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      self.RunGsUtil(['rm', '-r', 'gs://%s-tbu*' % buri_base])
+      stdout = self.RunGsUtil(['ls', 'gs://%s-tb*' % buri_base],
+                              return_stdout=True)
+      # 2 = one for single expected line plus one for final \n.
+      self.assertEqual(2, len(stdout.split('\n')))
+      self.assertEqual('gs://%s-tb3/o3' % buri_base, stdout.strip())
+    _Check()
 
   def test_rm_quiet(self):
     """Test that 'rm -q' outputs no progress indications."""
