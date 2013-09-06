@@ -46,41 +46,41 @@ _GET_SYNOPSIS = """
   gsutil web get bucket_uri
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    The "gsutil web set" command will allow you to set Website Configuration
-    on your bucket(s). The "set" sub-command has the following options:
+<B>SET</B>
+  The "gsutil web set" command will allow you to set Website Configuration
+  on your bucket(s). The "set" sub-command has the following options:
 
-    <B>SET OPTIONS</B>
-      -m <index.html>      Specifies the object name to serve when a bucket
-                           listing is requested via the CNAME alias to
-                           c.storage.googleapis.com.
+<B>SET OPTIONS</B>
+  -m <index.html>      Specifies the object name to serve when a bucket
+                       listing is requested via the CNAME alias to
+                       c.storage.googleapis.com.
 
-      -e <404.html>        Specifies the error page to serve when a request
-                           is made for a non-existing object, via the is
-                           requested via the CNAME alias to
-                           c.storage.googleapis.com.
+  -e <404.html>        Specifies the error page to serve when a request
+                       is made for a non-existing object, via the is
+                       requested via the CNAME alias to
+                       c.storage.googleapis.com.
 
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    The "gsutil web get" command will gets the web semantics configuration for
-    a bucket and displays an XML representation of the configuration.
+<B>GET</B>
+  The "gsutil web get" command will gets the web semantics configuration for
+  a bucket and displays an XML representation of the configuration.
 
-    In Google Cloud Storage, this would look like:
+  In Google Cloud Storage, this would look like:
 
-      <?xml version="1.0" ?>
-      <WebsiteConfiguration>
-        <MainPageSuffix>
-          index.html
-        </MainPageSuffix>
-        <NotFoundPage>
-          404.html
-        </NotFoundPage>
-      </WebsiteConfiguration>
+    <?xml version="1.0" ?>
+    <WebsiteConfiguration>
+      <MainPageSuffix>
+        index.html
+      </MainPageSuffix>
+      <NotFoundPage>
+        404.html
+      </NotFoundPage>
+    </WebsiteConfiguration>
 
 """
 

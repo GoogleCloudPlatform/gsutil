@@ -46,20 +46,20 @@ gsutil cors set cors-xml-file uri...
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    Gets the CORS configuration for a single bucket. The output from
-    "cors get" can be redirected into a file, edited and then updated using
-    "cors set".
+<B>GET</B>
+  Gets the CORS configuration for a single bucket. The output from
+  "cors get" can be redirected into a file, edited and then updated using
+  "cors set".
 """
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    Sets the CORS configuration for one or more buckets. The
-    cors-xml-file specified on the command line should be a path to a local
-    file containing an XML document as described above.
+<B>SET</B>
+  Sets the CORS configuration for one or more buckets. The
+  cors-xml-file specified on the command line should be a path to a local
+  file containing an XML document as described above.
 """
 
-_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS + '\n\n'
+_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + '\n\n'
 
 _DESCRIPTION = ("""
   Gets or sets the Cross-Origin Resource Sharing (CORS) configuration on one or

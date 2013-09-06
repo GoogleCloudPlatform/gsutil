@@ -46,21 +46,21 @@ _SET_SYNOPSIS = """
   gsutil lifecycle set config-xml-file uri...
 """
 
-_SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS + '\n'
+_SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS.lstrip('\n') + '\n'
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    Gets the lifecycle configuration for a given bucket. You can get the
-    lifecycle configuration for only one bucket at a time. The output can be
-    redirected into a file, edited and then updated via the set sub-command.
+<B>GET</B>
+  Gets the lifecycle configuration for a given bucket. You can get the
+  lifecycle configuration for only one bucket at a time. The output can be
+  redirected into a file, edited and then updated via the set sub-command.
 
 """
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    Sets the lifecycle configuration on one or more buckets. The config-xml-file
-    specified on the command line should be a path to a local file containing
-    the lifecycle congfiguration XML document.
+<B>SET</B>
+  Sets the lifecycle configuration on one or more buckets. The config-xml-file
+  specified on the command line should be a path to a local file containing
+  the lifecycle congfiguration XML document.
 
 """
 

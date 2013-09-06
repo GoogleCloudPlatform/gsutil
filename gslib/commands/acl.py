@@ -57,174 +57,177 @@ _CH_SYNOPSIS = """
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    The "acl get" command gets the ACL XML for a bucket or object, which you can
-    save and edit for the setacl command.
+<B>GET</B>
+  The "acl get" command gets the ACL XML for a bucket or object, which you can
+  save and edit for the setacl command.
 """
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    The "acl set" command allows you to set an Access Control List on one or
-    more buckets and objects. The simplest way to use it is to specify one of
-    the canned ACLs, e.g.,:
-  
-      gsutil acl set private gs://bucket
-  
-    or:
-  
-      gsutil acl set public-read gs://bucket/object
-  
-    See "gsutil help acls" for a list of all canned ACLs.
+<B>SET</B>
+  The "acl set" command allows you to set an Access Control List on one or
+  more buckets and objects. The simplest way to use it is to specify one of
+  the canned ACLs, e.g.,:
 
-    NOTE: By default, publicly readable objects are served with a Cache-Control
-    header allowing such objects to be cached for 3600 seconds. If you need to
-    ensure that updates become visible immediately, you should set a
-    Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
-    such objects. For help doing this, see 'gsutil help setmeta'.
+    gsutil acl set private gs://bucket
 
-    If you want to define more fine-grained control over your data, you can
-    retrieve an ACL using the "acl get" command, save the output to a file, edit
-    the file, and then use the "acl set" command to set that ACL on the buckets
-    and/or objects. For example:
+  or:
 
-      gsutil acl get gs://bucket/file.txt > acl.txt
-      (Make changes to acl.txt such as adding an additional grant.)
-      gsutil acl set acl.txt gs://cats/file.txt
+    gsutil acl set public-read gs://bucket/object
 
-    Note that you can set an ACL on multiple buckets or objects at once,
-    for example:
+  See "gsutil help acls" for a list of all canned ACLs.
 
-      gsutil acl set acl.txt gs://bucket/*.jpg
+  NOTE: By default, publicly readable objects are served with a Cache-Control
+  header allowing such objects to be cached for 3600 seconds. If you need to
+  ensure that updates become visible immediately, you should set a
+  Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
+  such objects. For help doing this, see 'gsutil help setmeta'.
 
-    If you have a large number of ACLs to update you might want to use the
-    gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
-    update:
+  If you want to define more fine-grained control over your data, you can
+  retrieve an ACL using the "acl get" command, save the output to a file, edit
+  the file, and then use the "acl set" command to set that ACL on the buckets
+  and/or objects. For example:
 
-      gsutil -m acl set acl.txt gs://bucket/*.jpg
+    gsutil acl get gs://bucket/file.txt > acl.txt
 
-    Note that multi-threading/multi-processing is only done when the named URIs
-    refer to objects. gsutil -m acl set gs://bucket1 gs://bucket2 will run the
-    acl set operations sequentially.
+  Make changes to acl.txt such as adding an additional grant, then:
+
+    gsutil acl set acl.txt gs://cats/file.txt
+
+  Note that you can set an ACL on multiple buckets or objects at once,
+  for example:
+
+    gsutil acl set acl.txt gs://bucket/*.jpg
+
+  If you have a large number of ACLs to update you might want to use the
+  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
+  update:
+
+    gsutil -m acl set acl.txt gs://bucket/*.jpg
+
+  Note that multi-threading/multi-processing is only done when the named URIs
+  refer to objects. gsutil -m acl set gs://bucket1 gs://bucket2 will run the
+  acl set operations sequentially.
 
 
-  <B>SET OPTIONS</B>
-    The "set" sub-command has the following options:
-      -R, -r      Performs "acl set" request recursively, to all objects under
-                  the specified URI.
+<B>SET OPTIONS</B>
+  The "set" sub-command has the following options
 
-      -a          Performs "acl set" request on all object versions.
+    -R, -r      Performs "acl set" request recursively, to all objects under
+                the specified URI.
 
-      -f          Normally gsutil stops at the first error. The -f option causes
-                  it to continue when it encounters errors. With this option the
-                  gsutil exit status will be 0 even if some ACLs couldn't be
-                  set.
+    -a          Performs "acl set" request on all object versions.
+
+    -f          Normally gsutil stops at the first error. The -f option causes
+                it to continue when it encounters errors. With this option the
+                gsutil exit status will be 0 even if some ACLs couldn't be
+                set.
 """
 
 _CH_DESCRIPTION = """
-  <B>CH</B>
-    The "acl ch" (or "acl change") command updates access control lists, similar
-    in spirit to the Linux chmod command. You can specify multiple access grant
-    additions and deletions in a single command run; all changes will be made
-    atomically to each object in turn. For example, if the command requests
-    deleting one grant and adding a different grant, the ACLs being updated will
-    never be left in an intermediate state where one grant has been deleted but
-    the second grant not yet added. Each change specifies a user or group grant
-    to add or delete, and for grant additions, one of R, W, FC (for the
-    permission to be granted). A more formal description is provided in a later
-    section; below we provide examples.
+<B>CH</B>
+  The "acl ch" (or "acl change") command updates access control lists, similar
+  in spirit to the Linux chmod command. You can specify multiple access grant
+  additions and deletions in a single command run; all changes will be made
+  atomically to each object in turn. For example, if the command requests
+  deleting one grant and adding a different grant, the ACLs being updated will
+  never be left in an intermediate state where one grant has been deleted but
+  the second grant not yet added. Each change specifies a user or group grant
+  to add or delete, and for grant additions, one of R, W, FC (for the
+  permission to be granted). A more formal description is provided in a later
+  section; below we provide examples.
 
-  <B>CH EXAMPLES</B>
-    Examples for "ch" sub-command:
+<B>CH EXAMPLES</B>
+  Examples for "ch" sub-command:
 
-      Grant the user john.doe@example.com WRITE access to the bucket
-      example-bucket:
+  Grant the user john.doe@example.com WRITE access to the bucket
+  example-bucket:
 
-        gsutil acl ch -u john.doe@example.com:WRITE gs://example-bucket
+    gsutil acl ch -u john.doe@example.com:WRITE gs://example-bucket
 
-      Grant the group admins@example.com FULL_CONTROL access to all jpg files in
-      the top level of example-bucket:
+  Grant the group admins@example.com FULL_CONTROL access to all jpg files in
+  the top level of example-bucket:
 
-        gsutil acl ch -g admins@example.com:FC gs://example-bucket/*.jpg
+    gsutil acl ch -g admins@example.com:FC gs://example-bucket/*.jpg
 
-      Grant the user with the specified canonical ID READ access to all objects
-      in example-bucket that begin with folder/:
+  Grant the user with the specified canonical ID READ access to all objects
+  in example-bucket that begin with folder/:
 
-        gsutil acl ch -R \\
-          -u 84fac329bceSAMPLE777d5d22b8SAMPLE785ac2SAMPLE2dfcf7c4adf34da46:R \\
-          gs://example-bucket/folder/
+    gsutil acl ch -R \\
+      -u 84fac329bceSAMPLE777d5d22b8SAMPLE785ac2SAMPLE2dfcf7c4adf34da46:R \\
+      gs://example-bucket/folder/
 
-      Grant all users from my-domain.org READ access to the bucket
-      gcs.my-domain.org:
+  Grant all users from my-domain.org READ access to the bucket
+  gcs.my-domain.org:
 
-        gsutil acl ch -g my-domain.org:R gs://gcs.my-domain.org
+    gsutil acl ch -g my-domain.org:R gs://gcs.my-domain.org
 
-      Remove any current access by john.doe@example.com from the bucket
-      example-bucket:
+  Remove any current access by john.doe@example.com from the bucket
+  example-bucket:
 
-        gsutil acl ch -d john.doe@example.com gs://example-bucket
+    gsutil acl ch -d john.doe@example.com gs://example-bucket
 
-      If you have a large number of objects to update, enabling multi-threading
-      with the gsutil -m flag can significantly improve performance. The
-      following command adds FULL_CONTROL for admin@example.org using
-      multi-threading:
+  If you have a large number of objects to update, enabling multi-threading
+  with the gsutil -m flag can significantly improve performance. The
+  following command adds FULL_CONTROL for admin@example.org using
+  multi-threading:
 
-        gsutil -m acl ch -R -u admin@example.org:FC gs://example-bucket
+    gsutil -m acl ch -R -u admin@example.org:FC gs://example-bucket
 
-      Grant READ access to everyone from my-domain.org and to all authenticated
-      users, and grant FULL_CONTROL to admin@mydomain.org, for the buckets
-      my-bucket and my-other-bucket, with multi-threading enabled:
+  Grant READ access to everyone from my-domain.org and to all authenticated
+  users, and grant FULL_CONTROL to admin@mydomain.org, for the buckets
+  my-bucket and my-other-bucket, with multi-threading enabled:
 
-        gsutil -m acl ch -R -g my-domain.org:R -g AllAuth:R \\
-          -u admin@mydomain.org:FC gs://my-bucket/ gs://my-other-bucket
+    gsutil -m acl ch -R -g my-domain.org:R -g AllAuth:R \\
+      -u admin@mydomain.org:FC gs://my-bucket/ gs://my-other-bucket
 
-  <B>CH PERMISSIONS</B>
-    Permissions:
-      You may specify the following permissions with either their shorthand or
-      their full name:
-    
-        R: READ
-        W: WRITE
-        FC: FULL_CONTROL
+<B>CH PERMISSIONS</B>
+  You may specify the following permissions with either their shorthand or
+  their full name:
 
-  <B>CH SCOPES</B>
-    Scopes:
-      There are four different scopes: Users, Groups, All Authenticated Users,
-      and All Users.
+    R: READ
+    W: WRITE
+    FC: FULL_CONTROL
 
-      Users are added with -u and a plain ID or email address, as in
-      "-u john-doe@gmail.com:r"
+<B>CH SCOPES</B>
+  There are four different scopes: Users, Groups, All Authenticated Users,
+  and All Users.
 
-      Groups are like users, but specified with the -g flag, as in
-      "-g power-users@example.com:fc". Groups may also be specified as a full
-      domain, as in "-g my-company.com:r".
+  Users are added with -u and a plain ID or email address, as in
+  "-u john-doe@gmail.com:r"
 
-      AllAuthenticatedUsers and AllUsers are specified directly, as
-      in "-g AllUsers:R" or "-g AllAuthenticatedUsers:FC". These are case
-      insensitive, and may be shortened to "all" and "allauth", respectively.
+  Groups are like users, but specified with the -g flag, as in
+  "-g power-users@example.com:fc". Groups may also be specified as a full
+  domain, as in "-g my-company.com:r".
 
-      Removing permissions is specified with the -d flag and an ID, email
-      address, domain, or one of AllUsers or AllAuthenticatedUsers.
+  AllAuthenticatedUsers and AllUsers are specified directly, as
+  in "-g AllUsers:R" or "-g AllAuthenticatedUsers:FC". These are case
+  insensitive, and may be shortened to "all" and "allauth", respectively.
 
-      Many scopes can be specified on the same command line, allowing bundled
-      changes to be executed in a single run. This will reduce the number of
-      requests made to the server.
+  Removing permissions is specified with the -d flag and an ID, email
+  address, domain, or one of AllUsers or AllAuthenticatedUsers.
 
-  <B>CH OPTIONS</B>
-    The "ch" sub-command has the following options:
-      -R, -r      Performs chacl request recursively, to all objects under the
-                  specified URI.
+  Many scopes can be specified on the same command line, allowing bundled
+  changes to be executed in a single run. This will reduce the number of
+  requests made to the server.
 
-      -u          Add or modify a user permission as specified in the SCOPES
-                  and PERMISSIONS sections.
+<B>CH OPTIONS</B>
+  The "ch" sub-command has the following options
 
-      -g          Add or modify a group permission as specified in the SCOPES
-                  and PERMISSIONS sections.
+    -R, -r      Performs chacl request recursively, to all objects under the
+                specified URI.
 
-      -d          Remove all permissions associated with the matching argument,
-                  as specified in the SCOPES and PERMISSIONS sections
+    -u          Add or modify a user permission as specified in the SCOPES
+                and PERMISSIONS sections.
+
+    -g          Add or modify a group permission as specified in the SCOPES
+                and PERMISSIONS sections.
+
+    -d          Remove all permissions associated with the matching argument,
+                as specified in the SCOPES and PERMISSIONS sections
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS + _CH_SYNOPSIS + '\n\n'
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = ("""
   The acl command has three sub-commands:

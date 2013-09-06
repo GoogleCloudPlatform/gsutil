@@ -57,9 +57,9 @@ _detailed_help_text = ("""
   URIs using wildcards.
 
   If run with the gsutil -q option nothing will be printed, e.g.:
-  
+
     gsutil -q stat gs://some-bucket/some-object
-    
+
   This can be useful for writing scripts, because the exit status will be 0 for
   an existing object and 1 for a non-existent object.
 """)

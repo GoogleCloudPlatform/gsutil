@@ -67,9 +67,9 @@ _detailed_help_text = ("""
     Editors, can lead to unexpected results. The solution to this problem is to
     add the email address for your service account as a project Owner. To find
     the email address, visit the
-    `Google Cloud Console<https://cloud.google.com/console#/project>`_, click on
-    the project you're using, click "APIs", and click "All registered apps" in
-    the top left; service accounts will appear as something like
+    `Google Cloud Console <https://cloud.google.com/console#/project>`_, click
+    on the project you're using, click "APIs", and click "All registered apps"
+    in the top left; service accounts will appear as something like
     "Service Account-<service account id>", which you can click to view the
     email address.
 

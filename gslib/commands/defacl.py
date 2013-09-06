@@ -50,54 +50,55 @@ _CH_SYNOPSIS = """
 """
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    The "defacl set" command sets default object ACLs for the specified buckets.
-    If you specify a default object ACL for a certain bucket, Google Cloud
-    Storage applies the default object ACL to all new objects uploaded to that
-    bucket.
+<B>SET</B>
+  The "defacl set" command sets default object ACLs for the specified buckets.
+  If you specify a default object ACL for a certain bucket, Google Cloud
+  Storage applies the default object ACL to all new objects uploaded to that
+  bucket.
 
-    Similar to the "acl set" command, the file-or-canned_acl_name names either a
-    canned ACL or the path to a file that contains ACL XML. (See "gsutil
-    help acl" for examples of editing and setting ACLs via the
-    acl command.)
+  Similar to the "acl set" command, the file-or-canned_acl_name names either a
+  canned ACL or the path to a file that contains ACL XML. (See "gsutil
+  help acl" for examples of editing and setting ACLs via the
+  acl command.)
 
-    If you don't set a default object ACL on a bucket, the bucket's default
-    object ACL will be project-private.
+  If you don't set a default object ACL on a bucket, the bucket's default
+  object ACL will be project-private.
 
-    Setting a default object ACL on a bucket provides a convenient way
-    to ensure newly uploaded objects have a specific ACL, and avoids the
-    need to back after the fact and set ACLs on a large number of objects
-    for which you forgot to set the ACL at object upload time (which can
-    happen if you don't set a default object ACL on a bucket, and get the
-    default project-private ACL).
+  Setting a default object ACL on a bucket provides a convenient way
+  to ensure newly uploaded objects have a specific ACL, and avoids the
+  need to back after the fact and set ACLs on a large number of objects
+  for which you forgot to set the ACL at object upload time (which can
+  happen if you don't set a default object ACL on a bucket, and get the
+  default project-private ACL).
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    Gets the default ACL XML for a bucket, which you can save and edit
-    for use with the "defacl set" command.
+<B>GET</B>
+  Gets the default ACL XML for a bucket, which you can save and edit
+  for use with the "defacl set" command.
 """
 
 _CH_DESCRIPTION = """
-  <B>CH</B>
-    The "defacl ch" (or "defacl change") command updates the default object
-    access control list for a bucket. The syntax is shared with the "acl ch"
-    command, so see the "CH" section of "gsutil help acl" for the full help
-    description.
+<B>CH</B>
+  The "defacl ch" (or "defacl change") command updates the default object
+  access control list for a bucket. The syntax is shared with the "acl ch"
+  command, so see the "CH" section of "gsutil help acl" for the full help
+  description.
 
-    Examples:
-      Add the user john.doe@example.com to the default object ACL on bucket
-      example-bucket with WRITE access:
+<B>CH EXAMPLES</B>
+  Add the user john.doe@example.com to the default object ACL on bucket
+  example-bucket with WRITE access:
 
-        gsutil defacl ch -u john.doe@example.com:WRITE gs://example-bucket
+    gsutil defacl ch -u john.doe@example.com:WRITE gs://example-bucket
 
-      Add the group admins@example.com to the default object ACL on bucket
-      example-bucket with FULL_CONTROL access:
+  Add the group admins@example.com to the default object ACL on bucket
+  example-bucket with FULL_CONTROL access:
 
-        gsutil defacl ch -g admins@example.com:FC gs://example-bucket
+    gsutil defacl ch -g admins@example.com:FC gs://example-bucket
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS + _CH_SYNOPSIS + '\n\n'
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
   The defacl command has three sub-commands:

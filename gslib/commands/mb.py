@@ -75,27 +75,19 @@ _detailed_help_text = ("""
   If you don't specify a -l option, the bucket will be created in the default
   location (US). Otherwise, you can specify one of the available locations:
 
-    EU - European Union
+  - EU (European Union)
+  - US (United States
+  - US-EAST1 (Eastern United States) [1]_
+  - US-EAST2 (Eastern United States) [1]_
+  - US-EAST3 (Eastern United States) [1]_
+  - US-CENTRAL1 (Central United States) [1]_
+  - US-CENTRAL2 (Central United States) [1]_
+  - US-WEST1 (Western United States) [1]_
 
-    US - United States
-
-    US-EAST1    - Eastern United States*
-
-    US-EAST2    - Eastern United States*
-
-    US-EAST3    - Eastern United States*
-
-    US-CENTRAL1 - Central United States*
-
-    US-CENTRAL2 - Central United States*
-
-    US-WEST1    - Western United States*
-
-  *These locations are for `Regional Buckets
-  <https://developers.google.com/storage/docs/regional-buckets>`_.
-  Regional Buckets is an experimental feature and data stored in these
-  locations is not subject to the usual SLA. See the documentation for
-  additional information.
+  .. [1] These locations are for `Regional Buckets <https://developers.google.com/storage/docs/regional-buckets>`_.
+     Regional Buckets is an experimental feature and data stored in these
+     locations is not subject to the usual SLA. See the documentation for
+     additional information.
 
   Note that creating a regional bucket can only be done using the
   DURABLE_REDUCED_AVAILABILITY storage class - for example:

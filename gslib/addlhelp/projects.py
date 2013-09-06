@@ -42,7 +42,7 @@ _detailed_help_text = ("""
   with access control appropriate for a project at your company, as the three
   group memberships can be configured by your administrative staff. Control
   over projects and their associated memberships is provided by the 
-  `Google Cloud Console<https://cloud.google.com/console#/project>`_.
+  `Google Cloud Console <https://cloud.google.com/console#/project>`_.
 
 
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>
@@ -96,7 +96,7 @@ _detailed_help_text = ("""
   You can edit the bucket ACL if you want to (see "gsutil help acl"),
   but for many cases you'll never need to, and instead can change group
   membership via the
-  `Google Cloud Console<https://cloud.google.com/console#/project>`_.
+  `Google Cloud Console <https://cloud.google.com/console#/project>`_.
 
 
 <B>IDENTIFYING PROJECTS WHEN CREATING AND LISTING BUCKETS</B>

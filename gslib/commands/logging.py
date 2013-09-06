@@ -47,65 +47,65 @@ _GET_SYNOPSIS = """
   gsutil logging get uri
 """
 
-_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS + '\n'
+_SYNOPSIS =  _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + '\n'
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    The set sub-command has two sub-commands:
+<B>SET</B>
+  The set sub-command has two sub-commands:
 
-    <B>ON</B>
-      The "gsutil set on" command will enable access logging of the
-      buckets named by the specified uris, outputting log files in the specified
-      logging_bucket. logging_bucket must already exist, and all URIs must name
-      buckets (e.g., gs://bucket). The required bucket parameter specifies the
-      bucket to which the logs are written, and the optional log_object_prefix
-      parameter specifies the prefix for log object names. The default prefix
-      is the bucket name. For example, the command:
-  
-        gsutil logging enable -b gs://my_logging_bucket -o AccessLog \\
-            gs://my_bucket1 gs://my_bucket2
+<B>ON</B>
+  The "gsutil set on" command will enable access logging of the
+  buckets named by the specified uris, outputting log files in the specified
+  logging_bucket. logging_bucket must already exist, and all URIs must name
+  buckets (e.g., gs://bucket). The required bucket parameter specifies the
+  bucket to which the logs are written, and the optional log_object_prefix
+  parameter specifies the prefix for log object names. The default prefix
+  is the bucket name. For example, the command:
 
-      will cause all read and write activity to objects in gs://mybucket1 and
-      gs://mybucket2 to be logged to objects prefixed with the name "AccessLog",
-      with those log objects written to the bucket gs://my_logging_bucket.
-    
-      Next, you need to grant cloud-storage-analytics@google.com write access to
-      the log bucket, using this command:
+    gsutil logging enable -b gs://my_logging_bucket -o AccessLog \\
+        gs://my_bucket1 gs://my_bucket2
 
-        acl ch -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
+  will cause all read and write activity to objects in gs://mybucket1 and
+  gs://mybucket2 to be logged to objects prefixed with the name "AccessLog",
+  with those log objects written to the bucket gs://my_logging_bucket.
 
-      Note that log data may contain sensitive information, so you should make
-      sure to set an appropriate default bucket ACL to protect that data. (See
-      "gsutil help defacl".)
+  Next, you need to grant cloud-storage-analytics@google.com write access to
+  the log bucket, using this command:
 
-    <B>OFF</B>
-      This command will disable access logging of the buckets named by the
-      specified uris. All URIs must name buckets (e.g., gs://bucket).
-  
-      No logging data is removed from the log buckets when you disable logging,
-      but Google Cloud Storage will stop delivering new logs once you have
-      run this command.
+    acl ch -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
+
+  Note that log data may contain sensitive information, so you should make
+  sure to set an appropriate default bucket ACL to protect that data. (See
+  "gsutil help defacl".)
+
+<B>OFF</B>
+  This command will disable access logging of the buckets named by the
+  specified uris. All URIs must name buckets (e.g., gs://bucket).
+
+  No logging data is removed from the log buckets when you disable logging,
+  but Google Cloud Storage will stop delivering new logs once you have
+  run this command.
 
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    If logging is enabled for the specified bucket uri, the server responds
-    with a <Logging> XML element that looks something like this:
+<B>GET</B>
+  If logging is enabled for the specified bucket uri, the server responds
+  with a <Logging> XML element that looks something like this:
 
-      <?xml version="1.0" ?>
-      <Logging>
-          <LogBucket>
-              logs-bucket
-          </LogBucket>
-          <LogObjectPrefix>
-              my-logs-enabled-bucket
-          </LogObjectPrefix>
-      </Logging>
+    <?xml version="1.0" ?>
+    <Logging>
+        <LogBucket>
+            logs-bucket
+        </LogBucket>
+        <LogObjectPrefix>
+            my-logs-enabled-bucket
+        </LogObjectPrefix>
+    </Logging>
 
-    If logging is not enabled, an empty <Logging> element is returned.
+  If logging is not enabled, an empty <Logging> element is returned.
 
-    You can download log data from your log bucket using the gsutil cp command.
+  You can download log data from your log bucket using the gsutil cp command.
 
 """
 

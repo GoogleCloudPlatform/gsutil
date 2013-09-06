@@ -62,11 +62,11 @@ _detailed_help_text = ("""
     gsutil help command or topic
 
   will provide help about the specified command or topic.
-  
+
   Running:
-    
+
     gsutil help command sub-command
-    
+
   will provide help about the specified sub-command. For example, running
   "gsutil help acl set" will provide help about the "set" subcommand of the
   "acl" command.

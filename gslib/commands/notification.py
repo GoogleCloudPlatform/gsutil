@@ -49,36 +49,36 @@ _STOPCHANNEL_SYNOPSIS = """
   gsutil notification stopchannel channel_id resource_id
 """
 
-_SYNOPSIS = _WATCHBUCKET_SYNOPSIS + _STOPCHANNEL_SYNOPSIS
+_SYNOPSIS = _WATCHBUCKET_SYNOPSIS + _STOPCHANNEL_SYNOPSIS.lstrip('\n')
 
 _WATCHBUCKET_DESCRIPTION = """
-  <B>WATCHBUCKET</B>
-    The watchbucket sub-command can be used to watch a bucket for object
-    changes.
+<B>WATCHBUCKET</B>
+  The watchbucket sub-command can be used to watch a bucket for object
+  changes.
 
-    The app_url parameter must be an HTTPS URL to an application that will be
-    notified of changes to any object in the bucket. The URL endpoint must be
-    a verified domain on your project. See
-    `Notification Authorization<https://developers.google.com/storage/docs/object-change-notification#_Authorization>`_
-    for details.
+  The app_url parameter must be an HTTPS URL to an application that will be
+  notified of changes to any object in the bucket. The URL endpoint must be
+  a verified domain on your project. See
+  `Notification Authorization <https://developers.google.com/storage/docs/object-change-notification#_Authorization>`_
+  for details.
 
-    The optional id parameter can be used to assign a unique identifier to the
-    created notification channel. If not provided, a random UUID string will be
-    generated.
+  The optional id parameter can be used to assign a unique identifier to the
+  created notification channel. If not provided, a random UUID string will be
+  generated.
 
-    The optional token parameter can be used to validate notifications events.
-    To do this, set this custom token and store it to later verify that
-    notification events contain the client token you expect.
+  The optional token parameter can be used to validate notifications events.
+  To do this, set this custom token and store it to later verify that
+  notification events contain the client token you expect.
 
 """
 
 _STOPCHANNEL_DESCRIPTION = """
-  <B>STOPCHANNEL</B>
-    The stopchannel sub-command can be used to stop sending change events to a
-    notification channel.
+<B>STOPCHANNEL</B>
+  The stopchannel sub-command can be used to stop sending change events to a
+  notification channel.
 
-    The channel_id and resource_id parameters should match the values from the
-    response of a bucket watch request.
+  The channel_id and resource_id parameters should match the values from the
+  response of a bucket watch request.
 
 """
 

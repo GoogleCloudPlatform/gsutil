@@ -41,36 +41,36 @@ _GET_SYNOPSIS = """
   gsutil versioning get bucket_uri
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
-  <B>SET</B>
-    The "set" sub-command requires an additional sub-command, either "on" or
-    "off", which, respectively, will enable or disable versioning for the
-    specified bucket(s).
+<B>SET</B>
+  The "set" sub-command requires an additional sub-command, either "on" or
+  "off", which, respectively, will enable or disable versioning for the
+  specified bucket(s).
 
 """
 
 _GET_DESCRIPTION = """
-  <B>GET</B>
-    The "get" sub-command gets the versioning configuration for a
-    bucket and displays an XML representation of the configuration.
-  
-    In Google Cloud Storage, this would look like:
-  
-      <?xml version="1.0" ?>
-      <VersioningConfiguration>
-        <Status>
-          Enabled
-        </Status>
-      </VersioningConfiguration>
+<B>GET</B>
+  The "get" sub-command gets the versioning configuration for a
+  bucket and displays an XML representation of the configuration.
+
+  In Google Cloud Storage, this would look like:
+
+    <?xml version="1.0" ?>
+    <VersioningConfiguration>
+      <Status>
+        Enabled
+      </Status>
+    </VersioningConfiguration>
 
 """
 
 _DESCRIPTION = """
   The Versioning Configuration feature enables you to configure a Google Cloud
   Storage bucket to keep old versions of objects.
-  
+
   The gsutil versioning command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION
 
