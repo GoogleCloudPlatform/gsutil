@@ -58,9 +58,8 @@ _SET_DESCRIPTION = """
                        listing is requested via the CNAME alias to
                        c.storage.googleapis.com.
 
-  -e <404.html>        Specifies the error page to serve when a request
-                       is made for a non-existing object, via the is
-                       requested via the CNAME alias to
+  -e <404.html>        Specifies the error page to serve when a request is made
+                       for a non-existent object via the CNAME alias to
                        c.storage.googleapis.com.
 
 """

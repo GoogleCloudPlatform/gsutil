@@ -67,9 +67,11 @@ _detailed_help_text = ("""
 
     gsutil help command sub-command
 
-  will provide help about the specified sub-command. For example, running
-  "gsutil help acl set" will provide help about the "set" subcommand of the
-  "acl" command.
+  will provide help about the specified sub-command. For example, running:
+
+    gsutil help acl set
+
+  will provide help about the "set" subcommand of the "acl" command.
 
   If you set the PAGER environment variable to the path to a pager program
   (such as /bin/less on Linux), long help sections will be piped through
@@ -167,7 +169,7 @@ class HelpCommand(Command):
           if not help_name:  # No subcommand or invalid subcommand.
             help_name = help_prov.help_spec[HELP_NAME]
             help_text = help_prov.help_spec[HELP_TEXT]
-  
+
           output.append('<B>NAME</B>\n')
           output.append('  %s - %s\n' %
                         (help_name, help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))

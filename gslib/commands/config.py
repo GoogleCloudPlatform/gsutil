@@ -78,7 +78,7 @@ _detailed_help_text = ("""
   to the [Credentials] section of the configuration file. The -r, -w,
   -f options (see OPTIONS below) cause gsutil config to request a token
   with restricted scope; the resulting token will be restricted to read-only
-  operations, read-write operation, or all operations (including acl get/set,
+  operations, read-write operations, or all operations (including acl get/set,
   defacl get/set, and logging get/'set on'/'set off' operations). In
   addition, -s <scope> can be used to request additional (non-Google-Storage)
   scopes.
