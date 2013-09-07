@@ -1,3 +1,65 @@
+Release 3.35 (release-date: 2013-09-09)
+=======================================
+
+Bug Fixes
+---------
+
+- Fix streaming upload to S3 and provide more useful stack traces multi-threaded failures.
+- Fix race condition in test_rm.
+- Fix retry decorator during test bucket cleanup.
+- Fixed cat bug that caused version to be ignored in URIs.
+- Don't decode -p or -h values other than x-goog-meta-. Fixes ability to use string project names.
+- Update bucket_relocate.sh to work on GCE.
+- Fix recursive uploading from subdirectories with unexpanded wildcard as source URI.
+- Make gsutil error text include <Message> content.
+- Change shebang line back to python because this doesn't work on some systems.
+- Fix hash_algs differences in perfdiag.
+- Update Python version check and shebang line.
+- Enforce project_id entry in config command; provide friendly error if missing proj ID.
+- Use transcoding-invariant headers when available in gs.Key.
+- Make gsutil cp not fail if unable to check versioning config on dest bucket.
+- Make gsutil detect when config fails because of proxy and prompt for proxy config.
+- Avoid checking metageneration attribute when long-listing S3 objects.
+- Exclude the no-op auth handler as indicating credentials are configured.
+
+
+New Features
+------------
+
+- Implemented gsutil stat command.
+
+
+Other Changes
+-------------
+
+- Consolidate config-related commands.
+- Changed rm -r gs://bucket to delete bucket at end.
+- Various doc cleanup and improvement.
+- Warn user before updating to major new version. Also fixed minor version comparison bug, and added tests.
+- Change max component count to 1024.
+- Add retry-decorator as a submodule.
+- Explicitly state control chars to avoid in gsutil naming documentation.
+- Make config command recommend project strings.
+- Made long listing format a little better looking.
+- Allow --help flag for subcommands.
+- Implement help for subcommands and add OPTIONS sections for subcommands.
+- Add more detailed error message to notification watchbucket command.
+- Add notification URL configuration for notification tests.
+- Refactor to use upstream retry_decorator as external dependency.
+- Distribute cacerts file with gsutil.
+- Updated gsutil help to point to Google Cloud Console instead of older APIs console.
+- Make gsutil pass bundled cacerts.txt to oauth2client; stop checking SHA1 of certs, now that we no longer depend on boto distribution.
+- Move all TTY checks to a common util function and mock it for update tests.
+- Fix duplicate entry created in .gitmodules.
+- Fix unit test breakage because VERSION file is old.
+- Fix test using ? glob with ObjectToURI.
+- Fix update tests that fail for package installs.
+- Change bucket delete teardown to try more times.
+- Fix tests that perform operations on bucket listings.
+- Keep package install set to True unless VERSION file doesn't exist.
+- Fix handling of non-numeric version strings in update test.
+
+
 Release 3.34 (release-date: 2013-07-18)
 =======================================
 
@@ -15,7 +77,7 @@ Release 3.33 (release-date: 2013-07-16)
 Bug Fixes
 ---------
 
-- Added .git* to MANIFEST.in exlcudes and fixed cp doc typo. This was needed to
+- Added .git* to MANIFEST.in excludes and fixed cp doc typo. This was needed to
   overcome problem caused by accidental inclusion of .git* files in release,
   which caused the update command no longer to allow updates (since starting
   in 3.32 it checks whether the user has any extraneous files in the gsutil
@@ -372,7 +434,7 @@ Bug Fixes
 - Fixed bug where gsutil setwebcfg signature didn't match with
   HMAC authentication.
 - Fixed ASCII codec decode error when constructing tracker filename
-  from non-7bit ASCII intput filename.
+  from non-7bit ASCII input filename.
 - Changed boto auth plugin framework to allow multiple plugins
   supporting requested capability, which fixes gsutil exception
   that used to happen where a GCE user had a service account
@@ -428,7 +490,7 @@ Other Changes
     versions. Versioned URIs are now uniformly handled by all
     commands.
   - Refactored StorageUri parsing that had been split across
-    storage_uri and conveience; made versioned URIs render with
+    storage_uri and convenience; made versioned URIs render with
     version string so StorageUri is round-trippable (boto change).
   - Implemented gsutil cp -v option for printing the version-specific
     URI that was just created.
@@ -811,7 +873,7 @@ Bug Fixes
   system limits, making it impossible to complete resumable transfers for
   those objects. Solution was to build the tracking file name from a fixed
   prefix, SHA1 hash of the long filename, epoch timestamp and last 16
-  chars of the long filename, which is guarantee to be a predicable and
+  chars of the long filename, which is guarantee to be a predictable and
   reasonable length.
 - Fixed minor bug in output from 'gsutil help dev' which advised executing
   an inconsequential test script (test_util.py).
