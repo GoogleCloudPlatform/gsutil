@@ -33,7 +33,7 @@ management tasks, including:
 """
 
 requires = [
-    'boto==2.9.8',
+    'boto==2.12.0',
     'httplib2>=0.8',
     'python-gflags>=2.0',
     'google-api-python-client>=1.1',
@@ -48,7 +48,7 @@ requires = [
 dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
-    'https://github.com/boto/boto/archive/12f3c1bd2e943bdf22571c0e61f3c12789f63ce9.tar.gz#egg=boto-2.9.8',
+    'https://github.com/boto/boto/archive/d36eac30a557c6ed6e1eaeeb94e7e930c002502c.tar.gz#egg=boto-2.12.0',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
