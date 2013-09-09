@@ -35,7 +35,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil mb [-c storage_class] [-l location] [-p proj_id] uri...
+  gsutil mb [-c class] [-l location] [-p proj_id] uri...
 
 
 <B>DESCRIPTION</B>
@@ -96,7 +96,7 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -c storage_class  Can be DRA (or DURABLE_REDUCED_AVAILABILITY) or S (or
+  -c class          Can be DRA (or DURABLE_REDUCED_AVAILABILITY) or S (or
                     STANDARD). Default is STANDARD.
 
   -l location       Can be any of the locations described above. Default is US.
