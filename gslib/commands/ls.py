@@ -143,7 +143,9 @@ _detailed_help_text = ("""
             Size:               2276224
             Cache-Control:      private, max-age=0
             Content-Type:       application/x-executable
-            ETag:       5ca6796417570a586723b7344afffc81
+            ETag:               5ca6796417570a586723b7344afffc81
+            Generation:         1378862725952000
+            Metageneration:     1
             ACL:        <Owner:00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70, <<UserById: 00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70>: u'FULL_CONTROL'>>
     TOTAL: 1 objects, 2276224 bytes (2.17 MB)
 
