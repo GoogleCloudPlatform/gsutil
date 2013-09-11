@@ -439,6 +439,10 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
         print '\tHash (%s):\t\t%s' % (
             alg, binascii.b2a_hex(obj.cloud_hashes[alg]))
     print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
+    if hasattr(obj, 'generation'):
+      print '\tGeneration:\t\t%s' % obj.generation
+    if hasattr(obj, 'metageneration'):
+      print '\tMetageneration:\t\t%s' % obj.metageneration
     if incl_acl:
       print '\tACL:\t\t%s' % (uri.get_acl(False, headers))
     return (1, obj.size)
