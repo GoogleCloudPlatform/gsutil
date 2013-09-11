@@ -39,6 +39,8 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Hash (crc32c):', stdout)
     self.assertIn('Hash (md5):', stdout)
     self.assertIn('ETag:', stdout)
+    self.assertIn('Generation:', stdout)
+    self.assertIn('Metageneration:', stdout)
 
   def test_minus_q_stat(self):
     object_uri = self.CreateObject(contents='z')
