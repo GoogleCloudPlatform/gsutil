@@ -30,14 +30,17 @@ import base
 # The mock storage service comes from the Boto library, but it is not
 # distributed with Boto when installed as a package. To get around this, we
 # copy the file to gslib/tests/mock_storage_service.py when building the gsutil
-# package. Try and import from both places here.
+# package. Try and import from several places here to find it.
 try:
   from gslib.tests import mock_storage_service
 except ImportError:
   try:
-    from tests.integration.s3 import mock_storage_service
+    from boto.tests.integration.s3 import mock_storage_service
   except ImportError:
-    import mock_storage_service
+    try:
+      from tests.integration.s3 import mock_storage_service
+    except ImportError:
+      import mock_storage_service
 
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
