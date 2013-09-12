@@ -62,6 +62,16 @@ _detailed_help_text = ("""
 
   This can be useful for writing scripts, because the exit status will be 0 for
   an existing object and 1 for a non-existent object.
+
+  Note: Unlike the gsutil ls command, the stat command does not support
+  operations on sub-directories. For example, if you run the command:
+
+    gsutil -q stat gs://some-bucket/some-object/
+
+  gsutil will look up information about the object "some-object/" (with a
+  trailing slash) inside bucket "some-bucket", as opposed to operating on
+  objects nested under gs://some-bucket/some-object. Unless you actually have an
+  object with that name, the operation will fail.
 """)
 
 # TODO: Add ability to stat buckets.
