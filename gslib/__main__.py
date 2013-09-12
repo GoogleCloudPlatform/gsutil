@@ -327,7 +327,7 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     if (e.status == 403
         or (e.status == 400 and e.code == 'MissingSecurityHeader')):
       _, _, detail = util.ParseErrorDetail(e)
-      if detail.find('x-goog-project-id header is required') != -1:
+      if detail and detail.find('x-goog-project-id header is required') != -1:
         _OutputAndExit('\n'.join(textwrap.wrap(
             'You are attempting to perform an operation that requires an '
             'x-goog-project-id header, with none configured. Please re-run '
