@@ -85,8 +85,13 @@ def PlaceNeededFiles(self, target_dir):
       mock_storage_src1
       if os.path.isfile(mock_storage_src1) else mock_storage_src2)
   if not os.path.isfile(mock_storage_src):
-    raise Exception('Unable to find required boto test source file at %s or %s.'
-                    % (mock_storage_src1, mock_storage_src2))
+    msg = 'WARNING Unable to find required boto test source file at '
+    msg += mock_storage_src1
+    msg += ' or '
+    msg += mock_storage_src2
+    msg += '. Unit tests requiering storage will not execute properly.'
+    print(msg)
+    return
   with open(mock_storage_src, 'r') as f:
     mock_storage_contents = f.read()
   with open(mock_storage_dst, 'w') as f:
