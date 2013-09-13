@@ -16,6 +16,8 @@ import boto
 import functools
 import os
 import posixpath
+import pkgutil
+import re
 import urlparse
 
 import unittest
@@ -24,6 +26,8 @@ if not hasattr(unittest.TestCase, 'assertIsNone'):
   import unittest2 as unittest
 
 from boto.provider import Provider
+import gslib.tests as gslib_tests
+
 
 # Flags for running different types of tests.
 RUN_INTEGRATION_TESTS = True
@@ -120,3 +124,13 @@ def PerformsFileToObjectUpload(func):
       if boto_config_was_set:
         os.environ['BOTO_CONFIG'] = old_boto_config
   return wrapper
+
+def GetTestNames():
+  """Returns a list of the names of the test modules in gslib.tests."""
+  matcher = re.compile(r'^test_(?P<name>.*)$')
+  names = []
+  for importer, modname, ispkg in pkgutil.iter_modules(gslib_tests.__path__):
+    m = matcher.match(modname)
+    if m:
+      names.append(m.group('name'))
+  return names

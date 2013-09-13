@@ -135,7 +135,7 @@ setup(
     description=('A command line tool for interacting with cloud storage '
                  'services.'),
     long_description=long_desc,
-    zip_safe=False,
+    zip_safe=True,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

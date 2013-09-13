@@ -17,6 +17,7 @@
 import boto
 import datetime
 import os
+import pkgutil
 import re
 import gslib.tests.testcase as testcase
 from gslib.tests.util import HAS_S3_CREDS
@@ -36,15 +37,12 @@ from gslib.util import Retry
 from gslib.util import TWO_MB
 
 
-CURDIR = os.path.abspath(os.path.dirname(__file__))
-TEST_DATA_DIR = os.path.join(CURDIR, 'test_data')
-
-
 class TestCp(testcase.GsUtilIntegrationTestCase):
   """Integration tests for cp command."""
 
   def _get_test_file(self, name):
-    return os.path.join(TEST_DATA_DIR, name)
+    contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % name)
+    return self.CreateTempFile(file_name=name, contents=contents)
 
   @PerformsFileToObjectUpload
   def test_noclobber(self):

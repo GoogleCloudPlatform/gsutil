@@ -363,6 +363,8 @@ def LookUpGsutilVersion(uri):
 
 def GetGsutilVersionModifiedTime():
   """Returns unix timestamp of when the VERSION file was last modified."""
+  if not gslib.VERSION_FILE:
+    return 0
   return int(os.path.getmtime(gslib.VERSION_FILE))
 
 

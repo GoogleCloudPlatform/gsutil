@@ -22,6 +22,7 @@
 """Package marker file."""
 
 import os
+import pkgutil
 import sys
 
 import gslib.exception
@@ -68,19 +69,31 @@ if IS_EDITABLE_INSTALL:
       PROGRAM_FILES_DIR, 'third_party', 'boto', 'tests', 'integration', 's3')
   sys.path.append(mock_storage_location)
 
+def _GetFileContents(filename):
+  """Tries to find the given filename on disk or via pkgutil.get_data.
+
+  Returns:
+    A tuple containing the absolute path to the requested file and the file's
+    contents. If the file is not actually on disk, the file path will be None.
+  """
+  fpath = os.path.join(PROGRAM_FILES_DIR, filename)
+  if os.path.isfile(fpath):
+    with open(fpath, 'r') as f:
+      content = f.read()
+  else:
+    content = pkgutil.get_data('gslib', filename)
+    fpath = None
+  return (fpath, content.strip())
+
 # Get the version file and store it.
-VERSION_FILE = os.path.join(PROGRAM_FILES_DIR, 'VERSION')
-if not os.path.isfile(VERSION_FILE):
+VERSION_FILE, VERSION = _GetFileContents('VERSION')
+if not VERSION:
   raise gslib.exception.CommandException(
       'VERSION file not found. Please reinstall gsutil from scratch')
-with open(VERSION_FILE, 'r') as f:
-  VERSION = f.read().strip()
 __version__ = VERSION
 
 # Get the checksum file and store it.
-CHECKSUM_FILE = os.path.join(PROGRAM_FILES_DIR, 'CHECKSUM')
-if not os.path.isfile(CHECKSUM_FILE):
+CHECKSUM_FILE, CHECKSUM = _GetFileContents('CHECKSUM')
+if not CHECKSUM:
   raise gslib.exception.CommandException(
       'CHECKSUM file not found. Please reinstall gsutil from scratch')
-with open(CHECKSUM_FILE, 'r') as f:
-  CHECKSUM = f.read().strip()

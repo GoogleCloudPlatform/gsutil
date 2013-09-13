@@ -124,5 +124,5 @@ class StatCommand(Command):
           try:
             uri.get_key(False, headers=self.headers)
           except InvalidUriError as e:
-            sys.exit(1)
+            return 1
     return 0

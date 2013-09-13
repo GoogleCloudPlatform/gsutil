@@ -22,17 +22,18 @@ import errno
 import getopt
 import logging
 import os
+import pkgutil
 import re
 import signal
 import socket
 import sys
+import tempfile
 import textwrap
 import traceback
 
 import apiclient
 import boto.exception
-from gslib import GSUTIL_DIR
-from gslib import GSLIB_DIR
+import gslib
 from gslib import util
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
@@ -52,11 +53,28 @@ try:
 except ImportError:
   pass
 
+DEBUG_WARNING = """
+***************************** WARNING *****************************
+*** You are running gsutil with debug output enabled.
+*** Be aware that debug output includes authentication credentials.
+*** Make sure to remove the value of the Authorization header for
+*** each HTTP request printed to the console prior to posting to
+*** a public medium such as a forum post or Stack Overflow.
+***************************** WARNING *****************************
+""".lstrip()
 
 debug = 0
 
-DEFAULT_CA_CERTS_FILE = os.path.abspath(
-    os.path.join(GSLIB_DIR, 'data', 'cacerts.txt'))
+# Temp files to delete, if possible, when program exits.
+cleanup_files = []
+
+
+def _Cleanup():
+  for fname in cleanup_files:
+    try:
+      os.remove(fname)
+    except OSError:
+      pass
 
 
 def _OutputAndExit(message):
@@ -111,103 +129,105 @@ def main():
   # If ca_certificates_file is configured use it; otherwise configure boto to
   # use the cert roots distributed with gsutil.
   if not boto.config.get_value('Boto', 'ca_certificates_file', None):
-    boto.config.set('Boto', 'ca_certificates_file', DEFAULT_CA_CERTS_FILE)
+    disk_certs_file = os.path.abspath(
+        os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
+    if not os.path.exists(disk_certs_file):
+      # If the file is not present on disk, this means the gslib module doesn't
+      # actually exist on disk anywhere. This can happen if it's being imported
+      # from a zip file. Unfortunately, we have to copy the certs file to a
+      # local temp file on disk because the underlying SSL socket requires it
+      # to be a filesystem path.
+      certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
+      if not certs_data:
+        raise gslib.exception.CommandException(
+            'Certificates file not found. Please reinstall gsutil from scratch')
+      fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
+      f = os.fdopen(fd, 'w')
+      f.write(certs_data)
+      f.close()
+      disk_certs_file = fname
+      cleanup_files.append(disk_certs_file)
+    boto.config.set('Boto', 'ca_certificates_file', disk_certs_file)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
-                               ['debug', 'detailedDebug', 'version', 'option',
-                                 'help', 'header', 'multithreaded', 'quiet'])
-  except getopt.GetoptError as e:
-    _HandleCommandException(gslib.exception.CommandException(e.msg))
-  for o, a in opts:
-    if o in ('-d', '--debug'):
-      # Passing debug=2 causes boto to include httplib header output.
-      debug = 2
-    elif o in ('-D', '--detailedDebug'):
-      # We use debug level 3 to ask gsutil code to output more detailed
-      # debug output. This is a bit of a hack since it overloads the same
-      # flag that was originally implemented for boto use. And we use -DD
-      # to ask for really detailed debugging (i.e., including HTTP payload).
-      if debug == 3:
-        debug = 4
-      else:
-        debug = 3
-    elif o in ('-?', '--help'):
-      _OutputUsageAndExit(command_runner)
-    elif o in ('-h', '--header'):
-      (hdr_name, _, hdr_val) = a.partition(':')
-      if not hdr_name:
-        _OutputUsageAndExit(command_runner)
-      headers[hdr_name.lower()] = hdr_val
-    elif o in ('-m', '--multithreaded'):
-      parallel_operations = True
-    elif o in ('-q', '--quiet'):
-      quiet = True
-    elif o in ('-v', '--version'):
-      version = True
-    elif o in ('-o', '--option'):
-      (opt_section_name, _, opt_value) = a.partition('=')
-      if not opt_section_name:
-        _OutputUsageAndExit(command_runner)
-      (opt_section, _, opt_name) = opt_section_name.partition(':')
-      if not opt_section or not opt_name:
-        _OutputUsageAndExit(command_runner)
-      if not boto.config.has_section(opt_section):
-        boto.config.add_section(opt_section)
-      boto.config.set(opt_section, opt_name, opt_value)
-
-  httplib2.debuglevel = debug
-  if debug > 1:
-    sys.stderr.write(
-        '***************************** WARNING *****************************\n'
-        '*** You are running gsutil with debug output enabled.\n'
-        '*** Be aware that debug output includes authentication '
-        'credentials.\n'
-        '*** Do not share (e.g., post to support forums) debug output\n'
-        '*** unless you have sanitized authentication tokens in the\n'
-        '*** output, or have revoked your credentials.\n'
-        '***************************** WARNING *****************************\n')
-  if debug == 2:
-    logging.basicConfig(level=logging.DEBUG)
-  elif debug > 2:
-    logging.basicConfig(level=logging.DEBUG)
-    command_runner.RunNamedCommand('ver', ['-l'])
-    config_items = []
     try:
-      config_items.extend(boto.config.items('Boto'))
-      config_items.extend(boto.config.items('GSUtil'))
-    except ConfigParser.NoSectionError:
-      pass
-    sys.stderr.write('config_file_list: %s\n' % config_file_list)
-    sys.stderr.write('config: %s\n' % str(config_items))
-  elif quiet:
-    logging.basicConfig(level=logging.WARNING)
-  else:
-    logging.basicConfig(level=logging.INFO)
-    # apiclient and oauth2client use info logging in places that would better
-    # correspond to gsutil's debug logging (e.g., when refreshing access
-    # tokens).
-    oauth2client.client.logger.setLevel(logging.WARNING)
-    apiclient.discovery.logger.setLevel(logging.WARNING)
-
-  if version:
-    command_name = 'version'
-  elif not args:
-    command_name = 'help'
-  else:
-    command_name = args[0]
-
-  # Unset http_proxy environment variable if it's set, because it confuses
-  # boto. (Proxies should instead be configured via the boto config file.)
-  if 'http_proxy' in os.environ:
+      opts, args = getopt.getopt(sys.argv[1:], 'dDvh:mq',
+                                 ['debug', 'detailedDebug', 'version', 'help',
+                                  'header', 'multithreaded', 'quiet'])
+    except getopt.GetoptError as e:
+      _HandleCommandException(gslib.exception.CommandException(e.msg))
+    for o, a in opts:
+      if o in ('-d', '--debug'):
+        # Passing debug=2 causes boto to include httplib header output.
+        debug = 2
+      elif o in ('-D', '--detailedDebug'):
+        # We use debug level 3 to ask gsutil code to output more detailed
+        # debug output. This is a bit of a hack since it overloads the same
+        # flag that was originally implemented for boto use. And we use -DD
+        # to ask for really detailed debugging (i.e., including HTTP payload).
+        if debug == 3:
+          debug = 4
+        else:
+          debug = 3
+      elif o in ('-?', '--help'):
+        _OutputUsageAndExit(command_runner)
+      elif o in ('-h', '--header'):
+        (hdr_name, unused_ptn, hdr_val) = a.partition(':')
+        if not hdr_name:
+          _OutputUsageAndExit(command_runner)
+        headers[hdr_name.lower()] = hdr_val
+      elif o in ('-m', '--multithreaded'):
+        parallel_operations = True
+      elif o in ('-q', '--quiet'):
+        quiet = True
+      elif o in ('-v', '--version'):
+        version = True
+    httplib2.debuglevel = debug
     if debug > 1:
-      sys.stderr.write(
-          'Unsetting http_proxy environment variable within gsutil run.\n')
-    del os.environ['http_proxy']
+      sys.stderr.write(DEBUG_WARNING)
+    if debug == 2:
+      logging.basicConfig(level=logging.DEBUG)
+    elif debug > 2:
+      logging.basicConfig(level=logging.DEBUG)
+      command_runner.RunNamedCommand('ver', ['-l'])
+      config_items = []
+      try:
+        config_items.extend(boto.config.items('Boto'))
+        config_items.extend(boto.config.items('GSUtil'))
+      except ConfigParser.NoSectionError:
+        pass
+      sys.stderr.write('config_file_list: %s\n' % config_file_list)
+      sys.stderr.write('config: %s\n' % str(config_items))
+    elif quiet:
+      logging.basicConfig(level=logging.WARNING)
+    else:
+      logging.basicConfig(level=logging.INFO)
+      # apiclient and oauth2client use info logging in places that would better
+      # correspond to gsutil's debug logging (e.g., when refreshing access
+      # tokens).
+      oauth2client.client.logger.setLevel(logging.WARNING)
+      apiclient.discovery.logger.setLevel(logging.WARNING)
 
-  return _RunNamedCommandAndHandleExceptions(command_runner, command_name,
-                                             args[1:], headers, debug,
-                                             parallel_operations)
+    if version:
+      command_name = 'version'
+    elif not args:
+      command_name = 'help'
+    else:
+      command_name = args[0]
+
+    # Unset http_proxy environment variable if it's set, because it confuses
+    # boto. (Proxies should instead be configured via the boto config file.)
+    if 'http_proxy' in os.environ:
+      if debug > 1:
+        sys.stderr.write(
+            'Unsetting http_proxy environment variable within gsutil run.\n')
+      del os.environ['http_proxy']
+
+    return _RunNamedCommandAndHandleExceptions(
+        command_runner, command_name, args[1:], headers, debug,
+        parallel_operations)
+  finally:
+    _Cleanup()
 
 
 def _HandleUnknownFailure(e):

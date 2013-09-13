@@ -36,6 +36,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 import gslib.tests as tests
+from gslib.tests.util import GetTestNames
 from gslib.util import NO_MAX
 
 
@@ -49,11 +50,6 @@ except ImportError as e:
     unittest = None
   else:
     raise
-
-
-COMMANDS_DIR = os.path.abspath(os.path.dirname(__file__))
-GSLIB_DIR = os.path.split(COMMANDS_DIR)[0]
-TESTS_DIR = os.path.join(GSLIB_DIR, 'tests')
 
 
 _detailed_help_text = ("""
@@ -203,29 +199,22 @@ class TestCommand(Command):
         elif o == '-l':
           list_tests = True
 
+    test_names = sorted(GetTestNames())
     if list_tests and not self.args:
-      test_files = os.listdir(TESTS_DIR)
-      matcher = re.compile(r'^test_(?P<name>.*).py$')
-      test_names = []
-      for fname in test_files:
-        m = matcher.match(fname)
-        if m:
-          test_names.append(m.group('name'))
       print 'Found %d test names:' % len(test_names)
       print ' ', '\n  '.join(sorted(test_names))
       return 0
 
     # Set list of commands to test if supplied.
-    commands_to_test = []
     if self.args:
+      commands_to_test = []
       for name in self.args:
-        if os.path.exists(os.path.join(TESTS_DIR, 'test_%s.py' % name)):
-          commands_to_test.append('gslib.tests.test_%s' % name)
-        elif os.path.exists(
-            os.path.join(TESTS_DIR, 'test_%s.py' % name.split('.')[0])):
+        if name in test_names or name.split('.')[0] in test_names:
           commands_to_test.append('gslib.tests.test_%s' % name)
         else:
           commands_to_test.append(name)
+    else:
+      commands_to_test = ['gslib.tests.test_%s' % name for name in test_names]
 
     # Installs a ctrl-c handler that tries to cleanly tear down tests.
     unittest.installHandler()
@@ -237,8 +226,6 @@ class TestCommand(Command):
         suite = loader.loadTestsFromNames(commands_to_test)
       except (ImportError, AttributeError) as e:
         raise CommandException('Invalid test argument name: %s' % e)
-    else:
-      suite = loader.discover(TESTS_DIR)
 
     if list_tests:
       suites = [suite]

@@ -43,12 +43,6 @@ except ImportError:
       import mock_storage_service
 
 
-CURDIR = os.path.abspath(os.path.dirname(__file__))
-TESTS_DIR = os.path.split(CURDIR)[0]
-GSLIB_DIR = os.path.split(TESTS_DIR)[0]
-GSUTIL_DIR = os.path.split(GSLIB_DIR)[0]
-
-
 class GSMockConnection(mock_storage_service.MockConnection):
 
   def __init__(self, *args, **kwargs):

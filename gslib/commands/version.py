@@ -145,6 +145,8 @@ class VersionCommand(Command):
     but when users ask for support we ask them to run a stock version of
     gsutil so we can reduce possible variables.)
     """
+    if gslib.IS_PACKAGE_INSTALL:
+      return 'PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS'
     m = md5()
     # Checksum gsutil and all .py files under gslib directory.
     files_to_checksum = [gslib.GSUTIL_PATH]

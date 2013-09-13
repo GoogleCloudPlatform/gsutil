@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gslib
 import itertools
 import os
+import pkgutil
 import re
 import struct
-import sys
+from subprocess import PIPE
+from subprocess import Popen
 
+import gslib.commands
+import gslib.addlhelp
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -41,8 +44,6 @@ from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import MAX_HELP_NAME_LEN
 from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import IsRunningInteractively
-from subprocess import PIPE
-from subprocess import Popen
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -245,16 +246,14 @@ class HelpCommand(Command):
     """Returns tuple (help type -> [HelpProviders],
                       help name->HelpProvider dict,
                      )."""
-    # Walk gslib/commands and gslib/addlhelp to find all HelpProviders.
-    for f in os.listdir(os.path.join(gslib.GSLIB_DIR, 'commands')):
-      # Handles no-extension files, etc.
-      (module_name, ext) = os.path.splitext(f)
-      if ext == '.py':
-        __import__('gslib.commands.%s' % module_name)
-    for f in os.listdir(os.path.join(gslib.GSLIB_DIR, 'addlhelp')):
-      (module_name, ext) = os.path.splitext(f)
-      if ext == '.py':
-        __import__('gslib.addlhelp.%s' % module_name)
+
+    # Import all gslib.commands submodules.
+    for _, module_name, _ in pkgutil.iter_modules(gslib.commands.__path__):
+      __import__('gslib.commands.%s' % module_name)
+    # Import all gslib.addlhelp submodules.
+    for _, module_name, _ in pkgutil.iter_modules(gslib.addlhelp.__path__):
+      __import__('gslib.addlhelp.%s' % module_name)
+
     help_type_map = {}
     help_name_map = {}
     for s in gslib.help_provider.ALL_HELP_TYPES:

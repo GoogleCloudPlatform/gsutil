@@ -19,6 +19,7 @@
 import boto
 import difflib
 import logging
+import pkgutil
 import os
 import sys
 import textwrap
@@ -26,6 +27,7 @@ import time
 
 from boto.storage_uri import BucketStorageUri
 import gslib
+import gslib.commands
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
@@ -103,13 +105,10 @@ class CommandRunner(object):
 
   def _LoadCommandMap(self):
     """Returns dict mapping each command_name to implementing class."""
-    # Walk gslib/commands and find all commands.
-    commands_dir = os.path.join(gslib.GSLIB_DIR, 'commands')
-    for f in os.listdir(commands_dir):
-      # Handles no-extension files, etc.
-      (module_name, ext) = os.path.splitext(f)
-      if ext == '.py':
-        __import__('gslib.commands.%s' % module_name)
+    # Import all gslib.commands submodules.
+    for _, module_name, _ in pkgutil.iter_modules(gslib.commands.__path__):
+      __import__('gslib.commands.%s' % module_name)
+
     command_map = {}
     # Only include Command subclasses in the dict.
     for command in Command.__subclasses__():
