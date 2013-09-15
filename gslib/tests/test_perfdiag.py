@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import socket
+
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
@@ -19,15 +21,29 @@ from gslib.tests.util import ObjectToURI as suri
 class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   """Integration tests for perfdiag command."""
 
+  # We want to test that perfdiag works both when connecting to the standard gs
+  # endpoint, and when connecting to a specific IP or host while setting the
+  # host header. For the 2nd case we resolve storage.googleapis.com to a
+  # specific IP and connect to that explicitly.
+  _gs_ip = socket.gethostbyname('storage.googleapis.com')
+  _custom_endpoint_flags = [
+      '-o', 'Credentials:gs_host=' + _gs_ip,
+      '-o', 'Credentials:gs_host_header=storage.googleapis.com',
+      '-o', 'Boto:https_validate_certificates=False']
+
   def test_latency(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['perfdiag', '-n', '1', '-t', 'lat', suri(bucket_uri)])
+    cmd = ['perfdiag', '-n', '1', '-t', 'lat', suri(bucket_uri)]
+    self.RunGsUtil(cmd)
+    self.RunGsUtil(self._custom_endpoint_flags + cmd)
 
   def _run_basic_wthru_or_rthru(self, test_name, num_processes, num_threads):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['perfdiag', '-n', str(num_processes * num_threads),
-                    '-s', '1024', '-c', str(num_processes),
-                    '-k', str(num_threads), '-t', test_name, suri(bucket_uri)])
+    cmd = ['perfdiag', '-n', str(num_processes * num_threads),
+           '-s', '1024', '-c', str(num_processes),
+           '-k', str(num_threads), '-t', test_name, suri(bucket_uri)]
+    self.RunGsUtil(cmd)
+    self.RunGsUtil(self._custom_endpoint_flags + cmd)
 
   def test_write_throughput_single_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 1, 2)
