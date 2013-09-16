@@ -104,6 +104,9 @@ _detailed_help_text = ("""
               "COPYING VERSIONED BUCKETS" section under
               'gsutil help versions'.
 
+  -o          Set/override values in the boto configuration value, in the format
+              <section>:<name>=<value>, e.g. gsutil -o "Boto:proxy=host" ...
+
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,
               etc. Errors are still reported. This option can be useful for
