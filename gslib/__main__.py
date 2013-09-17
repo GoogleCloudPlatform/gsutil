@@ -151,9 +151,9 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvh:mq',
-                                 ['debug', 'detailedDebug', 'version', 'help',
-                                  'header', 'multithreaded', 'quiet'])
+      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
+                                 ['debug', 'detailedDebug', 'version', 'option',
+                                  'help', 'header', 'multithreaded', 'quiet'])
     except getopt.GetoptError as e:
       _HandleCommandException(gslib.exception.CommandException(e.msg))
     for o, a in opts:
@@ -172,7 +172,7 @@ def main():
       elif o in ('-?', '--help'):
         _OutputUsageAndExit(command_runner)
       elif o in ('-h', '--header'):
-        (hdr_name, unused_ptn, hdr_val) = a.partition(':')
+        (hdr_name, _, hdr_val) = a.partition(':')
         if not hdr_name:
           _OutputUsageAndExit(command_runner)
         headers[hdr_name.lower()] = hdr_val
@@ -182,6 +182,16 @@ def main():
         quiet = True
       elif o in ('-v', '--version'):
         version = True
+      elif o in ('-o', '--option'):
+        (opt_section_name, _, opt_value) = a.partition('=')
+        if not opt_section_name:
+          _OutputUsageAndExit(command_runner)
+        (opt_section, _, opt_name) = opt_section_name.partition(':')
+        if not opt_section or not opt_name:
+          _OutputUsageAndExit(command_runner)
+        if not boto.config.has_section(opt_section):
+          boto.config.add_section(opt_section)
+        boto.config.set(opt_section, opt_name, opt_value)
     httplib2.debuglevel = debug
     if debug > 1:
       sys.stderr.write(DEBUG_WARNING)
