@@ -1,3 +1,23 @@
+Release 3.36 (release-date: 2013-09-17)
+=======================================
+
+Bug Fixes
+---------
+
+- Fix bug when a 400 or 403 exception has no detail.
+
+
+Other Changes
+-------------
+
+- Use pkgutil for finding package data and iterating module names.
+- Test that perfdiag works when connecting to alternate endpoint with host header.
+- Set config values from command line.
+- Clarify stat command documentation regarding trailing slashes.
+- Add an extra place to look for the mock_storage_service.
+- Add Generation and Metageneration to gsutil stat output.
+
+
 Release 3.35 (release-date: 2013-09-09)
 =======================================
 
