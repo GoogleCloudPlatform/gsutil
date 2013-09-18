@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import datetime
 import multiprocessing
 import os
@@ -867,6 +869,7 @@ class ConfigCommand(Command):
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
 
+    default_config_path_bak = None
     if output_file_name is None:
       # Check to see if a default config file name is requested via
       # environment variable. If so, use it, otherwise use the hard-coded
@@ -880,7 +883,6 @@ class ConfigCommand(Command):
         default_config_path = os.path.expanduser(os.path.join('~', '.boto'))
       if not os.path.exists(default_config_path):
         output_file_name = default_config_path
-        default_config_path_bak = None
       else:
         default_config_path_bak = default_config_path + '.bak'
         if os.path.exists(default_config_path_bak):
