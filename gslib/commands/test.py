@@ -36,7 +36,6 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
 import gslib.tests as tests
-from gslib.tests.util import GetTestNames
 from gslib.util import NO_MAX
 
 
@@ -44,10 +43,12 @@ from gslib.util import NO_MAX
 # display an error if the test command is run instead of breaking the whole
 # program.
 try:
+  from gslib.tests.util import GetTestNames
   from gslib.tests.util import unittest
 except ImportError as e:
   if 'unittest2' in str(e):
     unittest = None
+    GetTestNames = None
   else:
     raise
 
