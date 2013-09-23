@@ -57,7 +57,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
-  @Retry(GSResponseError, tries=5, timeout_secs=1)
+  @Retry(GSResponseError, tries=6, timeout_secs=1)
   def tearDown(self):
     super(GsUtilIntegrationTestCase, self).tearDown()
 
@@ -65,7 +65,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri = self.bucket_uris[-1]
       try:
         bucket_list = list(bucket_uri.list_bucket(all_versions=True))
-      except GSResponseError as e:
+      except GSResponseError, e:
         # This can happen for tests of rm -r command, which for bucket-only
         # URIs delete the bucket at the end.
         if e.status == 404:
@@ -74,8 +74,21 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         else:
           raise
       while bucket_list:
+        error = None
         for k in bucket_list:
-          k.delete()
+          try:
+            k.delete()
+          except GSResponseError, e:
+            # This could happen if objects that have already been deleted are
+            # still showing up in the listing due to eventual consistency. In
+            # that case, we continue on until we've tried to deleted every
+            # object in the listing before raising the error on which to retry.
+            if e.status == 404:
+              error = e
+            else:
+              raise
+        if error:
+          raise error
         bucket_list = list(bucket_uri.list_bucket(all_versions=True))
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
