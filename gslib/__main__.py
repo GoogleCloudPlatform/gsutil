@@ -31,7 +31,7 @@ import tempfile
 import textwrap
 import traceback
 
-import apiclient
+import apiclient.discovery
 import boto.exception
 import gslib
 from gslib import util
