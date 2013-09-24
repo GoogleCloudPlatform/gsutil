@@ -93,6 +93,14 @@ def _OutputUsageAndExit(command_runner):
   sys.exit(1)
 
 
+def _ConfigureLogging(level=logging.INFO):
+  """Similar to logging.basicConfig() except it always adds a handler."""
+  handler = logging.StreamHandler()
+  root_logger = logging.getLogger()
+  root_logger.addHandler(handler)
+  root_logger.setLevel(level)
+
+
 def main():
   global debug
 
@@ -196,9 +204,9 @@ def main():
     if debug > 1:
       sys.stderr.write(DEBUG_WARNING)
     if debug == 2:
-      logging.basicConfig(level=logging.DEBUG)
+      _ConfigureLogging(level=logging.DEBUG)
     elif debug > 2:
-      logging.basicConfig(level=logging.DEBUG)
+      _ConfigureLogging(level=logging.DEBUG)
       command_runner.RunNamedCommand('ver', ['-l'])
       config_items = []
       try:
@@ -209,9 +217,9 @@ def main():
       sys.stderr.write('config_file_list: %s\n' % config_file_list)
       sys.stderr.write('config: %s\n' % str(config_items))
     elif quiet:
-      logging.basicConfig(level=logging.WARNING)
+      _ConfigureLogging(level=logging.WARNING)
     else:
-      logging.basicConfig(level=logging.INFO)
+      _ConfigureLogging(level=logging.INFO)
       # apiclient and oauth2client use info logging in places that would better
       # correspond to gsutil's debug logging (e.g., when refreshing access
       # tokens).
