@@ -41,12 +41,16 @@ import tempfile
 import threading
 import urllib
 import urlparse
+
 from boto import cacerts
+from boto import config
+from gslib.util import Retry
+from oauth2client.client import AccessTokenRefreshError
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.client import OAuth2Credentials
+
 if HAS_CRYPTO:
   from oauth2client.client import SignedJwtAssertionCredentials
-
 
 try:
   import json
@@ -64,21 +68,6 @@ LOG = logging.getLogger('oauth2_client')
 token_exchange_lock = threading.Lock()
 
 GSUTIL_DEFAULT_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control'
-
-
-class Error(Exception):
-  """Base exception for the OAuth2 module."""
-  pass
-
-
-class AccessTokenRefreshError(Error):
-  """Error trying to exchange a refresh token into an access token."""
-  pass
-
-
-class AuthorizationCodeExchangeError(Error):
-  """Error trying to exchange an authorization code into a refresh token."""
-  pass
 
 
 class TokenCache(object):
@@ -372,6 +361,17 @@ class OAuth2ServiceAccountClient(OAuth2Client):
         credentials.token_expiry, datetime_strategy=self.datetime_strategy)
 
 
+class GsAccessTokenRefreshError(Exception):
+  """Rate limiting error when exchanging refresh token for access token."""
+  def __init__(self, e):
+    super(Exception, self).__init__(e)
+
+
+class GsInvalidRefreshTokenError(Exception):
+  def __init__(self, e):
+    super(Exception, self).__init__(e)
+
+
 class OAuth2UserAccountClient(OAuth2Client):
   """An OAuth2 client."""
 
@@ -411,7 +411,9 @@ class OAuth2UserAccountClient(OAuth2Client):
     self.client_secret = client_secret
     self.refresh_token = refresh_token
 
-
+  @Retry(GsAccessTokenRefreshError,
+         tries=config.get('OAuth2', 'oauth2_refresh_retries', 6),
+         timeout_secs=1)
   def FetchAccessToken(self):
     """Fetches an access token from the provider's token endpoint.
 
@@ -420,12 +422,29 @@ class OAuth2UserAccountClient(OAuth2Client):
     Returns:
       The fetched AccessToken.
     """
-    http = self.CreateHttpRequest()
-    credentials = OAuth2Credentials(None, self.client_id, self.client_secret,
-        self.refresh_token, None, self.token_uri, None)
-    credentials.refresh(http)
-    return AccessToken(credentials.access_token, 
-        credentials.token_expiry, datetime_strategy=self.datetime_strategy)
+    try:
+      http = self.CreateHttpRequest()
+      credentials = OAuth2Credentials(None, self.client_id, self.client_secret,
+          self.refresh_token, None, self.token_uri, None)
+      credentials.refresh(http)
+      return AccessToken(credentials.access_token, 
+          credentials.token_expiry, datetime_strategy=self.datetime_strategy)
+    except AccessTokenRefreshError, e:
+      if 'Invalid response 403' in e.message:
+        # This is the most we can do at the moment to accurately detect rate
+        # limiting errors since they come back as 403s with no further
+        # information.
+        raise GsAccessTokenRefreshError(e)
+      elif 'invalid_grant' in e.message:
+        LOG.info("""
+Attempted to retrieve an access token from an invalid refresh token. Two common
+cases in which you will see this error are:
+1. Your refresh token was revoked.
+2. Your refresh token was typed incorrectly.
+""")
+        raise GsInvalidRefreshTokenError(e)
+      else:
+        raise
 
 
 class AccessToken(object):

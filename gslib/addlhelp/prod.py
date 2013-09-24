@@ -141,6 +141,17 @@ _detailed_help_text = ("""
      this may or may not be optimal. Try experimenting with higher or lower
      numbers of threads, to find the best number of threads for your
      environment.
+
+<B>RUNNING GSUTIL ON MULTIPLE MACHINES</B>
+  When running gsutil on multiple machines that are all attempting to use the
+  same OAuth2 refresh token, it is possible to encounter rate limiting errors
+  for the refresh requests (especially if all of these machines are likely to
+  start running gsutil at the same time). To account for this, gsutil will
+  automatically retry OAuth2 refresh requests with a randomized exponential
+  backoff strategy like that which is described in the
+  "BACKGROUND ON RESUMABLE TRANSFERS" section above. The number of retries
+  attempted for OAuth2 refresh requests can be controlled via the
+  "oauth2_refresh_retries" variable in the .boto config file.
 """)
 
 

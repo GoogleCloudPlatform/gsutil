@@ -174,6 +174,7 @@ _detailed_help_text = ("""
       provider_label
       provider_authorization_uri
       provider_token_uri
+      oauth2_refresh_retries
 
 
 <B>UPDATING TO THE LATEST CONFIGURATION FILE</B>
@@ -296,9 +297,9 @@ https_validate_certificates = True
 # Note: 'gsutil -d' sets debug to 2 for that one command run.
 #debug = <0, 1, or 2>
 
-# 'num_retries' controls the number of retry attempts made when errors occur.
-# The default is 6. Note: don't set this value to 0, as it will cause boto to
-# fail when reusing HTTP connections.
+# 'num_retries' controls the number of retry attempts made when errors occur
+# during data transfers. The default is 6. Note: don't set this value to 0, as
+# it will cause boto to fail when reusing HTTP connections.
 #num_retries = <integer value>
 """
 
@@ -441,6 +442,11 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 #provider_label = Google
 #provider_authorization_uri = https://accounts.google.com/o/oauth2/auth
 #provider_token_uri = https://accounts.google.com/o/oauth2/token
+
+# 'oauth2_refresh_retries' controls the number of retry attempts made when
+# rate limiting errors occur for OAuth2 requests to retrieve an access token.
+# The default value is 6.
+#oauth2_refresh_retries = <integer value>
 """
 
 
