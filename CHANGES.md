@@ -1,3 +1,25 @@
+Release 3.37 (release-date: 2013-09-25)
+=======================================
+
+Bug Fixes
+---------
+
+- Fix parsing of -R for "acl ch" and chacl commands.
+- Fixed import statement of unittest2 which caused installations using Python
+  2.6 without unittest2 installed to fail when starting up gsutil.
+
+
+Other Changes
+-------------
+
+- Fixed tests so they pass on Windows and package installs.
+- Add a root logging handler manually instead of relying on basicConfig.
+- Fix apiclient import statement.
+- Exponential backoff for access token requests.
+- Fix flakiness in test TearDown to account for eventual consistency of object
+  listings.
+
+
 Release 3.36 (release-date: 2013-09-18)
 =======================================
 
