@@ -331,36 +331,36 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
     test_regex = self._MakeScopeRegex(
         'UserByEmail', self.USER_TEST_ADDRESS, 'FULL_CONTROL')
     xml = self.RunGsUtil(
-        ['acl', 'get', suri(self.sample_uri)], return_stdout=True)
+        self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-u', self.USER_TEST_ADDRESS+':fc', suri(self.sample_uri)])
     xml = self.RunGsUtil(
-        ['acl', 'get', suri(self.sample_uri)], return_stdout=True)
+        self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.USER_TEST_ADDRESS, suri(self.sample_uri)])
     xml = self.RunGsUtil(
-        ['acl', 'get', suri(self.sample_uri)], return_stdout=True)
+        self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
   def testObjectAclChange(self):
     obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
-    xml = self.RunGsUtil(['acl', 'get', suri(obj)], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)])
-    xml = self.RunGsUtil(['acl', 'get', suri(obj)], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
-    xml = self.RunGsUtil(['acl', 'get', suri(obj)], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
   def testMultithreadedAclChange(self, count=10):
@@ -374,7 +374,8 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
     xmls = []
     for obj in objects:
-      xmls.append(self.RunGsUtil(['acl', 'get', suri(obj)], return_stdout=True))
+      xmls.append(self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                 return_stdout=True))
     for xml in xmls:
       self.assertNotRegexpMatches(xml, test_regex)
 
@@ -384,9 +385,28 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
 
     xmls = []
     for obj in objects:
-      xmls.append(self.RunGsUtil(['acl', 'get', suri(obj)], return_stdout=True))
+      xmls.append(self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                 return_stdout=True))
     for xml in xmls:
       self.assertRegexpMatches(xml, test_regex)
+
+  def testRecursiveChangeAcl(self):
+    obj = self.CreateObject(bucket_uri=self.sample_uri, object_name='foo/bar',
+                            contents='something')
+    test_regex = self._MakeScopeRegex(
+        'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
+    self.assertNotRegexpMatches(xml, test_regex)
+
+    self.RunGsUtil(self._ch_acl_prefix +
+        ['-R', '-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)[:-3]])
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
+    self.assertRegexpMatches(xml, test_regex)
+
+    self.RunGsUtil(self._ch_acl_prefix +
+                   ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
+    xml = self.RunGsUtil(self._get_acl_prefix + [suri(obj)], return_stdout=True)
+    self.assertNotRegexpMatches(xml, test_regex)
 
   def testMultiVersionSupport(self):
     bucket = self.CreateVersionedBucket()
@@ -409,15 +429,15 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
 
     test_regex = self._MakeScopeRegex(
         'GroupByEmail', self.GROUP_TEST_ADDRESS, 'READ')
-    xml = self.RunGsUtil(['acl', 'get', obj_v1], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [obj_v1], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS+':READ', obj_v1])
-    xml = self.RunGsUtil(['acl', 'get', obj_v1], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [obj_v1], return_stdout=True)
     self.assertRegexpMatches(xml, test_regex)
 
-    xml = self.RunGsUtil(['acl', 'get', obj_v2], return_stdout=True)
+    xml = self.RunGsUtil(self._get_acl_prefix + [obj_v2], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
   def testBadRequestAclChange(self):
@@ -427,8 +447,8 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Bad Request', stderr)
     self.assertNotIn('Retrying', stdout)
     self.assertNotIn('Retrying', stderr)
-  
-  
+
+
 class TestAclOldAlias(TestAcl):
   _set_acl_prefix = ['setacl']
   _get_acl_prefix = ['getacl']

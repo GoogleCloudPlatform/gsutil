@@ -183,7 +183,6 @@ class DefAclCommand(Command):
       raise
 
   def _ChDefAcl(self):
-    self.parse_versions = True
     self.changes = []
 
     if self.sub_opts:

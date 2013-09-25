@@ -317,7 +317,6 @@ class AclCommand(Command):
       raise
     
   def _ChAcl(self):
-    self.parse_versions = True
     self.changes = []
 
     if self.sub_opts:
@@ -333,6 +332,8 @@ class AclCommand(Command):
         if o == '-d':
           self.changes.append(
               aclhelpers.AclDel(a, logger=self.logger))
+        if o == '-r' or o == '-R':
+          self.recursion_requested = True
 
     if not self.changes:
       raise CommandException(
