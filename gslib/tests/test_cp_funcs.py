@@ -84,10 +84,10 @@ class TestCp(GsUtilUnitTestCase):
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
-    expected_contents = [(str + '\n') for str in ([random_prefix] + objects)]
+    expected_contents = [random_prefix] + objects
     objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
                        for i in range(0, len(objects) / 2)]
     _WriteParallelUploadTrackerFile(tracker_file, random_prefix, objects)
     with open(tracker_file, 'rb') as f:
-      lines = f.readlines()
+      lines = f.read().splitlines()
     self.assertEqual(expected_contents, lines)

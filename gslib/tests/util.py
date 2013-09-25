@@ -18,6 +18,7 @@ import os
 import posixpath
 import pkgutil
 import re
+import tempfile
 import urlparse
 
 import unittest
@@ -35,8 +36,6 @@ RUN_UNIT_TESTS = True
 
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False
-
-PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG = '/tmp/.boto.parallel_upload_test_config'
 
 
 def _HasS3Credentials():
@@ -106,23 +105,32 @@ def PerformsFileToObjectUpload(func):
     try:
       old_boto_config = os.environ['BOTO_CONFIG']
       boto_config_was_set = True
-    except KeyError as e:
+    except KeyError:
       boto_config_was_set = False
+
+    tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
+    os.close(tmp_fd)
+
     try:
       # Run the test normally once.
       func(*args, **kwargs)
 
       # Try again, forcing parallel composite uploads.
       boto.config.set('GSUtil', 'parallel_composite_upload_threshold', '1')
-      os.environ['BOTO_CONFIG'] = PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG
+      with open(tmp_filename, 'w') as tmp_file:
+        boto.config.write(tmp_file)
 
-      # Write a new config file corresponding to the new BOTO_CONFIG.
-      with open(PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG, 'w') as f:
-        boto.config.write(f)
+      os.environ['BOTO_CONFIG'] = tmp_filename
       func(*args, **kwargs)
     finally:
+      try:
+        os.remove(tmp_filename)
+      except OSError:
+        pass
       if boto_config_was_set:
         os.environ['BOTO_CONFIG'] = old_boto_config
+      else:
+        del os.environ['BOTO_CONFIG']
   return wrapper
 
 def GetTestNames():

@@ -125,8 +125,9 @@ class TestCommandRunnerUnitTests(
       os.remove(self.timestamp_file)
     self.assertFalse(os.path.exists(self.timestamp_file))
     self.version_mod_time = 0
+    expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
-        True,
+        expect,
         self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   def test_invalid_commands(self):

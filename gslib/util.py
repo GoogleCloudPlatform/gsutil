@@ -32,7 +32,7 @@ from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 import gslib
 from gslib.exception import CommandException
-from retry_decorator import retry_decorator 
+from retry_decorator import retry_decorator
 from oauth2client.client import HAS_CRYPTO
 
 TWO_MB = 2 * 1024 * 1024

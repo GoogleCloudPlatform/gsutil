@@ -14,7 +14,7 @@
 
 """Contains gsutil base unit test case class."""
 
-import os.path
+import os
 import sys
 import tempfile
 

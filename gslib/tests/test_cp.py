@@ -565,9 +565,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file:', stderr)
 
   def test_filter_existing_components_non_versioned(self):
-    bucket_name = 'filter_existing_components_bucket_non_versioned'
-
-    bucket_uri = self.CreateBucket(bucket_name=bucket_name)
+    bucket_uri = self.CreateBucket()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
@@ -626,12 +624,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(str([args_uploaded_correctly.dst_uri]),
                      str(uploaded_components))
     self.assertEqual(
-        str([MakeGsUri(bucket_name, fpath_no_longer_used, suri_builder)]),
+        str([MakeGsUri(bucket_uri.bucket_name, fpath_no_longer_used,
+                       suri_builder)]),
         str(existing_objects_to_delete))
 
   def test_filter_existing_components_versioned(self):
-    bucket_name = 'filter_existing_components_bucket_versioned'
-    bucket_uri = self.CreateVersionedBucket(bucket_name=bucket_name)
+    bucket_uri = self.CreateVersionedBucket()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',

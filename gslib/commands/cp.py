@@ -1403,16 +1403,17 @@ class CpCommand(Command):
                          file_name)
 
       # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
-      with gzip.open(download_file_name, 'rb') as f_in:
-        with open(file_name, 'wb') as f_out:
+      f_in = gzip.open(download_file_name, 'rb')
+      with open(file_name, 'wb') as f_out:
+        data = f_in.read(self.GUNZIP_CHUNK_SIZE)
+        while data:
+          f_out.write(data)
+          if computed_hashes:
+            # Compute digests again on the uncompressed data.
+            for alg in computed_hashes.itervalues():
+              alg.update(data)
           data = f_in.read(self.GUNZIP_CHUNK_SIZE)
-          while data:
-            f_out.write(data)
-            if computed_hashes:
-              # Compute digests again on the uncompressed data.
-              for alg in computed_hashes.itervalues():
-                alg.update(data)
-            data = f_in.read(self.GUNZIP_CHUNK_SIZE)
+      f_in.close()
 
       os.unlink(download_file_name)
 

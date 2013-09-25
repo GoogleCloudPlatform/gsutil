@@ -44,7 +44,10 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
     self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
     self.assertIn('gsutil version %s' % gslib.VERSION, stdout)
-    self.assertRegexpMatches(stdout, r'.*checksum [0-9a-f]{32}.*')
+    if gslib.IS_PACKAGE_INSTALL:
+      self.assertIn('PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS', stdout)
+    else:
+      self.assertRegexpMatches(stdout, r'.*checksum [0-9a-f]{32}.*')
     self.assertIn('boto version ', stdout)
     self.assertIn('python version ', stdout)
     self.assertIn('config path: ', stdout)

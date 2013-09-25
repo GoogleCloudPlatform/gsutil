@@ -1,10 +1,12 @@
 import datetime
-import gslib.tests.testcase as testcase
-import gslib.third_party.oauth2_plugin.oauth2_client as oauth2_client
 import logging
 import os
-from stat import S_IMODE
-import unittest
+import stat
+
+import gslib.tests.testcase as testcase
+from gslib.tests.util import unittest
+import gslib.util
+import gslib.third_party.oauth2_plugin.oauth2_client as oauth2_client
 
 LOG = logging.getLogger('test_oauth2_client')
 
@@ -212,8 +214,10 @@ class FileSystemTokenCacheTest(unittest.TestCase):
   def testPut(self):
     self.cache.PutToken(self.key, self.token_1)
     # Assert that the cache file exists and has correct permissions.
-    self.assertEquals(
-        0600, S_IMODE(os.stat(self.cache.CacheFileName(self.key)).st_mode))
+    if not gslib.util.IS_WINDOWS:
+      self.assertEquals(
+          0600,
+          stat.S_IMODE(os.stat(self.cache.CacheFileName(self.key)).st_mode))
 
   def testPutGet(self):
     # No cache file present.
@@ -238,7 +242,11 @@ class FileSystemTokenCacheTest(unittest.TestCase):
   def testCacheFileName(self):
     cache = oauth2_client.FileSystemTokenCache(
         path_pattern='/var/run/ccache/token.%(uid)s.%(key)s')
-    self.assertEquals('/var/run/ccache/token.%d.abc123' % os.getuid(),
+    if gslib.util.IS_WINDOWS:
+      uid = '_'
+    else:
+      uid = os.getuid()
+    self.assertEquals('/var/run/ccache/token.%s.abc123' % uid,
                       cache.CacheFileName('abc123'))
 
     cache = oauth2_client.FileSystemTokenCache(
