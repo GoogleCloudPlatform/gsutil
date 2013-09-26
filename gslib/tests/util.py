@@ -130,7 +130,10 @@ def PerformsFileToObjectUpload(func):
       if boto_config_was_set:
         os.environ['BOTO_CONFIG'] = old_boto_config
       else:
-        del os.environ['BOTO_CONFIG']
+        # If the first call to func() failed, we might never have set the
+        # environment variable.
+        os.environ.pop('BOTO_CONFIG', None)
+
   return wrapper
 
 def GetTestNames():
