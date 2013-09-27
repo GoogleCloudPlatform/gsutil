@@ -125,7 +125,7 @@ class DefAclCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'fg:u:d',
+    SUPPORTED_SUB_ARGS : 'fg:u:d:',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.

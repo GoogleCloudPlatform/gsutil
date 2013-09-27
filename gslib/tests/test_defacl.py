@@ -93,6 +93,28 @@ class DefaclIntegrationTest(case.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-u', self.USER_TEST_ADDRESS+':fc', suri(bucket)])
 
+  def testDeletePermissionsWithCh(self):
+    bucket = self.CreateBucket()
+
+    test_regex = self._MakeScopeRegex(
+        'UserByEmail', self.USER_TEST_ADDRESS, 'FULL_CONTROL')
+    xml = self.RunGsUtil(
+        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    self.assertNotRegexpMatches(xml, test_regex)
+
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-u', self.USER_TEST_ADDRESS+':fc', suri(bucket)])
+    xml = self.RunGsUtil(
+        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    self.assertRegexpMatches(xml, test_regex)
+
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-d', self.USER_TEST_ADDRESS, suri(bucket)])
+    xml = self.RunGsUtil(
+        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    self.assertNotRegexpMatches(xml, test_regex)
+
+
 class DefaclOldAliasIntegrationTest(DefaclIntegrationTest):
   _defacl_ch_prefix= ['chdefacl']
   _defacl_get_prefix = ['getdefacl']
