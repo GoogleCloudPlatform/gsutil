@@ -813,11 +813,11 @@ class ConfigCommand(Command):
       time.sleep(2)
     else:
       sys.stdout.write(
-          '\nPlease navigate your browser to %s,\nthen find on the project '
-          'you will\nuse, and copy the Project ID string from the second '
-          'column. Older projects do\nnot have Project ID strings. For such '
-          'projects, click the project and then copy the\nProject Number '
-          'listed under that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
+          '\nPlease navigate your browser to %s,\nthen find the project you '
+          'will use, and copy the Project ID string from the\nsecond column. '
+          'Older projects do not have Project ID strings. For such projects,\n'
+          'click the project and then copy the Project Number listed under '
+          'that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
     default_project_id = raw_input('What is your project-id? ').strip()
     project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
