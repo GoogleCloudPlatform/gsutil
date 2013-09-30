@@ -107,6 +107,14 @@ _detailed_help_text = ("""
               defacl".
 """)
 
+def _SetMetadataExceptionHandler(cls, e):
+  """Exception handler that maintains state about post-completion status."""
+  cls.logger.error(e)
+  cls.everything_set_okay = False
+  
+def _SetMetadataFuncWrapper(cls, name_expansion_result):
+  cls._SetMetadataFunc(name_expansion_result)
+
 
 class SetMetaCommand(Command):
   """Implementation of gsutil setmeta command."""
@@ -145,6 +153,37 @@ class SetMetaCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    if (len(self.args) == 1
+        and not self.suri_builder.StorageUri(self.args[0]).names_object()):
+      raise CommandException('URI (%s) must name an object' % self.args[0])
+
+    # Used to track if any objects' metadata failed to be set.
+    self.everything_set_okay = True
+
+    name_expansion_iterator = NameExpansionIterator(
+        self.command_name, self.proj_id_handler, self.headers, self.debug,
+        self.logger, self.bucket_storage_uri_class, self.args,
+        self.recursion_requested, self.recursion_requested)
+
+    try:
+      # Perform requests in parallel (-m) mode, if requested, using
+      # configured number of parallel processes and threads. Otherwise,
+      # perform requests with sequential function calls in current process.
+      self.Apply(_SetMetadataFuncWrapper, name_expansion_iterator,
+                 _SetMetadataExceptionHandler, fail_on_error=True)
+    except GSResponseError as e:
+      if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
+          and e.status == 403:
+        self._WarnServiceAccounts()
+      raise
+
+    if not self.everything_set_okay:
+      raise CommandException('Metadata for some objects could not be set.')
+
+    return 0
+  
+  @Retry(GSResponseError, tries=3, timeout_secs=1)
+  def _SetMetadataFunc(self, name_expansion_result):
     headers = []
     preserve_acl = True
     if self.sub_opts:
@@ -156,60 +195,24 @@ class SetMetaCommand(Command):
 
     (metadata_minus, metadata_plus) = self._ParseMetadataHeaders(headers)
 
-    if (len(self.args) == 1
-        and not self.suri_builder.StorageUri(self.args[0]).names_object()):
-      raise CommandException('URI (%s) must name an object' % self.args[0])
+    exp_src_uri = self.suri_builder.StorageUri(
+        name_expansion_result.GetExpandedUriStr())
+    self.logger.info('Setting metadata on %s...', exp_src_uri)
 
-    # Used to track if any objects' metadata failed to be set.
-    self.everything_set_okay = True
+    key = exp_src_uri.get_key()
+    metageneration = getattr(key, 'metageneration', None)
+    generation = getattr(key, 'generation', None)
 
-    def _SetMetadataExceptionHandler(e):
-      """Simple exception handler to allow post-completion status."""
-      self.logger.error(str(e))
-      self.everything_set_okay = False
+    headers = {}
+    if generation:
+      headers['x-goog-if-generation-match'] = generation
+    if metageneration:
+      headers['x-goog-if-metageneration-match'] = metageneration
 
-    @Retry(GSResponseError, tries=3, timeout_secs=1)
-    def _SetMetadataFunc(name_expansion_result):
-      exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr())
-      self.logger.info('Setting metadata on %s...', exp_src_uri)
-
-      key = exp_src_uri.get_key()
-      metageneration = getattr(key, 'metageneration', None)
-      generation = getattr(key, 'generation', None)
-
-      headers = {}
-      if generation:
-        headers['x-goog-if-generation-match'] = generation
-      if metageneration:
-        headers['x-goog-if-metageneration-match'] = metageneration
-
-      # If this fails because of a precondition, it will raise a
-      # GSResponseError for @Retry to handle.
-      exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl,
-                                 headers=headers)
-
-    name_expansion_iterator = NameExpansionIterator(
-        self.command_name, self.proj_id_handler, self.headers, self.debug,
-        self.logger, self.bucket_storage_uri_class, self.args,
-        self.recursion_requested, self.recursion_requested)
-
-    try:
-      # Perform requests in parallel (-m) mode, if requested, using
-      # configured number of parallel processes and threads. Otherwise,
-      # perform requests with sequential function calls in current process.
-      self.Apply(_SetMetadataFunc, name_expansion_iterator,
-                 _SetMetadataExceptionHandler)
-    except GSResponseError as e:
-      if e.code == 'AccessDenied' and e.reason == 'Forbidden' \
-          and e.status == 403:
-        self._WarnServiceAccounts()
-      raise
-
-    if not self.everything_set_okay:
-      raise CommandException('Metadata for some objects could not be set.')
-
-    return 0
+    # If this fails because of a precondition, it will raise a
+    # GSResponseError for @Retry to handle.
+    exp_src_uri.set_metadata(metadata_plus, metadata_minus, preserve_acl,
+                               headers=headers)
 
   def _ParseMetadataHeaders(self, headers):
     metadata_minus = set()

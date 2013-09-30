@@ -189,15 +189,12 @@ class DefAclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-g':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP,
-                                   logger=self.logger))
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
         if o == '-u':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER,
-                                   logger=self.logger))
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))
         if o == '-d':
-          self.changes.append(
-              aclhelpers.AclDel(a, logger=self.logger))
+          self.changes.append(aclhelpers.AclDel(a))
 
     if not self.changes:
       raise CommandException(
@@ -237,7 +234,7 @@ class DefAclCommand(Command):
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(uri, current_acl)
+      modification_count += change.Execute(uri, current_acl, self.logger)
     if modification_count == 0:
       self.logger.info('No changes to {0}'.format(uri))
       return

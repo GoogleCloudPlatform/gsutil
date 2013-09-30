@@ -43,14 +43,13 @@ from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import DummyArgChecker
-from gslib.command import EofWorkQueue
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
-from gslib.command_runner import CommandRunner
+#from gslib.command_runner import CommandRunner
 from gslib.commands import config
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
@@ -168,6 +167,17 @@ _detailed_help_text = ("""
   information will be sent to Google unless you choose to send it.
 """)
 
+def _DownloadKey(cls, key):
+  key.get_contents_to_file(cls.devnull, **cls.get_contents_to_file_args)
+  
+def _UploadKey(cls, key):
+  return key.set_contents_from_string(cls.file_contents[cls.thru_local_file],
+                                      md5=cls.file_md5s[cls.thru_local_file])
+  
+def _PerfdiagExceptionHandler(cls, e):
+  """Simple exception handler to allow post-completion status."""
+  cls.logger.error(str(e))
+        
 
 class DummyFile(object):
   """A dummy, file-like object that throws away everything written to it."""
@@ -469,16 +479,13 @@ class PerfDiagCommand(Command):
             k.delete()
         self._RunOperation(_Delete)
 
+
   class _CpFilter(logging.Filter):
     def filter(self, record):
       # Used to prevent cp._LogCopyOperation from spewing output from
       # subprocesses about every iteration.
       msg = record.getMessage()
       return not (('Copying file:///' in msg) or ('Copying gs://' in msg))
-
-  def _PerfdiagExceptionHandler(self, e):
-    """Simple exception handler to allow post-completion status."""
-    self.logger.error(str(e))
 
   def _RunReadThruTests(self):
     """Runs read throughput tests."""
@@ -526,23 +533,17 @@ class PerfDiagCommand(Command):
         self._RunOperation(_Download)
       time_took = sum(times)
     else:
-      def _Download(key):
-        key.get_contents_to_file(self.devnull,
-                                 **self.get_contents_to_file_args)
-
       args = [k] * self.num_iterations
       self.logger.addFilter(self._CpFilter())
 
       t0 = time.time()
-      self.Apply(_Download,
+      self.Apply(_DownloadKey,
                  args,
-                 self._PerfdiagExceptionHandler,
+                 _PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
                  parallel_operations_override=True,
                  process_count=self.processes,
-                 is_main_thread=True,
-                 thread_count=self.threads,
-                 queue_class=EofWorkQueue)
+                 thread_count=self.threads)
       t1 = time.time()
       time_took = t1 - t0
 
@@ -587,23 +588,15 @@ class PerfDiagCommand(Command):
       time_took = sum(times)
 
     else:
-      def _Upload(key):
-        return key.set_contents_from_string(
-            self.file_contents[self.thru_local_file],
-            md5=self.file_md5s[self.thru_local_file])
-
       args = [k] * self.num_iterations
-
       t0 = time.time()
-      self.Apply(_Upload,
+      self.Apply(_UploadKey,
                  args,
-                 self._PerfdiagExceptionHandler,
+                 _PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
                  parallel_operations_override=True,
                  process_count=self.processes,
-                 is_main_thread=True,
-                 thread_count=self.threads,
-                 queue_class=EofWorkQueue)
+                 thread_count=self.threads)
       t1 = time.time()
       time_took = t1 - t0
 

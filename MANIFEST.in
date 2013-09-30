@@ -4,6 +4,7 @@ include LICENSE.third_party
 include README.md
 include VERSION
 include gsutil
+include gsutil.py
 include setup.py
 recursive-include gslib *
 global-exclude .git*

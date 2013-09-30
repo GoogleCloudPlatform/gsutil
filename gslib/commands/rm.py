@@ -102,6 +102,14 @@ _detailed_help_text = ("""
   -a          Delete all versions of an object.
 """)
 
+def _RemoveExceptionHandler(cls, e):
+  """Simple exception handler to allow post-completion status."""
+  cls.logger.error(str(e))
+  cls.everything_removed_okay = False
+  
+def _RemoveFuncWrapper(cls, name_expansion_result):
+  cls._RemoveFunc(name_expansion_result)
+
 
 class RmCommand(Command):
   """Implementation of gsutil rm command."""
@@ -172,11 +180,6 @@ class RmCommand(Command):
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
-    # Tracks if any URIs matched the given args.
-
-    remove_func = self._MkRemoveFunc()
-    exception_handler = self._MkRemoveExceptionHandler()
-
     bucket_uris_to_delete = []
     if self.recursion_requested:
       for uri_str in self.args:
@@ -192,11 +195,12 @@ class RmCommand(Command):
           self.logger, self.bucket_storage_uri_class, self.args,
           self.recursion_requested, flat=self.recursion_requested,
           all_versions=self.all_versions)
-
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(remove_func, name_expansion_iterator, exception_handler)
+      self.Apply(_RemoveFuncWrapper, name_expansion_iterator,
+                 _RemoveExceptionHandler,
+                 fail_on_error=(not self.continue_on_error))
 
     # Assuming the bucket has versioning enabled, uri's that don't map to
     # objects should throw an error even with all_versions, since the prior
@@ -233,7 +237,9 @@ class RmCommand(Command):
               self.logger, self.bucket_storage_uri_class,
               folder_object_wildcards, self.recursion_requested, flat=True,
               all_versions=self.all_versions)
-          self.Apply(remove_func, name_expansion_iterator, exception_handler)
+          self.Apply(_RemoveFuncWrapper, name_expansion_iterator,
+                     _RemoveExceptionHandler,
+                     fail_on_error=(not self.continue_on_error))
         except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
           if not e.reason.startswith('No URIs matched:'):
@@ -243,27 +249,18 @@ class RmCommand(Command):
     for uri in bucket_uris_to_delete:
       self.logger.info('Removing %s...', uri)
       uri.delete_bucket(self.headers)
-
     return 0
 
-  def _MkRemoveExceptionHandler(self):
-    def RemoveExceptionHandler(e):
-      """Simple exception handler to allow post-completion status."""
-      self.logger.error(str(e))
-      self.everything_removed_okay = False
-    return RemoveExceptionHandler
-
-  def _MkRemoveFunc(self):
-    def RemoveFunc(name_expansion_result):
-      exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr(),
-          is_latest=name_expansion_result.is_latest)
-      self.logger.info('Removing %s...', name_expansion_result.expanded_uri_str)
-      try:
-        exp_src_uri.delete_key(validate=False, headers=self.headers)
-      except:
-        if self.continue_on_error:
-          self.everything_removed_okay = False
-        else:
-          raise
-    return RemoveFunc
+  def _RemoveFunc(self, name_expansion_result):
+    exp_src_uri = self.suri_builder.StorageUri(
+        name_expansion_result.GetExpandedUriStr(),
+        is_latest=name_expansion_result.is_latest)
+    
+    self.logger.info('Removing %s...', name_expansion_result.expanded_uri_str)
+    try:
+      exp_src_uri.delete_key(validate=False, headers=self.headers)
+    except:
+      if self.continue_on_error:
+        self.everything_removed_okay = False
+      else:
+        raise

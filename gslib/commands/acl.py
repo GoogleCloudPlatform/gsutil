@@ -239,6 +239,13 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
+def _ApplyExceptionHandler(cls, exception):
+  cls.logger.error('Encountered a problem: {0}'.format(exception))
+  cls.everything_set_okay = False
+
+def _ApplyAclChangesWrapper(cls, uri_or_expansion_result):
+  cls.ApplyAclChanges(uri_or_expansion_result)
+
 
 class AclCommand(Command):
   """Implementation of gsutil acl command."""
@@ -323,15 +330,12 @@ class AclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-g':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP,
-                                   logger=self.logger))
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
         if o == '-u':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER,
-                                   logger=self.logger))
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))
         if o == '-d':
-          self.changes.append(
-              aclhelpers.AclDel(a, logger=self.logger))
+          self.changes.append(aclhelpers.AclDel(a))
         if o == '-r' or o == '-R':
           self.recursion_requested = True
 
@@ -374,15 +378,11 @@ class AclCommand(Command):
         raise e
 
     self.everything_set_okay = True
-    self.Apply(self.ApplyAclChanges,
+    self.Apply(_ApplyAclChangesWrapper,
                name_expansion_iterator,
-               self._ApplyExceptionHandler)
+               _ApplyExceptionHandler)
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
-    
-  def _ApplyExceptionHandler(self, exception):
-    self.logger.error('Encountered a problem: {0}'.format(exception))
-    self.everything_set_okay = False
 
   @Retry(GSResponseError, tries=3, timeout_secs=1)
   def ApplyAclChanges(self, uri_or_expansion_result):
@@ -405,7 +405,7 @@ class AclCommand(Command):
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(uri, current_acl)
+      modification_count += change.Execute(uri, current_acl, self.logger)
     if modification_count == 0:
       self.logger.info('No changes to {0}'.format(uri))
       return

@@ -40,7 +40,7 @@ class AclChange(object):
       'FC': 'FULL_CONTROL',
       }
 
-  def __init__(self, acl_change_descriptor, scope_type, logger):
+  def __init__(self, acl_change_descriptor, scope_type):
     """Creates an AclChange object.
 
     Args:
@@ -48,9 +48,7 @@ class AclChange(object):
                              the "acl" command's help.
       scope_type: Either ChangeType.USER or ChangeType.GROUP, specifying the
                   extent of the scope.
-      logger: An instance of logging.Logger.
     """
-    self.logger = logger
     self.identifier = ''
 
     self.raw_descriptor = acl_change_descriptor
@@ -175,20 +173,21 @@ class AclChange(object):
 
     current_acl.entries.entry_list.append(entry)
 
-  def Execute(self, uri, current_acl):
+  def Execute(self, uri, current_acl, logger):
     """Executes the described change on an ACL.
 
     Args:
       uri: The URI object to change.
       current_acl: An instance of boto.gs.acl.ACL to permute.
+      logger: An instance of logging.Logger.
 
     Returns:
       The number of changes that were made.
     """
-    self.logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
+    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
 
     if self.perm == 'WRITE' and uri.names_object():
-      self.logger.warning(
+      logger.warning(
           'Skipping {0} on {1}, as WRITE does not apply to objects'
           .format(self.raw_descriptor, uri))
       return 0
@@ -205,7 +204,7 @@ class AclChange(object):
       change_count = 1
 
     parsed_acl = minidom.parseString(current_acl.to_xml())
-    self.logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
+    logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
     return change_count
 
 
@@ -216,9 +215,8 @@ class AclDel(AclChange):
       r'AllAuth(enticatedUsers)?$': 'AllAuthenticatedUsers',
   }
 
-  def __init__(self, identifier, logger):
+  def __init__(self, identifier):
     self.raw_descriptor = '-d {0}'.format(identifier)
-    self.logger = logger
     self.identifier = identifier
     for regex, scope in self.scope_regexes.items():
       if re.match(regex, self.identifier, re.IGNORECASE):
@@ -240,11 +238,11 @@ class AclDel(AclChange):
             and entry.scope.type == 'AllAuthenticatedUsers'):
         yield entry
 
-  def Execute(self, uri, current_acl):
-    self.logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
+  def Execute(self, uri, current_acl, logger):
+    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:
       current_acl.entries.entry_list.remove(entry)
     parsed_acl = minidom.parseString(current_acl.to_xml())
-    self.logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
+    logger.debug('New Acl:\n{0}'.format(parsed_acl.toprettyxml()))
     return len(matching_entries)

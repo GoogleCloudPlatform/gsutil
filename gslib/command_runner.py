@@ -32,6 +32,7 @@ from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import OLD_ALIAS_MAP
+from gslib.command import ShutDownGsutil
 from gslib.exception import CommandException
 from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.storage_uri_builder import StorageUriBuilder
@@ -184,7 +185,10 @@ class CommandRunner(object):
         self, args, headers, debug, parallel_operations, self.config_file_list,
         self.bucket_storage_uri_class, test_method, logging_filters,
         command_alias_used=command_name)
-    return command_inst.RunCommand()
+
+    return_values = command_inst.RunCommand()
+    ShutDownGsutil()
+    return return_values
 
   def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update, and if it's been longer

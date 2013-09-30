@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-import threading
+import multiprocessing
 import wildcard_iterator
 
 from bucket_listing_ref import BucketListingRef
@@ -407,7 +407,7 @@ class NameExpansionIteratorQueue(object):
   def __init__(self, name_expansion_iterator, final_value):
     self.name_expansion_iterator = name_expansion_iterator
     self.final_value = final_value
-    self.lock = threading.Lock()
+    self.lock = multiprocessing.Manager().Lock()
 
   def qsize(self):
     raise NotImplementedError(

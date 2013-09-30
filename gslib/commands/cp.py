@@ -70,7 +70,6 @@ from gslib.bucket_listing_ref import BucketListingRef
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import Command
-from gslib.command import EofWorkQueue
 from gslib.command import FILE_URIS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
@@ -410,7 +409,8 @@ OPTIONS_TEXT = """
                  'gsutil help acls' for further details.
 
   -c            If an error occurrs, continue to attempt to copy the remaining
-                files.
+                files. Note that this option is always true when running
+                "gsutil -m cp".
 
   -D            Copy in "daisy chain" mode, i.e., copying between two buckets by
                 hooking a download to an upload, via the machine where gsutil is
@@ -551,6 +551,17 @@ _detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
                                    OPTIONS_TEXT])
 
 
+global cp_manager
+def InitializeMultiprocessingVariables():
+  """
+  Perform necessary initialization - see
+  gslib.command.InitializeMultiprocessingVariables for an explanation of why
+  this is necessary.
+  """
+  global cp_manager
+  cp_manager = multiprocessing.Manager()
+
+
 # This tuple is used only to encapsulate the arguments needed for
 # _PerformResumableUploadIfApplies, so that the arguments fit the model of
 # command.Apply().
@@ -561,10 +572,39 @@ PerformResumableUploadIfAppliesArgs = namedtuple(
 ObjectFromTracker = namedtuple('ObjectFromTracker',
                                'object_name generation')
 
+
 class TrackerFileType(object):
   UPLOAD = 1
   DOWNLOAD = 2
   PARALLEL_UPLOAD = 3
+
+def _CopyFuncWrapper(cls, args):
+  cls._CopyFunc(args)
+
+def _PerformResumableUploadIfAppliesWrapper(cls, args):
+  """A wrapper for cp._PerformResumableUploadIfApplies, which takes in a
+     PerformResumableUploadIfAppliesArgs, extracts the arguments to form the
+     arguments for the wrapped function, and then calls the wrapped function.
+     This was designed specifically for use with command.Apply().
+  """
+  fp = FilePart(args.filename, args.file_start, args.file_length)
+  with fp:
+    already_split = True
+    ret = cls._PerformResumableUploadIfApplies(
+        fp, args.src_uri, args.dst_uri, args.canned_acl, args.headers,
+        fp.length, already_split)
+  return ret
+
+def _CopyExceptionHandler(cls, e):
+  """Simple exception handler to allow post-completion status."""
+  cls.logger.error(str(e))
+  cls.copy_failure_count += 1
+  cls.logger.debug(('\n\nEncountered exception while copying:\n%s\n' %
+                     traceback.format_exc()))
+
+def _RmExceptionHandler(cls, e):
+  """Simple exception handler to allow post-completion status."""
+  cls.logger.error(str(e))
 
 class CpCommand(Command):
   """
@@ -1738,17 +1778,13 @@ class CpCommand(Command):
 
     # In parallel, copy all of the file parts that haven't already been
     # uploaded to temporary objects.
-    cp_results = self.Apply(self._PerformResumableUploadIfAppliesWrapper,
+    cp_results = self.Apply(_PerformResumableUploadIfAppliesWrapper,
                             components_to_upload,
-                            self._CopyExceptionHandler,
+                            _CopyExceptionHandler,
                             ('copy_failure_count', 'total_bytes_transferred'),
                             arg_checker=gslib.command.DummyArgChecker,
                             parallel_operations_override=True,
-                            queue_class=EofWorkQueue,
-                            should_return_results=True,
-                            ignore_subprocess_failures=True,
-                            is_main_thread=(not self.parallel_operations))
-
+                            should_return_results=True)
     uploaded_components = []
     total_bytes_uploaded = 0
     for cp_result in cp_results:
@@ -1772,10 +1808,9 @@ class CpCommand(Command):
         # those that were uploaded by a previous, failed run and have since
         # changed (but still have an old generation lying around).
         objects_to_delete = components + existing_objects_to_delete
-        self.Apply(_DeleteKeyFn, objects_to_delete, self._RmExceptionHandler,
+        self.Apply(_DeleteKeyFn, objects_to_delete, _RmExceptionHandler,
                    arg_checker=gslib.command.DummyArgChecker,
-                   parallel_operations_override=True, queue_class=EofWorkQueue,
-                   is_main_thread=(not self.parallel_operations))
+                   parallel_operations_override=True)
       except Exception, e:
         if (e.message and ('unexpected failure in' in e.message)
             and ('sub-processes, aborting' in e.message)):
@@ -2056,139 +2091,127 @@ class CpCommand(Command):
       dst_uri = self.suri_builder.StorageUri(trans_uri_str)
     return dst_uri
 
-  def _CopyExceptionHandler(self, e):
-    """Simple exception handler to allow post-completion status."""
-    self.logger.error(str(e))
-    self.copy_failure_count += 1
-    self.logger.debug(('\n\nEncountered exception while copying:\n%s\n' %
-                       traceback.format_exc()))
+  def _CopyFunc(self, name_expansion_result):
+    """Worker function for performing the actual copy (and rm, for mv)."""
+    (exp_dst_uri, have_existing_dst_container) = self._ExpandDstUri(
+         self.args[-1])
+    if self.perform_mv:
+      cmd_name = 'mv'
+    else:
+      cmd_name = self.command_name
+    src_uri = self.suri_builder.StorageUri(
+        name_expansion_result.GetSrcUriStr())
+    exp_src_uri = self.suri_builder.StorageUri(
+        name_expansion_result.GetExpandedUriStr())
+    src_uri_names_container = name_expansion_result.NamesContainer()
+    src_uri_expands_to_multi = name_expansion_result.NamesContainer()
+    have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
+    have_existing_dest_subdir = (
+        name_expansion_result.HaveExistingDstContainer())
+    if src_uri.names_provider():
+      raise CommandException(
+          'The %s command does not allow provider-only source URIs (%s)' %
+          (cmd_name, src_uri))
+    if have_multiple_srcs:
+      self._InsistDstUriNamesContainer(exp_dst_uri,
+                                       have_existing_dst_container,
+                                       cmd_name)
 
-  def _RmExceptionHandler(self, e):
-    """Simple exception handler to allow post-completion status."""
-    self.logger.error(str(e))
 
-  # Command entry point.
-  def RunCommand(self):
+    if self.use_manifest and self.manifest.WasSuccessful(str(exp_src_uri)):
+      return
 
-    # Inner funcs.
-    def _CopyFunc(name_expansion_result):
-      """Worker function for performing the actual copy (and rm, for mv)."""
-      if self.perform_mv:
-        cmd_name = 'mv'
-      else:
-        cmd_name = self.command_name
-      src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetSrcUriStr())
-      exp_src_uri = self.suri_builder.StorageUri(
-          name_expansion_result.GetExpandedUriStr())
-      src_uri_names_container = name_expansion_result.NamesContainer()
-      src_uri_expands_to_multi = name_expansion_result.NamesContainer()
-      have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
-      have_existing_dest_subdir = (
-          name_expansion_result.HaveExistingDstContainer())
-      if src_uri.names_provider():
-        raise CommandException(
-            'The %s command does not allow provider-only source URIs (%s)' %
-            (cmd_name, src_uri))
-      if have_multiple_srcs:
-        self._InsistDstUriNamesContainer(exp_dst_uri,
-                                         have_existing_dst_container,
-                                         cmd_name)
+    if self.perform_mv:
+      if name_expansion_result.NamesContainer():
+        # Use recursion_requested when performing name expansion for the
+        # directory mv case so we can determine if any of the source URIs are
+        # directories (and then use cp -R and rm -R to perform the move, to
+        # match the behavior of Linux mv (which when moving a directory moves
+        # all the contained files).
+        self.recursion_requested = True
+        # Disallow wildcard src URIs when moving directories, as supporting it
+        # would make the name transformation too complex and would also be
+        # dangerous (e.g., someone could accidentally move many objects to the
+        # wrong name, or accidentally overwrite many objects).
+        if ContainsWildcard(src_uri):
+          raise CommandException('The mv command disallows naming source '
+                                 'directories using wildcards')
 
-      if self.use_manifest and self.manifest.WasSuccessful(str(exp_src_uri)):
-        return
+    if (exp_dst_uri.is_file_uri()
+        and not os.path.exists(exp_dst_uri.object_name)
+        and have_multiple_srcs):
+      os.makedirs(exp_dst_uri.object_name)
 
-      if self.perform_mv:
-        if name_expansion_result.NamesContainer():
-          # Use recursion_requested when performing name expansion for the
-          # directory mv case so we can determine if any of the source URIs are
-          # directories (and then use cp -R and rm -R to perform the move, to
-          # match the behavior of Linux mv (which when moving a directory moves
-          # all the contained files).
-          self.recursion_requested = True
-          # Disallow wildcard src URIs when moving directories, as supporting it
-          # would make the name transformation too complex and would also be
-          # dangerous (e.g., someone could accidentally move many objects to the
-          # wrong name, or accidentally overwrite many objects).
-          if ContainsWildcard(src_uri):
-            raise CommandException('The mv command disallows naming source '
-                                   'directories using wildcards')
+    dst_uri = self._ConstructDstUri(src_uri, exp_src_uri,
+                                    src_uri_names_container,
+                                    src_uri_expands_to_multi,
+                                    have_multiple_srcs, exp_dst_uri,
+                                    have_existing_dest_subdir)
+    dst_uri = self._FixWindowsNaming(src_uri, dst_uri)
 
-      if (exp_dst_uri.is_file_uri()
-          and not os.path.exists(exp_dst_uri.object_name)
-          and have_multiple_srcs):
-        os.makedirs(exp_dst_uri.object_name)
+    self._CheckForDirFileConflict(exp_src_uri, dst_uri)
+    if self._SrcDstSame(exp_src_uri, dst_uri):
+      raise CommandException('%s: "%s" and "%s" are the same file - '
+                             'abort.' % (cmd_name, exp_src_uri, dst_uri))
 
-      dst_uri = self._ConstructDstUri(src_uri, exp_src_uri,
-                                      src_uri_names_container,
-                                      src_uri_expands_to_multi,
-                                      have_multiple_srcs, exp_dst_uri,
-                                      have_existing_dest_subdir)
-      dst_uri = self._FixWindowsNaming(src_uri, dst_uri)
+    if dst_uri.is_cloud_uri() and dst_uri.is_version_specific:
+      raise CommandException('%s: a version-specific URI\n(%s)\ncannot be '
+                             'the destination for gsutil cp - abort.'
+                             % (cmd_name, dst_uri))
 
-      self._CheckForDirFileConflict(exp_src_uri, dst_uri)
-      if self._SrcDstSame(exp_src_uri, dst_uri):
-        raise CommandException('%s: "%s" and "%s" are the same file - '
-                               'abort.' % (cmd_name, exp_src_uri, dst_uri))
-
-      if dst_uri.is_cloud_uri() and dst_uri.is_version_specific:
-        raise CommandException('%s: a version-specific URI\n(%s)\ncannot be '
-                               'the destination for gsutil cp - abort.'
-                               % (cmd_name, dst_uri))
-
-      elapsed_time = bytes_transferred = 0
-      try:
-        if self.use_manifest:
-          self.manifest.Initialize(exp_src_uri, dst_uri)
-        (elapsed_time, bytes_transferred, result_uri) = (
-            self._PerformCopy(exp_src_uri, dst_uri))
-        if self.use_manifest:
-          if hasattr(dst_uri, 'md5'):
-            self.manifest.Set(exp_src_uri, 'md5', dst_uri.md5)
-          self.manifest.SetResult(exp_src_uri, bytes_transferred, 'OK')
-      except ItemExistsError:
-        message = 'Skipping existing item: %s' % dst_uri.uri
+    elapsed_time = bytes_transferred = 0
+    try:
+      if self.use_manifest:
+        self.manifest.Initialize(exp_src_uri, dst_uri)
+      (elapsed_time, bytes_transferred, result_uri) = (
+          self._PerformCopy(exp_src_uri, dst_uri))
+      if self.use_manifest:
+        if hasattr(dst_uri, 'md5'):
+          self.manifest.Set(exp_src_uri, 'md5', dst_uri.md5)
+        self.manifest.SetResult(exp_src_uri, bytes_transferred, 'OK')
+    except ItemExistsError:
+      message = 'Skipping existing item: %s' % dst_uri.uri
+      self.logger.info(message)
+      if self.use_manifest:
+        self.manifest.SetResult(exp_src_uri, 0, 'skip', message)
+    except Exception, e:
+      if self._IsNoClobberServerException(e):
+        message = 'Rejected (noclobber): %s' % dst_uri.uri
         self.logger.info(message)
         if self.use_manifest:
           self.manifest.SetResult(exp_src_uri, 0, 'skip', message)
-      except Exception, e:
-        if self._IsNoClobberServerException(e):
-          message = 'Rejected (noclobber): %s' % dst_uri.uri
-          self.logger.info(message)
-          if self.use_manifest:
-            self.manifest.SetResult(exp_src_uri, 0, 'skip', message)
-        elif self.continue_on_error:
-          message = 'Error copying %s: %s' % (src_uri.uri, str(e))
-          self.copy_failure_count += 1
-          self.logger.error(message)
-          if self.use_manifest:
-            self.manifest.SetResult(exp_src_uri, 0, 'error', message)
-        else:
-          if self.use_manifest:
-            self.manifest.SetResult(exp_src_uri, 0, 'error', str(e))
-          raise
+      elif self.continue_on_error:
+        message = 'Error copying %s: %s' % (src_uri.uri, str(e))
+        self.copy_failure_count += 1
+        self.logger.error(message)
+        if self.use_manifest:
+          self.manifest.SetResult(exp_src_uri, 0, 'error', message)
+      else:
+        if self.use_manifest:
+          self.manifest.SetResult(exp_src_uri, 0, 'error', str(e))
+        raise
 
-      if self.print_ver:
-        # Some cases don't return a version-specific URI (e.g., if destination
-        # is a file).
-        if hasattr(result_uri, 'version_specific_uri'):
-          self.logger.info('Created: %s' % result_uri.version_specific_uri)
-        else:
-          self.logger.info('Created: %s' % result_uri.uri)
+    if self.print_ver:
+      # Some cases don't return a version-specific URI (e.g., if destination
+      # is a file).
+      if hasattr(result_uri, 'version_specific_uri'):
+        self.logger.info('Created: %s' % result_uri.version_specific_uri)
+      else:
+        self.logger.info('Created: %s' % result_uri.uri)
 
-      # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
-      # since we call copy internally from move and don't specify the -n flag)
-      # we'll need to only remove the source when we have not skipped the
-      # destination.
-      if self.perform_mv:
-        self.logger.info('Removing %s...', exp_src_uri)
-        exp_src_uri.delete_key(validate=False, headers=self.headers)
-      stats_lock.acquire()
+    # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
+    # since we call copy internally from move and don't specify the -n flag)
+    # we'll need to only remove the source when we have not skipped the
+    # destination.
+    if self.perform_mv:
+      self.logger.info('Removing %s...', exp_src_uri)
+      exp_src_uri.delete_key(validate=False, headers=self.headers)
+    with self.stats_lock:
       self.total_elapsed_time += elapsed_time
       self.total_bytes_transferred += bytes_transferred
-      stats_lock.release()
 
-    # Start of RunCommand code.
+  # Command entry point.
+  def RunCommand(self):
     self._ParseArgs()
 
     # If possible (this will fail on Windows), set the maximum number of open
@@ -2255,7 +2278,7 @@ class CpCommand(Command):
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    stats_lock = threading.Lock()
+    self.stats_lock = multiprocessing.Manager().Lock()
 
     # Tracks if any copies failed.
     self.copy_failure_count = 0
@@ -2270,8 +2293,8 @@ class CpCommand(Command):
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(_CopyFunc, name_expansion_iterator, self._CopyExceptionHandler,
-               shared_attrs)
+    self.Apply(_CopyFuncWrapper, name_expansion_iterator,
+               _CopyExceptionHandler, shared_attrs, fail_on_error=True)
     self.logger.debug(
         'total_bytes_transferred: %d', self.total_bytes_transferred)
 
@@ -2343,7 +2366,7 @@ class CpCommand(Command):
           self.read_args_from_stdin = True
         elif o == '-L':
           self.use_manifest = True
-          self.manifest = self._Manifest(a)
+          self.manifest = _Manifest(a)
         elif o == '-M':
           # Note that we signal to the cp command to perform a move (copy
           # followed by remove) and use directory-move naming rules by passing
@@ -2493,134 +2516,125 @@ class CpCommand(Command):
         (isinstance(e, ResumableUploadException) and 'code 412' in e.message))
 
 
+class _Manifest(object):
+  """Stores the manifest items for the CpCommand class."""
 
-  class _Manifest(object):
-    """Stores the manifest items for the CpCommand class."""
+  def __init__(self, path):
+    # self.items contains a dictionary of rows
+    self.items = {}
+    self.manifest_filter = {}
+    self.lock = multiprocessing.Manager().Lock()
 
-    def __init__(self, path):
-      # self.items contains a dictionary of rows
-      self.manifest_fp = None
-      self.items = {}
-      self.manifest_filter = {}
-      self.lock = threading.Lock()
+    self.manifest_path = os.path.expanduser(path)
+    self._ParseManifest()
+    self._CreateManifestFile()
+      
+  def _ParseManifest(self):
+    """
+    Load and parse a manifest file. This information will be used to skip
+    any files that have a skip or OK status.
+    """
+    try:
+      if os.path.exists(self.manifest_path):
+        with open(self.manifest_path, 'rb') as f:
+          first_row = True
+          reader = csv.reader(f)
+          for row in reader:
+            if first_row:
+              try:
+                source_index = row.index('Source')
+                result_index = row.index('Result')
+              except ValueError:
+                # No header and thus not a valid manifest file.
+                raise CommandException(
+                    'Missing headers in manifest file: %s' % self.manifest_path)
+            first_row = False
+            source = row[source_index]
+            result = row[result_index]
+            if result in ['OK', 'skip']:
+              # We're always guaranteed to take the last result of a specific
+              # source uri.
+              self.manifest_filter[source] = result
+    except IOError as ex:
+      raise CommandException('Could not parse %s' % path)
 
-      manifest_path = os.path.expanduser(path)
-      self._ParseManifest(manifest_path)
-      self._CreateManifestFile(manifest_path)
+  def WasSuccessful(self, src):
+    """ Returns whether the specified src uri was marked as successful."""
+    return src in self.manifest_filter
 
-    def __del__(self):
-      if self.manifest_fp:
-        self.manifest_fp.close()
+  def _CreateManifestFile(self):
+    """Opens the manifest file and assigns it to the file pointer."""
+    try:
+      if ((not os.path.exists(self.manifest_path))
+          or (os.stat(self.manifest_path).st_size == 0)):
+        # Add headers to the new file.
+        with open(self.manifest_path, 'wb', 1) as f:
+          writer = csv.writer(f)
+          writer.writerow(['Source',
+                          'Destination',
+                          'Start',
+                          'End',
+                          'Md5',
+                          'UploadId',
+                          'Source Size',
+                          'Bytes Transferred',
+                          'Result',
+                          'Description'])
+    except IOError:
+      raise CommandException('Could not create manifest file.')
 
-    def _ParseManifest(self, path):
-      """
-      Load and parse a manifest file. This information will be used to skip
-      any files that have a skip or OK status.
-      """
-      try:
-        if os.path.exists(path):
-          with open(path, 'rb') as f:
-            first_row = True
-            reader = csv.reader(f)
-            for row in reader:
-              if first_row:
-                try:
-                  source_index = row.index('Source')
-                  result_index = row.index('Result')
-                except ValueError:
-                  # No header and thus not a valid manifest file.
-                  raise CommandException(
-                      'Missing headers in manifest file: %s' % path)
-              first_row = False
-              source = row[source_index]
-              result = row[result_index]
-              if result in ['OK', 'skip']:
-                # We're always guaranteed to take the last result of a specific
-                # source uri.
-                self.manifest_filter[source] = result
-      except IOError as ex:
-        raise CommandException('Could not parse %s' % path)
+  def Set(self, uri, key, value):
+    if value is None:
+      # In case we don't have any information to set we bail out here.
+      # This is so that we don't clobber existing information.
+      # To zero information pass '' instead of None.
+      return
+    if uri in self.items:
+      self.items[uri][key] = value
+    else:
+      self.items[uri] = {key:value}
 
-    def WasSuccessful(self, src):
-      """ Returns whether the specified src uri was marked as successful."""
-      return src in self.manifest_filter
+  def Initialize(self, source_uri, destination_uri):
+    # Always use the source_uri as the key for the item. This is unique.
+    self.Set(source_uri, 'source_uri', source_uri)
+    self.Set(source_uri, 'destination_uri', destination_uri)
+    self.Set(source_uri, 'start_time', datetime.datetime.utcnow())
 
-    def _CreateManifestFile(self, path):
-      """Opens the manifest file and assigns it to the file pointer."""
-      try:
-        if not os.path.exists(path) or os.stat(path).st_size == 0:
-          # Add headers to the new file.
-          with open(path, 'wb', 1) as f:
-            writer = csv.writer(f)
-            writer.writerow(['Source',
-                            'Destination',
-                            'Start',
-                            'End',
-                            'Md5',
-                            'UploadId',
-                            'Source Size',
-                            'Bytes Transferred',
-                            'Result',
-                            'Description'])
-        # This file pointer will be closed in the destructor.
-        self.manifest_fp = open(path, 'a', 1)  # 1 == line buffered
-      except IOError:
-        raise CommandException('Could not create manifest file.')
+  def SetResult(self, source_uri, bytes_transferred, result,
+                description=''):
+    self.Set(source_uri, 'bytes', bytes_transferred)
+    self.Set(source_uri, 'result', result)
+    self.Set(source_uri, 'description', description)
+    self.Set(source_uri, 'end_time', datetime.datetime.utcnow())
+    self._WriteRowToManifestFile(source_uri)
+    self._RemoveItemFromManifest(source_uri)
 
-    def Set(self, uri, key, value):
-      if value is None:
-        # In case we don't have any information to set we bail out here.
-        # This is so that we don't clobber existing information.
-        # To zero information pass '' instead of None.
-        return
-      if uri in self.items:
-        self.items[uri][key] = value
-      else:
-        self.items[uri] = {key:value}
+  def _WriteRowToManifestFile(self, uri):
+    row_item = self.items[uri]
+    data = [
+      str(row_item['source_uri']),
+      str(row_item['destination_uri']),
+      '%sZ' % row_item['start_time'].isoformat(),
+      '%sZ' % row_item['end_time'].isoformat(),
+      row_item['md5'] if 'md5' in row_item else '',
+      row_item['upload_id'] if 'upload_id' in row_item else '',
+      str(row_item['size']) if 'size' in row_item else '',
+      str(row_item['bytes']) if 'bytes' in row_item else '',
+      row_item['result'],
+      row_item['description']]
 
-    def Initialize(self, source_uri, destination_uri):
-      # Always use the source_uri as the key for the item. This is unique.
-      self.Set(source_uri, 'source_uri', source_uri)
-      self.Set(source_uri, 'destination_uri', destination_uri)
-      self.Set(source_uri, 'start_time', datetime.datetime.utcnow())
-
-    def SetResult(self, source_uri, bytes_transferred, result,
-                  description=''):
-      self.Set(source_uri, 'bytes', bytes_transferred)
-      self.Set(source_uri, 'result', result)
-      self.Set(source_uri, 'description', description)
-      self.Set(source_uri, 'end_time', datetime.datetime.utcnow())
-      self._WriteRowToManifestFile(source_uri)
-      self._RemoveItemFromManifest(source_uri)
-
-    def _WriteRowToManifestFile(self, uri):
-      row_item = self.items[uri]
-      data = [
-        str(row_item['source_uri']),
-        str(row_item['destination_uri']),
-        '%sZ' % row_item['start_time'].isoformat(),
-        '%sZ' % row_item['end_time'].isoformat(),
-        row_item['md5'] if 'md5' in row_item else '',
-        row_item['upload_id'] if 'upload_id' in row_item else '',
-        str(row_item['size']) if 'size' in row_item else '',
-        str(row_item['bytes']) if 'bytes' in row_item else '',
-        row_item['result'],
-        row_item['description']]
-
-      # Aquire a lock to prevent multiple threads writing to the same file at
-      # the same time. This would cause a garbled mess in the manifest file.
-      self.lock.acquire()
-      try:
-        writer = csv.writer(self.manifest_fp)
+    # Aquire a lock to prevent multiple threads writing to the same file at
+    # the same time. This would cause a garbled mess in the manifest file.
+    with self.lock:
+      with open(self.manifest_path, 'a', 1) as f:  # 1 == line buffered
+        writer = csv.writer(f)
         writer.writerow(data)
-      finally:
-        self.lock.release()
 
-    def _RemoveItemFromManifest(self, uri):
-      # Remove the item from the dictionary since we're done with it and
-      # we don't want the dictionary to grow too large in memory for no good
-      # reason.
-      del self.items[uri]
+  def _RemoveItemFromManifest(self, uri):
+    # Remove the item from the dictionary since we're done with it and
+    # we don't want the dictionary to grow too large in memory for no good
+    # reason.
+    del self.items[uri]
 
 
 class ItemExistsError(Exception):
@@ -2714,7 +2728,7 @@ def _GetPartitionInfo(file_size, max_components, default_component_size):
   component_size = _DivideAndCeil(file_size, num_components)
   return (num_components, component_size)
 
-def _DeleteKeyFn(key):
+def _DeleteKeyFn(cls, key):
   """Wrapper function to be used with command.Apply()."""
   return key.delete_key()
 

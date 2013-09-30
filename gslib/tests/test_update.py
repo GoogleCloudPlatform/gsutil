@@ -66,8 +66,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # .git*, etc.)
     os.makedirs(gsutil_dst)
     for comp in ('CHANGES.md', 'CHECKSUM', 'COPYING', 'gslib', 'gsutil',
-                 'LICENSE.third_party', 'MANIFEST.in', 'README.md', 'scripts',
-                 'setup.py', 'third_party', 'VERSION'):
+                 'gsutil.py', 'LICENSE.third_party', 'MANIFEST.in', 'README.md',
+                 'scripts', 'setup.py', 'third_party', 'VERSION'):
       if os.path.isdir(os.path.join(GSUTIL_DIR, comp)):
         func = shutil.copytree
       else:

@@ -102,6 +102,17 @@ def _ConfigureLogging(level=logging.INFO):
 
 
 def main():
+  # These modules must be imported after importing gslib.__main__.
+  import gslib.command
+  from gslib.commands import cp
+  from gslib.third_party.oauth2_plugin import oauth2_client
+
+  # These setup methods must be called, and they should only be called from
+  # within an "if __name__ == '__main__':" block on Windows.
+  gslib.command.InitializeMultiprocessingVariables()
+  cp.InitializeMultiprocessingVariables()
+  oauth2_client.InitializeMultiprocessingVariables()
+
   global debug
 
   if not (2, 6) <= sys.version_info[:3] < (3,):

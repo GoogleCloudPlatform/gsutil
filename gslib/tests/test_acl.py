@@ -18,7 +18,7 @@ import gslib.tests.testcase as testcase
 import re
 
 from gslib import aclhelpers
-from gslib.command import _ThreadedLogger as ThreadedLogger
+from gslib.command import CreateGsutilLogger
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 
@@ -36,7 +36,7 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
   def setUp(self):
     super(TestAcl, self).setUp()
     self.sample_uri = self.CreateBucket()
-    self.logger = ThreadedLogger('acl')
+    self.logger = CreateGsutilLogger('acl')
 
   def test_set_invalid_acl_object(self):
     """Ensures that invalid XML content returns a MalformedACLError."""
@@ -207,88 +207,77 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
   
   def testAclChangeWithUserId(self):
     change = aclhelpers.AclChange(self.USER_TEST_ID + ':r',
-                                  scope_type=aclhelpers.ChangeType.USER,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.USER)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'UserById', self.USER_TEST_ID)
 
   def testAclChangeWithGroupId(self):
     change = aclhelpers.AclChange(self.GROUP_TEST_ID + ':r',
-                                  scope_type=aclhelpers.ChangeType.GROUP,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'GroupById', self.GROUP_TEST_ID)
 
   def testAclChangeWithUserEmail(self):
     change = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':r',
-                                  scope_type=aclhelpers.ChangeType.USER,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.USER)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclChangeWithGroupEmail(self):
     change = aclhelpers.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
-                                  scope_type=aclhelpers.ChangeType.GROUP,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'FULL_CONTROL', 'GroupByEmail',
                     self.GROUP_TEST_ADDRESS)
 
   def testAclChangeWithDomain(self):
     change = aclhelpers.AclChange(self.DOMAIN_TEST + ':READ',
-                                  scope_type=aclhelpers.ChangeType.GROUP,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'GroupByDomain', self.DOMAIN_TEST)
 
   def testAclChangeWithAllUsers(self):
     change = aclhelpers.AclChange('AllUsers:WRITE',
-                                  scope_type=aclhelpers.ChangeType.GROUP,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'WRITE', 'AllUsers')
 
   def testAclChangeWithAllAuthUsers(self):
     change = aclhelpers.AclChange('AllAuthenticatedUsers:READ',
-                                  scope_type=aclhelpers.ChangeType.GROUP,
-                                  logger=self.logger)
+                                  scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    change.Execute(self.sample_uri, acl)
+    change.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'AllAuthenticatedUsers')
-    remove = aclhelpers.AclDel('AllAuthenticatedUsers', logger=self.logger)
-    remove.Execute(self.sample_uri, acl)
+    remove = aclhelpers.AclDel('AllAuthenticatedUsers')
+    remove.Execute(self.sample_uri, acl, self.logger)
     self._AssertHasNo(acl, 'READ', 'AllAuthenticatedUsers')
 
   def testAclDelWithUser(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                               scope_type=aclhelpers.ChangeType.USER,
-                               logger=self.logger)
+                               scope_type=aclhelpers.ChangeType.USER)
     acl = self.sample_uri.get_acl()
-    add.Execute(self.sample_uri, acl)
+    add.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
-    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS,
-                               logger=self.logger)
-    remove.Execute(self.sample_uri, acl)
+    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
+    remove.Execute(self.sample_uri, acl, self.logger)
     self._AssertHasNo(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclDelWithGroup(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                               scope_type=aclhelpers.ChangeType.GROUP,
-                               logger=self.logger)
+                               scope_type=aclhelpers.ChangeType.GROUP)
     acl = self.sample_uri.get_acl()
-    add.Execute(self.sample_uri, acl)
+    add.Execute(self.sample_uri, acl, self.logger)
     self._AssertHas(acl, 'READ', 'GroupByEmail', self.USER_TEST_ADDRESS)
 
-    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS,
-                               logger=self.logger)
-    remove.Execute(self.sample_uri, acl)
+    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
+    remove.Execute(self.sample_uri, acl, self.logger)
     self._AssertHasNo(acl, 'READ', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 
   #

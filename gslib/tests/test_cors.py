@@ -196,7 +196,8 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
             'Please use "cors" with the appropriate sub-command' in line):
           continue
         actual.add(line)
-      self.assertEqual(expected, actual)
+      for line in expected:
+        self.assertIn(line, actual)
       self.assertEqual(stderr.count('Setting CORS'), 2)
     _Check1()
 

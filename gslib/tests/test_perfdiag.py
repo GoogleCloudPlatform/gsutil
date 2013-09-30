@@ -16,7 +16,8 @@ import socket
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-
+from gslib.tests.util import unittest
+from gslib.util import IS_WINDOWS
 
 class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   """Integration tests for perfdiag command."""
@@ -48,18 +49,22 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def test_write_throughput_single_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 1, 2)
 
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_write_throughput_multi_process_single_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 2, 1)
 
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_write_throughput_multi_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 2, 2)
 
   def test_read_throughput_single_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 1, 2)
 
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_read_throughput_multi_process_single_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 2, 1)
 
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_read_throughput_multi_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 2, 2)
 

@@ -24,7 +24,7 @@ class OAuth2Auth(AuthHandler):
 class OAuth2ServiceAccountAuth(AuthHandler):
   
   capability = ['google-oauth2', 's3']
-  
+
   def __init__(self, path, config, provider):
     if (provider.name == 'google' 
         and config.has_option('Credentials', 'gs_service_client_id') 
@@ -35,7 +35,7 @@ class OAuth2ServiceAccountAuth(AuthHandler):
       # If we make it to this point, then we will later attempt to authenticate
       # as a service account based on how the boto auth plugins work. This is
       # global so that command.py can access this value once it's set.
-      # TODO(zwilt) replace this approach with a way to get the current plugin
+      # TODO: replace this approach with a way to get the current plugin
       # from boto so that we don't have to have global variables.
       global IS_SERVICE_ACCOUNT
       IS_SERVICE_ACCOUNT = True

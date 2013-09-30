@@ -43,6 +43,17 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 
+def _Overwrite(fp):
+  """Overwrite first byte in an open file and flush contents."""
+  fp.seek(0)
+  fp.write('x')
+  fp.flush()
+
+def _Append(fp):
+  """Append a byte at end of an open file and flush contents."""
+  fp.seek(0,2)
+  fp.write('x')
+  fp.flush()
 
 class GsutilNamingTests(testcase.GsUtilUnitTestCase):
   """gsutil command method test suite"""
@@ -568,7 +579,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.fail('Did not get expected CommandException')
     except CommandException:
       self.assertFalse(os.listdir(dst_dir))
-    except:
+    except Exception, e:
       self.fail('Unexpected exception raised')
 
   def testDownloadWithObjectSizeChange(self):
@@ -576,24 +587,14 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     Test resumable download on an object that changes size before the
     downloaded file's checksum is validated.
     """
-    def append(fp):
-      """Append a byte at end of an open file and flush contents."""
-      fp.seek(0,2)
-      fp.write('x')
-      fp.flush()
-    self.DownloadTestHelper(append)
+    self.DownloadTestHelper(_Append)
 
   def testDownloadWithFileContentChange(self):
     """
     Tests resumable download on an object where the file content changes
     before the downloaded file's checksum is validated.
     """
-    def overwrite(fp):
-      """Overwrite first byte in an open file and flush contents."""
-      fp.seek(0)
-      fp.write('x')
-      fp.flush()
-    self.DownloadTestHelper(overwrite)
+    self.DownloadTestHelper(_Overwrite)
 
   @PerformsFileToObjectUpload
   def testFlatCopyingObjsAndFilesToBucketSubDir(self):

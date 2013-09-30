@@ -85,8 +85,8 @@ _detailed_help_text = ("""
               multi-threading and multi-processing, using a number of threads
               and processors determined by the parallel_thread_count and
               parallel_process_count values set in the boto configuration
-              file. You might want to experiment with these value, as the
-              best value can vary based on a number of factors, including
+              file. You might want to experiment with these values, as the
+              best values can vary based on a number of factors, including
               network speed, number of CPUs, and available memory.
 
               Using the -m option may make your performance worse if you
@@ -97,6 +97,12 @@ _detailed_help_text = ("""
               before the entire transfer is complete (e.g. failing after 300 of
               1000 files have been transferred), you will need to restart the
               entire transfer.
+              
+              Also, although most commands will normally fail upon encountering
+              an error when the -m flag is disabled, all commands will
+              continue to try all operations when -m is enabled with multiple
+              threads or processes, and the number of failed operations (if any)
+              will be reported at the end of the command's execution.
 
               WARNING: If you use the gsutil -m option when copying data
               between versioned buckets, object version ordering will not be

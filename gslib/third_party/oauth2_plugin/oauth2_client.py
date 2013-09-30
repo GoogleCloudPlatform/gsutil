@@ -36,9 +36,9 @@ import errno
 from hashlib import sha1
 import httplib2
 import logging
+import multiprocessing
 import os
 import tempfile
-import threading
 import urllib
 import urlparse
 
@@ -62,10 +62,20 @@ except ImportError:
     # Try for simplejson
     import simplejson as json
 
+global token_exchange_lock
+def InitializeMultiprocessingVariables():
+  """
+  Perform necessary initialization - see
+  gslib.command.InitializeMultiprocessingVariables for an explanation of why
+  this is necessary.
+  """
+  global token_exchange_lock
+  # Lock used for checking/exchanging refresh token so that a parallelized
+  # operation doesn't attempt concurrent refreshes.
+  token_exchange_lock = multiprocessing.Manager().Lock()
+
+
 LOG = logging.getLogger('oauth2_client')
-# Lock used for checking/exchanging refresh token, so multithreaded
-# operation doesn't attempt concurrent refreshes.
-token_exchange_lock = threading.Lock()
 
 GSUTIL_DEFAULT_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control'
 
