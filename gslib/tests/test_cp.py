@@ -33,6 +33,7 @@ from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
 from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import Retry
 from gslib.util import TWO_MB
 
@@ -563,6 +564,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', '-R', wildcard_uri, suri(bucket_uri)],
                             return_stderr=True)
     self.assertIn('Copying file:', stderr)
+
+  def test_cp_without_read_access(self):
+    object_uri = self.CreateObject(contents='foo')
+    with self.SetAnonymousBotoCreds():
+      stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
+                              return_stderr = True, expected_status=1)
+      self.assertIn('Access denied to', stderr)
 
   def test_filter_existing_components_non_versioned(self):
     bucket_uri = self.CreateBucket()

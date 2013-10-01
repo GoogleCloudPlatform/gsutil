@@ -393,7 +393,14 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
             'x-goog-project-id header, with none configured. Please re-run '
             'gsutil config and make sure to follow the instructions for '
             'finding and entering your default project id.')))
-      if not HasConfiguredCredentials():
+      if (not HasConfiguredCredentials() and
+          not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
+                                    False)):
+        # The check above allows tests to assert that we get a particular,
+        # expected failure, rather than always encountering this error message
+        # when there are no configured credentials. This allows tests to
+        # simulate a second user without permissions, without actually requiring
+        # two separate configured users.
         _OutputAndExit('\n'.join(textwrap.wrap(
             'You are attempting to access protected data with no configured '
             'credentials. Please visit '

@@ -27,6 +27,7 @@ if not hasattr(unittest.TestCase, 'assertIsNone'):
   import unittest2 as unittest
 
 from boto.provider import Provider
+from contextlib import contextmanager
 import gslib.tests as gslib_tests
 
 
@@ -102,12 +103,6 @@ def PerformsFileToObjectUpload(func):
   """
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
-    try:
-      old_boto_config = os.environ['BOTO_CONFIG']
-      boto_config_was_set = True
-    except KeyError:
-      boto_config_was_set = False
-
     tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
     os.close(tmp_fd)
 
@@ -120,21 +115,35 @@ def PerformsFileToObjectUpload(func):
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
 
-      os.environ['BOTO_CONFIG'] = tmp_filename
-      func(*args, **kwargs)
+      with SetBotoConfigForTest(tmp_filename):
+        func(*args, **kwargs)
     finally:
       try:
         os.remove(tmp_filename)
       except OSError:
         pass
-      if boto_config_was_set:
-        os.environ['BOTO_CONFIG'] = old_boto_config
-      else:
-        # If the first call to func() failed, we might never have set the
-        # environment variable.
-        os.environ.pop('BOTO_CONFIG', None)
 
   return wrapper
+
+@contextmanager
+def SetBotoConfigForTest(boto_config_path):
+  """Sets a given file as the boto config file for a single test."""
+
+  # Setup for entering "with" block.
+  try:
+    old_boto_config_env_variable = os.environ['BOTO_CONFIG']
+    boto_config_was_set = True
+  except KeyError:
+    boto_config_was_set = False
+  os.environ['BOTO_CONFIG'] = boto_config_path
+
+  yield
+
+  # Teardown for exiting "with" block.
+  if boto_config_was_set:
+    os.environ['BOTO_CONFIG'] = old_boto_config_env_variable
+  else:
+    os.environ.pop('BOTO_CONFIG', None)
 
 def GetTestNames():
   """Returns a list of the names of the test modules in gslib.tests."""

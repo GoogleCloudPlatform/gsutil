@@ -572,6 +572,8 @@ PerformResumableUploadIfAppliesArgs = namedtuple(
 ObjectFromTracker = namedtuple('ObjectFromTracker',
                                'object_name generation')
 
+CP_SUB_ARGS = 'a:cDeIL:MNnpqrRtvz:'
+
 
 class TrackerFileType(object):
   UPLOAD = 1
@@ -649,7 +651,7 @@ class CpCommand(Command):
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
     # -t is deprecated but leave intact for now to avoid breakage.
-    SUPPORTED_SUB_ARGS : 'a:cDeIL:MNnpqrRtvz:',
+    SUPPORTED_SUB_ARGS : CP_SUB_ARGS,
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.

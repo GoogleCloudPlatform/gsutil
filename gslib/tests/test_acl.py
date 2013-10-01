@@ -20,6 +20,7 @@ import re
 from gslib import aclhelpers
 from gslib.command import CreateGsutilLogger
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import Retry
 
 PUBLIC_READ_ACL_TEXT = '<Scope type="AllUsers"/><Permission>READ</Permission>'
@@ -436,6 +437,14 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Bad Request', stderr)
     self.assertNotIn('Retrying', stdout)
     self.assertNotIn('Retrying', stderr)
+    
+  def testAclGetWithoutFullControl(self):
+    object_uri = self.CreateObject(contents='foo')
+    with self.SetAnonymousBotoCreds():
+      stderr = self.RunGsUtil(['acl', 'get', suri(object_uri)],
+                              return_stderr = True, expected_status=1)
+      self.assertIn('Note that Full Control access is required to access ACLs.',
+                    stderr)
 
 
 class TestAclOldAlias(TestAcl):

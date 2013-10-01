@@ -21,6 +21,7 @@ from gslib.command import MIN_ARGS
 from gslib.command import PROVIDER_URIS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
 from gslib.command import URIS_START_ARG
+from gslib.commands.cp import CP_SUB_ARGS
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -80,12 +81,11 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -p          Causes ACL to be preserved when moving in the cloud. Note that
-              this option has performance and cost implications, because it
-              is essentially performing three requests ('acl get', cp,
-              'acl set'). (The performance issue can be mitigated to some
-              degree by using gsutil -m cp to cause
-              multi-threaded/multi-processing copying.)
+  All options that are available for the gsutil cp command are also available
+  for the gsutil mv command (except for the -R flag, which is implied by the
+  gsutil mv command). Please see the OPTIONS sections of "gsutil help cp"
+  for more information.
+
 """)
 
 
@@ -106,7 +106,7 @@ class MvCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'pv',
+    SUPPORTED_SUB_ARGS : CP_SUB_ARGS,  # Flags for mv are passed through to cp.
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : True,
     # True if provider-only URIs acceptable for this command.

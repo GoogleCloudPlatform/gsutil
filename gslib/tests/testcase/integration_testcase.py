@@ -14,24 +14,32 @@
 
 """Contains gsutil base integration test case class."""
 
+import base
+import boto
+import gslib
+import gslib.tests.util as util
 import logging
 import subprocess
 import sys
 
-import boto
 from boto.exception import GSResponseError
-
-import gslib
+from contextlib import contextmanager
 from gslib.project_id import ProjectIdHandler
-import gslib.tests.util as util
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
-import base
 
 
 LOGGER = logging.getLogger('integration-test')
 
+# Contents of boto config file that will tell gsutil not to override the real
+# error message with a warning about anonymous access if no credentials are
+# provided in the config file.
+BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING = """
+[Tests]
+bypass_anonymous_access_warning = True
+"""
 
 @unittest.skipUnless(util.RUN_INTEGRATION_TESTS,
                      'Not running integration tests.')
@@ -222,3 +230,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       return toreturn[0]
     elif toreturn:
       return tuple(toreturn)
+    
+  @contextmanager
+  def SetAnonymousBotoCreds(self):
+    boto_config_path = self.CreateTempFile(
+          contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
+    with SetBotoConfigForTest(boto_config_path):
+      yield
