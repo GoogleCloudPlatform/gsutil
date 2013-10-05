@@ -38,6 +38,7 @@ from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
+from gslib.util import MultiprocessingIsAvailable
 
 
 class CustomException(Exception):
@@ -110,11 +111,21 @@ class FakeCommand(Command):
     self.logger = CreateGsutilLogger('FakeCommand')
     self.parallel_operations = do_parallel
     self.failure_count = 0
+    self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
+
+
+class FakeCommandWithoutMultiprocessingModule(FakeCommand):
+  def __init__(self, do_parallel):
+    super(FakeCommandWithoutMultiprocessingModule, self).__init__(do_parallel)
+    self.multiprocessing_is_available = False
+
 
 # TODO: Figure out a good way to test that ctrl+C really stops execution,
 #       and also that ctrl+C works when there are still tasks enqueued.
 class TestParallelismFramework(testcase.GsUtilUnitTestCase):
   """gsutil parallelism framework test suite."""
+  
+  command_class = FakeCommand
 
   def _TestBasicApply(self, process_count, thread_count):
     args = [()] * (17 * process_count * thread_count + 1)
@@ -127,7 +138,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                         thread_count, process_count, command_inst=None,
                         shared_attrs=None, fail_on_error=False,
                         thr_exc_handler=None):
-    command_inst = command_inst or FakeCommand(True)
+    command_inst = command_inst or self.command_class(True)
     exception_handler = thr_exc_handler or _ExceptionHandler
     process_count = _AdjustProcessCountIfWindows(process_count)
     return command_inst.Apply(func, args_iterator, exception_handler,
@@ -153,7 +164,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self._TestBasicApply(10, 10)
 
   def testSharedAttrsWork(self):
-    command_inst = FakeCommand(True)
+    command_inst = self.command_class(True)
     command_inst.arg_length_sum = 0
     args = ['foo', ['bar', 'baz'], [], ['x', 'y'], [], 'abcd']
     results = self._RunApply(_IncrementByLength, args, 2, 2,
@@ -165,7 +176,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected_sum, command_inst.arg_length_sum)
 
   def testThreadsSurviveExceptions(self):
-    command_inst = FakeCommand(True)
+    command_inst = self.command_class(True)
     args = ([()] * 5)
     results = self._RunApply(_FailureFunc, args, 2, 2,
                                      command_inst=command_inst,
@@ -173,7 +184,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertEqual(len(args), command_inst.failure_count)
     
   def testThreadsSurviveExceptionsInExceptionHandler(self):
-    command_inst = FakeCommand(True)
+    command_inst = self.command_class(True)
     args = ([()] * 5)
     results = self._RunApply(_FailureFunc, args, 2, 2,
                                      command_inst=command_inst,
@@ -182,7 +193,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertEqual(len(args), command_inst.failure_count)
 
   def testFailOnErrorFlag(self):
-    command_inst = FakeCommand(True)
+    command_inst = self.command_class(True)
     args = ([()] * 5)
     try:
       results = self._RunApply(_FailureFunc, args, 1, 1,
@@ -202,3 +213,16 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     args = ([3, 1, 4, 1, 5])
     results = self._RunApply(_ReApplyWithReplicatedArguments, args, 2, 2)
     self.assertEqual(7 * (sum(args) + len(args)), sum(results))
+
+
+class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):
+  """Tests that the parallelism framework works when the multiprocessing module
+     is not available. Notably, this test has no way to override previous calls
+     to gslib.util.MultiprocessingIsAvailable to prevent the initialization of
+     all of the global variables in command.py, so this still behaves slightly
+     differently than the behavior one would see on a machine where the
+     multiprocessing functionality is actually not available (in particular, it
+     will not catch the case where a global variable that is not available for
+     the sequential path is referenced before initialization).
+  """
+  command_class = FakeCommandWithoutMultiprocessingModule

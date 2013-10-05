@@ -17,16 +17,14 @@
 import multiprocessing
 import threading
 
-
-class AtomicIncrementDict(object):
+class BasicIncrementDict(object):
   """
   Dictionary meant for storing any values for which the "+" operation is
-  defined (e.g., floats, lists, etc.) in a way that allows for atomic get, put,
-  and update in a thread- and process-safe way.
+  defined (e.g., floats, lists, etc.). This class is neither thread- nor
+  process-safe.
   """
-  def __init__(self, manager):
-    self.dict = ThreadAndProcessSafeDict(manager)
-    self.lock = multiprocessing.Lock()
+  def __init__(self):
+    self.dict = {}
 
   def get(self, key, default_value=None):
     return self.dict.get(key, default_value)
@@ -38,12 +36,31 @@ class AtomicIncrementDict(object):
     """
     Update the stored value associated with the given key (or the default_value,
     if there is no existing value for the key) by performing the equivalent of
+    self.put(key, self.get(key, default_value) + inc).
+    """
+    val = self.dict.get(key, default_value) + inc
+    self.dict[key] = val
+    return val
+
+
+class AtomicIncrementDict(BasicIncrementDict):
+  """
+  Dictionary meant for storing any values for which the "+" operation is
+  defined (e.g., floats, lists, etc.) in a way that allows for atomic get, put,
+  and update in a thread- and process-safe way.
+  """
+  def __init__(self, manager):
+    self.dict = ThreadAndProcessSafeDict(manager)
+    self.lock = multiprocessing.Lock()
+
+  def update(self, key, inc, default_value=0):
+    """
+    Update the stored value associated with the given key (or the default_value,
+    if there is no existing value for the key) by performing the equivalent of
     self.put(key, self.get(key, default_value) + inc) atomically.
     """
     with self.lock:
-      val = self.dict.get(key, default_value) + inc
-      self.dict[key] = val
-    return val
+      return super(AtomicIncrementDict, self).update(key, inc, default_value)
 
 
 class ThreadAndProcessSafeDict(object):

@@ -43,6 +43,7 @@ from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
+from gslib.util import MultiprocessingIsAvailable
 from gslib.util import RELEASE_NOTES_URL
 from gslib.util import SECONDS_PER_DAY
 
@@ -187,7 +188,8 @@ class CommandRunner(object):
         command_alias_used=command_name)
 
     return_values = command_inst.RunCommand()
-    ShutDownGsutil()
+    if MultiprocessingIsAvailable()[0]:
+      ShutDownGsutil()
     return return_values
 
   def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):

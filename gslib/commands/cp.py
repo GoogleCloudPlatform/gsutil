@@ -89,6 +89,7 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
+from gslib.util import CreateLock
 from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import ParseErrorDetail
 from gslib.util import HumanReadableToBytes
@@ -549,18 +550,6 @@ _detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
                                    PARALLEL_COMPOSITE_UPLOADS_TEXT,
                                    CHANGING_TEMP_DIRECTORIES_TEXT,
                                    OPTIONS_TEXT])
-
-
-global cp_manager
-def InitializeMultiprocessingVariables():
-  """
-  Perform necessary initialization - see
-  gslib.command.InitializeMultiprocessingVariables for an explanation of why
-  this is necessary.
-  """
-  global cp_manager
-  cp_manager = multiprocessing.Manager()
-
 
 # This tuple is used only to encapsulate the arguments needed for
 # _PerformResumableUploadIfApplies, so that the arguments fit the model of
@@ -2280,7 +2269,7 @@ class CpCommand(Command):
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    self.stats_lock = multiprocessing.Manager().Lock()
+    self.stats_lock = CreateLock()
 
     # Tracks if any copies failed.
     self.copy_failure_count = 0

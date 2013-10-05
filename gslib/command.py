@@ -50,10 +50,13 @@ from gslib.help_provider import HelpProvider
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionIteratorQueue
 from gslib.parallelism_framework_util import AtomicIncrementDict
+from gslib.parallelism_framework_util import BasicIncrementDict
 from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
 from gslib.project_id import ProjectIdHandler
 from gslib.storage_uri_builder import StorageUriBuilder
+from gslib.util import GetConfigFilePath
 from gslib.util import IS_WINDOWS
+from gslib.util import MultiprocessingIsAvailable
 from gslib.util import NO_MAX
 from gslib.wildcard_iterator import ContainsWildcard
 from oauth2client.client import HAS_CRYPTO
@@ -316,6 +319,10 @@ class Command(object):
   # This keeps track of the recursive depth of the current call to Apply.
   recursive_apply_level = 0
 
+  # If the multiprocessing module isn't available, we'll use this to keep track
+  # of the caller_id.
+  sequential_caller_id = -1
+
   # Define a convenience property for command name, since it's used many places.
   def _GetDefaultCommandName(self):
     return self.command_spec[COMMAND_NAME]
@@ -454,6 +461,8 @@ class Command(object):
         if o == '-r' or o == '-R':
           self.recursion_requested = True
           break
+
+    self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
 
   def CheckArguments(self):
     """Checks that the arguments provided on the command line fit the
@@ -755,14 +764,14 @@ class Command(object):
     if connection_pool:
       for i in connection_pool:
         connection_pool[i].connection.close()
-        
+
   def _GetProcessAndThreadCount(self, process_count, thread_count,
                                 parallel_operations_override):
     """
     Determines the values of process_count and thread_count that we should
     actually use. If we're not performing operations in parallel, then ignore
     existing values and use process_count = thread_count = 1.
-    
+
     Args:
       process_count: A positive integer or None. In the latter case, we read
                      the value from the .boto config file.
@@ -771,7 +780,7 @@ class Command(object):
       parallel_operations_override: Used to override self.parallel_operations.
                                     This allows the caller to safely override
                                     the top-level flag for a single call.
-                                    
+
     Returns:
       (process_count, thread_count): The number of processes and threads to use,
                                      respectively.
@@ -798,11 +807,17 @@ class Command(object):
       process_count = 1
       thread_count = 1
 
+    if IS_WINDOWS and process_count > 1:
+      raise CommandException('\n'.join(textwrap.wrap((
+          'It is not possible to set process_count > 1 on Windows. Please '
+          'update your config file (located at %s) and set '
+          '"process_count = 1".') %
+          GetConfigFilePath())))
     self.logger.debug('process count: %d', process_count)
     self.logger.debug('thread count: %d', thread_count)
     
     return (process_count, thread_count)
-  
+
   def _SetUpPerCallerState(self):
     """Set up the state for a caller id, corresponding to one Apply call."""
     # Get a new caller ID.
@@ -827,7 +842,7 @@ class Command(object):
     caller_id_finished_count.put(caller_id, 0)
     global_return_values_map.put(caller_id, [])
     return caller_id
-    
+
   def _CreateNewConsumerPool(self, num_processes, num_threads):
     """Create a new pool of processes that call _ApplyThreads."""
     processes = []
@@ -848,11 +863,126 @@ class Command(object):
     consumer_pool = _ConsumerPool(processes, task_queue)
     consumer_pools.append(consumer_pool)
 
-  def Apply(self, func, args_iterator, thr_exc_handler,
+  def Apply(self, func, args_iterator, exception_handler,
             shared_attrs=None, arg_checker=_UriArgChecker,
             parallel_operations_override=False, process_count=None,
             thread_count=None, should_return_results=False,
             fail_on_error=False):
+    """
+    Determines whether the necessary parts of the multiprocessing module are
+    available, and delegates to _ParallelApply or _SequentialApply as
+    appropriate.
+
+    Args:
+      func: Function to call to process each argument.
+      args_iterator: Iterable collection of arguments to be put into the
+                     work queue.
+      exception_handler: Exception handler for WorkerThread class.
+      shared_attrs: List of attributes to manage across sub-processes.
+      arg_checker: Used to determine whether we should process the current
+                   argument or simply skip it. Also handles any logging that
+                   is specific to a particular type of argument.
+      parallel_operations_override: Used to override self.parallel_operations.
+                                    This allows the caller to safely override
+                                    the top-level flag for a single call.
+      process_count: The number of processes to use. If not specified, then
+                     the configured default will be used.
+      thread_count: The number of threads per process. If not speficied, then
+                    the configured default will be used..
+      should_return_results: If true, then return the results of all successful
+                             calls to func in a list.
+      fail_on_error: If true, then raise any exceptions encountered when
+                     executing func. This is only applicable in the case of
+                     process_count == thread_count == 1.
+    """
+    (process_count, thread_count) = self._GetProcessAndThreadCount(
+        process_count, thread_count, parallel_operations_override)
+    is_main_thread = (self.recursive_apply_level == 0
+                      and self.sequential_caller_id == -1)
+    
+    # Only check this from the first call in the main thread. Apart from the
+    # fact that it's  wasteful to try this multiple times in general, it also
+    # will never work when called from a subprocess since we use daemon
+    # processes, and daemons can't create other processes.
+    if is_main_thread:
+      if ((not self.multiprocessing_is_available)
+          and (thread_count * process_count > 1)):
+        message = (
+            'You have requested multiple threads or processes for an operation,'
+            ' but the required functionality of Python\'s multiprocessing '
+            'module is not available. Your operations will be performed '
+            'sequentially, and any requests for parallelism will be ignored.')
+        try:
+          multiprocessing.Value('i', 0)
+        except:
+          message += (
+              'If you are on a Unix-like operating system, please ensure that '
+              'you have a /dev/shm or tmpfs implementation to which gsutil has '
+              'write access.')
+        self.logger.debug(MultiprocessingIsAvailable()[1])
+        self.logger.warn('\n'.join(textwrap.wrap(message)))
+
+    if self.multiprocessing_is_available:
+      caller_id = self._SetUpPerCallerState()
+    else:
+      self.sequential_caller_id += 1
+      caller_id = self.sequential_caller_id
+      
+      if is_main_thread:
+        global global_return_values_map, shared_vars_map
+        global caller_id_finished_count, shared_vars_list_map
+        global_return_values_map = BasicIncrementDict()
+        global_return_values_map.put(caller_id, [])
+        shared_vars_map = BasicIncrementDict()
+        caller_id_finished_count = BasicIncrementDict()
+        shared_vars_list_map = {}
+      
+
+    # If any shared attributes passed by caller, create a dictionary of
+    # shared memory variables for every element in the list of shared
+    # attributes.
+    if shared_attrs:
+      shared_vars_list_map[caller_id] = shared_attrs
+      for name in shared_attrs:
+        shared_vars_map.put((caller_id, name), 0)
+
+    # Make all of the requested function calls.
+    if self.multiprocessing_is_available:
+      self._ParallelApply(func, args_iterator, exception_handler, caller_id,
+                          arg_checker, parallel_operations_override,
+                          process_count, thread_count, should_return_results,
+                          fail_on_error)
+    else:
+      self._SequentialApply(func, args_iterator, exception_handler, caller_id,
+                            arg_checker, should_return_results, fail_on_error)
+
+    # Update self from shared variables.
+    if shared_attrs:
+      for name in shared_attrs:
+        setattr(self, name, shared_vars_map.get((caller_id, name)))
+
+    if should_return_results:
+      return global_return_values_map.get(caller_id)
+
+  def _SequentialApply(self, func, args_iterator, exception_handler, caller_id,
+                       arg_checker, should_return_results, fail_on_error):
+    """
+    Perform all function calls sequentially in the current thread. No other
+    threads or processes will be spawned. This degraded functionality is only
+    for use when the multiprocessing module is not available for some reason.
+    """
+    # Create a WorkerThread to handle all of the logic needed to actually call
+    # the function. Note that this thread will never be started, and all work
+    # is done in the current thread.
+    worker_thread = WorkerThread(None, False)
+    for args in args_iterator:
+      task = Task(func, args, caller_id, exception_handler,
+                  should_return_results, arg_checker, fail_on_error)
+      worker_thread.PerformTask(task, self)
+
+  def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
+                     arg_checker, parallel_operations_override, process_count,
+                     thread_count, should_return_results, fail_on_error):
     """
     Dispatch input arguments across a pool of parallel OS
     processes and/or Python threads, based on options (-m or not)
@@ -889,29 +1019,9 @@ class Command(object):
       execute the tasks.
 
     Args:
-      func: Function to call to process each URI.
-      args_iterator: Iterable collection of arguments to be put into the
-                     work queue.
-      thr_exc_handler: Exception handler for WorkerThread class.
-      shared_attrs: List of attributes to manage across sub-processes.
-      arg_checker: Used to determine whether we should process the current
-                   argument or simply skip it. Also handles any logging that
-                   is specific to a particular type of argument.
-      parallel_operations_override: Used to override self.parallel_operations.
-                                    This allows the caller to safely override
-                                    the top-level flag for a single call.
-      process_count: The number of processes to use. If not specified, then
-                     the configured default will be used.
-      thread_count: The number of threads per process. If not speficied, then
-                    the configured default will be used..
-      should_return_results: If true, then return the results of all successful
-                             calls to func in a list.
-      fail_on_error: If true, then raise any exceptions encountered when
-                     executing func. This is only applicable in the case of
-                     process_count == thread_count == 1.
-    """
-    (process_count, thread_count) = self._GetProcessAndThreadCount(
-        process_count, thread_count, parallel_operations_override)
+      caller_id: The caller ID unique to this call to command.Apply.
+      See command.Apply for description of other arguments.
+    """    
     is_main_thread = self.recursive_apply_level == 0
 
     # Catch ^C under Linux/MacOs so we can do cleanup before exiting.
@@ -938,17 +1048,7 @@ class Command(object):
             new_pool_needed.value = 1
             need_pool_or_done_cond.notify_all()
             # The main thread will notify us when it finishes.
-            need_pool_or_done_cond.wait()
-
-    caller_id = self._SetUpPerCallerState()
-    
-    # If any shared attributes passed by caller, create a dictionary of
-    # shared memory variables for every element in the list of shared
-    # attributes.
-    if shared_attrs:
-      shared_vars_list_map[caller_id] = shared_attrs
-      for name in shared_attrs:
-        shared_vars_map.put((caller_id, name), 0)      
+            need_pool_or_done_cond.wait()     
 
     # We don't honor the fail_on_error flag in the case of multiple threads
     # or processes.
@@ -969,7 +1069,7 @@ class Command(object):
     # the worst case, every worker blocks on such a call and the producer fills
     # up the task queue before it finishes, so we block forever).
     producer_thread = ProducerThread(args_iterator, caller_id, func, task_queue,
-                                     should_return_results, thr_exc_handler,
+                                     should_return_results, exception_handler,
                                      arg_checker, fail_on_error)
 
     if process_count > 1:
@@ -1001,13 +1101,6 @@ class Command(object):
       shard = 0
       self._ApplyThreads(thread_count, self.recursive_apply_level, shard,
                          is_blocking_call=True, task_queue=task_queue)
-
-    if shared_attrs:
-      for name in shared_attrs:
-        setattr(self, name, shared_vars_map.get((caller_id, name)))
-
-    if should_return_results:
-      return global_return_values_map.get(caller_id)
 
   def _ApplyThreads(self, thread_count, recursive_apply_level, shard,
                     is_blocking_call=False, task_queue=None):
@@ -1209,14 +1302,18 @@ class WorkerThread(threading.Thread):
   Note that this thread is NOT started upon instantiation because the function-
   calling logic is also used in the single-threaded case.
   """
-  def __init__(self, task_queue):
+  def __init__(self, task_queue, multiprocessing_is_available=True):
     """
     Args:
       task_queue: The thread-safe queue from which this thread should obtain
                   its work.
+      multiprocessing_is_available: False iff the multiprocessing module is not
+                                    available, in which case we're using
+                                    _SequentialApply.
     """
     super(WorkerThread, self).__init__()
     self.task_queue = task_queue
+    self.multiprocessing_is_available = multiprocessing_is_available
     self.daemon = True
     self.cached_classes = {}
     self.last_shared_var_values = {}
@@ -1262,7 +1359,8 @@ class WorkerThread(threading.Thread):
     # the function finished executing. Otherwise, we won't know when to
     # stop waiting and return results.
     num_done = caller_id_finished_count.update(caller_id, 1)
-    _NotifyIfDone(caller_id, num_done)
+    if self.multiprocessing_is_available:
+      _NotifyIfDone(caller_id, num_done)
 
   def run(self):
     while True:

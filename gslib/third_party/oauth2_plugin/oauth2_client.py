@@ -44,6 +44,7 @@ import urlparse
 
 from boto import cacerts
 from boto import config
+from gslib.util import CreateLock
 from gslib.util import Retry
 from oauth2client.client import AccessTokenRefreshError
 from oauth2client.client import HAS_CRYPTO
@@ -72,7 +73,7 @@ def InitializeMultiprocessingVariables():
   global token_exchange_lock
   # Lock used for checking/exchanging refresh token so that a parallelized
   # operation doesn't attempt concurrent refreshes.
-  token_exchange_lock = multiprocessing.Manager().Lock()
+  token_exchange_lock = CreateLock()
 
 
 LOG = logging.getLogger('oauth2_client')
