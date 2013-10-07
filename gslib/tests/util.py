@@ -137,13 +137,14 @@ def SetBotoConfigForTest(boto_config_path):
     boto_config_was_set = False
   os.environ['BOTO_CONFIG'] = boto_config_path
 
-  yield
-
-  # Teardown for exiting "with" block.
-  if boto_config_was_set:
-    os.environ['BOTO_CONFIG'] = old_boto_config_env_variable
-  else:
-    os.environ.pop('BOTO_CONFIG', None)
+  try:
+    yield
+  finally:
+    # Teardown for exiting "with" block.
+    if boto_config_was_set:
+      os.environ['BOTO_CONFIG'] = old_boto_config_env_variable
+    else:
+      os.environ.pop('BOTO_CONFIG', None)
 
 def GetTestNames():
   """Returns a list of the names of the test modules in gslib.tests."""
