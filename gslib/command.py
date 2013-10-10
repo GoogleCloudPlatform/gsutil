@@ -151,6 +151,8 @@ MAX_QUEUE_SIZE = 32500
 # causing problems with infinite recursion, and it can be increased if needed.
 MAX_RECURSIVE_DEPTH = 5
 
+ZERO_TASKS_TO_DO_ARGUMENT = ("There were no", "tasks to do")
+
 # Map from deprecated aliases to the current command and subcommands that
 # provide the same behavior.
 # TODO: Remove this map and deprecate old commands on 9/9/14.
@@ -895,10 +897,22 @@ class Command(object):
                      executing func. This is only applicable in the case of
                      process_count == thread_count == 1.
     """
+    if shared_attrs:
+      original_shared_vars_values = {}  # We'll add these back in at the end.
+      for name in shared_attrs:
+        original_shared_vars_values[name] = getattr(self, name)
+        # By setting this to 0, we simplify the logic for computing deltas.
+        # We'll add it back after all of the tasks have been performed.
+        setattr(self, name, 0)
+
     (process_count, thread_count) = self._GetProcessAndThreadCount(
         process_count, thread_count, parallel_operations_override)
     is_main_thread = (self.recursive_apply_level == 0
                       and self.sequential_caller_id == -1)
+
+    # We don't honor the fail_on_error flag in the case of multiple threads
+    # or processes.
+    fail_on_error = fail_on_error and (process_count * thread_count == 1)
     
     # Only check this from the first call in the main thread. Apart from the
     # fact that it's  wasteful to try this multiple times in general, it also
@@ -906,7 +920,7 @@ class Command(object):
     # processes, and daemons can't create other processes.
     if is_main_thread:
       if ((not self.multiprocessing_is_available)
-          and (thread_count * process_count > 1)):
+          and thread_count * process_count > 1):
         message = (
             'You have requested multiple threads or processes for an operation,'
             ' but the required functionality of Python\'s multiprocessing '
@@ -936,7 +950,7 @@ class Command(object):
         shared_vars_map = BasicIncrementDict()
         caller_id_finished_count = BasicIncrementDict()
         shared_vars_list_map = {}
-      
+
 
     # If any shared attributes passed by caller, create a dictionary of
     # shared memory variables for every element in the list of shared
@@ -956,10 +970,14 @@ class Command(object):
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
                             arg_checker, should_return_results, fail_on_error)
 
-    # Update self from shared variables.
     if shared_attrs:
       for name in shared_attrs:
-        setattr(self, name, shared_vars_map.get((caller_id, name)))
+        # This allows us to retain the original value of the shared variable,
+        # and simply apply the delta after what was done during the call to
+        # apply.                      
+        final_value = (original_shared_vars_values[name] +
+                       shared_vars_map.get((caller_id, name)))
+        setattr(self, name, final_value)
 
     if should_return_results:
       return global_return_values_map.get(caller_id)
@@ -971,11 +989,32 @@ class Command(object):
     threads or processes will be spawned. This degraded functionality is only
     for use when the multiprocessing module is not available for some reason.
     """
+
     # Create a WorkerThread to handle all of the logic needed to actually call
     # the function. Note that this thread will never be started, and all work
     # is done in the current thread.
     worker_thread = WorkerThread(None, False)
-    for args in args_iterator:
+    args_iterator = iter(args_iterator)
+    while True:
+      
+      # Try to get the next argument, handling any exceptions that arise.
+      try:
+        args = args_iterator.next()
+      except StopIteration, e:
+        break
+      except Exception, e:
+        if fail_on_error:
+          raise
+        else:
+          try:
+            exception_handler(self, e)
+          except Exception, e1:
+            self.logger.debug(
+                'Caught exception while handling exception for %s:\n%s',
+                func, traceback.format_exc())
+          continue
+
+      # Now that we actually have the next argument, perform the task.
       task = Task(func, args, caller_id, exception_handler,
                   should_return_results, arg_checker, fail_on_error)
       worker_thread.PerformTask(task, self)
@@ -1048,11 +1087,7 @@ class Command(object):
             new_pool_needed.value = 1
             need_pool_or_done_cond.notify_all()
             # The main thread will notify us when it finishes.
-            need_pool_or_done_cond.wait()     
-
-    # We don't honor the fail_on_error flag in the case of multiple threads
-    # or processes.
-    fail_on_error = fail_on_error and (process_count * thread_count == 1)
+            need_pool_or_done_cond.wait()
 
     # If we're running in this process, create a separate task queue. Otherwise,
     # if Apply has already been called with process_count > 1, then there will
@@ -1068,9 +1103,10 @@ class Command(object):
     # a new consumer pool must block until we're completely done producing; in
     # the worst case, every worker blocks on such a call and the producer fills
     # up the task queue before it finishes, so we block forever).
-    producer_thread = ProducerThread(args_iterator, caller_id, func, task_queue,
-                                     should_return_results, exception_handler,
-                                     arg_checker, fail_on_error)
+    producer_thread = ProducerThread(copy.copy(self), args_iterator, caller_id,
+                                     func, task_queue, should_return_results,
+                                     exception_handler, arg_checker,
+                                     fail_on_error)
 
     if process_count > 1:
       # Wait here until either:
@@ -1102,6 +1138,17 @@ class Command(object):
       self._ApplyThreads(thread_count, self.recursive_apply_level, shard,
                          is_blocking_call=True, task_queue=task_queue)
 
+    # We encountered an exception from the producer thread before any arguments
+    # were enqueued, but it wouldn't have been propagated, so we'll now
+    # explicitly raise it here.
+    if producer_thread.unknown_exception:
+      raise producer_thread.unknown_exception
+
+    # We encountered an exception from the producer thread while iterating over
+    # the arguments, so raise it here if we're meant to fail on error.
+    if producer_thread.iterator_exception and fail_on_error:
+      raise producer_thread.iterator_exception
+
   def _ApplyThreads(self, thread_count, recursive_apply_level, shard,
                     is_blocking_call=False, task_queue=None):
     """
@@ -1131,17 +1178,21 @@ class Command(object):
     num_enqueued = 0
     while True:
       task = task_queue.get()
-      if not task.arg_checker(self, task.args, shard):
-        continue
-      worker_pool.AddTask(task)
-      num_enqueued += 1
+      if task.args != ZERO_TASKS_TO_DO_ARGUMENT:
+        # If we have no tasks to do and we're performing a blocking call, we
+        # need a special signal to tell us to stop - otherwise, we block on
+        # the call to task_queue.get() forever.
+        if not task.arg_checker(self, task.args, shard):
+          continue
+        worker_pool.AddTask(task)
+        num_enqueued += 1
 
       if is_blocking_call:
         num_to_do = total_tasks[task.caller_id]
         # The producer thread won't enqueue the last task until after it has
         # updated total_tasks[caller_id], so we know that num_to_do < 0 implies
         # we will do this check again.
-        if num_to_do > 0 and num_enqueued == num_to_do:
+        if num_to_do >= 0 and num_enqueued == num_to_do:
           if thread_count == 1:
             return
           else:
@@ -1209,7 +1260,7 @@ class Task(namedtuple('Task',
 
 class ProducerThread(threading.Thread):
   """Thread used to enqueue work for other processes and threads."""
-  def __init__(self, args_iterator, caller_id, func, task_queue,
+  def __init__(self, cls, args_iterator, caller_id, func, task_queue,
                should_return_results, exception_handler, arg_checker,
                fail_on_error):
     """
@@ -1233,6 +1284,7 @@ class ProducerThread(threading.Thread):
     """
     super(ProducerThread, self).__init__()
     self.func = func
+    self.cls = cls
     self.args_iterator = args_iterator
     self.caller_id = caller_id
     self.task_queue = task_queue
@@ -1240,33 +1292,68 @@ class ProducerThread(threading.Thread):
     self.exception_handler = exception_handler
     self.should_return_results = should_return_results
     self.fail_on_error = fail_on_error
+    self.shared_variables_updater = _SharedVariablesUpdater()
     self.daemon = True
+    self.unknown_exception = None
+    self.iterator_exception = None
     self.start()
 
   def run(self):
     num_tasks = 0
     cur_task = None
     last_task = None
-    for args in self.args_iterator:
-      num_tasks += 1
-      last_task = cur_task
-      cur_task = Task(self.func, args, self.caller_id, self.exception_handler,
-                      self.should_return_results, self.arg_checker,
-                      self.fail_on_error)
-      if last_task:
-        self.task_queue.put(last_task, self.caller_id)
+    try:
+      args_iterator = iter(self.args_iterator)
+      while True:
+        try:
+          args = args_iterator.next()
+        except StopIteration, e:
+          break
+        except Exception, e:
+          if self.fail_on_error:
+            self.iterator_exception = e
+            raise
+          else:
+            try:
+              self.exception_handler(self.cls, e)
+            except Exception, e1:
+              self.cls.logger.debug(
+                  'Caught exception while handling exception for %s:\n%s',
+                  self.func, traceback.format_exc())
+            self.shared_variables_updater.Update(self.caller_id, self.cls)
+            continue
+        num_tasks += 1
+        last_task = cur_task
+        cur_task = Task(self.func, args, self.caller_id, self.exception_handler,
+                        self.should_return_results, self.arg_checker,
+                        self.fail_on_error)
+        if last_task:
+          self.task_queue.put(last_task, self.caller_id)
+    except Exception, e:
+      # This will also catch any exception raised due to an error in the
+      # iterator when fail_on_error is set, so check that we failed for some
+      # other reason before claiming that we had an unknown exception, and then
+      # re-raise the exception here.
+      if not self.iterator_exception:
+        self.unknown_exception = e
+      raise
+    finally:
+      # We need to make sure to update total_tasks[caller_id] before we enqueue
+      # the last task. Otherwise, a worker can retrieve the last task and
+      # complete it, then check total_tasks and determine that we're not done
+      # producing all before we update total_tasks. This approach forces workers
+      # to wait on the last task until after we've updated total_tasks.
+      total_tasks[self.caller_id] = num_tasks
+      if not cur_task:
+        # This happens if there were zero arguments to be put in the queue.
+        cur_task = Task(None, ZERO_TASKS_TO_DO_ARGUMENT, self.caller_id,
+                        None, None, None, None)
+      self.task_queue.put(cur_task, self.caller_id)
 
-    # We need to make sure to update total_tasks[caller_id] before we enqueue
-    # the last task. Otherwise, a worker can retrieve the last task and complete
-    # it, then check total_tasks and determine that we're not done producing
-    # all before we update total_tasks. This approach forces workers to wait
-    # on the last task until after we've updated total_tasks.
-    total_tasks[self.caller_id] = num_tasks
-    self.task_queue.put(cur_task, self.caller_id)
-
-    # It's possible that the workers finished before we updated total_tasks,
-    # so we need to check here as well.
-    _NotifyIfDone(self.caller_id, caller_id_finished_count.get(self.caller_id))
+      # It's possible that the workers finished before we updated total_tasks,
+      # so we need to check here as well.
+      _NotifyIfDone(self.caller_id,
+                    caller_id_finished_count.get(self.caller_id))
       
 
 class SameThreadWorkerPool(object):
@@ -1316,7 +1403,7 @@ class WorkerThread(threading.Thread):
     self.multiprocessing_is_available = multiprocessing_is_available
     self.daemon = True
     self.cached_classes = {}
-    self.last_shared_var_values = {}
+    self.shared_vars_updater = _SharedVariablesUpdater()
 
   def PerformTask(self, task, cls):
     """
@@ -1335,25 +1422,17 @@ class WorkerThread(threading.Thread):
     except Exception, e:
       if task.fail_on_error:
         raise  # Only happens for single thread and process case.
-
-      try:
-        task.exception_handler(cls, e)
-      except Exception, e1:
-        # Don't allow callers to throw exceptions here and kill the worker
-        # threads.
-        cls.logger.debug(
-            'Caught exception while handling exception for %s:\n%s',
-            task, traceback.format_exc())
+      else:
+        try:
+          task.exception_handler(cls, e)
+        except Exception, e1:
+          # Don't allow callers to throw exceptions here and kill the worker
+          # threads.
+          cls.logger.debug(
+              'Caught exception while handling exception for %s:\n%s',
+              task, traceback.format_exc())
     finally:
-      # Update any shared variables with their deltas.
-      shared_vars = shared_vars_list_map.get(caller_id, None)
-      if shared_vars:
-        for name in shared_vars:
-          key = (caller_id, name)
-          last_value = self.last_shared_var_values.get(key, 0)
-          delta = getattr(cls, name) - last_value
-          self.last_shared_var_values[key] = delta + last_value
-          shared_vars_map.update(key, delta)
+      self.shared_vars_updater.Update(caller_id, cls)
 
     # Even if we encounter an exception, we still need to claim that that
     # the function finished executing. Otherwise, we won't know when to
@@ -1377,6 +1456,50 @@ class WorkerThread(threading.Thread):
       self.PerformTask(task, cls)
 
 
+class _SharedVariablesUpdater(object):
+  """Used to update shared variable for a class in the global map. Note that
+     each thread will have its own instance of the calling class for context,
+     and it will also have its own instance of a _SharedVariablesUpdater.
+     This is used in the following way:
+
+     1. Before any tasks are performed, each thread will get a copy of the
+        calling class, and the globally-consistent value of this shared variable
+        will be initialized to whatever it was before the call to Apply began.
+
+     2. After each time a thread performs a task, it will look at the current
+        values of the shared variables in its instance of the calling class.
+
+        2.A. For each such variable, it computes the delta of this variable
+             between the last known value for this class (which is stored in
+             a dict local to this class) and the current value of the variable
+             in the class.
+
+        2.B. Using this delta, we update the last known value locally as well
+             as the globally-consistent value shared across all classes (the
+             globally consistent value is simply increased by the computed
+             delta).
+    """
+  def __init__(self):
+    self.last_shared_var_values = {}
+
+  def Update(self, caller_id, cls):
+    """Update any shared variables with their deltas."""
+    shared_vars = shared_vars_list_map.get(caller_id, None)
+    if shared_vars:
+      for name in shared_vars:
+        key = (caller_id, name)
+        last_value = self.last_shared_var_values.get(key, 0)
+        # Compute the change made since the last time we updated here. This is
+        # calculated by simply subtracting the last known value from the current
+        # value in the class instance.
+        delta = getattr(cls, name) - last_value
+        self.last_shared_var_values[key] = delta + last_value
+
+        # Update the globally-consistent value by simply increasing it by the
+        # computed delta.
+        shared_vars_map.update(key, delta)
+
+
 def _NotifyIfDone(caller_id, num_done):
   """
   Notify any threads that are waiting for results that something has finished.
@@ -1392,7 +1515,7 @@ def _NotifyIfDone(caller_id, num_done):
     num_done: The number of tasks currently completed for that caller_id.
   """
   num_to_do = total_tasks[caller_id]
-  if num_to_do == num_done and num_to_do > 0:
+  if num_to_do == num_done and num_to_do >= 0:
     # Notify the Apply call that's sleeping that it's ready to return.
     with need_pool_or_done_cond:
       call_completed_map[caller_id] = True
