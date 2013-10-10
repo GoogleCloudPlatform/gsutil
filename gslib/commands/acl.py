@@ -59,7 +59,7 @@ _CH_SYNOPSIS = """
 _GET_DESCRIPTION = """
 <B>GET</B>
   The "acl get" command gets the ACL XML for a bucket or object, which you can
-  save and edit for the setacl command.
+  save and edit for the acl set command.
 """
 
 _SET_DESCRIPTION = """
@@ -213,7 +213,7 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The "ch" sub-command has the following options
 
-    -R, -r      Performs chacl request recursively, to all objects under the
+    -R, -r      Performs acl ch request recursively, to all objects under the
                 specified URI.
 
     -u          Add or modify a user permission as specified in the SCOPES

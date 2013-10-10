@@ -19,7 +19,7 @@ from gslib.tests.util import ObjectToURI as suri
 class DefaclIntegrationTest(case.GsUtilIntegrationTestCase):
   """Tests gslib.commands.defacl."""
 
-  _defacl_ch_prefix= ['defacl', 'ch']
+  _defacl_ch_prefix = ['defacl', 'ch']
   _defacl_get_prefix = ['defacl', 'get']
   _defacl_set_prefix = ['defacl', 'set']
 

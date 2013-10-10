@@ -564,7 +564,7 @@ class Command(object):
 
     self.acl_arg = self.args[0]
     uri_args = self.args[1:]
-    # Disallow multi-provider setacl requests, because there are differences in
+    # Disallow multi-provider acl set requests, because there are differences in
     # the ACL models.
     storage_uri = self.UrisAreForSingleProvider(uri_args)
     if not storage_uri:

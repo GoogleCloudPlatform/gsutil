@@ -87,9 +87,9 @@ _CH_DESCRIPTION = """
 
 <B>CH EXAMPLES</B>
   Add the user john.doe@example.com to the default object ACL on bucket
-  example-bucket with WRITE access:
+  example-bucket with READ access:
 
-    gsutil defacl ch -u john.doe@example.com:WRITE gs://example-bucket
+    gsutil defacl ch -u john.doe@example.com:READ gs://example-bucket
 
   Add the group admins@example.com to the default object ACL on bucket
   example-bucket with FULL_CONTROL access:
@@ -213,7 +213,7 @@ class DefAclCommand(Command):
         uri = result.uri
         if not uri.names_bucket():
           raise CommandException(
-              'The chdefacl command can only be applied to buckets.')
+              'The defacl ch command can only be applied to buckets.')
         bucket_uris.add(uri)
 
     for uri in bucket_uris:
