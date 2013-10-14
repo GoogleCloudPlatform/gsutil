@@ -425,7 +425,9 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
     # Add accept encoding so that the HEAD request matches what would be
     # sent for a GET request.
     AddAcceptEncoding(headers)
+    got_key = False
     obj = uri.get_key(False, headers=headers)
+    got_key = True
     print '\tCreation time:\t\t%s' % obj.last_modified
     if obj.cache_control:
       print '\tCache-Control:\t\t%s' % obj.cache_control
@@ -458,9 +460,13 @@ def PrintFullInfoAboutUri(uri, incl_acl, headers):
     return (1, obj.size)
   except boto.exception.GSResponseError as e:
     if e.status == 403:
-      print ('\tACL:\t\t\tACCESS DENIED. Note: you need FULL_CONTROL '
-             'permission\n\t\t\ton the object to read its ACL.')
-      return (1, obj.size)
+      if got_key:
+        print ('\tACL:\t\t\tACCESS DENIED. Note: you need FULL_CONTROL '
+               'permission\n\t\t\ton the object to read its ACL.')
+        return (1, obj.size)
+      else:
+        print "You aren't authorized to read %s - skipping" % uri
+        return (1, 0)
     else:
       raise e
   return (numobjs, numbytes)
