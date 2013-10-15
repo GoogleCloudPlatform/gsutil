@@ -61,6 +61,17 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
          'gs://foo/bar'], expected_status=1, return_stderr=True)
     self.assertIn('Each header must appear at most once', stderr)
+    
+  def test_recursion_works(self):
+    bucket_uri = self.CreateBucket()
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    self.RunGsUtil(['setmeta', '-R', '-h', 'content-type:footype',
+                    suri(bucket_uri)])
+
+    for obj_uri in [object1_uri, object2_uri]:
+      stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
+      self.assertIn('footype', stdout)
 
   def test_invalid_non_ascii_custom_header(self):
     unicode_header = u'x-goog-meta-soufflé:5'

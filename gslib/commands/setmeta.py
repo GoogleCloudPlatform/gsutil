@@ -98,6 +98,7 @@ _detailed_help_text = ("""
 <B>OPTIONS</B>
   -h          Specifies a header:value to be added, or header to be removed,
               from each named object.
+
   -n          Causes the operations for reading and writing the ACL to be
               skipped. This halves the number of operations performed per
               request, improving the speed and reducing the cost of performing
@@ -105,6 +106,9 @@ _detailed_help_text = ("""
               all objects to have the same ACL, for which you have set a default
               ACL on the bucket(s) containing the objects. See "help gsutil
               defacl".
+
+  -R, -r      Performs setmeta request recursively, to all objects under the
+              specified URI.
 """)
 
 def _SetMetadataExceptionHandler(cls, e):
@@ -130,7 +134,7 @@ class SetMetaCommand(Command):
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'h:n',
+    SUPPORTED_SUB_ARGS : 'h:nrR',
     # True if file URIs acceptable for this command.
     FILE_URIS_OK : False,
     # True if provider-only URIs acceptable for this command.
@@ -153,7 +157,7 @@ class SetMetaCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    if (len(self.args) == 1
+    if (len(self.args) == 1 and not self.recursion_requested
         and not self.suri_builder.StorageUri(self.args[0]).names_object()):
       raise CommandException('URI (%s) must name an object' % self.args[0])
 
@@ -163,8 +167,7 @@ class SetMetaCommand(Command):
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.proj_id_handler, self.headers, self.debug,
         self.logger, self.bucket_storage_uri_class, self.args,
-        self.recursion_requested, self.recursion_requested)
-
+        self.recursion_requested, flat=self.recursion_requested)
     try:
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
