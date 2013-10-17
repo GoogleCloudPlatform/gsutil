@@ -57,6 +57,16 @@ _EXP_STRINGS = [
   (60, 'EB', 'Ebit', 'E'),
 ]
 
+global manager
+
+def InitializeMultiprocessingVariables():
+  """
+  Perform necessary initialization - see
+  gslib.command.InitializeMultiprocessingVariables for an explanation of why
+  this is necessary.
+  """
+  global manager
+  manager = multiprocessing.Manager()
 
 def _GenerateSuffixRegex():
   human_bytes_re = r'(?P<num>\d*\.\d+|\d+)\s*(?P<suffix>%s)?'
@@ -556,6 +566,6 @@ def CreateLock():
   are necessary to enable parallelism in operations.
   """
   if MultiprocessingIsAvailable()[0]:
-    return multiprocessing.Manager().Lock()
+    return manager.Lock()
   else:
     return threading.Lock()

@@ -556,12 +556,18 @@ _detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
 # command.Apply().
 PerformResumableUploadIfAppliesArgs = namedtuple(
     'PerformResumableUploadIfAppliesArgs',
-    'filename file_start file_length src_uri dst_uri canned_acl headers')
+    'filename file_start file_length src_uri dst_uri canned_acl headers '
+    'tracker_file tracker_file_lock')
 
 ObjectFromTracker = namedtuple('ObjectFromTracker',
                                'object_name generation')
 
 CP_SUB_ARGS = 'a:cDeIL:MNnpqrRtvz:'
+
+# The maximum length of a file name can vary wildly between different
+# operating systems, so we always ensure that tracker files are less
+# than 100 characters in order to avoid any such issues.
+MAX_TRACKER_FILE_NAME_LENGTH = 100
 
 
 class TrackerFileType(object):
@@ -584,6 +590,13 @@ def _PerformResumableUploadIfAppliesWrapper(cls, args):
     ret = cls._PerformResumableUploadIfApplies(
         fp, args.src_uri, args.dst_uri, args.canned_acl, args.headers,
         fp.length, already_split)
+
+  # Update the tracker file after each call in order to be as robust as possible
+  # against interrupts, failures, etc.
+  component = ret[2]
+  _AppendComponentTrackerToParallelUploadTrackerFile(args.tracker_file,
+                                                     component,
+                                                     args.tracker_file_lock)
   return ret
 
 def _CopyExceptionHandler(cls, e):
@@ -889,7 +902,7 @@ class CpCommand(Command):
         tracker_file_type = TrackerFileType.UPLOAD
       else:
         tracker_file_type = TrackerFileType.DOWNLOAD
-      tracker_file = self._GetTrackerFile(dst_uri, tracker_file_type)
+      tracker_file = self._GetTrackerFilePath(dst_uri, tracker_file_type)
 
       if upload:
         if dst_uri.scheme == 'gs':
@@ -899,29 +912,34 @@ class CpCommand(Command):
 
     return (cb, num_cb, transfer_handler)
 
-  def _GetTrackerFile(self, dst_uri, tracker_file_type, src_uri=None):
+  def _GetTrackerFilePath(self, dst_uri, tracker_file_type, src_uri=None):
     resumable_tracker_dir = CreateTrackerDirIfNeeded()
     if tracker_file_type == TrackerFileType.UPLOAD:
       # Encode the dest bucket and object name into the tracker file name.
       res_tracker_file_name = (
           re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s.url' %
                  (dst_uri.bucket_name, dst_uri.object_name)))
+      tracker_file_type_str = "upload"
     elif tracker_file_type == TrackerFileType.DOWNLOAD:
       # Encode the fully-qualified dest file name into the tracker file name.
       res_tracker_file_name = (
           re.sub('[/\\\\]', '_', 'resumable_download__%s.etag' %
                  (os.path.realpath(dst_uri.object_name))))
+      tracker_file_type_str = "download"
     elif tracker_file_type == TrackerFileType.PARALLEL_UPLOAD:
       # Encode the dest bucket and object names as well as the source file name
       # into the tracker file name.
       res_tracker_file_name = (
           re.sub('[/\\\\]', '_', 'parallel_upload__%s__%s__%s.url' %
                  (dst_uri.bucket_name, dst_uri.object_name, src_uri)))
+      tracker_file_type_str = "parallel_upload"
 
     res_tracker_file_name = _HashFilename(res_tracker_file_name)
-    tracker_file = '%s%s%s' % (resumable_tracker_dir, os.sep,
-                               res_tracker_file_name)
-    return tracker_file
+    tracker_file_name = '%s_%s' % (tracker_file_type_str, res_tracker_file_name)
+    tracker_file_path = '%s%s%s' % (resumable_tracker_dir, os.sep,
+                                    tracker_file_name)
+    assert(len(tracker_file_name) < MAX_TRACKER_FILE_NAME_LENGTH)
+    return tracker_file_path
 
   def _LogCopyOperation(self, src_uri, dst_uri, headers):
     """
@@ -1645,7 +1663,7 @@ class CpCommand(Command):
       raise CommandException('Unexpected src/dest case')
 
   def _PartitionFile(self, fp, file_size, src_uri, headers, canned_acl, bucket,
-                     random_prefix):
+                     random_prefix, tracker_file, tracker_file_lock):
     """Partitions a file into FilePart objects to be uploaded and later composed
        into an object matching the original file. This entails splitting the
        file into parts, naming and forming a destination URI for each part,
@@ -1659,6 +1677,10 @@ class CpCommand(Command):
          headers: The headers which ultimately passed to boto.
          canned_acl: The user-provided canned_acl, if applicable.
          bucket: The name of the destination bucket, of the form gs://bucket
+         random_prefix: The randomly-generated prefix used to prevent collisions
+                        among the temporary component names.
+         tracker_file: The path to the parallel composite upload tracker file.
+         tracker_file_lock: The lock protecting access to the tracker file.
 
        Returns:
          dst_args: The destination URIs for the temporary component objects.
@@ -1699,7 +1721,7 @@ class CpCommand(Command):
       offset = i * component_size
       func_args = PerformResumableUploadIfAppliesArgs(
           fp.name, offset, file_part_length, src_uri, tmp_dst_uri, canned_acl,
-          headers)
+          headers, tracker_file, tracker_file_lock)
       file_names.append(temp_file_name)
       dst_args[temp_file_name] = func_args
       uri_strs.append(self._MakeGsUriStr(bucket, temp_file_name))
@@ -1715,20 +1737,6 @@ class CpCommand(Command):
        object in Google Cloud Storage.
     """
     return 'gs://' + bucket + '/' + filename
-
-  def _PerformResumableUploadIfAppliesWrapper(self, args):
-    """A wrapper for cp._PerformResumableUploadIfApplies, which takes in a
-       PerformResumableUploadIfAppliesArgs, extracts the arguments to form the
-       arguments for the wrapped function, and then calls the wrapped function.
-       This was designed specifically for use with command.Apply().
-    """
-    fp = FilePart(args.filename, args.file_start, args.file_length)
-    with fp:
-      already_split = True
-      ret = self._PerformResumableUploadIfApplies(
-          fp, args.src_uri, args.dst_uri, args.canned_acl, args.headers,
-          fp.length, already_split)
-    return ret
 
   def _DoParallelCompositeUpload(self, fp, src_uri, dst_uri, headers,
                                  canned_acl, file_size):
@@ -1753,19 +1761,25 @@ class CpCommand(Command):
 
     # Determine which components, if any, have already been successfully
     # uploaded.
-    tracker_file = self._GetTrackerFile(dst_uri,
-                                        TrackerFileType.PARALLEL_UPLOAD,
-                                        src_uri)
+    tracker_file = self._GetTrackerFilePath(dst_uri,
+                                            TrackerFileType.PARALLEL_UPLOAD,
+                                            src_uri)
+    tracker_file_lock = CreateLock()
     (random_prefix, existing_components) = (
-        _ParseParallelUploadTrackerFile(tracker_file))
+        _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock))
+
+    # Create the initial tracker file for the upload.
+    _CreateParallelUploadTrackerFile(tracker_file, random_prefix,
+                                    existing_components, tracker_file_lock)
 
     # Get the set of all components that should be uploaded.
     dst_args = self._PartitionFile(fp, file_size, src_uri, headers, canned_acl,
-                                   bucket, random_prefix)
+                                   bucket, random_prefix, tracker_file,
+                                   tracker_file_lock)
 
     (components_to_upload, existing_components, existing_objects_to_delete) = (
         FilterExistingComponents(dst_args, existing_components, bucket,
-                                      self.suri_builder))
+                                 self.suri_builder))
 
     # In parallel, copy all of the file parts that haven't already been
     # uploaded to temporary objects.
@@ -1815,12 +1829,12 @@ class CpCommand(Command):
         else:
           raise e
       finally:
-        if os.path.exists(tracker_file):
-          os.unlink(tracker_file)
+        with tracker_file_lock:
+          if os.path.exists(tracker_file):
+            os.unlink(tracker_file)
     else:
-      # Some of the components failed to upload. In this case, we want to write
-      # the tracker file and then exit without deleting the objects.
-      _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components)
+      # Some of the components failed to upload. In this case, we want to exit
+      # without deleting the objects.
       raise CommandException(
           'Some temporary components were not uploaded successfully. '
           'Please retry this upload.')
@@ -2723,14 +2737,15 @@ def _DeleteKeyFn(cls, key):
   """Wrapper function to be used with command.Apply()."""
   return key.delete_key()
 
-def _ParseParallelUploadTrackerFile(tracker_file):
+def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
   """Parse the tracker file (if any) from the last parallel composite upload
      attempt. The tracker file is of the format described in
-     _WriteParallelUploadTrackerFile. If the file doesn't exist or cannot be
+     _CreateParallelUploadTrackerFile. If the file doesn't exist or cannot be
      read, then the upload will start from the beginning.
 
      Args:
        tracker_file: The name of the file to parse.
+       tracker_file_lock: Lock protecting access to the tracker file.
 
      Returns:
        random_prefix: A randomly-generated prefix to the name of the
@@ -2740,10 +2755,11 @@ def _ParseParallelUploadTrackerFile(tracker_file):
   """
   existing_objects = []
   try:
-    f = open(tracker_file, 'r')
-    lines = f.readlines()
-    lines = [line.strip() for line in lines]
-    f.close()
+    with tracker_file_lock:
+      f = open(tracker_file, 'r')
+      lines = f.readlines()
+      lines = [line.strip() for line in lines]
+      f.close()
   except IOError as e:
     # We can't read the tracker file, so generate a new random prefix.
     lines = [str(random.randint(1, (10 ** 10) - 1))]
@@ -2774,7 +2790,19 @@ def _ParseParallelUploadTrackerFile(tracker_file):
     i += 2
   return (random_prefix, existing_objects)
 
-def _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components):
+def _AppendComponentTrackerToParallelUploadTrackerFile(tracker_file, component,
+                                                       tracker_file_lock):
+  """Appends information about the uploaded component to the contents of an
+     existing tracker file, following the format described in
+     _CreateParallelUploadTrackerFile."""
+  lines = _GetParallelUploadTrackerFileLinesForComponents([component])
+  lines = [line + '\n' for line in lines]
+  with tracker_file_lock:
+    with open(tracker_file, 'a') as f:
+      f.writelines(lines)
+
+def _CreateParallelUploadTrackerFile(tracker_file, random_prefix, components,
+                                     tracker_file_lock):
   """Writes information about components that were successfully uploaded so
      that the upload can be resumed at a later date. The tracker file has
      the format:
@@ -2787,7 +2815,7 @@ def _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components):
        temp_object_N_name
        temp_object_N_generation
      where N is the number of components that have been successfully uploaded.
-     
+
      Args:
        tracker_file: The name of the parallel upload tracker file.
        random_prefix: The randomly-generated prefix that was used for
@@ -2795,16 +2823,25 @@ def _WriteParallelUploadTrackerFile(tracker_file, random_prefix, components):
        components: A list of ObjectFromTracker objects that were uploaded.
   """
   lines = [random_prefix]
+  lines += _GetParallelUploadTrackerFileLinesForComponents(components)
+  lines = [line + '\n' for line in lines]
+  with tracker_file_lock:
+    open(tracker_file, 'w').close()  # Clear the file.
+    with open(tracker_file, 'w') as f:
+      f.writelines(lines)
+
+def _GetParallelUploadTrackerFileLinesForComponents(components):
+  """Return a list of the lines that should appear in the parallel composite
+     upload tracker file representing the given components, using the format
+     as described in _CreateParallelUploadTrackerFile."""
+  lines = []
   for component in components:
     generation = None
     generation = component.generation
     if not generation:
       generation = ''
     lines += [component.object_name, generation]
-  lines = [line + '\n' for line in lines]
-  open(tracker_file, 'w').close()  # Clear the file.
-  with open(tracker_file, 'w') as f:
-    f.writelines(lines)
+  return lines
 
 def FilterExistingComponents(dst_args, existing_components,
                              bucket_name, suri_builder):
@@ -2837,18 +2874,26 @@ def FilterExistingComponents(dst_args, existing_components,
     if not (component_name in existing_component_names):
       components_to_upload.append(dst_args[component_name])
 
+  objects_already_chosen = []
+
   # Don't reuse any temporary components whose MD5 doesn't match the current
   # MD5 of the corresponding part of the file. If the bucket is versioned,
   # also make sure that we delete the existing temporary version.
   existing_objects_to_delete = []
   uploaded_components = []
   for tracker_object in existing_components:
-    if not tracker_object.object_name in dst_args.keys():
-      # This could happen if the component size has changed.
+    if ((not tracker_object.object_name in dst_args.keys())
+        or tracker_object.object_name in objects_already_chosen):
+      # This could happen if the component size has changed. This also serves
+      # to handle object names that get duplicated in the tracker file due
+      # to people doing things they shouldn't (e.g., overwriting an existing
+      # temporary component in a versioned bucket).
+
       uri = MakeGsUri(bucket_name, tracker_object.object_name, suri_builder)
       uri.generation = tracker_object.generation
       existing_objects_to_delete.append(uri)
       continue
+
     dst_arg = dst_args[tracker_object.object_name]
     file_part = FilePart(dst_arg.filename, dst_arg.file_start,
                          dst_arg.file_length)
@@ -2865,6 +2910,7 @@ def FilterExistingComponents(dst_args, existing_components,
       etag = None
     if etag != (('"%s"') % content_md5):
       components_to_upload.append(dst_arg)
+      objects_already_chosen.append(tracker_object.object_name)
       if tracker_object.generation:
         # If the old object doesn't have a generation (i.e., it isn't in a
         # versioned bucket), then we will just overwrite it anyway.
@@ -2875,9 +2921,12 @@ def FilterExistingComponents(dst_args, existing_components,
       uri = copy.deepcopy(dst_arg.dst_uri)
       uri.generation = tracker_object.generation
       uploaded_components.append(uri)
+      objects_already_chosen.append(tracker_object.object_name)
+
   if uploaded_components:
     logging.info(("Found %d existing temporary components to reuse.")
                   % len(uploaded_components))
+
   return (components_to_upload, uploaded_components,
           existing_objects_to_delete)
 

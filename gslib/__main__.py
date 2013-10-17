@@ -104,13 +104,15 @@ def _ConfigureLogging(level=logging.INFO):
 def main():
   # These modules must be imported after importing gslib.__main__.
   import gslib.command
+  import gslib.util
   from gslib.third_party.oauth2_plugin import oauth2_client
   from gslib.util import MultiprocessingIsAvailable
-  oauth2_client.InitializeMultiprocessingVariables()
   if MultiprocessingIsAvailable()[0]:
-    # This setup method must be called, and it should only be called from
-    # within an "if __name__ == '__main__':" block on Windows.
+    # These setup methods must be called, and, on Windows, they can only be
+    # called from within an "if __name__ == '__main__':" block.
+    gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
+  oauth2_client.InitializeMultiprocessingVariables()
 
   global debug
 

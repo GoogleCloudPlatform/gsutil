@@ -34,6 +34,7 @@ from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.util import CreateLock
 from gslib.util import Retry
 from gslib.util import TWO_MB
 
@@ -574,6 +575,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_filter_existing_components_non_versioned(self):
     bucket_uri = self.CreateBucket()
+    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file_lock = CreateLock()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
@@ -582,14 +585,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                                bucket_uri=bucket_uri)
     args_uploaded_correctly = PerformResumableUploadIfAppliesArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly,
-        key_uploaded_correctly, '', {})
+        key_uploaded_correctly, '', {}, tracker_file, tracker_file_lock)
 
     # Not yet uploaded, but needed.
     fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents='2')
     key_not_uploaded = self.CreateObject(object_name='foo2', contents='2',
                                          bucket_uri=bucket_uri)
     args_not_uploaded = PerformResumableUploadIfAppliesArgs(
-        fpath_not_uploaded, 0, 1, fpath_not_uploaded, key_not_uploaded, '', {})
+        fpath_not_uploaded, 0, 1, fpath_not_uploaded, key_not_uploaded, '', {},
+        tracker_file, tracker_file_lock)
 
     # Already uploaded, but contents no longer match. Even though the contents
     # differ, we don't delete this since the bucket is not versioned and it
@@ -599,12 +603,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                              bucket_uri=bucket_uri)
     args_wrong_contents = PerformResumableUploadIfAppliesArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
-        '', {})
+        '', {}, tracker_file, tracker_file_lock)
 
     # Exists in tracker file, but component object no longer exists.
     fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents='5')
     args_remote_deleted = PerformResumableUploadIfAppliesArgs(
-        fpath_remote_deleted, 0, 1, fpath_remote_deleted, '', '', {})
+        fpath_remote_deleted, 0, 1, fpath_remote_deleted, '', '', {},
+        tracker_file, tracker_file_lock)
 
     # Exists in tracker file and already uploaded, but no longer needed.
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
@@ -637,35 +642,51 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         str(existing_objects_to_delete))
 
   def test_filter_existing_components_versioned(self):
+    suri_builder = StorageUriBuilder(0, BucketStorageUri)
     bucket_uri = self.CreateVersionedBucket()
+    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file_lock = CreateLock()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
                                                    contents='1')
     key_uploaded_correctly = self.CreateObject(object_name='foo1', contents='1',
-                             bucket_uri=bucket_uri)
+                                               bucket_uri=bucket_uri)
     args_uploaded_correctly = PerformResumableUploadIfAppliesArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly,
-        key_uploaded_correctly, key_uploaded_correctly.generation, {})
+        key_uploaded_correctly, key_uploaded_correctly.generation, {},
+        tracker_file, tracker_file_lock)
+
+    # Duplicate object name in tracker file, but uploaded correctly.
+    fpath_duplicate = fpath_uploaded_correctly
+    key_duplicate = self.CreateObject(object_name='foo1', contents='1',
+                                      bucket_uri=bucket_uri)
+    args_duplicate = PerformResumableUploadIfAppliesArgs(
+        fpath_duplicate, 0, 1, fpath_duplicate, key_duplicate,
+        key_duplicate.generation, {}, tracker_file, tracker_file_lock)
+    object_name_duplicate = ObjectFromTracker(fpath_duplicate,
+        key_duplicate.generation).object_name
+    uri_duplicate = MakeGsUri(bucket_uri.bucket_name, object_name_duplicate,
+                              suri_builder)
+    uri_duplicate.generation = args_duplicate.dst_uri.generation
 
     # Already uploaded, but contents no longer match.
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
     key_wrong_contents = self.CreateObject(object_name='foo4', contents='_',
-                             bucket_uri=bucket_uri)
-
+                                           bucket_uri=bucket_uri)
     args_wrong_contents = PerformResumableUploadIfAppliesArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
-        key_wrong_contents.generation, {})
+        key_wrong_contents.generation, {}, tracker_file, tracker_file_lock)
 
     dst_args = {fpath_uploaded_correctly:args_uploaded_correctly,
                 fpath_wrong_contents:args_wrong_contents}
 
     existing_components = [ObjectFromTracker(fpath_uploaded_correctly,
                                              key_uploaded_correctly.generation),
+                           ObjectFromTracker(fpath_duplicate,
+                                             key_duplicate.generation),
                            ObjectFromTracker(fpath_wrong_contents,
                                              key_wrong_contents.generation)]
-
-    suri_builder = StorageUriBuilder(0, BucketStorageUri)
 
     (components_to_upload, uploaded_components, existing_objects_to_delete) = (
         FilterExistingComponents(dst_args, existing_components,
@@ -675,7 +696,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(str([args_uploaded_correctly.dst_uri]),
                      str(uploaded_components))
     expected_to_delete = [(args_wrong_contents.dst_uri.object_name,
-                           args_wrong_contents.dst_uri.generation)]
+                           args_wrong_contents.dst_uri.generation),
+                          (uri_duplicate.object_name,
+                           args_duplicate.dst_uri.generation)]
     for uri in existing_objects_to_delete:
       self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
     self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
