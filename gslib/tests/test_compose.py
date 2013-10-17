@@ -40,9 +40,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     components = ['gs://b/component-obj'] * (MAX_COMPOSE_ARITY + 1)
     stderr = self.RunGsUtil(['compose'] + components + ['gs://b/composite-obj'],
                             expected_status=1, return_stderr=True)
-    self.assertEquals(
-        'CommandException: Wrong number of arguments for "compose" command.\n',
-        stderr)
+    self.assertIn('command accepts at most', stderr)
 
   def test_compose_too_few_fails(self):
     stderr = self.RunGsUtil(

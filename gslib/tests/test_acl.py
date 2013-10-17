@@ -445,7 +445,26 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
                               return_stderr = True, expected_status=1)
       self.assertIn('Note that Full Control access is required to access ACLs.',
                     stderr)
+  
+  def testTooFewArgumentsFails(self):
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._get_acl_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
 
+    # No arguments for set, but valid subcommand.
+    stderr = self.RunGsUtil(self._set_acl_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for ch, but valid subcommand.
+    stderr = self.RunGsUtil(self._ch_acl_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['acl'], return_stderr=True, expected_status=1)
+    self.assertIn('command requires at least', stderr)
 
 class TestAclOldAlias(TestAcl):
   _set_acl_prefix = ['setacl']

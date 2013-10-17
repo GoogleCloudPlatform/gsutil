@@ -104,7 +104,7 @@ class CorsCommand(Command):
     # List of command name aliases.
     COMMAND_NAME_ALIASES : ['getcors', 'setcors'],
     # Min number of args required by this command.
-    MIN_ARGS : 1,
+    MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -133,6 +133,8 @@ class CorsCommand(Command):
   }
 
   def _CalculateUrisStartArg(self):
+    if not self.args:
+      self._RaiseWrongNumberOfArgumentsException()
     if (self.args[0].lower() == 'set'):
       return 2
     else:

@@ -62,7 +62,7 @@ _SET_DESCRIPTION = """
   parameter specifies the prefix for log object names. The default prefix
   is the bucket name. For example, the command:
 
-    gsutil logging enable -b gs://my_logging_bucket -o AccessLog \\
+    gsutil logging set on -b gs://my_logging_bucket -o AccessLog \\
         gs://my_bucket1 gs://my_bucket2
 
   will cause all read and write activity to objects in gs://mybucket1 and
@@ -142,7 +142,7 @@ class LoggingCommand(Command):
     # List of command name aliases.
     COMMAND_NAME_ALIASES : ['disablelogging', 'enablelogging', 'getlogging'],
     # Min number of args required by this command.
-    MIN_ARGS : 1,
+    MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -247,6 +247,8 @@ class LoggingCommand(Command):
       func = self._Get
     elif action_subcommand == 'set':
       state_subcommand = self.args.pop(0)
+      if not self.args:
+        self._RaiseWrongNumberOfArgumentsException()
       if state_subcommand == 'on':
         func = self._Enable
       elif state_subcommand == 'off':

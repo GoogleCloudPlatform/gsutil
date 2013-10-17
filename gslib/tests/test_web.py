@@ -69,6 +69,21 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(
         self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEquals(stdout, WEBCFG_EMPTY)
+
+  def testTooFewArgumentsFails(self):
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for set, but valid subcommand.
+    stderr = self.RunGsUtil(self._set_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['web'], return_stderr=True, expected_status=1)
+    self.assertIn('command requires at least', stderr)
     
 class TestWebOldAlias(TestWeb):
   _set_cmd_prefix = ['setwebcfg']

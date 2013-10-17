@@ -257,7 +257,7 @@ class AclCommand(Command):
     # List of command name aliases.
     COMMAND_NAME_ALIASES : ['getacl', 'setacl', 'chacl'],
     # Min number of args required by this command.
-    MIN_ARGS : 1,
+    MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -287,6 +287,8 @@ class AclCommand(Command):
   }
 
   def _CalculateUrisStartArg(self):
+    if not self.args:
+      self._RaiseWrongNumberOfArgumentsException()
     if (self.args[0].lower() == 'set') or (self.command_alias_used == 'setacl'):
       return 1
     else:

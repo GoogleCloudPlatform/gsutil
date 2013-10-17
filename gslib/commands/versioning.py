@@ -89,7 +89,7 @@ class VersioningCommand(Command):
     # List of command name aliases.
     COMMAND_NAME_ALIASES : ['setversioning', 'getversioning'],
     # Min number of args required by this command.
-    MIN_ARGS : 1,
+    MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -119,6 +119,8 @@ class VersioningCommand(Command):
   }
 
   def _CalculateUrisStartArg(self):
+    if not self.args:
+      self._RaiseWrongNumberOfArgumentsException()
     if (self.args[0].lower() == 'set'):
       return 2
     else:
@@ -130,6 +132,8 @@ class VersioningCommand(Command):
       raise CommandException('Argument to "%s set" must be either [on|off]'
                              % (self.command_name))
     uri_args = self.args[1:]
+    if len(uri_args) == 0:
+      self._RaiseWrongNumberOfArgumentsException()
 
     # Iterate over URIs, expanding wildcards, and setting the website
     # configuration on each.

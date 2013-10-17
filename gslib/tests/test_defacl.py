@@ -16,7 +16,7 @@ import gslib.tests.testcase as case
 from gslib.tests.util import ObjectToURI as suri
 
 
-class DefaclIntegrationTest(case.GsUtilIntegrationTestCase):
+class TestDefacl(case.GsUtilIntegrationTestCase):
   """Tests gslib.commands.defacl."""
 
   _defacl_ch_prefix = ['defacl', 'ch']
@@ -114,8 +114,27 @@ class DefaclIntegrationTest(case.GsUtilIntegrationTestCase):
         self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
     self.assertNotRegexpMatches(xml, test_regex)
 
+  def testTooFewArgumentsFails(self):
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._defacl_get_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
 
-class DefaclOldAliasIntegrationTest(DefaclIntegrationTest):
+    # No arguments for set, but valid subcommand.
+    stderr = self.RunGsUtil(self._defacl_set_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for ch, but valid subcommand.
+    stderr = self.RunGsUtil(self._defacl_ch_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['defacl'], return_stderr=True, expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+class TestDefaclOldAlias(TestDefacl):
   _defacl_ch_prefix= ['chdefacl']
   _defacl_get_prefix = ['getdefacl']
   _defacl_set_prefix = ['setdefacl']

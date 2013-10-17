@@ -433,8 +433,7 @@ class Command(object):
     
     if (len(self.args) < self.command_spec[MIN_ARGS]
         or len(self.args) > self.command_spec[MAX_ARGS]):
-      raise CommandException('Wrong number of arguments for "%s" command.' %
-                             self.command_name)
+      self._RaiseWrongNumberOfArgumentsException()
 
     if not (self.command_name in
             self._commands_with_subcommands_and_subopts):
@@ -465,6 +464,18 @@ class Command(object):
           break
 
     self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
+
+  def _RaiseWrongNumberOfArgumentsException(self):
+    """Raise an exception indicating that the wrong number of arguments was
+       provided for this command.
+    """
+    if len(self.args) > self.command_spec[MAX_ARGS]:
+      message = ('The %s command accepts at most %d arguments.' %
+                 (self.command_name, self.command_spec[MAX_ARGS]))
+    elif len(self.args) < self.command_spec[MIN_ARGS]:
+      message = ('The %s command requires at least %d arguments.' %
+                 (self.command_name, self.command_spec[MIN_ARGS]))
+    raise CommandException(message)
 
   def CheckArguments(self):
     """Checks that the arguments provided on the command line fit the

@@ -121,7 +121,7 @@ class DefAclCommand(Command):
     # List of command name aliases.
     COMMAND_NAME_ALIASES : ['setdefacl', 'getdefacl', 'chdefacl'],
     # Min number of args required by this command.
-    MIN_ARGS : 1,
+    MIN_ARGS : 2,
     # Max number of args required by this command, or NO_MAX.
     MAX_ARGS : NO_MAX,
     # Getopt-style string specifying acceptable sub args.
@@ -151,9 +151,11 @@ class DefAclCommand(Command):
   }
 
   def _CalculateUrisStartArg(self):
+    if not self.args:
+      self._RaiseWrongNumberOfArgumentsException()
     if (self.args[0].lower() == 'set'):
       return 2
-    elif self.command_alias_used == 'getacl':
+    elif self.command_alias_used == 'getdefacl':
       return 0
     else:
       return 1

@@ -22,7 +22,7 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
   _disable_cmd_prefix = ['logging', 'set', 'off']
   _get_cmd_prefix = ['logging', 'get']
 
-  def test_logging(self):
+  def testLogging(self):
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
     stderr = self.RunGsUtil(
@@ -37,6 +37,26 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(self._disable_cmd_prefix + [bucket_suri],
                             return_stderr=True)
     self.assertIn('Disabling logging', stderr)
+
+  def testTooFewArgumentsFails(self):
+    # No arguments for enable, but valid subcommand.
+    stderr = self.RunGsUtil(self._enable_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for disable, but valid subcommand.
+    stderr = self.RunGsUtil(self._disable_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+    
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['logging'], return_stderr=True, expected_status=1)
+    self.assertIn('command requires at least', stderr)
 
 class TestLoggingOldAlias(TestLogging):
   _enable_cmd_prefix = ['enablelogging']

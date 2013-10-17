@@ -208,6 +208,21 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
 
+  def testTooFewArgumentsFails(self):
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for set, but valid subcommand.
+    stderr = self.RunGsUtil(self._set_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['cors'], return_stderr=True, expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
 class TestCorsOldAlias(TestCors):
   _set_cmd_prefix = ['setcors']
   _get_cmd_prefix = ['getcors']

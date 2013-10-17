@@ -46,6 +46,22 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
         self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
 
+  def testTooFewArgumentsFails(self):
+    # No arguments for set, but valid subcommand.
+    stderr = self.RunGsUtil(self._set_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # No arguments for get, but valid subcommand.
+    stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
+    # Neither arguments nor subcommand.
+    stderr = self.RunGsUtil(['versioning'], return_stderr=True,
+                            expected_status=1)
+    self.assertIn('command requires at least', stderr)
+
 class TestVersioningOldAlias(TestVersioning):
   _set_cmd_prefix = ['setversioning']
   _get_cmd_prefix = ['getversioning']
