@@ -1343,11 +1343,9 @@ class ProducerThread(threading.Thread):
     except Exception, e:
       # This will also catch any exception raised due to an error in the
       # iterator when fail_on_error is set, so check that we failed for some
-      # other reason before claiming that we had an unknown exception, and then
-      # re-raise the exception here.
+      # other reason before claiming that we had an unknown exception.
       if not self.iterator_exception:
         self.unknown_exception = e
-      raise
     finally:
       # We need to make sure to update total_tasks[caller_id] before we enqueue
       # the last task. Otherwise, a worker can retrieve the last task and
