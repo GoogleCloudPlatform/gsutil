@@ -479,10 +479,10 @@ OPTIONS_TEXT = """
                 retransmitting data, but the additional HTTP requests may make
                 small object transfers slower and more expensive.
 
-  -p            Causes ACLs to be preserved when copying in the cloud. Note that
-                this option has performance and cost implications, because it
-                is essentially performing three requests ('acl get', cp,
-                'acl set'). (The performance issue can be mitigated to some
+  -p            Causes source ACLs to be preserved when copying in the cloud.
+                Note that this option has performance and cost implications,
+                because it is essentially performing three requests ('acl get',
+                cp, 'acl set'). (The performance issue can be mitigated to some
                 degree by using gsutil -m cp to cause parallel copying.)
 
                 You can avoid the additional performance and cost of using cp -p
