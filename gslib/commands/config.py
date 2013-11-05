@@ -94,6 +94,31 @@ _detailed_help_text = ("""
   [Credentials] section after creating the initial configuration file.
 
 
+
+<B>CONFIGURING SERVICE ACCOUNT CREDENTIALS</B>
+  You can configure credentials for service accounts using the gsutil config -e
+  option. Service accounts are useful for authenticating on behalf of a service
+  or application (as opposed to a user).
+
+  When you run gsutil config -e, you will be prompted for your service account
+  email address and the path to your private key file. To get these data, visit
+  the `Google Cloud Console <https://cloud.google.com/console#/project>`_, click
+  on the project you are using, then click "APIs & auth", then click "Registered
+  apps", then click on the name of the registered app. (Note: for service
+  accounts created via the older API Developer's Console, the name will be
+  something like "Service Account-<service account id>".) This page lists
+  the email address of your service account. From this page you can also click
+  Generate New Key, to generate and download the private key file. Save this
+  file somewhere accessible from the machine where you run gsutil. Make sure
+  to set its protection so only the users you want to be able to authenticate
+  as have access.
+
+  Note that your service account will NOT be considered an Owner for the
+  purposes of API access (see "gsutil help creds" for more information about
+  this). See https://developers.google.com/accounts/docs/OAuth2ServiceAccount
+  for further information on service account authentication.
+
+
 <B>CONFIGURATION FILE SELECTION PROCEDURE</B>
   By default, gsutil will look for the configuration file in /etc/boto.cfg and
   ~/.boto. You can override this choice by setting the BOTO_CONFIG environment
@@ -203,15 +228,8 @@ _detailed_help_text = ("""
               expected if you are running gsutil from an ssh window, or using
               gsutil on Windows.
 
-  -e          Prompt for service account credentials. This is an alternative to
-              the default OAuth2 option used for service accounts. Service
-              accounts are useful for authenticating on behalf of a service or
-              application (as opposed to a user). This option requires that -a
-              is not set. Additionally, note that your service account will NOT
-              be considered an Owner for the purposes of API access (see
-              "gsutil help creds" for more information about this). See
-              https://developers.google.com/accounts/docs/OAuth2ServiceAccount
-              for further information on service account authentication.
+  -e          Prompt for service account credentials. This option requires that
+              -a is not set.
 
   -f          Request token with full-control access (default).
 

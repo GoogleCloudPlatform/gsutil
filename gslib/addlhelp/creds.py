@@ -58,7 +58,7 @@ _detailed_help_text = ("""
     you will run gsutil out of a nightly cron job to upload/download data,
     using a service account allows the cron job not to depend on credentials of
     an individual employee at your company. This is the type of credential that
-    will be created when you run "gsutil config -e".
+    will be configured when you run "gsutil config -e".
 
     It is important to note that a service account is considered an Editor by
     default for the purposes of API access, rather than an Owner. In particular,
@@ -66,12 +66,13 @@ _detailed_help_text = ("""
     bucket ACLs, but the canned ACL options remove full_control access from
     Editors, can lead to unexpected results. The solution to this problem is to
     add the email address for your service account as a project Owner. To find
-    the email address, visit the
-    `Google Cloud Console <https://cloud.google.com/console#/project>`_, click
-    on the project you're using, click "APIs", and click "All registered apps"
-    in the top left; service accounts will appear as something like
-    "Service Account-<service account id>", which you can click to view the
-    email address.
+    the email address, visit the `Google Cloud Console
+    <https://cloud.google.com/console#/project>`_, click on the project you
+    are using, then click "APIs & auth", then click "Registered apps", then
+    click on the name of the registered app. (Note: for service accounts created
+    via the older API Developer's Console, the name will be something like
+    "Service Account-<service account id>".) This page lists the email address
+    of your service account.
 
     To create a service account, visit the Google Cloud Console and then:
 
