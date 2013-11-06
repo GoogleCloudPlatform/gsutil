@@ -16,6 +16,8 @@
 
 """Wrapper module for running gslib.__main__.main() from the command line."""
 
+import boto
+import gslib
 import os
 import sys
 import warnings
@@ -68,6 +70,12 @@ for libdir, subdir in THIRD_PARTY_LIBS:
             libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
+# Load the gsutil version number and append it to boto.UserAgent so the value
+# is set before anything instantiates boto. (If parts of boto were
+# instantiated first those parts would have the old value of boto.UserAgent,
+# so we wouldn't be guaranteed that all code paths send the correct user
+# agent.)
+boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 
 from gslib.util import UsingCrcmodExtension
 from gslib.util import IS_OSX

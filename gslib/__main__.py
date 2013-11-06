@@ -120,13 +120,6 @@ def main():
     raise gslib.exception.CommandException(
         'gsutil requires python 2.6 or 2.7.')
 
-  # Load the gsutil version number and append it to boto.UserAgent so the value
-  # is set before anything instantiates boto. (If parts of boto were
-  # instantiated first those parts would have the old value of boto.UserAgent,
-  # so we wouldn't be guaranteed that all code paths send the correct user
-  # agent.)
-  boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-
   config_file_list = GetBotoConfigFileList()
   command_runner = CommandRunner(config_file_list)
   headers = {}
