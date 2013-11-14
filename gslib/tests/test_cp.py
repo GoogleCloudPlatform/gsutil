@@ -361,6 +361,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNumLines(stdout, 2)
     _Check1()
 
+  def test_cross_storage_class_cp(self):
+    bucket1_uri = self.CreateBucket(storage_class='STANDARD')
+    bucket2_uri = self.CreateBucket(
+        storage_class='DURABLE_REDUCED_AVAILABILITY')
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    # Check that copy-in-the-cloud is allowed.
+    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
+                            return_stderr=True, expected_status=0)
+    self.assertIn('Copying ', stderr)
+
   def test_daisy_chain_cp(self):
     # Daisy chain mode is required for copying across storage classes,
     # so create 2 buckets and attempt to copy without vs with daisy chain mode.
@@ -368,10 +378,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket(
         storage_class='DURABLE_REDUCED_AVAILABILITY')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-    # Check that copy-in-the-cloud is disallowed.
-    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
-                            return_stderr=True, expected_status=1)
-    self.assertIn('Copy-in-the-cloud disallowed', stderr)
+
     # Set some headers on source object so we can verify that headers are
     # presereved by daisy-chain copy.
     self.RunGsUtil(['setmeta', '-h', 'Cache-Control:public,max-age=12',
@@ -386,7 +393,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # that was set at uploading time when updating the ACL.
     stderr = self.RunGsUtil(['cp', '-Dpn', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
-    self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
+    self.assertIn('Copying ', stderr)
+
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       uri = suri(bucket2_uri, key_uri.object_name)

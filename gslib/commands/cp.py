@@ -415,20 +415,21 @@ OPTIONS_TEXT = """
 
   -D            Copy in "daisy chain" mode, i.e., copying between two buckets by
                 hooking a download to an upload, via the machine where gsutil is
-                run. By default, data are copied between two buckets "in the
-                cloud", i.e., without needing to copy via the machine where
-                gsutil runs. However, copy-in-the-cloud is not supported when
-                copying between different locations (like US and EU) or between
-                different storage classes (like STANDARD and
-                DURABLE_REDUCED_AVAILABILITY). For these cases, you can use the
-                -D option to copy data between buckets.
+                run. By default, data are copied between two buckets
+                "in the cloud", i.e., without needing to copy via the machine
+                where gsutil runs.
+
+                By default, a "copy in the cloud" when the source is a composite
+                object will retain the composite nature of the object. However,
+                Daisy chain mode can be used to change a composite object into
+                a non-composite object. For example:
+
+                    gsutil cp -D -p gs://bucket/obj gs://bucket/obj_tmp
+                    gsutil mv -p gs://bucket/obj_tmp gs://bucket/obj
+
                 Note: Daisy chain mode is automatically used when copying
                 between providers (e.g., to copy data from Google Cloud Storage
-                to another provider). However, gsutil requires you to specify
-                cp -D explicitly when copying between different locations or
-                between different storage classes, to make sure it's clear that
-                you're using a slower, more expensive option than the normal
-                copy-in-the-cloud case.
+                to another provider).
 
   -e            Exclude symlinks. When specified, symbolic links will not be
                 copied.
@@ -1014,21 +1015,11 @@ class CpCommand(Command):
     # you can't do something like:
     #   gsutil cp -t Content-Type text/html gs://bucket/* gs://bucket2
     # to change the Content-Type while copying.
+    dst_key = dst_uri.copy_key(
+        src_bucket.name, src_uri.object_name, preserve_acl=preserve_acl,
+        headers=headers, src_version_id=src_uri.version_id,
+        src_generation=src_uri.generation)
 
-    try:
-      dst_key = dst_uri.copy_key(
-          src_bucket.name, src_uri.object_name, preserve_acl=preserve_acl,
-          headers=headers, src_version_id=src_uri.version_id,
-          src_generation=src_uri.generation)
-    except GSResponseError as e:
-      exc_name, message, detail = ParseErrorDetail(e)
-      if (exc_name == 'GSResponseError'
-          and ('Copy-in-the-cloud disallowed' in detail)):
-          raise CommandException('%s.\nNote: you can copy between locations '
-                                 'or between storage classes by using the '
-                                 'gsutil cp -D option.' % detail)
-      else:
-        raise
     end_time = time.time()
     return (end_time - start_time, src_key.size,
             dst_uri.clone_replace_key(dst_key))
