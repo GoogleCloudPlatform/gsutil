@@ -16,7 +16,6 @@
 
 """Wrapper module for running gslib.__main__.main() from the command line."""
 
-import gslib
 import os
 import sys
 import warnings
@@ -68,29 +67,6 @@ for libdir, subdir in THIRD_PARTY_LIBS:
         'Please re-install gsutil per the installation instructions.' % (
             libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
-
-# Load the gsutil version number and append it to boto.UserAgent so the value
-# is set before anything instantiates boto. (If parts of boto were
-# instantiated first those parts would have the old value of boto.UserAgent,
-# so we wouldn't be guaranteed that all code paths send the correct user
-# agent.)
-import boto
-boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-
-from gslib.util import UsingCrcmodExtension
-from gslib.util import IS_OSX
-
-CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
-CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
-
-try:
-  import crcmod
-except ImportError:
-  crcmod = None
-
-if not UsingCrcmodExtension(crcmod):
-  local_crcmod_path = CRCMOD_OSX_PATH if IS_OSX else CRCMOD_PATH
-  sys.path.insert(0, local_crcmod_path)
 
 def RunMain():
   import gslib.__main__

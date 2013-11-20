@@ -28,8 +28,8 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn('config: [', stderr)
     self.assertRegexpMatches(
-        stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*' %
-        (key_uri.bucket_name, key_uri.object_name))
+        stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
+        (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('header: Expires: ', stderr)
     self.assertIn('header: Date: ', stderr)

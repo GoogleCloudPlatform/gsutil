@@ -16,7 +16,6 @@
 
 """Main module for Google Cloud Storage command line tool."""
 
-import boto
 import ConfigParser
 import errno
 import getopt
@@ -31,16 +30,28 @@ import tempfile
 import textwrap
 import traceback
 
+# Load the gsutil version number and append it to boto.UserAgent so the value is
+# set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
+# is modified (done in gsutil.py) but before any calls are made that would cause
+# boto.s3.Connection to be loaded - otherwise the Connection class would end up
+# with a static reference to the pre-modified version of the UserAgent field,
+# so boto requests would not include gsutil/version# in the UserAgent string.
+import boto
+import gslib
+boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
+
 import apiclient.discovery
 import boto.exception
-import gslib
 from gslib import util
+from gslib import GSUTIL_DIR
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetConfigFilePath
 from gslib.util import HasConfiguredCredentials
+from gslib.util import IS_OSX
 from gslib.util import IsRunningInteractively
+from gslib.util import UsingCrcmodExtension
 import gslib.exception
 import httplib2
 import oauth2client
@@ -113,6 +124,22 @@ def main():
     gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
   oauth2_client.InitializeMultiprocessingVariables()
+
+  # The wrapper script adds all third_party libraries to the Python path, since
+  # we don't assume any third party libraries are installed system-wide.
+  THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+
+  CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+  CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+
+  try:
+    import crcmod
+  except ImportError:
+    crcmod = None
+
+  if not UsingCrcmodExtension(crcmod):
+    local_crcmod_path = CRCMOD_OSX_PATH if IS_OSX else CRCMOD_PATH
+    sys.path.insert(0, local_crcmod_path)
 
   global debug
 
