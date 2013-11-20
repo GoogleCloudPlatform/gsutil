@@ -23,13 +23,24 @@ from gslib.help_provider import HELP_TYPE
 _detailed_help_text = ("""
 <B>TECHNICAL SUPPORT</B>
   If you have any questions or encounter any problems with Google Cloud Storage,
-  please first read the FAQ at https://developers.google.com/storage/docs/faq.
-  If you still need help, please post your question to Stack Overflow with the
-  Google Cloud Storage tag
-  (http://stackoverflow.com/questions/tagged/google-cloud-storage). Our support
-  team actively monitors questions to this tag and we'll do our best to respond.
-  To help us diagnose any issues you encounter, please provide these details in
-  addition to the description of your problem:
+  please first read the `FAQ <https://developers.google.com/storage/docs/faq>`_.
+
+  If you still have questions please use one of the following methods as
+  appropriate, providing the details noted below:
+
+  A) For API, tool usage, or other software development-related questions,
+  please search for and post questions on Stack Overflow, using the official
+  `google-cloud-storage tag
+  <http://stackoverflow.com/questions/tagged/google-cloud-storage>`_. Our
+  support team actively monitors questions to this tag and we'll do our best to
+  respond.
+
+  B) For questions regarding your account, billing, Terms Of Service, Google
+  Cloud Console, or other administration-related questions please email
+  gs-team@google.com.
+
+  To help us diagnose any issues you encounter, please provide these details
+  in addition to the description of your problem:
 
   - The resource you are attempting to access (bucket name, object name)
   - The operation you attempted (GET, PUT, etc.)
