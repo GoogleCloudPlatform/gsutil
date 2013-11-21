@@ -144,7 +144,7 @@ config file.
 """
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
-    u'/gsutil/tmp/parallel_composite_uploads/do_NOT/use_this_prefix')
+    u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
 
 PARALLEL_UPLOAD_STATIC_SALT = u"""
 PARALLEL_UPLOAD_SALT_TO_PREVENT_COLLISIONS.
@@ -338,8 +338,7 @@ STREAMING_TRANSFERS_TEXT = """
 
 PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
-  gsutil automatically uses
-  `object composition <https://developers.google.com/storage/docs/composite-objects>`_
+  gsutil automatically uses `object composition <https://developers.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to
   Google Cloud Storage. This means that, by default, a large file will be split
   into component pieces that will be uploaded in parallel. Those components will
@@ -357,7 +356,11 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   take advantage of resumable uploads for those components that failed, and
   the component objects will be deleted after the first successful attempt.
   Any temporary objects that were uploaded successfully before gsutil failed
-  will still exist until the upload is completed successfully.
+  will still exist until the upload is completed successfully. The temporary
+  objects will be named in the following fashion:
+  <random ID>%s<hash>
+  where <random ID> is some numerical value, and <hash> is an MD5 hash (not
+  related to the hash of the contents of the file or object).
 
   One important caveat is that files uploaded in this fashion are still subject
   to the maximum number of components limit. For example, if you upload a large
@@ -372,7 +375,8 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 
   Note that this feature can be completely disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
-""" % (10, MAX_COMPONENT_COUNT - 9, MAX_COMPONENT_COUNT)
+""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE, 10, MAX_COMPONENT_COUNT - 9,
+       MAX_COMPONENT_COUNT)
 
 CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
@@ -1842,12 +1846,6 @@ class CpCommand(Command):
          dst_uri: Corresponding to an object in the cloud.
          file_size: The size of the source file, in bytes.
     """
-    # TODO: Currently, parallel composite uploads are disabled when the
-    # -m flag is present such that we don't spawn off an uncontrollable amount
-    # of subprocesses. We should either refactor cp such that there is not a
-    # nested call to command.Apply() in the parallel upload code, or find a
-    # way to dynamically control the global number of processes by looking at
-    # the inputs ahead of time.
     parallel_composite_upload_threshold = HumanReadableToBytes(boto.config.get(
         'GSUtil', 'parallel_composite_upload_threshold',
         DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))

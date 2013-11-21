@@ -113,6 +113,17 @@ _DESCRIPTION = """
 
     gsutil notification stopchannel channel1 SoGqan08XDIFWr1Fv_nGpRJBHh8
 
+<B>NOTIFICATIONS AND PARALLEL COMPOSITE UPLOADS</B>
+
+  By default, gsutil enables parallel composite uploads for large files (see
+  "gsutil help cp"), which means that an upload of a large object can result
+  in multiple temporary component objects being uploaded before the actual
+  intended object is created. Any subscriber to notifications for this bucket
+  will then see a notification for each of these components being created and
+  deleted. If this is a concern for you, note that parallel composite uploads
+  can be disabled by setting "parallel_composite_upload_threshold = 0" in your
+  boto config file.
+
 """
 
 NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE = """
