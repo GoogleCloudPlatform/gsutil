@@ -25,6 +25,11 @@ if not (2, 6) <= sys.version_info[:3] < (3,):
   sys.exit('gsutil requires python 2.6 or 2.7.')
 
 
+def UsingCrcmodExtension(crcmod):
+  return (getattr(crcmod, 'crcmod', None) and
+          getattr(crcmod.crcmod, '_usingExtension', None))
+
+
 def _OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
   sys.exit(1)
@@ -67,6 +72,24 @@ for libdir, subdir in THIRD_PARTY_LIBS:
         'Please re-install gsutil per the installation instructions.' % (
             libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
+
+# The wrapper script adds all third_party libraries to the Python path, since
+# we don't assume any third party libraries are installed system-wide.
+THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+
+try:
+  import crcmod
+except ImportError:
+  crcmod = None
+
+if not UsingCrcmodExtension(crcmod):
+  local_crcmod_path = (CRCMOD_OSX_PATH
+                       if 'darwin' in str(sys.platform).lower()
+                       else CRCMOD_PATH)
+  sys.path.insert(0, local_crcmod_path)
 
 def RunMain():
   import gslib.__main__
