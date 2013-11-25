@@ -1,3 +1,32 @@
+Release 3.38 (release-date: 3012-11-25)
+
+Bug Fixes
+---------
+
+- Fix to include version number in user-agent string.
+- Fix bug wherein -m flag or parallel uploads caused crash on systems without
+  /dev/shm.
+- Fix SSL errors and invalid results with perfdiag -c and -k rthru test.
+- Fixed cases where parallel composite uploads could leave orphaned components.
+- Fix bug attempting to stat objects you don't have auth to read.
+- Fixed bug breaking defacl's -d option.
+
+
+Other Changes
+-------------
+
+- Fixed gsutil config doc.
+- Fixed references to old command names; fix defacl ch example.
+- Improved error messages for deprecated command aliases.
+- Updated gsutil support info.
+
+
+New Features
+------------
+
+- Enabled -R flag for recursion with setmeta command.
+
+
 Release 3.37 (release-date: 2013-09-25)
 =======================================
 
