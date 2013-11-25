@@ -46,13 +46,6 @@ import traceback
 from gslib.util import AddAcceptEncoding
 
 try:
-  # This module doesn't necessarily exist on Windows.
-  import resource
-  HAS_RESOURCE_MODULE = True
-except ImportError, e:
-  HAS_RESOURCE_MODULE = False
-
-try:
   from hashlib import md5
 except ImportError:
   from md5 import md5
@@ -2208,25 +2201,6 @@ class CpCommand(Command):
   def RunCommand(self):
     self._ParseArgs()
 
-    # If possible (this will fail on Windows), set the maximum number of open
-    # files to avoid hitting the limit imposed by the OS. This number was
-    # obtained experimentally and may need tweaking.
-    new_soft_max_file_limit = 10000
-    # Try to set this with both resource names - RLIMIT_NOFILE for most Unix
-    # platforms, and RLIMIT_OFILE for BSD. Ignore AttributeError because the
-    # "resource" module is not guaranteed to know about these names.
-    if HAS_RESOURCE_MODULE:
-      try:
-        self._SetSoftMaxFileLimitForResource(resource.RLIMIT_NOFILE,
-                                             new_soft_max_file_limit)
-      except AttributeError, e:
-        pass
-      try:
-        self._SetSoftMaxFileLimitForResource(resource.RLIMIT_OFILE,
-                                             new_soft_max_file_limit)
-      except AttributeError, e:
-        pass
-
     self.total_elapsed_time = self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       self._HandleStreamingDownload()
@@ -2323,18 +2297,6 @@ class CpCommand(Command):
                              self.copy_failure_count, plural_str, plural_str))
 
     return 0
-
-  def _SetSoftMaxFileLimitForResource(self, resource_name, new_soft_limit):
-    """Sets a new soft limit for the maximum number of open files.    
-       The soft limit is used for this process (and its children), but the
-       hard limit is set by the system and cannot be exceeded.
-    """
-    try:
-      (soft_limit, hard_limit) = resource.getrlimit(resource_name)
-      soft_limit = max(new_soft_limit, soft_limit)
-      resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
-    except (resource.error, ValueError), e:
-      pass
 
   def _ParseArgs(self):
     self.perform_mv = False

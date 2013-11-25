@@ -932,20 +932,12 @@ class Command(object):
     if is_main_thread:
       if ((not self.multiprocessing_is_available)
           and thread_count * process_count > 1):
-        message = (
-            'You have requested multiple threads or processes for an operation,'
-            ' but the required functionality of Python\'s multiprocessing '
-            'module is not available. Your operations will be performed '
-            'sequentially, and any requests for parallelism will be ignored.')
-        try:
-          multiprocessing.Value('i', 0)
-        except:
-          message += (
-              'If you are on a Unix-like operating system, please ensure that '
-              'you have a /dev/shm or tmpfs implementation to which gsutil has '
-              'write access.')
-        self.logger.debug(MultiprocessingIsAvailable()[1])
-        self.logger.warn('\n'.join(textwrap.wrap(message)))
+        # Run the check again and log the appropriate warnings. This was run
+        # before, when the Command object was created, in order to calculate
+        # self.multiprocessing_is_available, but we don't want to print the
+        # warning until we're sure the user actually tried to use multiple
+        # threads or processes.
+        MultiprocessingIsAvailable(logger=self.logger)
 
     if self.multiprocessing_is_available:
       caller_id = self._SetUpPerCallerState()

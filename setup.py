@@ -33,7 +33,7 @@ management tasks, including:
 """
 
 requires = [
-    'boto==2.13.0',
+    'boto==2.17.0',
     'httplib2>=0.8',
     'python-gflags>=2.0',
     'google-api-python-client>=1.1',
@@ -42,13 +42,13 @@ requires = [
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',
-    'retry_decorator>=0.1.0',
+    'retry_decorator>=1.0.0',
 ]
 
 dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
-    'https://github.com/boto/boto/archive/4aae10cc2e0e8811105deff8c8b22b1ff0a415ee.tar.gz#egg=boto-2.13.0',
+    'https://github.com/boto/boto/archive/30079569d071a997200596102caccb3879cfb142.tar.gz#egg=boto-2.17.0',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))

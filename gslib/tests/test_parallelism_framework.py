@@ -47,10 +47,14 @@ def Timeout(func):
   """Decorator used to provide a timeout for functions."""
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
-    signal.signal(signal.SIGALRM, _HandleAlarm)
-    signal.alarm(5)
-    func(*args, **kwargs)
-    signal.alarm(0)  # Cancel the alarm.
+    if not IS_WINDOWS:
+      signal.signal(signal.SIGALRM, _HandleAlarm)
+      signal.alarm(5)
+    try:
+      func(*args, **kwargs)
+    finally:
+      if not IS_WINDOWS:
+        signal.alarm(0)  # Cancel the alarm.
   return wrapper
 
 def _HandleAlarm(signal_num, cur_stack_frame):
