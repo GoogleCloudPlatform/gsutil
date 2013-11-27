@@ -88,6 +88,7 @@ def _AdjustProcessCountIfWindows(process_count):
   else:
     return process_count
 
+
 def _ReApplyWithReplicatedArguments(cls, args):
   new_args = [args] * 7
   process_count = _AdjustProcessCountIfWindows(2)
@@ -104,6 +105,7 @@ def _ReApplyWithReplicatedArguments(cls, args):
   
   return len(return_values) + ret
 
+
 def _PerformNRecursiveCalls(cls, args):
   process_count = _AdjustProcessCountIfWindows(2)
   return_values = cls.Apply(_ReturnOneValue, [()] * args, _ExceptionHandler,
@@ -111,6 +113,10 @@ def _PerformNRecursiveCalls(cls, args):
                             process_count=process_count, thread_count=2,
                             should_return_results=True)
   return len(return_values)
+
+
+def _SkipEvenNumbersArgChecker(cls, arg):
+  return arg % 2 != 0
 
 
 class FailingIterator(object):
@@ -169,13 +175,13 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
 
   def _RunApply(self, func, args_iterator, process_count, thread_count,
                 command_inst=None, shared_attrs=None, fail_on_error=False,
-                thr_exc_handler=None):
+                thr_exc_handler=None, arg_checker=DummyArgChecker):
     command_inst = command_inst or self.command_class(True)
     exception_handler = thr_exc_handler or _ExceptionHandler
     return command_inst.Apply(func, args_iterator, exception_handler,
                               thread_count=thread_count,
                               process_count=process_count,
-                              arg_checker=DummyArgChecker,
+                              arg_checker=arg_checker,
                               should_return_results=True,
                               shared_attrs=shared_attrs,
                               fail_on_error=fail_on_error)
@@ -419,6 +425,35 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       self.fail("Did not throw expected exception.")
     except TypeError, e:
       pass
+  
+  def testSkippedArgumentsSingleThreadSingleProcess(self):
+    self._TestSkippedArguments(1, 1)
+    
+  def testSkippedArgumentsMultiThreadSingleProcess(self):
+    self._TestSkippedArguments(1, 10)
+    
+  def testSkippedArgumentsSingleThreadMultiProcess(self):
+    self._TestSkippedArguments(10, 1)
+    
+  def testSkippedArgumentsMultiThreadMultiProcess(self):
+    self._TestSkippedArguments(10, 10)
+
+  @Timeout
+  def _TestSkippedArguments(self, process_count, thread_count):
+
+    # Skip a proper subset of the arguments.
+    n = 2 * process_count * thread_count
+    args = range(1, n + 1)
+    results = self._RunApply(_ReturnOneValue, args, process_count, thread_count,
+                             arg_checker=_SkipEvenNumbersArgChecker)
+    self.assertEqual(n / 2, len(results))  # We know n is even.
+    self.assertEqual(n / 2, sum(results))
+
+    # Skip all arguments.
+    args = [2 * x for x in args]
+    results = self._RunApply(_ReturnOneValue, args, process_count, thread_count,
+                             arg_checker=_SkipEvenNumbersArgChecker)
+    self.assertEqual(0, len(results))
 
 
 class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):

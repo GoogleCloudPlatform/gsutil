@@ -35,6 +35,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import CreateLock
+from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import TWO_MB
 
@@ -580,6 +581,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
                               return_stderr = True, expected_status=1)
       self.assertIn('Access denied to', stderr)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  def test_cp_minus_e(self):
+    fpath_dir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=fpath_dir)
+    fpath2 = os.path.join(fpath_dir, 'cp_minus_e')
+    bucket_uri = self.CreateBucket()
+    os.symlink(fpath1, fpath2)
+    stderr = self.RunGsUtil(
+        ['cp', '-e', '%s%s*' % (fpath_dir, os.path.sep),
+         suri(bucket_uri, 'files')],
+        return_stderr=True)
+    self.assertIn('Copying file', stderr)
+    self.assertIn('Skipping symbolic link file', stderr)
 
   def test_filter_existing_components_non_versioned(self):
     bucket_uri = self.CreateBucket()

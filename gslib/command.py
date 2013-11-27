@@ -89,18 +89,19 @@ def CreateGsutilLogger(command_name):
     log.addHandler(log_handler)
   return log
 
-def _UriArgChecker(command_instance, uri, shard):
+def _UriArgChecker(command_instance, uri):
   exp_src_uri = command_instance.suri_builder.StorageUri(
       uri.GetExpandedUriStr())
-  command_instance.logger.debug('process %d shard %d is handling uri %s',
-                                os.getpid(), shard, exp_src_uri)
+  command_instance.logger.debug('process %d is handling uri %s',
+                                os.getpid(), exp_src_uri)
   if (command_instance.exclude_symlinks and exp_src_uri.is_file_uri()
       and os.path.islink(exp_src_uri.object_name)):
     command_instance.logger.info('Skipping symbolic link %s...', exp_src_uri)
     return False
   return True
 
-def DummyArgChecker(command_instance, arg, shard):
+
+def DummyArgChecker(command_instance, arg):
   return True
 
 def _SetAclFuncWrapper(cls, name_expansion_result):
@@ -964,7 +965,7 @@ class Command(object):
         shared_vars_map.put((caller_id, name), 0)
 
     # Make all of the requested function calls.
-    if self.multiprocessing_is_available:
+    if self.multiprocessing_is_available and thread_count * process_count > 1:
       self._ParallelApply(func, args_iterator, exception_handler, caller_id,
                           arg_checker, parallel_operations_override,
                           process_count, thread_count, should_return_results,
@@ -1016,11 +1017,11 @@ class Command(object):
                 'Caught exception while handling exception for %s:\n%s',
                 func, traceback.format_exc())
           continue
-
-      # Now that we actually have the next argument, perform the task.
-      task = Task(func, args, caller_id, exception_handler,
-                  should_return_results, arg_checker, fail_on_error)
-      worker_thread.PerformTask(task, self)
+      if arg_checker(self, args):
+        # Now that we actually have the next argument, perform the task.
+        task = Task(func, args, caller_id, exception_handler,
+                    should_return_results, arg_checker, fail_on_error)
+        worker_thread.PerformTask(task, self)
 
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
                      arg_checker, parallel_operations_override, process_count,
@@ -1185,8 +1186,6 @@ class Command(object):
         # If we have no tasks to do and we're performing a blocking call, we
         # need a special signal to tell us to stop - otherwise, we block on
         # the call to task_queue.get() forever.
-        if not task.arg_checker(self, task.args, shard):
-          continue
         worker_pool.AddTask(task)
         num_enqueued += 1
 
@@ -1206,7 +1205,6 @@ class Command(object):
                   # notified before we grabbed the lock.
                   return
                 need_pool_or_done_cond.wait()
-
 
 
 # Below here lie classes and functions related to controlling the flow of tasks
@@ -1268,6 +1266,7 @@ class ProducerThread(threading.Thread):
                fail_on_error):
     """
     Args:
+      cls: Instance of Command for which this ProducerThread was created.
       args_iterator: Iterable collection of arguments to be put into the
                      work queue.
       caller_id: Globally-unique caller ID corresponding to this call to Apply.
@@ -1325,13 +1324,15 @@ class ProducerThread(threading.Thread):
                   self.func, traceback.format_exc())
             self.shared_variables_updater.Update(self.caller_id, self.cls)
             continue
-        num_tasks += 1
-        last_task = cur_task
-        cur_task = Task(self.func, args, self.caller_id, self.exception_handler,
-                        self.should_return_results, self.arg_checker,
-                        self.fail_on_error)
-        if last_task:
-          self.task_queue.put(last_task, self.caller_id)
+
+        if self.arg_checker(self.cls, args):
+          num_tasks += 1
+          last_task = cur_task
+          cur_task = Task(self.func, args, self.caller_id,
+                          self.exception_handler, self.should_return_results,
+                          self.arg_checker, self.fail_on_error)
+          if last_task:
+            self.task_queue.put(last_task, self.caller_id)
     except Exception, e:
       # This will also catch any exception raised due to an error in the
       # iterator when fail_on_error is set, so check that we failed for some
