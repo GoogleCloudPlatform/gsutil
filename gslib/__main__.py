@@ -307,14 +307,6 @@ def main():
     else:
       command_name = args[0]
 
-    # Unset http_proxy environment variable if it's set, because it confuses
-    # boto. (Proxies should instead be configured via the boto config file.)
-    if 'http_proxy' in os.environ:
-      if debug > 1:
-        sys.stderr.write(
-            'Unsetting http_proxy environment variable within gsutil run.\n')
-      del os.environ['http_proxy']
-
     return _RunNamedCommandAndHandleExceptions(
         command_runner, command_name, args=args[1:], headers=headers,
         debug_level=debug, parallel_operations=parallel_operations)
