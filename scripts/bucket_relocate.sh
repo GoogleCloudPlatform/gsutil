@@ -24,12 +24,11 @@ to each bucket being migrated, and data are copied from the original to the
 new bucket(s). In stage 2 any newly created data are copied from the original to
 the temporary bucket(s), the original buckets are deleted and recreated in the
 new location/storage class, data are copied from the temporary to the re-created
-bucket(s), and the temporary bucket(s) deleted. Stage 1 can take a long time
-because it copies all data via the local machine (because copy-in-the-cloud
-isn't support spanning locations or storage classes); stage 2 should run quickly
-(because it uses copy-in-the-cloud), unless a large amount of data was added
-to the bucket while stage 1 was running. You should ensure that no reads or
-writes occur to your bucket during the brief period while stage 2 runs.
+bucket(s), and the temporary bucket(s) deleted. Because both stages 1 and 2 use
+copy-in-the-cloud, the run time will primarily be dependent upon the number of
+objects in the bucket, rather than the total size of the objects. You should
+ensure that no reads or writes occur to your bucket during the brief period
+while stage 2 runs.
 
 To ensure that all data are correctly copied from the source to the temporary
 bucket, we recommend running stage 1 first, and then comparing the source and
@@ -511,9 +510,9 @@ function Stage1 {
 
     # Copy the objects from the source bucket to the temp bucket
     if [ `LastStep "$src"` -eq 5 ]; then
-      LogStepStart "Step 6: ($src) - Copy objects from source to the temporary bucket ($dst) via local machine."
+      LogStepStart "Step 6: ($src) - Copy objects from source to the temporary bucket ($dst) in the cloud."
       ParallelIfNoVersioning $src
-      $gsutil $parallel_if_no_versioning cp -R -p -L $bman -D $src/* $dst/
+      $gsutil $parallel_if_no_versioning cp -R -p -L $bman $src/* $dst/
       if [ $? -ne 0 ]; then
         EchoErr "Failed to copy objects from $src to $dst."
         exit 1
@@ -597,7 +596,7 @@ function Stage2 {
     if [ `LastStep "$src"` -eq 7 ]; then
       LogStepStart "Step 8: ($src) - Catch up any new objects that weren't copied."
       ParallelIfNoVersioning $src
-      $gsutil $parallel_if_no_versioning cp -R -p -L $bman -D $src/* $dst/
+      $gsutil $parallel_if_no_versioning cp -R -p -L $bman $src/* $dst/
       if [ $? -ne 0 ]; then
         EchoErr "Failed to copy any new objects from $src to $dst"
         exit 1
