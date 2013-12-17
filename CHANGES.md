@@ -1,4 +1,4 @@
-Release 3.38 (release-date: 3012-11-25)
+Release 3.38 (release-date: 2013-11-25)
 
 Bug Fixes
 ---------
