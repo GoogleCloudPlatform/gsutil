@@ -76,16 +76,11 @@ DEBUG_WARNING = """
 
 HTTP_WARNING = """
 ***************************** WARNING *****************************
-*** You are running gsutil with the boto config variable "is_secure" set to
-*** False, which causes traffic to be sent via HTTP instead of HTTPS. This
-*** option should always be set to True in production environments, for several
-*** reasons:
-***   1. OAuth2 refresh and access tokens are bearer tokens, so must be
-***      protected from exposure on the wire.
-***   2. Resumable upload IDs are bearer tokens, so similarly must be protected.
-***   3. The gsutil update command needs to run over HTTPS to guard against
-***      man-in-the-middle attacks on code updates.
-***   4. User data shouldn't be sent in the clear.
+*** You are running gsutil with either the boto config variable "is_secure" set
+*** to False or the "https_validate_certificates" config variable set to False.
+*** These options should always be set to True in production environments, to
+*** protect against intercepted bearer tokens, man-in-the-middle attacks, and
+*** leaking of user data.
 ***************************** WARNING *****************************
 """.lstrip()
 
