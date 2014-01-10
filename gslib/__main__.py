@@ -46,6 +46,8 @@ from gslib import util
 from gslib import GSUTIL_DIR
 from gslib import wildcard_iterator
 from gslib.command_runner import CommandRunner
+from gslib.exception import CommandException
+from gslib.util import BOTO_IS_SECURE
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetConfigFilePath
 from gslib.util import HasConfiguredCredentials
@@ -69,6 +71,21 @@ DEBUG_WARNING = """
 *** Make sure to remove the value of the Authorization header for
 *** each HTTP request printed to the console prior to posting to
 *** a public medium such as a forum post or Stack Overflow.
+***************************** WARNING *****************************
+""".lstrip()
+
+HTTP_WARNING = """
+***************************** WARNING *****************************
+*** You are running gsutil with the boto config variable "is_secure" set to
+*** False, which causes traffic to be sent via HTTP instead of HTTPS. This
+*** option should always be set to True in production environments, for several
+*** reasons:
+***   1. OAuth2 refresh and access tokens are bearer tokens, so must be
+***      protected from exposure on the wire.
+***   2. Resumable upload IDs are bearer tokens, so similarly must be protected.
+***   3. The gsutil update command needs to run over HTTPS to guard against
+***      man-in-the-middle attacks on code updates.
+***   4. User data shouldn't be sent in the clear.
 ***************************** WARNING *****************************
 """.lstrip()
 
@@ -239,6 +256,10 @@ def main():
       # tokens).
       oauth2client.client.logger.setLevel(logging.WARNING)
       apiclient.discovery.logger.setLevel(logging.WARNING)
+
+    is_secure = BOTO_IS_SECURE
+    if not is_secure[0]:
+      sys.stderr.write(HTTP_WARNING)
 
     if version:
       command_name = 'version'

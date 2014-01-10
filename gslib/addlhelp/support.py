@@ -50,10 +50,12 @@ _detailed_help_text = ("""
     display your request's HTTP details. Provide these details with your post
     to the forum as they can help us further troubleshoot your issue.
 
-  Warning: The gsutil -D, -d, and -DD options will also print the authentication
+  Warning: The gsutil -d, -D, and -DD options will also print the authentication
   header with authentication credentials for your Google Cloud Storage account.
   Make sure to remove any "Authorization:" headers before you post HTTP details
-  to the forum.
+  to the forum. Note also that if you upload files large enough to use resumable
+  uploads, the resumable upload IDs are security-sensitive while an upload is
+  not yet complete, so should not be posted on public forums.
 
   If you make any local modifications to gsutil, please make sure to use
   a released copy of gsutil (instead of your locally modified copy) when

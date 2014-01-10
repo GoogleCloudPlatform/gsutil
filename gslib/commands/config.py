@@ -299,8 +299,15 @@ CONFIG_BOTO_SECTION_CONTENT = """
 
 # Set 'is_secure' to False to cause boto to connect using HTTP instead of the
 # default HTTPS. This is useful if you want to capture/analyze traffic
-# (e.g., with tcpdump). This option should always be set to True in production
-# environments (which is the default value).
+# (e.g., with tcpdump).
+# WARNING: This option should always be set to True (the default value) in
+# production environments, for several reasons:
+#   1. OAuth2 refresh and access tokens are bearer tokens, so must be
+#      protected from exposure on the wire.
+#   2. Resumable upload IDs are bearer tokens, so similarly must be protected.
+#   3. The gsutil update command needs to run over HTTPS to guard against
+#      man-in-the-middle attacks on code updates.
+#   4. User data shouldn't be sent in the clear.
 #is_secure = True
 
 # Set 'https_validate_certificates' to False to disable server certificate

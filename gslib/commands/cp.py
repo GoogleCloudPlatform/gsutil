@@ -82,8 +82,10 @@ from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
 from gslib.name_expansion import NameExpansionIterator
+from gslib.util import BOTO_IS_SECURE
 from gslib.util import CreateLock
 from gslib.util import CreateTrackerDirIfNeeded
+from gslib.util import GetConfigFilePath
 from gslib.util import ParseErrorDetail
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
@@ -904,7 +906,15 @@ class CpCommand(Command):
 
       if upload:
         if dst_uri.scheme == 'gs':
-          transfer_handler = ResumableUploadHandler(tracker_file)
+          is_secure = BOTO_IS_SECURE
+          if not is_secure[0]:
+            self.logger.info('\n'.join(textwrap.wrap(
+                'WARNING: Your boto config file (%s) has is_secure set to '
+                'False. Resumable uploads are not secure when performed with '
+                'this configuration, so large files are being uploaded with '
+                'non-resumable uploads instead.' % GetConfigFilePath())))
+          else:
+            transfer_handler = ResumableUploadHandler(tracker_file)
       else:
         transfer_handler = ResumableDownloadHandler(tracker_file)
 
