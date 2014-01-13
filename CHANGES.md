@@ -1,3 +1,18 @@
+=======
+Release 3.41 (release-date: 2014-01-14)
+
+Other Changes
+-------------
+
+- Changes to protect security of resumable upload IDs.
+
+
+Release 3.40: Skipped
+
+
+Release 3.39: Skipped
+
+
 Release 3.38 (release-date: 2013-11-25)
 
 Bug Fixes
