@@ -329,7 +329,7 @@ class UpdateCommand(Command):
       tf = None
     else:
       tf = self._FetchAndOpenGsutilTarball(update_from_uri_str)
-      tf.extract('./gsutil/VERSION')
+      tf.extractall()
       with open(os.path.join('gsutil', 'VERSION'), 'r') as ver_file:
         tarball_version = ver_file.read().strip()
 
