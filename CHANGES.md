@@ -1,5 +1,14 @@
-=======
+Release 3.42 (release-date: 2014-01-15)
+=======================================
+
+Other Changes
+-------------
+
+- Fixed potential bug with update command on CentOS.
+
+
 Release 3.41 (release-date: 2014-01-14)
+=======================================
 
 Other Changes
 -------------
