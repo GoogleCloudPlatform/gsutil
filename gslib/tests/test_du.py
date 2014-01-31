@@ -11,16 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Tests for du command."""
 import gslib.tests.testcase as testcase
-from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
 
 
 class TestDu(testcase.GsUtilIntegrationTestCase):
   """Integration tests for du command."""
 
   def _create_nested_subdir(self):
+    """Creates a nested subdirectory for use by tests in this module."""
     bucket_uri = self.CreateBucket()
     obj_uris = []
     obj_uris.append(self.CreateObject(
@@ -53,6 +54,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_subdirs(self):
+    """Tests that subdirectory sizes are correctly calculated and listed."""
     bucket_uri, obj_uris = self._create_nested_subdir()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -70,6 +72,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_multi_args(self):
+    """Tests running du with multiple command line arguments."""
     bucket_uri = self.CreateBucket()
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='foo2')
@@ -85,6 +88,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_total(self):
+    """Tests total size listing via the -c flag."""
     bucket_uri = self.CreateBucket()
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
@@ -110,6 +114,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_summary(self):
+    """Tests summary listing with the -s flag."""
     bucket_uri1, _ = self._create_nested_subdir()
     bucket_uri2, _ = self._create_nested_subdir()
 
@@ -125,6 +130,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_versioned(self):
+    """Tests listing all versions with the -a flag."""
     bucket_uri = self.CreateVersionedBucket()
     object_uri1 = self.CreateObject(
         bucket_uri=bucket_uri, object_name='foo', contents='foo')
@@ -152,6 +158,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
   def test_null_endings(self):
+    """Tests outputting 0-endings with the -0 flag."""
     bucket_uri = self.CreateBucket()
     obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
@@ -169,6 +176,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_excludes(self):
+    """Tests exclude pattern excluding certain file paths."""
     bucket_uri, obj_uris = self._create_nested_subdir()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -186,6 +194,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_excludes_file(self):
+    """Tests file exclusion with the -X flag."""
     bucket_uri, obj_uris = self._create_nested_subdir()
     fpath = self.CreateTempFile(contents='*sub2/five*\n*sub1/four')
 

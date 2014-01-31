@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Additional help about object metadata."""
 
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HelpProvider
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpProvider
+from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW OF METADATA</B>
@@ -51,27 +52,27 @@ _detailed_help_text = ("""
 <B>CONTENT TYPE</B>
   The most commonly set metadata is Content-Type (also known as MIME type),
   which allows browsers to render the object properly.
-  gsutil sets the Content-Type
-  automatically at upload time, based on each filename extension. For
-  example, uploading files with names ending in .txt will set Content-Type
-  to text/plain. If you're running gsutil on Linux or MacOS and would prefer
-  to have content type set based on naming plus content examination, see the
-  use_magicfile configuration variable in the gsutil/boto configuration file
-  (See also "gsutil help config"). In general, using use_magicfile is more
-  robust and configurable, but is not available on Windows.
+  gsutil sets the Content-Type automatically at upload time, based on each
+  filename extension. For example, uploading files with names ending in .txt
+  will set Content-Type to text/plain. If you're running gsutil on Linux or
+  MacOS and would prefer to have content type set based on naming plus content
+  examination, see the use_magicfile configuration variable in the gsutil/boto
+  configuration file (See also "gsutil help config"). In general, using
+  use_magicfile is more robust and configurable, but is not available on
+  Windows.
 
-  If you specify a -h header when uploading content (like the example gsutil
-  command given in the previous section), it overrides the Content-Type that
-  would have been set based on filename extension or content.  This can be
-  useful if the Content-Type detection algorithm doesn't work as desired
-  for some of your files.
+  If you specify a Content-Type header with -h when uploading content (like the 
+  example gsutil command given in the previous section), it overrides the
+  Content-Type that would have been set based on filename extension or content.
+  This can be useful if the Content-Type detection algorithm doesn't work as
+  desired for some of your files.
 
   You can also completely suppress content type detection in gsutil, by
   specifying an empty string on the Content-Type header:
 
     gsutil -h 'Content-Type:' cp -r images gs://bucket/images
 
-  In this case, the Google Cloud Storage service will attempt to detect
+  In this case, the Google Cloud Storage service will not attempt to detect
   the content type. In general this approach will work better than using
   filename extension-based content detection in gsutil, because the list of
   filename extensions is kept more current in the server-side content detection
@@ -104,8 +105,10 @@ _detailed_help_text = ("""
 
   Another use of the Cache-Control header is through the "no-transform" value,
   which instructs Google Cloud Storage to not apply any content transformations
-  based on specifics of a download request, such such as removing gzip
-  content-encoding for incompatible clients.
+  based on specifics of a download request, such as removing gzip
+  content-encoding for incompatible clients.  Note that this parameter is only
+  respected by the XML API. The Google Cloud Storage JSON API respects only the
+  no-cache and max-age Cache-Control parameters.
 
 
 <B>CONTENT-ENCODING</B>
@@ -168,11 +171,12 @@ _detailed_help_text = ("""
   - Content-Language
   - Content-MD5
   - Content-Type
-  - Any field starting with X-GOOG-META- (i.e., custom metadata).
+  - Any field starting with a matching Cloud Storage Provider
+    prefix, such as x-goog-meta- (i.e., custom metadata).
 
   Header names are case-insensitive.
 
-  X-GOOG-META- fields can have data set to arbitrary Unicode values. All
+  x-goog-meta- fields can have data set to arbitrary Unicode values. All
   other fields must have ASCII values.
 
 
@@ -187,15 +191,15 @@ class CommandOptions(HelpProvider):
   """Additional help about object metadata."""
 
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'metadata',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['cache-control', 'caching', 'content type',
-                         'mime type', 'mime', 'type'],
-    # Type of help:
-    HELP_TYPE : HelpType.ADDITIONAL_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working With Object Metadata',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'metadata',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['cache-control', 'caching', 'content type',
+                          'mime type', 'mime', 'type'],
+      # Type of help:
+      HELP_TYPE: HelpType.ADDITIONAL_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Working With Object Metadata',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }

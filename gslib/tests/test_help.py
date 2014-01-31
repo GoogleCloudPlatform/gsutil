@@ -30,7 +30,7 @@ class HelpTest(testcase.GsUtilUnitTestCase):
   def test_help_noargs(self):
     stdout = self.RunCommand('help', return_stdout=True)
     self.assertIn('Available commands', stdout)
-    
+
   def test_help_subcommand_arg(self):
     stdout = self.RunCommand('help', ['web', 'set'], return_stdout=True)
     self.assertIn('gsutil web set', stdout)

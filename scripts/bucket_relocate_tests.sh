@@ -139,11 +139,9 @@ class BucketRelocateTests(unittest.TestCase):
 
   def test_ConfigCors(self):
     bucket = self.buckets[0]
-    cors="""<?xml version="1.0" ?>
-<CorsConfig><Cors><Origins><Origin>http://origin1.example.com</Origin>
-</Origins><Methods><Method>GET</Method></Methods><ResponseHeaders>
-<ResponseHeader>Content-Type</ResponseHeader></ResponseHeaders>
-</Cors></CorsConfig>"""
+    cors=('[{"origin": ["http://origin1.example.com", '
+          '"http://origin2.example.com"], "responseHeader": '
+          '["foo", "bar"], "method": ["GET", "PUT", "POST"]}]\n')
     f = tempfile.NamedTemporaryFile()
     f.write(cors)
     f.flush()

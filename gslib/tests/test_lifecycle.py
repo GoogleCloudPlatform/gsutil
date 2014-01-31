@@ -11,51 +11,52 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for lifecycle command."""
 
 import posixpath
 from xml.dom.minidom import parseString
 
-from gslib.util import Retry
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.translation_helper import LifecycleTranslation
+from gslib.util import Retry
 
 
 class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
   """Integration tests for lifecycle command."""
 
-  empty_doc1 = parseString(
-      '<LifecycleConfiguration/>').toprettyxml(indent='    ')
+  empty_doc1 = '{}'
 
-  empty_doc2 = parseString(
-      '<LifecycleConfiguration>'
-      '</LifecycleConfiguration>').toprettyxml(indent='    ')
-
-  bad_doc1 = ('<?xml version="1.0" ?><LifecycleConfiguration><Rule>'
-              '<Action><Delete/></Action></Rule></LifecycleConfiguration>')
-
-  bad_doc2 = ('<?xml version="1.0" ?><LifecycleConfiguration><Rule>'
-              '<Condition><Age>365</Age></Condition></Rule>'
-              '</LifecycleConfiguration>')
-
-  bad_doc3 = ('<?xml version="1.0" ?><LifecycleConfiguration><Rule>'
-              '<Delete/><Condition><Age>365</Age></Condition></Rule>'
-              '</LifecycleConfiguration>')
-
-  bad_doc4 = ('<?xml version="1.0" ?><LifecycleConfiguration><Rule>'
-              '<Action><Delete/></Action><Age>365</Age></Rule>'
-              '</LifecycleConfiguration>')
-
-  valid_doc = parseString(
+  xml_doc = parseString(
       '<LifecycleConfiguration><Rule>'
       '<Action><Delete/></Action>'
       '<Condition><Age>365</Age></Condition>'
       '</Rule></LifecycleConfiguration>').toprettyxml(indent='    ')
 
+  bad_doc = (
+      '{"rule": [{"action": {"type": "Add"}, "condition": {"age": 365}}]}\n')
+
+  valid_doc = (
+      '{"rule": [{"action": {"type": "Delete"}, "condition": {"age": 365}}]}\n')
+
+  no_lifecycle_config = 'has no lifecycle configuration.'
+
+  def test_lifecycle_translation(self):
+    """Tests lifecycle translation for various formats."""
+    json_text = self.valid_doc
+    entries_list = LifecycleTranslation.JsonLifecycleToMessage(json_text)
+    boto_lifecycle = LifecycleTranslation.BotoLifecycleFromMessage(entries_list)
+    converted_entries_list = LifecycleTranslation.BotoLifecycleToMessage(
+        boto_lifecycle)
+    converted_json_text = LifecycleTranslation.JsonLifecycleFromMessage(
+        converted_entries_list)
+    self.assertEqual(json_text, converted_json_text)
+
   def test_default_lifecycle(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_empty_lifecycle1(self):
     bucket_uri = self.CreateBucket()
@@ -63,15 +64,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
-
-  def test_set_empty_lifecycle2(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.empty_doc2)
-    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
-                            return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_valid_lifecycle(self):
     bucket_uri = self.CreateBucket()
@@ -81,31 +74,22 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEqual(stdout, self.valid_doc)
 
-  def test_bad_lifecycle1(self):
+  def test_bad_lifecycle(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.bad_doc1)
-    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
-                   expected_status=1)
+    fpath = self.CreateTempFile(contents=self.bad_doc)
+    stderr = self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
+                            expected_status=1, return_stderr=True)
+    self.assertNotIn('XML lifecycle data provided', stderr)
 
-  def test_bad_lifecycle2(self):
+  def test_bad_xml_lifecycle(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.bad_doc2)
-    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
-                   expected_status=1)
-
-  def test_bad_lifecycle3(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.bad_doc3)
-    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
-                   expected_status=1)
-
-  def test_bad_lifecycle4(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.bad_doc4)
-    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
-                   expected_status=1)
+    fpath = self.CreateTempFile(contents=self.xml_doc)
+    stderr = self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('XML lifecycle data provided', stderr)
 
   def test_set_lifecycle_and_reset(self):
+    """Tests setting and turning off lifecycle configuration."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.valid_doc)
@@ -118,9 +102,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_lifecycle_multi_buckets(self):
+    """Tests setting lifecycle configuration on multiple buckets."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.valid_doc)
@@ -134,6 +119,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stdout, self.valid_doc)
 
   def test_set_lifecycle_wildcard(self):
+    """Tests setting lifecycle with a wildcarded bucket URI."""
     random_prefix = self.MakeRandomTestString()
     bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
     bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)

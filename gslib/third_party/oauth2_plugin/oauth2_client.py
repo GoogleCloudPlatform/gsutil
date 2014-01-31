@@ -39,9 +39,9 @@ import logging
 import multiprocessing
 import os
 import tempfile
+import threading
 import urllib
 import urlparse
-
 from boto import cacerts
 from boto import config
 from gslib.util import CreateLock
@@ -49,9 +49,9 @@ from gslib.util import Retry
 from oauth2client.client import AccessTokenRefreshError
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.client import OAuth2Credentials
-
 if HAS_CRYPTO:
   from oauth2client.client import SignedJwtAssertionCredentials
+
 
 try:
   import json
@@ -77,8 +77,26 @@ def InitializeMultiprocessingVariables():
 
 
 LOG = logging.getLogger('oauth2_client')
+# Lock used for checking/exchanging refresh token, so multithreaded
+# operation doesn't attempt concurrent refreshes.
+token_exchange_lock = threading.Lock()
 
 GSUTIL_DEFAULT_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control'
+
+
+class Error(Exception):
+  """Base exception for the OAuth2 module."""
+  pass
+
+
+class AccessTokenRefreshError(Error):
+  """Error trying to exchange a refresh token into an access token."""
+  pass
+
+
+class AuthorizationCodeExchangeError(Error):
+  """Error trying to exchange an authorization code into a refresh token."""
+  pass
 
 
 class TokenCache(object):
@@ -364,12 +382,17 @@ class OAuth2ServiceAccountClient(OAuth2Client):
   
   def FetchAccessToken(self):
     credentials = SignedJwtAssertionCredentials(self.client_id,
-        self.private_key, scope=GSUTIL_DEFAULT_SCOPE, 
+        self.private_key, scope=GSUTIL_DEFAULT_SCOPE,
         private_key_password=self.password)
     http = self.CreateHttpRequest()
     credentials.refresh(http)
     return AccessToken(credentials.access_token, 
         credentials.token_expiry, datetime_strategy=self.datetime_strategy)
+
+  def GetCredentials(self):
+    return SignedJwtAssertionCredentials(self.client_id,
+        self.private_key, scope=GSUTIL_DEFAULT_SCOPE, 
+        private_key_password=self.password)
 
 
 class GsAccessTokenRefreshError(Exception):
@@ -421,6 +444,13 @@ class OAuth2UserAccountClient(OAuth2Client):
     self.client_id = client_id
     self.client_secret = client_secret
     self.refresh_token = refresh_token
+
+  def GetCredentials(self):
+    """Fetches a credentials objects from the provider's token endpoint."""
+    access_token = self.GetAccessToken()
+    credentials = OAuth2Credentials(access_token.token, self.client_id,
+        self.client_secret, self.refresh_token, access_token.expiry, self.token_uri, None)
+    return credentials
 
   @Retry(GsAccessTokenRefreshError,
          tries=config.get('OAuth2', 'oauth2_refresh_retries', 6),

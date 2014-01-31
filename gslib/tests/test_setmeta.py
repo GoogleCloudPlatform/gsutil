@@ -12,16 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for setmeta command."""
 
 import gslib.tests.testcase as testcase
-from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
+from gslib.util import UTF8
 
 
 class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   """Integration tests for setmeta command."""
 
   def test_initial_metadata(self):
+    """Tests copying file to an object with metadata."""
     objuri = suri(self.CreateObject(contents='foo'))
     inpath = self.CreateTempFile()
     ct = 'image/gif'
@@ -31,11 +34,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % ct)
-      self.assertRegexpMatches(stdout, 'x-goog-meta-xyz:\s+abc')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % ct)
+      self.assertRegexpMatches(stdout, r'xyz:\s+abc')
     _Check1()
 
   def test_overwrite_existing(self):
+    """Tests overwriting an object's metadata."""
     objuri = suri(self.CreateObject(contents='foo'))
     inpath = self.CreateTempFile()
     self.RunGsUtil(['-h', 'x-goog-meta-xyz:abc', '-h', 'Content-Type:image/gif',
@@ -46,7 +50,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/html')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/html')
       self.assertNotIn('xyz', stdout)
     _Check1()
 
@@ -61,7 +65,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
          'gs://foo/bar'], expected_status=1, return_stderr=True)
     self.assertIn('Each header must appear at most once', stderr)
-    
+
   def test_recursion_works(self):
     bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
@@ -75,23 +79,24 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_invalid_non_ascii_custom_header(self):
     unicode_header = u'x-goog-meta-soufflé:5'
-    unicode_header_bytes = unicode_header.encode('utf-8')
+    unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
         expected_status=1, return_stderr=True)
     self.assertIn('Invalid non-ASCII header', stderr)
 
   def test_valid_non_ascii_custom_header(self):
+    """Tests setting custom metadata with a non-ASCII content."""
     objuri = self.CreateObject(contents='foo')
     unicode_header = u'x-goog-meta-dessert:soufflé'
-    unicode_header_bytes = unicode_header.encode('utf-8')
+    unicode_header_bytes = unicode_header.encode(UTF8)
     self.RunGsUtil(['setmeta', '-h', unicode_header_bytes, suri(objuri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
-      stdout = stdout.decode('utf-8')
-      self.assertIn(u'x-goog-meta-dessert:\tsoufflé', stdout)
+      stdout = stdout.decode(UTF8)
+      self.assertIn(u'dessert:\t\tsoufflé', stdout)
     _Check1()
 
   def test_disallowed_header(self):
@@ -113,9 +118,15 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         return_stderr=True)
     self.assertIn('must be either header or header:value', stderr)
 
+  def test_setmeta_with_canned_acl(self):
+    stderr = self.RunGsUtil(
+        ['setmeta', '-h', 'x-goog-acl:public-read', 'gs://foo/bar'],
+        expected_status=1, return_stderr=True)
+    self.assertIn('gsutil setmeta no longer allows canned ACLs', stderr)
+
   def test_invalid_non_ascii_header_value(self):
     unicode_header = u'Content-Type:dessert/soufflé'
-    unicode_header_bytes = unicode_header.encode('utf-8')
+    unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
         expected_status=1, return_stderr=True)

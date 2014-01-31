@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for versioning command."""
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -18,7 +19,7 @@ from gslib.tests.util import ObjectToURI as suri
 
 class TestVersioning(testcase.GsUtilIntegrationTestCase):
   """Integration tests for versioning command."""
-  
+
   _set_cmd_prefix = ['versioning', 'set']
   _get_cmd_prefix = ['versioning', 'get']
 
@@ -47,6 +48,7 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
 
   def testTooFewArgumentsFails(self):
+    """Ensures versioning commands fail with too few arguments."""
     # No arguments for set, but valid subcommand.
     stderr = self.RunGsUtil(self._set_cmd_prefix, return_stderr=True,
                             expected_status=1)
@@ -61,6 +63,7 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['versioning'], return_stderr=True,
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
+
 
 class TestVersioningOldAlias(TestVersioning):
   _set_cmd_prefix = ['setversioning']

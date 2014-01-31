@@ -1,5 +1,5 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-#coding=utf8
+# coding=utf8
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Unit and integration tests for gsutil command_runner module."""
 import logging
 import os
 import time
 
 import boto
-
+from boto.pyami.config import Config
 import gslib
-from boto.pyami.config import Config, BotoConfigLocations
 from gslib import command_runner
 from gslib.command_runner import HandleArgCoding
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
+import gslib.tests.util as util
+from gslib.tests.util import unittest
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import SECONDS_PER_DAY
 
@@ -33,7 +34,13 @@ class TestCommandRunnerUnitTests(
     testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil update check in command_runner module."""
 
+  # TODO: Many tests in this file increment the version number, and output
+  # a message to stderr claiming this version is available.  When mixed with
+  # some failures in the tests, this can be misleading, particularly when
+  # a new version number is under development but not yet released.
+
   def setUp(self):
+    """Sets up the command runner mock objects."""
     super(TestCommandRunnerUnitTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
@@ -50,7 +57,7 @@ class TestCommandRunnerUnitTests(
         raise CommandException(
             'Version number (%s) is not numeric.' % gslib.VERSION)
       base_version = base_version[:-1]
-    command_runner.LookUpGsutilVersion = lambda u: float(base_version) + 1
+    command_runner.LookUpGsutilVersion = lambda u, v: float(base_version) + 1
 
     # Mock out raw_input to trigger yes prompt.
     command_runner.raw_input = lambda p: 'y'
@@ -74,6 +81,7 @@ class TestCommandRunnerUnitTests(
     self.boto_configs = []
 
   def tearDown(self):
+    """Tears down the command runner mock objects."""
     super(TestCommandRunnerUnitTests, self).tearDown()
 
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
@@ -99,6 +107,7 @@ class TestCommandRunnerUnitTests(
     self.boto_configs.append((section, name, prev_value))
     boto.config.set(section, name, value)
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
     self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
@@ -107,8 +116,9 @@ class TestCommandRunnerUnitTests(
     self.running_interactively = False
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_no_tracker_file_version_recent(self):
     """Tests when no timestamp file exists and VERSION file is recent."""
     if os.path.exists(self.timestamp_file):
@@ -117,8 +127,9 @@ class TestCommandRunnerUnitTests(
     self.version_mod_time = time.time()
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_no_tracker_file_version_old(self):
     """Tests when no timestamp file exists and VERSION file is old."""
     if os.path.exists(self.timestamp_file):
@@ -128,22 +139,25 @@ class TestCommandRunnerUnitTests(
     expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
         expect,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_invalid_commands(self):
     """Tests that update is not triggered for certain commands."""
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('update', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_invalid_file_contents(self):
     """Tests no update if timestamp file has invalid value."""
     with open(self.timestamp_file, 'w') as f:
       f.write('NaN')
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_update_should_trigger(self):
     """Tests update should be triggered if time is up."""
     self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
@@ -153,8 +167,9 @@ class TestCommandRunnerUnitTests(
     expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
         expect,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_not_time_for_update_yet(self):
     """Tests update not triggered if not time yet."""
     self._SetBotoConfig('GSUtil', 'software_update_check_period', '3')
@@ -162,7 +177,7 @@ class TestCommandRunnerUnitTests(
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   def test_user_says_no_to_update(self):
     """Tests no update triggered if user says no at the prompt."""
@@ -172,8 +187,9 @@ class TestCommandRunnerUnitTests(
     command_runner.raw_input = lambda p: 'n'
     self.assertEqual(
         False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_update_check_skipped_with_quiet_mode(self):
     """Tests that update isn't triggered when loglevel is in quiet mode."""
     self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
@@ -183,23 +199,22 @@ class TestCommandRunnerUnitTests(
     # With regular loglevel, should return True except for package installs.
     expect = not gslib.IS_PACKAGE_INSTALL
     self.assertEqual(
-      expect,
-      self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        expect,
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
     prev_loglevel = logging.getLogger().getEffectiveLevel()
     try:
       logging.getLogger().setLevel(logging.ERROR)
       # With reduced loglevel, should return False.
       self.assertEqual(
-        False,
-        self.command_runner._MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          False,
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
     finally:
       logging.getLogger().setLevel(prev_loglevel)
 
+  # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):
-    """
-    Tests that gsutil encodes valid args correctly.
-    """
+    """Tests that gsutil encodes valid args correctly."""
     # Args other than -h and -p should be utf-8 decoded.
     args = HandleArgCoding(['ls', '-l'])
     self.assertIs(type(args[0]), unicode)
@@ -248,6 +263,7 @@ class TestCommandRunnerIntegrationTests(
   """Integration tests for gsutil update check in command_runner module."""
 
   def setUp(self):
+    """Sets up the command runner mock objects."""
     super(TestCommandRunnerIntegrationTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
@@ -262,7 +278,7 @@ class TestCommandRunnerIntegrationTests(
 
     # Create a credential-less boto config file.
     self.orig_config = boto.config
-    config_file = path=self.CreateTempFile(
+    config_file = self.CreateTempFile(
         contents='[GSUtil]\nsoftware_update_check_period=1')
     boto.config = Config(path=config_file)
     # Need to copy config into boto.connection.config because it gets loaded
@@ -271,6 +287,7 @@ class TestCommandRunnerIntegrationTests(
     self.command_runner = command_runner.CommandRunner(config_file)
 
   def tearDown(self):
+    """Tears down the command runner mock objects."""
     super(TestCommandRunnerIntegrationTests, self).tearDown()
 
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
@@ -279,10 +296,9 @@ class TestCommandRunnerIntegrationTests(
     boto.config = self.orig_config
     boto.connection.config = boto.config
 
+  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_lookup_version_without_credentials(self):
-    """
-    Tests that gsutil tarball version lookup works without credentials.
-    """
+    """Tests that gsutil tarball version lookup works without credentials."""
     self.command_runner = command_runner.CommandRunner(config_file_list=[])
     # Looking up software version shouldn't get auth failure exception.
     self.command_runner.RunNamedCommand('ls', [GSUTIL_PUB_TARBALL])

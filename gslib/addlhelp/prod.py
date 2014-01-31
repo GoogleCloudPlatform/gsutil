@@ -11,19 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Additional help about using gsutil for production tasks."""
 
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HelpProvider
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpProvider
+from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
   If you use gsutil in large production tasks (such as uploading or
-  downloading many GB of data each night), there are a number of things
+  downloading many GBs of data each night), there are a number of things
   you can do to help ensure success. Specifically, this section discusses
   how to script large production tasks around gsutil's resumable transfer
   mechanism.
@@ -32,11 +33,11 @@ _detailed_help_text = ("""
 <B>BACKGROUND ON RESUMABLE TRANSFERS</B>
   First, it's helpful to understand gsutil's resumable transfer mechanism,
   and how your script needs to be implemented around this mechanism to work
-  reliably. gsutil uses the resumable transfer support in the boto library
-  when you attempt to upload or download a file larger than a configurable
-  threshold (by default, this threshold is 2 MB). When a transfer fails
-  partway through (e.g., because of an intermittent network problem),
-  boto uses a randomized binary exponential backoff-and-retry strategy:
+  reliably. gsutil uses resumable transfer support when you attempt to upload
+  or download a file larger than a configurable threshold (by default, this
+  threshold is 2 MB). When a transfer fails partway through (e.g., because of
+  an intermittent network problem), gsutil uses a randomized binary exponential
+  backoff-and-retry strategy:
   wait a random period between [0..1] seconds and retry; if that fails,
   wait a random period between [0..2] seconds and retry; and if that
   fails, wait a random period between [0..4] seconds, and so on, up to a
@@ -136,11 +137,11 @@ _detailed_help_text = ("""
 
      If you use parallel transfers (gsutil -m) you might want to experiment with
      the number of threads being used (via the parallel_thread_count setting
-     in the .boto config file). By default, gsutil uses 24 threads. Depending
-     on your network speed, available memory, CPU load, and other conditions,
-     this may or may not be optimal. Try experimenting with higher or lower
-     numbers of threads, to find the best number of threads for your
-     environment.
+     in the .boto config file). By default, gsutil uses 10 threads for Linux
+     and 24 threads for other operating systems. Depending on your network
+     speed, available memory, CPU load, and other conditions, this may or may
+     not be optimal. Try experimenting with higher or lower numbers of threads
+     to find the best number of threads for your environment.
 
 <B>RUNNING GSUTIL ON MULTIPLE MACHINES</B>
   When running gsutil on multiple machines that are all attempting to use the
@@ -159,16 +160,16 @@ class CommandOptions(HelpProvider):
   """Additional help about using gsutil for production tasks."""
 
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'prod',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['production', 'resumable', 'resumable upload',
-                         'resumable transfer', 'resumable download',
-                         'scripts', 'scripting'],
-    # Type of help:
-    HELP_TYPE : HelpType.ADDITIONAL_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Scripting Production Transfers',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'prod',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['production', 'resumable', 'resumable upload',
+                          'resumable transfer', 'resumable download',
+                          'scripts', 'scripting'],
+      # Type of help:
+      HELP_TYPE: HelpType.ADDITIONAL_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Scripting Production Transfers',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }

@@ -11,27 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Implementation of mb command for creating cloud storage buckets."""
 
-import boto
 import textwrap
 
+from gslib.cloud_api import BadRequestException
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import CommandSpecKey
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
+from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.util import NO_MAX
+
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -113,85 +119,85 @@ class MbCommand(Command):
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'mb',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['makebucket', 'createbucket', 'md', 'mkdir'],
-    # Min number of args required by this command.
-    MIN_ARGS : 1,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : NO_MAX,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'c:l:p:',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 0,
+      # Name of command.
+      COMMAND_NAME: 'mb',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: ['makebucket', 'createbucket', 'md', 'mkdir'],
+      # Min number of args required by this command.
+      MIN_ARGS: 1,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: NO_MAX,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: 'c:l:p:',
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: False,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
+      # List of supported APIs
+      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
+      # Default API to use for this command
+      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'mb',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['createbucket', 'makebucket', 'md', 'mkdir',
-                         'location', 'dra', 'dras', 'reduced_availability',
-                         'durable_reduced_availability',
-                         'rr', 'reduced_redundancy',
-                         'standard', 'storage class' ],
-    # Type of help:
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Make buckets',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'mb',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['createbucket', 'makebucket', 'md', 'mkdir',
+                          'location', 'dra', 'dras', 'reduced_availability',
+                          'durable_reduced_availability',
+                          'rr', 'reduced_redundancy',
+                          'standard', 'storage class'],
+      # Type of help:
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Make buckets',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }
 
-  # Command entry point.
   def RunCommand(self):
-    location = ''
-    storage_class = ''
+    """Command entry point for the mb command."""
+    location = None
+    storage_class = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
           location = a
         elif o == '-p':
-          self.proj_id_handler.SetProjectId(a)
+          self.project_id = a
         elif o == '-c':
           storage_class = self._Normalize_Storage_Class(a)
 
-    if not self.headers:
-      headers = {}
-    else:
-      headers = self.headers.copy()
+    bucket_metadata = apitools_messages.Bucket(location=location,
+                                               storageClass=storage_class)
 
     for bucket_uri_str in self.args:
-      bucket_uri = self.suri_builder.StorageUri(bucket_uri_str)
-      if not bucket_uri.names_bucket():
+      bucket_uri = StorageUrlFromString(bucket_uri_str)
+      if not bucket_uri.IsBucket():
         raise CommandException('The mb command requires a URI that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_uri)
-      self.proj_id_handler.FillInProjectHeaderIfNeeded('mb', bucket_uri,
-                                                       headers)
+
       self.logger.info('Creating %s...', bucket_uri)
       # Pass storage_class param only if this is a GCS bucket. (In S3 the
       # storage class is specified on the key object.)
-      if bucket_uri.scheme == 'gs':
-        try:
-          bucket_uri.create_bucket(headers=headers, location=location,
-                                   storage_class=storage_class)
-        except boto.exception.StorageResponseError as e:
-          if e.status == 400 and e.code == 'DotfulBucketNameNotUnderTld':
-            bucket_name = bucket_uri.bucket_name
-            final_comp = bucket_name[bucket_name.rfind('.')+1:]
-            raise CommandException('\n'.join(textwrap.wrap(
+      try:
+        self.gsutil_api.CreateBucket(
+            bucket_uri.bucket_name, project_id=self.project_id,
+            metadata=bucket_metadata, provider=bucket_uri.scheme)
+      except BadRequestException as e:
+        if (e.status == 400 and e.reason == 'DotfulBucketNameNotUnderTld' and
+            bucket_uri.scheme == 'gs'):
+          bucket_name = bucket_uri.bucket_name
+          final_comp = bucket_name[bucket_name.rfind('.')+1:]
+          raise CommandException('\n'.join(textwrap.wrap(
               'Buckets with "." in the name must be valid DNS names. The bucket'
               ' you are attempting to create (%s) is not a valid DNS name,'
               ' because the final component (%s) is not currently a valid part'
               ' of the top-level DNS tree.' % (bucket_name, final_comp))))
-          else:
-            raise
-      else:
-        bucket_uri.create_bucket(headers=headers, location=location)
+        else:
+          raise
 
     return 0
 

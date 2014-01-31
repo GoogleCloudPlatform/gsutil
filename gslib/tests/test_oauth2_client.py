@@ -1,3 +1,17 @@
+# Copyright 2014 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Unit tests for oauth2_client and related classes."""
 import datetime
 import logging
 import os
@@ -5,8 +19,8 @@ import stat
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import unittest
-import gslib.util
 import gslib.third_party.oauth2_plugin.oauth2_client as oauth2_client
+import gslib.util
 
 LOG = logging.getLogger('test_oauth2_client')
 
@@ -16,14 +30,18 @@ AUTH_URI = 'https://provider.example.com/oauth/provider?mode=authorize'
 DEFAULT_CA_CERTS_FILE = os.path.abspath(
     os.path.join('gslib', 'data', 'cacerts.txt'))
 
-class MockDateTime:
+
+class MockDateTime(object):
   def __init__(self):
     self.mock_now = None
 
-  def utcnow(self):
+  def utcnow(self):  # pylint: disable=invalid-name
     return self.mock_now
 
+
 class MockOAuth2ServiceAccountClient(oauth2_client.OAuth2ServiceAccountClient):
+  """Mock service account client for testing OAuth2 with service accounts."""
+
   def __init__(self, client_id, private_key, password, auth_uri, token_uri,
                datetime_strategy):
     super(MockOAuth2ServiceAccountClient, self).__init__(
@@ -44,6 +62,8 @@ class MockOAuth2ServiceAccountClient(oauth2_client.OAuth2ServiceAccountClient):
 
 
 class MockOAuth2UserAccountClient(oauth2_client.OAuth2UserAccountClient):
+  """Mock user account client for testing OAuth2 with user accounts."""
+
   def __init__(self, token_uri, client_id, client_secret, refresh_token,
                auth_uri, datetime_strategy):
     super(MockOAuth2UserAccountClient, self).__init__(
@@ -62,45 +82,43 @@ class MockOAuth2UserAccountClient(oauth2_client.OAuth2UserAccountClient):
         GetExpiry(self.datetime_strategy, 3600),
         datetime_strategy=self.datetime_strategy)
 
-def GetExpiry(datetime_strategy, lengthInSeconds):
+
+def GetExpiry(datetime_strategy, length_in_seconds):
   token_expiry = (datetime_strategy.utcnow()
-                  + datetime.timedelta(seconds=lengthInSeconds))
+                  + datetime.timedelta(seconds=length_in_seconds))
   return token_expiry
 
-def CreateMockUserAccountClient(start_time, mock_datetime):
-  return MockOAuth2UserAccountClient(
-        TOKEN_URI, 'clid', 'clsecret', 'ref_token_abc123', AUTH_URI,
-        mock_datetime)
 
-def CreateMockServiceAccountClient(start_time, mock_datetime):
-  return MockOAuth2ServiceAccountClient(
-      'clid', 'private_key', 'password', AUTH_URI, TOKEN_URI,
+def CreateMockUserAccountClient(mock_datetime):
+  return MockOAuth2UserAccountClient(
+      TOKEN_URI, 'clid', 'clsecret', 'ref_token_abc123', AUTH_URI,
       mock_datetime)
 
 
-class OAuth2UserAccountClientTest(testcase.GsUtilUnitTestCase):
+def CreateMockServiceAccountClient(mock_datetime):
+  return MockOAuth2ServiceAccountClient(
+      'clid', 'private_key', 'password', AUTH_URI, TOKEN_URI, mock_datetime)
+
+
+class OAuth2AccountClientTest(testcase.GsUtilUnitTestCase):
+  """Unit tests for OAuth2UserAccountClient and OAuth2ServiceAccountClient."""
 
   def setUp(self):
     self.tempdirs = []
     self.mock_datetime = MockDateTime()
-    self.start_time = datetime.datetime(2011, 3, 1, 10, 25, 13, 300826)
+    self.start_time = datetime.datetime(2011, 3, 1, 11, 25, 13, 300826)
     self.mock_datetime.mock_now = self.start_time
 
-
   def testGetAccessTokenUserAccount(self):
-    self.client = CreateMockUserAccountClient(self.start_time,
-                                              self.mock_datetime)
+    self.client = CreateMockUserAccountClient(self.mock_datetime)
     self._RunGetAccessTokenTest()
-
 
   def testGetAccessTokenServiceAccount(self):
-    self.client = CreateMockServiceAccountClient(self.start_time,
-                                                 self.mock_datetime)
+    self.client = CreateMockServiceAccountClient(self.mock_datetime)
     self._RunGetAccessTokenTest()
 
-
   def _RunGetAccessTokenTest(self):
-    refresh_token = 'ref_token'
+    """Tests access token gets with self.client."""
     access_token_1 = 'abc123'
 
     self.assertFalse(self.client.fetched_token)
@@ -130,7 +148,6 @@ class OAuth2UserAccountClientTest(testcase.GsUtilUnitTestCase):
     self.mock_datetime.mock_now = (
         self.start_time + datetime.timedelta(minutes=55, seconds=1))
     self.client.datetime_strategy = self.mock_datetime
-    access_token_2 = 'zyx456'
     token_3 = self.client.GetAccessToken()
 
     # This should have resulted in a refresh request and a fresh access token.
@@ -141,8 +158,10 @@ class OAuth2UserAccountClientTest(testcase.GsUtilUnitTestCase):
 
 
 class AccessTokenTest(unittest.TestCase):
+  """Unit tests for access token functions."""
 
   def testShouldRefresh(self):
+    """Tests that token.ShouldRefresh returns the correct value."""
     mock_datetime = MockDateTime()
     start = datetime.datetime(2011, 3, 1, 11, 25, 13, 300826)
     expiry = start + datetime.timedelta(minutes=60)
@@ -174,6 +193,7 @@ class AccessTokenTest(unittest.TestCase):
     self.assertTrue(token.ShouldRefresh(time_delta=120))
 
   def testShouldRefreshNoExpiry(self):
+    """Tests token.ShouldRefresh with no expiry time."""
     mock_datetime = MockDateTime()
     start = datetime.datetime(2011, 3, 1, 11, 25, 13, 300826)
     token = oauth2_client.AccessToken(
@@ -187,15 +207,18 @@ class AccessTokenTest(unittest.TestCase):
     self.assertFalse(token.ShouldRefresh())
 
   def testSerialization(self):
+    """Tests token serialization."""
     expiry = datetime.datetime(2011, 3, 1, 11, 25, 13, 300826)
     token = oauth2_client.AccessToken('foo', expiry)
     serialized_token = token.Serialize()
-    LOG.debug('testSerialization: serialized_token=%s' % serialized_token)
+    LOG.debug('testSerialization: serialized_token=%s', serialized_token)
 
     token2 = oauth2_client.AccessToken.UnSerialize(serialized_token)
     self.assertEquals(token, token2)
 
+
 class FileSystemTokenCacheTest(unittest.TestCase):
+  """Unit tests for FileSystemTokenCache."""
 
   def setUp(self):
     self.cache = oauth2_client.FileSystemTokenCache()
@@ -208,7 +231,7 @@ class FileSystemTokenCacheTest(unittest.TestCase):
   def tearDown(self):
     try:
       os.unlink(self.cache.CacheFileName(self.key))
-    except:
+    except:  # pylint: disable=bare-except
       pass
 
   def testPut(self):
@@ -220,6 +243,7 @@ class FileSystemTokenCacheTest(unittest.TestCase):
           stat.S_IMODE(os.stat(self.cache.CacheFileName(self.key)).st_mode))
 
   def testPutGet(self):
+    """Tests putting and getting various tokens."""
     # No cache file present.
     self.assertEquals(None, self.cache.GetToken(self.key))
 
@@ -240,6 +264,7 @@ class FileSystemTokenCacheTest(unittest.TestCase):
     self.assertEquals(None, self.cache.GetToken(self.key))
 
   def testCacheFileName(self):
+    """Tests configuring the cache with a specific file name."""
     cache = oauth2_client.FileSystemTokenCache(
         path_pattern='/var/run/ccache/token.%(uid)s.%(key)s')
     if gslib.util.IS_WINDOWS:
@@ -256,13 +281,13 @@ class FileSystemTokenCacheTest(unittest.TestCase):
 
 
 class RefreshTokenTest(unittest.TestCase):
+  """Unit tests for refresh tokens."""
+
   def setUp(self):
     self.mock_datetime = MockDateTime()
     self.start_time = datetime.datetime(2011, 3, 1, 10, 25, 13, 300826)
     self.mock_datetime.mock_now = self.start_time
-    self.client = CreateMockUserAccountClient(self.start_time,
-                                              self.mock_datetime)
-
+    self.client = CreateMockUserAccountClient(self.mock_datetime)
 
   def testUniqeId(self):
     cred_id = self.client.CacheKey()

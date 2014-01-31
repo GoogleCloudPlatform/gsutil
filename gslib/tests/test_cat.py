@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import boto
+"""Tests for cat command."""
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
@@ -21,6 +20,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for cat command."""
 
   def test_cat_range(self):
+    """Tests cat command with various range arguments."""
     key_uri = self.CreateObject(contents='0123456789')
     # Test various invalid ranges.
     stderr = self.RunGsUtil(['cat', '-r -', suri(key_uri)],
@@ -48,6 +48,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertEqual('789', stdout)
 
   def test_cat_version(self):
+    """Tests cat command on versioned objects."""
     bucket_uri = self.CreateVersionedBucket()
     # Create 2 versions of an object.
     uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
@@ -58,12 +59,12 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertEqual('data2', stdout)
     # Using either version-specific URI should work.
     stdout = self.RunGsUtil(['cat', uri1.version_specific_uri],
-                             return_stdout=True)
+                            return_stdout=True)
     self.assertEqual('data1', stdout)
     stdout = self.RunGsUtil(['cat', uri2.version_specific_uri],
-                             return_stdout=True)
+                            return_stdout=True)
     self.assertEqual('data2', stdout)
     # Attempting to cat invalid version should result in an error.
     stderr = self.RunGsUtil(['cat', uri2.version_specific_uri + '23'],
                             return_stderr=True, expected_status=1)
-    self.assertIn('InvalidUriError', stderr)
+    self.assertIn('No URIs matched', stderr)

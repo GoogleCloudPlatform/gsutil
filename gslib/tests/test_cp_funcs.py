@@ -11,19 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Unit tests for parallel upload functions in cp command."""
 
 from gslib.commands.cp import _AppendComponentTrackerToParallelUploadTrackerFile
+from gslib.commands.cp import _CreateParallelUploadTrackerFile
 from gslib.commands.cp import _GetPartitionInfo
 from gslib.commands.cp import _HashFilename
 from gslib.commands.cp import _ParseParallelUploadTrackerFile
-from gslib.commands.cp import _CreateParallelUploadTrackerFile
 from gslib.commands.cp import ObjectFromTracker
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.util import CreateLock
 
 
 class TestCpFuncs(GsUtilUnitTestCase):
-  """Unit tests for functions in cp command."""
+  """Unit tests for parallel upload functions in cp command."""
 
   def test_HashFilename(self):
     # Tests that _HashFilename function works for both string and unicode
@@ -32,6 +33,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     _HashFilename(u'file1')
 
   def test_GetPartitionInfo(self):
+    """Tests the _GetPartitionInfo function."""
     # Simplest case - threshold divides file_size.
     (num_components, component_size) = _GetPartitionInfo(300, 200, 10)
     self.assertEqual(30, num_components)
@@ -60,7 +62,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(10, component_size)
 
     # Test component_size with huge numbers.
-    (num_components, component_size) = _GetPartitionInfo((10 ** 150) + 1,       
+    (num_components, component_size) = _GetPartitionInfo((10 ** 150) + 1,
                                                          10,
                                                          10)
     self.assertEqual(10, num_components)
@@ -72,6 +74,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(50, component_size)
 
   def test_ParseParallelUploadTrackerFile(self):
+    """Tests the _ParseParallelUploadTrackerFile function."""
     tracker_file_lock = CreateLock()
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
@@ -79,20 +82,21 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath = self.CreateTempFile(file_name='foo',
                                 contents=contents)
     expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-                       for i in range(0, len(objects) / 2)]
+                        for i in range(0, len(objects) / 2)]
     (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(
         fpath, tracker_file_lock)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(expected_objects, actual_objects)
 
   def test_CreateParallelUploadTrackerFile(self):
+    """Tests the _CreateParallelUploadTrackerFile function."""
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
     tracker_file_lock = CreateLock()
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
     expected_contents = [random_prefix] + objects
     objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-                       for i in range(0, len(objects) / 2)]
+               for i in range(0, len(objects) / 2)]
     _CreateParallelUploadTrackerFile(tracker_file, random_prefix, objects,
                                      tracker_file_lock)
     with open(tracker_file, 'rb') as f:
@@ -100,16 +104,17 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(expected_contents, lines)
 
   def test_AppendComponentTrackerToParallelUploadTrackerFile(self):
+    """Tests the _CreateParallelUploadTrackerFile function with append."""
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
     tracker_file_lock = CreateLock()
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
     expected_contents = [random_prefix] + objects
     objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-                       for i in range(0, len(objects) / 2)]
+               for i in range(0, len(objects) / 2)]
     _CreateParallelUploadTrackerFile(tracker_file, random_prefix, objects,
                                      tracker_file_lock)
-    
+
     new_object = ['obj2', '1234']
     expected_contents += new_object
     new_object = ObjectFromTracker(new_object[0], new_object[1])

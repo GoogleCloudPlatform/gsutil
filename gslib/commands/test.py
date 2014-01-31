@@ -11,23 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Implementation of gsutil test command."""
 
 # Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
 import logging
-import os.path
-import re
 
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -42,13 +41,14 @@ from gslib.util import NO_MAX
 # For Python 2.6, unittest2 is required to run the tests. If it's not available,
 # display an error if the test command is run instead of breaking the whole
 # program.
+# pylint: disable=g-import-not-at-top
 try:
   from gslib.tests.util import GetTestNames
   from gslib.tests.util import unittest
 except ImportError as e:
   if 'unittest2' in str(e):
     unittest = None
-    GetTestNames = None
+    GetTestNames = None  # pylint: disable=invalid-name
   else:
     raise
 
@@ -137,10 +137,10 @@ def MakeCustomTestResultClass(total_tests):
     def startTest(self, test):
       super(CustomTestResult, self).startTest(test)
       if self.dots:
-        id = '.'.join(test.id().split('.')[-2:])
+        test_id = '.'.join(test.id().split('.')[-2:])
         message = ('\r%d/%d finished - E[%d] F[%d] s[%d] - %s' % (
             self.testsRun, total_tests, len(self.errors),
-            len(self.failures), len(self.skipped), id))
+            len(self.failures), len(self.skipped), test_id))
         message = message[:73]
         message = message.ljust(73)
         self.stream.write('%s - ' % message)
@@ -163,12 +163,12 @@ class TestCommand(Command):
       MAX_ARGS: NO_MAX,
       # Getopt-style string specifying acceptable sub args.
       SUPPORTED_SUB_ARGS: 'ufl',
-      # True if file URIs acceptable for this command.
-      FILE_URIS_OK: True,
-      # True if provider-only URIs acceptable for this command.
-      PROVIDER_URIS_OK: False,
-      # Index in args of first URI arg.
-      URIS_START_ARG: 0,
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: True,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
   }
   help_spec = {
       # Name of command or auxiliary help info for which this help applies.
@@ -183,8 +183,8 @@ class TestCommand(Command):
       HELP_TEXT: _detailed_help_text,
   }
 
-  # Command entry point.
   def RunCommand(self):
+    """Command entry point for the test command."""
     if not unittest:
       raise CommandException('On Python 2.6, the unittest2 module is required '
                              'to run the gsutil tests.')

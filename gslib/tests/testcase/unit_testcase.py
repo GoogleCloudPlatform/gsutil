@@ -11,55 +11,49 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Contains gsutil base unit test case class."""
 
+import logging
 import os
 import sys
 import tempfile
 
 import boto
-
 from gslib import wildcard_iterator
+from gslib.boto_translation import BotoTranslation
+from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command_runner import CommandRunner
-from gslib.project_id import ProjectIdHandler
+from gslib.cs_api_map import ApiMapConstants
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.util as util
 from gslib.tests.util import unittest
+
 import base
 
-# The mock storage service comes from the Boto library, but it is not
-# distributed with Boto when installed as a package. To get around this, we
-# copy the file to gslib/tests/mock_storage_service.py when building the gsutil
-# package. Try and import from several places here to find it.
-try:
-  from gslib.tests import mock_storage_service
-except ImportError:
-  try:
-    from boto.tests.integration.s3 import mock_storage_service
-  except ImportError:
-    try:
-      from tests.integration.s3 import mock_storage_service
-    except ImportError:
-      import mock_storage_service
 
+class GsutilApiUnitTestClassMapFactory(object):
+  """Class map factory for use in unit tests.
 
-class GSMockConnection(mock_storage_service.MockConnection):
+  BotoTranslation is used for all cases so that GSMockBucketStorageUri can
+  be used to communicate with the mock XML service.
+  """
 
-  def __init__(self, *args, **kwargs):
-    kwargs['provider'] = 'gs'
-    super(GSMockConnection, self).__init__(*args, **kwargs)
+  @classmethod
+  def GetClassMap(cls):
+    """Returns a class map for use in unit tests."""
+    gs_class_map = {
+        ApiSelector.XML: BotoTranslation,
+        ApiSelector.JSON: BotoTranslation
+    }
+    s3_class_map = {
+        ApiSelector.XML: BotoTranslation
+    }
+    class_map = {
+        'gs': gs_class_map,
+        's3': s3_class_map
+    }
+    return class_map
 
-mock_connection = GSMockConnection()
-
-
-class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
-
-  def connect(self, access_key_id=None, secret_access_key=None):
-    return mock_connection
-
-  def compose(self, components, headers=None):
-    """Dummy implementation to allow parallel uploads with tests."""
-    return self.new_key()
 
 @unittest.skipUnless(util.RUN_UNIT_TESTS,
                      'Not running integration tests.')
@@ -69,13 +63,14 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
   @classmethod
   def setUpClass(cls):
     base.GsUtilTestCase.setUpClass()
-    cls.mock_bucket_storage_uri = GSMockBucketStorageUri
-    cls.proj_id_handler = ProjectIdHandler()
-    config_file_list = boto.pyami.config.BotoConfigLocations
-    # Use "gsutil_test_commands" as a fake UserAgent. This value will never be
-    # sent via HTTP because we're using MockStorageService here.
-    cls.command_runner = CommandRunner(config_file_list,
-                                       cls.mock_bucket_storage_uri)
+    cls.mock_bucket_storage_uri = util.GSMockBucketStorageUri
+    cls.mock_gsutil_api_class_map_factory = GsutilApiUnitTestClassMapFactory
+    cls.logger = logging.getLogger()
+    cls.config_file_list = boto.pyami.config.BotoConfigLocations
+    cls.command_runner = CommandRunner(
+        cls.config_file_list,
+        bucket_storage_uri_class=cls.mock_bucket_storage_uri,
+        gsutil_api_class_map_factory=cls.mock_gsutil_api_class_map_factory)
 
   def setUp(self):
     super(GsUtilUnitTestCase, self).setUp()
@@ -83,12 +78,12 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  test_method=None, return_stdout=False, cwd=None):
-    """
-    Method for calling gslib.command_runner.CommandRunner, passing
-    parallel_operations=False for all tests, optionally saving/returning stdout
-    output. We run all tests multi-threaded, to exercise those more complicated
-    code paths.
-    TODO: change to run with parallel_operations=True for all tests. At
+    """Method for calling gslib.command_runner.CommandRunner.
+
+    Passes parallel_operations=False for all tests, optionally saving/returning
+    stdout output. We run all tests multi-threaded, to exercise those more
+    complicated code paths.
+    TODO: Change to run with parallel_operations=True for all tests. At
     present when you do this it causes many test failures.
 
     Args:
@@ -96,15 +91,17 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       args: Command-line args (arg0 = actual arg, not command name ala bash).
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
-      parallel_operations: Should command operations be executed in parallel?
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
                    command and test type.
+      return_stdout: If true will save and return stdout produced by command.
       cwd: The working directory that should be switched to before running the
            command. The working directory will be reset back to its original
            value after running the command. If not specified, the working
            directory is left unchanged.
-      return_stdout: If true will save and return stdout produced by command.
+
+    Returns:
+      stdout produced by the command, if requested.
     """
     if util.VERBOSE_OUTPUT:
       sys.stderr.write('\nRunning test of %s %s\n' %
@@ -151,38 +148,71 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):
-    """
-    Convenience method for instantiating a testing instance of
-    WildCardIterator, without having to specify all the params of that class
+    """Convenience method for instantiating a test instance of WildcardIterator.
+
+    This makes it unnecessary to specify all the params of that class
     (like bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri).
-    Also naming the factory method this way makes it clearer in the test code
+    Also, naming the factory method this way makes it clearer in the test code
     that WildcardIterator needs to be set up for testing.
 
-    Args are same as for wildcard_iterator.wildcard_iterator(), except there's
-    no bucket_storage_uri_class arg.
+    Args are same as for wildcard_iterator.wildcard_iterator(), except
+    there are no class args for bucket_storage_uri_class or gsutil_api_class.
+
+    Args:
+      uri_or_str: StorageUri or string representing the wildcard string.
+      debug: debug level to pass to the underlying connection (0..3)
 
     Returns:
-      WildcardIterator.IterUris(), over which caller can iterate.
+      WildcardIterator, over which caller can iterate.
     """
-    return wildcard_iterator.wildcard_iterator(
-        uri_or_str, cls.proj_id_handler, cls.mock_bucket_storage_uri,
-        debug=debug)
+    # TODO: Remove when tests no longer pass StorageUri arguments.
+    uri_string = uri_or_str
+    if hasattr(uri_or_str, 'uri'):
+      uri_string = uri_or_str.uri
+
+    cls.gsutil_api_map = {
+        ApiMapConstants.API_MAP: (
+            cls.mock_gsutil_api_class_map_factory.GetClassMap()),
+        ApiMapConstants.SUPPORT_MAP: {
+            'gs': [ApiSelector.XML, ApiSelector.JSON],
+            's3': [ApiSelector.XML]
+        },
+        ApiMapConstants.DEFAULT_MAP: {
+            'gs': ApiSelector.JSON,
+            's3': ApiSelector.XML
+        }
+    }
+
+    cls.gsutil_api = CloudApiDelegator(
+        cls.mock_bucket_storage_uri, cls.gsutil_api_map, cls.logger,
+        credential_store=None, debug=debug)
+
+    return wildcard_iterator.CreateWildcardIterator(uri_string, cls.gsutil_api)
 
   @staticmethod
   def _test_storage_uri(uri_str, default_scheme='file', debug=0,
                         validate=True):
-    """
-    Convenience method for instantiating a testing
-    instance of StorageUri, without having to specify
+    """Convenience method for instantiating a testing instance of StorageUri.
+
+    This makes it unnecessary to specify
     bucket_storage_uri_class=mock_storage_service.MockBucketStorageUri.
     Also naming the factory method this way makes it clearer in the test
     code that StorageUri needs to be set up for testing.
 
     Args, Returns, and Raises are same as for boto.storage_uri(), except there's
     no bucket_storage_uri_class arg.
+
+    Args:
+      uri_str: Uri string to create StorageUri for.
+      default_scheme: Default scheme for the StorageUri
+      debug: debug level to pass to the underlying connection (0..3)
+      validate: If True, validate the resource that the StorageUri refers to.
+
+    Returns:
+      StorageUri based on the arguments.
     """
     return boto.storage_uri(uri_str, default_scheme, debug, validate,
-                            GSMockBucketStorageUri)
+                            util.GSMockBucketStorageUri)
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
     """Creates a test bucket.
@@ -204,7 +234,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     bucket_uri = boto.storage_uri(
         'gs://%s' % bucket_name.lower(),
         suppress_consec_slashes=False,
-        bucket_storage_uri_class=GSMockBucketStorageUri)
+        bucket_storage_uri_class=util.GSMockBucketStorageUri)
     bucket_uri.create_bucket(storage_class=storage_class)
     self.bucket_uris.append(bucket_uri)
     try:
@@ -220,8 +250,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     """Creates a test object.
 
     Args:
-      bucket: The URI of the bucket to place the object in. If not specified, a
-              new temporary bucket is created.
+      bucket_uri: The URI of the bucket to place the object in. If not
+                  specified, a new temporary bucket is created.
       object_name: The name to use for the object. If not specified, a temporary
                    test object name is constructed.
       contents: The contents to write to the object. If not specified, the key

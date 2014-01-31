@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tests for ls command."""
 
 import posixpath
 import re
@@ -20,9 +21,11 @@ import subprocess
 import sys
 
 import gslib
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
-from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
+from gslib.util import UTF8
 
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
@@ -51,6 +54,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_bucket_with_Lb(self):
+    """Tests ls -Lb."""
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -62,6 +66,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_bucket_with_lb(self):
+    """Tests ls -lb."""
     bucket_uri = self.CreateBucket()
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -73,6 +78,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_bucket_list_wildcard(self):
+    """Tests listing multiple buckets with a wildcard."""
     random_prefix = self.MakeRandomTestString()
     bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
     bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)
@@ -98,6 +104,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_nonexistent_bucket_with_ls(self):
+    """Tests a bucket that is known not to exist."""
     stderr = self.RunGsUtil(
         ['ls', '-lb', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
         return_stderr=True, expected_status=1)
@@ -114,17 +121,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.assertIn('404', stderr)
 
   def test_with_one_object(self):
-    bucket_uri = self.CreateBucket(test_objects=1)
-    objuri = [suri(bucket_uri.clone_replace_name(key.name))
-              for key in bucket_uri.list_bucket()][0]
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      self.assertEqual('%s\n' % objuri, stdout)
+      self.assertEqual('%s\n' % obj_uri, stdout)
     _Check1()
 
   def test_subdir(self):
+    """Tests listing a bucket subdirectory."""
     bucket_uri = self.CreateBucket(test_objects=1)
     k1_uri = bucket_uri.clone_replace_name('foo')
     k1_uri.set_contents_from_string('baz')
@@ -141,16 +148,26 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_versioning(self):
+    """Tests listing a versioned bucket."""
     bucket1_uri = self.CreateBucket(test_objects=1)
     bucket2_uri = self.CreateVersionedBucket(test_objects=1)
     bucket_list = list(bucket1_uri.list_bucket())
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)],
+                              return_stdout=True)
+      self.assertNumLines(stdout, 1)
+    _Check1()
+
     objuri = [bucket1_uri.clone_replace_key(key).versionless_uri
               for key in bucket_list][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
+    def _Check2():
       stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)],
                               return_stdout=True)
       self.assertNumLines(stdout, 3)
@@ -159,30 +176,46 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
                     stdout)
       self.assertIn('metageneration=', stdout)
-    _Check1()
+    _Check2()
 
   def test_etag(self):
+    """Tests that listing an object with an etag."""
     bucket_uri = self.CreateBucket()
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    # TODO: When testcase setup can use JSON, match against the exact JSON
+    # etag.
     etag = obj_uri.get_key().etag
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertNotIn(etag, stdout)
-
-      stdout = self.RunGsUtil(['ls', '-le', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertIn(etag, stdout)
-
-      stdout = self.RunGsUtil(['ls', '-ale', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertIn(etag, stdout)
-
+      if self.test_api == ApiSelector.XML:
+        self.assertNotIn(etag, stdout)
+      else:
+        self.assertNotIn('etag=', stdout)
     _Check1()
 
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-le', suri(bucket_uri)],
+                              return_stdout=True)
+      if self.test_api == ApiSelector.XML:
+        self.assertIn(etag, stdout)
+      else:
+        self.assertIn('etag=', stdout)
+    _Check2()
+
+    def _Check3():
+      stdout = self.RunGsUtil(['ls', '-ale', suri(bucket_uri)],
+                              return_stdout=True)
+      if self.test_api == ApiSelector.XML:
+        self.assertIn(etag, stdout)
+      else:
+        self.assertIn('etag=', stdout)
+    _Check3()
+
   def test_list_sizes(self):
+    """Tests various size listing options."""
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, contents='x' * 2048)
 
@@ -227,8 +260,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check5()
 
   def test_list_unicode_filename(self):
+    """Tests listing an object with a unicode filename."""
     object_name = u'Аудиоархив'
-    object_name_bytes = object_name.encode('utf-8')
+    object_name_bytes = object_name.encode(UTF8)
     bucket_uri = self.CreateVersionedBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
                                 object_name=object_name)
@@ -238,10 +272,15 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.assertIn(key_uri.generation, stdout)
     self.assertIn(
         'metageneration=%s' % key_uri.get_key().metageneration, stdout)
-    self.assertIn(
-        'etag=%s' % key_uri.get_key().etag, stdout)
+    if self.test_api == ApiSelector.XML:
+      self.assertIn(key_uri.get_key().etag, stdout)
+    else:
+      # TODO: When testcase setup can use JSON, match against the exact JSON
+      # etag.
+      self.assertIn('etag=', stdout)
 
   def test_list_gzip_content_length(self):
+    """Tests listing a gzipped object."""
     file_size = 10000
     file_contents = 'x' * file_size
     fpath = self.CreateTempFile(contents=file_contents, file_name='foo.txt')
@@ -262,6 +301,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_output_chopped(self):
+    """Tests that gsutil still succeeds with a truncated stdout."""
     bucket_uri = self.CreateBucket(test_objects=2)
 
     # Run Python with the -u flag so output is not buffered.
@@ -274,3 +314,36 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     p.wait()
     # Make sure it still exited cleanly.
     self.assertEqual(p.returncode, 0)
+
+  def test_recursive_list_trailing_slash(self):
+    """Tests listing an object with a trailing slash."""
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents='foo')
+    stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
+    # Note: The suri function normalizes the URI, so the double slash gets
+    # removed.
+    self.assertIn(suri(bucket_uri) + '/', stdout)
+
+  def test_recursive_list_trailing_two_slash(self):
+    """Tests listing an object with two trailing slashes."""
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents='foo')
+    stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
+    # Note: The suri function normalizes the URI, so the double slash gets
+    # removed.
+    self.assertIn(suri(bucket_uri) + '//', stdout)
+
+  def test_get_object_without_list_bucket_permission(self):
+    # Bucket is not publicly readable by default.
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='permitted', contents='foo')
+    # Set this object to be publicly readable.
+    self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:R', suri(object_uri)])
+    # Drop credentials.
+    with self.SetAnonymousBotoCreds():
+      stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
+                              return_stdout=True)
+      self.assertIn(suri(object_uri), stdout)
+
+

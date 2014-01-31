@@ -11,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for mv command."""
 
 import gslib.tests.testcase as testcase
-from gslib.util import Retry
 from gslib.tests.util import ObjectToURI as suri
+from gslib.util import Retry
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):
   """Integration tests for mv command."""
 
   def test_moving(self):
-    # Create two buckets, one with 2 objects and one with 0 objects, and verify.
+    """Tests moving two buckets, one with 2 objects and one with 0 objects."""
     bucket1_uri = self.CreateBucket(test_objects=2)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -88,3 +89,19 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
       self.assertNumLines(stdout, 0)
     _Check5()
+
+  def test_move_dir_to_bucket(self):
+    """Tests moving a local directory to a bucket."""
+    bucket_uri = self.CreateBucket()
+    dir_to_move = self.CreateTempDir(test_files=2)
+    self.RunGsUtil(['mv', dir_to_move, suri(bucket_uri)])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri) + '/**'],
+                              return_stdout=True)
+      self.assertNumLines(stdout, 2)
+    _Check()
+
+
+

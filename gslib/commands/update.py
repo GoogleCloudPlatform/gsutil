@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Implementation of update command for updating gsutil."""
 
 import os
 import shutil
@@ -23,12 +24,14 @@ import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import CommandSpecKey
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -36,13 +39,12 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
-from gslib.storage_uri_builder import StorageUriBuilder
-from gslib.util import BOTO_IS_SECURE
+from gslib.storage_url import StorageUrlFromString
+from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.util import CompareVersions
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IS_CYGWIN
 from gslib.util import IS_WINDOWS
-from gslib.util import LookUpGsutilVersion
 from gslib.util import LookUpGsutilVersion
 from gslib.util import RELEASE_NOTES_URL
 
@@ -109,12 +111,16 @@ class UpdateCommand(Command):
       MAX_ARGS: 1,
       # Getopt-style string specifying acceptable sub args.
       SUPPORTED_SUB_ARGS: 'fn',
-      # True if file URIs acceptable for this command.
-      FILE_URIS_OK: True,
-      # True if provider-only URIs acceptable for this command.
-      PROVIDER_URIS_OK: False,
-      # Index in args of first URI arg.
-      URIS_START_ARG: 0,
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: True,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
+      # List of supported APIs
+      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
+      # Default API to use for this command
+      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
   }
   help_spec = {
       # Name of command or auxiliary help info for which this help applies.
@@ -130,11 +136,10 @@ class UpdateCommand(Command):
   }
 
   def _DisallowUpdataIfDataInGsutilDir(self):
-    """
-    Disallows the update command from running if files other than those
-    distributed with gsutil are found. This prevents users from losing data if
-    they are in the habit of running gsutil from the gsutil directory, and
-    leaving data in that directory.
+    """Disallows the update command if files not in the gsutil distro are found.
+
+    This prevents users from losing data if they are in the habit of running
+    gsutil from the gsutil directory and leaving data in that directory.
 
     This will also detect someone attempting to run gsutil update from a git
     repo, since the top-level directory will contain git files and dirs (like
@@ -151,10 +156,10 @@ class UpdateCommand(Command):
     # and CHANGES.md files.
     manifest_lines = ['gslib', 'scripts', 'third_party', 'MANIFEST.in',
                       'CHANGES.md']
-    
+
     try:
       with open(os.path.join(gslib.GSUTIL_DIR, 'MANIFEST.in'), 'r') as fp:
-        for line in fp.readlines():
+        for line in fp:
           if line.startswith('include '):
             manifest_lines.append(line.split()[-1])
     except IOError:
@@ -166,16 +171,16 @@ class UpdateCommand(Command):
     # subdirs (like gslib) because that would require deeper parsing of
     # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
     # level directory.
-    for file in os.listdir(gslib.GSUTIL_DIR):
-      if file[-4:] == '.pyc':
+    for filename in os.listdir(gslib.GSUTIL_DIR):
+      if filename.endswith('.pyc'):
         # Ignore compiled code.
         continue
-      if file not in manifest_lines:
+      if filename not in manifest_lines:
         raise CommandException('\n'.join(textwrap.wrap(
             'A file (%s) that is not distributed with gsutil was found in '
             'the gsutil directory. The update command cannot run with user '
             'data in the gsutil directory.' %
-            os.path.join(gslib.GSUTIL_DIR, file))))
+            os.path.join(gslib.GSUTIL_DIR, filename))))
 
   def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):
     """Explains what to do if sudo needed to update gsutil software.
@@ -206,10 +211,10 @@ class UpdateCommand(Command):
         'Since it was installed by a different user previously, you will need '
         'to update using the following commands. You will be prompted for your '
         'password, and the install will run as "root". If you\'re unsure what '
-        'this means please ask your system administrator for help:'))
-         + ('\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
+        'this means please ask your system administrator for help:')) + (
+            '\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
             '\n\tchmod 600 %s') % (config_files, config_files, config_files),
-        informational=True)
+                           informational=True)
 
   # This list is checked during gsutil update by doing a lowercased
   # slash-left-stripped check. For example "/Dev" would match the "dev" entry.
@@ -223,7 +228,7 @@ class UpdateCommand(Command):
   ]
 
   def _EnsureDirsSafeForUpdate(self, dirs):
-    """Throws Exception if any of dirs is known to be unsafe for gsutil update.
+    """Raises Exception if any of dirs is known to be unsafe for gsutil update.
 
     This provides a fail-safe check to ensure we don't try to overwrite
     or delete any important directories. (That shouldn't happen given the
@@ -265,8 +270,8 @@ class UpdateCommand(Command):
         if not IS_WINDOWS:
           raise
 
-  # Command entry point.
   def RunCommand(self):
+    """Command entry point for the update command."""
 
     if gslib.IS_PACKAGE_INSTALL:
       raise CommandException(
@@ -274,11 +279,11 @@ class UpdateCommand(Command):
           'tarball. If you installed gsutil via another method, use the same '
           'method to update it.')
 
-    is_secure = BOTO_IS_SECURE
-    if not is_secure[0]:
+    https_validate_certificates = CERTIFICATE_VALIDATION_ENABLED
+    if not https_validate_certificates:
       raise CommandException(
-          'Your boto configuration has %s = False. The update command\n'
-          'cannot be run this way, for security reasons.' % is_secure[1])
+          'Your boto configuration has https_validate_certificates = False.\n'
+          'The update command cannot be run this way, for security reasons.')
 
     self._DisallowUpdataIfDataInGsutilDir()
 
@@ -307,12 +312,13 @@ class UpdateCommand(Command):
         if i > 0:
           raise CommandException(
               'Invalid update URI. Must name a single .tar.gz file.')
-        if result.uri.names_file():
+        storage_url = StorageUrlFromString(result.GetUrlString())
+        if storage_url.IsFileUrl() and not storage_url.IsDirectory():
           if not force_update:
             raise CommandException(
                 ('"update" command does not support "file://" URIs without the '
                  '-f option.'))
-        elif not result.uri.names_object():
+        elif not (storage_url.IsCloudUrl() and storage_url.IsObject()):
           raise CommandException(
               'Invalid update object URI. Must name a single .tar.gz file.')
     else:
@@ -322,9 +328,7 @@ class UpdateCommand(Command):
     # the tarball and extract the VERSION file. The version lookup will fail
     # when running the update system test, because it retrieves the tarball from
     # a temp file rather than a cloud URI (files lack the version metadata).
-    suri_builder = StorageUriBuilder(self.debug, self.bucket_storage_uri_class)
-    tarball_version = LookUpGsutilVersion(
-        self.suri_builder.StorageUri(update_from_uri_str))
+    tarball_version = LookUpGsutilVersion(self.gsutil_api, update_from_uri_str)
     if tarball_version:
       tf = None
     else:
@@ -343,8 +347,8 @@ class UpdateCommand(Command):
                                'installed.', informational=True)
 
     if not no_prompt:
-      (g, m) = CompareVersions(tarball_version, gslib.VERSION)
-      if m:
+      (_, major) = CompareVersions(tarball_version, gslib.VERSION)
+      if major:
         print('\n'.join(textwrap.wrap(
             'This command will update to the "%s" version of gsutil at %s. '
             'NOTE: This a major new version, so it is strongly recommended '

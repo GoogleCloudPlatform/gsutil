@@ -20,14 +20,15 @@ import os
 import sys
 import warnings
 
+# TODO: gsutil-beta: Distribute a pylint rc file.
 
 if not (2, 6) <= sys.version_info[:3] < (3,):
   sys.exit('gsutil requires python 2.6 or 2.7.')
 
 
-def UsingCrcmodExtension(crcmod):
-  return (getattr(crcmod, 'crcmod', None) and
-          getattr(crcmod.crcmod, '_usingExtension', None))
+def UsingCrcmodExtension(crcmod_module):
+  return (getattr(crcmod_module, 'crcmod', None) and
+          getattr(crcmod_module.crcmod, '_usingExtension', None))
 
 
 def _OutputAndExit(message):
@@ -81,6 +82,7 @@ CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
 CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
 
 try:
+  # pylint: disable=g-import-not-at-top
   import crcmod
 except ImportError:
   crcmod = None
@@ -91,7 +93,9 @@ if not UsingCrcmodExtension(crcmod):
                        else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
+
 def RunMain():
+  # pylint: disable=g-import-not-at-top
   import gslib.__main__
   sys.exit(gslib.__main__.main())
 

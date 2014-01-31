@@ -11,39 +11,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Implementation of lifecycle configuration command for GCS buckets."""
 import sys
-import xml
 
-from boto import handler
-from boto.gs.lifecycle import LifecycleConfig
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import CommandSpecKey
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
 from gslib.command import NO_MAX
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.help_provider import SUBCOMMAND_HELP_TEXT
+from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.translation_helper import LifecycleTranslation
+from gslib.util import UrlsAreForSingleProvider
 
 
 _GET_SYNOPSIS = """
-  gsutil lifecycle get uri
+  gsutil lifecycle get url
 """
 
 _SET_SYNOPSIS = """
-  gsutil lifecycle set config-xml-file uri...
+  gsutil lifecycle set config-xml-file url...
 """
 
 _SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS.lstrip('\n') + '\n'
@@ -58,9 +61,9 @@ _GET_DESCRIPTION = """
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  Sets the lifecycle configuration on one or more buckets. The config-xml-file
+  Sets the lifecycle configuration on one or more buckets. The config-json-file
   specified on the command line should be a path to a local file containing
-  the lifecycle congfiguration XML document.
+  the lifecycle congfiguration JSON document.
 
 """
 
@@ -73,20 +76,24 @@ _DESCRIPTION = """
   The lifecycle command has two sub-commands:
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION + """
 <B>EXAMPLES</B>
-  The following lifecycle configuration XML document specifies that all objects
-  that are more than 365 days old will be deleted automatically:
+  The following lifecycle configuration JSON document specifies that all objects
+  in this bucket that are more than 365 days old will be deleted automatically:
 
-    <?xml version="1.0" ?>
-    <LifecycleConfiguration>
-        <Rule>
-            <Action>
-                <Delete/>
-            </Action>
-            <Condition>
-                <Age>365</Age>
-            </Condition>
-        </Rule>
-    </LifecycleConfiguration>
+  {
+    "rule":
+    [
+      {
+        "action": {"type": "Delete"},
+        "condition": {"age": 365}
+      }
+    ]
+  }
+
+  The following (empty) lifecycle configuration JSON document removes all
+  lifecycle configuration for a bucket:
+
+  {}
+
 """
 
 _detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
@@ -100,103 +107,100 @@ class LifecycleCommand(Command):
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'lifecycle',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['lifecycleconfig'],
-    # Min number of args required by this command.
-    MIN_ARGS : 2,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : NO_MAX,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : '',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : True,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 1,
+      # Name of command.
+      COMMAND_NAME: 'lifecycle',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: ['lifecycleconfig'],
+      # Min number of args required by this command.
+      MIN_ARGS: 2,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: NO_MAX,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: '',
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: True,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 1,
+      # List of supported APIs
+      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
+      # Default API to use for this command
+      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'lifecycle',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['getlifecycle', 'setlifecycle'],
-    # Type of help)
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Get or set lifecycle configuration for a bucket',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
-    # Help text for sub-commands.
-    SUBCOMMAND_HELP_TEXT : {'get' : _get_help_text,
-                            'set' : _set_help_text},
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'lifecycle',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['getlifecycle', 'setlifecycle'],
+      # Type of help)
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Get or set lifecycle configuration for a bucket',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
+      # Help text for sub-commands.
+      SUBCOMMAND_HELP_TEXT: {'get': _get_help_text,
+                             'set': _set_help_text},
   }
 
-  # Get lifecycle configuration
-  def _GetLifecycleConfig(self):
-    # Wildcarding is allowed but must resolve to just one bucket.
-    uris = list(self.WildcardIterator(self.args[0]).IterUris())
-    if len(uris) == 0:
-      raise CommandException('No URIs matched')
-    if len(uris) != 1:
-      raise CommandException('%s matched more than one URI, which is not\n'
-          'allowed by the %s command' % (self.args[0], self.command_name))
-    uri = uris[0]
-    if not uri.names_bucket():
-      raise CommandException('"%s" command must specify a bucket' %
-                             self.command_name)
-    lifecycle_config = uri.get_lifecycle_config(False, self.headers)
-    # Pretty-print the XML to make it more easily human editable.
-    parsed_xml = xml.dom.minidom.parseString(
-        lifecycle_config.to_xml().encode('utf-8'))
-    sys.stdout.write(parsed_xml.toprettyxml(indent='    '))
-    return 0
-
-  # Set lifecycle configuration
   def _SetLifecycleConfig(self):
+    """Sets lifecycle configuration for a Google Cloud Storage bucket."""
     lifecycle_arg = self.args[0]
-    uri_args = self.args[1:]
-    # Disallow multi-provider setlifecycle requests.
-    storage_uri = self.UrisAreForSingleProvider(uri_args)
-    if not storage_uri:
+    url_args = self.args[1:]
+    # Disallow multi-provider 'lifecycle set' requests.
+    if not UrlsAreForSingleProvider(url_args):
       raise CommandException('"%s" command spanning providers not allowed.' %
                              self.command_name)
 
-    # Open, read and parse file containing XML document.
+    # Open, read and parse file containing JSON document.
     lifecycle_file = open(lifecycle_arg, 'r')
     lifecycle_txt = lifecycle_file.read()
     lifecycle_file.close()
-    lifecycle_config = LifecycleConfig()
+    lifecycle = LifecycleTranslation.JsonLifecycleToMessage(lifecycle_txt)
 
-    # Parse XML document and convert into LifecycleConfig object.
-    h = handler.XmlHandler(lifecycle_config, None)
-    try:
-      xml.sax.parseString(lifecycle_txt, h)
-    except xml.sax._exceptions.SAXParseException, e:
-      raise CommandException(
-          'Requested lifecycle config is invalid: %s at line %s, column %s' %
-          (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
-
-    # Iterate over URIs, expanding wildcards, and setting the lifecycle config
-    # on each.
+    # Iterate over URLs, expanding wildcards and setting the lifecycle on each.
     some_matched = False
-    for uri_str in uri_args:
-      for blr in self.WildcardIterator(uri_str):
-        uri = blr.GetUri()
-        if not uri.names_bucket():
-          raise CommandException('URI %s must name a bucket for the %s command'
-                                 % (str(uri), self.command_name))
+    for url_str in url_args:
+      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
+                                                 bucket_fields=['lifecycle'])
+      for blr in bucket_iter:
+        url = StorageUrlFromString(blr.url_string)
         some_matched = True
-        self.logger.info('Setting lifecycle configuration on %s...', uri)
-        uri.configure_lifecycle(lifecycle_config, False, self.headers)
+        self.logger.info('Setting lifecycle configuration on %s...',
+                         blr.url_string)
+        if url.scheme == 's3':
+          self.gsutil_api.XmlPassThroughSetLifecycle(lifecycle_txt,
+                                                     url.GetUrlString(),
+                                                     provider=url.scheme)
+        else:
+          bucket_metadata = apitools_messages.Bucket(lifecycle=lifecycle)
+          self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
+                                      provider=url.scheme, fields=['id'])
     if not some_matched:
-      raise CommandException('No URIs matched')
+      raise CommandException('No URLs matched')
+    return 0
+
+  def _GetLifecycleConfig(self):
+    """Gets lifecycle configuration for a Google Cloud Storage bucket."""
+    bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
+        self.args[0], bucket_fields=['lifecycle'])
+
+    if bucket_url.scheme == 's3':
+      sys.stdout.write(self.gsutil_api.XmlPassThroughGetLifecycle(
+          bucket_url.GetUrlString(),
+          provider=bucket_url.scheme))
+    else:
+      if bucket_metadata.lifecycle and bucket_metadata.lifecycle.rule:
+        sys.stdout.write(LifecycleTranslation.JsonLifecycleFromMessage(
+            bucket_metadata.lifecycle))
+      else:
+        sys.stdout.write('%s has no lifecycle configuration.\n' % bucket_url)
 
     return 0
 
-  # Command entry point.
   def RunCommand(self):
+    """Command entry point for the lifecycle command."""
     subcommand = self.args.pop(0)
     if subcommand == 'get':
       return self._GetLifecycleConfig()

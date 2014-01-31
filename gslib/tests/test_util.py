@@ -18,18 +18,18 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
 """Tests for gsutil utility functions."""
 
 from gslib import util
-from gslib.util import CompareVersions
 import gslib.tests.testcase as testcase
+from gslib.util import CompareVersions
 
 
 class TestUtil(testcase.GsUtilUnitTestCase):
   """Tests for utility functions."""
 
   def test_MakeHumanReadable(self):
+    """Tests converting byte counts to human-readable strings."""
     self.assertEqual(util.MakeHumanReadable(0), '0 B')
     self.assertEqual(util.MakeHumanReadable(1023), '1023 B')
     self.assertEqual(util.MakeHumanReadable(1024), '1 KB')
@@ -41,6 +41,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(util.MakeHumanReadable(1024 ** 6), '1 EB')
 
   def test_MakeBitsHumanReadable(self):
+    """Tests converting bit counts to human-readable strings."""
     self.assertEqual(util.MakeBitsHumanReadable(0), '0 bit')
     self.assertEqual(util.MakeBitsHumanReadable(1023), '1023 bit')
     self.assertEqual(util.MakeBitsHumanReadable(1024), '1 Kbit')
@@ -52,6 +53,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(util.MakeBitsHumanReadable(1024 ** 6), '1 Ebit')
 
   def test_HumanReadableToBytes(self):
+    """Tests converting human-readable strings to byte counts."""
     self.assertEqual(util.HumanReadableToBytes('1'), 1)
     self.assertEqual(util.HumanReadableToBytes('15'), 15)
     self.assertEqual(util.HumanReadableToBytes('15.3'), 15)
@@ -67,6 +69,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(util.HumanReadableToBytes('1e'), 1024 ** 6)
 
   def test_CompareVersions(self):
+    """Tests CompareVersions for various use cases."""
     # CompareVersions(first, second) returns (g, m), where
     #   g is True if first known to be greater than second, else False.
     #   m is True if first known to be greater by at least 1 major version,

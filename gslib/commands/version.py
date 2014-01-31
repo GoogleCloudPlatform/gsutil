@@ -11,32 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Implementation of gsutil version command."""
 
-import boto
-import crcmod
+from hashlib import md5
 import os
 import re
 import sys
 
+import boto
+import crcmod
 import gslib
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.util import GetConfigFilePath
 from gslib.util import UsingCrcmodExtension
-from hashlib import md5
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -59,41 +60,41 @@ class VersionCommand(Command):
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'version',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : ['ver'],
-    # Min number of args required by this command.
-    MIN_ARGS : 0,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : 0,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'l',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 0,
+      # Name of command.
+      COMMAND_NAME: 'version',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: ['ver'],
+      # Min number of args required by this command.
+      MIN_ARGS: 0,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: 0,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: 'l',
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: False,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'version',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['ver'],
-    # Type of help:
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Print version info about gsutil',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'version',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['ver'],
+      # Type of help:
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Print version info about gsutil',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }
 
-  # Command entry point.
   def RunCommand(self):
+    """Command entry point for the version command."""
     long_form = False
     if self.sub_opts:
-      for o, a in self.sub_opts:
+      for o, _ in self.sub_opts:
         if o == '-l':
           long_form = True
 
@@ -139,25 +140,29 @@ class VersionCommand(Command):
     return 0
 
   def _ComputeCodeChecksum(self):
-    """
-    Computes a checksum of gsutil code so we can see if users locally modified
+    """Computes a checksum of gsutil code.
+
+    This checksum can be used to determine if users locally modified
     gsutil when requesting support. (It's fine for users to make local mods,
     but when users ask for support we ask them to run a stock version of
     gsutil so we can reduce possible variables.)
+
+    Returns:
+      MD5 checksum of gsutil code.
     """
     if gslib.IS_PACKAGE_INSTALL:
       return 'PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS'
     m = md5()
     # Checksum gsutil and all .py files under gslib directory.
     files_to_checksum = [gslib.GSUTIL_PATH]
-    for root, sub_folders, files in os.walk(gslib.GSLIB_DIR):
-      for file in files:
-        if file[-3:] == '.py':
-          files_to_checksum.append(os.path.join(root, file))
+    for root, _, files in os.walk(gslib.GSLIB_DIR):
+      for filepath in files:
+        if filepath.endswith('.py'):
+          files_to_checksum.append(os.path.join(root, filepath))
     # Sort to ensure consistent checksum build, no matter how os.walk
     # orders the list.
-    for file in sorted(files_to_checksum):
-      f = open(file, 'r')
+    for filepath in sorted(files_to_checksum):
+      f = open(filepath, 'r')
       content = f.read()
       content = re.sub(r'(\r\n|\r|\n)', '\n', content)
       m.update(content)

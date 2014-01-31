@@ -19,6 +19,7 @@ from xml.dom import minidom
 from boto.gs import acl
 
 from gslib.exception import CommandException
+from gslib.storage_url import StorageUrlFromString
 
 
 class ChangeType(object):
@@ -26,6 +27,10 @@ class ChangeType(object):
   GROUP = 'Group'
 
 
+# TODO: Convert this file from XML to JSON (right now, we translate ACLs from
+# JSON to XML to apply changes, then back to JSON once they have been applied).
+# Also, deprecate and remove the FC: FULL_CONTROL syntax; that permission/role
+# is named OWNER in JSON.
 class AclChange(object):
   """Represents a logical change to an access control list."""
   public_scopes = ['AllAuthenticatedUsers', 'AllUsers']
@@ -38,6 +43,7 @@ class AclChange(object):
       'R': 'READ',
       'W': 'WRITE',
       'FC': 'FULL_CONTROL',
+      'O': 'FULL_CONTROL'
       }
 
   def __init__(self, acl_change_descriptor, scope_type):
@@ -173,23 +179,23 @@ class AclChange(object):
 
     current_acl.entries.entry_list.append(entry)
 
-  def Execute(self, uri, current_acl, logger):
+  def Execute(self, url_string, current_acl, logger):
     """Executes the described change on an ACL.
 
     Args:
-      uri: The URI object to change.
+      url_string: URL string representing the object to change.
       current_acl: An instance of boto.gs.acl.ACL to permute.
       logger: An instance of logging.Logger.
 
     Returns:
       The number of changes that were made.
     """
-    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
+    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, url_string))
 
-    if self.perm == 'WRITE' and uri.names_object():
+    if self.perm == 'WRITE' and StorageUrlFromString(url_string).IsObject():
       logger.warning(
           'Skipping {0} on {1}, as WRITE does not apply to objects'
-          .format(self.raw_descriptor, uri))
+          .format(self.raw_descriptor, url_string))
       return 0
 
     matching_entries = list(self._YieldMatchingEntries(current_acl))
@@ -208,7 +214,7 @@ class AclChange(object):
     return change_count
 
 
-class AclDel(AclChange):
+class AclDel(object):
   """Represents a logical change from an access control list."""
   scope_regexes = {
       r'All(Users)?$': 'AllUsers',

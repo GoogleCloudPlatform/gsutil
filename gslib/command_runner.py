@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding=utf8
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
@@ -16,26 +15,27 @@
 
 """Class that runs a named gsutil command."""
 
-import boto
 import difflib
 import logging
-import pkgutil
 import os
+import pkgutil
 import sys
 import textwrap
 import time
 
+import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
-import gslib.commands
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import OLD_ALIAS_MAP
 from gslib.command import ShutDownGsutil
+import gslib.commands
+from gslib.cs_api_map import GsutilApiClassMapFactory
 from gslib.exception import CommandException
+from gslib.gcs_json_api import GcsJsonApi
 from gslib.help_provider import SUBCOMMAND_HELP_TEXT
-from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.util import CompareVersions
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
@@ -46,11 +46,11 @@ from gslib.util import LookUpGsutilVersion
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import RELEASE_NOTES_URL
 from gslib.util import SECONDS_PER_DAY
+from gslib.util import UTF8
 
 
 def HandleArgCoding(args):
-  """
-  Handles coding of command-line args.
+  """Handles coding of command-line args.
 
   Args:
     args: array of command-line args.
@@ -70,7 +70,7 @@ def HandleArgCoding(args):
   processing_header = False
   for i in range(len(args)):
     arg = args[i]
-    decoded = arg.decode('utf-8')
+    decoded = arg.decode(UTF8)
     if processing_header:
       if arg.lower().startswith('x-goog-meta'):
         args[i] = decoded
@@ -92,17 +92,23 @@ def HandleArgCoding(args):
 
 
 class CommandRunner(object):
+  """Runs gsutil commands and does some top-level argument handling."""
 
   def __init__(self, config_file_list,
-                bucket_storage_uri_class=BucketStorageUri):
-    """
+               bucket_storage_uri_class=BucketStorageUri,
+               gsutil_api_class_map_factory=GsutilApiClassMapFactory):
+    """Instantiates a CommandRunner.
+
     Args:
       config_file_list: Config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
+      gsutil_api_class_map_factory: Creates map of cloud storage interfaces.
+                                    Settable for testing/mocking.
     """
     self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
+    self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
     self.command_map = self._LoadCommandMap()
 
   def _LoadCommandMap(self):
@@ -122,28 +128,32 @@ class CommandRunner(object):
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None,
                       skip_update_check=False, logging_filters=None):
-    """Runs the named command. Used by gsutil main, commands built atop
-      other commands, and tests .
+    """Runs the named command.
 
-      Args:
-        command_name: The name of the command being run.
-        args: Command-line args (arg0 = actual arg, not command name ala bash).
-        headers: Dictionary containing optional HTTP headers to pass to boto.
-        debug: Debug level to pass in to boto connection (range 0..3).
-        parallel_operations: Should command operations be executed in parallel?
-        test_method: Optional general purpose method for testing purposes.
-                     Application and semantics of this method will vary by
-                     command and test type.
-        skip_update_check: Set to True to disable checking for gsutil updates.
-        logging_filters: Optional list of logging.Filters to apply to this
-                         command's logger.
+    Used by gsutil main, commands built atop other commands, and tests.
 
-      Raises:
-        CommandException: if errors encountered.
+    Args:
+      command_name: The name of the command being run.
+      args: Command-line args (arg0 = actual arg, not command name ala bash).
+      headers: Dictionary containing optional HTTP headers to pass to boto.
+      debug: Debug level to pass in to boto connection (range 0..3).
+      parallel_operations: Should command operations be executed in parallel?
+      test_method: Optional general purpose method for testing purposes.
+                   Application and semantics of this method will vary by
+                   command and test type.
+      skip_update_check: Set to True to disable checking for gsutil updates.
+      logging_filters: Optional list of logging.Filters to apply to this
+                       command's logger.
+
+    Raises:
+      CommandException: if errors encountered.
+
+    Returns:
+      Return value(s) from Command that was run.
     """
     ConfigureNoOpAuthIfNeeded()
     if (not skip_update_check and
-        self._MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
+        self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
       args = ['-n']
 
@@ -159,7 +169,7 @@ class CommandRunner(object):
     if command_name not in self.command_map:
       close_matches = difflib.get_close_matches(
           command_name, self.command_map.keys(), n=1)
-      if len(close_matches):
+      if close_matches:
         # Instead of suggesting a deprecated command alias, suggest the new
         # name for that command.
         translated_command_name = (
@@ -184,24 +194,25 @@ class CommandRunner(object):
     command_class = self.command_map[command_name]
     command_inst = command_class(
         self, args, headers, debug, parallel_operations, self.config_file_list,
-        self.bucket_storage_uri_class, test_method, logging_filters,
-        command_alias_used=command_name)
-
+        self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
+        test_method, logging_filters, command_alias_used=command_name)
     return_values = command_inst.RunCommand()
     if MultiprocessingIsAvailable()[0]:
       ShutDownGsutil()
     return return_values
 
-  def _MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
-    """Checks the last time we checked for an update, and if it's been longer
-       than the configured threshold offers the user to update gsutil.
+  def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
+    """Checks the last time we checked for an update and offers one if needed.
 
-      Args:
-        command_name: The name of the command being run.
-        debug: Debug level to pass in to boto connection (range 0..3).
+    Offer is made if the time since the last update check is longer
+    than the configured threshold offers the user to update gsutil.
 
-      Returns:
-        True if the user decides to update.
+    Args:
+      command_name: The name of the command being run.
+      debug: Debug level to pass in to boto connection (range 0..3).
+
+    Returns:
+      True if the user decides to update.
     """
     # Don't try to interact with user if:
     # - gsutil is not connected to a tty (e.g., if being run from cron);
@@ -219,10 +230,11 @@ class CommandRunner(object):
     # - user specified gs_host (which could be a non-production different
     #   service instance, in which case credentials won't work for checking
     #   gsutil tarball).
+    logger = logging.getLogger()
     gs_host = boto.config.get('Credentials', 'gs_host', None)
     if (not IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
-        or not logging.getLogger().isEnabledFor(logging.INFO)
+        or not logger.isEnabledFor(logging.INFO)
         or gs_host):
       return False
 
@@ -250,8 +262,12 @@ class CommandRunner(object):
 
     if (cur_ts - last_checked_ts
         > software_update_check_period * SECONDS_PER_DAY):
-      suri_builder = StorageUriBuilder(debug, self.bucket_storage_uri_class)
-      cur_ver = LookUpGsutilVersion(suri_builder.StorageUri(GSUTIL_PUB_TARBALL))
+      # Create a credential-less gsutil API to check for the public
+      # update tarball.
+      gsutil_api = GcsJsonApi(self.bucket_storage_uri_class, logger,
+                              credentials=None, debug=debug)
+
+      cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
@@ -259,9 +275,9 @@ class CommandRunner(object):
         print '\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). NOTE: This is a major new version, so it is '
-            'strongly recommended that you review the release note details at %s '
-            'before updating to this version, especially if you use gsutil in '
-            'scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+            'strongly recommended that you review the release note details at '
+            '%s before updating to this version, especially if you use gsutil '
+            'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print

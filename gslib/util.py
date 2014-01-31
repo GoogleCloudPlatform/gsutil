@@ -14,11 +14,7 @@
 
 """Static data and helper functions."""
 
-import binascii
-import boto
-import boto.auth
 import errno
-import gslib
 import math
 import multiprocessing
 import os
@@ -29,15 +25,30 @@ import threading
 import traceback
 import xml.etree.ElementTree as ElementTree
 
+import boto
 from boto import config
+import boto.auth
 from boto.exception import NoAuthHandlerFound
 from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
+import gslib
 from gslib.exception import CommandException
-from retry_decorator import retry_decorator
+from gslib.storage_url import StorageUrlFromString
+from gslib.translation_helper import AclTranslation
+from gslib.translation_helper import S3_ACL_MARKER_GUID
+from gslib.translation_helper import S3_DELETE_MARKER_GUID
+from gslib.translation_helper import S3_MARKER_GUIDS
 from oauth2client.client import HAS_CRYPTO
+from retry_decorator import retry_decorator
 
+# pylint: disable=g-import-not-at-top
+try:
+  from hashlib import md5
+except ImportError:
+  from md5 import md5
+
+# pylint: disable=g-import-not-at-top
 try:
   # This module doesn't necessarily exist on Windows.
   import resource
@@ -46,8 +57,14 @@ except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
 TWO_MB = 2 * 1024 * 1024
+DEFAULT_FILE_BUFFER_SIZE = 8192
+
+# Make a progress callback every 64KB during uploads/downloads.
+CALLBACK_PER_X_BYTES = 1024*64
 
 NO_MAX = sys.maxint
+
+UTF8 = 'utf-8'
 
 VERSION_MATCHER = re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?')
 
@@ -55,27 +72,30 @@ RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
-  (0, 'B', 'bit'),
-  (10, 'KB', 'Kbit', 'K'),
-  (20, 'MB', 'Mbit', 'M'),
-  (30, 'GB', 'Gbit', 'G'),
-  (40, 'TB', 'Tbit', 'T'),
-  (50, 'PB', 'Pbit', 'P'),
-  (60, 'EB', 'Ebit', 'E'),
+    (0, 'B', 'bit'),
+    (10, 'KB', 'Kbit', 'K'),
+    (20, 'MB', 'Mbit', 'M'),
+    (30, 'GB', 'Gbit', 'G'),
+    (40, 'TB', 'Tbit', 'T'),
+    (50, 'PB', 'Pbit', 'P'),
+    (60, 'EB', 'Ebit', 'E'),
 ]
 
-global manager
+global manager  # pylint: disable=global-at-module-level
+
 
 def InitializeMultiprocessingVariables():
+  """Perform necessary initialization for multiprocessing.
+
+    See gslib.command.InitializeMultiprocessingVariables for an explanation
+    of why this is necessary.
   """
-  Perform necessary initialization - see
-  gslib.command.InitializeMultiprocessingVariables for an explanation of why
-  this is necessary.
-  """
-  global manager
+  global manager  # pylint: disable=global-variable-undefined
   manager = multiprocessing.Manager()
 
+
 def _GenerateSuffixRegex():
+  """Creates a suffix regex for human-readable byte counts."""
   human_bytes_re = r'(?P<num>\d*\.\d+|\d+)\s*(?P<suffix>%s)?'
   suffixes = []
   suffix_to_si = {}
@@ -84,7 +104,7 @@ def _GenerateSuffixRegex():
     for suffix in si_suffixes:
       suffix_to_si[suffix] = i
     suffixes.extend(si_suffixes)
-  human_bytes_re = human_bytes_re % '|'.join(suffixes)
+  human_bytes_re %= '|'.join(suffixes)
   matcher = re.compile(human_bytes_re)
   return suffix_to_si, matcher
 
@@ -105,7 +125,7 @@ MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
-Retry = retry_decorator.retry
+Retry = retry_decorator.retry  # pylint: disable=invalid-name
 
 # Cache the values from this check such that they're available to all callers
 # without needing to run all the checks again (some of these, such as calling
@@ -113,6 +133,7 @@ Retry = retry_decorator.retry
 cached_multiprocessing_is_available = None
 cached_multiprocessing_is_available_stack_trace = None
 cached_multiprocessing_is_available_message = None
+
 
 # Enum class for specifying listing style.
 class ListingStyle(object):
@@ -127,8 +148,10 @@ def UsingCrcmodExtension(crcmod):
 
 
 def CreateTrackerDirIfNeeded():
-  """Looks up the configured directory where gsutil keeps its resumable
-     transfer tracker files, and creates it if it doesn't already exist.
+  """Looks up or creates the gsutil tracker file directory.
+
+  This is the configured directory where gsutil keeps its resumable transfer
+  tracker files. This function creates it if it doesn't already exist.
 
   Returns:
     The pathname to the tracker directory.
@@ -158,16 +181,16 @@ LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
 
 def HasConfiguredCredentials():
   """Determines if boto credential/config file exists."""
-  config = boto.config
   has_goog_creds = (config.has_option('Credentials', 'gs_access_key_id') and
                     config.has_option('Credentials', 'gs_secret_access_key'))
   has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
                     config.has_option('Credentials', 'aws_secret_access_key'))
   has_oauth_creds = (
       config.has_option('Credentials', 'gs_oauth2_refresh_token'))
-  has_service_account_creds = (HAS_CRYPTO and
-      config.has_option('Credentials', 'gs_service_client_id')
-      and config.has_option('Credentials', 'gs_service_key_file'))
+  has_service_account_creds = (
+      HAS_CRYPTO and
+      config.has_option('Credentials', 'gs_service_client_id') and
+      config.has_option('Credentials', 'gs_service_key_file'))
 
   valid_auth_handler = None
   try:
@@ -188,10 +211,7 @@ def HasConfiguredCredentials():
 
 
 def ConfigureNoOpAuthIfNeeded():
-  """
-  Sets up no-op auth handler if no boto credentials are configured.
-  """
-  config = boto.config
+  """Sets up no-op auth handler if no boto credentials are configured."""
   if not HasConfiguredCredentials():
     if (config.has_option('Credentials', 'gs_service_client_id')
         and not HAS_CRYPTO):
@@ -204,7 +224,8 @@ def ConfigureNoOpAuthIfNeeded():
     else:
       # With no boto config file the user can still access publicly readable
       # buckets and objects.
-      from gslib import no_op_auth_plugin
+      # TODO(thobrla): Run gce_test with a gsutil4 tarball.
+      from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
 
 
 def GetConfigFilePath():
@@ -274,6 +295,8 @@ def HumanReadableToBytes(human_string):
     human_string: A string supplied by user, e.g. '1M', '3 GB'.
   Returns:
     An integer containing the number of bytes.
+  Raises:
+    ValueError: on an invalid string.
   """
   human_string = human_string.lower()
   m = MATCH_HUMAN_BYTES.match(human_string)
@@ -314,82 +337,54 @@ def Percentile(values, percent, key=lambda x: x):
   return d0 + d1
 
 
-def ParseErrorDetail(e):
-  """Parse <Message> and/or <Details> text from XML content.
-
-  Args:
-    e: The GSResponseError that includes XML to be parsed.
-
-  Returns:
-    (exception_name, m, d), where m is <Message> text or None,
-                            and d is <Details> text or None.
-  """
-  exc_name_parts = re.split("[\.']", str(type(e)))
-  if len(exc_name_parts) < 2:
-    # Shouldn't happen, but have fallback in case.
-    exc_name = str(type(e))
-  else:
-    exc_name = exc_name_parts[-2]
-  if not hasattr(e, 'body') or e.body is None:
-    return (exc_name, None)
-
-  match = re.search(r'<Message>(?P<message>.*)</Message>', e.body)
-  m = match.group('message') if match else None
-  match = re.search(r'<Details>(?P<details>.*)</Details>', e.body)
-  d = match.group('details') if match else None
-  return (exc_name, m, d)
-
-def FormatErrorMessage(exc_name, status, code, reason, message, detail):
-  """Formats an error message from components parsed by ParseErrorDetail."""
-  if message and detail:
-    return('%s: status=%d, code=%s, reason="%s", message="%s", detail="%s"' %
-           (exc_name, status, code, reason, message, detail))
-  if message:
-    return('%s: status=%d, code=%s, reason="%s", message="%s"' %
-           (exc_name, status, code, reason, message))
-  if detail:
-    return('%s: status=%d, code=%s, reason="%s", detail="%s"' %
-           (exc_name, status, code, reason, detail))
-  return('%s: status=%d, code=%s, reason="%s"' %
-         (exc_name, status, code, reason))
-
 def UnaryDictToXml(message):
-  """Generates XML representation of a nested dict with exactly one
-  top-level entry and an arbitrary number of 2nd-level entries, e.g.
-  capturing a WebsiteConfiguration message.
+  """Generates XML representation of a nested dict.
+
+  This dict contains exactly one top-level entry and an arbitrary number of
+  2nd-level entries, e.g. capturing a WebsiteConfiguration message.
 
   Args:
     message: The dict encoding the message.
 
   Returns:
     XML string representation of the input dict.
+
+  Raises:
+    Exception: if dict contains more than one top-level entry.
   """
   if len(message) != 1:
-    raise Exception("Expected dict of size 1, got size %d" % len(message))
+    raise Exception('Expected dict of size 1, got size %d' % len(message))
 
   name, content = message.items()[0]
-  T = ElementTree.Element(name)
-  for property, value in sorted(content.items()):
-    node = ElementTree.SubElement(T, property)
+  element_type = ElementTree.Element(name)
+  for element_property, value in sorted(content.items()):
+    node = ElementTree.SubElement(element_type, element_property)
     node.text = value
-  return ElementTree.tostring(T)
+  return ElementTree.tostring(element_type)
 
 
-def LookUpGsutilVersion(uri):
-  """Looks up the gsutil version of the specified gsutil tarball URI, from the
-     metadata field set on that object.
+def LookUpGsutilVersion(gsutil_api, url_str):
+  """Looks up the gsutil version of the specified gsutil tarball URL.
+
+  Version is specified in the metadata field set on that object.
 
   Args:
-    URI: gsutil URI tarball (such as gs://pub/gsutil.tar.gz).
+    gsutil_api: gsutil Cloud API to use when retrieving gsutil tarball.
+    url_str: tarball URL to retrieve (such as 'gs://pub/gsutil.tar.gz').
 
   Returns:
-    Version string if URI is a cloud URI containing x-goog-meta-gsutil-version
+    Version string if URL is a cloud URL containing x-goog-meta-gsutil-version
     metadata, else None.
   """
-  if uri.is_cloud_uri():
-    obj = uri.get_key(False)
-    if obj.metadata and 'gsutil_version' in obj.metadata:
-      return obj.metadata['gsutil_version']
+  url = StorageUrlFromString(url_str)
+  if url.IsCloudUrl():
+    obj = gsutil_api.GetObjectMetadata(url.bucket_name, url.object_name,
+                                       provider=url.scheme,
+                                       fields=['metadata'])
+    if obj.metadata and obj.metadata.additionalProperties:
+      for prop in obj.metadata.additionalProperties:
+        if prop.key == 'gsutil_version':
+          return prop.value
 
 
 def GetGsutilVersionModifiedTime():
@@ -404,12 +399,14 @@ def IsRunningInteractively():
   return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
 
 
+def _HttpsValidateCertifcatesEnabled():
+  return config.get('Boto', 'https_validate_certificates', True)
+
+CERTIFICATE_VALIDATION_ENABLED = _HttpsValidateCertifcatesEnabled()
+
+
 def _BotoIsSecure():
-  for cfg_var in ('is_secure', 'https_validate_certificates'):
-    if (config.has_option('Boto', cfg_var)
-        and not config.getboolean('Boto', cfg_var)):
-      return False, cfg_var
-  return True, ''
+  return config.get('Boto', 'is_secure', True)
 
 BOTO_IS_SECURE = _BotoIsSecure()
 
@@ -421,78 +418,82 @@ def AddAcceptEncoding(headers):
     headers['accept-encoding'] = 'gzip'
 
 
-def PrintFullInfoAboutUri(uri, incl_acl, headers):
-  """Print full info for given URI (like what displays for gsutil ls -L).
+def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
+  """Print full info for given object (like what displays for gsutil ls -L).
 
   Args:
-    uri: StorageUri being listed.
+    bucket_listing_ref: BucketListingRef being listed.
+                        Must have ref_type OBJECT and a populated root_object
+                        with the desired fields.
     incl_acl: True if ACL info should be output.
-    headers: The headers to pass to boto, if any.
 
   Returns:
-    Tuple (number of objects,
-           object length, if listing_style is one of the long listing formats)
+    Tuple (number of objects, object_length)
 
   Raises:
     Exception: if calling bug encountered.
   """
-  # Run in a try/except clause so we can continue listings past
-  # access-denied errors (which can happen because user may have READ
-  # permission on object and thus see the bucket listing data, but lack
-  # FULL_CONTROL over individual objects and thus not be able to read
-  # their ACLs).
-  # TODO: Switch this code to use string formatting instead of tabs.
-  try:
-    print '%s:' % uri.uri.encode('utf-8')
-    headers = headers.copy()
-    # Add accept encoding so that the HEAD request matches what would be
-    # sent for a GET request.
-    AddAcceptEncoding(headers)
-    got_key = False
-    obj = uri.get_key(False, headers=headers)
-    got_key = True
-    print '\tCreation time:\t\t%s' % obj.last_modified
-    if obj.cache_control:
-      print '\tCache-Control:\t\t%s' % obj.cache_control
-    if obj.content_disposition:
-      print '\tContent-Disposition:\t\t%s' % obj.content_disposition
-    if obj.content_encoding:
-      print '\tContent-Encoding:\t%s' % obj.content_encoding
-    if obj.content_language:
-      print '\tContent-Language:\t%s' % obj.content_language
-    print '\tContent-Length:\t\t%s' % obj.size
-    print '\tContent-Type:\t\t%s' % obj.content_type
-    if hasattr(obj, 'component_count') and obj.component_count:
-      print '\tComponent-Count:\t%d' % obj.component_count
-    if obj.metadata:
-      prefix = uri.get_provider().metadata_prefix
-      for name in obj.metadata:
-        meta_string = '\t%s%s:\t%s' % (prefix, name, obj.metadata[name])
-        print meta_string.encode('utf-8')
-    if hasattr(obj, 'cloud_hashes'):
-      for alg in obj.cloud_hashes:
-        print '\tHash (%s):\t\t%s' % (
-            alg, binascii.b2a_hex(obj.cloud_hashes[alg]))
-    print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
-    if hasattr(obj, 'generation'):
-      print '\tGeneration:\t\t%s' % obj.generation
-    if hasattr(obj, 'metageneration'):
-      print '\tMetageneration:\t\t%s' % obj.metageneration
-    if incl_acl:
-      print '\tACL:\t\t%s' % (uri.get_acl(False, headers))
-    return (1, obj.size)
-  except boto.exception.GSResponseError as e:
-    if e.status == 403:
-      if got_key:
-        print ('\tACL:\t\t\tACCESS DENIED. Note: you need FULL_CONTROL '
-               'permission\n\t\t\ton the object to read its ACL.')
-        return (1, obj.size)
+  url_str = bucket_listing_ref.GetUrlString()
+  obj = bucket_listing_ref.root_object
+
+  if (obj.metadata and S3_DELETE_MARKER_GUID in
+      obj.metadata.additionalProperties):
+    num_bytes = 0
+    num_objs = 0
+    url_str += '<DeleteMarker>'
+  else:
+    num_bytes = obj.size
+    num_objs = 1
+
+  print '%s:' % url_str.encode(UTF8)
+  if obj.updated:
+    print '\tCreation time:\t\t%s' % obj.updated.strftime(
+        '%a, %d %b %Y %H:%M:%S GMT')
+  if obj.cacheControl:
+    print '\tCache-Control:\t\t%s' % obj.cacheControl
+  if obj.contentDisposition:
+    print '\tContent-Disposition:\t\t%s' % obj.contentDisposition
+  if obj.contentEncoding:
+    print '\tContent-Encoding:\t\t%s' % obj.contentEncoding
+  if obj.contentLanguage:
+    print '\tContent-Language:\t%s' % obj.contentLanguage
+  print '\tContent-Length:\t\t%s' % obj.size
+  print '\tContent-Type:\t\t%s' % obj.contentType
+  if obj.componentCount:
+    print '\tComponent-Count:\t%d' % obj.componentCount
+  marker_props = {}
+  if obj.metadata and obj.metadata.additionalProperties:
+    non_marker_props = []
+    for add_prop in obj.metadata.additionalProperties:
+      if add_prop.key not in S3_MARKER_GUIDS:
+        non_marker_props.append(add_prop)
       else:
-        print "You aren't authorized to read %s - skipping" % uri
-        return (1, 0)
+        marker_props[add_prop.key] = add_prop.value
+    if non_marker_props:
+      print '\tMetadata:'
+      for ap in non_marker_props:
+        meta_string = '\t\t%s:\t\t%s' % (ap.key, ap.value)
+        print meta_string.encode(UTF8)
+  if obj.crc32c: print '\tHash (crc32c):\t\t%s' % obj.crc32c
+  if obj.md5Hash: print '\tHash (md5):\t\t%s' % obj.md5Hash
+  print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
+  if obj.generation:
+    print '\tGeneration:\t\t%s' % obj.generation
+  if obj.metageneration:
+    print '\tMetageneration:\t\t%s' % obj.metageneration
+  if incl_acl:
+    # JSON API won't return acls as part of the response unless we have
+    # full control scope
+    if obj.acl:
+      print '\tACL:\t\t%s' % AclTranslation.JsonFromMessage(obj.acl)
+    elif S3_ACL_MARKER_GUID in marker_props:
+      print '\tACL:\t\t%s' % marker_props[S3_ACL_MARKER_GUID]
     else:
-      raise e
-  return (numobjs, numbytes)
+      print ('\tACL:\t\t\tACCESS DENIED. Note: you need OWNER '
+             'permission\n\t\t\t\ton the object to read its ACL.')
+
+  return (num_objs, num_bytes)
+
 
 def CompareVersions(first, second):
   """Compares the first and second gsutil version strings.
@@ -501,6 +502,10 @@ def CompareVersions(first, second):
   Does not handle multiple periods (e.g. 3.3.4) or complicated suffixes
   (e.g., 3.3RC4 vs. 3.3RC5). A version string with a suffix is treated as
   less than its non-suffix counterpart (e.g. 3.32 > 3.32pre).
+
+  Args:
+    first: First gsutil version string.
+    second: Second gsutil version string.
 
   Returns:
     (g, m):
@@ -531,32 +536,156 @@ def CompareVersions(first, second):
       return (bool(suffix_ver2) and not suffix_ver1, False)
   return (False, False)
 
+
 def _IncreaseSoftLimitForResource(resource_name):
-  """Sets a new soft limit for the maximum number of open files.    
-     The soft limit is used for this process (and its children), but the
-     hard limit is set by the system and cannot be exceeded.
+  """Sets a new soft limit for the maximum number of open files.
+
+  The soft limit is used for this process (and its children), but the
+  hard limit is set by the system and cannot be exceeded.
+
+  Args:
+    resource_name: Name of the resource to increase the soft limit for.
+
+  Returns:
+    Hard limit for the resource
   """
   try:
-    (soft_limit, hard_limit) = resource.getrlimit(resource_name)
+    (_, hard_limit) = resource.getrlimit(resource_name)
     resource.setrlimit(resource_name, (hard_limit, hard_limit))
     return hard_limit
-  except (resource.error, ValueError), e:
+  except (resource.error, ValueError):
     return 0
 
-def MultiprocessingIsAvailable(logger=None):
+
+def CalculateMd5FromContents(fp):
+  """Calculates the MD5 hash of the contents of a file.
+
+  This function resets the file pointer to position 0.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    MD5 digest of the file in hex string format.
   """
+  current_md5 = md5()
+  fp.seek(0)
+  while True:
+    data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
+    if not data:
+      break
+    current_md5.update(data)
+  fp.seek(0)
+  return current_md5.hexdigest()
+
+
+def GetCloudApiInstance(cls, thread_state=None):
+  """Gets a gsutil Cloud API instance.
+
+  Since Cloud API implementations are not guaranteed to be thread-safe, each
+  thread needs its own instance. These instances are passed to each thread
+  via the thread pool logic in command.
+
+  Args:
+    cls: Command class to be used for single-threaded case.
+    thread_state: Per thread state from this thread containing a gsutil
+                  Cloud API instance.
+
+  Returns:
+    gsutil Cloud API instance.
+  """
+  return thread_state or cls.gsutil_api
+
+
+def GetFileSize(fp, position_to_eof=False):
+  """Returns size of file, optionally leaving fp positioned at EOF."""
+  if not position_to_eof:
+    cur_pos = fp.tell()
+  fp.seek(0, os.SEEK_END)
+  cur_file_size = fp.tell()
+  if not position_to_eof:
+    fp.seek(cur_pos)
+  return cur_file_size
+
+
+def GetStreamFromFileUrl(storage_url):
+  if storage_url.IsStream():
+    return sys.stdin
+  else:
+    return open(storage_url.object_name, 'rb')
+
+
+def UrlsAreForSingleProvider(url_args):
+  """Tests whether the URLs are all for a single provider.
+
+  Args:
+    url_args: Strings to check.
+
+  Returns:
+    True if URLs are for single provider, False otherwise.
+  """
+  provider = None
+  url = None
+  for url_str in url_args:
+    url = StorageUrlFromString(url_str)
+    if not provider:
+      provider = url.scheme
+    elif url.scheme != provider:
+      return False
+  return provider is not None
+
+
+def HaveFileUrls(args_to_check):
+  """Checks whether args_to_check contain any file URLs.
+
+  Args:
+    args_to_check: Command-line argument subset to check.
+
+  Returns:
+    True if args_to_check contains any file URLs.
+  """
+  for url_str in args_to_check:
+    storage_url = StorageUrlFromString(url_str)
+    if storage_url.IsFileUrl():
+      return True
+  return False
+
+
+def HaveProviderUrls(args_to_check):
+  """Checks whether args_to_check contains any provider URLs (like 'gs://').
+
+  Args:
+    args_to_check: Command-line argument subset to check.
+
+  Returns:
+    True if args_to_check contains any provider URLs.
+  """
+  for url_str in args_to_check:
+    storage_url = StorageUrlFromString(url_str)
+    if storage_url.IsCloudUrl() and storage_url.IsProvider():
+      return True
+  return False
+
+
+def MultiprocessingIsAvailable(logger=None):
+  """Checks if multiprocessing is available.
+
   There are some environments in which there is no way to use multiprocessing
   logic that's built into Python (e.g., if /dev/shm is not available, then
   we can't create semaphores). This simply tries out a few things that will be
   needed to make sure the environment can support the pieces of the
   multiprocessing module that we need.
-  
+
+  Args:
+    logger: logging.logger to use for debug output.
+
   Returns:
     (multiprocessing_is_available, stack_trace):
       multiprocessing_is_available: True iff the multiprocessing module is
                                     available for use.
       stack_trace: The stack trace generated by the call we tried that failed.
   """
+  # pylint: disable=global-variable-undefined
   global cached_multiprocessing_is_available
   global cached_multiprocessing_check_stack_trace
   global cached_multiprocessing_is_available_message
@@ -585,13 +714,13 @@ def MultiprocessingIsAvailable(logger=None):
         message += ('\nPlease ensure that you have write access to both '
                     '/dev/shm and /run/shm.')
       raise  # We'll handle this in one place below.
-  
+
     # Manager objects and Windows are generally a pain to work with, so try it
     # out as a sanity check. This definitely works on some versions of Windows,
     # but it's certainly possible that there is some unknown configuration for
     # which it won't.
     multiprocessing.Manager()
-    
+
     # Check that the max number of open files is reasonable. Always check this
     # after we're sure that the basic multiprocessing functionality is
     # available, since this won't matter unless that's true.
@@ -603,12 +732,12 @@ def MultiprocessingIsAvailable(logger=None):
       try:
         limit = max(limit,
                     _IncreaseSoftLimitForResource(resource.RLIMIT_NOFILE))
-      except AttributeError, e:
+      except AttributeError:
         pass
       try:
         limit = max(limit,
                     _IncreaseSoftLimitForResource(resource.RLIMIT_OFILE))
-      except AttributeError, e:
+      except AttributeError:
         pass
     if limit < MIN_ACCEPTABLE_OPEN_FILES_LIMIT and not IS_WINDOWS:
       message += (
@@ -618,7 +747,7 @@ def MultiprocessingIsAvailable(logger=None):
           '~/.bashrc (Linux), ~/.bash_profile (OS X), or equivalent file, '
           'and opening a new terminal.' % limit)
       raise Exception('Max number of open files, %s, is too low.' % limit)
-  except:
+  except:  # pylint: disable=bare-except
     stack_trace = traceback.format_exc()
     multiprocessing_is_available = False
     if logger is not None:
@@ -631,13 +760,18 @@ def MultiprocessingIsAvailable(logger=None):
   cached_multiprocessing_is_available_message = message
   return (multiprocessing_is_available, stack_trace)
 
+
 def CreateLock():
-  """
-  Returns either a multiprocessing lock or a threading lock. We will use the
-  former iff we have access to the parts of the multiprocessing module that
-  are necessary to enable parallelism in operations.
+  """Returns either a multiprocessing lock or a threading lock.
+
+  Use Multiprocessing lock iff we have access to the parts of the
+  multiprocessing module that are necessary to enable parallelism in operations.
+
+  Returns:
+    Multiprocessing or threading lock.
   """
   if MultiprocessingIsAvailable()[0]:
     return manager.Lock()
   else:
     return threading.Lock()
+
