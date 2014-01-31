@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import boto
+from contextlib import contextmanager
 import functools
 import os
-import posixpath
 import pkgutil
+import posixpath
 import re
 import tempfile
+import unittest
 import urlparse
 
-import unittest
-if not hasattr(unittest.TestCase, 'assertIsNone'):
-  # external dependency unittest2 required for Python <= 2.6
-  import unittest2 as unittest
-
+import boto
 from boto.provider import Provider
-from contextlib import contextmanager
 import gslib.tests as gslib_tests
 
+if not hasattr(unittest.TestCase, 'assertIsNone'):
+  # external dependency unittest2 required for Python <= 2.6
+  import unittest2 as unittest  # pylint: disable=g-import-not-at-top
 
 # Flags for running different types of tests.
 RUN_INTEGRATION_TESTS = True
@@ -37,6 +36,8 @@ RUN_UNIT_TESTS = True
 
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False
+
+PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG = '/tmp/.boto.parallel_upload_test_config'
 
 
 def _HasS3Credentials():
@@ -48,8 +49,27 @@ def _HasS3Credentials():
 HAS_S3_CREDS = _HasS3Credentials()
 
 
+def _HasGSHost():
+  return boto.config.get('Credentials', 'gs_host', None) is not None
+
+HAS_GS_HOST = _HasGSHost()
+
+
+# TODO: gsutil-beta: Add annotations for XML/JSON/GS/S3 testing.
+def _UsingJSONApi():
+  return boto.config.get('GSUtil', 'force_api', 'json').upper() != 'XML'
+
+USING_JSON_API = _UsingJSONApi()
+
+
 def _NormalizeURI(uri):
   """Normalizes the path component of a URI.
+
+  Args:
+    uri: URI to normalize.
+
+  Returns:
+    Normalized URI.
 
   Examples:
     gs://foo//bar -> gs://foo/bar
@@ -79,8 +99,12 @@ def ObjectToURI(obj, *suffixes):
     obj: The object to get the URI from. Can be a file object, a subclass of
          boto.storage_uri.StorageURI, or a string. If a string, it is assumed to
          be a local on-disk path.
-    suffixes: Suffixes to append. For example, ObjectToUri(bucketuri, 'foo')
-              would return the URI for a key name 'foo' inside the given bucket.
+    *suffixes: Suffixes to append. For example, ObjectToUri(bucketuri, 'foo')
+               would return the URI for a key name 'foo' inside the given
+               bucket.
+
+  Returns:
+    Storage URI string.
   """
   if isinstance(obj, file):
     return 'file://%s' % os.path.abspath(os.path.join(obj.name, *suffixes))
@@ -95,14 +119,57 @@ def ObjectToURI(obj, *suffixes):
     uri = uri[:-1]
   return uri
 
+# The mock storage service comes from the Boto library, but it is not
+# distributed with Boto when installed as a package. To get around this, we
+# copy the file to gslib/tests/mock_storage_service.py when building the gsutil
+# package. Try and import from both places here.
+# pylint: disable=g-import-not-at-top
+try:
+  from gslib.tests import mock_storage_service
+except ImportError:
+  try:
+    from boto.tests.integration.s3 import mock_storage_service
+  except ImportError:
+    try:
+      from tests.integration.s3 import mock_storage_service
+    except ImportError:
+      import mock_storage_service
+
+
+class GSMockConnection(mock_storage_service.MockConnection):
+
+  def __init__(self, *args, **kwargs):
+    kwargs['provider'] = 'gs'
+    super(GSMockConnection, self).__init__(*args, **kwargs)
+
+mock_connection = GSMockConnection()
+
+
+class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
+
+  def connect(self, access_key_id=None, secret_access_key=None):
+    return mock_connection
+
+  def compose(self, components, headers=None):
+    """Dummy implementation to allow parallel uploads with tests."""
+    return self.new_key()
+
+
 def PerformsFileToObjectUpload(func):
-  """Decorator used to indicate that a test performs an upload from a local
-     file to an object. This forces the test to run once normally, and again
-     with a special .boto config file that will ensure that the test follows
-     the parallel composite upload code path.
+  """Decorator indicating that a test uploads from a local file to an object.
+
+  This forces the test to run once normally, and again with a special .boto
+  config file that will ensure that the test follows the parallel composite
+  upload code path.
+
+  Args:
+    func: Function to wrap.
+
+  Returns:
+    Wrapped function.
   """
   @functools.wraps(func)
-  def wrapper(*args, **kwargs):
+  def Wrapper(*args, **kwargs):
     tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
     os.close(tmp_fd)
 
@@ -123,12 +190,12 @@ def PerformsFileToObjectUpload(func):
       except OSError:
         pass
 
-  return wrapper
+  return Wrapper
+
 
 @contextmanager
 def SetBotoConfigForTest(boto_config_path):
   """Sets a given file as the boto config file for a single test."""
-
   # Setup for entering "with" block.
   try:
     old_boto_config_env_variable = os.environ['BOTO_CONFIG']
@@ -146,11 +213,12 @@ def SetBotoConfigForTest(boto_config_path):
     else:
       os.environ.pop('BOTO_CONFIG', None)
 
+
 def GetTestNames():
   """Returns a list of the names of the test modules in gslib.tests."""
   matcher = re.compile(r'^test_(?P<name>.*)$')
   names = []
-  for importer, modname, ispkg in pkgutil.iter_modules(gslib_tests.__path__):
+  for _, modname, _ in pkgutil.iter_modules(gslib_tests.__path__):
     m = matcher.match(modname)
     if m:
       names.append(m.group('name'))

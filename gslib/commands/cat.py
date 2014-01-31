@@ -12,39 +12,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Implementation of Unix-like cat command for cloud storage providers."""
 
 import re
-import sys
 
+from gslib.cat_helper import CatHelper
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URIS_OK
+from gslib.command import CommandSpecKey
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
+from gslib.command import URLS_START_ARG
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpType
 from gslib.util import NO_MAX
-from gslib.wildcard_iterator import ContainsWildcard
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil cat [-h] uri...
+  gsutil cat [-h] url...
 
 
 <B>DESCRIPTION</B>
-  The cat command outputs the contents of one or more URIs to stdout.
+  The cat command outputs the contents of one or more URLs to stdout.
   It is equivalent to doing:
 
-    gsutil cp uri... -
+    gsutil cp url... -
 
   (The final '-' causes gsutil to stream the output to stdout.)
 
@@ -84,87 +86,70 @@ class CatCommand(Command):
 
   # Command specification (processed by parent class).
   command_spec = {
-    # Name of command.
-    COMMAND_NAME : 'cat',
-    # List of command name aliases.
-    COMMAND_NAME_ALIASES : [],
-    # Min number of args required by this command.
-    MIN_ARGS : 0,
-    # Max number of args required by this command, or NO_MAX.
-    MAX_ARGS : NO_MAX,
-    # Getopt-style string specifying acceptable sub args.
-    SUPPORTED_SUB_ARGS : 'hvr:',
-    # True if file URIs acceptable for this command.
-    FILE_URIS_OK : False,
-    # True if provider-only URIs acceptable for this command.
-    PROVIDER_URIS_OK : False,
-    # Index in args of first URI arg.
-    URIS_START_ARG : 0,
+      # Name of command.
+      COMMAND_NAME: 'cat',
+      # List of command name aliases.
+      COMMAND_NAME_ALIASES: [],
+      # Min number of args required by this command.
+      MIN_ARGS: 0,
+      # Max number of args required by this command, or NO_MAX.
+      MAX_ARGS: NO_MAX,
+      # Getopt-style string specifying acceptable sub args.
+      SUPPORTED_SUB_ARGS: 'hvr:',
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: False,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
+      # List of supported APIs
+      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
+      # Default API to use for this command
+      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
   }
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'cat',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : [],
-    # Type of help:
-    HELP_TYPE : HelpType.COMMAND_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Concatenate object content to stdout',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'cat',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: [],
+      # Type of help:
+      HELP_TYPE: HelpType.COMMAND_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Concatenate object content to stdout',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }
-
-  def _UriIterator(self, uri_str):
-    # Generator that returns URI(s) for uri_str. If uri_str is a wildcard we
-    # iterate over matches, else we return a single URI.
-    if not ContainsWildcard(uri_str):
-      yield self.suri_builder.StorageUri(uri_str)
-    else:
-      for uri in self.WildcardIterator(uri_str).IterUris():
-        yield uri
 
   # Command entry point.
   def RunCommand(self):
+    """Command entry point for the cat command."""
     show_header = False
     request_range = None
+    start_byte = 0
+    end_byte = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-h':
           show_header = True
         elif o == '-r':
           request_range = a.strip()
-          if not re.match('^[0-9]+-[0-9]*$|^-[0-9]+$', request_range):
+          range_matcher = re.compile(
+              '^(?P<start>[0-9]+)-(?P<end>[0-9]*)$|^(?P<endslice>-[0-9]+)$')
+          range_match = range_matcher.match(request_range)
+          if not range_match:
             raise CommandException('Invalid range (%s)' % request_range)
+          if range_match.group('start'):
+            start_byte = long(range_match.group('start'))
+          if range_match.group('end'):
+            end_byte = long(range_match.group('end'))
+          if range_match.group('endslice'):
+            start_byte = long(range_match.group('endslice'))
         elif o == '-v':
           self.logger.info('WARNING: The %s -v option is no longer'
                            ' needed, and will eventually be removed.\n'
                            % self.command_name)
 
-    printed_one = False
-    # We manipulate the stdout so that all other data other than the Object
-    # contents go to stderr.
-    cat_outfd = sys.stdout
-    sys.stdout = sys.stderr
-    did_some_work = False
-
-    for uri_str in self.args:
-      for uri in self._UriIterator(uri_str):
-        if not uri.names_object():
-          raise CommandException('"%s" command must specify objects.' %
-                                 self.command_name)
-        did_some_work = True
-        if show_header:
-          if printed_one:
-            print
-          print '==> %s <==' % uri.__str__()
-          printed_one = True
-        key = uri.get_key(False, self.headers)
-        headers = self.headers.copy()
-        if request_range:
-          headers['range'] = 'bytes=%s' % str(request_range)
-        key.get_file(cat_outfd, headers)
-    sys.stdout = cat_outfd
-    if not did_some_work:
-      raise CommandException('No URIs matched')
-
-    return 0
+    return CatHelper(self).CatUrlStrings(self.args,
+                                         show_header=show_header,
+                                         start_byte=start_byte,
+                                         end_byte=end_byte)

@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Defines gsutil-supported credential types."""
 
-class CredTypes:
+
+class CredTypes(object):
   HMAC, OAUTH2_SERVICE_ACCOUNT, OAUTH2_USER_ACCOUNT = range(3)

@@ -69,8 +69,12 @@ if IS_EDITABLE_INSTALL:
       PROGRAM_FILES_DIR, 'third_party', 'boto', 'tests', 'integration', 's3')
   sys.path.append(mock_storage_location)
 
+
 def _GetFileContents(filename):
   """Tries to find the given filename on disk or via pkgutil.get_data.
+
+  Args:
+    filename: String name of the file.
 
   Returns:
     A tuple containing the absolute path to the requested file and the file's

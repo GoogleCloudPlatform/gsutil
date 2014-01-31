@@ -11,57 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Helper module for Google Cloud Storage project IDs."""
 
 import boto
 
-from gslib.exception import ProjectIdException
-from gslib.wildcard_iterator import WILDCARD_BUCKET_ITERATOR
+from gslib.cloud_api import ProjectIdException
 
 GOOG_PROJ_ID_HDR = 'x-goog-project-id'
 
 
-class ProjectIdHandler(object):
-  """Google Project ID header handling."""
-
-  def __init__(self):
-    """Instantiates Project ID handler. Call after boto config file loaded."""
-    config = boto.config
-    self.project_id = config.get_value('GSUtil', 'default_project_id')
-
-  def SetProjectId(self, project_id):
-    """Overrides project ID value from config file default.
-
-    Args:
-      project_id: Project ID to use.
-    """
-    self.project_id = project_id
-
-  def FillInProjectHeaderIfNeeded(self, command, uri, headers):
-    """Fills project ID header into headers if defined and applicable.
-
-    Args:
-      command: The command being run.
-      uri: The URI against which this command is being run.
-      headers: Dictionary containing optional HTTP headers to pass to boto.
-          Must not be None.
-    """
-
-    # We only include the project ID header if it's a GS URI and a project_id
-    # was specified and
-    # (it's an 'mb', 'logging set off', or 'logging set on' command or
-    #  a boto request in integration tests or
-    #  (an 'ls' command that doesn't specify a bucket or wildcarded bucket)).
-    if (uri.scheme.lower() == 'gs' and self.project_id
-        and (command == 'mb' or command == 'disablelogging'
-             or command == 'enablelogging'
-             or command == 'test'
-             or (command == 'ls' and not uri.names_bucket())
-             or (command == WILDCARD_BUCKET_ITERATOR))):
-      # Note: check for None (as opposed to "not headers") here because
-      # it's ok to pass empty headers.
-      if headers is None:
-        raise ProjectIdException(
-            'FillInProjectHeaderIfNeeded called with headers=None')
-      headers[GOOG_PROJ_ID_HDR] = self.project_id
-    elif headers.has_key(GOOG_PROJ_ID_HDR):
-      del headers[GOOG_PROJ_ID_HDR]
+def PopulateProjectId(project_id=None):
+  """Fills in a project_id from the boto config file if one is not provided."""
+  if not project_id:
+    default_id = boto.config.get_value('GSUtil', 'default_project_id')
+    if not default_id:
+      raise ProjectIdException('MissingProjectId')
+    return default_id
+  return project_id

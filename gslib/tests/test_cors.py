@@ -11,45 +11,38 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for cors command."""
 
 import posixpath
 from xml.dom.minidom import parseString
 
-from gslib.util import Retry
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.translation_helper import CorsTranslation
+from gslib.util import Retry
 
 
 class TestCors(testcase.GsUtilIntegrationTestCase):
   """Integration tests for cors command."""
-  
+
   _set_cmd_prefix = ['cors', 'set']
   _get_cmd_prefix = ['cors', 'get']
 
-  empty_doc1 = parseString('<CorsConfig/>').toprettyxml(indent='    ')
+  empty_doc1 = '[]'
+  empty_doc2 = '[ {} ]'
 
-  empty_doc2 = parseString(
-      '<CorsConfig></CorsConfig>').toprettyxml(indent='    ')
+  cors_bad = (
+      '[{"origin": ["http://origin1.example.com", '
+      '"http://origin2.example.com"], '
+      '"responseHeader": ["foo", "bar"], "badmethod": ["GET", "PUT", "POST"], '
+      '"maxAgeSeconds": 3600},'
+      '{"origin": ["http://origin3.example.com"], '
+      '"responseHeader": ["foo2", "bar2"], "method": ["GET", "DELETE"]}])'
+  )
 
-  empty_doc3 = parseString(
-      '<CorsConfig><Cors/></CorsConfig>').toprettyxml(indent='    ')
+  no_cors = 'has no CORS configuration'
 
-  empty_doc4 = parseString(
-      '<CorsConfig><Cors></Cors></CorsConfig>').toprettyxml(indent='    ')
-
-  cors_bad1 = ('<?xml version="1.0" ?><CorsConfig><Cors><Methods><Method>GET'
-               '</ResponseHeader></Methods></Cors></CorsConfig>')
-
-  cors_bad2 = ('<?xml version="1.0" ?><CorsConfig><Cors><Methods><Cors>GET'
-               '</Cors></Methods></Cors></CorsConfig>')
-
-  cors_bad3 = ('<?xml version="1.0" ?><CorsConfig><Methods><Method>GET'
-               '</Method></Methods></Cors></CorsConfig>')
-
-  cors_bad4 = ('<?xml version="1.0" ?><CorsConfig><Cors><Method>GET'
-               '</Method></Cors></CorsConfig>')
-
-  cors_doc = parseString(
+  xml_cors_doc = parseString(
       '<CorsConfig><Cors><Origins>'
       '<Origin>http://origin1.example.com</Origin>'
       '<Origin>http://origin2.example.com</Origin>'
@@ -64,11 +57,37 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
       '<ResponseHeader>bar2</ResponseHeader></ResponseHeaders>'
       '</Cors></CorsConfig>').toprettyxml(indent='    ')
 
+  # This is coupled with the precise mechanics of how we print cors config.
+  cors_doc = (
+      '[{"origin": ["http://origin1.example.com", '
+      '"http://origin2.example.com"], '
+      '"responseHeader": ["foo", "bar"], "method": ["GET", "PUT", "POST"], '
+      '"maxAgeSeconds": 3600},'
+      '{"origin": ["http://origin3.example.com"], '
+      '"responseHeader": ["foo2", "bar2"], "method": ["GET", "DELETE"]}]\n')
+
+  # This is coupled with the precise mechanics of how we print cors config.
+  cors_doc2 = (
+      '[{"origin": ["http://origin1.example.com", '
+      '"http://origin2.example.com"], '
+      '"responseHeader": ["foo", "bar"], "method": ["GET", "PUT", "POST"]}]\n'
+  )
+
+  def test_cors_translation(self):
+    """Tests cors translation for various formats."""
+    json_text = self.cors_doc
+    entries_list = CorsTranslation.JsonCorsToMessageEntries(json_text)
+    boto_cors = CorsTranslation.BotoCorsFromMessage(entries_list)
+    converted_entries_list = CorsTranslation.BotoCorsToMessage(boto_cors)
+    converted_json_text = CorsTranslation.MessageEntriesToJson(
+        converted_entries_list)
+    self.assertEqual(json_text, converted_json_text)
+
   def test_default_cors(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_cors, stdout)
 
   def test_set_empty_cors1(self):
     bucket_uri = self.CreateBucket()
@@ -76,7 +95,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_cors, stdout)
 
   def test_set_empty_cors2(self):
     bucket_uri = self.CreateBucket()
@@ -84,23 +103,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
-
-  def test_set_empty_cors3(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.empty_doc3)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
-                            return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc3)
-
-  def test_set_empty_cors4(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.empty_doc4)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
-                            return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc3)
+    self.assertIn(self.no_cors, stdout)
 
   def test_non_null_cors(self):
     bucket_uri = self.CreateBucket()
@@ -110,31 +113,22 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEqual(stdout, self.cors_doc)
 
-  def test_bad_cors1(self):
+  def test_bad_cors_xml(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_bad1)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-                   expected_status=1)
+    fpath = self.CreateTempFile(contents=self.xml_cors_doc)
+    stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('XML CORS data provided', stderr)
 
-  def test_bad_cors2(self):
+  def test_bad_cors(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_bad2)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-                   expected_status=1)
-
-  def test_bad_cors3(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_bad3)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-                   expected_status=1)
-
-  def test_bad_cors4(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_bad4)
-    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-                   expected_status=1)
+    fpath = self.CreateTempFile(contents=self.cors_bad)
+    stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
+                            expected_status=1, return_stderr=True)
+    self.assertNotIn('XML CORS data provided', stderr)
 
   def set_cors_and_reset(self):
+    """Tests setting CORS then removing it."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.cors_doc)
@@ -147,9 +141,26 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.empty_doc1)
+    self.assertIn(self.no_cors, stdout)
+
+  def set_partial_cors_and_reset(self):
+    """Tests setting CORS without maxAgeSeconds, then removing it."""
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.cors_doc2)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertEqual(stdout, self.cors_doc2)
+
+    fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
+    self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertIn(self.no_cors, stdout)
 
   def set_multi_non_null_cors(self):
+    """Tests setting different CORS configurations."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_doc)
@@ -163,6 +174,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stdout, self.cors_doc)
 
   def test_set_wildcard_non_null_cors(self):
+    """Tests setting CORS on a wildcarded bucket URI."""
     random_prefix = self.MakeRandomTestString()
     bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
     bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)
@@ -186,6 +198,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     actual = set()
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
+      """Ensures expect set lines are present in command output."""
       stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
                               return_stderr=True)
       outlines = stderr.splitlines()
@@ -209,6 +222,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stdout, self.cors_doc)
 
   def testTooFewArgumentsFails(self):
+    """Ensures CORS commands fail with too few arguments."""
     # No arguments for get, but valid subcommand.
     stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
                             expected_status=1)
@@ -222,6 +236,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     # Neither arguments nor subcommand.
     stderr = self.RunGsUtil(['cors'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
+
 
 class TestCorsOldAlias(TestCors):
   _set_cmd_prefix = ['setcors']

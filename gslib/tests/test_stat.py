@@ -13,27 +13,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import posixpath
-import re
-import subprocess
-import sys
-
-import gslib
+"""Tests for stat command."""
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-from gslib.wildcard_iterator import ContainsWildcard
+
 
 class TestStat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for stat command."""
 
   def test_stat_output(self):
+    """Tests stat output of a single object."""
     object_uri = self.CreateObject(contents='z')
     stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
     self.assertIn(object_uri.uri, stdout)
     self.assertIn('Creation time:', stdout)
-    self.assertIn('Cache-Control:', stdout)
-    self.assertIn('Content-Encoding:', stdout)
+
+    # Cache-Control and Content-Encoding can be different depending on
+    # whether the JSON or XML API is used.  For JSON, only max-age and
+    # no-cache are respected.  Although the object field will be populated
+    # with whatever we set, the actual header returned from the JSON API
+    # may differ from it (and differ from the XML response for the same object).
+    #
+    # Likewise, with contentEncoding, the field value and the header value
+    # are not guaranteed to match or be the same across APIs.
+    #
+    # JSON will not return a Cache-control or content-encoding with the
+    # current test object creation, so check these only for the XML API.
+    if self.test_api == ApiSelector.XML:
+      self.assertIn('Cache-Control:', stdout)
+      self.assertIn('Content-Encoding:', stdout)
     self.assertIn('Content-Length:', stdout)
     self.assertIn('Content-Type:', stdout)
     self.assertIn('Hash (crc32c):', stdout)

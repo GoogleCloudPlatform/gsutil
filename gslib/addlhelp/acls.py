@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Additional help about Access Control Lists."""
 
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HelpProvider
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpProvider
+from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
@@ -42,7 +43,7 @@ _detailed_help_text = ("""
     allowed to write and delete objects in that bucket -- including
     overwriting previously written objects.
 
-  - Users granted FULL_CONTROL access are allowed WRITE access and also
+  - Users granted OWNER access are allowed WRITE access and also
     are allowed to read and write the bucket's ACL.
 
   The object ACL works as follows:
@@ -50,7 +51,7 @@ _detailed_help_text = ("""
   - Users granted READ access are allowed to read the object's data and
     metadata.
 
-  - Users granted FULL_CONTROL access are allowed READ access and also
+  - Users granted OWNER access are allowed READ access and also
     are allowed to read and write the object's ACL.
 
   A couple of points are worth noting, that sometimes surprise users:
@@ -62,10 +63,10 @@ _detailed_help_text = ("""
      object ACL matters for that purpose. This is different from how things
      work in Linux file systems, where both the file and directory permission
      control file read access. It also means, for example, that someone with
-     FULL_CONTROL over the bucket may not have read access to objects in
+     OWNER over the bucket may not have read access to objects in
      the bucket.  This is by design, and supports useful cases. For example,
      you might want to set up bucket ownership so that a small group of
-     administrators have FULL_CONTROL on the bucket (with the ability to
+     administrators have OWNER on the bucket (with the ability to
      delete data to control storage costs), but not grant those users read
      access to the object data (which might be sensitive data that should
      only be accessed by a different specific group of users).
@@ -78,17 +79,17 @@ _detailed_help_text = ("""
   project-private
     Gives permission to the project team based on their roles. Anyone who is
     part of the team has READ permission, and project owners and project editors
-    have FULL_CONTROL permission. This is the default ACL for newly created
+    have OWNER permission. This is the default ACL for newly created
     buckets. This is also the default ACL for newly created objects unless the
     default object ACL for that bucket has been changed. For more details see
     "gsutil help projects".
 
   private
-    Gives the requester (and only the requester) FULL_CONTROL permission for a
+    Gives the requester (and only the requester) OWNER permission for a
     bucket or object.
 
   public-read
-    Gives the requester FULL_CONTROL permission and gives all users READ
+    Gives the requester OWNER permission and gives all users READ
     permission. When you apply this to an object, anyone on the Internet can
     read the object without authenticating.
 
@@ -99,113 +100,83 @@ _detailed_help_text = ("""
     such objects. For help doing this, see 'gsutil help setmeta'.
 
   public-read-write
-    Gives the requester FULL_CONTROL permission and gives all users READ and
+    Gives the requester OWNER permission and gives all users READ and
     WRITE permission. This ACL applies only to buckets.
 
   authenticated-read
-    Gives the requester FULL_CONTROL permission and gives all authenticated
+    Gives the requester OWNER permission and gives all authenticated
     Google account holders READ permission.
 
   bucket-owner-read
-    Gives the requester FULL_CONTROL permission and gives the bucket owner READ
+    Gives the requester OWNER permission and gives the bucket owner READ
     permission. This is used only with objects.
 
   bucket-owner-full-control
-    Gives the requester FULL_CONTROL permission and gives the bucket owner
-    FULL_CONTROL permission. This is used only with objects.
+    Gives the requester OWNER permission and gives the bucket owner
+    OWNER permission. This is used only with objects.
 
 
-<B>ACL XML</B>
-  When you use a canned ACL, it is translated into an XML representation
+<B>ACL JSON</B>
+  When you use a canned ACL, it is translated into an JSON representation
   that can later be retrieved and edited to specify more fine-grained
   detail about who can read and write buckets and objects. By running
-  the "gsutil acl get" command you can retrieve the ACL XML, and edit it to
+  the "gsutil acl get" command you can retrieve the ACL JSON, and edit it to
   customize the permissions.
 
   As an example, if you create an object in a bucket that has no default
   object ACL set and then retrieve the ACL on the object, it will look
   something like this:
 
-    <AccessControlList>
-      <Owner>
-        <ID>
-          00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-        </ID>
-      </Owner>
-      <Entries>
-        <Entry>
-          <Scope type="GroupById">
-            <ID>
-              00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7
-            </ID>
-          </Scope>
-          <Permission>
-            FULL_CONTROL
-          </Permission>
-        </Entry>
-        <Entry>
-          <Scope type="GroupById">
-            <ID>
-              00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51
-            </ID>
-          </Scope>
-          <Permission>
-            FULL_CONTROL
-          </Permission>
-        </Entry>
-        <Entry>
-          <Scope type="GroupById">
-            <ID>
-              00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71
-            </ID>
-          </Scope>
-          <Permission>
-            READ
-          </Permission>
-        </Entry>
-      </Entries>
-    </AccessControlList>
+  [
+    {
+      "entity": "group-00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7",
+      "entityId": "00b4903a9740e42c29800f53bd5a9a62a2f96eb3f64a4313a115df3f3a776bf7",
+      "role": "OWNER"
+    },
+    {
+      "entity": "group-00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51",
+      "entityId": "00b4903a977fd817e9da167bc81306489181a110456bb635f466d71cf90a0d51",
+      "role": "OWNER"
+    },
+    {
+      "entity": "00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71",
+      "entityId": "00b4903a974898cc8fc309f2f2835308ba3d3df1b889d3fc7e33e187d52d8e71",
+      "role": "READER"
+    }
+  ]
 
-  The ACL consists of an Owner element and a collection of Entry elements,
-  each of which specifies a Scope and a Permission. Scopes are the way you
-  specify an individual or group of individuals, and Permissions specify what
-  access they're permitted.
+  The ACL consists collection of elements, each of which specifies an Entity
+  and a Role.  Entities are the way you specify an individual or group of
+  individuals, and Roles specify what access they're permitted.
 
-  This particular ACL grants FULL_CONTROL to two groups (which means members
+  This particular ACL grants OWNER to two groups (which means members
   of those groups are allowed to read the object and read and write the ACL),
   and READ permission to a third group. The project groups are (in order)
-  the owners group, editors group, and viewers group.
+  the project owners group, editors group, and viewers group.
 
-  The 64 digit hex identifiers used in this ACL are called canonical IDs,
-  and are used to identify predefined groups associated with the project that
-  owns the bucket. For more information about project groups, see "gsutil
-  help projects".
+  The 64 digit hex identifiers (following any prefixes like "group-") used in
+  this ACL are called canonical IDs.  They are used to identify predefined
+  groups associated with the project that owns the bucket: the Project Owners,
+  Project Editors, and All Project Team Members groups. For more information
+  the permissions and roles of these project groups, see "gsutil help projects".
 
-  Here's an example of an ACL specified using the GroupByEmail and GroupByDomain
-  scopes:
+  Here's an example of an ACL specified using the group-by-email and
+  group-by-domain entities:
 
-    <AccessControlList>
-      <Entries>
-        <Entry>
-          <Permission>
-            FULL_CONTROL
-          </Permission>
-          <Scope type="GroupByEmail">
-            <EmailAddress>travel-companion-owners@googlegroups.com</EmailAddress>
-          </Scope>
-        </Entry>
-        <Entry>
-          <Permission>
-            READ
-          </Permission>
-          <Scope type="GroupByDomain">
-            <Domain>example.com</Domain>
-          </Scope>
-        </Entry>
-      </Entries>
-    </AccessControlList>
+[
+  {
+    "entity": "group-travel-companion-owners@googlegroups.com"
+    "email": "travel-companion-owners@googlegroups.com",
+    "role": "OWNER",
+  }
+  {
+    "domain": "example.com",
+    "entity": "domain-example.com"
+    "role": "READER",
+  },
+]
 
-  This ACL grants members of an email group FULL_CONTROL, and grants READ
+  This ACL grants members of an email group OWNER, and grants READ
   access to any user in a domain (which must be a Google Apps for Business
   domain). By applying email group grants to a collection of objects
   you can edit access control for large numbers of objects at once via
@@ -225,15 +196,15 @@ class CommandOptions(HelpProvider):
   """Additional help about Access Control Lists."""
 
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'acls',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['ACL', 'access control', 'access control list',
-                         'authorization', 'canned', 'canned acl'],
-    # Type of help:
-    HELP_TYPE : HelpType.ADDITIONAL_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'Working With Access Control Lists',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'acls',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['ACL', 'access control', 'access control list',
+                          'authorization', 'canned', 'canned acl'],
+      # Type of help:
+      HELP_TYPE: HelpType.ADDITIONAL_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'Working With Access Control Lists',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }

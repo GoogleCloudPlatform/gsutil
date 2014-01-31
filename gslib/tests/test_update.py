@@ -31,7 +31,7 @@ import gslib
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
-from gslib.util import BOTO_IS_SECURE
+from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 
 
 TESTS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -41,10 +41,10 @@ GSUTIL_DIR = os.path.join(TESTS_DIR, '..', '..')
 class UpdateTest(testcase.GsUtilIntegrationTestCase):
   """Update command test suite."""
 
-  @unittest.skipUnless(BOTO_IS_SECURE[0],
-                       'Test requires boto secure connection.')
+  @unittest.skipUnless(CERTIFICATE_VALIDATION_ENABLED,
+                       'Test requires https certificate validation enabled.')
   def test_update(self):
-    """Tests that the update command works or throws proper exceptions."""
+    """Tests that the update command works or raises proper exceptions."""
 
     if gslib.IS_PACKAGE_INSTALL:
       # The update command is not present when installed via package manager.
@@ -113,7 +113,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
         cwd=gsutil_dst, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
     self.assertEqual(p.returncode, 1)
-    self.assertIn('non-existent object', stderr)
+    self.assertIn('NotFoundException', stderr)
 
     # Run with file:// URI wihout -f option.
     p = subprocess.Popen(prefix + ['gsutil', 'update', suri(src_tarball)],

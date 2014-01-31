@@ -11,20 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Contains gsutil base integration test case class."""
 
-import base
-import boto
-import gslib
-import gslib.tests.util as util
+from contextlib import contextmanager
 import logging
 import subprocess
 import sys
 
+import boto
 from boto.exception import GSResponseError
-from contextlib import contextmanager
-from gslib.project_id import ProjectIdHandler
+import gslib
+from gslib.project_id import GOOG_PROJ_ID_HDR
+from gslib.project_id import PopulateProjectId
+from gslib.tests.testcase import base
+import gslib.tests.util as util
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
@@ -41,30 +41,43 @@ BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING = """
 bypass_anonymous_access_warning = True
 """
 
+
 @unittest.skipUnless(util.RUN_INTEGRATION_TESTS,
                      'Not running integration tests.')
 class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   """Base class for gsutil integration tests."""
   GROUP_TEST_ADDRESS = 'gs-discussion@googlegroups.com'
-  GROUP_TEST_ID = '00b4903a97d097895ab58ef505d535916a712215b79c3e54932c2eb502ad97f5'
+  GROUP_TEST_ID = (
+      '00b4903a97d097895ab58ef505d535916a712215b79c3e54932c2eb502ad97f5')
   USER_TEST_ADDRESS = 'gs-team@google.com'
-  USER_TEST_ID = '00b4903a9703325c6bfc98992d72e75600387a64b3b6bee9ef74613ef8842080'
+  USER_TEST_ID = (
+      '00b4903a9703325c6bfc98992d72e75600387a64b3b6bee9ef74613ef8842080')
   DOMAIN_TEST = 'google.com'
-  # No one can create this bucket without owning the google.com domain, and we
+  # No one can create this bucket without owning the gmail.com domain, and we
   # won't create this bucket, so it shouldn't exist.
-  NONEXISTENT_BUCKET_NAME = 'nonexistent-bucket-foobar.google.com'
+  # It would be nice to use google.com here but JSON API disallows
+  # 'google' in resource IDs.
+  NONEXISTENT_BUCKET_NAME = 'nonexistent-bucket-foobar.gmail.com'
 
   def setUp(self):
+    """Creates base configuration for integration tests."""
     super(GsUtilIntegrationTestCase, self).setUp()
     self.bucket_uris = []
 
     # Set up API version and project ID handler.
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
-    self.proj_id_handler = ProjectIdHandler()
+
+    # TODO: gsutil-beta: This should consider whether the command
+    # supports the API or not, but since commands will default to XML
+    # it is enough to assume XML support and override as needed in the tests.
+    self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
+  # TODO: As long as we're still using boto to do the teardown,
+  # we decorate with boto exceptions.  Eventually this should be migrated
+  # to CloudApi exceptions.
   @Retry(GSResponseError, tries=6, timeout_secs=1)
   def tearDown(self):
     super(GsUtilIntegrationTestCase, self).tearDown()
@@ -96,7 +109,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
             else:
               raise
         if error:
-          raise error
+          raise error  # pylint: disable=raising-bad-type
         bucket_list = list(bucket_uri.list_bucket(all_versions=True))
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
@@ -124,12 +137,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    
+
     if provider == 'gs':
       # Apply API version and project ID headers if necessary.
       headers = {'x-goog-api-version': self.api_version}
-      self.proj_id_handler.FillInProjectHeaderIfNeeded(
-          'test', bucket_uri, headers)
+      headers[GOOG_PROJ_ID_HDR] = PopulateProjectId()
     else:
       headers = {}
 
@@ -164,8 +176,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """Creates a test object.
 
     Args:
-      bucket: The URI of the bucket to place the object in. If not specified, a
-              new temporary bucket is created.
+      bucket_uri: The URI of the bucket to place the object in. If not
+                  specified, a new temporary bucket is created.
       object_name: The name to use for the object. If not specified, a temporary
                    test object name is constructed.
       contents: The contents to write to the object. If not specified, the key
@@ -230,10 +242,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       return toreturn[0]
     elif toreturn:
       return tuple(toreturn)
-    
+
   @contextmanager
   def SetAnonymousBotoCreds(self):
     boto_config_path = self.CreateTempFile(
-          contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
+        contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
     with SetBotoConfigForTest(boto_config_path):
       yield

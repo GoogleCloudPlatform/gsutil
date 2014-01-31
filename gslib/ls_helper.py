@@ -1,0 +1,235 @@
+# Copyright 2014 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Utility functions and class for listing commands such as ls and du."""
+import fnmatch
+
+from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.exception import CommandException
+from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.util import UTF8
+from gslib.wildcard_iterator import StorageUrlFromString
+
+
+def PrintNewLine():
+  """Default function for printing new lines between directories."""
+  print
+
+
+def PrintDirHeader(bucket_listing_ref):
+  """Default function for printing headers for buckets or prefixes.
+
+  Header is printed prior to listing the contents of the bucket or prefix.
+
+  Args:
+    bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
+  """
+  print '%s:' % bucket_listing_ref.GetUrlString().encode(UTF8)
+
+
+def PrintDir(bucket_listing_ref):
+  """Default function for printing buckets or prefixes.
+
+  Args:
+    bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
+  """
+  print bucket_listing_ref.GetUrlString().encode(UTF8)
+
+
+# pylint: disable=unused-argument
+def PrintDirSummary(num_bytes, bucket_listing_ref):
+  """Off-by-default function for printing buckets or prefix size summaries.
+
+  Args:
+    num_bytes: Number of bytes contained in the directory.
+    bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
+  """
+  pass
+
+
+def PrintObject(bucket_listing_ref):
+  """Default printing function for objects.
+
+  Args:
+    bucket_listing_ref: BucketListingRef of type OBJECT.
+
+  Returns:
+    (num_objects, num_bytes).
+  """
+  print bucket_listing_ref.GetUrlString().encode(UTF8)
+  return (1, 0)
+
+
+class LsHelper(object):
+  """Helper class for ls and du."""
+
+  def __init__(self, iterator_func, logger,
+               print_object_func=PrintObject,
+               print_dir_func=PrintDir,
+               print_dir_header_func=PrintDirHeader,
+               print_dir_summary_func=PrintDirSummary,
+               print_newline_func=PrintNewLine,
+               all_versions=False, should_recurse=False,
+               exclude_patterns=None, fields=('name',)):
+    """Initializes the helper class to prepare for listing.
+
+    Args:
+      iterator_func: Function for instantiating iterator.
+                     Inputs-
+                       url_string- Url string to iterate on. May include
+                                   wildcards.
+                       all_versions=False- If true, iterate over all object
+                                           versions.
+      logger: Logger for outputting warnings / errors.
+      print_object_func: Function for printing objects.
+      print_dir_func:    Function for printing buckets/prefixes.
+      print_dir_header_func: Function for printing header line for buckets
+                             or prefixes.
+      print_dir_summary_func: Function for printing size summaries about
+                              buckets/prefixes.
+      print_newline_func: Function for printing new lines between dirs.
+      all_versions:      If true, list all object versions.
+      should_recurse:    If true, recursively listing buckets/prefixes.
+      exclude_patterns:  Patterns to exclude when listing.
+      fields:            Fields to request from bucket listings; this should
+                         include all fields that need to be populated in
+                         objects so they can be listed. Can be set to None
+                         to retrieve all object fields. Defaults to short
+                         listing fields.
+    """
+    self._iterator_func = iterator_func
+    self.logger = logger
+    self._print_object_func = print_object_func
+    self._print_dir_func = print_dir_func
+    self._print_dir_header_func = print_dir_header_func
+    self._print_dir_summary_func = print_dir_summary_func
+    self._print_newline_func = print_newline_func
+    self.all_versions = all_versions
+    self.should_recurse = should_recurse
+    self.exclude_patterns = exclude_patterns
+    self.bucket_listing_fields = fields
+
+  def ExpandUrlAndPrint(self, url):
+    """Iterates over the given URL and calls print functions.
+
+    Args:
+      url: StorageUrl to iterate over.
+
+    Returns:
+      (num_objects, num_bytes) total number of objects and bytes iterated.
+    """
+    num_objects = 0
+    num_bytes = 0
+    print_newline = False
+
+    if url.IsBucket() or self.should_recurse:
+      # IsBucket() implies a top-level listing.
+      return self._RecurseExpandUrlAndPrint(url.GetUrlString(),
+                                            print_initial_newline=False)
+    else:
+      # User provided a prefix or object URL, but it's impossible to tell
+      # which until we do a listing and see what matches.
+      top_level_iteration = url.GetVersionlessUrlStringStripOneSlash()
+      top_level_iterator = PluralityCheckableIterator(self._iterator_func(
+          '%s' % top_level_iteration, all_versions=self.all_versions).IterAll(
+              expand_top_level_buckets=True,
+              bucket_listing_fields=self.bucket_listing_fields))
+      plurality = top_level_iterator.HasPlurality()
+
+      for blr in top_level_iterator:
+        if self._MatchesExcludedPattern(blr):
+          continue
+        if blr.ref_type == BucketListingRefType.OBJECT:
+          no, nb = self._print_object_func(blr)
+          print_newline = True
+        elif blr.ref_type == BucketListingRefType.PREFIX:
+          if print_newline:
+            self._print_newline_func()
+          else:
+            print_newline = True
+          if plurality:
+            self._print_dir_header_func(blr)
+          expansion_url_str = '%s/*' % StorageUrlFromString(
+              blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
+          no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
+          self._print_dir_summary_func(nb, blr)
+        else:
+          # We handle all buckets at the top level, so this should never happen.
+          raise CommandException(
+              'Sub-level iterator returned a CsBucketListingRef of type Bucket')
+        num_objects += no
+        num_bytes += nb
+      return num_objects, num_bytes
+
+  def _RecurseExpandUrlAndPrint(self, url_str, print_initial_newline=True):
+    """Iterates over the given URL string and calls print functions.
+
+    Args:
+      url_str: String describing StorageUrl to iterate over.
+               Must be of depth one or higher.
+      print_initial_newline: If true, print a newline before recursively
+                             expanded prefixes.
+
+    Returns:
+      (num_objects, num_bytes) total number of objects and bytes iterated.
+    """
+    num_objects = 0
+    num_bytes = 0
+    for blr in self._iterator_func(
+        '%s' % url_str, all_versions=self.all_versions).IterAll(
+            expand_top_level_buckets=True,
+            bucket_listing_fields=self.bucket_listing_fields):
+      if self._MatchesExcludedPattern(blr):
+        continue
+
+      if blr.ref_type == BucketListingRefType.OBJECT:
+        no, nb = self._print_object_func(blr)
+      elif blr.ref_type == BucketListingRefType.PREFIX:
+        if self.should_recurse:
+          if print_initial_newline:
+            self._print_newline_func()
+          else:
+            print_initial_newline = True
+          self._print_dir_header_func(blr)
+          expansion_url_str = '%s/*' % StorageUrlFromString(
+              blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
+
+          no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
+          self._print_dir_summary_func(nb, blr)
+        else:
+          no, nb = 0, 0
+          self._print_dir_func(blr)
+      else:
+        # We handle all buckets at the top level, so this should never happen.
+        raise CommandException(
+            'Sub-level iterator returned a bucketListingRef of type Bucket')
+      num_objects += no
+      num_bytes += nb
+
+    return num_objects, num_bytes
+
+  def _MatchesExcludedPattern(self, blr):
+    """Checks bucket listing reference against patterns to exclude.
+
+    Args:
+      blr: BucketListingRef to check.
+
+    Returns:
+      True if reference matches a pattern and should be excluded.
+    """
+    if self.exclude_patterns:
+      tomatch = blr.GetUrlString()
+      for pattern in self.exclude_patterns:
+        if fnmatch.fnmatch(tomatch, pattern):
+          return True
+    return False

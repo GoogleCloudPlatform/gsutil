@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Additional help about subdirectory handling in gsutil."""
 
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
 from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HelpProvider
 from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HelpType
 from gslib.help_provider import HELP_TYPE
+from gslib.help_provider import HelpProvider
+from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
@@ -103,16 +104,16 @@ class CommandOptions(HelpProvider):
   """Additional help about subdirectory handling in gsutil."""
 
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : 'subdirs',
-    # List of help name aliases.
-    HELP_NAME_ALIASES : ['dirs', 'directory', 'directories', 'folder',
-                         'folders', 'hierarchy', 'subdir', 'subdirectory',
-                         'subdirectories'],
-    # Type of help:
-    HELP_TYPE : HelpType.ADDITIONAL_HELP,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : 'How Subdirectories Work',
-    # The full help text.
-    HELP_TEXT : _detailed_help_text,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: 'subdirs',
+      # List of help name aliases.
+      HELP_NAME_ALIASES: ['dirs', 'directory', 'directories', 'folder',
+                          'folders', 'hierarchy', 'subdir', 'subdirectory',
+                          'subdirectories'],
+      # Type of help:
+      HELP_TYPE: HelpType.ADDITIONAL_HELP,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: 'How Subdirectories Work',
+      # The full help text.
+      HELP_TEXT: _detailed_help_text,
   }

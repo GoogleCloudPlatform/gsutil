@@ -17,9 +17,12 @@
 # Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
+import base64
+import binascii
 import calendar
 from collections import defaultdict
 import contextlib
+import cStringIO
 import datetime
 import json
 import logging
@@ -34,23 +37,26 @@ import subprocess
 import tempfile
 import time
 
+from apiclient import errors as apiclient_errors
 import boto
-from boto.utils import compute_md5
 import boto.gs.connection
-
 import gslib
+from gslib.cloud_api import NotFoundException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import COMMAND_NAME
 from gslib.command import COMMAND_NAME_ALIASES
+from gslib.command import CommandSpecKey
 from gslib.command import DummyArgChecker
-from gslib.command import FILE_URIS_OK
+from gslib.command import FILE_URLS_OK
 from gslib.command import MAX_ARGS
 from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URIS_OK
+from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URIS_START_ARG
-#from gslib.command_runner import CommandRunner
+from gslib.command import URLS_START_ARG
 from gslib.commands import config
+from gslib.cp_helper import GetDownloadSerializationDict
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import HELP_NAME
 from gslib.help_provider import HELP_NAME_ALIASES
@@ -58,7 +64,9 @@ from gslib.help_provider import HELP_ONE_LINE_SUMMARY
 from gslib.help_provider import HELP_TEXT
 from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpType
-from gslib.util import GetBotoConfigFileList
+from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.util import CalculateMd5FromContents
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
@@ -68,14 +76,14 @@ from gslib.util import Percentile
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
   gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c processes]
-  [-k threads] [-s size] [-t tests] uri...
+  [-k threads] [-s size] [-t tests] url...
 
 
 <B>DESCRIPTION</B>
   The perfdiag command runs a suite of diagnostic tests for a given Google
   Storage bucket.
 
-  The 'uri' parameter must name an existing bucket (e.g. gs://foo) to which
+  The 'url' parameter must name an existing bucket (e.g. gs://foo) to which
   the user has write permission. Several test files will be uploaded to and
   downloaded from this bucket. All test files will be deleted at the completion
   of the diagnostic if it finishes successfully.
@@ -167,22 +175,24 @@ _detailed_help_text = ("""
   information will be sent to Google unless you choose to send it.
 """)
 
-def _DownloadKey(cls, key):
-  key.get_contents_to_file(cls.devnull, **cls.get_contents_to_file_args)
-  
-def _UploadKey(cls, key):
-  return key.set_contents_from_string(cls.file_contents[cls.thru_local_file],
-                                      md5=cls.file_md5s[cls.thru_local_file])
-  
+
+def _DownloadWrapper(cls, download_tuple, thread_state=None):
+  cls.Download(download_tuple, thread_state=thread_state)
+
+
+def _UploadWrapper(cls, thru_tuple, thread_state=None):
+  cls.Upload(thru_tuple, thread_state=thread_state)
+
+
 def _PerfdiagExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
-        
+
 
 class DummyFile(object):
   """A dummy, file-like object that throws away everything written to it."""
 
-  def write(self, *args, **kwargs):  # pylint: disable-msg=C6409
+  def write(self, *args, **kwargs):  # pylint: disable=invalid-name
     pass
 
 
@@ -201,12 +211,16 @@ class PerfDiagCommand(Command):
       MAX_ARGS: 1,
       # Getopt-style string specifying acceptable sub args.
       SUPPORTED_SUB_ARGS: 'n:c:k:s:t:m:i:o:',
-      # True if file URIs acceptable for this command.
-      FILE_URIS_OK: False,
-      # True if provider-only URIs acceptable for this command.
-      PROVIDER_URIS_OK: False,
-      # Index in args of first URI arg.
-      URIS_START_ARG: 0,
+      # True if file URLs acceptable for this command.
+      FILE_URLS_OK: False,
+      # True if provider-only URLs acceptable for this command.
+      PROVIDER_URLS_OK: False,
+      # Index in args of first URL arg.
+      URLS_START_ARG: 0,
+      # List of supported APIs
+      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
+      # Default API to use for this command
+      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
   }
   help_spec = {
       # Name of command or auxiliary help info for which this help applies.
@@ -221,7 +235,7 @@ class PerfDiagCommand(Command):
       HELP_TEXT: _detailed_help_text,
   }
 
-  # Byte sizes to use for testing files.
+  # Byte sizes to use for latency testing files.
   # TODO: Consider letting the user specify these sizes with a configuration
   # parameter.
   test_file_sizes = (
@@ -274,7 +288,7 @@ class PerfDiagCommand(Command):
     self.logger.debug('Running command: %s', cmd)
     stderr = subprocess.PIPE if mute_stderr else None
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr)
-    (stdoutdata, stderrdata) = p.communicate()
+    (stdoutdata, _) = p.communicate()
     if raise_on_error and p.returncode:
       raise CommandException("Received non-zero return code (%d) from "
                              "subprocess '%s'." % (p.returncode, ' '.join(cmd)))
@@ -309,7 +323,7 @@ class PerfDiagCommand(Command):
       self.file_sizes[fpath] = file_size
       random_bytes = os.urandom(min(file_size, self.MAX_UNIQUE_RANDOM_BYTES))
       total_bytes = 0
-      file_contents = ""
+      file_contents = ''
       while total_bytes < file_size:
         num_bytes = min(self.MAX_UNIQUE_RANDOM_BYTES, file_size - total_bytes)
         file_contents += random_bytes[:num_bytes]
@@ -318,7 +332,8 @@ class PerfDiagCommand(Command):
       with os.fdopen(fd, 'wb') as f:
         f.write(self.file_contents[fpath])
       with open(fpath, 'rb') as f:
-        self.file_md5s[fpath] = compute_md5(f)
+        self.file_md5s[fpath] = base64.encodestring(
+            binascii.unhexlify(CalculateMd5FromContents(f))).rstrip('\n')
       return fpath
 
     # Create files for latency tests.
@@ -329,16 +344,16 @@ class PerfDiagCommand(Command):
     # Creating a file for warming up the TCP connection.
     self.tcp_warmup_file = _MakeFile(5 * 1024 * 1024)  # 5 Megabytes.
     # Remote file to use for TCP warmup.
-    self.tcp_warmup_remote_file = (str(self.bucket_uri) +
+    self.tcp_warmup_remote_file = (str(self.bucket_url) +
                                    os.path.basename(self.tcp_warmup_file))
 
     # Local file on disk for write throughput tests.
     self.thru_local_file = _MakeFile(self.thru_filesize)
     # Remote file to write/read from during throughput tests.
-    self.thru_remote_file = (str(self.bucket_uri) +
+    self.thru_remote_file = (str(self.bucket_url) +
                              os.path.basename(self.thru_local_file))
     # Dummy file buffer to use for downloading that goes nowhere.
-    self.devnull = DummyFile()
+    self.discard_sink = DummyFile()
 
   def _TearDown(self):
     """Performs operations to clean things up after performing diagnostics."""
@@ -353,12 +368,11 @@ class PerfDiagCommand(Command):
     for f in cleanup_files:
 
       def _Delete():
-        k = self.bucket.key_class(self.bucket)
-        k.name = os.path.basename(f)
         try:
-          k.delete()
-        except boto.exception.BotoServerError as e:
-          # Ignore not found errors since it's already gone.
+          self.gsutil_api.DeleteObject(self.bucket_url.bucket_name,
+                                       os.path.basename(f),
+                                       provider=self.provider)
+        except NotFoundException as e:
           if e.status != 404:
             raise
 
@@ -399,27 +413,30 @@ class PerfDiagCommand(Command):
     # by the remote party or the connection broke because of network issues.
     # Only the BotoServerError is counted as a 5xx error towards the retry
     # limit.
-    exceptions = list(self.bucket.connection.http_exceptions)
-    exceptions.append(boto.exception.BotoServerError)
-
     success = False
     server_error_retried = 0
     total_retried = 0
     i = 0
+    return_val = None
     while not success:
       next_sleep = random.random() * (2 ** i) + 1
       try:
-        func()
+        return_val = func()
         self.total_requests += 1
         success = True
-      except tuple(exceptions) as e:
+      except tuple(self.exceptions) as e:
         total_retried += 1
         if total_retried > self.MAX_TOTAL_RETRIES:
           self.logger.info('Reached maximum total retries. Not retrying.')
           break
-        if isinstance(e, boto.exception.BotoServerError):
-          if e.status >= 500:
-            self.error_responses_by_code[e.status] += 1
+        if (isinstance(e, apiclient_errors.HttpError) or
+            isinstance(e, ServiceException)):
+          if isinstance(e, apiclient_errors.HttpError):
+            status = e.resp.status
+          else:
+            status = e.status
+          if status >= 500:
+            self.error_responses_by_code[status] += 1
             self.total_requests += 1
             self.request_errors += 1
             server_error_retried += 1
@@ -432,7 +449,7 @@ class PerfDiagCommand(Command):
             break
         else:
           self.connection_breaks += 1
-    return success
+    return return_val
 
   def _RunLatencyTests(self):
     """Runs latency tests."""
@@ -443,49 +460,61 @@ class PerfDiagCommand(Command):
       self.logger.info('\nRunning latency iteration %d...', i+1)
       for fpath in self.latency_files:
         basename = os.path.basename(fpath)
-        gsbucket = str(self.bucket_uri)
-        gsuri = gsbucket + basename
+        url = StorageUrlFromString(str(self.bucket_url))
+        url.object_name = basename
         file_size = self.file_sizes[fpath]
         readable_file_size = MakeHumanReadable(file_size)
 
         self.logger.info(
             "\nFile of size %(size)s located on disk at '%(fpath)s' being "
-            "diagnosed in the cloud at '%(gsuri)s'."
-            % {'size': readable_file_size, 'fpath': fpath, 'gsuri': gsuri})
+            "diagnosed in the cloud at '%(url)s'."
+            % {'size': readable_file_size, 'fpath': fpath, 'url': url})
 
-        k = self.bucket.key_class(self.bucket)
-        k.BufferSize = self.KEY_BUFFER_SIZE
-        k.key = basename
+        upload_target = StorageUrlToUploadObjectMetadata(url)
 
         def _Upload():
+          io_fp = cStringIO.StringIO(self.file_contents[fpath])
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
-            k.set_contents_from_string(self.file_contents[fpath],
-                                       md5=self.file_md5s[fpath])
+            self.gsutil_api.UploadObject(
+                io_fp, upload_target, size=file_size, provider=self.provider,
+                fields=['name'])
         self._RunOperation(_Upload)
 
         def _Metadata():
           with self._Time('METADATA_%d' % file_size, self.results['latency']):
-            k.exists()
-        self._RunOperation(_Metadata)
+            return self.gsutil_api.GetObjectMetadata(
+                url.bucket_name, url.object_name,
+                provider=self.provider, fields=['name', 'contentType',
+                                                'mediaLink', 'size'])
+        # Download will get the metadata first if we don't pass it in.
+        download_metadata = self._RunOperation(_Metadata)
+        serialization_dict = GetDownloadSerializationDict(download_metadata)
+        serialization_data = json.dumps(serialization_dict)
 
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
-            k.get_contents_to_file(self.devnull,
-                                   **self.get_contents_to_file_args)
+            self.gsutil_api.GetObjectMedia(
+                url.bucket_name, url.object_name, self.discard_sink,
+                provider=self.provider, serialization_data=serialization_data)
         self._RunOperation(_Download)
 
         def _Delete():
           with self._Time('DELETE_%d' % file_size, self.results['latency']):
-            k.delete()
+            self.gsutil_api.DeleteObject(url.bucket_name, url.object_name,
+                                         provider=self.provider)
         self._RunOperation(_Delete)
-
 
   class _CpFilter(logging.Filter):
     def filter(self, record):
       # Used to prevent cp._LogCopyOperation from spewing output from
       # subprocesses about every iteration.
       msg = record.getMessage()
-      return not (('Copying file:///' in msg) or ('Copying gs://' in msg))
+      return not (('Copying file:///' in msg) or ('Copying gs://' in msg) or
+                  ('Computing CRC' in msg))
+
+  def _PerfdiagExceptionHandler(self, e):
+    """Simple exception handler to allow post-completion status."""
+    self.logger.error(str(e))
 
   def _RunReadThruTests(self):
     """Runs read throughput tests."""
@@ -495,49 +524,66 @@ class PerfDiagCommand(Command):
                                        'threads': self.threads}
 
     # Copy the TCP warmup file.
-    warmup_key = self.bucket.key_class(self.bucket)
-    warmup_key.key = os.path.basename(self.tcp_warmup_file)
+    warmup_url = StorageUrlFromString(str(self.bucket_url))
+    warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
+    warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
 
+    # TODO: gsutil-beta: Need to disable dumping payloads at debuglevel==2
+    # for JSON API, because it dumps the entire warmup file.
     def _Upload1():
-      warmup_key.set_contents_from_string(
-          self.file_contents[self.tcp_warmup_file],
-          md5=self.file_md5s[self.tcp_warmup_file])
+      self.gsutil_api.UploadObject(
+          cStringIO.StringIO(self.file_contents[self.tcp_warmup_file]),
+          warmup_target, provider=self.provider, fields=['name'])
     self._RunOperation(_Upload1)
 
     # Copy the file to remote location before reading.
-    k = self.bucket.key_class(self.bucket)
-    k.BufferSize = self.KEY_BUFFER_SIZE
-    k.key = os.path.basename(self.thru_local_file)
+    thru_url = StorageUrlFromString(str(self.bucket_url))
+    thru_url.object_name = self.thru_local_file
+    thru_target = StorageUrlToUploadObjectMetadata(thru_url)
+    thru_target.md5Hash = self.file_md5s[self.thru_local_file]
 
+    # Get the mediaLink here so that we can pass it to download.
     def _Upload2():
-      k.set_contents_from_string(self.file_contents[self.thru_local_file],
-                                 md5=self.file_md5s[self.thru_local_file])
-    self._RunOperation(_Upload2)
+      return self.gsutil_api.UploadObject(
+          cStringIO.StringIO(self.file_contents[self.thru_local_file]),
+          thru_target, provider=self.provider, size=self.thru_filesize,
+          fields=['name', 'mediaLink', 'size'])
+
+    # Get the metadata for the object so that we are just measuring performance
+    # on the actual bytes transfer.
+    download_metadata = self._RunOperation(_Upload2)
+    serialization_dict = GetDownloadSerializationDict(download_metadata)
+    serialization_data = json.dumps(serialization_dict)
 
     if self.processes == 1 and self.threads == 1:
 
       # Warm up the TCP connection.
       def _Warmup():
-        warmup_key.get_contents_to_file(self.devnull,
-                                        **self.get_contents_to_file_args)
+        self.gsutil_api.GetObjectMedia(warmup_url.bucket_name,
+                                       warmup_url.object_name,
+                                       self.discard_sink,
+                                       provider=self.provider)
       self._RunOperation(_Warmup)
 
       times = []
 
       def _Download():
         t0 = time.time()
-        k.get_contents_to_file(self.devnull, **self.get_contents_to_file_args)
+        self.gsutil_api.GetObjectMedia(
+            thru_url.bucket_name, thru_url.object_name, self.discard_sink,
+            provider=self.provider, serialization_data=serialization_data)
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
         self._RunOperation(_Download)
       time_took = sum(times)
     else:
-      args = [k] * self.num_iterations
+      args = ([(thru_url.bucket_name, thru_url.object_name, serialization_data)]
+              * self.num_iterations)
       self.logger.addFilter(self._CpFilter())
 
       t0 = time.time()
-      self.Apply(_DownloadKey,
+      self.Apply(_DownloadWrapper,
                  args,
                  _PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
@@ -561,26 +607,39 @@ class PerfDiagCommand(Command):
                                         'processes': self.processes,
                                         'threads': self.threads}
 
-    k = self.bucket.key_class(self.bucket)
-    k.BufferSize = self.KEY_BUFFER_SIZE
-    k.key = os.path.basename(self.thru_local_file)
+    warmup_url = StorageUrlFromString(str(self.bucket_url))
+    warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
+    warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
+
+    thru_url = StorageUrlFromString(str(self.bucket_url))
+    thru_url.object_name = self.thru_local_file
+    thru_target = StorageUrlToUploadObjectMetadata(thru_url)
+    thru_target.md5Hash = self.file_md5s[self.thru_local_file]
+
+    thru_tuple = UploadObjectTuple(thru_target.bucket, thru_target.name,
+                                   md5=thru_target.md5Hash)
+
     if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
-      warmup_key = self.bucket.key_class(self.bucket)
-      warmup_key.key = os.path.basename(self.tcp_warmup_file)
-
       def _Warmup():
-        warmup_key.set_contents_from_string(
-            self.file_contents[self.tcp_warmup_file],
-            md5=self.file_md5s[self.tcp_warmup_file])
+        self.gsutil_api.UploadObject(
+            cStringIO.StringIO(self.file_contents[self.tcp_warmup_file]),
+            warmup_target, provider=self.provider, size=self.thru_filesize,
+            fields=['name'])
       self._RunOperation(_Warmup)
 
       times = []
 
       def _Upload():
+        """Uploads the write throughput measurement object."""
+        upload_target = apitools_messages.Object(bucket=thru_tuple.bucket_name,
+                                                 name=thru_tuple.object_name,
+                                                 md5Hash=thru_tuple.md5)
+        io_fp = cStringIO.StringIO(self.file_contents[self.thru_local_file])
         t0 = time.time()
-        k.set_contents_from_string(self.file_contents[self.thru_local_file],
-                                   md5=self.file_md5s[self.thru_local_file])
+        self.gsutil_api.UploadObject(
+            io_fp, upload_target, provider=self.provider,
+            size=self.thru_filesize, fields=['name'])
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -588,9 +647,9 @@ class PerfDiagCommand(Command):
       time_took = sum(times)
 
     else:
-      args = [k] * self.num_iterations
+      args = [thru_tuple] * self.num_iterations
       t0 = time.time()
-      self.Apply(_UploadKey,
+      self.Apply(_UploadWrapper,
                  args,
                  _PerfdiagExceptionHandler,
                  arg_checker=DummyArgChecker,
@@ -606,6 +665,34 @@ class PerfDiagCommand(Command):
     self.results['write_throughput']['time_took'] = time_took
     self.results['write_throughput']['total_bytes_copied'] = total_bytes_copied
     self.results['write_throughput']['bytes_per_second'] = bytes_per_second
+
+  def Upload(self, thru_tuple, thread_state=None):
+    if thread_state:
+      gsutil_api = thread_state
+    else:
+      gsutil_api = self.gsutil_api
+    upload_target = apitools_messages.Object(bucket=thru_tuple.bucket_name,
+                                             name=thru_tuple.object_name,
+                                             md5Hash=thru_tuple.md5)
+    gsutil_api.UploadObject(
+        cStringIO.StringIO(self.file_contents[self.thru_local_file]),
+        upload_target, provider=self.provider, size=self.thru_filesize,
+        fields=['name'])
+
+  def Download(self, download_tuple, thread_state=None):
+    """Downloads a file.
+
+    Args:
+      download_tuple: (bucket name, object name, serialization data for object).
+      thread_state: gsutil Cloud API instance to use for the download.
+    """
+    if thread_state:
+      gsutil_api = thread_state
+    else:
+      gsutil_api = self.gsutil_api
+    gsutil_api.GetObjectMedia(
+        download_tuple[0], download_tuple[1], self.discard_sink,
+        provider=self.provider, serialization_data=download_tuple[2])
 
   def _GetDiskCounters(self):
     """Retrieves disk I/O statistics for all disks.
@@ -702,7 +789,7 @@ class PerfDiagCommand(Command):
     """Collects system information."""
     sysinfo = {}
 
-    # All exceptions that might be thrown from socket module calls.
+    # All exceptions that might be raised from socket module calls.
     socket_errors = (
         socket.error, socket.herror, socket.gaierror, socket.timeout)
 
@@ -733,8 +820,7 @@ class PerfDiagCommand(Command):
 
     # Look up IP addresses for Google Server.
     try:
-      (hostname, aliaslist, ipaddrlist) = socket.gethostbyname_ex(
-          self.GOOGLE_API_HOST)
+      (hostname, _, ipaddrlist) = socket.gethostbyname_ex(self.GOOGLE_API_HOST)
       sysinfo['googserv_ips'] = ipaddrlist
     except socket_errors:
       sysinfo['googserv_ips'] = []
@@ -743,7 +829,7 @@ class PerfDiagCommand(Command):
     sysinfo['googserv_hostnames'] = []
     for googserv_ip in ipaddrlist:
       try:
-        (hostname, aliaslist, ipaddrlist) = socket.gethostbyaddr(googserv_ip)
+        (hostname, _, ipaddrlist) = socket.gethostbyaddr(googserv_ip)
         sysinfo['googserv_hostnames'].append(hostname)
       except socket_errors:
         pass
@@ -1109,19 +1195,19 @@ class PerfDiagCommand(Command):
     if not self.args:
       raise CommandException('Wrong number of arguments for "perfdiag" '
                              'command.')
-    self.bucket_uri = self.suri_builder.StorageUri(self.args[0])
-    if not self.bucket_uri.names_bucket():
-      raise CommandException('The perfdiag command requires a URI that '
-                             'specifies a bucket.\n"%s" is not '
-                             'valid.' % self.bucket_uri)
-    self.bucket = self.bucket_uri.get_bucket()
 
-    # TODO: Add MD5 argument support to get_contents_to_file()
-    # and pass the file md5 as a parameter to avoid any unnecessary
-    # computation.
-    self.get_contents_to_file_args = {}
-    if self.bucket_uri.scheme == 'gs':
-      self.get_contents_to_file_args = {'hash_algs': {}}
+    self.provider = StorageUrlFromString(self.args[0]).scheme
+    self.bucket_url = StorageUrlFromString(self.args[0])
+    if not (self.bucket_url.IsCloudUrl() and self.bucket_url.IsBucket()):
+      raise CommandException('The perfdiag command requires a URL that '
+                             'specifies a bucket.\n"%s" is not '
+                             'valid.' % self.args[0])
+    # Ensure the bucket exists.
+    self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
+                              provider=self.bucket_url.scheme,
+                              fields=['id'])
+    self.exceptions = []
+    self.exceptions.append(ServiceException)
 
   # Command entry point.
   def RunCommand(self):
@@ -1144,7 +1230,7 @@ class PerfDiagCommand(Command):
         'Throughput file size: %s\n'
         'Diagnostics to run: %s',
         self.num_iterations,
-        self.bucket_uri,
+        self.bucket_url,
         self.processes,
         self.threads,
         MakeHumanReadable(self.thru_filesize),
@@ -1159,8 +1245,8 @@ class PerfDiagCommand(Command):
       self.results['sysinfo']['netstat_start'] = self._GetTcpStats()
       if IS_LINUX:
         self.results['sysinfo']['disk_counters_start'] = self._GetDiskCounters()
-      # Record bucket URI.
-      self.results['bucket_uri'] = str(self.bucket_uri)
+      # Record bucket URL.
+      self.results['bucket_uri'] = str(self.bucket_url)
       self.results['json_format'] = 'perfdiag'
       self.results['metadata'] = self.metadata_keys
 
@@ -1188,3 +1274,23 @@ class PerfDiagCommand(Command):
       self._TearDown()
 
     return 0
+
+
+class UploadObjectTuple(object):
+  """Picklable tuple with necessary metadata for an insert object call."""
+
+  def __init__(self, bucket_name, object_name, md5=None):
+    self.bucket_name = bucket_name
+    self.object_name = object_name
+    self.md5 = md5
+
+
+def StorageUrlToUploadObjectMetadata(storage_url):
+  if storage_url.IsCloudUrl() and storage_url.IsObject():
+    upload_target = apitools_messages.Object()
+    upload_target.name = storage_url.object_name
+    upload_target.bucket = storage_url.bucket_name
+    return upload_target
+  else:
+    raise CommandException('Non-cloud URL upload target %s was created in '
+                           'perfdiag implemenation.' % storage_url)

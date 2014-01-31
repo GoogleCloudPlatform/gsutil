@@ -13,31 +13,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for cp command."""
 
-import boto
 import datetime
 import os
 import pkgutil
 import re
-import gslib.tests.testcase as testcase
-from gslib.tests.util import HAS_S3_CREDS
-from gslib.tests.util import unittest
 
+import boto
 from boto import storage_uri
 from boto.storage_uri import BucketStorageUri
-from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
+
 from gslib.commands.cp import FilterExistingComponents
 from gslib.commands.cp import MakeGsUri
 from gslib.commands.cp import ObjectFromTracker
 from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
 from gslib.storage_uri_builder import StorageUriBuilder
+import gslib.tests.testcase as testcase
+from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
-from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.util import CreateLock
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import TWO_MB
+from gslib.util import UTF8
 
 
 class TestCp(testcase.GsUtilIntegrationTestCase):
@@ -61,6 +62,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'bar')
 
+  def test_object_and_prefix_same_name(self):
+    # TODO: Make this a a unit test when unit_testcase supports returning
+    # stderr.
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo/bar', contents='bar')
+    fpath = self.CreateTempFile()
+    stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                            return_stderr=True)
+    self.assertIn('Omitting prefix "%s/"' % suri(bucket_uri, 'foo'), stderr)
+
+  def test_dest_bucket_not_exist(self):
+    fpath = self.CreateTempFile(contents='foo')
+    invalid_bucket_uri = 'gs://nonexistentbucket-asf801rj3r9as90mfnnkjxpo02/'
+    stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('does not exist.', stderr)
+
   def test_copy_in_cloud_noclobber(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -70,9 +91,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Copying'), 1)
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(bucket2_uri,
-                  key_uri.object_name), stderr)
-    
+    self.assertIn('Skipping existing item: %s' %
+                  suri(bucket2_uri, key_uri.object_name), stderr)
+
   def _run_streaming_test(self, provider):
     bucket_uri = self.CreateBucket(provider=provider)
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
@@ -84,16 +105,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(HAS_S3_CREDS, 'Test requires S3 credentials.')
   def test_streaming_s3(self):
     self._run_streaming_test('s3')
-    
 
   @PerformsFileToObjectUpload
   def test_streaming_gs(self):
     self._run_streaming_test('gs')
 
+  def test_streaming_multiple_arguments(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['cp', '-', '-', suri(bucket_uri)],
+                            stdin='bar', return_stderr=True, expected_status=1)
+    self.assertIn('Multiple URL strings are not supported with streaming',
+                  stderr)
+
   # TODO: Implement a way to test both with and without using magic file.
 
   @PerformsFileToObjectUpload
   def test_detect_content_type(self):
+    """Tests local detection of content type."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
 
@@ -102,7 +130,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+audio/mpeg')
+      if IS_WINDOWS:
+        self.assertTrue(
+            re.search(r'Content-Type:\s+audio/x-mpg', stdout) or
+            re.search(r'Content-Type:\s+audio/mpeg', stdout))
+      else:
+        self.assertRegexpMatches(stdout, r'Content-Type:\s+audio/mpeg')
     _Check1()
 
     self.RunGsUtil(['cp', self._get_test_file('test.gif'), dsturi])
@@ -110,10 +143,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check2()
 
-  def test_content_type_override(self):
+  def test_content_type_override_default(self):
+    """Tests overriding content type with the default value."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
 
@@ -123,7 +157,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
+      self.assertRegexpMatches(stdout,
+                               r'Content-Type:\s+application/octet-stream')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:', 'cp',
@@ -132,11 +167,36 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+binary/octet-stream')
+      self.assertRegexpMatches(stdout,
+                               r'Content-Type:\s+application/octet-stream')
+    _Check2()
+
+  def test_content_type_override(self):
+    """Tests overriding content type with a value."""
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
+
+    self.RunGsUtil(['-h', 'Content-Type:text/plain', 'cp',
+                    self._get_test_file('test.mp3'), dsturi])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
+    _Check1()
+
+    self.RunGsUtil(['-h', 'Content-Type:text/plain', 'cp',
+                    self._get_test_file('test.gif'), dsturi])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
     _Check2()
 
   @PerformsFileToObjectUpload
-  def test_foo_noct(self):
+  def test_magicfile_override(self):
+    """Tests content type override with magicfile value."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents='foo/bar\n')
@@ -145,14 +205,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      USE_MAGICFILE = boto.config.getbool('GSUtil', 'use_magicfile', False)
-      content_type = ('text/plain' if USE_MAGICFILE
+      use_magicfile = boto.config.getbool('GSUtil', 'use_magicfile', False)
+      content_type = ('text/plain' if use_magicfile
                       else 'application/octet-stream')
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+%s' % content_type)
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % content_type)
     _Check1()
 
   @PerformsFileToObjectUpload
   def test_content_type_mismatches(self):
+    """Tests overriding content type when it does not match the file type."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents='foo/bar\n')
@@ -163,7 +224,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
@@ -172,7 +233,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check2()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp', fpath, dsturi])
@@ -180,11 +241,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check3()
 
   @PerformsFileToObjectUpload
   def test_content_type_header_case_insensitive(self):
+    """Tests that content type header is treated with case insensitivity."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
     fpath = self._get_test_file('test.gif')
@@ -195,8 +257,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+text/plain')
-      self.assertNotRegexpMatches(stdout, 'image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
+      self.assertNotRegexpMatches(stdout, r'image/gif')
     _Check1()
 
     self.RunGsUtil(['-h', 'CONTENT-TYPE:image/gif',
@@ -206,12 +268,31 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
-      self.assertNotRegexpMatches(stdout, 'image/gif,\s*image/gif')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertNotRegexpMatches(stdout, r'image/gif,\s*image/gif')
     _Check2()
 
   @PerformsFileToObjectUpload
+  def test_other_headers(self):
+    """Tests that non-content-type headers are applied successfully on copy."""
+    bucket_uri = self.CreateBucket()
+    dsturi = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+
+    self.RunGsUtil(['-h', 'Cache-Control:public,max-age=12',
+                    '-h', 'x-goog-meta-1:abcd', 'cp',
+                    fpath, dsturi])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
+      self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
+      self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
+    _Check1()
+
+  @PerformsFileToObjectUpload
   def test_versioning(self):
+    """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
     k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
@@ -253,20 +334,32 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
   def test_recursive_copying_versioned_bucket(self):
-    # Tests that cp -R between versioned buckets copies all versions and
-    # preserves version order.
+    """Tests that cp -R with versioned buckets copies all versions in order."""
     bucket1_uri = self.CreateVersionedBucket()
     bucket2_uri = self.CreateVersionedBucket()
+
     # Write two versions of an object to the bucket1.
-    k_uri = self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
-                              contents='data0')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='k', contents='data0')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
                       contents='longer_data1')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
+                                return_stdout=True).split('\n')
+      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
+                                return_stdout=True).split('\n')
+      self.assertEquals(len(listing1), 4)
+      self.assertEquals(len(listing2), 1)  # Single empty line from \n split.
+    _Check1()
+
     # Recursively copy to second versioned bucket.
     self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'), suri(bucket2_uri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
+    def _Check2():
+      """Validates the results of the cp -R."""
       listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
                                 return_stdout=True).split('\n')
       listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
@@ -290,15 +383,45 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       size2, _, uri_str2, _ = listing2[1].split()
       self.assertEquals(size2, str(len('longer_data1')))
       self.assertEquals(storage_uri(uri_str2).object_name, 'k')
-    _Check1()
+    _Check2()
+
+  @PerformsFileToObjectUpload
+  def test_cp_v_generation_match(self):
+    """Tests that cp -v option handles the if-generation-match header."""
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    g1 = k1_uri.generation
+
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
+
+    gen_match_header = 'x-goog-if-generation-match:%s' % g1
+    # First copy should succeed
+    self.RunGsUtil(['-h', gen_match_header, 'cp', fpath1, suri(k1_uri)])
+
+    # Second copy should fail the precondition.
+    stderr = self.RunGsUtil(['-h', gen_match_header, 'cp', fpath1,
+                             suri(k1_uri)],
+                            return_stderr=True, expected_status=1)
+
+    self.assertIn('PreconditionException', stderr)
+
+    # Specifiying a generation with -n should fail before the request hits the
+    # server
+    stderr = self.RunGsUtil(['-h', gen_match_header, 'cp', '-n', fpath1,
+                             suri(k1_uri)],
+                            return_stderr=True, expected_status=1)
+
+    self.assertIn('ArgumentException', stderr)
+    self.assertIn('Specifying x-goog-if-generation-match is not supported '
+                  'with cp -n', stderr)
 
   @PerformsFileToObjectUpload
   def test_cp_v_option(self):
-    # Tests that cp -v option returns the created object's version-specific URI.
+    """"Tests that cp -v returns the created object's version-specific URI."""
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
     k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
-    g1 = k1_uri.generation
 
     # Case 1: Upload file to object using one-shot PUT.
     tmpdir = self.CreateTempDir()
@@ -331,6 +454,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self._run_cp_minus_v_test('-v', k1_uri.uri, k2_uri.uri)
 
   def _run_cp_minus_v_test(self, opt, src_str, dst_str):
+    """Runs cp -v with the options and validates the results."""
     stderr = self.RunGsUtil(['cp', opt, src_str, dst_str], return_stderr=True)
     match = re.search(r'Created: (.*)\n', stderr)
     self.assertIsNotNone(match)
@@ -342,11 +466,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       lines = stdout.split('\n')
       # Final (most recent) object should match the "Created:" URI. This is
       # in second-to-last line (last line is '\n').
+      self.assertGreater(len(lines), 2)
       self.assertEqual(created_uri, lines[-2])
     _Check1()
 
   @PerformsFileToObjectUpload
   def test_stdin_args(self):
+    """Tests cp with the -I option."""
     tmpdir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
     fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
@@ -362,24 +488,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNumLines(stdout, 2)
     _Check1()
 
-  def test_cross_storage_class_cp(self):
+  def test_cross_storage_class_cloud_cp(self):
     bucket1_uri = self.CreateBucket(storage_class='STANDARD')
     bucket2_uri = self.CreateBucket(
         storage_class='DURABLE_REDUCED_AVAILABILITY')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-    # Check that copy-in-the-cloud is allowed.
-    stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
-                            return_stderr=True, expected_status=0)
-    self.assertIn('Copying ', stderr)
+    # Server now allows copy-in-the-cloud across storage classes.
+    self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)])
 
   def test_daisy_chain_cp(self):
-    # Daisy chain mode is required for copying across storage classes,
-    # so create 2 buckets and attempt to copy without vs with daisy chain mode.
+    """Tests cp with the -D option."""
     bucket1_uri = self.CreateBucket(storage_class='STANDARD')
     bucket2_uri = self.CreateBucket(
         storage_class='DURABLE_REDUCED_AVAILABILITY')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
-
     # Set some headers on source object so we can verify that headers are
     # presereved by daisy-chain copy.
     self.RunGsUtil(['setmeta', '-h', 'Cache-Control:public,max-age=12',
@@ -387,24 +509,42 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                     '-h', 'x-goog-meta-1:abcd', suri(key_uri)])
     # Set public-read (non-default) ACL so we can verify that cp -D -p works.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
-    acl_xml = self.RunGsUtil(['acl', 'get', suri(key_uri)], return_stdout=True)
-    # Perform daisy-chain copy and verify that it wasn't disallowed and that
-    # source object headers and ACL were preserved. Also specify -n option to
-    # test that gsutil correctly removes the x-goog-if-generation-match:0 header
-    # that was set at uploading time when updating the ACL.
+    acl_json = self.RunGsUtil(['acl', 'get', suri(key_uri)], return_stdout=True)
+    # Perform daisy-chain copy and verify that source object headers and ACL
+    # were preserved. Also specify -n option to test that gsutil correctly
+    # removes the x-goog-if-generation-match:0 header that was set at uploading
+    # time when updating the ACL.
     stderr = self.RunGsUtil(['cp', '-Dpn', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
-    self.assertIn('Copying ', stderr)
-
+    self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       uri = suri(bucket2_uri, key_uri.object_name)
       stdout = self.RunGsUtil(['ls', '-L', uri], return_stdout=True)
-      self.assertRegexpMatches(stdout, 'Cache-Control:\s+public,max-age=12')
-      self.assertRegexpMatches(stdout, 'Content-Type:\s+image/gif')
-      self.assertRegexpMatches(stdout, 'x-goog-meta-1:\s+abcd')
-      new_acl_xml = self.RunGsUtil(['acl', 'get', uri], return_stdout=True)
-      self.assertEqual(acl_xml, new_acl_xml)
+      self.assertRegexpMatches(stdout, r'Cache-Control:\s+public,max-age=12')
+      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegexpMatches(stdout, r'Metadata:\s+1:\s+abcd')
+      new_acl_json = self.RunGsUtil(['acl', 'get', uri], return_stdout=True)
+      self.assertEqual(acl_json, new_acl_json)
+    _Check()
+
+  def test_canned_acl_cp(self):
+    """Tests copying with a canned ACL."""
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    self.RunGsUtil(['cp', '-a', 'public-read', suri(key_uri),
+                    suri(bucket2_uri)])
+    # Set public-read on the original key after the copy so we can compare
+    # the ACLs.
+    self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
+    public_read_acl = self.RunGsUtil(['acl', 'get', suri(key_uri)],
+                                     return_stdout=True)
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      uri = suri(bucket2_uri, key_uri.object_name)
+      new_acl_json = self.RunGsUtil(['acl', 'get', uri], return_stdout=True)
+      self.assertEqual(public_read_acl, new_acl_json)
     _Check()
 
   def test_cp_key_to_local_stream(self):
@@ -421,9 +561,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(contents, stdout)
 
   def test_copy_bucket_to_bucket(self):
-    # Tests that recursively copying from bucket to bucket produces identically
-    # named objects (and not, in particular, destination objects named by the
-    # version- specific URI from source objects).
+    """Tests that recursively copying from bucket to bucket.
+
+    This should produce identically named objects (and not, in particular,
+    destination objects named by the version-specific URI from source objects).
+    """
     src_bucket_uri = self.CreateVersionedBucket()
     dst_bucket_uri = self.CreateVersionedBucket()
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj0',
@@ -436,7 +578,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['cp', '-R', suri(src_bucket_uri),
                       suri(dst_bucket_uri)])
       stdout = self.RunGsUtil(['ls', '-R', dst_bucket_uri.uri],
-                               return_stdout=True)
+                              return_stdout=True)
       self.assertIn('%s%s/obj0\n' % (dst_bucket_uri,
                                      src_bucket_uri.bucket_name), stdout)
       self.assertIn('%s%s/obj1\n' % (dst_bucket_uri,
@@ -444,9 +586,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _CopyAndCheck()
 
   def test_copy_bucket_to_dir(self):
-    # Tests that recursively copying from bucket to dir produces identically
-    # named objects (and not, in particular, destination objects named by the
-    # version- specific URI from source objects).
+    """Tests recursively copying from bucket to a directory.
+
+    This should produce identically named objects (and not, in particular,
+    destination objects named by the version- specific URI from source objects).
+    """
     src_bucket_uri = self.CreateBucket()
     dst_dir = self.CreateTempDir()
     self.CreateObject(bucket_uri=src_bucket_uri, object_name='obj0',
@@ -456,17 +600,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _CopyAndCheck():
+      """Copies the bucket recursively and validates the results."""
       self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
       dir_list = []
-      for dirname, dirnames, filenames in os.walk(dst_dir):
+      for dirname, _, filenames in os.walk(dst_dir):
         for filename in filenames:
           dir_list.append(os.path.join(dirname, filename))
       dir_list = sorted(dir_list)
       self.assertEqual(len(dir_list), 2)
       self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name,
-                                    "obj0"), dir_list[0])
+                                    'obj0'), dir_list[0])
       self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name,
-                                    "obj1"), dir_list[1])
+                                    'obj1'), dir_list[1])
     _CopyAndCheck()
 
   def test_copy_quiet(self):
@@ -479,6 +624,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @PerformsFileToObjectUpload
   def test_cp_manifest_upload(self):
+    """Tests uploading with a manifest file."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
 
@@ -486,8 +632,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     logpath = self.CreateTempFile(contents='')
     # Ensure the file is empty.
     open(logpath, 'w').close()
-    stdout = self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi],
-                            return_stdout=True)
+    self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
     with open(logpath, 'r') as f:
       lines = f.readlines()
     self.assertEqual(len(lines), 2)
@@ -515,13 +660,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @PerformsFileToObjectUpload
   def test_cp_manifest_download(self):
+    """Tests downloading with a manifest file."""
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='')
     logpath = self.CreateTempFile(contents='')
     # Ensure the file is empty.
     open(logpath, 'w').close()
-    stdout = self.RunGsUtil(['cp', '-L', logpath, suri(key_uri), fpath],
-                            return_stdout=True)
+    self.RunGsUtil(['cp', '-L', logpath, suri(key_uri), fpath],
+                   return_stdout=True)
     with open(logpath, 'r') as f:
       lines = f.readlines()
     self.assertEqual(len(lines), 2)
@@ -552,7 +698,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # to construct tracker filename).
     fpath = self.CreateTempFile(file_name=u'Аудиоархив',
                                 contents='x' * 3 * 1024 * 1024)
-    fpath_bytes = fpath.encode('utf-8')
+    fpath_bytes = fpath.encode(UTF8)
     stderr = self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)],
                             return_stderr=True)
     self.assertIn('Copying file:', stderr)
@@ -576,11 +722,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file:', stderr)
 
   def test_cp_without_read_access(self):
-    object_uri = self.CreateObject(contents='foo')
+    """Tests that cp fails without read access to the object."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      lines = stdout.split('\n')
+      self.assertEqual(2, len(lines))
+    _Check1()
+
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
-                              return_stderr = True, expected_status=1)
-      self.assertIn('Access denied to', stderr)
+                              return_stderr=True, expected_status=1)
+      self.assertIn('Access denied', stderr)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_cp_minus_e(self):
@@ -596,7 +752,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file', stderr)
     self.assertIn('Skipping symbolic link file', stderr)
 
+  def test_cp_multithreaded_wildcard(self):
+    """Tests that cp -m works with a wildcard."""
+    num_test_files = 5
+    tmp_dir = self.CreateTempDir(test_files=num_test_files)
+    bucket_uri = self.CreateBucket()
+    wildcard_uri = '%s%s*' % (tmp_dir, os.sep)
+    self.RunGsUtil(['-m', 'cp', wildcard_uri, suri(bucket_uri)])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      lines = stdout.split('\n')
+      self.assertEqual(num_test_files + 1, len(lines))  # +1 line for final \n
+    _Check1()
+
+  # TODO: gsutil-beta: Re-enable this once parallel composite upload is ported.
+  @unittest.skipUnless(False,
+                       'Parallel composite upload not yet implemented.')
   def test_filter_existing_components_non_versioned(self):
+    """Tests upload with a variety of component states."""
     bucket_uri = self.CreateBucket()
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
     tracker_file_lock = CreateLock()
@@ -623,7 +798,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # will be overwritten anyway.
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
     key_wrong_contents = self.CreateObject(object_name='foo4', contents='_',
-                             bucket_uri=bucket_uri)
+                                           bucket_uri=bucket_uri)
     args_wrong_contents = PerformResumableUploadIfAppliesArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
         '', {}, tracker_file, tracker_file_lock)
@@ -636,13 +811,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Exists in tracker file and already uploaded, but no longer needed.
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
-    key_no_longer_used = self.CreateObject(object_name='foo6', contents='6',
-                             bucket_uri=bucket_uri)
+    self.CreateObject(object_name='foo6', contents='6', bucket_uri=bucket_uri)
 
-    dst_args = {fpath_uploaded_correctly:args_uploaded_correctly,
-                fpath_not_uploaded:args_not_uploaded,
-                fpath_wrong_contents:args_wrong_contents,
-                fpath_remote_deleted:args_remote_deleted}
+    dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
+                fpath_not_uploaded: args_not_uploaded,
+                fpath_wrong_contents: args_wrong_contents,
+                fpath_remote_deleted: args_remote_deleted}
 
     existing_components = [ObjectFromTracker(fpath_uploaded_correctly, ''),
                            ObjectFromTracker(fpath_wrong_contents, ''),
@@ -664,7 +838,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                        suri_builder)]),
         str(existing_objects_to_delete))
 
+  # TODO: gsutil-beta: Re-enable this once parallel composite upload is ported.
+  @unittest.skipUnless(False,
+                       'Parallel composite upload not yet implemented.')
   def test_filter_existing_components_versioned(self):
+    """Tests upload with versionined parallel components."""
     suri_builder = StorageUriBuilder(0, BucketStorageUri)
     bucket_uri = self.CreateVersionedBucket()
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
@@ -687,8 +865,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     args_duplicate = PerformResumableUploadIfAppliesArgs(
         fpath_duplicate, 0, 1, fpath_duplicate, key_duplicate,
         key_duplicate.generation, {}, tracker_file, tracker_file_lock)
-    object_name_duplicate = ObjectFromTracker(fpath_duplicate,
-        key_duplicate.generation).object_name
+    object_name_duplicate = ObjectFromTracker(
+        fpath_duplicate, key_duplicate.generation).object_name
     uri_duplicate = MakeGsUri(bucket_uri.bucket_name, object_name_duplicate,
                               suri_builder)
     uri_duplicate.generation = args_duplicate.dst_uri.generation
@@ -701,8 +879,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         fpath_wrong_contents, 0, 1, fpath_wrong_contents, key_wrong_contents,
         key_wrong_contents.generation, {}, tracker_file, tracker_file_lock)
 
-    dst_args = {fpath_uploaded_correctly:args_uploaded_correctly,
-                fpath_wrong_contents:args_wrong_contents}
+    dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
+                fpath_wrong_contents: args_wrong_contents}
 
     existing_components = [ObjectFromTracker(fpath_uploaded_correctly,
                                              key_uploaded_correctly.generation),
@@ -710,6 +888,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                              key_duplicate.generation),
                            ObjectFromTracker(fpath_wrong_contents,
                                              key_wrong_contents.generation)]
+
+    suri_builder = StorageUriBuilder(0, BucketStorageUri)
 
     (components_to_upload, uploaded_components, existing_objects_to_delete) = (
         FilterExistingComponents(dst_args, existing_components,
@@ -725,3 +905,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     for uri in existing_objects_to_delete:
       self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
     self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
+
+  # TODO: gsutil-beta: Robust testing for resumable download and upload
+  # implementations, which differ substantially from the boto implementation.
+  # We should try to unit test as many of the individual classes as possible,
+  # possibly inserting some test hooks such that we can simulate breaks.

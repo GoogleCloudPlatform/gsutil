@@ -11,46 +11,73 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Iterator wrapper for checking wrapped iterator's emptiness or plurality."""
 
-"""
-Iterator wrapper that allows you to check whether the wrapped iterator
-is empty and whether it has more than 1 element.
-"""
+# TODO: Here and elsewhere (wildcard_iterator, name_expansion), do not reference
+# __iter__ directly because it causes the first element to be instantiated.
+# Instead, implement __iter__ as a return self and implement the next() function
+# which returns (not yields) the values.  This necessitates that in the case
+# of the iterator classes, the iterator is used once per class instantiation
+# so that next() calls do not collide, but this semantic has been long-assumed
+# by the iterator classes for the use of __iter__ anyway.
+
+import sys
+
 
 class PluralityCheckableIterator(object):
+  """Iterator wrapper class.
+
+    Allows you to check whether the wrapped iterator is empty and
+    whether it has more than 1 element.
+  """
 
   def __init__(self, it):
-    self.it = it.__iter__()
+    # Need to get the iterator function here so that we don't immediately
+    # instantiate the first element (which could raise an exception).
+    self.orig_iterator = it
+    self.base_iterator = None
     self.head = []
+    self.underlying_iter_empty = False
     # Populate first 2 elems into head so we can check whether iterator has
     # more than 1 item.
-    for i in range(0, 2):
-      self.__populate_head__()
+    for _ in range(0, 2):
+      self._PopulateHead()
 
-  def __populate_head__(self):
-    try:
-      e = self.it.next()
-      self.underlying_iter_empty = False
-      self.head.append(e)
-    except StopIteration:
-      # Indicates we can no longer call next() on underlying iterator, but
-      # there could still be elements left to iterate in head.
-      self.underlying_iter_empty = True
+  def _PopulateHead(self):
+    if not self.underlying_iter_empty:
+      try:
+        if not self.base_iterator:
+          self.base_iterator = iter(self.orig_iterator)
+        e = self.base_iterator.next()
+        self.underlying_iter_empty = False
+        self.head.append(('element', e))
+      except StopIteration:
+        # Indicates we can no longer call next() on underlying iterator, but
+        # there could still be elements left to iterate in head.
+        self.underlying_iter_empty = True
+      except Exception, e:
+        # Buffer the exception and raise it when the element is accessed.
+        # Also, preserve the original stack trace, as the stack trace from
+        # within plurality_checkable_iterator.next is not very useful.
+        self.head.append(('exception', e, sys.exc_info()[2]))
 
   def __iter__(self):
-    while len(self.head) > 0:
-      yield self.next()
-    else:
-      raise StopIteration()
+    return self
 
   def next(self):
     # Backfill into head each time we pop an element so we can always check
-    # for emptiness and for has_plurality().
-    self.__populate_head__()
-    return self.head.pop(0)
+    # for emptiness and for HasPlurality().
+    while self.head:
+      self._PopulateHead()
+      item_tuple = self.head.pop(0)
+      if item_tuple[0] == 'element':
+        return item_tuple[1]
+      else:  # buffered exception
+        raise item_tuple[1].__class__, item_tuple[1], item_tuple[2]
+    raise StopIteration()
 
-  def is_empty(self):
-    return len(self.head) == 0
+  def IsEmpty(self):
+    return not self.head
 
-  def has_plurality(self):
+  def HasPlurality(self):
     return len(self.head) > 1

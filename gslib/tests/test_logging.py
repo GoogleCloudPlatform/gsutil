@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Integration tests for logging command."""
 
 import gslib.tests.testcase as testcase
 
 from gslib.tests.util import ObjectToURI as suri
 
+
 class TestLogging(testcase.GsUtilIntegrationTestCase):
-  
+  """Integration tests for logging command."""
+
   _enable_cmd_prefix = ['logging', 'set', 'on']
   _disable_cmd_prefix = ['logging', 'set', 'off']
   _get_cmd_prefix = ['logging', 'get']
 
   def testLogging(self):
+    """Tests enabling and disabling logging."""
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
     stderr = self.RunGsUtil(
@@ -32,13 +36,14 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(self._get_cmd_prefix + [bucket_suri],
                             return_stdout=True)
-    self.assertIn('LogObjectPrefix', stdout)
+    self.assertIn('LogObjectPrefix'.lower(), stdout.lower())
 
     stderr = self.RunGsUtil(self._disable_cmd_prefix + [bucket_suri],
                             return_stderr=True)
     self.assertIn('Disabling logging', stderr)
 
   def testTooFewArgumentsFails(self):
+    """Ensures logging commands fail with too few arguments."""
     # No arguments for enable, but valid subcommand.
     stderr = self.RunGsUtil(self._enable_cmd_prefix, return_stderr=True,
                             expected_status=1)
@@ -48,7 +53,7 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(self._disable_cmd_prefix, return_stderr=True,
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
-    
+
     # No arguments for get, but valid subcommand.
     stderr = self.RunGsUtil(self._get_cmd_prefix, return_stderr=True,
                             expected_status=1)
@@ -57,6 +62,7 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     # Neither arguments nor subcommand.
     stderr = self.RunGsUtil(['logging'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
+
 
 class TestLoggingOldAlias(TestLogging):
   _enable_cmd_prefix = ['enablelogging']

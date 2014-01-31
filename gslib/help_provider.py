@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Module defining help types and providers for gsutil commands."""
 
 from gslib.exception import CommandException
+
 
 class HelpType(object):
   COMMAND_HELP = 'command_help'
@@ -42,22 +44,24 @@ DESCRIPTION_PREFIX = """
 SYNOPSIS_PREFIX = """
 <B>SYNOPSIS</B>"""
 
+
 class HelpProvider(object):
   """Interface for providing help."""
 
   # Each subclass must define the following map.
   help_spec = {
-    # Name of command or auxiliary help info for which this help applies.
-    HELP_NAME : None,
-    # List of help name aliases.
-    HELP_NAME_ALIASES : None,
-    # HelpType.
-    HELP_TYPE : None,
-    # One line summary of this help.
-    HELP_ONE_LINE_SUMMARY : None,
-    # The full help text.
-    HELP_TEXT : None,
+      # Name of command or auxiliary help info for which this help applies.
+      HELP_NAME: None,
+      # List of help name aliases.
+      HELP_NAME_ALIASES: None,
+      # HelpType.
+      HELP_TYPE: None,
+      # One line summary of this help.
+      HELP_ONE_LINE_SUMMARY: None,
+      # The full help text.
+      HELP_TEXT: None,
   }
+
 
 # This is a static helper instead of a class method because the help loader
 # (gslib.commands.help._LoadHelpMaps()) operates on classes not instances.
@@ -71,7 +75,7 @@ def SanityCheck(help_provider, help_name_map):
   assert (len(help_provider.help_spec[HELP_NAME]) > 1
           and len(help_provider.help_spec[HELP_NAME]) < MAX_HELP_NAME_LEN)
   for hna in help_provider.help_spec[HELP_NAME_ALIASES]:
-    assert len(hna) > 0
+    assert hna
   one_line_summary_len = len(help_provider.help_spec[HELP_ONE_LINE_SUMMARY])
   assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN
           and one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
@@ -84,9 +88,11 @@ def SanityCheck(help_provider, help_name_map):
     if help_name_map.has_key(name_or_alias):
       raise CommandException(
           'Duplicate help name/alias "%s" found while loading help from %s. '
-          'That name/alias was already taken by %s' % (name_or_alias,
-          help_provider.__module__, help_name_map[name_or_alias].__module__))
-      
+          'That name/alias was already taken by %s' % (
+              name_or_alias, help_provider.__module__,
+              help_name_map[name_or_alias].__module__))
+
+
 def CreateHelpText(synopsis, description):
   """Helper for adding help text headers given synopsis and description."""
   return SYNOPSIS_PREFIX + synopsis + DESCRIPTION_PREFIX + description

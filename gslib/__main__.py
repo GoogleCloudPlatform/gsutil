@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Main module for Google Cloud Storage command line tool."""
 
 import ConfigParser
@@ -38,28 +37,30 @@ import traceback
 # so boto requests would not include gsutil/version# in the UserAgent string.
 import boto
 import gslib
+# TODO: gsutil-beta: Cloud SDK scans for this string and performs
+# substitution; ensure this works with both apitools and boto.
 boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 
-import apiclient.discovery
-import boto.exception
-from gslib import util
-from gslib import GSUTIL_DIR
-from gslib import wildcard_iterator
-from gslib.command_runner import CommandRunner
-from gslib.exception import CommandException
-from gslib.util import BOTO_IS_SECURE
-from gslib.util import GetBotoConfigFileList
-from gslib.util import GetConfigFilePath
-from gslib.util import HasConfiguredCredentials
-from gslib.util import IsRunningInteractively
-import gslib.exception
+# pylint: disable=g-bad-import-order
+# pylint: disable=g-import-not-at-top
 import httplib2
 import oauth2client
+from gslib import wildcard_iterator
+from gslib.cloud_api import AccessDeniedException
+from gslib.cloud_api import ArgumentException
+from gslib.cloud_api import BadRequestException
+from gslib.cloud_api import ProjectIdException
+from gslib.cloud_api import ServiceException
+from gslib.command_runner import CommandRunner
+import gslib.exception
+from gslib.exception import CommandException
+import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
 
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
 # authentication is performed.
 try:
+  # pylint: disable=unused-import,g-import-not-at-top
   from gslib.third_party.oauth2_plugin import oauth2_plugin
 except ImportError:
   pass
@@ -76,11 +77,10 @@ DEBUG_WARNING = """
 
 HTTP_WARNING = """
 ***************************** WARNING *****************************
-*** You are running gsutil with either the boto config variable "is_secure" set
-*** to False or the "https_validate_certificates" config variable set to False.
-*** These options should always be set to True in production environments, to
-*** protect against intercepted bearer tokens, man-in-the-middle attacks, and
-*** leaking of user data.
+*** You are running gsutil with the "https_validate_certificates" config
+*** variable set to False. This option should always be set to True in
+*** production environments to protect against man-in-the-middle attacks,
+*** and leaking of user data.
 ***************************** WARNING *****************************
 """.lstrip()
 
@@ -99,13 +99,15 @@ def _Cleanup():
 
 
 def _OutputAndExit(message):
+  """Outputs message and exists with code 1."""
+  from gslib.util import UTF8  # pylint: disable=g-import-not-at-top
   if debug == 4:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n' %
            re.sub('\\n', '\n    ', stack_trace))
   else:
     err = '%s\n' % message
-  sys.stderr.write(err.encode('utf-8'))
+  sys.stderr.write(err.encode(UTF8))
   sys.exit(1)
 
 
@@ -124,8 +126,12 @@ def _ConfigureLogging(level=logging.INFO):
 
 def main():
   # These modules must be imported after importing gslib.__main__.
+  # pylint: disable=redefined-outer-name,g-import-not-at-top
   import gslib.command
   import gslib.util
+  from gslib.util import BOTO_IS_SECURE
+  from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+  from gslib.util import GetBotoConfigFileList
   from gslib.third_party.oauth2_plugin import oauth2_client
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
@@ -141,6 +147,16 @@ def main():
     raise gslib.exception.CommandException(
         'gsutil requires python 2.6 or 2.7.')
 
+  if not BOTO_IS_SECURE:
+    raise CommandException('\n'.join(textwrap.wrap(
+        'Your boto configuration has is_secure = False. Gsutil cannot be '
+        'run this way, for security reasons.')))
+
+  # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
+  # API. However, we still store gsutil configuration data in the .boto
+  # config file for compatibility with previous versions and user convenience.
+  # Many users have a .boto configuration file from previous versions, and it
+  # is useful to have all of the configuration for gsutil stored in one place.
   config_file_list = GetBotoConfigFileList()
   command_runner = CommandRunner(config_file_list)
   headers = {}
@@ -250,10 +266,8 @@ def main():
       # correspond to gsutil's debug logging (e.g., when refreshing access
       # tokens).
       oauth2client.client.logger.setLevel(logging.WARNING)
-      apiclient.discovery.logger.setLevel(logging.WARNING)
 
-    is_secure = BOTO_IS_SECURE
-    if not is_secure[0]:
+    if not CERTIFICATE_VALIDATION_ENABLED:
       sys.stderr.write(HTTP_WARNING)
 
     if version:
@@ -272,8 +286,8 @@ def main():
       del os.environ['http_proxy']
 
     return _RunNamedCommandAndHandleExceptions(
-        command_runner, command_name, args[1:], headers, debug,
-        parallel_operations)
+        command_runner, command_name, args=args[1:], headers=headers,
+        debug_level=debug, parallel_operations=parallel_operations)
   finally:
     _Cleanup()
 
@@ -296,9 +310,17 @@ def _HandleCommandException(e):
     _OutputAndExit('CommandException: %s' % e.reason)
 
 
+# pylint: disable=unused-argument
 def _HandleControlC(signal_num, cur_stack_frame):
-  """Called when user hits ^C so we can print a brief message instead of
-  the normal Python stack trace (unless -D option is used)."""
+  """Called when user hits ^C.
+
+  This function prints a brief message instead of the normal Python stack trace
+  (unless -D option is used).
+
+  Args:
+    signal_num: Signal that was caught.
+    cur_stack_frame: Unused.
+  """
   if debug > 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit(
@@ -310,80 +332,99 @@ def _HandleControlC(signal_num, cur_stack_frame):
 
 def _HandleSigQuit(signal_num, cur_stack_frame):
   """Called when user hits ^\\, so we can force breakpoint a running gsutil."""
-  import pdb
+  import pdb  # pylint: disable=g-import-not-at-top
   pdb.set_trace()
 
-def _ConstructAclHelp(default_project_id):
-  acct_help_part_1 = (
-"""Your request resulted in an AccountProblem (403) error. Usually this happens
-if you attempt to create a bucket or upload an object without having first
-enabled billing for the project you are using. To remedy this problem, please do
-the following:
 
-1. Navigate to the https://cloud.google.com/console#/project, click on the
-   project you will use, and then copy the Project Number listed under that
-   project.
-
-""")
-  acct_help_part_2 = '\n'
+def _ConstructAclHelp():
+  """Constructs a help string for an access control error."""
+  default_project_id = boto.config.get_value('GSUtil',
+                                             'default_project_id')
+  # pylint: disable=line-too-long
+  acct_help = (
+      """Your request resulted in an AccountProblem (403) error. Usually this
+      happens if you attempt to create a bucket or upload an object without
+      having first enabled billing for the project you are using. Please
+      ensure billing is enabled for your project by following the instructions
+      at
+      `Google Developers Console<https://developers.google.com/console/help/billing>`.
+      """)
   if default_project_id:
-    acct_help_part_2 = (
-"""2. Click "Google Cloud Storage" on the left hand pane, and then check that
-the value listed for "x-goog-project-id" on this page matches the project ID
-(%s) from your boto config file.
+    acct_help += (
+        """In the project overview, ensure that the Project Number listed for
+        your project matches the project ID (%s) from your boto config file.
+        """ % default_project_id)
+  acct_help += (
+      """If the above doesn't resolve your AccountProblem, please send mail to
+      gs-team@google.com requesting assistance, noting the exact command you
+      ran, the fact that you received a 403 AccountProblem error, and your
+      project ID. Please do not post your project ID on StackOverflow.
 
-""" % default_project_id)
-  acct_help_part_3 = (
-"""Check whether there's an "!" next to Billing. If so, click Billing and then
-enable billing for this project. Note that it can take up to one hour after
-enabling billing for the project to become activated for creating buckets and
-uploading objects.
+      Note: It's possible to use Google Cloud Storage without enabling billing
+      if you're only listing or reading objects for which you're authorized, or
+      if you're uploading objects to a bucket billed to a project that has
+      billing enabled. But if you're attempting to create buckets or upload
+      objects to a bucket owned by your own project, you must first enable
+      billing for that project.""")
+  return acct_help
 
-If the above doesn't resolve your AccountProblem, please send mail to
-gs-team@google.com requesting assistance, noting the exact command you ran, the
-fact that you received a 403 AccountProblem error, and your project ID. Please
-do not post your project ID on StackOverflow.
 
-Note: It's possible to use Google Cloud Storage without enabling billing if
-you're only listing or reading objects for which you're authorized, or if
-you're uploading objects to a bucket billed to a project that has billing
-enabled. But if you're attempting to create buckets or upload objects to a
-bucket owned by your own project, you must first enable billing for that
-project.""")
-  return (acct_help_part_1, acct_help_part_2, acct_help_part_3)
+def _CheckAndHandleCredentialException(e, args):
+  # Provide detail to users who have no boto config file (who might previously
+  # have been using gsutil only for accessing publicly readable buckets and
+  # objects).
+  # pylint: disable=g-import-not-at-top
+  from gslib.util import HasConfiguredCredentials
+  if (not HasConfiguredCredentials() and
+      not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
+                                False)):
+    # The check above allows tests to assert that we get a particular,
+    # expected failure, rather than always encountering this error message
+    # when there are no configured credentials. This allows tests to
+    # simulate a second user without permissions, without actually requiring
+    # two separate configured users.
+    _OutputAndExit('\n'.join(textwrap.wrap(
+        'You are attempting to access protected data with no configured '
+        'credentials. Please visit '
+        'https://cloud.google.com/console#/project and sign up for an '
+        'account, and then run the "gsutil config" command to configure '
+        'gsutil to use these credentials.')))
+  elif (e.reason == 'AccountProblem'
+        and ','.join(args).find('gs://') != -1):
+    _OutputAndExit(_ConstructAclHelp())
+
 
 def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
-                                        headers=None, debug=0,
+                                        headers=None, debug_level=0,
                                         parallel_operations=False):
+  """Runs the command with the given command runner and arguments."""
+  # pylint: disable=g-import-not-at-top
+  from gslib.util import GetConfigFilePath
+  from gslib.util import IS_WINDOWS
+  from gslib.util import IsRunningInteractively
   try:
     # Catch ^C so we can print a brief message instead of the normal Python
     # stack trace.
     signal.signal(signal.SIGINT, _HandleControlC)
     # Catch ^\ so we can force a breakpoint in a running gsutil.
-    if not util.IS_WINDOWS:
+    if not IS_WINDOWS:
       signal.signal(signal.SIGQUIT, _HandleSigQuit)
-    return command_runner.RunNamedCommand(command_name, args, headers, debug,
-                                          parallel_operations)
+    return command_runner.RunNamedCommand(command_name, args, headers,
+                                          debug_level, parallel_operations)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit('Missing credentials for the given URI(s). Does your '
                      'boto config file contain all needed credentials?')
     else:
       _OutputAndExit(str(e))
-  except boto.exception.StorageDataError as e:
-    _OutputAndExit('StorageDataError: %s.' % e.reason)
-  except boto.exception.BotoClientError as e:
-    _OutputAndExit('BotoClientError: %s.' % e.reason)
   except gslib.exception.CommandException as e:
     _HandleCommandException(e)
   except getopt.GetoptError as e:
     _HandleCommandException(gslib.exception.CommandException(e.msg))
-  except boto.exception.InvalidAclError as e:
-    _OutputAndExit('InvalidAclError: %s.' % str(e))
   except boto.exception.InvalidUriError as e:
     _OutputAndExit('InvalidUriError: %s.' % e.message)
-  except gslib.exception.ProjectIdException as e:
-    _OutputAndExit('ProjectIdException: %s.' % e.reason)
+  except gslib.exception.InvalidUrlError as e:
+    _OutputAndExit('InvalidUrlError: %s.' % e.message)
   except boto.auth_handler.NotReadyToAuthenticate:
     _OutputAndExit('NotReadyToAuthenticate')
   except OSError as e:
@@ -399,65 +440,42 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
       raise
   except wildcard_iterator.WildcardException as e:
     _OutputAndExit(e.reason)
-  except boto.exception.StorageResponseError as e:
-    # Check for access denied, and provide detail to users who have no boto
-    # config file (who might previously have been using gsutil only for
-    # accessing publicly readable buckets and objects).
-    if (e.status == 403
-        or (e.status == 400 and e.code == 'MissingSecurityHeader')):
-      _, _, detail = util.ParseErrorDetail(e)
-      if detail and detail.find('x-goog-project-id header is required') != -1:
-        _OutputAndExit('\n'.join(textwrap.wrap(
-            'You are attempting to perform an operation that requires an '
-            'x-goog-project-id header, with none configured. Please re-run '
-            'gsutil config and make sure to follow the instructions for '
-            'finding and entering your default project id.')))
-      if (not HasConfiguredCredentials() and
-          not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
-                                    False)):
-        # The check above allows tests to assert that we get a particular,
-        # expected failure, rather than always encountering this error message
-        # when there are no configured credentials. This allows tests to
-        # simulate a second user without permissions, without actually requiring
-        # two separate configured users.
-        _OutputAndExit('\n'.join(textwrap.wrap(
-            'You are attempting to access protected data with no configured '
-            'credentials. Please visit '
-            'https://cloud.google.com/console#/project and sign up for an '
-            'account, and then run the "gsutil config" command to configure '
-            'gsutil to use these credentials.')))
-      elif (e.error_code == 'AccountProblem'
-            and ','.join(args).find('gs://') != -1):
-        default_project_id = boto.config.get_value('GSUtil',
-                                                   'default_project_id')
-        (acct_help_part_1, acct_help_part_2, acct_help_part_3) = (
-            _ConstructAclHelp(default_project_id))
-        if default_project_id:
-          _OutputAndExit(acct_help_part_1 + acct_help_part_2 + '3. ' +
-                         acct_help_part_3)
-        else:
-          _OutputAndExit(acct_help_part_1 + '2. ' + acct_help_part_3)
-
-    exc_name, message, detail = util.ParseErrorDetail(e)
-    _OutputAndExit(util.FormatErrorMessage(
-        exc_name, e.status, e.code, e.reason, message, detail))
-  except boto.exception.ResumableUploadException as e:
-    _OutputAndExit('ResumableUploadException: %s.' % e.message)
+  except ProjectIdException, e:
+    _OutputAndExit(
+        'You are attempting to perform an operation that requires a '
+        'project id, with none configured. Please re-run '
+        'gsutil config and make sure to follow the instructions for '
+        'finding and entering your default project id.')
+  except BadRequestException, e:
+    if e.reason == 'MissingSecurityHeader':
+      _CheckAndHandleCredentialException(e, args)
+    _OutputAndExit(e)
+  except AccessDeniedException, e:
+    _CheckAndHandleCredentialException(e, args)
+    _OutputAndExit(e)
+  except ArgumentException, e:
+    _OutputAndExit(e)
+  except ServiceException, e:
+    _OutputAndExit(e)
+  except apitools_exceptions.HttpError, e:
+    # These should usually be retried by the underlying implementation or
+    # wrapped by CloudApi ServiceExceptions, but if we do get them,
+    # print something useful.
+    _OutputAndExit('HttpError: %s, %s' % (getattr(e.response, 'status', ''),
+                                          e.content or ''))
   except socket.error as e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because
       # the library code send loop (in boto/s3/key.py) can get through the
       # entire file and then request the HTTP response before the socket
       # gets closed and the response lost.
-      message = (
-"""
-Got a "Broken pipe" error. This can happen to clients using Python 2.x,
-when the server sends an error response and then closes the socket (see
-http://bugs.python.org/issue5542). If you are trying to upload a large
-object you might retry with a small (say 200k) object, and see if you get
-a more specific error code.
-""")
-      _OutputAndExit(message)
+      _OutputAndExit(
+          'Got a "Broken pipe" error. This can happen to clients using Python '
+          '2.x, when the server sends an error response and then closes the '
+          'socket (see http://bugs.python.org/issue5542). If you are trying to '
+          'upload a large object you might retry with a small (say 200k) '
+          'object, and see if you get a more specific error code.'
+      )
     else:
       _HandleUnknownFailure(e)
   except Exception as e:
@@ -466,14 +484,16 @@ a more specific error code.
     # different problems and both have unhelpful error messages. Moreover,
     # the error type belongs to PyOpenSSL, which is not necessarily installed.
     if 'mac verify failure' in str(e):
-      _OutputAndExit("Encountered an error while refreshing access token." +
-          " If you are using a service account,\nplease verify that the " +
-          "gs_service_key_file_password field in your config file," +
-          "\n%s, is correct." % GetConfigFilePath())
+      _OutputAndExit(
+          'Encountered an error while refreshing access token. '
+          'If you are using a service account,\nplease verify that the '
+          'gs_service_key_file_password field in your config file,'
+          '\n%s, is correct.' % GetConfigFilePath())
     elif 'asn1 encoding routines' in str(e):
-      _OutputAndExit("Encountered an error while refreshing access token." +
-          " If you are using a service account,\nplease verify that the " +
-          "gs_service_key_file field in your config file,\n%s, is correct."
+      _OutputAndExit(
+          'Encountered an error while refreshing access token. '
+          'If you are using a service account,\nplease verify that the '
+          'gs_service_key_file field in your config file,\n%s, is correct.'
           % GetConfigFilePath())
     _HandleUnknownFailure(e)
 

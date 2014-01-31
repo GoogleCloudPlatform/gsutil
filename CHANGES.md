@@ -1,3 +1,62 @@
+Release 4.0 beta 1 (release date: 2014-01-31)
+=======================================
+
+New Features
+------------
+- The Google Cloud Storage JSON API (v1beta2) is now the default API used
+  by gsutil for all commands targeting gs:// URLs. The JSON API is more
+  bandwidth efficient than the older XML API when transferring metadata
+  and does not require separate calls to preserve object ACLs when copying.
+- The Google Cloud Storage XML API can be used in lieu of the JSON API
+  by setting 'force_api = xml' in the GSUtil section of your boto config file.
+
+Backwards-incompatible changes
+------------------------------
+- The Google Cloud Storage configuration data supported by the acl, cors,
+  and lifecycle commands uses the JSON format instead of the older XML format.
+  gsutil 4.0 will fail and provide conversion instructions if an XML
+  configuration file is provided as an argument for a gs:// URL.
+- gsutil no longer accepts arbitrary headers via the global -h flag.
+  Documented headers for gsutil commands are still supported; for the
+  full list of supported headers, see `gsutil help command_opts`.
+- The compose command will now default the destination object's
+  Content-Type to the Content-Type of the first source object if none
+  is provided via the -h global flag.
+- The long-deprecated -t option has been removed from the cp command.
+
+Other Changes
+-------------
+- All python files not under a third_party directory are now pylint-clean,
+  with the exception of TODO-format and a handful of warnings in root-level
+  files. As part of the de-linting process, many edge-case bugs were
+  identified and fixed.
+- The ls command now operates depth-first (as in Unix ls) instead
+  of breadth-first.
+- 'URI' has now been replaced throughout much of the codebase with the
+  more appropriate term 'URL'.
+- The wildcard and name expansion iterators have been heavily refactored.
+- A new abstraction layer ('gsutil Cloud API') has been implemented to allow
+  gsutil to interact with JSON and XML APIs interchangeably.
+- A new URL abstraction layer ('StorageUrl') has been implemented to
+  interact with URL strings without making HTTP calls.
+- Resumable upload and download handling and tracker files are now managed
+  by the cp command instead of using the handlers in the boto library.
+
+Beta Disclaimers
+----------------
+- There are some gsutil 3.x features that are not yet supported in the
+  4.0 beta. These are denoted in the code by 'TODO: gsutil-beta' and
+  will be implemented before the final 4.0 release. Notable omissions
+  include:
+  - Parallel composite upload support.
+  - Perfdiag host header support.
+  - On-the-fly hash computation for resumable uploads.
+  - In-memory daisy-chain copying support (for now, a temporary file is used).
+  - Progress indicator for streaming uploads.
+  - Efficient credential refresh for long-running multi-process operations.
+  - Bucket relocate scripts (they will fail at present).
+
+
 Release 3.42 (release-date: 2014-01-15)
 =======================================
 
