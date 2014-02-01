@@ -146,17 +146,6 @@ def _NewThreadsafeQueue():
   queues.append(queue)
   return queue
 
-
-# command_spec key constants.
-COMMAND_NAME = 'command_name'
-COMMAND_NAME_ALIASES = 'command_name_aliases'
-MIN_ARGS = 'min_args'
-MAX_ARGS = 'max_args'
-SUPPORTED_SUB_ARGS = 'supported_sub_args'
-FILE_URLS_OK = 'file_url_ok'
-PROVIDER_URLS_OK = 'provider_url_ok'
-URLS_START_ARG = 'urls_start_arg'
-
 # The maximum size of a process- or thread-safe queue. Imposing this limit
 # prevents us from needing to hold an arbitrary amount of data in memory.
 # However, setting this number too high (e.g., >= 32768 on OS X) can cause
@@ -188,12 +177,6 @@ OLD_ALIAS_MAP = {'chacl': ['acl', 'ch'],
                  'setversioning': ['versioning', 'set'],
                  'getwebcfg': ['web', 'get'],
                  'setwebcfg': ['web', 'set']}
-
-
-# Enum class for command spec key constants
-class CommandSpecKey(object):
-  GS_API_SUPPORT = 'gs_api_support'
-  GS_DEFAULT_API = 'gs_default_api'
 
 
 # TODO: gsutil-beta: Rework credentials to use a file-store.  In particular,
@@ -286,37 +269,38 @@ def InitializeMultiprocessingVariables():
   class_map = manager.dict()
 
 
-class Command(object):
-  """Base class for all gsutil commands."""
-  REQUIRED_SPEC_KEYS = [COMMAND_NAME]
+# Each subclass of Command must define a property named 'command_spec' that is
+# an instance of the following class.
+CommandSpec = namedtuple('CommandSpec', [
+    # Name of command.
+    'command_name',
+    # List of command name aliases.
+    'command_name_aliases',
+    # Min number of args required by this command.
+    'min_args',
+    # Max number of args required by this command, or NO_MAX.
+    'max_args',
+    # Getopt-style string specifying acceptable sub args.
+    'supported_sub_args',
+    # True if file URLs are acceptable for this command.
+    'file_url_ok',
+    # True if provider-only URLs are acceptable for this command.
+    'provider_url_ok',
+    # Index in args of first URL arg.
+    'urls_start_arg',
+    # List of supported APIs
+    'gs_api_support',
+    # Default API to use for this command
+    'gs_default_api',
+])
 
-  # Each subclass must define the following map, minimally including the
-  # keys in REQUIRED_SPEC_KEYS; other values below will be used as defaults,
-  # although for readbility subclasses should specify the complete map.
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: None,
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: [],
-      # Min number of args required by this command.
-      MIN_ARGS: 0,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: NO_MAX,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: '',
-      # True if file URLs are acceptable for this command.
-      FILE_URLS_OK: False,
-      # True if provider-only URLs are acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.XML,
-  }
-  _default_command_spec = command_spec
-  help_spec = HelpProvider.help_spec
+
+class Command(HelpProvider):
+  """Base class for all gsutil commands."""
+
+  # Each subclass must override this with an instance of CommandSpec.
+  command_spec = None
+
   _commands_with_subcommands_and_subopts = ['acl', 'defacl', 'logging', 'web',
                                             'notification']
 
@@ -327,9 +311,28 @@ class Command(object):
   # of the caller_id.
   sequential_caller_id = -1
 
+  @staticmethod
+  def CreateCommandSpec(command_name, command_name_aliases=None, min_args=0,
+                        max_args=NO_MAX, supported_sub_args='',
+                        file_url_ok=False, provider_url_ok=False,
+                        urls_start_arg=0, gs_api_support=None,
+                        gs_default_api=None):
+    """Creates an instance of CommandSpec, with defaults."""
+    return CommandSpec(
+        command_name = command_name,
+        command_name_aliases = command_name_aliases or [],
+        min_args = min_args,
+        max_args = max_args,
+        supported_sub_args = supported_sub_args,
+        file_url_ok = file_url_ok,
+        provider_url_ok = provider_url_ok,
+        urls_start_arg = urls_start_arg,
+        gs_api_support = gs_api_support or [ApiSelector.XML],
+        gs_default_api = gs_default_api or ApiSelector.XML)
+
   # Define a convenience property for command name, since it's used many places.
   def _GetDefaultCommandName(self):
-    return self.command_spec[COMMAND_NAME]
+    return self.command_spec.command_name
   command_name = property(_GetDefaultCommandName)
 
   def _CalculateUrlsStartArg(self):
@@ -338,7 +341,7 @@ class Command(object):
     Returns:
       Index of the first URL arg (according to the command spec).
     """
-    return self.command_spec[URLS_START_ARG]
+    return self.command_spec.urls_start_arg
 
   def _TranslateDeprecatedAliases(self, args):
     """Map deprecated aliases to the corresponding new command, and warn."""
@@ -410,30 +413,23 @@ class Command(object):
       for log_filter in logging_filters:
         self.logger.addFilter(log_filter)
 
-    # Process sub-command instance specifications.
-    # First, ensure subclass implementation sets all required keys.
-    for k in self.REQUIRED_SPEC_KEYS:
-      if k not in self.command_spec or self.command_spec[k] is None:
-        raise CommandException('"%s" command implementation is missing %s '
-                               'specification' % (self.command_name, k))
-    # Now override default command_spec with subclass-specified values.
-    tmp = self._default_command_spec
-    tmp.update(self.command_spec)
-    self.command_spec = tmp
-    del tmp
+    if self.command_spec is None:
+        raise CommandException('"%s" command implementation is missing a '
+                               'command_spec definition.' % self.command_name)
 
     # Parse and validate args.
     args = self._TranslateDeprecatedAliases(args)
     try:
       (self.sub_opts, self.args) = getopt.getopt(
-          args, self.command_spec[SUPPORTED_SUB_ARGS])
+          args, self.command_spec.supported_sub_args)
     except GetoptError, e:
       raise CommandException('%s for "%s" command.' % (e.msg,
                                                        self.command_name))
-    self.command_spec[URLS_START_ARG] = self._CalculateUrlsStartArg()
+    self.command_spec = self.command_spec._replace(
+        urls_start_arg=self._CalculateUrlsStartArg())
 
-    if (len(self.args) < self.command_spec[MIN_ARGS]
-        or len(self.args) > self.command_spec[MAX_ARGS]):
+    if (len(self.args) < self.command_spec.min_args
+        or len(self.args) > self.command_spec.max_args):
       self._RaiseWrongNumberOfArgumentsException()
 
     if self.command_name not in self._commands_with_subcommands_and_subopts:
@@ -441,11 +437,11 @@ class Command(object):
 
     # Build the support and default maps from the command spec.
     support_map = {
-        'gs': self.command_spec[CommandSpecKey.GS_API_SUPPORT],
+        'gs': self.command_spec.gs_api_support,
         's3': [ApiSelector.XML]
     }
     default_map = {
-        'gs': self.command_spec[CommandSpecKey.GS_DEFAULT_API],
+        'gs': self.command_spec.gs_default_api,
         's3': ApiSelector.XML
     }
     self.gsutil_api_map = GsutilApiMapFactory.GetApiMap(
@@ -483,12 +479,12 @@ class Command(object):
 
   def _RaiseWrongNumberOfArgumentsException(self):
     """Raises exception for wrong number of arguments supplied to command."""
-    if len(self.args) > self.command_spec[MAX_ARGS]:
+    if len(self.args) > self.command_spec.max_args:
       message = ('The %s command accepts at most %d arguments.' %
-                 (self.command_name, self.command_spec[MAX_ARGS]))
-    elif len(self.args) < self.command_spec[MIN_ARGS]:
+                 (self.command_name, self.command_spec.max_args))
+    elif len(self.args) < self.command_spec.min_args:
       message = ('The %s command requires at least %d arguments.' %
-                 (self.command_name, self.command_spec[MIN_ARGS]))
+                 (self.command_name, self.command_spec.min_args))
     raise CommandException(message)
 
   def CheckArguments(self):
@@ -506,13 +502,13 @@ class Command(object):
       CommandException if the arguments don't match.
     """
 
-    if (not self.command_spec[FILE_URLS_OK]
-        and HaveFileUrls(self.args[self.command_spec[URLS_START_ARG]:])):
+    if (not self.command_spec.file_url_ok
+        and HaveFileUrls(self.args[self.command_spec.urls_start_arg:])):
       raise CommandException('"%s" command does not support "file://" URLs. '
                              'Did you mean to use a gs:// URL?' %
                              self.command_name)
-    if (not self.command_spec[PROVIDER_URLS_OK]
-        and HaveProviderUrls(self.args[self.command_spec[URLS_START_ARG]:])):
+    if (not self.command_spec.provider_url_ok
+        and HaveProviderUrls(self.args[self.command_spec.urls_start_arg:])):
       raise CommandException('"%s" command does not support provider-only '
                              'URLs.' % self.command_name)
 

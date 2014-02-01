@@ -44,26 +44,11 @@ import gslib
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CommandSpecKey
 from gslib.command import DummyArgChecker
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.commands import config
 from gslib.cp_helper import GetDownloadSerializationDict
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.util import CalculateMd5FromContents
@@ -199,41 +184,28 @@ class DummyFile(object):
 class PerfDiagCommand(Command):
   """Implementation of gsutil perfdiag command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'perfdiag',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['diag', 'diagnostic', 'perf', 'performance'],
-      # Min number of args required by this command.
-      MIN_ARGS: 0,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: 1,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'n:c:k:s:t:m:i:o:',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: False,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'perfdiag',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: [],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Run performance diagnostic',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'perfdiag',
+      command_name_aliases = ['diag', 'diagnostic', 'perf', 'performance'],
+      min_args = 0,
+      max_args = 1,
+      supported_sub_args = 'n:c:k:s:t:m:i:o:',
+      file_url_ok = False,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api = ApiSelector.JSON,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'perfdiag',
+      help_name_aliases = [],
+      help_type = 'command_help',
+      help_one_line_summary = 'Run performance diagnostic',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   # Byte sizes to use for latency testing files.
   # TODO: Consider letting the user specify these sizes with a configuration

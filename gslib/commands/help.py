@@ -23,26 +23,11 @@ from subprocess import Popen
 
 import gslib.addlhelp
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
 from gslib.command import OLD_ALIAS_MAP
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 import gslib.commands
 from gslib.exception import CommandException
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpProvider
-from gslib.help_provider import HelpType
 from gslib.help_provider import MAX_HELP_NAME_LEN
-from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import IsRunningInteractively
 
 _detailed_help_text = ("""
@@ -88,37 +73,26 @@ top_level_usage_string = (
 class HelpCommand(Command):
   """Implementation of gsutil help command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'help',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['?', 'man'],
-      # Min number of args required by this command.
-      MIN_ARGS: 0,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: 2,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: '',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: True,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'help',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['?'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Get help about commands and topics',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'help',
+      command_name_aliases = ['?', 'man'],
+      min_args = 0,
+      max_args = 2,
+      supported_sub_args = '',
+      file_url_ok = True,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'help',
+      help_name_aliases = ['?'],
+      help_type = 'command_help',
+      help_one_line_summary = 'Get help about commands and topics',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def RunCommand(self):
     """Command entry point for the help command."""
@@ -127,15 +101,17 @@ class HelpCommand(Command):
     if not self.args:
       output.append('%s\nAvailable commands:\n' % top_level_usage_string)
       format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
-      for help_prov in sorted(help_type_map[HelpType.COMMAND_HELP],
-                              key=lambda hp: hp.help_spec[HELP_NAME]):
-        output.append(format_str % (help_prov.help_spec[HELP_NAME],
-                                    help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+      for help_prov in sorted(help_type_map['command_help'],
+                              key=lambda hp: hp.help_spec.help_name):
+        output.append(format_str % (
+            help_prov.help_spec.help_name,
+            help_prov.help_spec.help_one_line_summary))
       output.append('\nAdditional help topics:\n')
-      for help_prov in sorted(help_type_map[HelpType.ADDITIONAL_HELP],
-                              key=lambda hp: hp.help_spec[HELP_NAME]):
-        output.append(format_str % (help_prov.help_spec[HELP_NAME],
-                                    help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+      for help_prov in sorted(help_type_map['additional_help'],
+                              key=lambda hp: hp.help_spec.help_name):
+        output.append(format_str % (
+            help_prov.help_spec.help_name,
+            help_prov.help_spec.help_one_line_summary))
       output.append('\nUse gsutil help <command or topic> for detailed help.')
     else:
       invalid_subcommand = False
@@ -146,7 +122,7 @@ class HelpCommand(Command):
         help_prov = help_name_map[arg]
         help_name = None
         if len(self.args) > 1:  # We also have a subcommand argument.
-          subcommand_map = help_prov.help_spec.get(SUBCOMMAND_HELP_TEXT, None)
+          subcommand_map = help_prov.help_spec.subcommand_help_text
           if subcommand_map and self.args[1] in subcommand_map:
             help_name = arg + ' ' + self.args[1]
             help_text = subcommand_map[self.args[1]]
@@ -170,12 +146,12 @@ class HelpCommand(Command):
                   ) % (self.args[1], arg, arg, '\n'.join(subcommand_examples)))
         if not invalid_subcommand:
           if not help_name:  # No subcommand or invalid subcommand.
-            help_name = help_prov.help_spec[HELP_NAME]
-            help_text = help_prov.help_spec[HELP_TEXT]
+            help_name = help_prov.help_spec.help_name
+            help_text = help_prov.help_spec.help_text
 
           output.append('<B>NAME</B>\n')
-          output.append('  %s - %s\n' %
-                        (help_name, help_prov.help_spec[HELP_ONE_LINE_SUMMARY]))
+          output.append('  %s - %s\n' % (
+              help_name, help_prov.help_spec.help_one_line_summary))
           output.append('\n\n')
           output.append(help_text.strip('\n'))
           new_alias = OLD_ALIAS_MAP.get(arg, [None])[0]
@@ -282,8 +258,8 @@ class HelpCommand(Command):
         # HelpProviders, like naming.py).
         continue
       gslib.help_provider.SanityCheck(help_prov, help_name_map)
-      help_name_map[help_prov.help_spec[HELP_NAME]] = help_prov
-      for help_name_aliases in help_prov.help_spec[HELP_NAME_ALIASES]:
+      help_name_map[help_prov.help_spec.help_name] = help_prov
+      for help_name_aliases in help_prov.help_spec.help_name_aliases:
         help_name_map[help_name_aliases] = help_prov
-      help_type_map[help_prov.help_spec[HELP_TYPE]].append(help_prov)
+      help_type_map[help_prov.help_spec.help_type].append(help_prov)
     return (help_type_map, help_name_map)

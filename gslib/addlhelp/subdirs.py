@@ -13,13 +13,7 @@
 # limitations under the License.
 """Additional help about subdirectory handling in gsutil."""
 
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpProvider
-from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
@@ -103,17 +97,14 @@ _detailed_help_text = ("""
 class CommandOptions(HelpProvider):
   """Additional help about subdirectory handling in gsutil."""
 
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'subdirs',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['dirs', 'directory', 'directories', 'folder',
-                          'folders', 'hierarchy', 'subdir', 'subdirectory',
-                          'subdirectories'],
-      # Type of help:
-      HELP_TYPE: HelpType.ADDITIONAL_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'How Subdirectories Work',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Help specification. See help_provider.py for documentation.
+  help_spec = HelpProvider.HelpSpec(
+      help_name = 'subdirs',
+      help_name_aliases = [
+          'dirs', 'directory', 'directories', 'folder', 'folders', 'hierarchy',
+          'subdir', 'subdirectory', 'subdirectories'],
+      help_type = 'additional_help',
+      help_one_line_summary = 'How Subdirectories Work',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )

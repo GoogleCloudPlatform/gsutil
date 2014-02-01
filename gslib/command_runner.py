@@ -27,15 +27,12 @@ import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import OLD_ALIAS_MAP
 from gslib.command import ShutDownGsutil
 import gslib.commands
 from gslib.cs_api_map import GsutilApiClassMapFactory
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
-from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.util import CompareVersions
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
@@ -120,8 +117,8 @@ class CommandRunner(object):
     command_map = {}
     # Only include Command subclasses in the dict.
     for command in Command.__subclasses__():
-      command_map[command.command_spec[COMMAND_NAME]] = command
-      for command_name_aliases in command.command_spec[COMMAND_NAME_ALIASES]:
+      command_map[command.command_spec.command_name] = command
+      for command_name_aliases in command.command_spec.command_name_aliases:
         command_map[command_name_aliases] = command
     return command_map
 
@@ -180,8 +177,7 @@ class CommandRunner(object):
     if '--help' in args:
       new_args = [command_name]
       original_command_class = self.command_map[command_name]
-      subcommands = original_command_class.help_spec.get(
-          SUBCOMMAND_HELP_TEXT, {}).keys()
+      subcommands = original_command_class.help_spec.subcommand_help_text.keys()
       for arg in args:
         if arg in subcommands:
           new_args.append(arg)
