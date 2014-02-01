@@ -22,20 +22,6 @@ import boto
 import crcmod
 import gslib
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.util import GetConfigFilePath
 from gslib.util import UsingCrcmodExtension
 
@@ -58,37 +44,26 @@ _detailed_help_text = ("""
 class VersionCommand(Command):
   """Implementation of gsutil version command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'version',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['ver'],
-      # Min number of args required by this command.
-      MIN_ARGS: 0,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: 0,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'l',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: False,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'version',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['ver'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Print version info about gsutil',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'version',
+      command_name_aliases = ['ver'],
+      min_args = 0,
+      max_args = 0,
+      supported_sub_args = 'l',
+      file_url_ok = False,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'version',
+      help_name_aliases = ['ver'],
+      help_type = 'command_help',
+      help_one_line_summary = 'Print version info about gsutil',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def RunCommand(self):
     """Command entry point for the version command."""

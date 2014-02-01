@@ -34,24 +34,10 @@ from oauth2client.client import HAS_CRYPTO
 
 import gslib
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
 
@@ -466,37 +452,27 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 class ConfigCommand(Command):
   """Implementation of gsutil config command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'config',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['cfg', 'conf', 'configure'],
-      # Min number of args required by this command.
-      MIN_ARGS: 0,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: 0,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'habefwrs:o:',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: False,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'config',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Obtain credentials and create configuration file',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'config',
+      command_name_aliases = ['cfg', 'conf', 'configure'],
+      min_args = 0,
+      max_args = 0,
+      supported_sub_args = 'habefwrs:o:',
+      file_url_ok = False,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'config',
+      help_name_aliases = ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
+      help_type = 'command_help',
+      help_one_line_summary = (
+          'Obtain credentials and create configuration file'),
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def _OpenConfigFile(self, file_path):
     """Creates and opens a configuration file for writing.

@@ -21,27 +21,11 @@ from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CommandSpecKey
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
 from gslib.command import SetAclExceptionHandler
 from gslib.command import SetAclFuncWrapper
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
-from gslib.help_provider import SUBCOMMAND_HELP_TEXT
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
@@ -126,45 +110,30 @@ _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 class DefAclCommand(Command):
   """Implementation of gsutil defacl command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'defacl',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['setdefacl', 'getdefacl', 'chdefacl'],
-      # Min number of args required by this command.
-      MIN_ARGS: 2,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: NO_MAX,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: 'fg:u:d:',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: False,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 1,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'defacl',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Get, set, or change default ACL on buckets',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-      # Help text for sub-commands.
-      SUBCOMMAND_HELP_TEXT: {'get': _get_help_text,
-                             'set': _set_help_text,
-                             'ch': _ch_help_text},
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'defacl',
+      command_name_aliases = ['setdefacl', 'getdefacl', 'chdefacl'],
+      min_args = 2,
+      max_args = NO_MAX,
+      supported_sub_args = 'fg:u:d:',
+      file_url_ok = False,
+      provider_url_ok = False,
+      urls_start_arg = 1,
+      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api = ApiSelector.JSON,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'defacl',
+      help_name_aliases = [
+          'default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
+      help_type = 'command_help',
+      help_one_line_summary = 'Get, set, or change default ACL on buckets',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {
+          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
+  )
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
@@ -270,7 +239,7 @@ class DefAclCommand(Command):
     """Command entry point for the defacl command."""
     action_subcommand = self.args.pop(0)
     self.sub_opts, self.args = getopt.getopt(
-        self.args, self.command_spec[SUPPORTED_SUB_ARGS])
+        self.args, self.command_spec.supported_sub_args)
     self.CheckArguments()
     self.def_acl = True
     if action_subcommand == 'get':

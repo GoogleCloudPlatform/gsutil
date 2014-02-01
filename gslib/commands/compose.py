@@ -16,23 +16,8 @@
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CommandSpecKey
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
@@ -80,42 +65,30 @@ _detailed_help_text = ("""
 class ComposeCommand(Command):
   """Implementation of gsutil compose command."""
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'compose',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['concat'],
-      # Min number of args required by this command.
-      MIN_ARGS: 2,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: MAX_COMPOSE_ARITY + 1,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: '',
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: False,  # Not files, just object names without gs:// prefix.
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 1,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'compose',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['concat'],
-      # Type of help)
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: (
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'compose',
+      command_name_aliases = ['concat'],
+      min_args = 2,
+      max_args = MAX_COMPOSE_ARITY + 1,
+      supported_sub_args = '',
+      # Not files, just object names without gs:// prefix.
+      file_url_ok = False,
+      provider_url_ok = False,
+      urls_start_arg = 1,
+      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api = ApiSelector.JSON,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'compose',
+      help_name_aliases = ['concat'],
+      help_type = 'command_help',
+      help_one_line_summary = (
           'Concatenate a sequence of objects into a new composite object.'),
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def CheckProvider(self, uri):
     if uri.scheme != 'gs':

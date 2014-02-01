@@ -26,16 +26,8 @@ import signal
 from boto.storage_uri import BucketStorageUri
 from gslib import cs_api_map
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
 from gslib.command import CreateGsutilLogger
 from gslib.command import DummyArgChecker
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 import gslib.tests.testcase as testcase
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
@@ -150,17 +142,19 @@ class FailingIterator(object):
 
 class FakeCommand(Command):
   """Fake command class for overriding command instance state."""
-  command_spec = {
-      COMMAND_NAME: 'fake',
-      COMMAND_NAME_ALIASES: [],
-  }
-  help_spec = {
-      HELP_NAME: 'fake',
-      HELP_NAME_ALIASES: [],
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      HELP_ONE_LINE_SUMMARY: 'Something to take up space.',
-      HELP_TEXT: 'Something else to take up space.',
-  }
+  command_spec = Command.CreateCommandSpec(
+      'fake',
+      command_name_aliases = [],
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'fake',
+      help_name_aliases = [],
+      help_type = 'command_help',
+      help_one_line_summary = 'Something to take up space.',
+      help_text = 'Something else to take up space.',
+      subcommand_help_text = {},
+  )
 
   def __init__(self, do_parallel):
     self.bucket_storage_uri_class = BucketStorageUri

@@ -14,24 +14,9 @@
 """Implementation of Unix-like mv command for cloud storage providers."""
 
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CommandSpecKey
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.commands.cp import CP_SUB_ARGS
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 
@@ -100,41 +85,29 @@ class MvCommand(Command):
      a shorthand for 'cp' followed by 'rm'.
   """
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'mv',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['move', 'ren', 'rename'],
-      # Min number of args required by this command.
-      MIN_ARGS: 2,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: NO_MAX,
-      # Getopt-style string specifying acceptable sub args.
-      SUPPORTED_SUB_ARGS: CP_SUB_ARGS,  # Flags for mv are passed through to cp.
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: True,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'mv',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['move', 'rename'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Move/rename objects and/or subdirectories',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'mv',
+      command_name_aliases = ['move', 'ren', 'rename'],
+      min_args = 2,
+      max_args = NO_MAX,
+      # Flags for mv are passed through to cp.
+      supported_sub_args = CP_SUB_ARGS,
+      file_url_ok = True,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api = ApiSelector.JSON,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'mv',
+      help_name_aliases = ['move', 'rename'],
+      help_type = 'command_help',
+      help_one_line_summary = 'Move/rename objects and/or subdirectories',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def RunCommand(self):
     """Command entry point for the mv command."""

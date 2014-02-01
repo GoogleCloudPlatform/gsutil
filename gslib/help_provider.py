@@ -13,30 +13,15 @@
 # limitations under the License.
 """Module defining help types and providers for gsutil commands."""
 
+import collections
 from gslib.exception import CommandException
 
-
-class HelpType(object):
-  COMMAND_HELP = 'command_help'
-  ADDITIONAL_HELP = 'additional_help'
-
-ALL_HELP_TYPES = [HelpType.COMMAND_HELP, HelpType.ADDITIONAL_HELP]
-
-# help_spec key constants.
-HELP_NAME = 'help_name'
-HELP_NAME_ALIASES = 'help_name_aliases'
-HELP_TYPE = 'help_type'
-HELP_ONE_LINE_SUMMARY = 'help_one_line_summary'
-HELP_TEXT = 'help_text'
-SUBCOMMAND_HELP_TEXT = 'subcommand_help_text'
+ALL_HELP_TYPES = ['command_help', 'additional_help']
 
 # Constants enforced by SanityCheck
 MAX_HELP_NAME_LEN = 15
 MIN_ONE_LINE_SUMMARY_LEN = 10
 MAX_ONE_LINE_SUMMARY_LEN = 80 - MAX_HELP_NAME_LEN
-
-REQUIRED_SPEC_KEYS = [HELP_NAME, HELP_NAME_ALIASES, HELP_TYPE,
-                      HELP_ONE_LINE_SUMMARY, HELP_TEXT]
 
 DESCRIPTION_PREFIX = """
 <B>DESCRIPTION</B>"""
@@ -48,42 +33,44 @@ SYNOPSIS_PREFIX = """
 class HelpProvider(object):
   """Interface for providing help."""
 
-  # Each subclass must define the following map.
-  help_spec = {
+  # Each subclass of HelpProvider define a property named 'help_spec' that is
+  # an instance of the following class.
+  HelpSpec = collections.namedtuple('HelpSpec', [
       # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: None,
+      'help_name',
       # List of help name aliases.
-      HELP_NAME_ALIASES: None,
-      # HelpType.
-      HELP_TYPE: None,
+      'help_name_aliases',
+      # Type of help.
+      'help_type',
       # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: None,
+      'help_one_line_summary',
       # The full help text.
-      HELP_TEXT: None,
-  }
+      'help_text',
+      # Help text for subcommands of the command's help being specified.
+      'subcommand_help_text',
+  ])
+
+  # Each subclass must override this with an instance of HelpSpec.
+  help_spec = None
 
 
 # This is a static helper instead of a class method because the help loader
 # (gslib.commands.help._LoadHelpMaps()) operates on classes not instances.
 def SanityCheck(help_provider, help_name_map):
   """Helper for checking that a HelpProvider has minimally adequate content."""
-  for k in REQUIRED_SPEC_KEYS:
-    if k not in help_provider.help_spec or help_provider.help_spec[k] is None:
-      raise CommandException('"%s" help implementation is missing %s '
-                             'specification' % (help_provider.help_name, k))
   # Sanity check the content.
-  assert (len(help_provider.help_spec[HELP_NAME]) > 1
-          and len(help_provider.help_spec[HELP_NAME]) < MAX_HELP_NAME_LEN)
-  for hna in help_provider.help_spec[HELP_NAME_ALIASES]:
+  assert (len(help_provider.help_spec.help_name) > 1
+          and len(help_provider.help_spec.help_name) < MAX_HELP_NAME_LEN)
+  for hna in help_provider.help_spec.help_name_aliases:
     assert hna
-  one_line_summary_len = len(help_provider.help_spec[HELP_ONE_LINE_SUMMARY])
+  one_line_summary_len = len(help_provider.help_spec.help_one_line_summary)
   assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN
           and one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
-  assert len(help_provider.help_spec[HELP_TEXT]) > 10
+  assert len(help_provider.help_spec.help_text) > 10
 
   # Ensure there are no dupe help names or aliases across commands.
-  name_check_list = [help_provider.help_spec[HELP_NAME]]
-  name_check_list.extend(help_provider.help_spec[HELP_NAME_ALIASES])
+  name_check_list = [help_provider.help_spec.help_name]
+  name_check_list.extend(help_provider.help_spec.help_name_aliases)
   for name_or_alias in name_check_list:
     if help_name_map.has_key(name_or_alias):
       raise CommandException(

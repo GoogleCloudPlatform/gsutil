@@ -13,13 +13,7 @@
 # limitations under the License.
 """Additional help about Google Cloud Storage projects."""
 
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
 from gslib.help_provider import HelpProvider
-from gslib.help_provider import HelpType
 
 _detailed_help_text = ("""
 <B>OVERVIEW</B>
@@ -93,16 +87,13 @@ _detailed_help_text = ("""
 class CommandOptions(HelpProvider):
   """Additional help about Google Cloud Storage projects."""
 
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'projects',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['apis console', 'cloud console', 'console',
-                          'dev console', 'project', 'proj', 'project-id'],
-      # Type of help:
-      HELP_TYPE: HelpType.ADDITIONAL_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Working With Projects',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+  # Help specification. See help_provider.py for documentation.
+  help_spec = HelpProvider.HelpSpec(
+      help_name = 'projects',
+      help_name_aliases = ['apis console', 'cloud console', 'console',
+                           'dev console', 'project', 'proj', 'project-id'],
+      help_type = 'additional_help',
+      help_one_line_summary = 'Working With Projects',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )

@@ -54,15 +54,6 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import ResumableDownloadException
 from gslib.command import Command
-from gslib.command import COMMAND_NAME
-from gslib.command import COMMAND_NAME_ALIASES
-from gslib.command import CommandSpecKey
-from gslib.command import FILE_URLS_OK
-from gslib.command import MAX_ARGS
-from gslib.command import MIN_ARGS
-from gslib.command import PROVIDER_URLS_OK
-from gslib.command import SUPPORTED_SUB_ARGS
-from gslib.command import URLS_START_ARG
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
@@ -73,12 +64,6 @@ from gslib.cp_helper import GetMD5FromETag
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
-from gslib.help_provider import HELP_NAME
-from gslib.help_provider import HELP_NAME_ALIASES
-from gslib.help_provider import HELP_ONE_LINE_SUMMARY
-from gslib.help_provider import HELP_TEXT
-from gslib.help_provider import HELP_TYPE
-from gslib.help_provider import HelpType
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.storage_url import ContainsWildcard
@@ -636,42 +621,29 @@ class CpCommand(Command):
   # Chunk size to use while unzipping gzip files.
   GUNZIP_CHUNK_SIZE = 8192
 
-  # Command specification (processed by parent class).
-  command_spec = {
-      # Name of command.
-      COMMAND_NAME: 'cp',
-      # List of command name aliases.
-      COMMAND_NAME_ALIASES: ['copy'],
-      # Min number of args required by this command.
-      MIN_ARGS: 1,
-      # Max number of args required by this command, or NO_MAX.
-      MAX_ARGS: NO_MAX,
-      # Getopt-style string specifying acceptable sub args.
+  # Command specification. See base class for documentation.
+  command_spec = Command.CreateCommandSpec(
+      'cp',
+      command_name_aliases = ['copy'],
+      min_args = 1,
+      max_args = NO_MAX,
       # -t is deprecated but leave intact for now to avoid breakage.
-      SUPPORTED_SUB_ARGS: CP_SUB_ARGS,
-      # True if file URLs acceptable for this command.
-      FILE_URLS_OK: True,
-      # True if provider-only URLs acceptable for this command.
-      PROVIDER_URLS_OK: False,
-      # Index in args of first URL arg.
-      URLS_START_ARG: 0,
-      # List of supported APIs
-      CommandSpecKey.GS_API_SUPPORT: [ApiSelector.XML, ApiSelector.JSON],
-      # Default API to use for this command
-      CommandSpecKey.GS_DEFAULT_API: ApiSelector.JSON,
-  }
-  help_spec = {
-      # Name of command or auxiliary help info for which this help applies.
-      HELP_NAME: 'cp',
-      # List of help name aliases.
-      HELP_NAME_ALIASES: ['copy'],
-      # Type of help:
-      HELP_TYPE: HelpType.COMMAND_HELP,
-      # One line summary of this help.
-      HELP_ONE_LINE_SUMMARY: 'Copy files and objects',
-      # The full help text.
-      HELP_TEXT: _detailed_help_text,
-  }
+      supported_sub_args = CP_SUB_ARGS,
+      file_url_ok = True,
+      provider_url_ok = False,
+      urls_start_arg = 0,
+      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api = ApiSelector.JSON,
+  )
+  # Help specification. See help_provider.py for documentation.
+  help_spec = Command.HelpSpec(
+      help_name = 'cp',
+      help_name_aliases = ['copy'],
+      help_type = 'command_help',
+      help_one_line_summary = 'Copy files and objects',
+      help_text = _detailed_help_text,
+      subcommand_help_text = {},
+  )
 
   def _CheckForDirFileConflict(self, exp_src_url, dst_url):
     """Checks whether copying exp_src_url into dst_url is not possible.
