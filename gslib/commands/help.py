@@ -76,22 +76,22 @@ class HelpCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'help',
-      command_name_aliases = ['?', 'man'],
-      min_args = 0,
-      max_args = 2,
-      supported_sub_args = '',
-      file_url_ok = True,
-      provider_url_ok = False,
-      urls_start_arg = 0,
+      command_name_aliases=['?', 'man'],
+      min_args=0,
+      max_args=2,
+      supported_sub_args='',
+      file_url_ok=True,
+      provider_url_ok=False,
+      urls_start_arg=0,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'help',
-      help_name_aliases = ['?'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Get help about commands and topics',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='help',
+      help_name_aliases=['?'],
+      help_type='command_help',
+      help_one_line_summary='Get help about commands and topics',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

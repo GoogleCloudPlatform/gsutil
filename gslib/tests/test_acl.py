@@ -20,8 +20,6 @@ from gslib import aclhelpers
 from gslib.command import CreateGsutilLogger
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-from gslib.tests.util import unittest
-from gslib.tests.util import USING_JSON_API
 from gslib.util import Retry
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'

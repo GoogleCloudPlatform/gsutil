@@ -144,16 +144,16 @@ class FakeCommand(Command):
   """Fake command class for overriding command instance state."""
   command_spec = Command.CreateCommandSpec(
       'fake',
-      command_name_aliases = [],
+      command_name_aliases=[],
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'fake',
-      help_name_aliases = [],
-      help_type = 'command_help',
-      help_one_line_summary = 'Something to take up space.',
-      help_text = 'Something else to take up space.',
-      subcommand_help_text = {},
+      help_name='fake',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='Something to take up space.',
+      help_text='Something else to take up space.',
+      subcommand_help_text={},
   )
 
   def __init__(self, do_parallel):

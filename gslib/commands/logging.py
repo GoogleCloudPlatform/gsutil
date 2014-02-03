@@ -119,25 +119,25 @@ class LoggingCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'logging',
-      command_name_aliases = ['disablelogging', 'enablelogging', 'getlogging'],
-      min_args = 2,
-      max_args = NO_MAX,
-      supported_sub_args = 'b:o:',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['disablelogging', 'enablelogging', 'getlogging'],
+      min_args=2,
+      max_args=NO_MAX,
+      supported_sub_args='b:o:',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'logging',
-      help_name_aliases = ['loggingconfig', 'logs', 'log', 'getlogging',
-                           'enablelogging', 'disablelogging'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Configure or retrieve logging on buckets',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {'get': _get_help_text, 'set': _set_help_text},
+      help_name='logging',
+      help_name_aliases=['loggingconfig', 'logs', 'log', 'getlogging',
+                         'enablelogging', 'disablelogging'],
+      help_type='command_help',
+      help_one_line_summary='Configure or retrieve logging on buckets',
+      help_text=_detailed_help_text,
+      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
   )
 
   def _Get(self):

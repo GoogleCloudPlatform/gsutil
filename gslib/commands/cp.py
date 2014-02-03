@@ -624,25 +624,25 @@ class CpCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'cp',
-      command_name_aliases = ['copy'],
-      min_args = 1,
-      max_args = NO_MAX,
+      command_name_aliases=['copy'],
+      min_args=1,
+      max_args=NO_MAX,
       # -t is deprecated but leave intact for now to avoid breakage.
-      supported_sub_args = CP_SUB_ARGS,
-      file_url_ok = True,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      supported_sub_args=CP_SUB_ARGS,
+      file_url_ok=True,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'cp',
-      help_name_aliases = ['copy'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Copy files and objects',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='cp',
+      help_name_aliases=['copy'],
+      help_type='command_help',
+      help_one_line_summary='Copy files and objects',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def _CheckForDirFileConflict(self, exp_src_url, dst_url):

@@ -68,26 +68,26 @@ class ComposeCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'compose',
-      command_name_aliases = ['concat'],
-      min_args = 2,
-      max_args = MAX_COMPOSE_ARITY + 1,
-      supported_sub_args = '',
+      command_name_aliases=['concat'],
+      min_args=2,
+      max_args=MAX_COMPOSE_ARITY + 1,
+      supported_sub_args='',
       # Not files, just object names without gs:// prefix.
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 1,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=1,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'compose',
-      help_name_aliases = ['concat'],
-      help_type = 'command_help',
-      help_one_line_summary = (
+      help_name='compose',
+      help_name_aliases=['concat'],
+      help_type='command_help',
+      help_one_line_summary=(
           'Concatenate a sequence of objects into a new composite object.'),
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def CheckProvider(self, uri):

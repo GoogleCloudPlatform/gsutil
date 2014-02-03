@@ -88,25 +88,25 @@ class MvCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'mv',
-      command_name_aliases = ['move', 'ren', 'rename'],
-      min_args = 2,
-      max_args = NO_MAX,
+      command_name_aliases=['move', 'ren', 'rename'],
+      min_args=2,
+      max_args=NO_MAX,
       # Flags for mv are passed through to cp.
-      supported_sub_args = CP_SUB_ARGS,
-      file_url_ok = True,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      supported_sub_args=CP_SUB_ARGS,
+      file_url_ok=True,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'mv',
-      help_name_aliases = ['move', 'rename'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Move/rename objects and/or subdirectories',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='mv',
+      help_name_aliases=['move', 'rename'],
+      help_type='command_help',
+      help_one_line_summary='Move/rename objects and/or subdirectories',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

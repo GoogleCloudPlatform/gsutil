@@ -105,27 +105,27 @@ class MbCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'mb',
-      command_name_aliases = ['makebucket', 'createbucket', 'md', 'mkdir'],
-      min_args = 1,
-      max_args = NO_MAX,
-      supported_sub_args = 'c:l:p:',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['makebucket', 'createbucket', 'md', 'mkdir'],
+      min_args=1,
+      max_args=NO_MAX,
+      supported_sub_args='c:l:p:',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'mb',
-      help_name_aliases = [
+      help_name='mb',
+      help_name_aliases=[
           'createbucket', 'makebucket', 'md', 'mkdir', 'location', 'dra',
           'dras', 'reduced_availability', 'durable_reduced_availability', 'rr',
           'reduced_redundancy', 'standard', 'storage class'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Make buckets',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_type='command_help',
+      help_one_line_summary='Make buckets',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

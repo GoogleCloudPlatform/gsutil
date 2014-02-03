@@ -119,24 +119,24 @@ class RmCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'rm',
-      command_name_aliases = ['del', 'delete', 'remove'],
-      min_args = 1,
-      max_args = NO_MAX,
-      supported_sub_args = 'afrRv',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['del', 'delete', 'remove'],
+      min_args=1,
+      max_args=NO_MAX,
+      supported_sub_args='afrRv',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'rm',
-      help_name_aliases = ['del', 'delete', 'remove'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Remove objects',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='rm',
+      help_name_aliases=['del', 'delete', 'remove'],
+      help_type='command_help',
+      help_one_line_summary='Remove objects',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

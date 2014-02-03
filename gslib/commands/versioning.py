@@ -65,25 +65,25 @@ class VersioningCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'versioning',
-      command_name_aliases = ['setversioning', 'getversioning'],
-      min_args = 2,
-      max_args = NO_MAX,
-      supported_sub_args = '',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 2,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['setversioning', 'getversioning'],
+      min_args=2,
+      max_args=NO_MAX,
+      supported_sub_args='',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=2,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'versioning',
-      help_name_aliases = ['getversioning', 'setversioning'],
-      help_type = 'command_help',
-      help_one_line_summary = (
+      help_name='versioning',
+      help_name_aliases=['getversioning', 'setversioning'],
+      help_type='command_help',
+      help_one_line_summary=(
           'Enable or suspend versioning for one or more buckets'),
-      help_text = _detailed_help_text,
-      subcommand_help_text = {'get': _get_help_text, 'set': _set_help_text},
+      help_text=_detailed_help_text,
+      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
   )
 
   def _CalculateUrlsStartArg(self):
