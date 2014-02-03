@@ -118,24 +118,24 @@ class SetMetaCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'setmeta',
-      command_name_aliases = ['setheader'],
-      min_args = 1,
-      max_args = NO_MAX,
-      supported_sub_args = 'h:nrR',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 1,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['setheader'],
+      min_args=1,
+      max_args=NO_MAX,
+      supported_sub_args='h:nrR',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=1,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'setmeta',
-      help_name_aliases = ['setheader'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Set metadata on already uploaded objects',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='setmeta',
+      help_name_aliases=['setheader'],
+      help_type='command_help',
+      help_one_line_summary='Set metadata on already uploaded objects',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

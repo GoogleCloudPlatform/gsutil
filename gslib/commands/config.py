@@ -29,9 +29,6 @@ import webbrowser
 
 import boto
 from boto.provider import Provider
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
-
 import gslib
 from gslib.command import Command
 from gslib.commands.compose import MAX_COMPONENT_COUNT
@@ -40,6 +37,8 @@ from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
 
 
 _detailed_help_text = ("""
@@ -455,23 +454,23 @@ class ConfigCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'config',
-      command_name_aliases = ['cfg', 'conf', 'configure'],
-      min_args = 0,
-      max_args = 0,
-      supported_sub_args = 'habefwrs:o:',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
+      command_name_aliases=['cfg', 'conf', 'configure'],
+      min_args=0,
+      max_args=0,
+      supported_sub_args='habefwrs:o:',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'config',
-      help_name_aliases = ['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
-      help_type = 'command_help',
-      help_one_line_summary = (
+      help_name='config',
+      help_name_aliases=['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
+      help_type='command_help',
+      help_one_line_summary=(
           'Obtain credentials and create configuration file'),
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def _OpenConfigFile(self, file_path):

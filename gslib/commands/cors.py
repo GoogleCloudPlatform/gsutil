@@ -90,25 +90,25 @@ class CorsCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'cors',
-      command_name_aliases = ['getcors', 'setcors'],
-      min_args = 2,
-      max_args = NO_MAX,
-      supported_sub_args = '',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 1,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['getcors', 'setcors'],
+      min_args=2,
+      max_args=NO_MAX,
+      supported_sub_args='',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=1,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'cors',
-      help_name_aliases = ['getcors', 'setcors', 'cross-origin'],
-      help_type = 'command_help',
-      help_one_line_summary = (
+      help_name='cors',
+      help_name_aliases=['getcors', 'setcors', 'cross-origin'],
+      help_type='command_help',
+      help_one_line_summary=(
           'Set a CORS JSON document for one or more buckets'),
-      help_text = _detailed_help_text,
-      subcommand_help_text = {'get': _get_help_text, 'set': _set_help_text},
+      help_text=_detailed_help_text,
+      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
   )
 
   def _CalculateUrlsStartArg(self):

@@ -47,22 +47,22 @@ class VersionCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'version',
-      command_name_aliases = ['ver'],
-      min_args = 0,
-      max_args = 0,
-      supported_sub_args = 'l',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
+      command_name_aliases=['ver'],
+      min_args=0,
+      max_args=0,
+      supported_sub_args='l',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'version',
-      help_name_aliases = ['ver'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Print version info about gsutil',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='version',
+      help_name_aliases=['ver'],
+      help_type='command_help',
+      help_one_line_summary='Print version info about gsutil',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

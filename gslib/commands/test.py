@@ -140,22 +140,22 @@ class TestCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'test',
-      command_name_aliases = [],
-      min_args = 0,
-      max_args = NO_MAX,
-      supported_sub_args = 'ufl',
-      file_url_ok = True,
-      provider_url_ok = False,
-      urls_start_arg = 0,
+      command_name_aliases=[],
+      min_args=0,
+      max_args=NO_MAX,
+      supported_sub_args='ufl',
+      file_url_ok=True,
+      provider_url_ok=False,
+      urls_start_arg=0,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'test',
-      help_name_aliases = [],
-      help_type = 'command_help',
-      help_one_line_summary = 'Run gsutil tests',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='test',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='Run gsutil tests',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   def RunCommand(self):

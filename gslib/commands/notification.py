@@ -139,26 +139,26 @@ class NotificationCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'notification',
-      command_name_aliases = [
+      command_name_aliases=[
           'notify', 'notifyconfig', 'notifications', 'notif'],
-      min_args = 3,
-      max_args = NO_MAX,
-      supported_sub_args = 'i:t:',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 1,
-      gs_api_support = [ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      min_args=3,
+      max_args=NO_MAX,
+      supported_sub_args='i:t:',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=1,
+      gs_api_support=[ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'notification',
-      help_name_aliases = ['watchbucket', 'stopchannel', 'notifyconfig'],
-      help_type = 'command_help',
-      help_one_line_summary = 'Configure object change notification',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {'watchbucket': _watchbucket_help_text,
-                              'stopchannel': _stopchannel_help_text},
+      help_name='notification',
+      help_name_aliases=['watchbucket', 'stopchannel', 'notifyconfig'],
+      help_type='command_help',
+      help_one_line_summary='Configure object change notification',
+      help_text=_detailed_help_text,
+      subcommand_help_text={'watchbucket': _watchbucket_help_text,
+                            'stopchannel': _stopchannel_help_text},
   )
 
   def _WatchBucket(self):

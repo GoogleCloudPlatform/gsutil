@@ -187,24 +187,24 @@ class PerfDiagCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'perfdiag',
-      command_name_aliases = ['diag', 'diagnostic', 'perf', 'performance'],
-      min_args = 0,
-      max_args = 1,
-      supported_sub_args = 'n:c:k:s:t:m:i:o:',
-      file_url_ok = False,
-      provider_url_ok = False,
-      urls_start_arg = 0,
-      gs_api_support = [ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api = ApiSelector.JSON,
+      command_name_aliases=['diag', 'diagnostic', 'perf', 'performance'],
+      min_args=0,
+      max_args=1,
+      supported_sub_args='n:c:k:s:t:m:i:o:',
+      file_url_ok=False,
+      provider_url_ok=False,
+      urls_start_arg=0,
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
-      help_name = 'perfdiag',
-      help_name_aliases = [],
-      help_type = 'command_help',
-      help_one_line_summary = 'Run performance diagnostic',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='perfdiag',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='Run performance diagnostic',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )
 
   # Byte sizes to use for latency testing files.
