@@ -1052,16 +1052,6 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('cat', [suri(src_uri)], return_stdout=True)
     self.assertEqual(stdout, 'foo')
 
-  def testGetAclCommandRuns(self):
-    """Test that the 'acl get' command basically runs."""
-    src_bucket_uri = self.CreateBucket()
-    self.RunCommand('acl', ['get', suri(src_bucket_uri)])
-
-  def testGetDefAclCommandRuns(self):
-    """Test that the 'defacl get' command basically runs."""
-    src_bucket_uri = self.CreateBucket()
-    self.RunCommand('defacl', ['get', suri(src_bucket_uri)])
-
   def testGetLoggingCommandRuns(self):
     """Test that the 'logging get' command basically runs."""
     src_bucket_uri = self.CreateBucket()

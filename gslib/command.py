@@ -748,6 +748,8 @@ class Command(HelpProvider):
         acl = blr.root_object.acl
       if not acl:
         self._WarnServiceAccounts()
+        raise AccessDeniedException('Access denied. Please ensure you have '
+                                    'OWNER permission on %s.' % url_str)
       else:
         print AclTranslation.JsonFromMessage(acl)
 
