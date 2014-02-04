@@ -19,6 +19,7 @@ import logging
 
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
@@ -100,11 +101,11 @@ class StatCommand(Command):
                    'contentEncoding', 'contentLanguage', 'size', 'contentType',
                    'componentCount', 'metadata', 'crc32c', 'md5Hash', 'etag',
                    'generation', 'metageneration']
+    matches = 0
     for uri_str in self.args:
       uri = StorageUrlFromString(uri_str)
       if not uri.IsObject():
         raise CommandException('The stat command only works with object URIs')
-      matches = 0
       try:
         if ContainsWildcard(uri_str):
           blr_iter = self.WildcardIterator(uri_str,
@@ -119,10 +120,12 @@ class StatCommand(Command):
           matches += 1
           if logging.getLogger().isEnabledFor(logging.INFO):
             PrintFullInfoAboutObject(blr, incl_acl=False)
+      except AccessDeniedException:
+        print 'You aren\'t authorized to read %s - skipping' % uri_str
       except InvalidUrlError:
         return 1
       except NotFoundException:
-        return 1
-      if not matches:
-        return 1
+        continue
+    if not matches:
+      return 1
     return 0
