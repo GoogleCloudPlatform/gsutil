@@ -104,6 +104,8 @@ _detailed_help_text = ("""
   -u          Only run unit tests.
 
   -f          Exit on first test failure.
+
+  -s          Run tests against S3 instead of GS.
 """)
 
 
@@ -143,7 +145,7 @@ class TestCommand(Command):
       command_name_aliases=[],
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='ufl',
+      supported_sub_args='ufls',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -174,6 +176,12 @@ class TestCommand(Command):
           failfast = True
         elif o == '-l':
           list_tests = True
+        elif o == '-s':
+          if not tests.util.HAS_S3_CREDS:
+            raise CommandException('S3 tests require S3 credentials. Please '
+                                   'add appropriate credentials to your .boto '
+                                   'file and re-run.')
+          tests.util.RUN_S3_TESTS = True
 
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:

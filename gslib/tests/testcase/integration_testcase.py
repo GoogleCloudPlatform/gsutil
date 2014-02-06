@@ -68,10 +68,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
 
-    # TODO: gsutil-beta: This should consider whether the command
-    # supports the API or not, but since commands will default to XML
-    # it is enough to assume XML support and override as needed in the tests.
-    self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
+    if util.RUN_S3_TESTS:
+      self.test_api = 'XML'
+      self.default_provider = 's3'
+      self.NONEXISTENT_BUCKET_NAME = (
+          'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
+    else:
+      # TODO: gsutil-beta: This should consider whether the command
+      # supports the API or not, but since commands will default to XML
+      # it is enough to assume XML support and override as needed in the tests.
+      self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
+      self.default_provider = 'gs'
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
@@ -132,7 +139,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       StorageUri for the created bucket.
     """
     if not provider:
-      provider = 'gs'
+      provider = self.default_provider
     bucket_name = bucket_name or self.MakeTempName('bucket')
 
     bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
@@ -212,7 +219,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A tuple containing the desired return values specified by the return_*
       arguments.
     """
-    cmd = [gslib.GSUTIL_PATH] + cmd
+    cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

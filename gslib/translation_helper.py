@@ -268,6 +268,57 @@ def PreconditionsFromHeaders(headers):
   return return_preconditions
 
 
+def EncodeStringAsLong(string_to_convert):
+  """Encodes an ASCII string as a python long.
+
+  This is used for modeling S3 version_id's as apitools generation.  Because
+  python longs can be arbitrarily large, this works.
+
+  Args:
+    string_to_convert: ASCII string to convert to a long.
+
+  Returns:
+    Long that represents the input string.
+  """
+  return long(string_to_convert.encode('hex'), 16)
+
+
+def _DecodeLongAsString(long_to_convert):
+  """Decodes an encoded python long into an ASCII string.
+
+  This is used for modeling S3 version_id's as apitools generation.
+
+  Args:
+    long_to_convert: long to convert to ASCII string. If this is already a
+                     string, it is simply returned.
+
+  Returns:
+    String decoded from the input long.
+  """
+  if isinstance(long_to_convert, basestring):
+    # Already converted.
+    return long_to_convert
+  return hex(long_to_convert)[2:-1].decode('hex')
+
+
+def GenerationFromUrlAndString(url, generation):
+  """Decodes a generation from a StorageURL and a generation string.
+
+  This is used to represent gs and s3 versioning.
+
+  Args:
+    url: StorageUrl representing the object.
+    generation: Long or string representing the object's generation or
+                version.
+
+  Returns:
+    Valid generation string for use in URLs.
+  """
+  if url.scheme == 's3' and generation:
+    return _DecodeLongAsString(generation)
+  return generation
+
+
 def CheckForXmlConfigurationAndRaise(config_type_string, json_txt):
   """Checks a JSON parse exception for provided XML configuration."""
   try:

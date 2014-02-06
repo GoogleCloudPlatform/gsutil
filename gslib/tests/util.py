@@ -33,6 +33,7 @@ if not hasattr(unittest.TestCase, 'assertIsNone'):
 # Flags for running different types of tests.
 RUN_INTEGRATION_TESTS = True
 RUN_UNIT_TESTS = True
+RUN_S3_TESTS = False
 
 # Whether the tests are running verbose or not.
 VERBOSE_OUTPUT = False

@@ -52,6 +52,7 @@ from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
+from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
 from gslib.command import Command
 from gslib.commands.compose import MAX_COMPONENT_COUNT
@@ -71,6 +72,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
+from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
@@ -865,7 +867,8 @@ class CpCommand(Command):
     end_time = time.time()
 
     result_url = dst_url.Clone()
-    result_url.generation = dst_obj.generation
+    result_url.generation = GenerationFromUrlAndString(result_url,
+                                                       dst_obj.generation)
 
     return (end_time - start_time, src_obj_size, result_url, dst_obj.md5Hash)
 
@@ -1068,9 +1071,6 @@ class CpCommand(Command):
     end_time = time.time()
     elapsed_time = end_time - start_time
 
-    result_url = dst_url.Clone()
-    result_url.generation = uploaded_object.generation
-
     return (elapsed_time, uploaded_object)
 
   def _CompressFileForUpload(self, src_url, src_obj_filestream, src_obj_size):
@@ -1184,7 +1184,10 @@ class CpCommand(Command):
       upload_stream.close()
 
     result_url = dst_url.Clone()
+
     result_url.generation = uploaded_object.generation
+    result_url.generation = GenerationFromUrlAndString(
+        result_url, uploaded_object.generation)
 
     return (elapsed_time, uploaded_object.size, result_url,
             uploaded_object.md5Hash)
@@ -1708,7 +1711,9 @@ class CpCommand(Command):
         os.unlink(download_path)
 
     result_url = dst_url.Clone()
-    result_url.generation = uploaded_object.generation
+    result_url.generation = GenerationFromUrlAndString(
+        result_url, uploaded_object.generation)
+
     return (end_time - start_time, src_obj_metadata.size, result_url,
             uploaded_object.md5Hash)
 
@@ -1739,7 +1744,10 @@ class CpCommand(Command):
     # Initialize metadata from any headers passed in via -h.
     dst_obj_metadata = ObjectMetadataFromHeaders(dst_obj_headers)
 
-    preconditions = PreconditionsFromHeaders(dst_obj_headers)
+    if dst_url.IsCloudUrl() and dst_url.scheme == 'gs':
+      preconditions = PreconditionsFromHeaders(dst_obj_headers)
+    else:
+      preconditions = Preconditions()
 
     src_obj_metadata = None
     src_obj_filestream = None
@@ -1770,9 +1778,10 @@ class CpCommand(Command):
         src_obj_fields = ['crc32c', 'contentEncoding', 'contentType', 'etag',
                           'mediaLink', 'md5Hash', 'size']
       try:
+        src_generation = GenerationFromUrlAndString(src_url, src_url.generation)
         src_obj_metadata = gsutil_api.GetObjectMetadata(
             src_url.bucket_name, src_url.object_name,
-            generation=src_url.generation, provider=src_url.scheme,
+            generation=src_generation, provider=src_url.scheme,
             fields=src_obj_fields)
       except NotFoundException:
         raise CommandException(
@@ -2110,11 +2119,12 @@ class CpCommand(Command):
 
     # Check for the special case where we have a folder marker object
     folder_expansion = self.WildcardIterator(
-        dst_url_str + '_$folder$').IterAll()
+        dst_url_str + '_$folder$').IterAll(bucket_listing_fields=['name'])
     for blr in folder_expansion:
       return (storage_url, True)
 
-    blr_expansion = self.WildcardIterator(dst_url_str).IterAll()
+    blr_expansion = self.WildcardIterator(dst_url_str).IterAll(
+        bucket_listing_fields=['name'])
     for blr in blr_expansion:
       if blr.ref_type == BucketListingRefType.PREFIX:
         return (storage_url, True)
