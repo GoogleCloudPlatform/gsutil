@@ -67,4 +67,31 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     # Attempting to cat invalid version should result in an error.
     stderr = self.RunGsUtil(['cat', uri2.version_specific_uri + '23'],
                             return_stderr=True, expected_status=1)
-    self.assertIn('No URIs matched', stderr)
+    self.assertIn('No URLs matched', stderr)
+
+  def test_cat_multi_arg(self):
+    """Tests cat command with multiple arguments."""
+    bucket_uri = self.CreateBucket()
+    data1 = '0123456789'
+    data2 = 'abcdefghij'
+    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=data1)
+    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=data2)
+    stdout, stderr = self.RunGsUtil(
+        ['cat', suri(obj_uri1), suri(bucket_uri) + 'nonexistent'],
+        return_stdout=True, return_stderr=True, expected_status=1)
+    # First object should print, second should produce an exception.
+    self.assertIn(data1, stdout)
+    self.assertIn('No URLs matched', stderr)
+
+    stdout, stderr = self.RunGsUtil(
+        ['cat', suri(bucket_uri) + 'nonexistent', suri(obj_uri1)],
+        return_stdout=True, return_stderr=True, expected_status=1)
+
+    # If first object is invalid, exception should halt output immediately.
+    self.assertNotIn(data1, stdout)
+    self.assertIn('No URLs matched', stderr)
+
+    # Two valid objects should both print successfully.
+    stdout = self.RunGsUtil(['cat', suri(obj_uri1), suri(obj_uri2)],
+                            return_stdout=True)
+    self.assertIn(data1 + data2, stdout)

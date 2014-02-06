@@ -43,16 +43,16 @@ class CatHelper(object):
       0 on success.
 
     Raises:
-      CommandException if no URIs can be found.
+      CommandException if no URLs can be found.
     """
     printed_one = False
     # We manipulate the stdout so that all other data other than the Object
     # contents go to stderr.
     cat_outfd = sys.stdout
     sys.stdout = sys.stderr
-    did_some_work = False
     try:
       for url_str in url_strings:
+        did_some_work = False
         for blr in self.command_obj.WildcardIterator(url_str).IterObjects():
           did_some_work = True
           if show_header:
@@ -69,9 +69,9 @@ class CatHelper(object):
                 generation=storage_url.generation, provider=storage_url.scheme)
           else:
             cat_outfd.write(open(storage_url.object_name, 'rb').read())
+        if not did_some_work:
+          raise CommandException('No URLs matched %s' % url_str)
       sys.stdout = cat_outfd
-      if not did_some_work:
-        raise CommandException('No URIs matched')
     finally:
       sys.stdout = cat_outfd
 
