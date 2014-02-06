@@ -49,6 +49,8 @@ from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.third_party.storage_apitools import storage_v1beta2_client as apitools_client
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.third_party.storage_apitools import transfer as apitools_transfer
+from gslib.translation_helper import CreateBucketNotFoundException
+from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.util import CALLBACK_PER_X_BYTES
 
@@ -793,27 +795,15 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def _CreateBucketNotFoundException(self, e, bucket_name):
-    return NotFoundException('%s bucket does not exist.' %
-                             bucket_name, status=e.status_code)
-
-  def _CreateObjectNotFoundException(self, e, bucket_name, object_name,
-                                     generation=None):
-    uri_string = '%s://%s/%s' % (self.provider, bucket_name, object_name)
-    if generation:
-      uri_string += '#%s' % str(generation)
-    return NotFoundException('%s does not exist.' % uri_string,
-                             status=e.status_code)
-
   def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
                                   generation=None):
     """Translates an HTTP exception and raises the translated or original value.
 
     Args:
       e: Any Exception.
-      bucket_name: Optional bucket name in request the caused the exception.
-      object_name: Optional object name in request the caused the exception.
-      generation: Optional generation in request the caused the exception.
+      bucket_name: Optional bucket name in request that caused the exception.
+      object_name: Optional object name in request that caused the exception.
+      generation: Optional generation in request that caused the exception.
 
     Raises:
       Translated CloudApi exception, or the original exception if it was not
@@ -833,9 +823,9 @@ class GcsJsonApi(CloudApi):
 
     Args:
       e: Any exception in TRANSLATABLE_APITOOLS_EXCEPTIONS.
-      bucket_name: Optional bucket name in request the caused the exception.
-      object_name: Optional object name in request the caused the exception.
-      generation: Optional generation in request the caused the exception.
+      bucket_name: Optional bucket name in request that caused the exception.
+      object_name: Optional object name in request that caused the exception.
+      generation: Optional generation in request that caused the exception.
 
     Returns:
       CloudStorageApiServiceException for translatable exceptions, None
@@ -860,7 +850,8 @@ class GcsJsonApi(CloudApi):
                                        'Is your project ID valid?',
                                        status=e.status_code)
         elif 'The bucket you tried to delete was not empty.' in str(e):
-          return NotEmptyException('BucketNotEmpty', status=e.status_code)
+          return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
+                                   status=e.status_code)
         elif ('The bucket you tried to create requires domain ownership '
               'verification.' in str(e)):
           return AccessDeniedException(
@@ -872,12 +863,16 @@ class GcsJsonApi(CloudApi):
       if e.status_code == 404:
         if bucket_name:
           if object_name:
-            return self._CreateObjectNotFoundException(e, bucket_name,
-                                                       object_name,
-                                                       generation=generation)
-          return self._CreateBucketNotFoundException(e, bucket_name)
+            return CreateObjectNotFoundException(e.status_code, self.provider,
+                                                 bucket_name, object_name,
+                                                 generation=generation)
+          return CreateBucketNotFoundException(e.status_code, self.provider,
+                                               bucket_name)
         return NotFoundException(e.message, status=e.status_code)
       elif e.status_code == 409 and bucket_name:
+        if 'The bucket you tried to delete was not empty.' in str(e):
+          return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
+                                   status=e.status_code)
         return ServiceException(
             'Bucket %s already exists.' % bucket_name, status=e.status_code)
       elif e.status_code == 412:

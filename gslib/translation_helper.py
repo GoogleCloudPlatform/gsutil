@@ -21,6 +21,7 @@ from third_party.storage_apitools import encoding as encoding
 from third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 
 from gslib.cloud_api import ArgumentException
+from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import Preconditions
 
 # In Python 2.6, ElementTree raises ExpatError instead of ParseError.
@@ -266,6 +267,19 @@ def PreconditionsFromHeaders(headers):
                             'x-goog-if-metageneration match must be specified '
                             'with a positive integer value.')
   return return_preconditions
+
+
+def CreateBucketNotFoundException(code, provider, bucket_name):
+  return NotFoundException('%s://%s bucket does not exist.' %
+                           (provider, bucket_name), status=code)
+
+
+def CreateObjectNotFoundException(code, provider, bucket_name, object_name,
+                                  generation=None):
+  uri_string = '%s://%s/%s' % (provider, bucket_name, object_name)
+  if generation:
+    uri_string += '#%s' % str(generation)
+  return NotFoundException('%s does not exist.' % uri_string, status=code)
 
 
 def EncodeStringAsLong(string_to_convert):
