@@ -27,6 +27,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
 from gslib.storage_url import WILDCARD_REGEX
+from gslib.translation_helper import GenerationFromUrlAndString
 
 
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
@@ -176,8 +177,7 @@ class CloudWildcardIterator(WildcardIterator):
                   if not suffix_wildcard or (
                       StripOneSlash(gcs_object.name) == suffix_wildcard):
                     if not single_version_request or (
-                        str(self.wildcard_url.generation) ==
-                        str(gcs_object.generation)):
+                        self._SingleVersionMatches(gcs_object.generation)):
                       yield self._GetObjectRef(
                           bucket_url_string, gcs_object, with_version=(
                               self.all_versions or single_version_request))
@@ -296,6 +296,11 @@ class CloudWildcardIterator(WildcardIterator):
           (wildcard, prefix, delimiter, prefix_wildcard, suffix_wildcard))
     return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
+  def _SingleVersionMatches(self, listed_generation):
+    decoded_generation = GenerationFromUrlAndString(self.wildcard_url,
+                                                    listed_generation)
+    return str(self.wildcard_url.generation) == str(decoded_generation)
+
   def _ExpandBucketWildcards(self, bucket_fields=None):
     """Expands bucket and provider wildcards.
 
@@ -369,8 +374,10 @@ class CloudWildcardIterator(WildcardIterator):
       BucketListingRef of type OBJECT.
     """
     if with_version:
+      generation_str = GenerationFromUrlAndString(self.wildcard_url,
+                                                  gcs_object.generation)
       object_string = '%s%s#%s' % (bucket_url_string, gcs_object.name,
-                                   gcs_object.generation)
+                                   generation_str)
       return BucketListingRef(object_string,
                               ref_type=BucketListingRefType.OBJECT,
                               root_object=gcs_object)

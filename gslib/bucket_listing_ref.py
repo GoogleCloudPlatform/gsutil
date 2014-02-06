@@ -50,11 +50,11 @@ class BucketListingRef(object):
     Raises:
       BucketListingRefException: If reference type is invalid.
     """
-    self.url_string = url_string
     if ref_type not in (BucketListingRefType.BUCKET,
                         BucketListingRefType.OBJECT,
                         BucketListingRefType.PREFIX):
       raise BucketListingRefException('Invalid ref_type %s' % ref_type)
+    self.url_string = url_string
     self.ref_type = ref_type
     self.root_object = root_object
 

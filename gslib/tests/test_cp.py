@@ -30,9 +30,9 @@ from gslib.commands.cp import ObjectFromTracker
 from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
 from gslib.storage_uri_builder import StorageUriBuilder
 import gslib.tests.testcase as testcase
-from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
 from gslib.util import CreateLock
 from gslib.util import IS_WINDOWS
@@ -77,7 +77,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents='foo')
-    invalid_bucket_uri = 'gs://nonexistentbucket-asf801rj3r9as90mfnnkjxpo02/'
+    invalid_bucket_uri = (
+        '%s://%s' % (self.default_provider, self.NONEXISTENT_BUCKET_NAME))
     stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
                             expected_status=1, return_stderr=True)
     self.assertIn('does not exist.', stderr)
@@ -94,21 +95,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping existing item: %s' %
                   suri(bucket2_uri, key_uri.object_name), stderr)
 
-  def _run_streaming_test(self, provider):
-    bucket_uri = self.CreateBucket(provider=provider)
+  @PerformsFileToObjectUpload
+  def test_streaming(self):
+    bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
                             stdin='bar', return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
     key_uri = bucket_uri.clone_replace_name('foo')
     self.assertEqual(key_uri.get_contents_as_string(), 'bar')
-
-  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires S3 credentials.')
-  def test_streaming_s3(self):
-    self._run_streaming_test('s3')
-
-  @PerformsFileToObjectUpload
-  def test_streaming_gs(self):
-    self._run_streaming_test('gs')
 
   def test_streaming_multiple_arguments(self):
     bucket_uri = self.CreateBucket()
@@ -296,13 +290,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
     k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
-    g1 = k2_uri.generation
+    g1 = k2_uri.generation or k2_uri.version_id
     self.RunGsUtil(['cp', suri(k1_uri), suri(k2_uri)])
     k2_uri = bucket_uri.clone_replace_name(k2_uri.object_name)
     k2_uri = bucket_uri.clone_replace_key(k2_uri.get_key())
-    g2 = k2_uri.generation
+    g2 = k2_uri.generation or k2_uri.version_id
     k2_uri.set_contents_from_string('data3')
-    g3 = k2_uri.generation
+    g3 = k2_uri.generation or k2_uri.version_id
 
     fpath = self.CreateTempFile()
     # Check to make sure current version is data3.
@@ -333,6 +327,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
+  @unittest.skipUnless(not RUN_S3_TESTS, 'S3 lists versioned objects in '
+                       'reverse timestamp order.')
   def test_recursive_copying_versioned_bucket(self):
     """Tests that cp -R with versioned buckets copies all versions in order."""
     bucket1_uri = self.CreateVersionedBucket()
@@ -386,6 +382,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
   @PerformsFileToObjectUpload
+  @unittest.skipUnless(not RUN_S3_TESTS, 'Preconditions not supported for S3.')
   def test_cp_v_generation_match(self):
     """Tests that cp -v option handles the if-generation-match header."""
     bucket_uri = self.CreateVersionedBucket()
@@ -417,6 +414,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                   'with cp -n', stderr)
 
   @PerformsFileToObjectUpload
+  @unittest.skipUnless(not RUN_S3_TESTS, 'S3 lists versioned objects in '
+                       'reverse timestamp order.')
   def test_cp_v_option(self):
     """"Tests that cp -v returns the created object's version-specific URI."""
     bucket_uri = self.CreateVersionedBucket()
@@ -643,7 +642,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
     self.assertEqual(results[0][:7], 'file://')  # source
-    self.assertEqual(results[1][:5], 'gs://')  # destination
+    self.assertEqual(results[1][:5], '%s://' %
+                     self.default_provider)      # destination
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     start_date = datetime.datetime.strptime(results[2], date_format)
     end_date = datetime.datetime.strptime(results[3], date_format)
@@ -677,7 +677,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                         'Result', 'Description']
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
-    self.assertEqual(results[0][:5], 'gs://')  # source
+    self.assertEqual(results[0][:5], '%s://' %
+                     self.default_provider)      # source
     self.assertEqual(results[1][:7], 'file://')  # destination
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     start_date = datetime.datetime.strptime(results[2], date_format)
@@ -736,7 +737,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
                               return_stderr=True, expected_status=1)
-      self.assertIn('Access denied', stderr)
+      self.assertIn('AccessDenied', stderr)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_cp_minus_e(self):

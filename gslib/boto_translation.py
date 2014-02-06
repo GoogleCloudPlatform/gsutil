@@ -20,10 +20,12 @@ import datetime
 import errno
 import httplib
 import json
+import os
 import pickle
 import random
 import re
 import socket
+import tempfile
 import time
 import xml
 from xml.dom.minidom import parseString as XmlParseString
@@ -56,15 +58,20 @@ from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
+from gslib.storage_uri_builder import StorageUriBuilder
+from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CorsTranslation
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
+from gslib.translation_helper import EncodeStringAsLong
+from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CALLBACK_PER_X_BYTES
+from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
 from gslib.util import S3_DELETE_MARKER_GUID
 from gslib.util import UnaryDictToXml
@@ -104,6 +111,7 @@ class BotoTranslation(CloudApi):
     _ = credentials
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
+    self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -192,8 +200,8 @@ class BotoTranslation(CloudApi):
       location = metadata.location
     # Pass storage_class param only if this is a GCS bucket. (In S3 the
     # storage class is specified on the key object.)
+    headers = {}
     if bucket_uri.scheme == 'gs':
-      headers = {}
       self._AddApiVersionToHeaders(headers)
       headers[GOOG_PROJ_ID_HDR] = PopulateProjectId(project_id)
       storage_class = ''
@@ -556,7 +564,23 @@ class BotoTranslation(CloudApi):
     dst_uri.set_contents_from_file(upload_stream, headers=headers)
 
   def _PerformStreamingUpload(self, dst_uri, upload_stream, headers=None):
-    dst_uri.set_contents_from_stream(upload_stream, headers=headers)
+    if dst_uri.get_provider().supports_chunked_transfer():
+      dst_uri.set_contents_from_stream(upload_stream, headers=headers)
+    else:
+      # Provider doesn't support chunked transfer, so copy to a temporary
+      # file.
+      (temp_fh, temp_path) = tempfile.mkstemp()
+      try:
+        with open(temp_path, 'wb') as out_fp:
+          stream_bytes = upload_stream.read(DEFAULT_FILE_BUFFER_SIZE)
+          while stream_bytes:
+            out_fp.write(stream_bytes)
+            stream_bytes = upload_stream.read(DEFAULT_FILE_BUFFER_SIZE)
+        with open(temp_path, 'rb') as in_fp:
+          dst_uri.set_contents_from_file(in_fp, headers=headers)
+      finally:
+        os.close(temp_fh)
+        os.unlink(temp_path)
 
   def _PerformResumableUpload(self, key, upload_stream, tracker_callback,
                               serialization_data=None, progress_callback=None,
@@ -708,7 +732,7 @@ class BotoTranslation(CloudApi):
     # the same, but in this case the underlying boto call determines the
     # provider based on the presence of one or the other.
     src_version_id = None
-    if self.provider is 's3':
+    if self.provider == 's3':
       src_version_id = src_generation
       src_generation = None
 
@@ -776,7 +800,8 @@ class BotoTranslation(CloudApi):
         headers['x-goog-if-metageneration-match'] = preconditions.meta_gen_match
 
   def _AddApiVersionToHeaders(self, headers):
-    headers['x-goog-api-version'] = self.api_version
+    if self.provider == 'gs':
+      headers['x-goog-api-version'] = self.api_version
 
   def _StorageUriForBucket(self, bucket):
     """Returns a boto storage_uri for the given bucket name.
@@ -807,10 +832,7 @@ class BotoTranslation(CloudApi):
     """
     uri_string = '%s://%s/%s' % (self.provider, bucket, object_name)
     if generation:
-      if generation == 0 and self.provider == 's3':
-        uri_string += '#NULL'
-      else:
-        uri_string += '#%s' % generation
+      uri_string += '#%s' % generation
     return boto.storage_uri(
         uri_string, suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
@@ -1028,7 +1050,10 @@ class BotoTranslation(CloudApi):
     # Remaining functions amend cloud_api_object.
     self._TranslateDeleteMarker(key, cloud_api_object)
     if not fields or 'acl' in fields:
-      self._TranslateBotoKeyAcl(key, cloud_api_object, generation=generation)
+      generation_str = GenerationFromUrlAndString(
+          StorageUrlFromString(self.provider), generation)
+      self._TranslateBotoKeyAcl(key, cloud_api_object,
+                                generation=generation_str)
 
     return cloud_api_object
 
@@ -1055,13 +1080,7 @@ class BotoTranslation(CloudApi):
         generation = long(key.generation)
     elif self.provider == 's3':
       if getattr(key, 'version_id', None):
-        if str(key.version_id).lower() == 'null':
-          # Overloading otherwise unused number 0 here to handle the null case
-          # where a S3 object was created prior to versioning being enabled
-          # on the bucket.
-          generation = 0
-        else:
-          generation = long(str(key.version_id))
+        generation = EncodeStringAsLong(key.version_id)
     return generation
 
   def _TranslateBotoKeyMetageneration(self, key):
@@ -1117,16 +1136,17 @@ class BotoTranslation(CloudApi):
     headers = {}
     self._AddApiVersionToHeaders(headers)
     try:
-      key_acl = storage_uri_for_key.get_acl(headers=headers)
       if self.provider == 'gs':
+        key_acl = storage_uri_for_key.get_acl(headers=headers)
         # key.get_acl() does not support versioning so we need to use
         # storage_uri to ensure we're getting the versioned ACL.
         for acl in AclTranslation.BotoObjectAclToMessage(key_acl):
           cloud_api_object.acl.append(acl)
       if self.provider == 's3':
+        key_acl = key.get_xml_acl(headers=headers)
         # ACLs for s3 are different and we use special markers to represent
         # them in the gsutil Cloud API.
-        AddS3MarkerAclToObjectMetadata(cloud_api_object, str(key_acl))
+        AddS3MarkerAclToObjectMetadata(cloud_api_object, key_acl)
     except boto.exception.GSResponseError, e:
       if e.status == 403:
         # Consume access denied exceptions to mimic JSON behavior of simply

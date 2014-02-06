@@ -85,6 +85,7 @@ HTTP_WARNING = """
 """.lstrip()
 
 debug = 0
+test_exception_traces = False
 
 # Temp files to delete, if possible, when program exits.
 cleanup_files = []
@@ -101,7 +102,7 @@ def _Cleanup():
 def _OutputAndExit(message):
   """Outputs message and exists with code 1."""
   from gslib.util import UTF8  # pylint: disable=g-import-not-at-top
-  if debug == 4:
+  if debug == 4 or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n' %
            re.sub('\\n', '\n    ', stack_trace))
@@ -142,6 +143,7 @@ def main():
   oauth2_client.InitializeMultiprocessingVariables()
 
   global debug
+  global test_exception_traces
 
   if not (2, 6) <= sys.version_info[:3] < (3,):
     raise gslib.exception.CommandException(
@@ -164,6 +166,7 @@ def main():
   quiet = False
   version = False
   debug = 0
+  test_exception_traces = False
 
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
@@ -203,7 +206,8 @@ def main():
     try:
       opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
                                  ['debug', 'detailedDebug', 'version', 'option',
-                                  'help', 'header', 'multithreaded', 'quiet'])
+                                  'help', 'header', 'multithreaded', 'quiet',
+                                  'testexceptiontraces'])
     except getopt.GetoptError as e:
       _HandleCommandException(gslib.exception.CommandException(e.msg))
     for o, a in opts:
@@ -232,6 +236,8 @@ def main():
         quiet = True
       elif o in ('-v', '--version'):
         version = True
+      elif o == '--testexceptiontraces':  # Hidden flag for integration tests.
+        test_exception_traces = True
       elif o in ('-o', '--option'):
         (opt_section_name, _, opt_value) = a.partition('=')
         if not opt_section_name:

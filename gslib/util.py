@@ -32,15 +32,17 @@ from boto.exception import NoAuthHandlerFound
 from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
+from oauth2client.client import HAS_CRYPTO
+from retry_decorator import retry_decorator
+
 import gslib
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
+from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import S3_ACL_MARKER_GUID
 from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
-from oauth2client.client import HAS_CRYPTO
-from retry_decorator import retry_decorator
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -224,7 +226,6 @@ def ConfigureNoOpAuthIfNeeded():
     else:
       # With no boto config file the user can still access publicly readable
       # buckets and objects.
-      # TODO(thobrla): Run gce_test with a gsutil4 tarball.
       from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
 
 
@@ -434,6 +435,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     Exception: if calling bug encountered.
   """
   url_str = bucket_listing_ref.GetUrlString()
+  storage_url = StorageUrlFromString(url_str)
   obj = bucket_listing_ref.root_object
 
   if (obj.metadata and S3_DELETE_MARKER_GUID in
@@ -478,7 +480,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   if obj.md5Hash: print '\tHash (md5):\t\t%s' % obj.md5Hash
   print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
   if obj.generation:
-    print '\tGeneration:\t\t%s' % obj.generation
+    generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
+    print '\tGeneration:\t\t%s' % generation_str
   if obj.metageneration:
     print '\tMetageneration:\t\t%s' % obj.metageneration
   if incl_acl:
