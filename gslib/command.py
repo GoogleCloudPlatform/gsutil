@@ -319,16 +319,16 @@ class Command(HelpProvider):
                         gs_default_api=None):
     """Creates an instance of CommandSpec, with defaults."""
     return CommandSpec(
-        command_name = command_name,
-        command_name_aliases = command_name_aliases or [],
-        min_args = min_args,
-        max_args = max_args,
-        supported_sub_args = supported_sub_args,
-        file_url_ok = file_url_ok,
-        provider_url_ok = provider_url_ok,
-        urls_start_arg = urls_start_arg,
-        gs_api_support = gs_api_support or [ApiSelector.XML],
-        gs_default_api = gs_default_api or ApiSelector.XML)
+        command_name=command_name,
+        command_name_aliases=command_name_aliases or [],
+        min_args=min_args,
+        max_args=max_args,
+        supported_sub_args=supported_sub_args,
+        file_url_ok=file_url_ok,
+        provider_url_ok=provider_url_ok,
+        urls_start_arg=urls_start_arg,
+        gs_api_support=gs_api_support or [ApiSelector.XML],
+        gs_default_api=gs_default_api or ApiSelector.XML)
 
   # Define a convenience property for command name, since it's used many places.
   def _GetDefaultCommandName(self):
@@ -414,8 +414,8 @@ class Command(HelpProvider):
         self.logger.addFilter(log_filter)
 
     if self.command_spec is None:
-        raise CommandException('"%s" command implementation is missing a '
-                               'command_spec definition.' % self.command_name)
+      raise CommandException('"%s" command implementation is missing a '
+                             'command_spec definition.' % self.command_name)
 
     # Parse and validate args.
     args = self._TranslateDeprecatedAliases(args)
@@ -425,6 +425,8 @@ class Command(HelpProvider):
     except GetoptError, e:
       raise CommandException('%s for "%s" command.' % (e.msg,
                                                        self.command_name))
+    # Named tuple public functions start with _
+    # pylint: disable=protected-access
     self.command_spec = self.command_spec._replace(
         urls_start_arg=self._CalculateUrlsStartArg())
 
@@ -737,7 +739,7 @@ class Command(HelpProvider):
       try:
         acl = self.gsutil_api.XmlPassThroughGetAcl(
             blr.GetUrlString(), def_obj_acl=self.def_acl, provider=url.scheme)
-        print acl
+        print acl.to_xml()
       except AccessDeniedException, _:
         self._WarnServiceAccounts()
         raise

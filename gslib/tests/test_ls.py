@@ -106,17 +106,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_nonexistent_bucket_with_ls(self):
     """Tests a bucket that is known not to exist."""
     stderr = self.RunGsUtil(
-        ['ls', '-lb', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        ['ls', '-lb', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True, expected_status=1)
     self.assertIn('404', stderr)
 
     stderr = self.RunGsUtil(
-        ['ls', '-Lb', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        ['ls', '-Lb', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True, expected_status=1)
     self.assertIn('404', stderr)
 
     stderr = self.RunGsUtil(
-        ['ls', '-b', 'gs://%s' % self.NONEXISTENT_BUCKET_NAME],
+        ['ls', '-b', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True, expected_status=1)
     self.assertIn('404', stderr)
 

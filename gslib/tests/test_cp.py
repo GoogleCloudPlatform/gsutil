@@ -30,9 +30,9 @@ from gslib.commands.cp import ObjectFromTracker
 from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
 from gslib.storage_uri_builder import StorageUriBuilder
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
-from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
 from gslib.util import CreateLock
 from gslib.util import IS_WINDOWS
@@ -78,7 +78,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents='foo')
     invalid_bucket_uri = (
-        '%s://%s' % (self.default_provider, self.NONEXISTENT_BUCKET_NAME))
+        '%s://%s' % (self.default_provider, self.nonexistent_bucket_name))
     stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
                             expected_status=1, return_stderr=True)
     self.assertIn('does not exist.', stderr)
@@ -327,8 +327,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
-  @unittest.skipUnless(not RUN_S3_TESTS, 'S3 lists versioned objects in '
-                       'reverse timestamp order.')
+  @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_recursive_copying_versioned_bucket(self):
     """Tests that cp -R with versioned buckets copies all versions in order."""
     bucket1_uri = self.CreateVersionedBucket()
@@ -382,7 +381,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
   @PerformsFileToObjectUpload
-  @unittest.skipUnless(not RUN_S3_TESTS, 'Preconditions not supported for S3.')
+  @SkipForS3('Preconditions not supported for S3.')
   def test_cp_v_generation_match(self):
     """Tests that cp -v option handles the if-generation-match header."""
     bucket_uri = self.CreateVersionedBucket()
@@ -414,8 +413,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                   'with cp -n', stderr)
 
   @PerformsFileToObjectUpload
-  @unittest.skipUnless(not RUN_S3_TESTS, 'S3 lists versioned objects in '
-                       'reverse timestamp order.')
+  @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_cp_v_option(self):
     """"Tests that cp -v returns the created object's version-specific URI."""
     bucket_uri = self.CreateVersionedBucket()

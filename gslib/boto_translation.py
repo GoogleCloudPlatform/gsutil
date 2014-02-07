@@ -145,6 +145,10 @@ class BotoTranslation(CloudApi):
 
       buckets_iter = provider_uri.get_all_buckets(headers=headers)
       for bucket in buckets_iter:
+        if self.provider == 's3' and bucket.name.lower() != bucket.name:
+          # S3 listings can return buckets with upper-case names, but boto
+          # can't successfully call them.
+          continue
         yield self._BotoBucketToBucket(bucket, fields=get_fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
