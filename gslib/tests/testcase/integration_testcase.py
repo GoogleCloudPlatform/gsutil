@@ -214,6 +214,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
       key_uri.set_contents_from_string(contents)
+    else:
+      if self.default_provider == 's3':
+        # S3 will only create the object if it has content.
+        key_uri.set_contents_from_string('default')
     return key_uri
 
   def RunGsUtil(self, cmd, return_status=False, return_stdout=False,
