@@ -15,11 +15,13 @@
 
 import re
 import gslib.tests.testcase as case
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
 
+@SkipForS3('S3 does not support default object ACLs.')
 class TestDefacl(case.GsUtilIntegrationTestCase):
   """Integration tests for the defacl command."""
 

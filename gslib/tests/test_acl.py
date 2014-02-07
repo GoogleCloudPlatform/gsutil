@@ -19,19 +19,26 @@ import re
 from gslib import aclhelpers
 from gslib.command import CreateGsutilLogger
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForGS
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
 
-class TestAcl(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for acl command."""
+class TestAclBase(testcase.GsUtilIntegrationTestCase):
+  """Integration test case base class for acl command."""
 
   _set_acl_prefix = ['acl', 'set']
   _get_acl_prefix = ['acl', 'get']
   _set_defacl_prefix = ['defacl', 'set']
   _ch_acl_prefix = ['acl', 'ch']
+
+
+@SkipForS3('Tests use GS ACL model.')
+class TestAcl(TestAclBase):
+  """Integration tests for acl command."""
 
   def setUp(self):
     super(TestAcl, self).setUp()
@@ -160,6 +167,9 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
     inpath = self.CreateTempFile(contents='def')
     self.RunGsUtil(['cp', inpath, uri.uri])
 
+    # TODO: The common case of creating a single object (and maybe a single
+    # versioned object) and then ensuring that it comes back in a listing
+    # should be an integration_testcase helper function.
     # Find out the two object version IDs.
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -483,6 +493,57 @@ class TestAcl(testcase.GsUtilIntegrationTestCase):
     # Neither arguments nor subcommand.
     stderr = self.RunGsUtil(['acl'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
+
+
+class TestS3CompatibleAcl(TestAclBase):
+  """ACL integration tests that work for s3 and gs URLs."""
+
+  def testAclObjectGetSet(self):
+    obj_uri = self.CreateObject(contents='foo')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _ListObject():
+      stdout = self.RunGsUtil(['ls', suri(obj_uri)], return_stdout=True)
+      lines = stdout.split('\n')
+      self.assertEqual(len(lines), 2)
+    _ListObject()
+
+    stdout = self.RunGsUtil(self._get_acl_prefix + [suri(obj_uri)],
+                            return_stdout=True)
+    set_contents = self.CreateTempFile(contents=stdout)
+    self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(obj_uri)])
+
+  def testAclBucketGetSet(self):
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(self._get_acl_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
+    set_contents = self.CreateTempFile(contents=stdout)
+    self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(bucket_uri)])
+
+
+@SkipForGS('S3 ACLs accept XML and should not cause an XML warning.')
+class TestS3OnlyAcl(TestAclBase):
+  """ACL integration tests that work only for s3 URLs."""
+
+  # TODO: Format all test case names consistently.
+  def test_set_xml_acl(self):
+    """Ensures XML content does not return an XML warning for S3."""
+    obj_uri = suri(self.CreateObject(contents='foo'))
+    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('BadRequestException', stderr)
+    self.assertNotIn('XML ACL data provided', stderr)
+
+  def test_set_xml_acl_bucket(self):
+    """Ensures XML content does not return an XML warning for S3."""
+    bucket_uri = suri(self.CreateBucket())
+    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('BadRequestException', stderr)
+    self.assertNotIn('XML ACL data provided', stderr)
 
 
 class TestAclOldAlias(TestAcl):

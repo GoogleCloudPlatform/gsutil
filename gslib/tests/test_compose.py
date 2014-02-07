@@ -14,11 +14,11 @@
 """Tests for compose command."""
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 import gslib.tests.testcase as testcase
-from gslib.tests.util import HAS_S3_CREDS
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
-from gslib.tests.util import unittest
 
 
+@SkipForS3('S3 does not support object composition.')
 class TestCompose(testcase.GsUtilIntegrationTestCase):
   """Integration tests for compose command."""
 
@@ -58,22 +58,6 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     expected_msg = (
         'CommandException: GCS does '
         'not support inter-bucket composing.\n')
-    self.assertIn(expected_msg, stderr)
-
-  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires S3 credentials.')
-  def test_compose_non_gcs_target(self):
-    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
-                            expected_status=1, return_stderr=True)
-    expected_msg = ('CommandException: "compose" called on URI with '
-                    'unsupported provider (%s).\n' % 's3://b/o3')
-    self.assertIn(expected_msg, stderr)
-
-  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires S3 credentials.')
-  def test_compose_non_gcs_component(self):
-    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 's3://b/o2', 'gs://b/o3'],
-                            expected_status=1, return_stderr=True)
-    expected_msg = ('CommandException: "compose" called on URI with '
-                    'unsupported provider (%s).\n' % 's3://b/o2')
     self.assertIn(expected_msg, stderr)
 
   def test_versioned_target_disallowed(self):
@@ -124,3 +108,20 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True, expected_status=1)
 
     self.assertIn('PreconditionException', stderr)
+
+
+class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
+  def test_compose_non_gcs_target(self):
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
+                            expected_status=1, return_stderr=True)
+    expected_msg = ('CommandException: "compose" called on URI with '
+                    'unsupported provider (%s).\n' % 's3://b/o3')
+    self.assertIn(expected_msg, stderr)
+
+  def test_compose_non_gcs_component(self):
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 's3://b/o2', 'gs://b/o3'],
+                            expected_status=1, return_stderr=True)
+    expected_msg = ('CommandException: "compose" called on URI with '
+                    'unsupported provider (%s).\n' % 's3://b/o2')
+    self.assertIn(expected_msg, stderr)
+

@@ -19,12 +19,13 @@ import subprocess
 import sys
 
 import boto
-from boto.exception import GSResponseError
+from boto.exception import StorageResponseError
 import gslib
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
 import gslib.tests.util as util
+from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
@@ -42,6 +43,20 @@ bypass_anonymous_access_warning = True
 """
 
 
+def SkipForGS(reason):
+  if not RUN_S3_TESTS:
+    return unittest.skip(reason)
+  else:
+    return lambda func: func
+
+
+def SkipForS3(reason):
+  if RUN_S3_TESTS:
+    return unittest.skip(reason)
+  else:
+    return lambda func: func
+
+
 @unittest.skipUnless(util.RUN_INTEGRATION_TESTS,
                      'Not running integration tests.')
 class GsUtilIntegrationTestCase(base.GsUtilTestCase):
@@ -57,7 +72,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   # won't create this bucket, so it shouldn't exist.
   # It would be nice to use google.com here but JSON API disallows
   # 'google' in resource IDs.
-  NONEXISTENT_BUCKET_NAME = 'nonexistent-bucket-foobar.gmail.com'
+  nonexistent_bucket_name = 'nonexistent-bucket-foobar.gmail.com'
 
   def setUp(self):
     """Creates base configuration for integration tests."""
@@ -71,7 +86,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if util.RUN_S3_TESTS:
       self.test_api = 'XML'
       self.default_provider = 's3'
-      self.NONEXISTENT_BUCKET_NAME = (
+      self.nonexistent_bucket_name = (
           'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
     else:
       # TODO: gsutil-beta: This should consider whether the command
@@ -85,7 +100,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   # TODO: As long as we're still using boto to do the teardown,
   # we decorate with boto exceptions.  Eventually this should be migrated
   # to CloudApi exceptions.
-  @Retry(GSResponseError, tries=6, timeout_secs=1)
+  @Retry(StorageResponseError, tries=6, timeout_secs=1)
   def tearDown(self):
     super(GsUtilIntegrationTestCase, self).tearDown()
 
@@ -93,7 +108,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri = self.bucket_uris[-1]
       try:
         bucket_list = list(bucket_uri.list_bucket(all_versions=True))
-      except GSResponseError, e:
+      except StorageResponseError, e:
         # This can happen for tests of rm -r command, which for bucket-only
         # URIs delete the bucket at the end.
         if e.status == 404:
@@ -106,7 +121,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         for k in bucket_list:
           try:
             k.delete()
-          except GSResponseError, e:
+          except StorageResponseError, e:
             # This could happen if objects that have already been deleted are
             # still showing up in the listing due to eventual consistency. In
             # that case, we continue on until we've tried to deleted every

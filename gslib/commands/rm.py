@@ -161,6 +161,10 @@ class RmCommand(Command):
     bucket_urls_to_delete = []
     if self.recursion_requested:
       bucket_fields = ['id']
+      # Note that this is inefficient when using the XML API with bucket
+      # wildcards. We make a separate versioning-get call for all buckets, even
+      # those that don't match the wildcard filter.  This can be worked around
+      # by just specifying the -a flag.
       if not self.all_versions:
         bucket_fields.append('versioning')
       for url_str in self.args:
