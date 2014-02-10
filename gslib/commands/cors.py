@@ -22,6 +22,7 @@ from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import CorsTranslation
+from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider
 
@@ -137,6 +138,8 @@ class CorsCommand(Command):
         StorageUrlFromString(url_args[0]).scheme)
 
     cors = CorsTranslation.JsonCorsToMessageEntries(cors_txt)
+    if not cors:
+      cors = REMOVE_CORS_CONFIG
 
     # Iterate over URLs, expanding wildcards and setting the CORS on each.
     some_matched = False

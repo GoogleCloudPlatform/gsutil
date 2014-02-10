@@ -71,6 +71,7 @@ from gslib.translation_helper import EncodeStringAsLong
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
+from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CALLBACK_PER_X_BYTES
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
@@ -166,6 +167,8 @@ class BotoTranslation(CloudApi):
         boto_acl = AclTranslation.BotoAclFromMessage(metadata.acl)
         bucket_uri.set_xml_acl(boto_acl.to_xml(), headers=headers)
       if metadata.cors:
+        if metadata.cors == REMOVE_CORS_CONFIG:
+          metadata.cors = []
         boto_cors = CorsTranslation.BotoCorsFromMessage(metadata.cors)
         bucket_uri.set_cors(boto_cors, False)
       if metadata.defaultObjectAcl:

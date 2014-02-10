@@ -52,6 +52,19 @@ S3_MARKER_GUIDS = [S3_ACL_MARKER_GUID, S3_DELETE_MARKER_GUID]
 
 DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 
+# Because CORS is just a list in apitools, we need special handling or blank
+# CORS lists will get sent with other configuration commands such as lifecycle,
+# commands, which would cause CORS configuration to be unintentionally removed.
+# Protorpc defaults list values to an empty list, and won't allow us to set the
+# value to None like other configuration fields, so there is no way to
+# distinguish the default value from when we actually want to remove the CORS
+# configuration.  To work around this, we create a dummy CORS entry that
+# signifies that we should nullify the CORS configuration.
+# A value of [] means don't modify the CORS configuration.
+# A value of REMOVE_CORS_CONFIG means remove the CORS configuration.
+REMOVE_CORS_CONFIG = [apitools_messages.Bucket.CorsValueListEntry(
+    maxAgeSeconds=-1, method=['REMOVE_CORS_CONFIG'])]
+
 
 def ObjectMetadataFromHeaders(headers):
   """Creates object metadata according to the provided headers.
@@ -500,7 +513,15 @@ class CorsTranslation(object):
 
   @classmethod
   def JsonCorsToMessageEntries(cls, json_cors):
-    """Translates CORS JSON to an apitools message."""
+    """Translates CORS JSON to an apitools message.
+
+    Args:
+      json_cors: JSON string representing CORS configuration.
+
+    Returns:
+      List of apitools Bucket.CorsValueListEntry. An empty list represents
+      no CORS configuration.
+    """
     try:
       deserialized_cors = json.loads(json_cors)
       cors = []
