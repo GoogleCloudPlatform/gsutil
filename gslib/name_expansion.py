@@ -111,21 +111,9 @@ class NameExpansionResult(object):
 
 
 class _NameExpansionIterator(object):
-  """Iterates over all source URLs passed to the iterator.
-
-  For each src url, expands wildcards, object-less bucket names,
-  subdir bucket names, and directory names, and generates a flat listing of all
-  the matching objects/files.
-
-  You should instantiate this object using the static factory function
-  NameExpansionIterator, because consumers of this iterator need the
-  PluralityCheckableIterator wrapper built by that function.
-
-  Yields:
-    gslib.name_expansion.NameExpansionResult.
-
-  Raises:
-    CommandException: if errors encountered.
+  """
+  Class that iterates over all source URLs passed to the iterator.
+  See details in __iter__ function doc.
   """
 
   def __init__(self, command_name, debug, logger,
@@ -200,6 +188,22 @@ class _NameExpansionIterator(object):
     self._flatness_wildcard = {True: '**', False: '*'}
 
   def __iter__(self):
+    """Iterates over all source URLs passed to the iterator.
+
+    For each src url, expands wildcards, object-less bucket names,
+    subdir bucket names, and directory names, and generates a flat listing of
+    all the matching objects/files.
+
+    You should instantiate this object using the static factory function
+    NameExpansionIterator, because consumers of this iterator need the
+    PluralityCheckableIterator wrapper built by that function.
+
+    Yields:
+      gslib.name_expansion.NameExpansionResult.
+
+    Raises:
+      CommandException: if errors encountered.
+    """
     for url_str in self.url_strs:
       storage_url = StorageUrlFromString(url_str)
 
