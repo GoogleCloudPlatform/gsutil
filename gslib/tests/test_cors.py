@@ -13,6 +13,7 @@
 # limitations under the License.
 """Integration tests for cors command."""
 
+import json
 import posixpath
 from xml.dom.minidom import parseString
 
@@ -57,7 +58,6 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
       '<ResponseHeader>bar2</ResponseHeader></ResponseHeaders>'
       '</Cors></CorsConfig>').toprettyxml(indent='    ')
 
-  # This is coupled with the precise mechanics of how we print cors config.
   cors_doc = (
       '[{"origin": ["http://origin1.example.com", '
       '"http://origin2.example.com"], '
@@ -65,13 +65,13 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
       '"maxAgeSeconds": 3600},'
       '{"origin": ["http://origin3.example.com"], '
       '"responseHeader": ["foo2", "bar2"], "method": ["GET", "DELETE"]}]\n')
+  cors_json_obj = json.loads(cors_doc)
 
-  # This is coupled with the precise mechanics of how we print cors config.
   cors_doc2 = (
       '[{"origin": ["http://origin1.example.com", '
       '"http://origin2.example.com"], '
-      '"responseHeader": ["foo", "bar"], "method": ["GET", "PUT", "POST"]}]\n'
-  )
+      '"responseHeader": ["foo", "bar"], "method": ["GET", "PUT", "POST"]}]\n')
+  cors_json_obj2 = json.loads(cors_doc2)
 
   def test_cors_translation(self):
     """Tests cors translation for various formats."""
@@ -81,7 +81,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     converted_entries_list = CorsTranslation.BotoCorsToMessage(boto_cors)
     converted_json_text = CorsTranslation.MessageEntriesToJson(
         converted_entries_list)
-    self.assertEqual(json_text, converted_json_text)
+    self.assertEqual(json.loads(json_text), json.loads(converted_json_text))
 
   def test_default_cors(self):
     bucket_uri = self.CreateBucket()
@@ -111,7 +111,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def test_bad_cors_xml(self):
     bucket_uri = self.CreateBucket()
@@ -135,7 +135,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.valid_cors_obj)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
@@ -151,7 +151,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc2)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj2)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
@@ -168,10 +168,10 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
         self._set_cmd_prefix + [fpath, suri(bucket1_uri), suri(bucket2_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj)
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def test_set_wildcard_non_null_cors(self):
     """Tests setting CORS on a wildcarded bucket URI."""
@@ -216,10 +216,10 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj)
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
                             return_stdout=True)
-    self.assertEqual(stdout, self.cors_doc)
+    self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def testTooFewArgumentsFails(self):
     """Ensures CORS commands fail with too few arguments."""

@@ -52,6 +52,7 @@ from gslib.third_party.storage_apitools import transfer as apitools_transfer
 from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
+from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
 
 # Implementation supports only 'gs' URIs, so provider is unused.
@@ -244,17 +245,16 @@ class GcsJsonApi(CloudApi):
     # For blank metadata objects, we need to explicitly call
     # them out to apitools so it will send/erase them.
     apitools_include_fields = []
-    for metadata_field in ('cors', 'metadata', 'lifecycle', 'logging',
-                           'versioning', 'website'):
+    for metadata_field in ('metadata', 'lifecycle', 'logging', 'versioning',
+                           'website'):
       attr = getattr(bucket_metadata, metadata_field, None)
-      if attr is not None:
-        if ((metadata_field != 'cors'
-             and not encoding.MessageToDict(attr)) or
-            (metadata_field == 'cors'
-             and not attr)):
-          if metadata_field != 'cors':
-            setattr(bucket_metadata, metadata_field, None)
-          apitools_include_fields.append(metadata_field)
+      if attr and not encoding.MessageToDict(attr):
+        setattr(bucket_metadata, metadata_field, None)
+        apitools_include_fields.append(metadata_field)
+
+    if bucket_metadata.cors and bucket_metadata.cors == REMOVE_CORS_CONFIG:
+      bucket_metadata.cors = []
+      apitools_include_fields.append('cors')
 
     apitools_request = apitools_messages.StorageBucketsPatchRequest(
         bucket=bucket_name, bucketResource=bucket_metadata,
