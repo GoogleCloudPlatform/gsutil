@@ -23,6 +23,7 @@ import sys
 import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 from gslib.util import UTF8
@@ -91,7 +92,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     common_prefix = posixpath.commonprefix([suri(bucket1_uri),
                                             suri(bucket2_uri)])
     self.assertTrue(common_prefix.startswith(
-        'gs://%sgsutil-test-test_bucket_list_wildcard-bucket-' % random_prefix))
+        '%s://%sgsutil-test-test_bucket_list_wildcard-bucket-' %
+        (self.default_provider, random_prefix)))
     wildcard = '%s*' % common_prefix
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -269,15 +271,19 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)],
                             return_stdout=True)
     self.assertIn(object_name_bytes, stdout)
-    self.assertIn(key_uri.generation, stdout)
-    self.assertIn(
-        'metageneration=%s' % key_uri.get_key().metageneration, stdout)
-    if self.test_api == ApiSelector.XML:
+    if self.default_provider == 'gs':
+      self.assertIn(key_uri.generation, stdout)
+      self.assertIn(
+          'metageneration=%s' % key_uri.get_key().metageneration, stdout)
+      if self.test_api == ApiSelector.XML:
+        self.assertIn(key_uri.get_key().etag, stdout)
+      else:
+        # TODO: When testcase setup can use JSON, match against the exact JSON
+        # etag.
+        self.assertIn('etag=', stdout)
+    elif self.default_provider == 's3':
+      self.assertIn(key_uri.version_id, stdout)
       self.assertIn(key_uri.get_key().etag, stdout)
-    else:
-      # TODO: When testcase setup can use JSON, match against the exact JSON
-      # etag.
-      self.assertIn('etag=', stdout)
 
   def test_list_gzip_content_length(self):
     """Tests listing a gzipped object."""
@@ -333,13 +339,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # removed.
     self.assertIn(suri(bucket_uri) + '//', stdout)
 
+  @SkipForS3('S3 anonymous access is not supported.')
   def test_get_object_without_list_bucket_permission(self):
     # Bucket is not publicly readable by default.
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
                                    object_name='permitted', contents='foo')
     # Set this object to be publicly readable.
-    self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:R', suri(object_uri)])
+    self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
     # Drop credentials.
     with self.SetAnonymousBotoCreds():
       stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
