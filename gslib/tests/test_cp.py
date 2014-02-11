@@ -24,10 +24,10 @@ import boto
 from boto import storage_uri
 from boto.storage_uri import BucketStorageUri
 
-from gslib.commands.cp import FilterExistingComponents
-from gslib.commands.cp import MakeGsUri
-from gslib.commands.cp import ObjectFromTracker
-from gslib.commands.cp import PerformResumableUploadIfAppliesArgs
+from gslib.copy_helper import FilterExistingComponents
+from gslib.copy_helper import MakeGsUri
+from gslib.copy_helper import ObjectFromTracker
+from gslib.copy_helper import PerformResumableUploadIfAppliesArgs
 from gslib.storage_uri_builder import StorageUriBuilder
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3

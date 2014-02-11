@@ -41,12 +41,12 @@ from apiclient import errors as apiclient_errors
 import boto
 import boto.gs.connection
 import gslib
+from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.commands import config
-from gslib.cp_helper import GetDownloadSerializationDict
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
