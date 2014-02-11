@@ -127,7 +127,7 @@ class MvCommand(Command):
     # use-only) cp -M option, which causes each original object to be deleted
     # after successfully copying to its destination, and also causes naming
     # behavior consistent with Unix mv naming behavior (see comments in
-    # _ConstructDstUrl in cp.py).
+    # ConstructDstUrl).
     unparsed_args = ['-M']
     if self.recursion_requested:
       unparsed_args.append('-R')

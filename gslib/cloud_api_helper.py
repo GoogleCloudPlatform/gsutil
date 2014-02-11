@@ -36,4 +36,27 @@ def ValidateDstObjectMetadata(dst_obj_metadata):
         "Object metadata supplied for destination object had no bucket name.")
 
 
-  
+def GetDownloadSerializationDict(src_obj_metadata):
+  """Returns a baseline serialization dict from the source object metadata.
+
+  There are four entries:
+    auto_transfer: JSON-specific field, always False.
+    progress: How much of the download has already been completed. Caller
+              should override this value if the download is being resumed.
+    total_size: Total object size.
+    url: Implementation-specific field used for saving a metadata get call.
+         For JSON, this the download URL of the object.
+         For XML, this is a pickled boto key.
+
+  Args:
+    src_obj_metadata: Object to be downloaded.
+
+  Returns:
+    Serialization dict for use with Cloud API GetObjectMedia.
+  """
+  return {
+      'auto_transfer': 'False',
+      'progress': 0,
+      'total_size': src_obj_metadata.size,
+      'url': src_obj_metadata.mediaLink
+  }

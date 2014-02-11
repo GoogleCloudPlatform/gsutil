@@ -13,12 +13,12 @@
 # limitations under the License.
 """Unit tests for parallel upload functions in cp command."""
 
-from gslib.commands.cp import _AppendComponentTrackerToParallelUploadTrackerFile
-from gslib.commands.cp import _CreateParallelUploadTrackerFile
-from gslib.commands.cp import _GetPartitionInfo
-from gslib.commands.cp import _HashFilename
-from gslib.commands.cp import _ParseParallelUploadTrackerFile
-from gslib.commands.cp import ObjectFromTracker
+from gslib.copy_helper import _AppendComponentTrackerToParallelUploadTrackerFile
+from gslib.copy_helper import _CreateParallelUploadTrackerFile
+from gslib.copy_helper import _GetPartitionInfo
+from gslib.copy_helper import _HashFilename
+from gslib.copy_helper import _ParseParallelUploadTrackerFile
+from gslib.copy_helper import ObjectFromTracker
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.util import CreateLock
 

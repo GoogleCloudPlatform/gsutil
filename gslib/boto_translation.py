@@ -41,6 +41,7 @@ from boto.gs.lifecycle import LifecycleConfig
 from boto.s3.deletemarker import DeleteMarker
 from boto.s3.prefix import Prefix
 from gslib.boto_resumable_upload import BotoResumableUpload
+from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import BadRequestException
@@ -52,10 +53,9 @@ from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ServiceException
-from gslib.cloud_api_helper import ValidateDstObjectMetadata
-from gslib.cp_helper import GetHashAlgs
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
+from gslib.hashing_helper import GetHashAlgs
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_uri_builder import StorageUriBuilder
