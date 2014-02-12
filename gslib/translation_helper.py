@@ -483,10 +483,7 @@ class CorsTranslation(object):
           header_elements.append((boto.gs.cors.HEADER, header))
         collection_elements.append((boto.gs.cors.HEADERS, header_elements))
       cors.cors.append(collection_elements)
-    if cors.cors:
-      return cors
-    else:
-      return None
+    return cors
 
   @classmethod
   def BotoCorsToMessage(cls, boto_cors):
