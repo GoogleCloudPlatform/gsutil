@@ -244,6 +244,12 @@ class BotoTranslation(CloudApi):
           'BucketNotEmpty' in translated_exception.reason):
         try:
           if bucket_uri.get_versioning_config():
+            if self.provider == 's3':
+              raise NotEmptyException(
+                  'VersionedBucketNotEmpty (%s). Currently, gsutil does not '
+                  'support listing or removing S3 DeleteMarkers, so you may '
+                  'need to delete these using another tool to successfully '
+                  'delete this bucket.' % bucket_name, status=e.status)
             raise NotEmptyException(
                 'VersionedBucketNotEmpty (%s)' % bucket_name, status=e.status)
           else:
@@ -997,10 +1003,16 @@ class BotoTranslation(CloudApi):
                   website_config['NotFoundPage'])
         except TRANSLATABLE_BOTO_EXCEPTIONS, e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
-    if (not fields or ('versioning' in fields)
-        and bucket_uri.get_versioning_config(headers=headers)):
-      cloud_api_bucket.versioning = apitools_messages.Bucket.VersioningValue(
-          enabled=True)
+    if not fields or 'versioning' in fields:
+      versioning = bucket_uri.get_versioning_config(headers=headers)
+      if versioning:
+        if (self.provider == 's3' and 'Versioning' in versioning and
+            versioning['Versioning'] == 'Enabled'):
+          cloud_api_bucket.versioning = (
+              apitools_messages.Bucket.VersioningValue(enabled=True))
+        elif self.provider == 'gs':
+          cloud_api_bucket.versioning = (
+              apitools_messages.Bucket.VersioningValue(enabled=True))
 
     # For S3 long bucket listing we do not support CORS, lifecycle, website, and
     # logging translation. The individual commands can be used to get

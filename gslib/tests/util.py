@@ -56,7 +56,6 @@ def _HasGSHost():
 HAS_GS_HOST = _HasGSHost()
 
 
-# TODO: gsutil-beta: Add annotations for XML/JSON/GS/S3 testing.
 def _UsingJSONApi():
   return boto.config.get('GSUtil', 'force_api', 'json').upper() != 'XML'
 

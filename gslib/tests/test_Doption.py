@@ -16,9 +16,11 @@
 import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 
+@SkipForS3('-D output is implementation-specific.')
 class TestCat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil -D option."""
 

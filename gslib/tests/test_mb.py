@@ -14,12 +14,14 @@
 """Integration tests for mb command."""
 
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 
 class TestMb(testcase.GsUtilIntegrationTestCase):
   """Integration tests for mb command."""
 
+  @SkipForS3('S3 returns success when bucket already exists.')
   def test_mb_bucket_exists(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['mb', suri(bucket_uri)], expected_status=1,
