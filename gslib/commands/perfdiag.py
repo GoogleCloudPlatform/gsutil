@@ -24,6 +24,7 @@ from collections import defaultdict
 import contextlib
 import cStringIO
 import datetime
+import httplib
 import json
 import logging
 import math
@@ -640,10 +641,9 @@ class PerfDiagCommand(Command):
     self.results['write_throughput']['bytes_per_second'] = bytes_per_second
 
   def Upload(self, thru_tuple, thread_state=None):
-    if thread_state:
-      gsutil_api = thread_state
-    else:
-      gsutil_api = self.gsutil_api
+    assert thread_state, ('Multiple threads/processes sharing single gsutil_api'
+                          'in command.Apply().')
+    gsutil_api = thread_state
     upload_target = apitools_messages.Object(bucket=thru_tuple.bucket_name,
                                              name=thru_tuple.object_name,
                                              md5Hash=thru_tuple.md5)
@@ -659,10 +659,9 @@ class PerfDiagCommand(Command):
       download_tuple: (bucket name, object name, serialization data for object).
       thread_state: gsutil Cloud API instance to use for the download.
     """
-    if thread_state:
-      gsutil_api = thread_state
-    else:
-      gsutil_api = self.gsutil_api
+    assert thread_state, ('Multiple threads/processes sharing single gsutil_api'
+                          'in command.Apply().')
+    gsutil_api = thread_state
     gsutil_api.GetObjectMedia(
         download_tuple[0], download_tuple[1], self.discard_sink,
         provider=self.provider, serialization_data=download_tuple[2])
@@ -1179,8 +1178,8 @@ class PerfDiagCommand(Command):
     self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
                               provider=self.bucket_url.scheme,
                               fields=['id'])
-    self.exceptions = []
-    self.exceptions.append(ServiceException)
+    self.exceptions = [httplib.HTTPException, socket.error, socket.gaierror,
+                       httplib.BadStatusLine, ServiceException]
 
   # Command entry point.
   def RunCommand(self):

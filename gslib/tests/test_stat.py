@@ -40,16 +40,17 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     #
     # JSON will not return a Cache-control or content-encoding with the
     # current test object creation, so check these only for the XML API.
-    if self.test_api == ApiSelector.XML:
-      self.assertIn('Cache-Control:', stdout)
-      self.assertIn('Content-Encoding:', stdout)
+    if self.default_provider == 'gs':
+      if self.test_api == ApiSelector.XML:
+        self.assertIn('Cache-Control:', stdout)
+        self.assertIn('Content-Encoding:', stdout)
+      self.assertIn('Generation:', stdout)
+      self.assertIn('Metageneration:', stdout)
+      self.assertIn('Hash (crc32c):', stdout)
+      self.assertIn('Hash (md5):', stdout)
     self.assertIn('Content-Length:', stdout)
     self.assertIn('Content-Type:', stdout)
-    self.assertIn('Hash (crc32c):', stdout)
-    self.assertIn('Hash (md5):', stdout)
     self.assertIn('ETag:', stdout)
-    self.assertIn('Generation:', stdout)
-    self.assertIn('Metageneration:', stdout)
 
   def test_minus_q_stat(self):
     object_uri = self.CreateObject(contents='z')

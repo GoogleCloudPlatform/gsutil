@@ -20,6 +20,7 @@ import sys
 
 import boto
 from boto.exception import StorageResponseError
+from boto.s3.deletemarker import DeleteMarker
 import gslib
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
@@ -89,9 +90,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       self.nonexistent_bucket_name = (
           'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
     else:
-      # TODO: gsutil-beta: This should consider whether the command
-      # supports the API or not, but since commands will default to XML
-      # it is enough to assume XML support and override as needed in the tests.
       self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
       self.default_provider = 'gs'
 
@@ -107,7 +105,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     while self.bucket_uris:
       bucket_uri = self.bucket_uris[-1]
       try:
-        bucket_list = list(bucket_uri.list_bucket(all_versions=True))
+        bucket_list = self._ListBucket(bucket_uri)
       except StorageResponseError, e:
         # This can happen for tests of rm -r command, which for bucket-only
         # URIs delete the bucket at the end.
@@ -120,7 +118,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         error = None
         for k in bucket_list:
           try:
-            k.delete()
+            if isinstance(k, DeleteMarker):
+              bucket_uri.get_bucket().delete_key(k.name,
+                                                 version_id=k.version_id)
+            else:
+              k.delete()
           except StorageResponseError, e:
             # This could happen if objects that have already been deleted are
             # still showing up in the listing due to eventual consistency. In
@@ -132,9 +134,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
               raise
         if error:
           raise error  # pylint: disable=raising-bad-type
-        bucket_list = list(bucket_uri.list_bucket(all_versions=True))
+        bucket_list = self._ListBucket(bucket_uri)
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
+
+  def _ListBucket(self, bucket_uri):
+    if bucket_uri.scheme == 's3':
+      # storage_uri will omit delete markers from bucket listings, but
+      # these must be deleted before we can remove an S3 bucket.
+      return list(v for v in bucket_uri.get_bucket().list_versions())
+    return list(bucket_uri.list_bucket(all_versions=True))
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
                    provider=None):

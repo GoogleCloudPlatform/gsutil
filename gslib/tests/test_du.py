@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for du command."""
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 
@@ -129,6 +130,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
       ]))
     _Check()
 
+  @SkipForS3('S3 lists versions in reverse order.')
   def test_versioned(self):
     """Tests listing all versions with the -a flag."""
     bucket_uri = self.CreateVersionedBucket()

@@ -18,11 +18,13 @@ import posixpath
 from xml.dom.minidom import parseString
 
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.translation_helper import CorsTranslation
 from gslib.util import Retry
 
 
+@SkipForS3('CORS command is only supported for gs:// URLs')
 class TestCors(testcase.GsUtilIntegrationTestCase):
   """Integration tests for cors command."""
 

@@ -27,9 +27,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = bucket_uri.clone_replace_name('foo')
     key_uri.set_contents_from_string('bar')
-    g1 = key_uri.generation
+    g1 = key_uri.generation or key_uri.version_id
     key_uri.set_contents_from_string('baz')
-    g2 = key_uri.generation
+    g2 = key_uri.generation or key_uri.version_id
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1(stderr_lines):
@@ -37,7 +37,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
       stderr_lines.update(set(stderr.splitlines()))
       stderr = '\n'.join(stderr_lines)
-      self.assertEqual(stderr.count('Removing gs://'), 2)
+      self.assertEqual(stderr.count('Removing %s://' % self.default_provider),
+                       2)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     all_stderr_lines = set()
@@ -55,15 +56,15 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = bucket_uri.clone_replace_name('foo')
     key_uri.set_contents_from_string('bar')
-    g1 = key_uri.generation
+    g1 = key_uri.generation or key_uri.version_id
     key_uri.set_contents_from_string('baz')
-    g2 = key_uri.generation
+    g2 = key_uri.generation or key_uri.version_id
     stderr = self.RunGsUtil(['rm', suri(key_uri)], return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 1)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     self.assertIn('Removing %s...' % suri(key_uri), stderr)
     stderr = self.RunGsUtil(['-m', 'rm', '-a', suri(key_uri)],
                             return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 2)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 2)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -87,19 +88,19 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2_uri = bucket_uri.clone_replace_name('foo2')
     k1_uri.set_contents_from_string('bar')
     k2_uri.set_contents_from_string('bar2')
-    k1g1 = k1_uri.generation
-    k2g1 = k2_uri.generation
+    k1g1 = k1_uri.generation or k1_uri.version_id
+    k2g1 = k2_uri.generation or k2_uri.version_id
     k1_uri.set_contents_from_string('baz')
     k2_uri.set_contents_from_string('baz2')
-    k1g2 = k1_uri.generation
-    k2g2 = k2_uri.generation
+    k1g2 = k1_uri.generation or k1_uri.version_id
+    k2g2 = k2_uri.generation or k2_uri.version_id
 
     all_stderr_lines = set()
     stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)
-    self.assertEqual(stderr.count('Removing gs://'), 5)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 5)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
@@ -122,16 +123,16 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2_uri = bucket_uri.clone_replace_name('dir/foo2')
     k1_uri.set_contents_from_string('bar')
     k2_uri.set_contents_from_string('bar2')
-    k1g1 = k1_uri.generation
-    k2g1 = k2_uri.generation
+    k1g1 = k1_uri.generation or k1_uri.version_id
+    k2g1 = k2_uri.generation or k2_uri.version_id
     k1_uri.set_contents_from_string('baz')
     k2_uri.set_contents_from_string('baz2')
-    k1g2 = k1_uri.generation
-    k2g2 = k2_uri.generation
+    k1g2 = k1_uri.generation or k1_uri.version_id
+    k2g2 = k2_uri.generation or k2_uri.version_id
 
     stderr = self.RunGsUtil(['rm', '-ar', '%s/dir' % suri(bucket_uri)],
                             return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 4)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 4)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
@@ -152,7 +153,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['rm', '-a', suri(key_uri), '%s/missing'
                              % suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
-    self.assertEqual(stderr.count('Removing gs://'), 1)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     self.assertIn('No URLs matched', stderr)
 
   def test_some_missing_force(self):
@@ -162,7 +163,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('bar')
     stderr = self.RunGsUtil(['rm', '-af', suri(key_uri), '%s/missing'
                              % suri(bucket_uri)], return_stderr=True)
-    self.assertEqual(stderr.count('Removing gs://'), 1)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -265,12 +266,15 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=buri3, object_name='o3', contents='z')
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      self.RunGsUtil(['rm', '-r', 'gs://%s-tbu*' % buri_base])
-      stdout = self.RunGsUtil(['ls', 'gs://%s-tb*' % buri_base],
+      self.RunGsUtil(['rm', '-r', '%s://%s-tbu*' % (self.default_provider,
+                                                    buri_base)])
+      stdout = self.RunGsUtil(['ls', '%s://%s-tb*' % (self.default_provider,
+                                                      buri_base)],
                               return_stdout=True)
       # 2 = one for single expected line plus one for final \n.
       self.assertEqual(2, len(stdout.split('\n')))
-      self.assertEqual('gs://%s-tb3/o3' % buri_base, stdout.strip())
+      self.assertEqual('%s://%s-tb3/o3' % (self.default_provider, buri_base),
+                       stdout.strip())
     _Check()
 
   def test_rm_quiet(self):
@@ -295,7 +299,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)
-    self.assertEqual(stderr.count('Removing gs://'), 4)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 4)
     self.assertIn('Removing %s' % suri(ouri1), stderr)
     self.assertIn('Removing %s' % suri(ouri2), stderr)
     self.assertIn('Removing %s' % suri(ouri3), stderr)
@@ -346,7 +350,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)
-    self.assertEqual(stderr.count('Removing gs://'), 10)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 10)
     self.assertIn('Removing %s' % suri(ouri1), stderr)
     self.assertIn('Removing %s' % suri(ouri2), stderr)
     self.assertIn('Removing %s' % suri(ouri3), stderr)
