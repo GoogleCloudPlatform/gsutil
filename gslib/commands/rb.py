@@ -81,7 +81,7 @@ class RbCommand(Command):
           if 'VersionedBucketNotEmpty' in e.reason:
             raise CommandException('Bucket is not empty. Note: this is a '
                                    'versioned bucket, so to delete all objects'
-                                   '\nyou need to use:\n\tgsutil rm -ra %s'
+                                   '\nyou need to use:\n\tgsutil rm -r %s'
                                    % url)
           else:
             raise
