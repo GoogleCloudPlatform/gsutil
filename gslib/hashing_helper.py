@@ -16,6 +16,8 @@
 Currently, the cp command and boto_translation use this functionality.
 """
 
+import base64
+import binascii
 from hashlib import md5
 import re
 import sys
@@ -24,6 +26,7 @@ from boto import config
 import crcmod
 
 from gslib.exception import CommandException
+from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import UsingCrcmodExtension
 
 
@@ -59,17 +62,81 @@ file.
 """
 
 NO_SERVER_HASH_EXCEPTION_TEXT = """
-This object has no server-supplied hash for performing integrity
-checks. To skip integrity checking for such objects, see the "check_hashes"
-option in your boto config file."""
-
-NO_SERVER_HASH_EXCEPTION = CommandException(NO_SERVER_HASH_EXCEPTION_TEXT)
+%s has no server-supplied hash for performing integrity checks. To skip
+integrity checking for such objects, see the "check_hashes" option in your boto
+config file."""
 
 NO_SERVER_HASH_WARNING = """
 WARNING: This object has no server-supplied hash for performing integrity
 checks. To force integrity checking, see the "check_hashes" option in your
 boto config file.
 """
+
+MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
+
+
+def CalculateB64EncodedCrc32cFromContents(fp):
+  return CalculateB64EncodedHashFromContents(
+      fp, crcmod.predefined.Crc('crc-32c'))
+
+
+def CalculateB64EncodedMd5FromContents(fp):
+  return CalculateB64EncodedHashFromContents(fp, md5())
+
+
+def CalculateB64EncodedHashFromContents(fp, hash_alg):
+  return base64.encodestring(binascii.unhexlify(
+      CalculateHashFromContents(fp, hash_alg))).rstrip('\n')
+
+
+def _CalculateCrc32cFromContents(fp):
+  """Calculates the Crc32c hash of the contents of a file.
+
+  This function resets the file pointer to position 0.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    CRC32C digest of the file in hex string format.
+  """
+  return CalculateHashFromContents(fp, crcmod.predefined.Crc('crc-32c'))
+
+
+def CalculateMd5FromContents(fp):
+  """Calculates the MD5 hash of the contents of a file.
+
+  This function resets the file pointer to position 0.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    MD5 digest of the file in hex string format.
+  """
+  return CalculateHashFromContents(fp, md5())
+
+
+def CalculateHashFromContents(fp, hash_alg):
+  """Calculates the MD5 hash of the contents of a file.
+
+  This function resets the file pointer to position 0.
+
+  Args:
+    fp: An already-open file object.
+    hash_alg: Instance of hashing class initialized to start state.
+
+  Returns:
+    Hash of the file in hex string format.
+  """
+  fp.seek(0)
+  while True:
+    data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
+    if not data:
+      break
+    hash_alg.update(data)
+  fp.seek(0)
+  return hash_alg.hexdigest()
 
 
 def GetMD5FromETag(src_etag):
@@ -81,19 +148,19 @@ def GetMD5FromETag(src_etag):
   Returns:
     MD5 in hex string format, or None.
   """
-  if src_etag:
-    possible_md5 = src_etag.strip('"\'').lower()
-    if re.match(r'^[0-9a-f]{32}$', possible_md5):
-      return possible_md5
+  if src_etag and MD5_REGEX.search(src_etag):
+    return src_etag.strip('"\'').lower()
 
 
-def GetHashAlgs(src_etag=None, src_md5=False, src_crc32c=False):
+def GetHashAlgs(src_etag=None, src_md5=False, src_crc32c=False,
+                src_url_str=None):
   """Returns a dict of hash algorithms for validating an object.
 
   Args:
     src_etag: Etag for the source object, if present - possibly an MD5.
     src_md5: If True, source object has an md5 hash.
     src_crc32c: If True, source object has a crc32c hash.
+    src_url_str: URL string of object being hashed.
 
   Returns:
     Dict of (string, hash algorithm).
@@ -131,7 +198,7 @@ def GetHashAlgs(src_etag=None, src_md5=False, src_crc32c=False):
 
   if not hash_algs:
     if check_hashes_config == 'if_fast_else_skip':
-      sys.stderr.write(NO_SERVER_HASH_WARNING)
+      sys.stderr.write(NO_SERVER_HASH_WARNING % src_url_str)
     else:
-      raise NO_SERVER_HASH_EXCEPTION
+      raise CommandException(NO_SERVER_HASH_EXCEPTION_TEXT % src_url_str)
   return hash_algs

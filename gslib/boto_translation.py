@@ -57,6 +57,7 @@ from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.hashing_helper import GetHashAlgs
+from gslib.hashing_helper import MD5_REGEX
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_uri_builder import StorageUriBuilder
@@ -335,7 +336,6 @@ class BotoTranslation(CloudApi):
     """See CloudApi class for function doc strings."""
     # This implementation will get the object metadata first if we don't pass it
     # in via serialization_data.
-    _ = provider
     headers = {}
     self._AddApiVersionToHeaders(headers)
     if 'accept-encoding' not in headers:
@@ -363,7 +363,8 @@ class BotoTranslation(CloudApi):
         src_md5=(getattr(key, 'cloud_hashes', None)
                  and 'md5' in key.cloud_hashes),
         src_crc32c=(getattr(key, 'cloud_hashes', None)
-                    and 'crc32c' in key.cloud_hashes))
+                    and 'crc32c' in key.cloud_hashes),
+        src_url_str='%s://%s/%s' % (self.provider, bucket_name, object_name))
 
     total_size = 0
     if serialization_data:
@@ -1075,7 +1076,7 @@ class BotoTranslation(CloudApi):
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
         md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip('\n')
       elif self.provider == 's3' and getattr(key, 'etag', None):
-        if not re.match('^"[a-fA-F0-9]{32}"$', key.etag):
+        if not MD5_REGEX.search(key.etag):
           # S3 etags are MD5s for non-multi-part objects, but multi-part objects
           # (which include all objects >= 5GB) have a custom checksum
           # implementation that is not currently supported by gsutil.

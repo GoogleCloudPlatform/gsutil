@@ -17,8 +17,6 @@
 # Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
-import base64
-import binascii
 import calendar
 from collections import defaultdict
 import contextlib
@@ -51,9 +49,9 @@ from gslib.command import DummyArgChecker
 from gslib.commands import config
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
-from gslib.util import CalculateMd5FromContents
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
@@ -306,8 +304,7 @@ class PerfDiagCommand(Command):
       with os.fdopen(fd, 'wb') as f:
         f.write(self.file_contents[fpath])
       with open(fpath, 'rb') as f:
-        self.file_md5s[fpath] = base64.encodestring(
-            binascii.unhexlify(CalculateMd5FromContents(f))).rstrip('\n')
+        self.file_md5s[fpath] = CalculateB64EncodedMd5FromContents(f)
       return fpath
 
     # Create files for latency tests.

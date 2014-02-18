@@ -103,11 +103,10 @@ def CreateGsutilLogger(command_name):
 
 
 def _UrlArgChecker(command_instance, url):
+  if not command_instance.exclude_symlinks:
+    return True
   exp_src_url = StorageUrlFromString(url.GetExpandedUrlStr())
-  command_instance.logger.debug('process %d is handling url %s',
-                                os.getpid(), exp_src_url)
-  if (command_instance.exclude_symlinks and exp_src_url.IsFileUrl()
-      and os.path.islink(exp_src_url.object_name)):
+  if exp_src_url.IsFileUrl() and os.path.islink(exp_src_url.object_name):
     command_instance.logger.info('Skipping symbolic link %s...', exp_src_url)
     return False
   return True

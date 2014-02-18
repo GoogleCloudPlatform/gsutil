@@ -31,15 +31,15 @@ def UsingCrcmodExtension(crcmod_module):
           getattr(crcmod_module.crcmod, '_usingExtension', None))
 
 
-def _OutputAndExit(message):
+def OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
   sys.exit(1)
 
 
 GSUTIL_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 if not GSUTIL_DIR:
-  _OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
-                 'cannot run correctly without this.\n')
+  OutputAndExit('Unable to determine where gsutil is installed. Sorry, '
+                'cannot run correctly without this.\n')
 
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
@@ -67,7 +67,7 @@ THIRD_PARTY_LIBS = [
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
-    _OutputAndExit(
+    OutputAndExit(
         'There is no %s library under the gsutil third-party directory (%s).\n'
         'The gsutil command cannot work properly when installed this way.\n'
         'Please re-install gsutil per the installation instructions.' % (

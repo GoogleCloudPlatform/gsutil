@@ -28,8 +28,8 @@ from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.copy_helper import CopyHelper
-from gslib.copy_helper import CreateOptsTuple
-from gslib.copy_helper import GetOptsTuple
+from gslib.copy_helper import CreateCopyHelperOpts
+from gslib.copy_helper import GetCopyHelperOpts
 from gslib.copy_helper import ItemExistsError
 from gslib.copy_helper import Manifest
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
@@ -173,7 +173,7 @@ COPY_IN_CLOUD_TEXT = """
   provider, gsutil copies data "in the cloud" (i.e., without downloading
   to and uploading from the machine where you run gsutil). In addition to
   the performance and cost advantages of doing this, copying in the cloud
-  preserves metadata (like Content-Type and Cache-Control).  In contrast,
+  preserves metadata (like Content-Type and Cache-Control). In contrast,
   when you download data from the cloud it ends up in a file, which has
   no associated metadata. Thus, unless you have some way to hold on to
   or re-create that metadata, downloading to a file will not retain the
@@ -359,6 +359,10 @@ OPTIONS_TEXT = """
                 status indicates there was at least one failure during the
                 gsutil run).
 
+                Note: If you're trying to synchronize the contents of a
+                directory and a bucket (or two buckets), see
+                'gsutil help rsync'.
+
   -n            No-clobber. When specified, existing files or objects at the
                 destination will not be overwritten. Any items that are skipped
                 by this option will be reported as being skipped. This option
@@ -371,12 +375,14 @@ OPTIONS_TEXT = """
                 this option has performance and cost implications when using 
                 the XML API, as it requires separate HTTP calls for interacting
                 with ACLs. The performance issue can be mitigated to some
-                degree by using gsutil -m cp to cause parallel copying.)
+                degree by using gsutil -m cp to cause parallel copying.) Also,
+                this option only works if you have OWNER access to all of the
+                objects that are copied.
 
                 You can avoid the additional performance and cost of using cp -p
                 if you want all objects in the destination bucket to end up with
-                the same ACL by setting a default ACL on that bucket instead of
-                using cp -p. See "help gsutil defacl".
+                the same ACL by setting a default object ACL on that bucket
+                instead of using cp -p. See "help gsutil defacl".
 
                 Note that it's not valid to specify both the -a and -p options
                 together.
@@ -511,8 +517,8 @@ class CpCommand(Command):
     copy_helper = self.copy_helper
     have_existing_dst_container = self.have_existing_dst_container
 
-    opts_tuple = GetOptsTuple()
-    if opts_tuple.perform_mv:
+    copy_helper_opts = GetCopyHelperOpts()
+    if copy_helper_opts.perform_mv:
       cmd_name = 'mv'
     else:
       cmd_name = self.command_name
@@ -534,11 +540,11 @@ class CpCommand(Command):
       copy_helper.InsistDstUrlNamesContainer(
           exp_dst_url, have_existing_dst_container, cmd_name)
 
-    if opts_tuple.use_manifest and self.manifest.WasSuccessful(
+    if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(
         exp_src_url.GetUrlString()):
       return
 
-    if opts_tuple.perform_mv:
+    if copy_helper_opts.perform_mv:
       if name_expansion_result.NamesContainer():
         # Use recursion_requested when performing name expansion for the
         # directory mv case so we can determine if any of the source URLs are
@@ -578,12 +584,12 @@ class CpCommand(Command):
 
     elapsed_time = bytes_transferred = 0
     try:
-      if opts_tuple.use_manifest:
+      if copy_helper_opts.use_manifest:
         self.manifest.Initialize(
             exp_src_url.GetUrlString(), dst_url.GetUrlString())
       (elapsed_time, bytes_transferred, result_url, md5) = (
           copy_helper.PerformCopy(exp_src_url, dst_url, gsutil_api))
-      if opts_tuple.use_manifest:
+      if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.GetUrlString(), 'md5', md5)
         self.manifest.SetResult(
@@ -591,29 +597,29 @@ class CpCommand(Command):
     except ItemExistsError:
       message = 'Skipping existing item: %s' % dst_url.GetUrlString()
       self.logger.info(message)
-      if opts_tuple.use_manifest:
+      if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.GetUrlString(), 0, 'skip', message)
     except Exception, e:
       if copy_helper.IsNoClobberServerException(e):
         message = 'Rejected (noclobber): %s' % dst_url.GetUrlString()
         self.logger.info(message)
-        if opts_tuple.use_manifest:
+        if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
               exp_src_url.GetUrlString(), 0, 'skip', message)
       elif self.continue_on_error:
         message = 'Error copying %s: %s' % (src_url.GetUrlString(), str(e))
         self.copy_failure_count += 1
         self.logger.error(message)
-        if opts_tuple.use_manifest:
+        if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
               exp_src_url.GetUrlString(), 0, 'error', message)
       else:
-        if opts_tuple.use_manifest:
+        if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
               exp_src_url.GetUrlString(), 0, 'error', str(e))
         raise
 
-    if opts_tuple.print_ver:
+    if copy_helper_opts.print_ver:
       # Some cases don't return a version-specific URL (e.g., if destination
       # is a file).
       self.logger.info('Created: %s' % result_url.GetUrlString())
@@ -622,7 +628,7 @@ class CpCommand(Command):
     # since we call copy internally from move and don't specify the -n flag)
     # we'll need to only remove the source when we have not skipped the
     # destination.
-    if opts_tuple.perform_mv:
+    if copy_helper_opts.perform_mv:
       self.logger.info('Removing %s...', exp_src_url)
       if exp_src_url.IsCloudUrl():
         gsutil_api.DeleteObject(exp_src_url.bucket_name,
@@ -638,11 +644,11 @@ class CpCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
-    opts_tuple = self._ParseOpts()
+    copy_helper_opts = self._ParseOpts()
     self.copy_helper = CopyHelper(
         command_obj=self, command_name=self.command_name, args=self.args,
-        opts_tuple=opts_tuple, sub_opts=self.sub_opts, headers=self.headers,
-        logger=self.logger, manifest=self.manifest,
+        copy_helper_opts=copy_helper_opts, sub_opts=self.sub_opts,
+        headers=self.headers, logger=self.logger, manifest=self.manifest,
         copy_exception_handler=_CopyExceptionHandler,
         rm_exception_handler=_RmExceptionHandler)
 
@@ -650,7 +656,7 @@ class CpCommand(Command):
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       return CatHelper(self).CatUrlStrings(self.args[:-1])
 
-    if opts_tuple.read_args_from_stdin:
+    if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
         raise CommandException('Source URLs cannot be specified with -I option')
       url_strs = self.copy_helper.StdinIterator()
@@ -659,8 +665,8 @@ class CpCommand(Command):
         raise CommandException('Wrong number of arguments for "cp" command.')
       url_strs = self.args[:-1]
 
-    (exp_dst_url, have_existing_dst_container) = self.copy_helper.ExpandDstUrl(
-        self.args[-1], self.gsutil_api)
+    (exp_dst_url, have_existing_dst_container) = (
+        self.copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api))
 
     # If the destination bucket has versioning enabled iterate with
     # all_versions=True. That way we'll copy all versions if the source bucket
@@ -687,7 +693,7 @@ class CpCommand(Command):
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug,
         self.logger, self.gsutil_api, url_strs,
-        self.recursion_requested or opts_tuple.perform_mv,
+        self.recursion_requested or copy_helper_opts.perform_mv,
         have_existing_dst_container=have_existing_dst_container,
         project_id=self.project_id, all_versions=all_versions)
     self.have_existing_dst_container = have_existing_dst_container
@@ -739,33 +745,29 @@ class CpCommand(Command):
             self.total_bytes_transferred, self.total_elapsed_time,
             MakeHumanReadable(self.total_bytes_per_second))
     if self.copy_failure_count:
-      plural_str = ''
-      if self.copy_failure_count > 1:
-        plural_str = 's'
+      plural_str = 's' if self.copy_failure_count else ''
       raise CommandException('%d file%s/object%s could not be transferred.' % (
           self.copy_failure_count, plural_str, plural_str))
 
     return 0
 
   def _ParseOpts(self):
-    opts_tuple = CreateOptsTuple()
-    opts_tuple.perform_mv = False
-    # exclude_symlinks is handled by Command parent class, so place a copy in
-    # self.exclude_symlinks.
+    perform_mv = False
+    # exclude_symlinks is handled by Command parent class, so save in Command
+    # state rather than CopyHelperOpts.
     self.exclude_symlinks = False
-    opts_tuple.no_clobber = False
-    # continue_on_error is handled by Command parent class, so place a copy in
-    # self.continue_on_error.
-    opts_tuple.continue_on_error = False
+    no_clobber = False
+    # continue_on_error is handled by Command parent class, so save in Command
+    # state rather than CopyHelperOpts.
     self.continue_on_error = False
-    opts_tuple.daisy_chain = False
-    opts_tuple.read_args_from_stdin = False
-    opts_tuple.print_ver = False
-    opts_tuple.use_manifest = False
-    opts_tuple.preserve_acl = False
-    opts_tuple.canned_acl = None
+    daisy_chain = False
+    read_args_from_stdin = False
+    print_ver = False
+    use_manifest = False
+    preserve_acl = False
+    canned_acl = None
     # canned, def_acl, and acl_arg are handled by a helper function in parent
-    # Command class, so save in Command state rather than opts_tuple.
+    # Command class, so save in Command state rather than CopyHelperOpts.
     self.canned = None
     self.def_acl = None
     self.acl_arg = None
@@ -776,31 +778,31 @@ class CpCommand(Command):
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
-          opts_tuple.canned_acl = a
+          canned_acl = a
           self.canned = True
           self.def_acl = False
           self.acl_arg = a
         if o == '-c':
           self.continue_on_error = True
         elif o == '-D':
-          opts_tuple.daisy_chain = True
+          daisy_chain = True
         elif o == '-e':
           self.exclude_symlinks = True
         elif o == '-I':
-          opts_tuple.read_args_from_stdin = True
+          read_args_from_stdin = True
         elif o == '-L':
-          opts_tuple.use_manifest = True
+          use_manifest = True
           self.manifest = Manifest(a)
         elif o == '-M':
           # Note that we signal to the cp command to perform a move (copy
           # followed by remove) and use directory-move naming rules by passing
           # the undocumented (for internal use) -M option when running the cp
           # command from mv.py.
-          opts_tuple.perform_mv = True
+          perform_mv = True
         elif o == '-n':
-          opts_tuple.no_clobber = True
-        if o == '-p':
-          opts_tuple.preserve_acl = True
+          no_clobber = True
+        elif o == '-p':
+          preserve_acl = True
         elif o == '-q':
           self.logger.warning(
               'Warning: gsutil cp -q is deprecated, and will be removed in the '
@@ -809,11 +811,19 @@ class CpCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
-          opts_tuple.print_ver = True
-    if opts_tuple.preserve_acl and opts_tuple.canned_acl:
+          print_ver = True
+    if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
-    return opts_tuple
+    return CreateCopyHelperOpts(
+        perform_mv=perform_mv,
+        no_clobber=no_clobber,
+        daisy_chain=daisy_chain,
+        read_args_from_stdin=read_args_from_stdin,
+        print_ver=print_ver,
+        use_manifest=use_manifest,
+        preserve_acl=preserve_acl,
+        canned_acl=canned_acl)
 
   def _GetBucketWithVersioningConfig(self, exp_dst_url):
     """Gets versioning config for a bucket and ensures that it exists.

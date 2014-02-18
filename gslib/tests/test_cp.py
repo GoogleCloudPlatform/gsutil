@@ -30,13 +30,13 @@ from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import MakeGsUri
 from gslib.copy_helper import ObjectFromTracker
 from gslib.copy_helper import PerformResumableUploadIfAppliesArgs
+from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_uri_builder import StorageUriBuilder
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import unittest
-from gslib.util import CalculateMd5FromContents
 from gslib.util import CreateLock
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -191,6 +191,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
     _Check2()
 
+  @unittest.skipIf(IS_WINDOWS, 'magicfile is not available on Windows.')
   @PerformsFileToObjectUpload
   def test_magicfile_override(self):
     """Tests content type override with magicfile value."""
