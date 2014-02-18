@@ -648,7 +648,6 @@ class CpCommand(Command):
       self.total_elapsed_time += elapsed_time
       self.total_bytes_transferred += bytes_transferred
 
-
   # Command entry point.
   def RunCommand(self):
     opts_tuple = self._ParseOpts()
@@ -765,7 +764,6 @@ class CpCommand(Command):
     opts_tuple.perform_mv = False
     # exclude_symlinks is handled by Command parent class, so place a copy in
     # self.exclude_symlinks.
-    opts_tupleexclude_symlinks = False
     self.exclude_symlinks = False
     opts_tuple.no_clobber = False
     # continue_on_error is handled by Command parent class, so place a copy in
