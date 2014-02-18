@@ -42,7 +42,6 @@ import time
 
 from boto import config
 from boto.exception import ResumableUploadException
-import crcmod
 
 import gslib
 from gslib.bucket_listing_ref import BucketListingRef
@@ -60,6 +59,9 @@ from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
+from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
+from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.hashing_helper import GetHashAlgs
 from gslib.hashing_helper import GetMD5FromETag
 from gslib.storage_url import ContainsWildcard
@@ -71,7 +73,6 @@ from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
-from gslib.util import CalculateMd5FromContents
 from gslib.util import CreateLock
 from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
@@ -79,7 +80,9 @@ from gslib.util import GetFileSize
 from gslib.util import GetStreamFromFileUrl
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
+from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
+from gslib.util import TEN_MB
 from gslib.util import TWO_MB
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
@@ -96,13 +99,13 @@ if IS_WINDOWS:
   from ctypes import WINFUNCTYPE
   from ctypes import WinError
 
-# Declare opts_tuple as a global because namedtuple isn't aware of
+# Declare copy_helper_opts as a global because namedtuple isn't aware of
 # assigning to a class member (which breaks pickling done by multiprocessing).
 # For details see
 # http://stackoverflow.com/questions/16377215/how-to-pickle-a-namedtuple-instance-correctly
 # Similarly can't pickle logger.
 # pylint: disable=global-at-module-level
-global global_opts_tuple, global_logger
+global global_copy_helper_opts, global_logger
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
     u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
@@ -170,47 +173,66 @@ def _PerformResumableUploadIfAppliesWrapper(cls, args):
   with fp:
     already_split = True
     ret = cls._PerformResumableUploadIfApplies(
-        fp, args.src_url, args.dst_url, global_opts_tuple.canned_acl,
+        fp, args.src_url, args.dst_url, global_copy_helper_opts.canned_acl,
         args.headers, fp.length, already_split)
 
   # Update the tracker file after each call in order to be as robust as possible
   # against interrupts, failures, etc.
   component = ret[2]
   _AppendComponentTrackerToParallelUploadTrackerFile(
-      global_opts_tuple.tracker_file, component,
-      global_opts_tuple.tracker_file_lock)
+      global_copy_helper_opts.tracker_file, component,
+      global_copy_helper_opts.tracker_file_lock)
   return ret
 
 
-def CreateOptsTuple():
-  """Creates namedtuple for passing options to CopyHelper."""
+CopyHelperOpts = namedtuple('CopyHelperOpts', [
+    'perform_mv',
+    'no_clobber',
+    'daisy_chain',
+    'read_args_from_stdin',
+    'print_ver',
+    'use_manifest',
+    'preserve_acl',
+    'canned_acl'])
+
+
+def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
+                         read_args_from_stdin=False, print_ver=False,
+                         use_manifest=False, preserve_acl=False,
+                         canned_acl=None):
+  """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
-  return namedtuple(
-      'CopyHelperOpts', 'perform_mv exclude_symlinks no_clobber '
-      'daisy_chain read_args_from_stdin print_ver '
-      'use_manifest preserve_acl canned_acl canned def_acl')
+  return CopyHelperOpts(
+      perform_mv=perform_mv,
+      no_clobber=no_clobber,
+      daisy_chain=daisy_chain,
+      read_args_from_stdin=read_args_from_stdin,
+      print_ver=print_ver,
+      use_manifest=use_manifest,
+      preserve_acl=preserve_acl,
+      canned_acl=canned_acl)
 
 
 # pylint: disable=undefined-variable
-def GetOptsTuple():
+def GetCopyHelperOpts():
   """Returns namedtuple holding CopyHelper options."""
-  return global_opts_tuple
+  return global_copy_helper_opts
 
 
 class CopyHelper(object):
   """Helper class for commands that perform data copying (cp and rsync)."""
 
-  def __init__(self, command_obj, command_name, args, opts_tuple, sub_opts,
-               headers, manifest, logger, copy_exception_handler,
+  def __init__(self, command_obj, command_name, args, copy_helper_opts,
+               sub_opts, headers, manifest, logger, copy_exception_handler,
                rm_exception_handler):
     """Constructor.
 
     Args:
       command_obj: gsutil command instance of calling command.
       command_name: The name of the command being run.
-      opts_tuple: namedtuple of command-line options from calling
-                  CreateOptsTuple.
+      copy_helper_opts: namedtuple of command-line options from calling
+                  CreateCopyHelperOpts.
       args: array of command-line args.
       sub_opts: sub-options of command being run.
       headers: The headers which ultimately passed to boto.
@@ -223,7 +245,7 @@ class CopyHelper(object):
     """
     self.command_name = command_name
     self.args = args
-    gslib.copy_helper.global_opts_tuple = opts_tuple
+    gslib.copy_helper.global_copy_helper_opts = copy_helper_opts
     self.sub_opts = sub_opts
     self.headers = headers
     self.manifest = manifest
@@ -440,7 +462,7 @@ class CopyHelper(object):
     dst_obj = gsutil_api.CopyObject(
         src_url.bucket_name, src_url.object_name,
         dst_obj_metadata=dst_obj_metadata, src_generation=src_url.generation,
-        canned_acl=global_opts_tuple.canned_acl,
+        canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS)
 
@@ -550,8 +572,7 @@ class CopyHelper(object):
         if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
           gslib.copy_helper.global_logger.info(
               'Computing CRC for %s...', src_url.GetUrlString())
-        crc32c_b64 = base64.encodestring(binascii.unhexlify(
-            _CalculateCrc32cFromContents(f_in))).rstrip('\n')
+        crc32c_b64 = CalculateB64EncodedCrc32cFromContents(f_in)
         dst_obj_metadata.crc32c = crc32c_b64
 
     start_time = time.time()
@@ -559,13 +580,13 @@ class CopyHelper(object):
       # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
       uploaded_object = gsutil_api.UploadObjectStreaming(
           src_obj_filestream, object_metadata=dst_obj_metadata,
-          canned_acl=global_opts_tuple.canned_acl,
+          canned_acl=global_copy_helper_opts.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           fields=UPLOAD_RETURN_FIELDS)
     else:
       uploaded_object = gsutil_api.UploadObject(
           src_obj_filestream, object_metadata=dst_obj_metadata,
-          canned_acl=global_opts_tuple.canned_acl,
+          canned_acl=global_copy_helper_opts.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           size=src_obj_size, fields=UPLOAD_RETURN_FIELDS)
     end_time = time.time()
@@ -627,9 +648,7 @@ class CopyHelper(object):
       gslib.copy_helper.global_logger.info(
           'Computing CRC for %s...', src_url.GetUrlString())
     with open(src_url.object_name, 'rb') as f_in:
-      crc32c_b64 = base64.encodestring(binascii.unhexlify(
-          _CalculateCrc32cFromContents(f_in))).rstrip('\n')
-      dst_obj_metadata.crc32c = crc32c_b64
+      dst_obj_metadata.crc32c = CalculateB64EncodedCrc32cFromContents(f_in)
 
     # This contains the upload URL, which will uniquely identify the
     # destination object.
@@ -644,7 +663,7 @@ class CopyHelper(object):
     try:
       uploaded_object = gsutil_api.UploadObjectResumable(
           src_obj_filestream, object_metadata=dst_obj_metadata,
-          canned_acl=global_opts_tuple.canned_acl,
+          canned_acl=global_copy_helper_opts.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           size=src_obj_size, serialization_data=tracker_data,
           fields=UPLOAD_RETURN_FIELDS,
@@ -973,9 +992,11 @@ class CopyHelper(object):
       need_to_unzip = False
 
     # Set up hash digesters.
-    hash_algs = GetHashAlgs(src_etag=src_obj_metadata.etag,
-                            src_md5=src_obj_metadata.md5Hash,
-                            src_crc32c=src_obj_metadata.crc32c)
+    hash_algs = GetHashAlgs(
+        src_etag=src_obj_metadata.etag,
+        src_md5=src_obj_metadata.md5Hash,
+        src_crc32c=src_obj_metadata.crc32c,
+        src_url_str=src_url.GetUrlString())
     digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
     fp = None
@@ -1019,7 +1040,7 @@ class CopyHelper(object):
             download_start_point = existing_file_size
             serialization_dict['progress'] = download_start_point
             # Catch up our digester with the hash data.
-            if existing_file_size > TWO_MB:
+            if existing_file_size > TEN_MB:
               for alg_name in digesters:
                 gslib.copy_helper.global_logger.info(
                     'Catching up %s for %s' % (alg_name, download_file_name))
@@ -1154,19 +1175,17 @@ class CopyHelper(object):
     """
     digests = {}
     if 'md5' in algs:
-      if src_obj_metadata.size and src_obj_metadata.size > TWO_MB:
+      if src_obj_metadata.size and src_obj_metadata.size > TEN_MB:
         gslib.copy_helper.global_logger.info(
             'Computing MD5 for %s...', file_name)
       with open(file_name, 'rb') as fp:
-        digests['md5'] = base64.encodestring(binascii.unhexlify(
-            CalculateMd5FromContents(fp))).rstrip('\n')
+        digests['md5'] = CalculateB64EncodedMd5FromContents(fp)
     if 'crc32c' in algs:
-      if src_obj_metadata.size and src_obj_metadata.size > TWO_MB:
+      if src_obj_metadata.size and src_obj_metadata.size > TEN_MB:
         gslib.copy_helper.global_logger.info(
             'Computing CRC32C for %s...', file_name)
       with open(file_name, 'rb') as fp:
-        digests['crc32c'] = base64.encodestring(binascii.unhexlify(
-            _CalculateCrc32cFromContents(fp))).rstrip('\n')
+        digests['crc32c'] = CalculateB64EncodedCrc32cFromContents(fp)
     return digests
 
   def _CheckHashes(self, src_obj_metadata, file_name, digests):
@@ -1193,6 +1212,7 @@ class CopyHelper(object):
     if src_obj_metadata.crc32c:
       cloud_hashes['crc32c'] = src_obj_metadata.crc32c.rstrip('\n')
 
+    checked_one = False
     for alg in local_hashes:
       if alg not in cloud_hashes:
         continue
@@ -1207,6 +1227,16 @@ class CopyHelper(object):
             '%s signature computed for local file (%s) doesn\'t match '
             'cloud-supplied digest (%s). Local file (%s) deleted.' % (
                 alg, local_b64_digest, cloud_b64_digest, file_name))
+      checked_one = True
+    # One known way this can currently happen is when downloading objects larger
+    # than 5GB from S3 (for which the etag is not an MD5).
+    # TODO: implement reverse-engineered algorithm for S3's multi-part etag
+    # computation
+    # (http://permalink.gmane.org/gmane.comp.file-systems.s3.s3tools/583).
+    if not checked_one:
+      gslib.copy_helper.global_logger.warn(
+          'Found no hashes to validate object downloaded to %s. '
+          'Integrity cannot be assured without hashes.' % file_name)
 
   def _CopyFileToFile(self, src_url, dst_url):
     """Copies a local file to a local file.
@@ -1261,10 +1291,11 @@ class CopyHelper(object):
 
     # We don't attempt to preserve ACLs across providers because
     # GCS and S3 support different ACLs and disjoint principals.
-    if global_opts_tuple.preserve_acl and src_url.scheme != dst_url.scheme:
+    if (global_copy_helper_opts.preserve_acl
+        and src_url.scheme != dst_url.scheme):
       raise NotImplementedError(
           'Cross-provider cp -p not supported')
-    if not global_opts_tuple.preserve_acl:
+    if not global_copy_helper_opts.preserve_acl:
       dst_obj_metadata.acl = []
 
     # TODO: gsutil-beta: For now, download the file locally in its entirety,
@@ -1299,7 +1330,7 @@ class CopyHelper(object):
       upload_fp = open(download_path, 'rb')
       uploaded_object = gsutil_api.UploadObject(
           upload_fp, object_metadata=dst_obj_metadata,
-          canned_acl=global_opts_tuple.canned_acl,
+          canned_acl=global_copy_helper_opts.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size)
 
@@ -1371,10 +1402,10 @@ class CopyHelper(object):
                           'etag', 'generation', 'md5Hash', 'mediaLink',
                           'metadata', 'metageneration', 'size']
         # We only need the ACL if we're going to preserve it.
-        if global_opts_tuple.preserve_acl:
+        if global_copy_helper_opts.preserve_acl:
           src_obj_fields.append('acl')
         if (src_url.scheme == dst_url.scheme
-            and not global_opts_tuple.daisy_chain):
+            and not global_copy_helper_opts.daisy_chain):
           copy_in_the_cloud = True
         else:
           copy_in_the_cloud = False
@@ -1394,10 +1425,10 @@ class CopyHelper(object):
             src_url.GetUrlString())
       src_obj_size = src_obj_metadata.size
       dst_obj_metadata.contentType = src_obj_metadata.contentType
-      if global_opts_tuple.preserve_acl:
+      if global_copy_helper_opts.preserve_acl:
         dst_obj_metadata.acl = src_obj_metadata.acl
         # Special case for S3-to-S3 copy URLs using
-        # global_opts_tuple.preserve_acl.
+        # global_copy_helper_opts.preserve_acl.
         # dst_url will be verified in _CopyObjToObjDaisyChainMode if it
         # is not s3 (and thus differs from src_url).
         if src_url.scheme == 's3':
@@ -1414,7 +1445,7 @@ class CopyHelper(object):
       else:
         src_obj_size = os.path.getsize(src_url.object_name)
 
-    if global_opts_tuple.use_manifest:
+    if global_copy_helper_opts.use_manifest:
       # Set the source size in the manifest.
       self.manifest.Set(src_url.GetUrlString(), 'size', src_obj_size)
 
@@ -1423,7 +1454,7 @@ class CopyHelper(object):
     if IS_WINDOWS and src_url.IsFileUrl() and src_url.IsStream():
       msvcrt.setmode(GetStreamFromFileUrl(src_url).fileno(), os.O_BINARY)
 
-    if global_opts_tuple.no_clobber:
+    if global_copy_helper_opts.no_clobber:
       # There are two checks to prevent clobbering:
       # 1) The first check is to see if the URL
       #    already exists at the destination and prevent the upload/download
@@ -1459,7 +1490,7 @@ class CopyHelper(object):
     dst_obj_metadata.name = dst_url.object_name
     dst_obj_metadata.bucket = dst_url.bucket_name
 
-    if global_opts_tuple.canned_acl:
+    if global_copy_helper_opts.canned_acl:
       # No canned ACL support in JSON, force XML API to be used for
       # upload/copy operations.
       orig_force_api = gsutil_api.force_api
@@ -1486,7 +1517,7 @@ class CopyHelper(object):
         else:  # dst_url.IsFileUrl()
           return self._CopyFileToFile(src_url, dst_url)
     finally:
-      if global_opts_tuple.canned_acl:
+      if global_copy_helper_opts.canned_acl:
         gsutil_api.force_api = orig_force_api
 
   # TODO: gsutil-beta: Port this function and other parallel upload functions,
@@ -1683,41 +1714,41 @@ class CopyHelper(object):
             and file_size >= parallel_composite_upload_threshold
             and file_size >= MIN_PARALLEL_COMPOSITE_FILE_SIZE)
 
-  def ExpandDstUrl(self, dst_url_str, gsutil_api):
-    """Expands wildcard if present in dst_url_str.
+  def ExpandUrlToSingleBlr(self, url_str, gsutil_api):
+    """Expands wildcard if present in url_str.
 
     Args:
-      dst_url_str: String representation of requested dst_url.
+      url_str: String representation of requested url.
       gsutil_api: gsutil Cloud API instance to use.
 
     Returns:
-        (exp_dst_url, have_existing_dst_container)
-        where exp_dst_url is a StorageUrl
+        (exp_url, have_existing_dst_container)
+        where exp_url is a StorageUrl
         and have_existing_dst_container is a bool indicating whether
-        exp_dst_url names an existing directory, bucket, or bucket subdirectory.
+        exp_url names an existing directory, bucket, or bucket subdirectory.
         In the case where we match a subdirectory AND an object, the
         subdirectory is returned.
 
     Raises:
-      CommandException: if dst_url_str matched more than 1 URL.
+      CommandException: if url_str matched more than 1 URL.
     """
-    # Handle wildcarded dst_url case.
-    if ContainsWildcard(dst_url_str):
-      blr_expansion = list(CreateWildcardIterator(dst_url_str, gsutil_api,
+    # Handle wildcarded url case.
+    if ContainsWildcard(url_str):
+      blr_expansion = list(CreateWildcardIterator(url_str, gsutil_api,
                                                   debug=self.debug,
                                                   project_id=self.project_id))
       if len(blr_expansion) != 1:
         raise CommandException('Destination (%s) must match exactly 1 URL' %
-                               dst_url_str)
+                               url_str)
       blr = blr_expansion[0]
       # BLR is either an OBJECT, PREFIX, or BUCKET; the latter two represent
       # directories.
       return (StorageUrlFromString(blr.url_string),
               blr.ref_type != BucketListingRefType.OBJECT)
 
-    storage_url = StorageUrlFromString(dst_url_str)
+    storage_url = StorageUrlFromString(url_str)
 
-    # Handle non-wildcarded dst_url:
+    # Handle non-wildcarded url:
     if storage_url.IsFileUrl():
       return (storage_url, storage_url.IsDirectory())
 
@@ -1726,22 +1757,22 @@ class CopyHelper(object):
       return (storage_url, True)
 
     # For object/prefix URLs check 3 cases: (a) if the name ends with '/' treat
-    # as a subdir; otherwise, use the wildcard iterator with dst_url to
-    # find if (b) there's a Prefix matching dst_url, or (c) name is of form
+    # as a subdir; otherwise, use the wildcard iterator with url to
+    # find if (b) there's a Prefix matching url, or (c) name is of form
     # dir_$folder$ (and in both these cases also treat dir as a subdir).
     # Cloud subdirs are always considered to be an existing container.
-    if dst_url_str.endswith('/'):
+    if IsCloudSubdirPlaceholder(storage_url):
       return (storage_url, True)
 
     # Check for the special case where we have a folder marker object
     folder_expansion = CreateWildcardIterator(
-        dst_url_str + '_$folder$', gsutil_api, debug=self.debug,
+        url_str + '_$folder$', gsutil_api, debug=self.debug,
         project_id=self.project_id).IterAll(
             bucket_listing_fields=['name'])
     for blr in folder_expansion:
       return (storage_url, True)
 
-    blr_expansion = CreateWildcardIterator(dst_url_str, gsutil_api,
+    blr_expansion = CreateWildcardIterator(url_str, gsutil_api,
                                            debug=self.debug,
                                            project_id=self.project_id).IterAll(
                                                bucket_listing_fields=['name'])
@@ -1855,7 +1886,7 @@ class CopyHelper(object):
     #    assuming dir1 contains f1.txt and f2.txt.
 
     recursive_move_to_new_subdir = False
-    if (global_opts_tuple.perform_mv and self.recursion_requested
+    if (global_copy_helper_opts.perform_mv and self.recursion_requested
         and src_url_expands_to_multi and not have_existing_dest_subdir):
       # Case 1. Handle naming rules for bucket subdir mv. Here we want to
       # line up the src_url against its expansion, to find the base to build
@@ -1910,7 +1941,8 @@ class CopyHelper(object):
                                    delim, dst_key_name)
 
     new_exp_dst_url = exp_dst_url.Clone()
-    new_exp_dst_url.object_name = dst_key_name
+    new_exp_dst_url.object_name = dst_key_name.replace(src_url.delim,
+                                                       exp_dst_url.delim)
     return new_exp_dst_url
 
   def FixWindowsNaming(self, src_url, dst_url):
@@ -2044,7 +2076,7 @@ class CopyHelper(object):
       bool indicator - True indicates that the server did attempt to clobber
           an existing file.
     """
-    return global_opts_tuple.no_clobber and (
+    return global_copy_helper_opts.no_clobber and (
         (isinstance(e, PreconditionException)) or
         (isinstance(e, ResumableUploadException) and '412' in e.message))
 
@@ -2500,25 +2532,3 @@ def FilterExistingComponents(dst_args, existing_components,
 def MakeGsUri(bucket, filename, suri_builder):
   """Returns a StorageUri for an object in GCS."""
   return suri_builder.StorageUri(bucket + '/' + filename)
-
-
-def _CalculateCrc32cFromContents(fp):
-  """Calculates the Crc32c hash of the contents of a file.
-
-  This function resets the file pointer to position 0.
-
-  Args:
-    fp: An already-open file object.
-
-  Returns:
-    CRC32C digest of the file in hex string format.
-  """
-  current_crc = crcmod.predefined.Crc('crc-32c')
-  fp.seek(0)
-  while True:
-    data = fp.read(8192)
-    if not data:
-      break
-    current_crc.update(data)
-  fp.seek(0)
-  return current_crc.hexdigest()

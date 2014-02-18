@@ -107,6 +107,27 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual('f1', actual[1].root_object.name)
 
   @PerformsFileToObjectUpload
+  def testCopyingNestedFileToBucketSubdir(self):
+    """Tests copying a nested file to a bucket subdir.
+
+    Tests that we correctly translate local FS-specific delimiters ('\' on
+    Windows) to bucket delimiter (/).
+    """
+    tmpdir = self.CreateTempDir()
+    subdir = os.path.join(tmpdir, 'subdir')
+    os.mkdir(subdir)
+    src_file = self.CreateTempFile(tmpdir=tmpdir, file_name='obj', contents='')
+    dst_bucket_uri = self.CreateBucket()
+    # Make an object under subdir so next copy will treat subdir as a subdir.
+    self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir/a')])
+    self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir')])
+    actual = list(self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '**')).IterObjects())
+    self.assertEqual(2, len(actual))
+    self.assertEqual('subdir/a', actual[0].root_object.name)
+    self.assertEqual('subdir/obj', actual[1].root_object.name)
+
+  @PerformsFileToObjectUpload
   def testCopyingAbsolutePathDirToBucket(self):
     """Tests recursively copying absolute path directory to a bucket."""
     dst_bucket_uri = self.CreateBucket()

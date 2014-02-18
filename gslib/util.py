@@ -36,6 +36,7 @@ from oauth2client.client import HAS_CRYPTO
 from retry_decorator import retry_decorator
 
 import gslib
+from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
@@ -46,12 +47,6 @@ from gslib.translation_helper import S3_MARKER_GUIDS
 
 # pylint: disable=g-import-not-at-top
 try:
-  from hashlib import md5
-except ImportError:
-  from md5 import md5
-
-# pylint: disable=g-import-not-at-top
-try:
   # This module doesn't necessarily exist on Windows.
   import resource
   HAS_RESOURCE_MODULE = True
@@ -59,6 +54,7 @@ except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
 TWO_MB = 2 * 1024 * 1024
+TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
 
 # Make a progress callback every 64KB during uploads/downloads.
@@ -560,28 +556,6 @@ def _IncreaseSoftLimitForResource(resource_name):
     return 0
 
 
-def CalculateMd5FromContents(fp):
-  """Calculates the MD5 hash of the contents of a file.
-
-  This function resets the file pointer to position 0.
-
-  Args:
-    fp: An already-open file object.
-
-  Returns:
-    MD5 digest of the file in hex string format.
-  """
-  current_md5 = md5()
-  fp.seek(0)
-  while True:
-    data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
-    if not data:
-      break
-    current_md5.update(data)
-  fp.seek(0)
-  return current_md5.hexdigest()
-
-
 def GetCloudApiInstance(cls, thread_state=None):
   """Gets a gsutil Cloud API instance.
 
@@ -778,3 +752,35 @@ def CreateLock():
   else:
     return threading.Lock()
 
+
+def IsCloudSubdirPlaceholder(url, blr=None):
+  """Determines if URL is a cloud subdir placeholder.
+
+  This function is needed because GUI tools (like the GCS cloud console) allow
+  users to create empty "folders" by creating a placeholder object; and parts
+  of gsutil need to treat those placeholder objects specially. For example,
+  gsutil rsync needs to avoid downloading those objects because they can cause
+  conflicts (see comments in rsync command for details).
+
+  We currently detect two cases:
+    - Cloud objects whose name ends with '_$folder$'
+    - Cloud objects whose name ends with '/'
+
+  Args:
+    url: The URL to be checked.
+    blr: BucketListingRef to check, or None if not available.
+         If None, size won't be checked.
+
+  Returns:
+    True/False.
+  """
+  if not url.IsCloudUrl():
+    return False
+  url_str = url.GetUrlString()
+  if url_str.endswith('_$folder$'):
+    return True
+  if blr and blr.ref_type == BucketListingRefType.OBJECT:
+    size = blr.root_object.size
+  else:
+    size = 0
+  return size == 0 and url_str.endswith('/')

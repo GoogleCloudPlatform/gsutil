@@ -29,6 +29,9 @@ import webbrowser
 
 import boto
 from boto.provider import Provider
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
+
 import gslib
 from gslib.command import Command
 from gslib.commands.compose import MAX_COMPONENT_COUNT
@@ -37,8 +40,6 @@ from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
 
 
 _detailed_help_text = ("""
@@ -148,6 +149,19 @@ _detailed_help_text = ("""
 
   The currently supported settings, are, by section:
 
+    [Credentials]
+      aws_access_key_id
+      aws_secret_access_key
+      gs_access_key_id
+      gs_host
+      gs_json_host
+      gs_json_port 
+      gs_oauth2_refresh_token
+      gs_port
+      gs_secret_access_key
+      s3_host
+      s3_port
+
     [Boto]
       proxy
       proxy_port
@@ -159,29 +173,30 @@ _detailed_help_text = ("""
       num_retries
 
     [GSUtil]
-      resumable_threshold
-      resumable_tracker_dir
-      software_update_check_period
-      parallel_process_count
-      parallel_thread_count
-      parallel_composite_upload_threshold
-      parallel_composite_upload_component_size
-      use_magicfile
-      content_language
       check_hashes
+      content_language
       default_api_version
       default_project_id
+      force_api
       json_api_version
+      parallel_composite_upload_component_size
+      parallel_composite_upload_threshold
+      parallel_process_count
+      parallel_thread_count
+      resumable_threshold
+      resumable_tracker_dir
+      rsync_buffer_lines
+      software_update_check_period
+      use_magicfile
 
     [OAuth2]
-      token_cache
-      token_cache
       client_id
       client_secret
-      provider_label
-      provider_authorization_uri
-      provider_token_uri
       oauth2_refresh_retries
+      provider_authorization_uri
+      provider_label
+      provider_token_uri
+      token_cache
 
 
 <B>UPDATING TO THE LATEST CONFIGURATION FILE</B>
@@ -304,6 +319,27 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # resumable Google Cloud Storage transfers are attempted. The default is 2097152
 # (2 MiB).
 #resumable_threshold = %(resumable_threshold)d
+
+# 'rsync_buffer_lines' specifies the number of lines of bucket or directory
+# listings saved in each temp file during sorting. (The complete set is
+# split across temp files and separately sorted/merged, to avoid needing to
+# fit everything in memory at once.) If you are trying to synchronize very
+# large directories/buckets (e.g., containing millions or more objects),
+# having too small a value here can cause gsutil to run out of open file
+# handles. If that happens, you can try to increase the number of open file
+# handles your system allows (e.g., see 'man ulimit' on Linux; see also
+# http://docs.python.org/2/library/resource.html). If you can't do that (or
+# if you're already at the upper limit), increasing rsync_buffer_lines will
+# cause gsutil to use fewer file handles, but at the cost of more memory. With
+# rsync_buffer_lines set to 32000 and assuming a typical URL is 100 bytes
+# long, gsutil will require approximately 10MB of memory while building
+# the synchronization state, and will require approximately 60 open file
+# descriptors to build the synchronization state over all 1M source and 1M
+# destination URLs. Memory and file descriptors are only consumed while
+# building the state; once the state is built, it resides in two temp files that
+# are read and processed incrementally during the actual copy/delete
+# operations.
+#rsync_buffer_lines = 32000
 
 # 'resumable_tracker_dir' specifies the base location where resumable
 # transfer tracker files are saved. By default they're in ~/.gsutil
@@ -596,9 +632,9 @@ class ConfigCommand(Command):
     """
     config = boto.config
     config_file.write(
-        '# To use a proxy, edit and uncomment the proxy and proxy_port lines.'
-        '# If you need a user/password with this proxy, edit and uncomment'
-        '# those lines as well.')
+        '# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n'
+        '# If you need a user/password with this proxy, edit and uncomment\n'
+        '# those lines as well.\n')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy', config.get_value('Boto', 'proxy', None),
         'proxy host')
