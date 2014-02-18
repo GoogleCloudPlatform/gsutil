@@ -17,6 +17,8 @@ import random
 import shutil
 import tempfile
 
+import boto
+import gslib.tests.util as util
 from gslib.tests.util import unittest
 
 MAX_BUCKET_LENGTH = 63
@@ -26,6 +28,12 @@ class GsUtilTestCase(unittest.TestCase):
   """Base test case class for unit and integration tests."""
 
   def setUp(self):
+    if util.RUN_S3_TESTS:
+      self.test_api = 'XML'
+      self.default_provider = 's3'
+    else:
+      self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
+      self.default_provider = 'gs'
     self.tempdirs = []
 
   def tearDown(self):

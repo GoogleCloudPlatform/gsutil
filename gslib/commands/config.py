@@ -373,6 +373,9 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # %(max_component_count)d.
 # If 'parallel_composite_upload_threshold' is set to 0, then automatic parallel
 # uploads will never occur.
+# Setting an extremely low threshold is unadvisable. The vast majority of
+# environments will see degraded performance for thresholds below 80M, and it
+# is almost never advantageous to have a threshold below 20M.
 # 'parallel_composite_upload_component_size' specifies the ideal size of a
 # component in bytes, which will act as an upper bound to the size of the
 # components if ceil(file_size / parallel_composite_upload_component_size) is

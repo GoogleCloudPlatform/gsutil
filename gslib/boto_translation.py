@@ -60,7 +60,6 @@ from gslib.hashing_helper import GetHashAlgs
 from gslib.hashing_helper import MD5_REGEX
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
-from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
@@ -116,7 +115,6 @@ class BotoTranslation(CloudApi):
     _ = credentials
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
-    self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -359,9 +357,10 @@ class BotoTranslation(CloudApi):
     # Key instantiates its own digesters, so we have to ignore the caught-up
     # digesters and pass in a clean set of hash_algs.
     hash_algs = GetHashAlgs(
-        src_etag=getattr(key, 'etag', None),
-        src_md5=(getattr(key, 'cloud_hashes', None)
-                 and 'md5' in key.cloud_hashes),
+        src_md5=((getattr(key, 'cloud_hashes', None)
+                  and 'md5' in key.cloud_hashes) or
+                 (getattr(key, 'etag', None)
+                  and self._GetMD5FromETag(key.etag))),
         src_crc32c=(getattr(key, 'cloud_hashes', None)
                     and 'crc32c' in key.cloud_hashes),
         src_url_str='%s://%s/%s' % (self.provider, bucket_name, object_name))
@@ -812,11 +811,11 @@ class BotoTranslation(CloudApi):
     dst_obj_metadata.name = None
     dst_bucket_name = dst_obj_metadata.bucket
     dst_obj_metadata.bucket = None
+    headers = HeadersFromObjectMetadata(dst_obj_metadata, self.provider)
     if not dst_obj_metadata.contentType:
       dst_obj_metadata.contentType = DEFAULT_CONTENT_TYPE
-    headers = {}
+      headers['content-type'] = dst_obj_metadata.contentType
     self._AddApiVersionToHeaders(headers)
-    headers['Content-Type'] = dst_obj_metadata.contentType
     self._AddPreconditionsToHeaders(preconditions, headers)
 
     dst_uri = self._StorageUriForObject(dst_bucket_name, dst_obj_name)
@@ -847,6 +846,18 @@ class BotoTranslation(CloudApi):
   def _AddApiVersionToHeaders(self, headers):
     if self.provider == 'gs':
       headers['x-goog-api-version'] = self.api_version
+
+  def _GetMD5FromETag(self, src_etag):
+    """Returns an MD5 from the etag iff the etag is a valid MD5 hash.
+
+    Args:
+      src_etag: Object etag for which to return the MD5.
+
+    Returns:
+      MD5 in hex string format, or None.
+    """
+    if src_etag and MD5_REGEX.search(src_etag):
+      return src_etag.strip('"\'').lower()
 
   def _StorageUriForBucket(self, bucket):
     """Returns a boto storage_uri for the given bucket name.
@@ -1075,16 +1086,16 @@ class BotoTranslation(CloudApi):
     if not fields or 'md5Hash' in fields:
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
         md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip('\n')
-      elif self.provider == 's3' and getattr(key, 'etag', None):
-        if not MD5_REGEX.search(key.etag):
-          # S3 etags are MD5s for non-multi-part objects, but multi-part objects
-          # (which include all objects >= 5GB) have a custom checksum
-          # implementation that is not currently supported by gsutil.
-          raise ServiceException('Non-MD5 etag (%s) present for key %s, data '
-                                 'integrity checks are not possible.'
-                                 % (key.etag, key))
+      elif self._GetMD5FromETag(getattr(key, 'etag', None)):
         md5_hash = base64.encodestring(
-            binascii.unhexlify(key.etag.strip('"\''))).rstrip('\n')
+            binascii.unhexlify(self._GetMD5FromETag(key.etag))).rstrip('\n')
+      elif self.provider == 's3':
+        # S3 etags are MD5s for non-multi-part objects, but multi-part objects
+        # (which include all objects >= 5GB) have a custom checksum
+        # implementation that is not currently supported by gsutil.
+        raise ServiceException('Non-MD5 etag (%s) present for key %s, data '
+                               'integrity checks are not possible.'
+                               % (key.etag, key))
 
     # Serialize the boto key in the media link if it is requested.  This
     # way we can later access the key without adding an HTTP call.
@@ -1092,11 +1103,14 @@ class BotoTranslation(CloudApi):
     if not fields or 'mediaLink' in fields:
       media_link = binascii.b2a_base64(
           pickle.dumps(key, pickle.HIGHEST_PROTOCOL))
+    size = None
+    if not fields or 'size' in fields:
+      size = key.size or 0
 
     cloud_api_object = apitools_messages.Object(
         bucket=key.bucket.name,
         name=key.name,
-        size=key.size,
+        size=size,
         contentEncoding=key.content_encoding,
         contentLanguage=key.content_language,
         contentType=key.content_type,

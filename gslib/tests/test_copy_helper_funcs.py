@@ -18,8 +18,14 @@ from gslib.copy_helper import _CreateParallelUploadTrackerFile
 from gslib.copy_helper import _GetPartitionInfo
 from gslib.copy_helper import _HashFilename
 from gslib.copy_helper import _ParseParallelUploadTrackerFile
+from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import ObjectFromTracker
+from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
+from gslib.hashing_helper import CalculateMd5FromContents
+from gslib.storage_url import StorageUrlFromString
+from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.util import CreateLock
 
 
@@ -123,3 +129,206 @@ class TestCpFuncs(GsUtilUnitTestCase):
     with open(tracker_file, 'rb') as f:
       lines = f.read().splitlines()
     self.assertEqual(expected_contents, lines)
+
+  def test_FilterExistingComponentsNonVersioned(self):
+    """Tests upload with a variety of component states."""
+    mock_api = MockCloudApi()
+    bucket_name = self.MakeTempName('bucket')
+    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file_lock = CreateLock()
+
+    # dst_obj_metadata used for passing content-type.
+    empty_object = apitools_messages.Object()
+
+    # Already uploaded, contents still match, component still used.
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents='1')
+    fpath_uploaded_correctly_url = StorageUrlFromString(
+        str(fpath_uploaded_correctly))
+    object_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s' % (
+        self.default_provider, bucket_name,
+        fpath_uploaded_correctly))
+    with open(fpath_uploaded_correctly) as f_in:
+      fpath_uploaded_correctly_md5 = CalculateMd5FromContents(f_in)
+    mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_uploaded_correctly,
+                                 md5Hash=fpath_uploaded_correctly_md5),
+        contents='1')
+
+    args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
+        object_uploaded_correctly_url, '', empty_object, tracker_file,
+        tracker_file_lock)
+
+    # Not yet uploaded, but needed.
+    fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents='2')
+    fpath_not_uploaded_url = StorageUrlFromString(str(fpath_not_uploaded))
+    object_not_uploaded_url = StorageUrlFromString('%s://%s/%s' % (
+        self.default_provider, bucket_name, fpath_not_uploaded))
+    args_not_uploaded = PerformParallelUploadFileToObjectArgs(
+        fpath_not_uploaded, 0, 1, fpath_not_uploaded_url,
+        object_not_uploaded_url, '', empty_object, tracker_file,
+        tracker_file_lock)
+
+    # Already uploaded, but contents no longer match. Even though the contents
+    # differ, we don't delete this since the bucket is not versioned and it
+    # will be overwritten anyway.
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
+    object_wrong_contents_url = StorageUrlFromString('%s://%s/%s' % (
+        self.default_provider, bucket_name, fpath_wrong_contents))
+    with open(self.CreateTempFile(contents='_')) as f_in:
+      fpath_wrong_contents_md5 = CalculateMd5FromContents(f_in)
+    mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_wrong_contents,
+                                 md5Hash=fpath_wrong_contents_md5),
+        contents='1')
+
+    args_wrong_contents = PerformParallelUploadFileToObjectArgs(
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
+        object_wrong_contents_url, '', empty_object, tracker_file,
+        tracker_file_lock)
+
+    # Exists in tracker file, but component object no longer exists.
+    fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents='5')
+    fpath_remote_deleted_url = StorageUrlFromString(
+        str(fpath_remote_deleted))
+    args_remote_deleted = PerformParallelUploadFileToObjectArgs(
+        fpath_remote_deleted, 0, 1, fpath_remote_deleted_url, '', '',
+        empty_object, tracker_file, tracker_file_lock)
+
+    # Exists in tracker file and already uploaded, but no longer needed.
+    fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
+    with open(fpath_no_longer_used) as f_in:
+      file_md5 = CalculateMd5FromContents(f_in)
+    mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name='foo6', md5Hash=file_md5), contents='6')
+
+    dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
+                fpath_not_uploaded: args_not_uploaded,
+                fpath_wrong_contents: args_wrong_contents,
+                fpath_remote_deleted: args_remote_deleted}
+
+    existing_components = [ObjectFromTracker(fpath_uploaded_correctly, ''),
+                           ObjectFromTracker(fpath_wrong_contents, ''),
+                           ObjectFromTracker(fpath_remote_deleted, ''),
+                           ObjectFromTracker(fpath_no_longer_used, '')]
+
+    bucket_url = StorageUrlFromString('%s://%s' % (self.default_provider,
+                                                   bucket_name))
+
+    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
+        FilterExistingComponents(dst_args, existing_components,
+                                 bucket_url, mock_api))
+
+    for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
+      self.assertTrue(arg in components_to_upload)
+    self.assertEqual(1, len(uploaded_components))
+    self.assertEqual(args_uploaded_correctly.dst_url.GetUrlString(),
+                     uploaded_components[0].GetUrlString())
+    self.assertEqual(1, len(existing_objects_to_delete))
+    no_longer_used_url = StorageUrlFromString('%s://%s/%s' % (
+        self.default_provider, bucket_name, fpath_no_longer_used))
+    self.assertEqual(no_longer_used_url.GetUrlString(),
+                     existing_objects_to_delete[0].GetUrlString())
+
+  def test_FilterExistingComponentsVersioned(self):
+    """Tests upload with versionined parallel components."""
+
+    mock_api = MockCloudApi()
+    bucket_name = self.MakeTempName('bucket')
+    mock_api.MockCreateVersionedBucket(bucket_name)
+
+    # dst_obj_metadata used for passing content-type.
+    empty_object = apitools_messages.Object()
+
+    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file_lock = CreateLock()
+
+    # Already uploaded, contents still match, component still used.
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents='1')
+    fpath_uploaded_correctly_url = StorageUrlFromString(
+        str(fpath_uploaded_correctly))
+    with open(fpath_uploaded_correctly) as f_in:
+      fpath_uploaded_correctly_md5 = CalculateMd5FromContents(f_in)
+    object_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_uploaded_correctly,
+                                 md5Hash=fpath_uploaded_correctly_md5),
+        contents='1')
+    object_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s#%s' % (
+        self.default_provider, bucket_name,
+        fpath_uploaded_correctly, object_uploaded_correctly.generation))
+    args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
+        object_uploaded_correctly_url, object_uploaded_correctly.generation,
+        empty_object, tracker_file, tracker_file_lock)
+
+    # Duplicate object name in tracker file, but uploaded correctly.
+    fpath_duplicate = fpath_uploaded_correctly
+    fpath_duplicate_url = StorageUrlFromString(str(fpath_duplicate))
+    duplicate_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_duplicate,
+                                 md5Hash=fpath_uploaded_correctly_md5),
+        contents='1')
+    duplicate_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s#%s' % (
+        self.default_provider, bucket_name,
+        fpath_uploaded_correctly, duplicate_uploaded_correctly.generation))
+    args_duplicate = PerformParallelUploadFileToObjectArgs(
+        fpath_duplicate, 0, 1, fpath_duplicate_url,
+        duplicate_uploaded_correctly_url,
+        duplicate_uploaded_correctly.generation, empty_object, tracker_file,
+        tracker_file_lock)
+
+    # Already uploaded, but contents no longer match.
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
+    with open(self.CreateTempFile(contents='_')) as f_in:
+      fpath_wrong_contents_md5 = CalculateMd5FromContents(f_in)
+    object_wrong_contents = mock_api.MockCreateObjectWithMetadata(
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_wrong_contents,
+                                 md5Hash=fpath_wrong_contents_md5),
+        contents='_')
+    wrong_contents_url = StorageUrlFromString('%s://%s/%s#%s' % (
+        self.default_provider, bucket_name,
+        fpath_wrong_contents, object_wrong_contents.generation))
+    args_wrong_contents = PerformParallelUploadFileToObjectArgs(
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
+        wrong_contents_url, '', empty_object, tracker_file,
+        tracker_file_lock)
+
+    dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
+                fpath_wrong_contents: args_wrong_contents}
+
+    existing_components = [
+        ObjectFromTracker(fpath_uploaded_correctly,
+                          object_uploaded_correctly_url.generation),
+        ObjectFromTracker(fpath_duplicate,
+                          duplicate_uploaded_correctly_url.generation),
+        ObjectFromTracker(fpath_wrong_contents,
+                          wrong_contents_url.generation)]
+
+    bucket_url = StorageUrlFromString('%s://%s' % (self.default_provider,
+                                                   bucket_name))
+
+    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
+        FilterExistingComponents(dst_args, existing_components,
+                                 bucket_url, mock_api))
+
+    self.assertEqual([args_wrong_contents], components_to_upload)
+    self.assertEqual(args_uploaded_correctly.dst_url.GetUrlString(),
+                     uploaded_components[0].GetUrlString())
+    expected_to_delete = [(args_wrong_contents.dst_url.object_name,
+                           args_wrong_contents.dst_url.generation),
+                          (args_duplicate.dst_url.object_name,
+                           args_duplicate.dst_url.generation)]
+    for uri in existing_objects_to_delete:
+      self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
+    self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
+
