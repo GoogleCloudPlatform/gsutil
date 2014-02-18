@@ -1877,7 +1877,8 @@ class CopyHelper(object):
 
     if (not recursive_move_to_new_subdir and (
         exp_dst_url.IsFileUrl() or self._ShouldTreatDstUrlAsBucketSubDir(
-            have_multiple_srcs, exp_dst_url, have_existing_dest_subdir))):
+            have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+            src_url_names_container))):
       if exp_dst_url.object_name and exp_dst_url.object_name.endswith(
           exp_dst_url.delim):
         dst_key_name = '%s%s%s' % (
@@ -1938,7 +1939,8 @@ class CopyHelper(object):
               src_url.generation == dst_url.generation)
 
   def _ShouldTreatDstUrlAsBucketSubDir(self, have_multiple_srcs, dst_url,
-                                       have_existing_dest_subdir):
+                                       have_existing_dest_subdir,
+                                       src_url_names_container):
     """Checks whether dst_url should be treated as a bucket "sub-directory".
 
     The decision about whether something constitutes a bucket "sub-directory"
@@ -1953,6 +1955,10 @@ class CopyHelper(object):
     exists, when running the command:
       gsutil cp file1 file2 gs://bucket/abc
     we should copy file1 to gs://bucket/abc/file1 (and similarly for file2).
+    Finally, for recursive copies, if the source is a container then we should
+    copy to a container as the target.  For example, when running the command:
+      gsutil cp -r dir1 gs://bucket/dir2
+    we should copy the subtree of dir1 to gs://bucket/dir2.
 
     Note that we don't disallow naming a bucket "sub-directory" where there's
     already an object at that URL. For example it's legitimate (albeit
@@ -1968,12 +1974,17 @@ class CopyHelper(object):
       dst_url: StorageUrl to check.
       have_existing_dest_subdir: bool indicator whether dest is an existing
         subdirectory.
+      src_url_names_container: bool indicator of whether the source URL
+        is a container.
 
     Returns:
       bool indicator.
     """
-    return ((have_multiple_srcs and dst_url.IsCloudUrl())
-            or (have_existing_dest_subdir))
+    if have_existing_dest_subdir:
+      return True
+    if dst_url.IsCloudUrl():
+      return (have_multiple_srcs or
+              (src_url_names_container and self.recursion_requested))
 
   def _ShouldTreatDstUrlAsSingleton(self, have_multiple_srcs,
                                     have_existing_dest_subdir, dst_url):
@@ -1991,6 +2002,8 @@ class CopyHelper(object):
     Returns:
       bool indicator.
     """
+    if self.recursion_requested:
+      return False
     if dst_url.IsFileUrl():
       return not dst_url.IsDirectory()
     else:  # dst_url.IsCloudUrl()
