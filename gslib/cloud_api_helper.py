@@ -27,13 +27,13 @@ def ValidateDstObjectMetadata(dst_obj_metadata):
   """
   if not dst_obj_metadata:
     raise ArgumentException(
-        "No object metadata supplied for destination object.")
+        'No object metadata supplied for destination object.')
   if not dst_obj_metadata.name:
     raise ArgumentException(
-        "Object metadata supplied for destination object had no object name.")
+        'Object metadata supplied for destination object had no object name.')
   if not dst_obj_metadata.bucket:
     raise ArgumentException(
-        "Object metadata supplied for destination object had no bucket name.")
+        'Object metadata supplied for destination object had no bucket name.')
 
 
 def GetDownloadSerializationDict(src_obj_metadata):

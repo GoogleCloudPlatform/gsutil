@@ -26,6 +26,7 @@ import datetime
 import errno
 import gzip
 import hashlib
+from hashlib import md5
 import json
 import logging
 import mimetypes
@@ -41,20 +42,18 @@ import time
 
 from boto import config
 from boto.exception import ResumableUploadException
-from hashlib import md5
 import crcmod
-import gslib
 
+import gslib
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
-from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
-from gslib.command import Command
+from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
@@ -101,9 +100,9 @@ if IS_WINDOWS:
 # assigning to a class member (which breaks pickling done by multiprocessing).
 # For details see
 # http://stackoverflow.com/questions/16377215/how-to-pickle-a-namedtuple-instance-correctly
-global global_opts_tuple
 # Similarly can't pickle logger.
-global global_logger
+# pylint: disable=global-at-module-level
+global global_opts_tuple, global_logger
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
     u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
@@ -160,6 +159,7 @@ class TrackerFileType(object):
 # pylint: disable=g-short-docstring-punctuation,g-doc-return-or-yield
 # pylint: disable=g-no-space-after-docstring-summary,g-doc-args
 # pylint: disable=protected-access
+# pylint: disable=undefined-variable
 def _PerformResumableUploadIfAppliesWrapper(cls, args):
   """A wrapper for cp._PerformResumableUploadIfApplies, which takes in a
      PerformResumableUploadIfAppliesArgs, extracts the arguments to form the
@@ -170,14 +170,15 @@ def _PerformResumableUploadIfAppliesWrapper(cls, args):
   with fp:
     already_split = True
     ret = cls._PerformResumableUploadIfApplies(
-        fp, args.src_url, args.dst_url, opts_tuple.canned_acl,
+        fp, args.src_url, args.dst_url, global_opts_tuple.canned_acl,
         args.headers, fp.length, already_split)
 
   # Update the tracker file after each call in order to be as robust as possible
   # against interrupts, failures, etc.
   component = ret[2]
   _AppendComponentTrackerToParallelUploadTrackerFile(
-      opts_tuple.tracker_file, component, opts_tuple.tracker_file_lock)
+      global_opts_tuple.tracker_file, component,
+      global_opts_tuple.tracker_file_lock)
   return ret
 
 
@@ -190,6 +191,8 @@ def CreateOptsTuple():
       'daisy_chain read_args_from_stdin print_ver '
       'use_manifest preserve_acl canned_acl canned def_acl')
 
+
+# pylint: disable=undefined-variable
 def GetOptsTuple():
   """Returns namedtuple holding CopyHelper options."""
   return global_opts_tuple
@@ -201,7 +204,8 @@ class CopyHelper(object):
   def __init__(self, command_obj, command_name, args, opts_tuple, sub_opts,
                headers, manifest, logger, copy_exception_handler,
                rm_exception_handler):
-    """
+    """Constructor.
+
     Args:
       command_obj: gsutil command instance of calling command.
       command_name: The name of the command being run.
@@ -229,7 +233,7 @@ class CopyHelper(object):
     self.recursion_requested = command_obj.recursion_requested
     self.test_method = command_obj.test_method
     self.debug = command_obj.debug
-    self.project_id= command_obj.project_id
+    self.project_id = command_obj.project_id
     self.resumable_threshold = config.getint('GSUtil', 'resumable_threshold',
                                              TWO_MB)
 
@@ -281,7 +285,7 @@ class CopyHelper(object):
                              (exp_src_url.GetUrlString(), dst_path))
 
   def InsistDstUrlNamesContainer(self, exp_dst_url,
-                                  have_existing_dst_container, command_name):
+                                 have_existing_dst_container, command_name):
     """Ensures the destination URL names a container.
 
     Acceptable containers include directory, bucket, bucket
@@ -350,6 +354,15 @@ class CopyHelper(object):
   # TODO: gsutil-beta: Port this function and other parallel upload functions,
   # then re-enable linting for it.
   def _GetTrackerFilePath(self, dst_url, tracker_file_type, src_url=None):
+    """Returns path to tracker file.
+
+    Args:
+      dst_url: The dest URL.
+      tracker_file_type: UPLOAD or DOWNLOAD.
+      src_url: The source URL.
+
+    Returns: file path.
+    """
     resumable_tracker_dir = CreateTrackerDirIfNeeded()
     if tracker_file_type == TrackerFileType.UPLOAD:
       # Encode the dest bucket and object name into the tracker file name.
@@ -679,8 +692,7 @@ class CopyHelper(object):
     return StorageUrlFromString(gzip_path), gzip_size
 
   def _UploadFileToObject(self, src_url, src_obj_filestream, src_obj_size,
-                          dst_url, dst_obj_metadata, preconditions, gsutil_api,
-                          allow_splitting=True):
+                          dst_url, dst_obj_metadata, preconditions, gsutil_api):
     """Uploads a local file to an object.
 
     Args:
@@ -691,8 +703,6 @@ class CopyHelper(object):
       dst_obj_metadata: Metadata to be applied to the destination object.
       preconditions: Preconditions to use for the copy.
       gsutil_api: gsutil Cloud API to use for the copy.
-      allow_splitting: If true, allow this upload to be split into parallel
-                       uploads and composed.
     Returns:
       (elapsed_time, bytes_transferred, dst_url with generation,
       md5 hash of destination) excluding overhead like initial GET.
@@ -1126,6 +1136,13 @@ class CopyHelper(object):
     return digests
 
   def _CreateDigestsFromLocalFile(self, algs, file_name, src_obj_metadata):
+    """Creates CRC32C and/or MD5 digest from file_name.
+
+    Args:
+      algs: list of algorithms to compute.
+      file_name: file to digest.
+      src_obj_metadata: metadta of source object.
+    """
     digests = {}
     if 'md5' in algs:
       if src_obj_metadata.size and src_obj_metadata.size > TWO_MB:
@@ -1206,6 +1223,7 @@ class CopyHelper(object):
     return (end_time - start_time, os.path.getsize(dst_url.object_name),
             dst_url, None)
 
+  # pylint: disable=undefined-variable
   def _CopyObjToObjDaisyChainMode(self, src_url, src_obj_metadata, dst_url,
                                   dst_obj_metadata, preconditions, gsutil_api):
     """Copies from src_url to dst_url in "daisy chain" mode.
@@ -1292,6 +1310,7 @@ class CopyHelper(object):
     return (end_time - start_time, src_obj_metadata.size, result_url,
             uploaded_object.md5Hash)
 
+  # pylint: disable=undefined-variable
   def PerformCopy(self, src_url, dst_url, gsutil_api):
     """Performs copy from src_url to dst_url, handling various special cases.
 
@@ -1705,7 +1724,7 @@ class CopyHelper(object):
     blr_expansion = CreateWildcardIterator(dst_url_str, gsutil_api,
                                            debug=self.debug,
                                            project_id=self.project_id).IterAll(
-        bucket_listing_fields=['name'])
+                                               bucket_listing_fields=['name'])
     for blr in blr_expansion:
       if blr.ref_type == BucketListingRefType.PREFIX:
         return (storage_url, True)
@@ -1713,9 +1732,9 @@ class CopyHelper(object):
     return (storage_url, False)
 
   def ConstructDstUrl(self, src_url, exp_src_url,
-                       src_url_names_container, src_url_expands_to_multi,
-                       have_multiple_srcs, exp_dst_url,
-                       have_existing_dest_subdir):
+                      src_url_names_container, src_url_expands_to_multi,
+                      have_multiple_srcs, exp_dst_url,
+                      have_existing_dest_subdir):
     """Constructs the destination URL for a given exp_src_url/exp_dst_url pair.
 
     Uses context-dependent naming rules that mimic Linux cp and mv behavior.
