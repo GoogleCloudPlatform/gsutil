@@ -155,6 +155,37 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
     return self.new_key()
 
 
+def SetBotoConfig(section, name, value, revert_list):
+  """Sets boto configuration temporarily for testing.
+
+  Configuration should later be reverted to its original setting using
+  RevertBotoConfig.
+
+  Args:
+    section: Boto config section to set
+    name: Boto config name to set
+    value: Value to set
+    revert_list: List for tracking configs to revert.
+  """
+  prev_value = boto.config.get(section, name, None)
+  revert_list.append((section, name, prev_value))
+  boto.config.set(section, name, value)
+
+
+def RevertBotoConfig(revert_list):
+  """Reverts boto config modifications made by SetBotoConfig.
+
+  Args:
+    revert_list: List of boto config modifications created by calls to
+                 SetBotoConfig.
+  """
+  for section, name, value in revert_list:
+    if value is None:
+      boto.config.remove_option(section, name)
+    else:
+      boto.config.set(section, name, value)
+
+
 def PerformsFileToObjectUpload(func):
   """Decorator indicating that a test uploads from a local file to an object.
 
@@ -177,11 +208,16 @@ def PerformsFileToObjectUpload(func):
       # Run the test normally once.
       func(*args, **kwargs)
 
-      # Try again, forcing parallel composite uploads.
-      boto.config.set('GSUtil', 'parallel_composite_upload_threshold', '1')
+      # Create config file that forces parallel composite uploads.
+      boto_configs = []
+      SetBotoConfig('GSUtil', 'parallel_composite_upload_threshold', '1',
+                    boto_configs)
+      SetBotoConfig('GSUtil', 'check_hashes', 'always', boto_configs)
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
+      RevertBotoConfig(boto_configs)
 
+      # Try again, forcing parallel composite uploads.
       with SetBotoConfigForTest(tmp_filename):
         func(*args, **kwargs)
     finally:

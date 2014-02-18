@@ -22,14 +22,13 @@ import os
 import time
 import traceback
 
+from gslib import copy_helper
 from gslib.cat_helper import CatHelper
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.commands.compose import MAX_COMPONENT_COUNT
-from gslib.copy_helper import CopyHelper
 from gslib.copy_helper import CreateCopyHelperOpts
-from gslib.copy_helper import GetCopyHelperOpts
 from gslib.copy_helper import ItemExistsError
 from gslib.copy_helper import Manifest
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
@@ -522,10 +521,9 @@ class CpCommand(Command):
     """Worker function for performing the actual copy (and rm, for mv)."""
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
     exp_dst_url = self.exp_dst_url
-    copy_helper = self.copy_helper
     have_existing_dst_container = self.have_existing_dst_container
 
-    copy_helper_opts = GetCopyHelperOpts()
+    copy_helper_opts = copy_helper.GetCopyHelperOpts()
     if copy_helper_opts.perform_mv:
       cmd_name = 'mv'
     else:
@@ -575,7 +573,8 @@ class CpCommand(Command):
 
     dst_url = copy_helper.ConstructDstUrl(
         src_url, exp_src_url, src_url_names_container, src_url_expands_to_multi,
-        have_multiple_srcs, exp_dst_url, have_existing_dest_subdir)
+        have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+        self.recursion_requested)
     dst_url = copy_helper.FixWindowsNaming(src_url, dst_url)
 
     copy_helper.CheckForDirFileConflict(exp_src_url, dst_url)
@@ -596,7 +595,11 @@ class CpCommand(Command):
         self.manifest.Initialize(
             exp_src_url.GetUrlString(), dst_url.GetUrlString())
       (elapsed_time, bytes_transferred, result_url, md5) = (
-          copy_helper.PerformCopy(exp_src_url, dst_url, gsutil_api))
+          copy_helper.PerformCopy(
+              self.logger, exp_src_url, dst_url, gsutil_api,
+              self, _CopyExceptionHandler, allow_splitting=True,
+              headers=self.headers, manifest=self.manifest,
+              gzip_exts=self.gzip_exts, test_method=self.test_method))
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.GetUrlString(), 'md5', md5)
@@ -608,7 +611,8 @@ class CpCommand(Command):
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.GetUrlString(), 0, 'skip', message)
     except Exception, e:
-      if copy_helper.IsNoClobberServerException(e):
+      if (copy_helper_opts.no_clobber and
+          copy_helper.IsNoClobberServerException(e)):
         message = 'Rejected (noclobber): %s' % dst_url.GetUrlString()
         self.logger.info(message)
         if copy_helper_opts.use_manifest:
@@ -653,12 +657,6 @@ class CpCommand(Command):
   # Command entry point.
   def RunCommand(self):
     copy_helper_opts = self._ParseOpts()
-    self.copy_helper = CopyHelper(
-        command_obj=self, command_name=self.command_name, args=self.args,
-        copy_helper_opts=copy_helper_opts, sub_opts=self.sub_opts,
-        headers=self.headers, logger=self.logger, manifest=self.manifest,
-        copy_exception_handler=_CopyExceptionHandler,
-        rm_exception_handler=_RmExceptionHandler)
 
     self.total_elapsed_time = self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
@@ -667,14 +665,15 @@ class CpCommand(Command):
     if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
         raise CommandException('Source URLs cannot be specified with -I option')
-      url_strs = self.copy_helper.StdinIterator()
+      url_strs = copy_helper.StdinIterator()
     else:
       if len(self.args) < 2:
         raise CommandException('Wrong number of arguments for "cp" command.')
       url_strs = self.args[:-1]
 
     (exp_dst_url, have_existing_dst_container) = (
-        self.copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api))
+        copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api,
+                                         self.debug, self.project_id))
 
     # If the destination bucket has versioning enabled iterate with
     # all_versions=True. That way we'll copy all versions if the source bucket
@@ -774,11 +773,12 @@ class CpCommand(Command):
     use_manifest = False
     preserve_acl = False
     canned_acl = None
-    # canned, def_acl, and acl_arg are handled by a helper function in parent
+    # canned_acl is handled by a helper function in parent
     # Command class, so save in Command state rather than CopyHelperOpts.
     self.canned = None
-    self.def_acl = None
-    self.acl_arg = None
+
+    # Files matching these extensions should be gzipped before uploading.
+    self.gzip_exts = []
 
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -788,8 +788,6 @@ class CpCommand(Command):
         if o == '-a':
           canned_acl = a
           self.canned = True
-          self.def_acl = False
-          self.acl_arg = a
         if o == '-c':
           self.continue_on_error = True
         elif o == '-D':
@@ -820,6 +818,8 @@ class CpCommand(Command):
           self.recursion_requested = True
         elif o == '-v':
           print_ver = True
+        elif o == '-z':
+          self.gzip_exts = a.split(',')
     if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')

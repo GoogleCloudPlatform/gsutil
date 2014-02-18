@@ -53,7 +53,6 @@ from gslib.parallelism_framework_util import AtomicIncrementDict
 from gslib.parallelism_framework_util import BasicIncrementDict
 from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
-from gslib.storage_uri_builder import StorageUriBuilder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
@@ -249,7 +248,7 @@ def InitializeMultiprocessingVariables():
   # Condition used to notify any waiting threads that a task has finished or
   # that a call to Apply needs a new set of consumer processes.
   need_pool_or_done_cond = manager.Condition()
-  
+
   # Lock used to prevent multiple worker processes from asking the main thread
   # to create a new consumer pool for the same level.
   worker_checking_level_lock = manager.Lock()
@@ -454,7 +453,6 @@ class Command(HelpProvider):
 
     self.credential_store = CredentialStore()
     self.project_id = None
-    self.suri_builder = StorageUriBuilder(debug, bucket_storage_uri_class)
     self.gsutil_api = CloudApiDelegator(
         bucket_storage_uri_class, self.gsutil_api_map,
         self.logger, credential_store=self.credential_store, debug=self.debug)
@@ -1182,7 +1180,7 @@ class Command(HelpProvider):
 
     if process_count > 1:  # Handle process pool creation.
       # Check whether this call will need a new set of workers.
-      
+
       # Each worker must acquire a shared lock before notifying the main thread
       # that it needs a new worker pool, so that at most one worker asks for
       # a new worker pool at once.
@@ -1289,8 +1287,9 @@ class Command(HelpProvider):
 
     task_queue = task_queue or task_queues[recursive_apply_level]
 
-    assert thread_count * process_count > 1, ('Invalid state, calling ' +
-        'command._ApplyThreads with only one thread and process.')
+    assert thread_count * process_count > 1, (
+        'Invalid state, calling command._ApplyThreads with only one thread '
+        'and process.')
     if thread_count > 1:
       worker_pool = WorkerPool(
           thread_count, self.logger,
@@ -1336,6 +1335,7 @@ class Command(HelpProvider):
 
 
 class _ConsumerPool(object):
+
   def __init__(self, processes, task_queue):
     self.processes = processes
     self.task_queue = task_queue

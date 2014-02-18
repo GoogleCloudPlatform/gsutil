@@ -25,9 +25,9 @@ import urllib
 from boto import config
 import crcmod
 
+from gslib import copy_helper
 from gslib.command import Command
 from gslib.command import DummyArgChecker
-from gslib.copy_helper import CopyHelper
 from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -436,7 +436,6 @@ class _DiffIterator(object):
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
     self.command_obj = command_obj
-    self.copy_helper = command_obj.copy_helper
     self.compute_checksums = command_obj.compute_checksums
     self.recursion_requested = command_obj.recursion_requested
     self.logger = self.command_obj.logger
@@ -603,7 +602,6 @@ class _DiffIterator(object):
     # processed. Each time we encounter None in src_url_str or dst_url_str we
     # populate from the respective iterator, and we reset one or the other value
     # to None after yielding an action that disposes of that URL.
-    self.copy_helper = self.command_obj.copy_helper
     while not self.sorted_src_urls_it.IsEmpty() or src_url_str is not None:
       if src_url_str is None:
         (src_url_str, src_size, src_crc32c, src_md5) = self._ParseTmpFileLine(
@@ -611,9 +609,10 @@ class _DiffIterator(object):
         # Skip past base URL and normalize slashes so we can compare across
         # clouds/file systems (including Windows).
         src_url_str_to_check = src_url_str[base_src_url_len:].replace('\\', '/')
-        dst_url_str_would_copy_to = self.copy_helper.ConstructDstUrl(
+        dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
             self.base_src_url, StorageUrlFromString(src_url_str), True, True,
-            True, self.base_dst_url, False).GetUrlString()
+            True, self.base_dst_url, False,
+            self.recursion_requested).GetUrlString()
       if self.sorted_dst_urls_it.IsEmpty():
         # We've reached end of dst URLs, so copy src to dst.
         yield _DiffToApply(
@@ -680,7 +679,9 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     if cls.dryrun:
       cls.logger.info('Would copy %s to %s', src_url, dst_url)
     else:
-      cls.copy_helper.PerformCopy(src_url, dst_url, gsutil_api)
+      copy_helper.PerformCopy(cls.logger, src_url, dst_url, gsutil_api, cls,
+                              _RsyncExceptionHandler,
+                              headers=cls.headers)
   else:
     raise CommandException('Got unexpected DiffAction (%d)'
                            % diff_to_apply.diff_action)
@@ -725,11 +726,10 @@ class RsyncCommand(Command):
       subcommand_help_text={},
   )
 
-  def _InsistContainer(self, copy_helper, url_str):
+  def _InsistContainer(self, url_str):
     """Sanity checks that URL names an existing container.
 
     Args:
-      copy_helper: instance of CopyHelper.
       url_str: URL string to check.
 
     Returns:
@@ -739,7 +739,8 @@ class RsyncCommand(Command):
       CommandException if url_str doesn't name an existing container.
     """
     (url, have_existing_container) = (
-        copy_helper.ExpandUrlToSingleBlr(url_str, self.gsutil_api))
+        copy_helper.ExpandUrlToSingleBlr(url_str, self.gsutil_api, self.debug,
+                                         self.project_id))
     if not have_existing_container:
       raise CommandException(
           'arg (%s) does not name a directory, bucket, or bucket subdir.'
@@ -748,18 +749,12 @@ class RsyncCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the rsync command."""
-    copy_helper_opts = self._ParseOpts()
+    self._ParseOpts()
     if self.compute_checksums and not UsingCrcmodExtension(crcmod):
       self.logger.warn(SLOW_CRCMOD_WARNING)
 
-    self.copy_helper = CopyHelper(
-        command_obj=self, command_name=self.command_name, args=self.args,
-        copy_helper_opts=copy_helper_opts, sub_opts=self.sub_opts,
-        headers=self.headers, logger=self.logger, manifest=None,
-        copy_exception_handler=_RsyncExceptionHandler,
-        rm_exception_handler=_RsyncExceptionHandler)
-    src_url = self._InsistContainer(self.copy_helper, self.args[0])
-    dst_url = self._InsistContainer(self.copy_helper, self.args[1])
+    src_url = self._InsistContainer(self.args[0])
+    dst_url = self._InsistContainer(self.args[1])
 
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0

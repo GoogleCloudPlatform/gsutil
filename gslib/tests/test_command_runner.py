@@ -25,6 +25,8 @@ from gslib.command_runner import HandleArgCoding
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 import gslib.tests.util as util
+from gslib.tests.util import RevertBotoConfig
+from gslib.tests.util import SetBotoConfig
 from gslib.tests.util import unittest
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import SECONDS_PER_DAY
@@ -96,21 +98,13 @@ class TestCommandRunnerUnitTests(
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()
 
-    for section, name, value in self.boto_configs:
-      if value is None:
-        boto.config.remove_option(section, name)
-      else:
-        boto.config.set(section, name, value)
-
-  def _SetBotoConfig(self, section, name, value):
-    prev_value = boto.config.get(section, name, None)
-    self.boto_configs.append((section, name, prev_value))
-    boto.config.set(section, name, value)
+    RevertBotoConfig(self.boto_configs)
 
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
-    self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
+    SetBotoConfig('GSUtil', 'software_update_check_period', '1',
+                  self.boto_configs)
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
     self.running_interactively = False
@@ -160,7 +154,8 @@ class TestCommandRunnerUnitTests(
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_update_should_trigger(self):
     """Tests update should be triggered if time is up."""
-    self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
+    SetBotoConfig('GSUtil', 'software_update_check_period', '1',
+                  self.boto_configs)
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
     # Update will not trigger for package installs.
@@ -172,7 +167,8 @@ class TestCommandRunnerUnitTests(
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_not_time_for_update_yet(self):
     """Tests update not triggered if not time yet."""
-    self._SetBotoConfig('GSUtil', 'software_update_check_period', '3')
+    SetBotoConfig('GSUtil', 'software_update_check_period', '3',
+                  self.boto_configs)
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
     self.assertEqual(
@@ -181,7 +177,8 @@ class TestCommandRunnerUnitTests(
 
   def test_user_says_no_to_update(self):
     """Tests no update triggered if user says no at the prompt."""
-    self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
+    SetBotoConfig('GSUtil', 'software_update_check_period', '1',
+                  self.boto_configs)
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
     command_runner.raw_input = lambda p: 'n'
@@ -192,7 +189,8 @@ class TestCommandRunnerUnitTests(
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_update_check_skipped_with_quiet_mode(self):
     """Tests that update isn't triggered when loglevel is in quiet mode."""
-    self._SetBotoConfig('GSUtil', 'software_update_check_period', '1')
+    SetBotoConfig('GSUtil', 'software_update_check_period', '1',
+                  self.boto_configs)
     with open(self.timestamp_file, 'w') as f:
       f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 

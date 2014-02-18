@@ -139,25 +139,10 @@ def CalculateHashFromContents(fp, hash_alg):
   return hash_alg.hexdigest()
 
 
-def GetMD5FromETag(src_etag):
-  """Returns an MD5 from the etag iff the etag is a valid MD5 hash.
-
-  Args:
-    src_etag: Object etag for which to return the MD5.
-
-  Returns:
-    MD5 in hex string format, or None.
-  """
-  if src_etag and MD5_REGEX.search(src_etag):
-    return src_etag.strip('"\'').lower()
-
-
-def GetHashAlgs(src_etag=None, src_md5=False, src_crc32c=False,
-                src_url_str=None):
+def GetHashAlgs(src_md5=False, src_crc32c=False, src_url_str=None):
   """Returns a dict of hash algorithms for validating an object.
 
   Args:
-    src_etag: Etag for the source object, if present - possibly an MD5.
     src_md5: If True, source object has an md5 hash.
     src_crc32c: If True, source object has a crc32c hash.
     src_url_str: URL string of object being hashed.
@@ -174,8 +159,6 @@ def GetHashAlgs(src_etag=None, src_md5=False, src_crc32c=False,
       'GSUtil', 'check_hashes', 'if_fast_else_fail')
   if check_hashes_config == 'never':
     return hash_algs
-  if GetMD5FromETag(src_etag):
-    hash_algs['md5'] = md5
   if src_md5:
     hash_algs['md5'] = md5
   # If the cloud provider supplies a CRC, we'll compute a checksum to

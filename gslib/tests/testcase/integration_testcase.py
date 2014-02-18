@@ -85,13 +85,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         'GSUtil', 'default_api_version', '1')
 
     if util.RUN_S3_TESTS:
-      self.test_api = 'XML'
-      self.default_provider = 's3'
       self.nonexistent_bucket_name = (
           'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
-    else:
-      self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
-      self.default_provider = 'gs'
 
   # Retry with an exponential backoff if a server error is received. This
   # ensures that we try *really* hard to clean up after ourselves.
