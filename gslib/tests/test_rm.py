@@ -82,7 +82,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('No URLs matched', stderr)
 
   def test_remove_all_versions_recursive_on_bucket(self):
-    """Test that 'rm -ar' works on bucket."""
+    """Test that 'rm -r' works on bucket."""
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = bucket_uri.clone_replace_name('foo')
     k2_uri = bucket_uri.clone_replace_name('foo2')
@@ -96,7 +96,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2g2 = k2_uri.generation or k2_uri.version_id
 
     all_stderr_lines = set()
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)
@@ -117,7 +117,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_remove_all_versions_recursive_on_subdir(self):
-    """Test that 'rm -ar' works on subdir."""
+    """Test that 'rm -r' works on subdir."""
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = bucket_uri.clone_replace_name('dir/foo')
     k2_uri = bucket_uri.clone_replace_name('dir/foo2')
@@ -130,7 +130,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k1g2 = k1_uri.generation or k1_uri.version_id
     k2g2 = k2_uri.generation or k2_uri.version_id
 
-    stderr = self.RunGsUtil(['rm', '-ar', '%s/dir' % suri(bucket_uri)],
+    stderr = self.RunGsUtil(['rm', '-r', '%s/dir' % suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 4)
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g1), stderr)
@@ -239,14 +239,15 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri, 'obj', 'z')
     self.CreateObject(bucket_uri, 'obj', 'z')
     self.CreateObject(bucket_uri, 'obj', 'z')
-    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
+    self.RunGsUtil(['rm', suri(bucket_uri, '**')])
+    stderr = self.RunGsUtil(['rb', suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
-    self.assertIn('versioning enabled', stderr)
+    self.assertIn('Bucket is not empty', stderr)
 
-    # Now try with rm -ra.
+    # Now try with rm -r.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      self.RunGsUtil(['rm', '-ra', suri(bucket_uri)])
+      self.RunGsUtil(['rm', '-r', suri(bucket_uri)])
       # Bucket should be deleted.
       stderr = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stderr=True, expected_status=1)
@@ -346,7 +347,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     all_stderr_lines = set()
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)

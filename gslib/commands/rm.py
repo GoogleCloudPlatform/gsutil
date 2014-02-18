@@ -51,8 +51,12 @@ _detailed_help_text = ("""
     gsutil rm gs://bucket/subdir**
     gsutil rm -R gs://bucket/subdir
 
-  Running gsutil rm -R on a bucket will delete all objects in the bucket, and
-  then delete the bucket:
+  The -R option will also delete all object versions in the subdirectory for
+  versioning-enabled buckets, whereas the ** command will only delete the live
+  version of each object in the subdirectory.
+
+  Running gsutil rm -R on a bucket will delete all versions of all objects in
+  the bucket, and then delete the bucket:
 
     gsutil rm -R gs://bucket
 
@@ -84,10 +88,11 @@ _detailed_help_text = ("""
               errors when removing multiple objects. With this option the gsutil
               exit status will be 0 even if some objects couldn't be removed.
 
-  -R, -r      Causes bucket contents to be removed recursively (i.e., including
-              all objects and subdirectories). If used with a bucket-only URL
-              (like gs://bucket), after deleting objects and subdirectories
-              gsutil will delete the bucket.
+  -R, -r      Causes bucket or bucket subdirectory contents (all objects and
+              subdirectories that it contains) to be removed recursively. If
+              used with a bucket-only URL (like gs://bucket), after deleting
+              objects and subdirectories gsutil will delete the bucket.  The -r
+              flag implies the -a flag and will delete all object versions.
 
   -a          Delete all versions of an object.
 """)
@@ -153,6 +158,7 @@ class RmCommand(Command):
           self.continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+          self.all_versions = True
         elif o == '-v':
           self.logger.info('WARNING: The %s -v option is no longer'
                            ' needed, and will eventually be removed.\n'
@@ -161,25 +167,11 @@ class RmCommand(Command):
     bucket_urls_to_delete = []
     if self.recursion_requested:
       bucket_fields = ['id']
-      # Note that this is inefficient when using the XML API with bucket
-      # wildcards. We make a separate versioning-get call for all buckets, even
-      # those that don't match the wildcard filter.  This can be worked around
-      # by just specifying the -a flag.
-      if not self.all_versions:
-        bucket_fields.append('versioning')
       for url_str in self.args:
         url = StorageUrlFromString(url_str)
         if url.IsBucket() or url.IsProvider():
           for blr in self.WildcardIterator(url_str).IterBuckets(
               bucket_fields=bucket_fields):
-            bucket = blr.root_object
-            if (not self.all_versions and bucket.versioning and
-                bucket.versioning.enabled):
-              raise CommandException(
-                  'Running gsutil rm -R on a bucket-only URL (%s)\nwith '
-                  'versioning enabled will not work without specifying the -a '
-                  'flag. Please try\nagain, using:\n\tgsutil rm -Ra %s'
-                  % (url_str, ' '.join(self.args)))
             bucket_urls_to_delete.append(
                 StorageUrlFromString(blr.GetUrlString()))
 
