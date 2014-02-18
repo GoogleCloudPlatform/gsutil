@@ -363,6 +363,28 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     expected = set([suri(dst_bucket_uri, 'f1'), suri(dst_bucket_uri, 'f2')])
     self.assertEqual(expected, actual)
 
+  @PerformsFileToObjectUpload
+  def testCopyingSubdirRecursiveToNonexistentSubdir(self):
+    """Tests copying a directory with a single file recursively to a bucket.
+
+    The file should end up in a new bucket subdirectory with the file's
+    directory structure starting below the recursive copy point, as in Unix cp.
+
+    Example:
+      filepath: dir1/dir2/foo
+      cp -r dir1 dir3
+      Results in dir3/dir2/foo being created.
+    """
+    src_dir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=src_dir + '/dir1/dir2', file_name='foo')
+    dst_bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', ['-R', src_dir + '/dir1',
+                           suri(dst_bucket_uri, 'dir3')])
+    actual = set(str(u) for u in self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+    expected = set([suri(dst_bucket_uri, 'dir3/dir2/foo')])
+    self.assertEqual(expected, actual)
+
   def testAttemptDirCopyWithoutRecursion(self):
     """Tests copying a directory without -R."""
     src_dir = self.CreateTempDir(test_files=1)
