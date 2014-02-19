@@ -81,7 +81,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
         return_stdout=True, return_stderr=True, expected_status=1)
     # First object should print, second should produce an exception.
     self.assertIn(data1, stdout)
-    self.assertIn('No URLs matched', stderr)
+    self.assertIn('NotFoundException', stderr)
 
     stdout, stderr = self.RunGsUtil(
         ['cat', suri(bucket_uri) + 'nonexistent', suri(obj_uri1)],
@@ -89,7 +89,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
 
     # If first object is invalid, exception should halt output immediately.
     self.assertNotIn(data1, stdout)
-    self.assertIn('No URLs matched', stderr)
+    self.assertIn('NotFoundException', stderr)
 
     # Two valid objects should both print successfully.
     stdout = self.RunGsUtil(['cat', suri(obj_uri1), suri(obj_uri2)],
