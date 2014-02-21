@@ -20,8 +20,6 @@ import tempfile
 
 import boto
 from boto import config
-import httplib2
-from third_party.oauth2_plugin import oauth2_helper
 
 import gslib
 from gslib.cloud_api import AccessDeniedException
@@ -54,6 +52,8 @@ from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
+import httplib2
+from third_party.oauth2_plugin import oauth2_helper
 
 # Implementation supports only 'gs' URIs, so provider is unused.
 # pylint: disable=unused-argument
@@ -559,12 +559,13 @@ class GcsJsonApi(CloudApi):
                                        object_name=object_name,
                                        generation=generation)
 
-  def _UploadObject(self, upload_stream, object_metadata, preconditions=None,
-                    provider=None, fields=None, size=None,
+  def _UploadObject(self, upload_stream, object_metadata, canned_acl=None,
+                    size=None, preconditions=None, provider=None, fields=None,
                     serialization_data=None, tracker_callback=None,
                     progress_callback=None, apitools_strategy='simple'):
     """Upload implementation, apitools_strategy plus gsutil Cloud API args."""
     ValidateDstObjectMetadata(object_metadata)
+    assert not canned_acl, 'Canned ACLs not supported by JSON API.'
 
     bytes_uploaded_container = BytesUploadedContainer()
 
@@ -651,37 +652,41 @@ class GcsJsonApi(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
 
-  def UploadObjectResumable(
-      self, upload_stream, object_metadata, preconditions=None, provider=None,
-      fields=None, size=None, serialization_data=None, tracker_callback=None,
-      progress_callback=None):
+  def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
+                   size=None, preconditions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     return self._UploadObject(
-        upload_stream, object_metadata, preconditions=preconditions,
-        fields=fields, size=size, serialization_data=serialization_data,
+        upload_stream, object_metadata, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields, size=size,
+        apitools_strategy='simple')
+
+  def UploadObjectStreaming(self, upload_stream, object_metadata,
+                            canned_acl=None, preconditions=None, provider=None,
+                            fields=None):
+    """See CloudApi class for function doc strings."""
+    # Streaming indicated by not passing a size.
+    return self._UploadObject(
+        upload_stream, object_metadata, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields, apitools_strategy='simple')
+
+  def UploadObjectResumable(
+      self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
+      provider=None, fields=None, size=None, serialization_data=None,
+      tracker_callback=None, progress_callback=None):
+    """See CloudApi class for function doc strings."""
+    return self._UploadObject(
+        upload_stream, object_metadata, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields, size=size,
+        serialization_data=serialization_data,
         tracker_callback=tracker_callback, progress_callback=progress_callback,
         apitools_strategy='resumable')
 
-  def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            preconditions=None, provider=None, fields=None):
-    """See CloudApi class for function doc strings."""
-    # Streaming indicated by not passing a size.
-    return self._UploadObject(upload_stream, object_metadata,
-                              preconditions=preconditions, fields=fields,
-                              apitools_strategy='simple')
-
-  def UploadObject(self, upload_stream, object_metadata,
-                   preconditions=None, provider=None, fields=None, size=None):
-    """See CloudApi class for function doc strings."""
-    return self._UploadObject(upload_stream, object_metadata,
-                              preconditions=preconditions, fields=fields,
-                              size=size, apitools_strategy='simple')
-
   def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, preconditions=None, provider=None,
-                 fields=None):
+                 src_generation=None, canned_acl=None, preconditions=None,
+                 provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     ValidateDstObjectMetadata(dst_obj_metadata)
+    assert not canned_acl, 'Canned ACLs not supported by JSON API.'
 
     if src_generation:
       src_generation = long(src_generation)

@@ -243,36 +243,38 @@ class CloudApiDelegator(CloudApi):
         progress_callback=progress_callback,
         serialization_data=serialization_data, digesters=digesters)
 
+  def UploadObject(self, upload_stream, object_metadata, size=None,
+                   canned_acl=None, preconditions=None, provider=None,
+                   fields=None):
+    return self._GetApi(provider).UploadObject(
+        upload_stream, object_metadata, size=size, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields)
+
   def UploadObjectResumable(
-      self, upload_stream, object_metadata, preconditions=None, provider=None,
-      fields=None, size=None, serialization_data=None, tracker_callback=None,
-      progress_callback=None):
+      self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
+      provider=None, fields=None, size=None, serialization_data=None,
+      tracker_callback=None, progress_callback=None):
     return self._GetApi(provider).UploadObjectResumable(
-        upload_stream, object_metadata,
+        upload_stream, object_metadata, canned_acl=canned_acl,
         preconditions=preconditions, size=size, fields=fields,
         serialization_data=serialization_data,
         tracker_callback=tracker_callback,
         progress_callback=progress_callback)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            preconditions=None, provider=None, fields=None):
+                            canned_acl=None, preconditions=None, provider=None,
+                            fields=None):
     return self._GetApi(provider).UploadObjectStreaming(
-        upload_stream, object_metadata, preconditions=preconditions,
-        fields=fields)
-
-  def UploadObject(self, upload_stream, object_metadata, size=None,
-                   preconditions=None, provider=None, fields=None):
-    return self._GetApi(provider).UploadObject(
-        upload_stream, object_metadata, preconditions=preconditions,
-        size=size, fields=fields)
+        upload_stream, object_metadata, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields)
 
   def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, preconditions=None, provider=None,
-                 fields=None):
+                 src_generation=None, canned_acl=None, preconditions=None,
+                 provider=None, fields=None):
     return self._GetApi(provider).CopyObject(
         src_bucket_name, src_obj_name, dst_obj_metadata,
-        src_generation=src_generation, preconditions=preconditions,
-        fields=fields)
+        src_generation=src_generation, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields)
 
   def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
                     preconditions=None, provider=None, fields=None):

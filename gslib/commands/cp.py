@@ -22,8 +22,6 @@ import os
 import time
 import traceback
 
-from gslib.bucket_listing_ref import BucketListingRef
-from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.cat_helper import CatHelper
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
@@ -38,7 +36,6 @@ from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
-from gslib.name_expansion import NameExpansionResult
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import CreateLock
@@ -620,15 +617,6 @@ class CpCommand(Command):
       # Some cases don't return a version-specific URL (e.g., if destination
       # is a file).
       self.logger.info('Created: %s' % result_url.GetUrlString())
-
-    if opts_tuple.canned_acl:
-      # Package up destination URL in a NameExpansionResult so SetAclFunc
-      # can operate on it.  All that is used is the blr to get the URL string.
-      dst_blr = BucketListingRef(dst_url.GetUrlString(),
-                                 BucketListingRefType.OBJECT)
-      dst_name_ex_result = NameExpansionResult('', False, False, False, dst_blr,
-                                               have_existing_dst_container=None)
-      self.SetAclFunc(dst_name_ex_result, thread_state=thread_state)
 
     # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
     # since we call copy internally from move and don't specify the -n flag)
