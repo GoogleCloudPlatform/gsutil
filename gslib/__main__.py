@@ -102,7 +102,7 @@ def _Cleanup():
 def _OutputAndExit(message):
   """Outputs message and exists with code 1."""
   from gslib.util import UTF8  # pylint: disable=g-import-not-at-top
-  if debug == 4 or test_exception_traces:
+  if debug >= 2 or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n' %
            re.sub('\\n', '\n    ', stack_trace))
@@ -213,7 +213,7 @@ def main():
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Passing debug=2 causes boto to include httplib header output.
-        debug = 2
+        debug = 3
       elif o in ('-D', '--detailedDebug'):
         # We use debug level 3 to ask gsutil code to output more detailed
         # debug output. This is a bit of a hack since it overloads the same
@@ -251,9 +251,7 @@ def main():
     httplib2.debuglevel = debug
     if debug > 1:
       sys.stderr.write(DEBUG_WARNING)
-    if debug == 2:
-      _ConfigureLogging(level=logging.DEBUG)
-    elif debug > 2:
+    if debug >= 2:
       _ConfigureLogging(level=logging.DEBUG)
       command_runner.RunNamedCommand('ver', ['-l'])
       config_items = []
@@ -301,7 +299,7 @@ def main():
 def _HandleUnknownFailure(e):
   # Called if we fall through all known/handled exceptions. Allows us to
   # print a stacktrace if -D option used.
-  if debug > 2:
+  if debug >= 2:
     stack_trace = traceback.format_exc()
     sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
                      re.sub('\\n', '\n    ', stack_trace))
@@ -327,7 +325,7 @@ def _HandleControlC(signal_num, cur_stack_frame):
     signal_num: Signal that was caught.
     cur_stack_frame: Unused.
   """
-  if debug > 2:
+  if debug >= 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit(
         'DEBUG: Caught signal %d - Exception stack trace:\n'
