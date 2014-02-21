@@ -373,7 +373,9 @@ class CloudWildcardIterator(WildcardIterator):
     Returns:
       BucketListingRef of type OBJECT.
     """
-    if with_version:
+    # Generation can be None in test mocks, so just return the
+    # live object for simplicity.
+    if with_version and gcs_object.generation is not None:
       generation_str = GenerationFromUrlAndString(self.wildcard_url,
                                                   gcs_object.generation)
       object_string = '%s%s#%s' % (bucket_url_string, gcs_object.name,
