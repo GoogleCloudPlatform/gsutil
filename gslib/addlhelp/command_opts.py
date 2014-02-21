@@ -33,12 +33,10 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -d          Shows HTTP requests/headers.
-
-  -D          Shows HTTP requests/headers plus additional debug info needed when
+  -D          Shows HTTP requests/headers and additional debug info needed when
               posting support requests.
 
-  -DD         Shows HTTP requests/headers plus additional debug info plus HTTP
+  -DD         Shows HTTP requests/headers, additional debug info plus HTTP
               upstream payload.
 
   -h          Allows you to specify certain HTTP headers, for example:
