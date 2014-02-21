@@ -544,6 +544,35 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(public_read_acl, new_acl_json)
     _Check()
 
+  @PerformsFileToObjectUpload
+  def test_canned_acl_upload(self):
+    """Tests uploading a file with a canned ACL."""
+    bucket1_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    # Set public-read on the object so we can compare the ACLs.
+    self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
+    public_read_acl = self.RunGsUtil(['acl', 'get', suri(key_uri)],
+                                     return_stdout=True)
+
+    file_name = 'bar'
+    fpath = self.CreateTempFile(file_name=file_name, contents='foo')
+    self.RunGsUtil(['cp', '-a', 'public-read', fpath, suri(bucket1_uri)])
+    new_acl_json = self.RunGsUtil(['acl', 'get', suri(bucket1_uri, file_name)],
+                                  return_stdout=True)
+    self.assertEqual(public_read_acl, new_acl_json)
+
+    resumable_size = boto.config.get('GSUtil', 'resumable_threshold', TWO_MB)
+    resumable_file_name = 'resumable_bar'
+    resumable_contents = os.urandom(resumable_size)
+    resumable_fpath = self.CreateTempFile(
+        file_name=resumable_file_name, contents=resumable_contents)
+    self.RunGsUtil(['cp', '-a', 'public-read', resumable_fpath,
+                    suri(bucket1_uri)])
+    new_resumable_acl_json = self.RunGsUtil(
+        ['acl', 'get', suri(bucket1_uri, resumable_file_name)],
+        return_stdout=True)
+    self.assertEqual(public_read_acl, new_resumable_acl_json)
+
   def test_cp_key_to_local_stream(self):
     bucket_uri = self.CreateBucket()
     contents = 'foo'

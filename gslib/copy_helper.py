@@ -412,6 +412,7 @@ class CopyHelper(object):
       gslib.copy_helper.global_logger.info(
           'Copying %s%s...', src_url.GetUrlString(), content_type_msg)
 
+  # pylint: disable=undefined-variable
   def _CopyObjToObjInTheCloud(self, src_url, src_obj_size, dst_url,
                               dst_obj_metadata, preconditions, gsutil_api):
     """Performs copy-in-the cloud from specified src to dest object.
@@ -438,7 +439,8 @@ class CopyHelper(object):
 
     dst_obj = gsutil_api.CopyObject(
         src_url.bucket_name, src_url.object_name,
-        src_generation=src_url.generation, dst_obj_metadata=dst_obj_metadata,
+        dst_obj_metadata=dst_obj_metadata, src_generation=src_url.generation,
+        canned_acl=global_opts_tuple.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS)
 
@@ -524,6 +526,7 @@ class CopyHelper(object):
         content_type = DEFAULT_CONTENT_TYPE
       dst_obj_metadata.contentType = content_type
 
+  # pylint: disable=undefined-variable
   def _UploadFileToObjectNonResumable(self, src_url, src_obj_filestream,
                                       src_obj_size, dst_url, dst_obj_metadata,
                                       preconditions, gsutil_api):
@@ -550,22 +553,27 @@ class CopyHelper(object):
         crc32c_b64 = base64.encodestring(binascii.unhexlify(
             _CalculateCrc32cFromContents(f_in))).rstrip('\n')
         dst_obj_metadata.crc32c = crc32c_b64
+
     start_time = time.time()
     if src_url.IsStream():
       # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
       uploaded_object = gsutil_api.UploadObjectStreaming(
           src_obj_filestream, object_metadata=dst_obj_metadata,
+          canned_acl=global_opts_tuple.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           fields=UPLOAD_RETURN_FIELDS)
     else:
       uploaded_object = gsutil_api.UploadObject(
           src_obj_filestream, object_metadata=dst_obj_metadata,
+          canned_acl=global_opts_tuple.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           size=src_obj_size, fields=UPLOAD_RETURN_FIELDS)
     end_time = time.time()
     elapsed_time = end_time - start_time
+
     return elapsed_time, uploaded_object
 
+  # pylint: disable=undefined-variable
   def _UploadFileToObjectResumable(self, src_url, src_obj_filestream,
                                    src_obj_size, dst_url, dst_obj_metadata,
                                    preconditions, gsutil_api):
@@ -636,6 +644,7 @@ class CopyHelper(object):
     try:
       uploaded_object = gsutil_api.UploadObjectResumable(
           src_obj_filestream, object_metadata=dst_obj_metadata,
+          canned_acl=global_opts_tuple.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           size=src_obj_size, serialization_data=tracker_data,
           fields=UPLOAD_RETURN_FIELDS,
@@ -1290,6 +1299,7 @@ class CopyHelper(object):
       upload_fp = open(download_path, 'rb')
       uploaded_object = gsutil_api.UploadObject(
           upload_fp, object_metadata=dst_obj_metadata,
+          canned_acl=global_opts_tuple.canned_acl,
           preconditions=preconditions, provider=dst_url.scheme,
           fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size)
 
@@ -1449,25 +1459,35 @@ class CopyHelper(object):
     dst_obj_metadata.name = dst_url.object_name
     dst_obj_metadata.bucket = dst_url.bucket_name
 
-    if src_url.IsCloudUrl():
-      if dst_url.IsFileUrl():
-        return self._DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
-                                          gsutil_api)
-      elif copy_in_the_cloud:
-        return self._CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
-                                            dst_obj_metadata, preconditions,
+    if global_opts_tuple.canned_acl:
+      # No canned ACL support in JSON, force XML API to be used for
+      # upload/copy operations.
+      orig_force_api = gsutil_api.force_api
+      gsutil_api.force_api = ApiSelector.XML
+
+    try:
+      if src_url.IsCloudUrl():
+        if dst_url.IsFileUrl():
+          return self._DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                                             gsutil_api)
-      else:
-        return self._CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
-                                                dst_url, dst_obj_metadata,
-                                                preconditions, gsutil_api)
-    else:  # src_url.IsFileUrl()
-      if dst_url.IsCloudUrl():
-        return self._UploadFileToObject(src_url, src_obj_filestream,
-                                        src_obj_size, dst_url, dst_obj_metadata,
-                                        preconditions, gsutil_api)
-      else:  # dst_url.IsFileUrl()
-        return self._CopyFileToFile(src_url, dst_url)
+        elif copy_in_the_cloud:
+          return self._CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
+                                              dst_obj_metadata, preconditions,
+                                              gsutil_api)
+        else:
+          return self._CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
+                                                  dst_url, dst_obj_metadata,
+                                                  preconditions, gsutil_api)
+      else:  # src_url.IsFileUrl()
+        if dst_url.IsCloudUrl():
+          return self._UploadFileToObject(
+              src_url, src_obj_filestream, src_obj_size, dst_url,
+              dst_obj_metadata, preconditions, gsutil_api)
+        else:  # dst_url.IsFileUrl()
+          return self._CopyFileToFile(src_url, dst_url)
+    finally:
+      if global_opts_tuple.canned_acl:
+        gsutil_api.force_api = orig_force_api
 
   # TODO: gsutil-beta: Port this function and other parallel upload functions,
   # then re-enable linting for it.

@@ -553,13 +553,15 @@ class BotoResumableUpload(object):
                         self.progress_less_iterations, sleep_time_secs)
     time.sleep(sleep_time_secs)
 
-  def SendFile(self, key, fp, headers, cb=None, num_cb=10, hash_algs=None):
+  def SendFile(self, key, fp, headers, canned_acl=None, cb=None, num_cb=10,
+               hash_algs=None):
     """Upload a file to a key into a bucket on GS, resumable upload protocol.
 
     Args:
       key: `boto.s3.key.Key` or subclass representing the upload destination.
       fp: File pointer to upload
       headers: The headers to pass along with the PUT request
+      canned_acl: Optional canned ACL to apply to object.
       cb: Callback function that will be called to report progress on
           the upload.  The callback should accept two integer parameters, the
           first representing the number of bytes that have been successfully
@@ -587,6 +589,9 @@ class BotoResumableUpload(object):
     content_type = 'Content-Type'
     if content_type in headers and headers[content_type] is None:
       del headers[content_type]
+
+    if canned_acl:
+      headers[key.provider.acl_header] = canned_acl
 
     headers['User-Agent'] = UserAgent
 

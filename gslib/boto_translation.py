@@ -589,12 +589,16 @@ class BotoTranslation(CloudApi):
     return self.GetObjectMetadata(bucket_name, object_name,
                                   generation=generation, fields=fields)
 
-  def _PerformSimpleUpload(self, dst_uri, upload_stream, headers=None):
-    dst_uri.set_contents_from_file(upload_stream, headers=headers)
+  def _PerformSimpleUpload(self, dst_uri, upload_stream, canned_acl=None,
+                           headers=None):
+    dst_uri.set_contents_from_file(upload_stream, policy=canned_acl,
+                                   headers=headers)
 
-  def _PerformStreamingUpload(self, dst_uri, upload_stream, headers=None):
+  def _PerformStreamingUpload(self, dst_uri, upload_stream, canned_acl=None,
+                              headers=None):
     if dst_uri.get_provider().supports_chunked_transfer():
-      dst_uri.set_contents_from_stream(upload_stream, headers=headers)
+      dst_uri.set_contents_from_stream(upload_stream, policy=canned_acl,
+                                       headers=headers)
     else:
       # Provider doesn't support chunked transfer, so copy to a temporary
       # file.
@@ -606,21 +610,22 @@ class BotoTranslation(CloudApi):
             out_fp.write(stream_bytes)
             stream_bytes = upload_stream.read(DEFAULT_FILE_BUFFER_SIZE)
         with open(temp_path, 'rb') as in_fp:
-          dst_uri.set_contents_from_file(in_fp, headers=headers)
+          dst_uri.set_contents_from_file(in_fp, policy=canned_acl,
+                                         headers=headers)
       finally:
         os.close(temp_fh)
         os.unlink(temp_path)
 
   def _PerformResumableUpload(self, key, upload_stream, tracker_callback,
-                              serialization_data=None, progress_callback=None,
-                              headers=None):
+                              canned_acl=None, serialization_data=None,
+                              progress_callback=None, headers=None):
     resumable_upload = BotoResumableUpload(
         tracker_callback, self.logger, resume_url=serialization_data)
     # TODO: gsutil-beta: Because we send hash_algs=None to SendFile, we will
     # calculate an md5 on the fly by default.  Unify this approach within the
     # cp command so that it works cleanly for XML and JSON.
-    resumable_upload.SendFile(key, upload_stream, cb=progress_callback,
-                              headers=headers)
+    resumable_upload.SendFile(key, upload_stream, canned_acl=canned_acl,
+                              cb=progress_callback, headers=headers)
 
   def _UploadSetup(self, object_metadata, preconditions=None):
     """Shared upload implementation.
@@ -672,15 +677,15 @@ class BotoTranslation(CloudApi):
         dst_uri.set_xml_acl(s3_acl)
 
   def UploadObjectResumable(
-      self, upload_stream, object_metadata, preconditions=None, provider=None,
-      fields=None, size=None, serialization_data=None, tracker_callback=None,
-      progress_callback=None):
+      self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
+      provider=None, fields=None, size=None, serialization_data=None,
+      tracker_callback=None, progress_callback=None):
     """See CloudApi class for function doc strings."""
     if self.provider == 's3':
       # Resumable uploads are not supported for s3.
       return self.UploadObject(
-          upload_stream, object_metadata, preconditions=preconditions,
-          fields=fields, size=size)
+          upload_stream, object_metadata, canned_acl=canned_acl,
+          preconditions=preconditions, fields=fields, size=size)
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
     if not tracker_callback:
@@ -689,6 +694,7 @@ class BotoTranslation(CloudApi):
     try:
       self._PerformResumableUpload(dst_uri.new_key(headers=headers),
                                    upload_stream, tracker_callback,
+                                   canned_acl=canned_acl,
                                    serialization_data=serialization_data,
                                    progress_callback=progress_callback,
                                    headers=headers)
@@ -701,13 +707,15 @@ class BotoTranslation(CloudApi):
                                        object_name=object_metadata.name)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            preconditions=None, provider=None, fields=None):
+                            canned_acl=None, preconditions=None, provider=None,
+                            fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 
     try:
-      self._PerformStreamingUpload(dst_uri, upload_stream, headers=headers)
+      self._PerformStreamingUpload(dst_uri, upload_stream,
+                                   canned_acl=canned_acl, headers=headers)
       self._SetObjectAcl(object_metadata, dst_uri)
 
       new_key = dst_uri.get_key()
@@ -717,14 +725,15 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
 
-  def UploadObject(self, upload_stream, object_metadata,
+  def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    preconditions=None, size=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 
     try:
-      self._PerformSimpleUpload(dst_uri, upload_stream, headers=headers)
+      self._PerformSimpleUpload(dst_uri, upload_stream, canned_acl=canned_acl,
+                                headers=headers)
       self._SetObjectAcl(object_metadata, dst_uri)
 
       new_key = dst_uri.get_key()
@@ -752,8 +761,8 @@ class BotoTranslation(CloudApi):
                                        generation=generation)
 
   def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, preconditions=None, provider=None,
-                 fields=None):
+                 src_generation=None, canned_acl=None, preconditions=None,
+                 provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     dst_uri = self._StorageUriForObject(dst_obj_metadata.bucket,
@@ -771,19 +780,20 @@ class BotoTranslation(CloudApi):
     self._AddApiVersionToHeaders(headers)
     self._AddPreconditionsToHeaders(preconditions, headers)
 
+    if canned_acl:
+      headers[dst_uri.get_provider().acl_header] = canned_acl
+
+    preserve_acl = True if dst_obj_metadata.acl else False
+    if self.provider == 's3':
+      s3_acl = S3MarkerAclFromObjectMetadata(dst_obj_metadata)
+      if s3_acl:
+        preserve_acl = True
+
     try:
       new_key = dst_uri.copy_key(
-          src_bucket_name, src_obj_name,
+          src_bucket_name, src_obj_name, preserve_acl=preserve_acl,
           headers=headers, src_version_id=src_version_id,
           src_generation=src_generation)
-
-      if dst_obj_metadata.acl:
-        boto_acl = AclTranslation.BotoAclFromMessage(dst_obj_metadata.acl)
-        dst_uri.set_xml_acl(boto_acl.to_xml())
-      if self.provider == 's3':
-        s3_acl = S3MarkerAclFromObjectMetadata(dst_obj_metadata)
-        if s3_acl:
-          dst_uri.set_xml_acl(s3_acl)
 
       return self._BotoKeyToObject(new_key, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:

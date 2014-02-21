@@ -279,14 +279,17 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetObjectMedia must be overloaded')
 
-  def UploadObject(self, upload_stream, object_metadata, size=None,
-                   preconditions=None, provider=None, fields=None):
+  def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
+                   size=None, preconditions=None, provider=None,
+                   fields=None):
     """Uploads object data and metadata.
 
     Args:
       upload_stream: Seekable stream of object data.
       object_metadata: Object metadata for new object.  Must include bucket
                        and object name.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
+                  in object_metadata.
       size: Optional object size.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
@@ -303,13 +306,16 @@ class CloudApi(object):
     raise NotImplementedError('UploadObject must be overloaded')
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            preconditions=None, provider=None, fields=None):
+                            canned_acl=None, preconditions=None, provider=None,
+                            fields=None):
     """Uploads object data and metadata.
 
     Args:
       upload_stream: Stream of object data. May not be seekable.
       object_metadata: Object metadata for new object.  Must include bucket
                        and object name.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
+                  in object_metadata.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
@@ -325,17 +331,20 @@ class CloudApi(object):
     raise NotImplementedError('UploadObject must be overloaded')
 
   def UploadObjectResumable(
-      self, upload_stream, object_metadata, preconditions=None, size=None,
-      serialization_data=None, tracker_callback=None, progress_callback=None,
-      provider=None, fields=None):
+      self, upload_stream, object_metadata, canned_acl=None,
+      size=None, preconditions=None, serialization_data=None,
+      tracker_callback=None, progress_callback=None, provider=None,
+      fields=None):
     """Uploads object data and metadata using a resumable upload strategy.
 
     Args:
       upload_stream: Seekable stream of object data.
       object_metadata: Object metadata for new object.  Must include bucket
                        and object name.
-      preconditions: Preconditions for the request.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
+                  in object_metadata.
       size: Total size of the object.
+      preconditions: Preconditions for the request.
       serialization_data: Dict of {'url' : UploadURL} allowing for uploads to
                           be resumed.
       tracker_callback: Callback function taking a upload URL string.
@@ -361,8 +370,8 @@ class CloudApi(object):
     raise NotImplementedError('UploadObjectResumable must be overloaded')
 
   def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, preconditions=None, provider=None,
-                 fields=None):
+                 src_generation=None, canned_acl=None, preconditions=None,
+                 provider=None, fields=None):
     """Copies an object in the cloud.
 
     Args:
@@ -371,6 +380,8 @@ class CloudApi(object):
       dst_obj_metadata: Object metadata for new object.  Must include bucket
                         and object name.
       src_generation: Generation of the source object to copy.
+      canned_acl: Optional canned ACL to apply to destination object. Overrides
+                  ACL set in dst_obj_metadata.
       preconditions: Destination object preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
