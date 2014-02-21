@@ -30,6 +30,7 @@ from gslib.third_party.storage_apitools import exceptions
 
 __all__ = [
     'GetHttp',
+    'MakeRequest',
     ]
 
 
@@ -76,10 +77,10 @@ class Response(collections.namedtuple(
   __slots__ = ()
 
   def __len__(self):
-    if '-content-encoding' in self.info:
+    if '-content-encoding' in self.info and 'content-range' in self.info:
       # httplib2 rewrites content-length in the case of a compressed
       # transfer; we can't trust the content-length header in that
-      # case, but we *can* trust content-range.
+      # case, but we *can* trust content-range, if it's present.
       _, _, range_spec = self.info['content-range'].partition(' ')
       byte_range, _, _ = range_spec.partition('/')
       start, _, end = byte_range.partition('-')
