@@ -586,6 +586,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['cp', fpath, '-'], return_stdout=True)
     self.assertIn(contents, stdout)
 
+  @PerformsFileToObjectUpload
+  def test_cp_zero_byte_file(self):
+    dst_bucket_uri = self.CreateBucket()
+    src_dir = self.CreateTempDir()
+    fpath = os.path.join(src_dir, 'zero_byte')
+    with open(fpath, 'w') as unused_out_file:
+      pass  # Write a zero byte file
+    self.RunGsUtil(['cp', fpath, suri(dst_bucket_uri)])
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri)], return_stdout=True)
+      self.assertIn(os.path.basename(fpath), stdout)
+    _Check1()
+
+    download_path = os.path.join(src_dir, 'zero_byte_download')
+    self.RunGsUtil(['cp', suri(dst_bucket_uri, 'zero_byte'), download_path])
+    self.assertTrue(os.stat(download_path))
+
   def test_copy_bucket_to_bucket(self):
     """Tests that recursively copying from bucket to bucket.
 

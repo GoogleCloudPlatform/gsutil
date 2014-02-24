@@ -454,13 +454,12 @@ class GcsJsonApi(CloudApi):
       outer_total_size = json.loads(serialization_data)['total_size']
 
     if progress_callback:
-      if outer_total_size:
-        callback_count = outer_total_size / CALLBACK_PER_X_BYTES
-        progress_callback(0, outer_total_size)
-      else:
+      if outer_total_size is None:
         raise ArgumentException('Download size is required when callbacks are '
                                 'requested for a download, but no size was '
                                 'provided.')
+      callback_count = outer_total_size / CALLBACK_PER_X_BYTES
+      progress_callback(0, outer_total_size)
 
     callback_class_factory = DownloadCallbackConnectionClassFactory(
         total_size=outer_total_size, callback_count=callback_count,
