@@ -1073,6 +1073,16 @@ class BotoTranslation(CloudApi):
     if not fields or 'md5Hash' in fields:
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
         md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip('\n')
+      elif self.provider == 's3' and getattr(key, 'etag', None):
+        if not re.match('^"[a-fA-F0-9]{32}"$', key.etag):
+          # S3 etags are MD5s for non-multi-part objects, but multi-part objects
+          # (which include all objects >= 5GB) have a custom checksum
+          # implementation that is not currently supported by gsutil.
+          raise ServiceException('Non-MD5 etag (%s) present for key %s, data '
+                                 'integrity checks are not possible.'
+                                 % (key.etag, key))
+        md5_hash = base64.encodestring(
+            binascii.unhexlify(key.etag.strip('"\''))).rstrip('\n')
 
     # Serialize the boto key in the media link if it is requested.  This
     # way we can later access the key without adding an HTTP call.
