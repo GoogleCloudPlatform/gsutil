@@ -15,6 +15,8 @@
 # limitations under the License.
 """Integration tests for cp command."""
 
+import base64
+import binascii
 import datetime
 import os
 import pkgutil
@@ -34,6 +36,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import unittest
+from gslib.util import CalculateMd5FromContents
 from gslib.util import CreateLock
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -665,6 +668,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri.clone_replace_name('o2'))],
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)
+
+  def test_cp_md5_match(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='bar')
+    with open(fpath, 'r') as f_in:
+      file_md5 = base64.encodestring(binascii.unhexlify(
+          CalculateMd5FromContents(f_in))).rstrip('\n')
+    self.RunGsUtil(['cp', fpath, suri(bucket_uri)])
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertRegexpMatches(stdout,
+                               r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5))
+    _Check1()
 
   @PerformsFileToObjectUpload
   def test_cp_manifest_upload(self):
