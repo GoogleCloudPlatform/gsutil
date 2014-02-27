@@ -15,6 +15,7 @@
 
 import json
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 
@@ -49,6 +50,7 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
   _set_defacl_command = ['defacl', 'set']
   _get_defacl_command = ['defacl', 'get']
 
+  @SkipForS3('A number of configs in this test are not supported by S3')
   def test_set_multi_config(self):
     """Tests that bucket config patching affects only the desired config."""
     bucket_uri = self.CreateBucket()
