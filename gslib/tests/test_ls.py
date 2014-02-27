@@ -25,6 +25,8 @@ from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import unittest
+from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UTF8
 
@@ -261,8 +263,19 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertIn('2 KB', stdout)
     _Check5()
 
+  @unittest.skipIf(IS_WINDOWS,
+                   'Unicode handling on Windows requires mods to site-packages')
   def test_list_unicode_filename(self):
     """Tests listing an object with a unicode filename."""
+    # Note: This test fails on Windows (command.exe). I was able to get ls to
+    # output Unicode filenames correctly by hacking the UniStream class code
+    # shown at
+    # http://stackoverflow.com/questions/878972/windows-cmd-encoding-change-causes-python-crash/3259271
+    # into the start of gslib/commands/ls.py, along with no-op flush and
+    # isastream functions (as an experiment).  However, even with that change,
+    # the current test still fails, since it also needs to run that
+    # stdout/stderr-replacement code. That UniStream class replacement really
+    # needs to be added to the site-packages on Windows python.
     object_name = u'Аудиоархив'
     object_name_bytes = object_name.encode(UTF8)
     bucket_uri = self.CreateVersionedBucket()
@@ -352,5 +365,3 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
                               return_stdout=True)
       self.assertIn(suri(object_uri), stdout)
-
-
