@@ -288,16 +288,17 @@ class BotoTranslation(CloudApi):
         else:
           key_to_convert = key
 
-          # list_bucket does not return fully populated keys.
-          # If we need more than these fields, make an HTTP call to get the key.
-          key_http_fields = set(
-              ['acl', 'cacheControl', 'componentCount',
-               'contentDisposition', 'contentEncoding',
-               'contentLanguage', 'contentType', 'crc32c',
-               'md5Hash', 'metadata', 'timeDeleted'])
+          # Listed keys are populated with these fields during bucket listing.
+          key_http_fields = set(['bucket', 'etag', 'name', 'updated',
+                                 'generation', 'metageneration', 'size'])
 
+          # When fields == None, the caller is requesting all possible fields.
+          # If the caller requested any fields that are not populated by bucket
+          # listing, we'll need to make a separate HTTP call for each object to
+          # get its metadata and populate the remaining fields with the result.
           if not get_fields or (get_fields and not
-                                fields.isdisjoint(key_http_fields)):
+                                get_fields.issubset(key_http_fields)):
+
             generation = None
             if getattr(key, 'generation', None):
               generation = key.generation
