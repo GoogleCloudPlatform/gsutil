@@ -184,8 +184,8 @@ class UpdateCommand(Command):
         'to update using the following commands. You will be prompted for your '
         'password, and the install will run as "root". If you\'re unsure what '
         'this means please ask your system administrator for help:')) + (
-            '\n\tchmod 644 %s\n\tsudo env BOTO_CONFIG=%s gsutil update'
-            '\n\tchmod 600 %s') % (config_files, config_files, config_files),
+            '\n\tsudo chmod 644 %s\n\tsudo env BOTO_CONFIG="%s" gsutil update'
+            '\n\tsudo chmod 600 %s') % (config_files, config_files, config_files),
                            informational=True)
 
   # This list is checked during gsutil update by doing a lowercased
