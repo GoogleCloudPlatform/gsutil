@@ -127,7 +127,7 @@ class RmCommand(Command):
       command_name_aliases=['del', 'delete', 'remove'],
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='afrRv',
+      supported_sub_args='afrR',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -159,10 +159,6 @@ class RmCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
           self.all_versions = True
-        elif o == '-v':
-          self.logger.info('WARNING: The %s -v option is no longer'
-                           ' needed, and will eventually be removed.\n'
-                           % self.command_name)
 
     bucket_urls_to_delete = []
     if self.recursion_requested:

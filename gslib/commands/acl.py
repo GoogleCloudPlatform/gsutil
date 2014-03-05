@@ -255,7 +255,7 @@ class AclCommand(Command):
       command_name_aliases=['getacl', 'setacl', 'chacl'],
       min_args=2,
       max_args=NO_MAX,
-      supported_sub_args='afRrvg:u:d:',
+      supported_sub_args='afRrg:u:d:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
@@ -292,10 +292,6 @@ class AclCommand(Command):
           self.continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
-        elif o == '-v':
-          self.logger.warning('WARNING: The %s -v option is no longer'
-                              ' needed, and will eventually be '
-                              'removed.\n' % self.command_name)
     try:
       self.SetAclCommandHelper(SetAclFuncWrapper, SetAclExceptionHandler)
     except AccessDeniedException, unused_e:

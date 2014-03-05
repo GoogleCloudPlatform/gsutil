@@ -59,11 +59,16 @@ _detailed_help_text = ("""
 
     gsutil rsync -r data gs://mybucket/data
 
-  If you have a large number of files to synchronize you might want to use the
+  If you have a large number of objects to synchronize you might want to use the
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   synchronization:
 
     gsutil -m rsync -r data gs://mybucket/data
+
+  The -m option typically will provide a large performance boost if either the
+  source or destination (or both) is a cloud URL. If both source and
+  destination are file URLs the -m option will typically thrash the disk and
+  slow synchronization down.
 
   To make the local directory "data" the same as the contents of
   gs://mybucket/data:
@@ -165,7 +170,7 @@ _detailed_help_text = ("""
                 using the XML API, as it requires separate HTTP calls for
                 interacting with ACLs. The performance issue can be mitigated to
                 some degree by using gsutil -m rsync to cause parallel
-                synchronization.) Also, this option only works if you have OWNER
+                synchronization. Also, this option only works if you have OWNER
                 access to all of the objects that are copied.
 
                 You can avoid the additional performance and cost of using
