@@ -131,7 +131,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         os.chdir(cwd)
       self.command_runner.RunNamedCommand(
           command_name, args=args, headers=headers, debug=debug,
-          parallel_operations=False, test_method=test_method)
+          parallel_operations=False, test_method=test_method, do_shutdown=False)
     finally:
       if cwd and cwd_sav:
         os.chdir(cwd_sav)
