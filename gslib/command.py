@@ -205,7 +205,7 @@ global manager, consumer_pools, task_queues, caller_id_lock, caller_id_counter
 global total_tasks, call_completed_map, global_return_values_map
 global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
 global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-global class_map
+global class_map, worker_checking_level_lock
 
 
 def InitializeMultiprocessingVariables():
@@ -222,7 +222,7 @@ def InitializeMultiprocessingVariables():
   global total_tasks, call_completed_map, global_return_values_map
   global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
   global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-  global class_map
+  global class_map, worker_checking_level_lock
 
   manager = multiprocessing.Manager()
 
@@ -249,6 +249,10 @@ def InitializeMultiprocessingVariables():
   # Condition used to notify any waiting threads that a task has finished or
   # that a call to Apply needs a new set of consumer processes.
   need_pool_or_done_cond = manager.Condition()
+  
+  # Lock used to prevent multiple worker processes from asking the main thread
+  # to create a new consumer pool for the same level.
+  worker_checking_level_lock = manager.Lock()
 
   # Map from caller_id to the current number of completed tasks for that ID.
   caller_id_finished_count = AtomicIncrementDict(manager)
@@ -949,7 +953,6 @@ class Command(HelpProvider):
     cls.gsutil_api = None
 
     class_map[caller_id] = cls
-
     total_tasks[caller_id] = -1  # -1 => the producer hasn't finished yet.
     call_completed_map[caller_id] = False
     caller_id_finished_count.Put(caller_id, 0)
@@ -1018,6 +1021,7 @@ class Command(HelpProvider):
 
     (process_count, thread_count) = self._GetProcessAndThreadCount(
         process_count, thread_count, parallel_operations_override)
+
     is_main_thread = (self.recursive_apply_level == 0
                       and self.sequential_caller_id == -1)
 
@@ -1182,18 +1186,28 @@ class Command(HelpProvider):
 
     if process_count > 1:  # Handle process pool creation.
       # Check whether this call will need a new set of workers.
-      with need_pool_or_done_cond:
+      
+      # Each worker must acquire a shared lock before notifying the main thread
+      # that it needs a new worker pool, so that at most one worker asks for
+      # a new worker pool at once.
+      try:
+        if not is_main_thread:
+          worker_checking_level_lock.acquire()
         if self.recursive_apply_level >= current_max_recursive_level.value:
-          # Only the main thread is allowed to create new processes - otherwise,
-          # we will run into some Python bugs.
-          if is_main_thread:
-            self._CreateNewConsumerPool(process_count, thread_count)
-          else:
-            # Notify the main thread that we need a new consumer pool.
-            new_pool_needed.value = 1
-            need_pool_or_done_cond.notify_all()
-            # The main thread will notify us when it finishes.
-            need_pool_or_done_cond.wait()
+          with need_pool_or_done_cond:
+            # Only the main thread is allowed to create new processes -
+            # otherwise, we will run into some Python bugs.
+            if is_main_thread:
+              self._CreateNewConsumerPool(process_count, thread_count)
+            else:
+              # Notify the main thread that we need a new consumer pool.
+              new_pool_needed.value = 1
+              need_pool_or_done_cond.notify_all()
+              # The main thread will notify us when it finishes.
+              need_pool_or_done_cond.wait()
+      finally:
+        if not is_main_thread:
+          worker_checking_level_lock.release()
 
     # If we're running in this process, create a separate task queue. Otherwise,
     # if Apply has already been called with process_count > 1, then there will
@@ -1275,9 +1289,12 @@ class Command(HelpProvider):
                         _ApplyThreads must behave as a blocking call.
     """
     self._ResetConnectionPool()
+    self.recursive_apply_level = recursive_apply_level
 
     task_queue = task_queue or task_queues[recursive_apply_level]
 
+    assert thread_count * process_count > 1, ('Invalid state, calling ' +
+        'command._ApplyThreads with only one thread and process.')
     if thread_count > 1:
       worker_pool = WorkerPool(
           thread_count, self.logger,
@@ -1289,8 +1306,6 @@ class Command(HelpProvider):
           self, bucket_storage_uri_class=self.bucket_storage_uri_class,
           gsutil_api_map=self.gsutil_api_map,
           credential_store=self.credential_store, debug=self.debug)
-    else:
-      worker_pool = SameThreadWorkerPool(self)
 
     num_enqueued = 0
     while True:
@@ -1448,7 +1463,7 @@ class ProducerThread(threading.Thread):
                           self.exception_handler, self.should_return_results,
                           self.arg_checker, self.fail_on_error)
           if last_task:
-            self.task_queue.put(last_task, self.caller_id)
+            self.task_queue.put(last_task)
     except Exception, e:  # pylint: disable=broad-except
       # This will also catch any exception raised due to an error in the
       # iterator when fail_on_error is set, so check that we failed for some
@@ -1466,7 +1481,7 @@ class ProducerThread(threading.Thread):
         # This happens if there were zero arguments to be put in the queue.
         cur_task = Task(None, ZERO_TASKS_TO_DO_ARGUMENT, self.caller_id,
                         None, None, None, None)
-      self.task_queue.put(cur_task, self.caller_id)
+      self.task_queue.put(cur_task)
 
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.
@@ -1576,13 +1591,13 @@ class WorkerThread(threading.Thread):
     finally:
       self.shared_vars_updater.Update(caller_id, cls)
 
-    # Even if we encounter an exception, we still need to claim that that
-    # the function finished executing. Otherwise, we won't know when to
-    # stop waiting and return results.
-    num_done = caller_id_finished_count.Update(caller_id, 1)
+      # Even if we encounter an exception, we still need to claim that that
+      # the function finished executing. Otherwise, we won't know when to
+      # stop waiting and return results.
+      num_done = caller_id_finished_count.Update(caller_id, 1)
 
-    if cls.multiprocessing_is_available:
-      _NotifyIfDone(caller_id, num_done)
+      if cls.multiprocessing_is_available:
+        _NotifyIfDone(caller_id, num_done)
 
   def run(self):
     while True:
