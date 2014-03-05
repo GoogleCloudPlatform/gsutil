@@ -75,7 +75,7 @@ class CatCommand(Command):
       command_name_aliases=[],
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='hvr:',
+      supported_sub_args='hr:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -116,10 +116,6 @@ class CatCommand(Command):
             end_byte = long(range_match.group('end'))
           if range_match.group('endslice'):
             start_byte = long(range_match.group('endslice'))
-        elif o == '-v':
-          self.logger.info('WARNING: The %s -v option is no longer'
-                           ' needed, and will eventually be removed.\n'
-                           % self.command_name)
 
     return CatHelper(self).CatUrlStrings(self.args,
                                          show_header=show_header,
