@@ -139,6 +139,21 @@ _detailed_help_text = ("""
   OPTIONS below).
 
 
+<B>SLOW CHECKSUMS</B>
+  If you find that CRC32C checksum computation runs slowly, this is likely
+  because you don't have a compiled CRC32c on your system. Try running:
+
+    gsutil ver -l
+
+  If the output contains:
+
+    compiled crcmod: False 
+
+  you are running a Python library for computing CRC32C, which is much slower
+  than using the compiled code. For information on getting a compiled CRC32C
+  implementation, see 'gsutil help crc32c'.
+
+
 <B>LIMITATIONS</B>
   1. The gsutil rsync command doesn't make the destination object's timestamps
      match those of the source object (it can't; timestamp setting is not
