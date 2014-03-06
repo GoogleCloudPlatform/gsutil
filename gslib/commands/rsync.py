@@ -23,6 +23,7 @@ import traceback
 import urllib
 
 from boto import config
+import crcmod
 
 from gslib.command import Command
 from gslib.command import DummyArgChecker
@@ -38,9 +39,16 @@ from gslib.util import GetCloudApiInstance
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import TEN_MB
+from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 from gsutil import OutputAndExit
+
+SLOW_CRCMOD_WARNING = """
+WARNING: You have requested checksumming but your crcmod installation isn't
+using the module's C extension, so checksumming will run very slowly. For help
+installing the extension, please see:
+  $ gsutil help crcmod"""
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -741,6 +749,9 @@ class RsyncCommand(Command):
   def RunCommand(self):
     """Command entry point for the rsync command."""
     copy_helper_opts = self._ParseOpts()
+    if self.compute_checksums and not UsingCrcmodExtension(crcmod):
+      self.logger.warn(SLOW_CRCMOD_WARNING)
+
     self.copy_helper = CopyHelper(
         command_obj=self, command_name=self.command_name, args=self.args,
         copy_helper_opts=copy_helper_opts, sub_opts=self.sub_opts,
