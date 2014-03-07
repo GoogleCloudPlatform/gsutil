@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implementation of update command for updating gsutil."""
+from __future__ import absolute_import
 
 import os
 import shutil
 import signal
+import stat
 import tarfile
 import tempfile
 import textwrap
@@ -185,7 +187,8 @@ class UpdateCommand(Command):
         'password, and the install will run as "root". If you\'re unsure what '
         'this means please ask your system administrator for help:')) + (
             '\n\tsudo chmod 644 %s\n\tsudo env BOTO_CONFIG="%s" gsutil update'
-            '\n\tsudo chmod 600 %s') % (config_files, config_files, config_files),
+            '\n\tsudo chmod 600 %s') %
+                           (config_files, config_files, config_files),
                            informational=True)
 
   # This list is checked during gsutil update by doing a lowercased
@@ -373,13 +376,25 @@ class UpdateCommand(Command):
     # users, we can skip this step when running on Windows, which
     # avoids the problem that Windows has no find or xargs command.
     if not IS_WINDOWS:
-      # Make all files and dirs in updated area readable by other
-      # and make all directories executable by other.
-      os.system('chmod -R o+r ' + new_dir)
-      os.system('find ' + new_dir + ' -type d | xargs chmod o+x')
+      # Make all files and dirs in updated area owner-RW and world-R, and make
+      # all directories owner-RWX and world-RX.
+      for dirname, subdirs, filenames in os.walk(new_dir):
+        for filename in filenames:
+          fd = os.open(os.path.join(dirname, filename), os.O_RDONLY)
+          os.fchmod(fd, stat.S_IWRITE | stat.S_IRUSR |
+                    stat.S_IRGRP | stat.S_IROTH)
+          os.close(fd)
+        for subdir in subdirs:
+          fd = os.open(os.path.join(dirname, subdir), os.O_RDONLY)
+          os.fchmod(fd, stat.S_IRWXU | stat.S_IXGRP | stat.S_IXOTH |
+                    stat.S_IRGRP | stat.S_IROTH)
+          os.close(fd)
 
-      # Make main gsutil script readable and executable by other.
-      os.system('chmod o+rx ' + os.path.join(new_dir, 'gsutil'))
+      # Make main gsutil script owner-RWX and world-RX.
+      fd = os.open(os.path.join(new_dir, 'gsutil', 'gsutil'), os.O_RDONLY)
+      os.fchmod(fd, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP |
+                stat.S_IROTH | stat.S_IXOTH)
+      os.close(fd)
 
     # Move old installation aside and new into place.
     os.rename(gslib.GSUTIL_DIR, os.path.join(old_dir, 'old'))
