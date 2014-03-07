@@ -528,7 +528,7 @@ class ConfigCommand(Command):
           when the file already exists).
     """
     flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
-    # Accommodate Windows; stolen from python2.6/tempfile.py.
+    # Accommodate Windows; copied from python2.6/tempfile.py.
     if hasattr(os, 'O_NOINHERIT'):
       flags |= os.O_NOINHERIT
     try:
@@ -899,7 +899,7 @@ class ConfigCommand(Command):
       scopes.append(SCOPE_FULL_CONTROL)
 
     default_config_path_bak = None
-    if output_file_name is None:
+    if not output_file_name:
       # Check to see if a default config file name is requested via
       # environment variable. If so, use it, otherwise use the hard-coded
       # default file. Then use the default config file name, if it doesn't
@@ -936,10 +936,10 @@ class ConfigCommand(Command):
       output_file = sys.stdout
     else:
       output_file = self._OpenConfigFile(output_file_name)
-      sys.stderr.write(
-          'This script will create a boto config file at\n%s\ncontaining your '
-          'credentials, based on your responses to the following questions.\n\n'
-          % output_file_name)
+      sys.stderr.write('\n'.join(textwrap.wrap(
+          'This command will create a boto config file at %s containing your '
+          'credentials, based on your responses to the following questions.'
+          % output_file_name)) + '\n')
 
     # Catch ^C so we can restore the backup.
     signal.signal(signal.SIGINT, CleanupHandler)

@@ -461,16 +461,12 @@ class Command(HelpProvider):
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
-    # Cross-platform list containing gsutil path for use with subprocess.
-    self.gsutil_exec_list = []
     # If running on Windows, invoke python interpreter explicitly.
     if gslib.util.IS_WINDOWS:
       self.gsutil_cmd += 'python '
-      self.gsutil_exec_list += ['python']
     # Add full path to gsutil to make sure we test the correct version.
     self.gsutil_path = gslib.GSUTIL_PATH
     self.gsutil_cmd += self.gsutil_path
-    self.gsutil_exec_list += [self.gsutil_path]
 
     # We're treating recursion_requested like it's used by all commands, but
     # only some of the commands accept the -R option.
