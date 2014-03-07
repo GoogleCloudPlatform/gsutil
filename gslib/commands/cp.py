@@ -183,6 +183,14 @@ COPY_IN_CLOUD_TEXT = """
   ACL to the new object, and instead will use the default bucket ACL (see
   "gsutil help defacl").  You can override this behavior with the -p
   option (see OPTIONS below).
+
+  One additional note about copying in the cloud: If the destination bucket has
+  versioning enabled, gsutil cp will copy all versions of the source object(s).
+  For example:
+
+    gsutil cp gs://bucket1/obj gs://bucket2
+
+  will cause all versions of gs://bucket1/obj to be copied to gs://bucket2.
 """
 
 RESUMABLE_TRANSFERS_TEXT = """
