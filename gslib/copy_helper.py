@@ -263,7 +263,6 @@ class CopyHelper(object):
   # different paths (e.g., uploading a file to an object vs. downloading an
   # object to a file) could be split into separate files.
 
-  USE_MAGICFILE = config.getbool('GSUtil', 'use_magicfile', False)
   # Chunk size to use while unzipping gzip files.
   GUNZIP_CHUNK_SIZE = 8192
 
@@ -532,7 +531,7 @@ class CopyHelper(object):
       # Streams (denoted by '-') are expected to be 'application/octet-stream'
       # and 'file' would partially consume them.
       if object_name != '-':
-        if self.USE_MAGICFILE:
+        if config.getbool('GSUtil', 'use_magicfile', False):
           p = subprocess.Popen(['file', '--mime-type', object_name],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
           output, error = p.communicate()
