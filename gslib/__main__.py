@@ -340,36 +340,45 @@ def _HandleSigQuit(signal_num, cur_stack_frame):
   pdb.set_trace()
 
 
-def _ConstructAclHelp():
-  """Constructs a help string for an access control error."""
-  default_project_id = boto.config.get_value('GSUtil',
-                                             'default_project_id')
-  # pylint: disable=line-too-long
-  acct_help = (
-      """Your request resulted in an AccountProblem (403) error. Usually this
-      happens if you attempt to create a bucket or upload an object without
-      having first enabled billing for the project you are using. Please
-      ensure billing is enabled for your project by following the instructions
-      at
-      `Google Developers Console<https://developers.google.com/console/help/billing>`.
-      """)
+def _ConstructAccountProblemHelp(reason):
+  """Constructs a help string for an access control error.
+
+  Args:
+    reason: e.reason string from caught exception.
+
+  Returns:
+    Contructed help text.
+  """
+  default_project_id = boto.config.get_value('GSUtil', 'default_project_id')
+  # pylint: disable=line-too-long, g-inconsistent-quotes
+  if 'Account disabled' in reason or 'AccountProblem' in reason:
+    acct_help = "Your request resulted in an Account disabled error. "
+  else:
+    # Assume problem was 'AccountProblem'.
+    acct_help = (
+        "Your request resulted in an AccountProblem (403) error. Usually this "
+        "happens if you attempt to create a bucket without first having "
+        "enabled billing for the project you are using. ")
+  acct_help += (
+      "Please ensure billing is enabled for your project by following the "
+      "instructions at "
+      "`Google Developers Console<https://developers.google.com/console/help/billing>`. ")
   if default_project_id:
     acct_help += (
-        """In the project overview, ensure that the Project Number listed for
-        your project matches the project ID (%s) from your boto config file.
-        """ % default_project_id)
+        "In the project overview, ensure that the Project Number listed for "
+        "your project matches the project ID (%s) from your boto config file. "
+        % default_project_id)
   acct_help += (
-      """If the above doesn't resolve your AccountProblem, please send mail to
-      gs-team@google.com requesting assistance, noting the exact command you
-      ran, the fact that you received a 403 AccountProblem error, and your
-      project ID. Please do not post your project ID on StackOverflow.
-
-      Note: It's possible to use Google Cloud Storage without enabling billing
-      if you're only listing or reading objects for which you're authorized, or
-      if you're uploading objects to a bucket billed to a project that has
-      billing enabled. But if you're attempting to create buckets or upload
-      objects to a bucket owned by your own project, you must first enable
-      billing for that project.""")
+      "If the above doesn't resolve your AccountProblem, please send mail to "
+      "gs-team@google.com requesting assistance, noting the exact command you "
+      "ran, the fact that you received a 403 AccountProblem error, and your "
+      "project ID. Please do not post your project ID on StackOverflow. "
+      "Note: It's possible to use Google Cloud Storage without enabling "
+      "billing if you're only listing or reading objects for which you're "
+      "authorized, or if you're uploading objects to a bucket billed to a "
+      "project that has billing enabled. But if you're attempting to create "
+      "buckets or upload objects to a bucket owned by your own project, you "
+      "must first enable billing for that project.")
   return acct_help
 
 
@@ -393,9 +402,10 @@ def _CheckAndHandleCredentialException(e, args):
         'https://cloud.google.com/console#/project and sign up for an '
         'account, and then run the "gsutil config" command to configure '
         'gsutil to use these credentials.')))
-  elif (e.reason == 'AccountProblem'
+  elif ((e.reason == 'AccountProblem' or e.reason == 'Account disabled.')
         and ','.join(args).find('gs://') != -1):
-    _OutputAndExit(_ConstructAclHelp())
+    _OutputAndExit('\n'.join(textwrap.wrap(
+        _ConstructAccountProblemHelp(e.reason))))
 
 
 def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
@@ -444,24 +454,24 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
       raise
   except wildcard_iterator.WildcardException as e:
     _OutputAndExit(e.reason)
-  except ProjectIdException, e:
+  except ProjectIdException as e:
     _OutputAndExit(
         'You are attempting to perform an operation that requires a '
         'project id, with none configured. Please re-run '
         'gsutil config and make sure to follow the instructions for '
         'finding and entering your default project id.')
-  except BadRequestException, e:
+  except BadRequestException as e:
     if e.reason == 'MissingSecurityHeader':
       _CheckAndHandleCredentialException(e, args)
     _OutputAndExit(e)
-  except AccessDeniedException, e:
+  except AccessDeniedException as e:
     _CheckAndHandleCredentialException(e, args)
     _OutputAndExit(e)
-  except ArgumentException, e:
+  except ArgumentException as e:
     _OutputAndExit(e)
-  except ServiceException, e:
+  except ServiceException as e:
     _OutputAndExit(e)
-  except apitools_exceptions.HttpError, e:
+  except apitools_exceptions.HttpError as e:
     # These should usually be retried by the underlying implementation or
     # wrapped by CloudApi ServiceExceptions, but if we do get them,
     # print something useful.
