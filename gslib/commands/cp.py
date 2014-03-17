@@ -453,7 +453,7 @@ _detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
                                    OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:cDeIL:MNnpqrRtvz:'
+CP_SUB_ARGS = 'a:cDeIL:MNnprRtvz:'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -809,11 +809,6 @@ class CpCommand(Command):
           no_clobber = True
         elif o == '-p':
           preserve_acl = True
-        elif o == '-q':
-          self.logger.warning(
-              'Warning: gsutil cp -q is deprecated, and will be removed in the '
-              'future.\nPlease use gsutil -q cp ... instead.')
-          self.logger.setLevel(level=logging.WARNING)
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-v':
