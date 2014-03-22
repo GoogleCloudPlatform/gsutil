@@ -200,6 +200,11 @@ _detailed_help_text = ("""
                 rsync -p if you want all objects in the destination bucket to
                 end up with the same ACL by setting a default object ACL on that
                 bucket instead of using rsync -p. See 'help gsutil defacl'.
+
+  -R, -r        Causes directories, buckets, and bucket subdirectories to be
+                synchronized recursively. If you neglect to use this option
+                gsutil will make only the top-level directory in the source
+                and destination URLs match, skipping any sub-directories.
 """)
 
 
