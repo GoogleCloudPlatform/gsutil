@@ -429,9 +429,10 @@ class GcsJsonApi(CloudApi):
     global_params = apitools_messages.StandardQueryParameters()
 
     if fields:
+      fields = set(fields)
       if 'nextPageToken' not in fields:
         fields.add('nextPageToken')
-      global_params.fields = ','.join(set(fields))
+      global_params.fields = ','.join(fields)
 
     try:
       object_list = self.api_client.objects.List(apitools_request,
