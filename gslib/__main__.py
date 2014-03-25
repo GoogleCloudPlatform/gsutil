@@ -61,7 +61,7 @@ import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
 # authentication is performed.
 try:
   # pylint: disable=unused-import,g-import-not-at-top
-  from gslib.third_party.oauth2_plugin import oauth2_plugin
+  from oauth2_plugin import oauth2_plugin
 except ImportError:
   pass
 
@@ -133,14 +133,13 @@ def main():
   from gslib.util import BOTO_IS_SECURE
   from gslib.util import CERTIFICATE_VALIDATION_ENABLED
   from gslib.util import GetBotoConfigFileList
-  from gslib.third_party.oauth2_plugin import oauth2_client
+  from oauth2_plugin import oauth2_client
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
     # These setup methods must be called, and, on Windows, they can only be
     # called from within an "if __name__ == '__main__':" block.
     gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
-  oauth2_client.InitializeMultiprocessingVariables()
 
   global debug
   global test_exception_traces

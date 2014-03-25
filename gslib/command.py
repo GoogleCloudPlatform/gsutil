@@ -709,7 +709,7 @@ class Command(HelpProvider):
     """
     # Import this here so that the value will be set first in oauth2_plugin.
     # pylint: disable=g-import-not-at-top
-    from gslib.third_party.oauth2_plugin.oauth2_plugin import IS_SERVICE_ACCOUNT
+    from oauth2_plugin.oauth2_plugin import IS_SERVICE_ACCOUNT
 
     if IS_SERVICE_ACCOUNT:
       # This method is only called when canned ACLs are used, so the warning

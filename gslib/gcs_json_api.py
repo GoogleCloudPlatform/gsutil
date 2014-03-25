@@ -53,7 +53,7 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
 import httplib2
-from third_party.oauth2_plugin import oauth2_helper
+from oauth2_plugin import oauth2_helper
 
 # Implementation supports only 'gs' URIs, so provider is unused.
 # pylint: disable=unused-argument

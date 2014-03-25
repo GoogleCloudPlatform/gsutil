@@ -22,3 +22,6 @@
 [submodule "third_party/retry-decorator"]
 	path = third_party/retry-decorator
 	url = https://github.com/pnpnpn/retry-decorator.git
+[submodule "third_party/gcs-oauth2-boto-plugin"]
+	path = third_party/gcs-oauth2-boto-plugin
+	url = https://github.com/GoogleCloudPlatform/gcs-oauth2-boto-plugin.git
