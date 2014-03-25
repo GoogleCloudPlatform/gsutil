@@ -90,3 +90,10 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
         ['perfdiag', '-n', '1', '-s', '3pb', '-t', 'wthru', 'gs://foobar'],
         expected_status=1, return_stderr=True)
     self.assertIn('Maximum throughput file size', stderr)
+
+  def test_listing(self):
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(
+        ['perfdiag', '-n', '1', '-t', 'list', suri(bucket_uri)],
+        return_stdout=True)
+    self.assertIn('Number of listing calls made:', stdout)

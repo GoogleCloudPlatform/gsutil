@@ -52,6 +52,7 @@ from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.util import GetCloudApiInstance
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
@@ -115,6 +116,13 @@ _detailed_help_text = ("""
                  retrieving its metadata, reading the file, and deleting
                  the file. Records the latency of each operation.
 
+              list
+                 Write N (set with -n) objects to the bucket, record how long
+                 it takes for the eventually consistent listing call to return
+                 the N objects in its result, delete the N objects, then record
+                 how long it takes listing to stop returning the N objects.
+                 This test is off by default.
+
               rthru
                  Runs N (set with -n) read operations, with at most C
                  (set with -c) reads outstanding at any given time.
@@ -161,12 +169,26 @@ _detailed_help_text = ("""
 """)
 
 
-def _DownloadWrapper(cls, download_tuple, thread_state=None):
-  cls.Download(download_tuple, thread_state=thread_state)
+class Error(Exception):
+  """Base exception class for this module."""
+  pass
 
 
-def _UploadWrapper(cls, thru_tuple, thread_state=None):
-  cls.Upload(thru_tuple, thread_state=thread_state)
+class InvalidArgument(Error):
+  """Raised on invalid arguments to functions."""
+  pass
+
+
+def _DownloadWrapper(cls, arg, thread_state=None):
+  cls.Download(arg, thread_state=thread_state)
+
+
+def _UploadWrapper(cls, arg, thread_state=None):
+  cls.Upload(arg, thread_state=thread_state)
+
+
+def _DeleteWrapper(cls, arg, thread_state=None):
+  cls.Delete(arg, thread_state=thread_state)
 
 
 def _PerfdiagExceptionHandler(cls, e):
@@ -218,7 +240,9 @@ class PerfDiagCommand(Command):
   )
 
   # List of all diagnostic tests.
-  ALL_DIAG_TESTS = ('rthru', 'wthru', 'lat')
+  ALL_DIAG_TESTS = ('rthru', 'wthru', 'lat', 'list')
+  # List of diagnostic tests to run by default.
+  DEFAULT_DIAG_TESTS = ('rthru', 'wthru', 'lat')
 
   # Google Cloud Storage API endpoint host.
   GOOGLE_API_HOST = boto.gs.connection.GSConnection.DefaultHost
@@ -236,6 +260,10 @@ class PerfDiagCommand(Command):
   # The maximum number of bytes to generate pseudo-randomly before beginning
   # to repeat bytes. This number was chosen as the next prime larger than 5 MB.
   MAX_UNIQUE_RANDOM_BYTES = 5242883
+
+  # Maximum amount of time, in seconds, we will wait for object listings to
+  # reflect what we expect in the listing tests.
+  MAX_LISTING_WAIT_TIME = 60.0
 
   def _Exec(self, cmd, raise_on_error=True, return_output=False,
             mute_stderr=False):
@@ -476,6 +504,7 @@ class PerfDiagCommand(Command):
         self._RunOperation(_Delete)
 
   class _CpFilter(logging.Filter):
+
     def filter(self, record):
       # Used to prevent cp._LogCopyOperation from spewing output from
       # subprocesses about every iteration.
@@ -585,10 +614,8 @@ class PerfDiagCommand(Command):
     thru_url = StorageUrlFromString(str(self.bucket_url))
     thru_url.object_name = self.thru_local_file
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
-    thru_target.md5Hash = self.file_md5s[self.thru_local_file]
-
-    thru_tuple = UploadObjectTuple(thru_target.bucket, thru_target.name,
-                                   md5=thru_target.md5Hash)
+    thru_tuple = UploadObjectTuple(
+        thru_target.bucket, thru_target.name, filepath=self.thru_local_file)
 
     if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
@@ -637,17 +664,111 @@ class PerfDiagCommand(Command):
     self.results['write_throughput']['total_bytes_copied'] = total_bytes_copied
     self.results['write_throughput']['bytes_per_second'] = bytes_per_second
 
+  def _RunListTests(self):
+    """Runs eventual consistency listing latency tests."""
+    self.results['listing'] = {'num_files': self.num_iterations}
+
+    # Generate N random object names to put in the bucket.
+    list_prefix = 'gsutil-perfdiag-list-'
+    list_objects = []
+    for _ in xrange(self.num_iterations):
+      list_objects.append(
+          u'%s%s' % (list_prefix, os.urandom(20).encode('hex')))
+
+    # Add the objects to the bucket.
+    self.logger.info(
+        '\nWriting %s objects for listing test...', self.num_iterations)
+    empty_md5 = CalculateB64EncodedMd5FromContents(cStringIO.StringIO(''))
+    args = [
+        UploadObjectTuple(self.bucket_url.bucket_name, name, md5=empty_md5,
+                          contents='') for name in list_objects]
+    self.Apply(_UploadWrapper, args, _PerfdiagExceptionHandler,
+               arg_checker=DummyArgChecker)
+
+    list_latencies = []
+    files_seen = []
+    total_start_time = time.time()
+    expected_objects = set(list_objects)
+    found_objects = set()
+
+    def _List():
+      """Lists and returns objects in the bucket. Also records latency."""
+      t0 = time.time()
+      objects = list(self.gsutil_api.ListObjects(
+          self.bucket_url.bucket_name, prefix=list_prefix, delimiter='/',
+          provider=self.provider, fields=['items/name']))
+      t1 = time.time()
+      list_latencies.append(t1 - t0)
+      return set([obj.data.name for obj in objects])
+
+    self.logger.info(
+        'Listing bucket %s waiting for %s objects to appear...',
+        self.bucket_url.bucket_name, self.num_iterations)
+    while expected_objects - found_objects:
+      def _ListAfterUpload():
+        names = _List()
+        found_objects.update(names & expected_objects)
+        files_seen.append(len(found_objects))
+      self._RunOperation(_ListAfterUpload)
+      if expected_objects - found_objects:
+        if time.time() - total_start_time > self.MAX_LISTING_WAIT_TIME:
+          self.logger.warning('Maximum time reached waiting for listing.')
+          break
+    total_end_time = time.time()
+
+    self.results['listing']['insert'] = {
+        'num_listing_calls': len(list_latencies),
+        'list_latencies': list_latencies,
+        'files_seen_after_listing': files_seen,
+        'time_took': total_end_time - total_start_time,
+    }
+
+    self.logger.info(
+        'Deleting %s objects for listing test...', self.num_iterations)
+    self.Apply(_DeleteWrapper, args, _PerfdiagExceptionHandler,
+               arg_checker=DummyArgChecker)
+
+    self.logger.info(
+        'Listing bucket %s waiting for %s objects to disappear...',
+        self.bucket_url.bucket_name, self.num_iterations)
+    list_latencies = []
+    files_seen = []
+    total_start_time = time.time()
+    found_objects = set(list_objects)
+    while found_objects:
+      def _ListAfterDelete():
+        names = _List()
+        found_objects.intersection_update(names)
+        files_seen.append(len(found_objects))
+      self._RunOperation(_ListAfterDelete)
+      if found_objects:
+        if time.time() - total_start_time > self.MAX_LISTING_WAIT_TIME:
+          self.logger.warning('Maximum time reached waiting for listing.')
+          break
+    total_end_time = time.time()
+
+    self.results['listing']['delete'] = {
+        'num_listing_calls': len(list_latencies),
+        'list_latencies': list_latencies,
+        'files_seen_after_listing': files_seen,
+        'time_took': total_end_time - total_start_time,
+    }
+
   def Upload(self, thru_tuple, thread_state=None):
-    assert thread_state, ('Multiple threads/processes sharing single gsutil_api'
-                          'in command.Apply().')
-    gsutil_api = thread_state
-    upload_target = apitools_messages.Object(bucket=thru_tuple.bucket_name,
-                                             name=thru_tuple.object_name,
-                                             md5Hash=thru_tuple.md5)
+    gsutil_api = GetCloudApiInstance(self, thread_state)
+
+    md5hash = thru_tuple.md5
+    contents = thru_tuple.contents
+    if thru_tuple.filepath:
+      md5hash = self.file_md5s[thru_tuple.filepath]
+      contents = self.file_contents[thru_tuple.filepath]
+
+    upload_target = apitools_messages.Object(
+        bucket=thru_tuple.bucket_name, name=thru_tuple.object_name,
+        md5Hash=md5hash)
     gsutil_api.UploadObject(
-        cStringIO.StringIO(self.file_contents[self.thru_local_file]),
-        upload_target, provider=self.provider, size=self.thru_filesize,
-        fields=['name'])
+        cStringIO.StringIO(contents), upload_target,
+        provider=self.provider, size=len(contents), fields=['name'])
 
   def Download(self, download_tuple, thread_state=None):
     """Downloads a file.
@@ -656,12 +777,15 @@ class PerfDiagCommand(Command):
       download_tuple: (bucket name, object name, serialization data for object).
       thread_state: gsutil Cloud API instance to use for the download.
     """
-    assert thread_state, ('Multiple threads/processes sharing single gsutil_api'
-                          'in command.Apply().')
-    gsutil_api = thread_state
+    gsutil_api = GetCloudApiInstance(self, thread_state)
     gsutil_api.GetObjectMedia(
         download_tuple[0], download_tuple[1], self.discard_sink,
         provider=self.provider, serialization_data=download_tuple[2])
+
+  def Delete(self, thru_tuple, thread_state=None):
+    gsutil_api = thread_state or self.gsutil_api
+    gsutil_api.DeleteObject(
+        thru_tuple.bucket_name, thru_tuple.object_name, provider=self.provider)
 
   def _GetDiskCounters(self):
     """Retrieves disk I/O statistics for all disks.
@@ -957,6 +1081,33 @@ class PerfDiagCommand(Command):
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8))
 
+    if 'listing' in self.results:
+      print
+      print '-' * 78
+      print 'Listing'.center(78)
+      print '-' * 78
+
+      listing = self.results['listing']
+      insert = listing['insert']
+      delete = listing['delete']
+      print 'After inserting %s objects:' % listing['num_files']
+      print ('  Total time for objects to appear: %.2g seconds' %
+             insert['time_took'])
+      print '  Number of listing calls made: %s' % insert['num_listing_calls']
+      print ('  Individual listing call latencies: [%s]' %
+             ', '.join('%.2gs' % lat for lat in insert['list_latencies']))
+      print ('  Files reflected after each call: [%s]' %
+             ', '.join(map(str, insert['files_seen_after_listing'])))
+
+      print 'After deleting %s objects:' % listing['num_files']
+      print ('  Total time for objects to appear: %.2g seconds' %
+             delete['time_took'])
+      print '  Number of listing calls made: %s' % delete['num_listing_calls']
+      print ('  Individual listing call latencies: [%s]' %
+             ', '.join('%.2gs' % lat for lat in delete['list_latencies']))
+      print ('  Files reflected after each call: [%s]' %
+             ', '.join(map(str, delete['files_seen_after_listing'])))
+
     if 'sysinfo' in self.results:
       print
       print '-' * 78
@@ -1105,7 +1256,7 @@ class PerfDiagCommand(Command):
     # From -s.
     self.thru_filesize = 1048576
     # From -t.
-    self.diag_tests = self.ALL_DIAG_TESTS
+    self.diag_tests = self.DEFAULT_DIAG_TESTS
     # From -o.
     self.output_file = None
     # From -i.
@@ -1225,6 +1376,8 @@ class PerfDiagCommand(Command):
         self._RunReadThruTests()
       if 'wthru' in self.diag_tests:
         self._RunWriteThruTests()
+      if 'list' in self.diag_tests:
+        self._RunListTests()
 
       # Collect netstat info and disk counters after tests.
       self.results['sysinfo']['netstat_end'] = self._GetTcpStats()
@@ -1248,10 +1401,35 @@ class PerfDiagCommand(Command):
 class UploadObjectTuple(object):
   """Picklable tuple with necessary metadata for an insert object call."""
 
-  def __init__(self, bucket_name, object_name, md5=None):
+  def __init__(self, bucket_name, object_name, filepath=None, md5=None,
+               contents=None):
+    """Create an upload tuple.
+
+    Args:
+      bucket_name: Name of the bucket to upload to.
+      object_name: Name of the object to upload to.
+      filepath: A file path located in self.file_contents and self.file_md5s.
+      md5: The MD5 hash of the object being uploaded.
+      contents: The contents of the file to be uploaded.
+
+    Note: (contents + md5) and filepath are mutually exlusive. You may specify
+          one or the other, but not both.
+    Note: If one of contents or md5 are specified, they must both be specified.
+
+    Raises:
+      InvalidArgument: if the arguments are invalid.
+    """
     self.bucket_name = bucket_name
     self.object_name = object_name
+    self.filepath = filepath
     self.md5 = md5
+    self.contents = contents
+    if filepath and (md5 or contents is not None):
+      raise InvalidArgument(
+          'Only one of filepath or (md5 + contents) may be specified.')
+    if not filepath and (not md5 or contents is None):
+      raise InvalidArgument(
+          'Both md5 and contents must be specified.')
 
 
 def StorageUrlToUploadObjectMetadata(storage_url):
