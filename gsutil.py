@@ -58,12 +58,13 @@ warnings.filterwarnings('ignore', category=UserWarning,
 # the directory under third_party and the second element is the subdirectory
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
-    ('python-gflags', ''),
-    ('google-api-python-client', ''),
-    ('httplib2', 'python2'),
+    ('google-api-python-client', ''),  # Must be before boto.
     ('boto', ''),
-    ('socksipy-branch', ''),
+    ('gcs-oauth2-boto-plugin', ''),
+    ('httplib2', 'python2'),
+    ('python-gflags', ''),
     ('retry-decorator', ''),
+    ('socksipy-branch', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):

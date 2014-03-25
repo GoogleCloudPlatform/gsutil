@@ -36,15 +36,16 @@ management tasks, including:
 
 requires = [
     'boto==2.22.1',
-    'httplib2>=0.8',
-    'python-gflags>=2.0',
-    'google-api-python-client>=1.1',
-    'pyOpenSSL>=0.13',
     'crcmod>=1.7',
+    'gcs-oauth2-boto-plugin>=1.0',
+    'google-api-python-client>=1.1',
+    'httplib2>=0.8',
+    'pyOpenSSL>=0.13',
+    'python-gflags>=2.0',
+    'retry_decorator>=1.0.0',
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',
-    'retry_decorator>=1.0.0',
 ]
 
 dependency_links = [
