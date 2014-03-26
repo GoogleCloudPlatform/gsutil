@@ -28,8 +28,6 @@ import time
 import urllib
 
 import httplib2
-from OpenSSL.crypto import load_pkcs12
-from OpenSSL.crypto import sign
 
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
@@ -37,6 +35,17 @@ from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
+
+try:
+  # Check for openssl.
+  # pylint: disable=C6204
+  from OpenSSL.crypto import load_pkcs12
+  from OpenSSL.crypto import sign
+  HAVE_OPENSSL = True
+except ImportError:
+  load_pkcs12 = None
+  sign = None
+  HAVE_OPENSSL = False
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -243,6 +252,11 @@ class UrlSignCommand(Command):
 
   def RunCommand(self):
     """Command entry point for signurl command."""
+    if not HAVE_OPENSSL:
+      raise CommandException(
+          'The signurl command requires the pyopenssl library (try pip '
+          'install pyopenssl or easy_install pyopenssl)')
+
     method, expiration, content_type, passwd = self._ParseSubOpts()
     storage_urls = self._EnumerateStorageUrls(self.args[1:])
 
