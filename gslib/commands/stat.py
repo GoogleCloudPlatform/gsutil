@@ -108,8 +108,8 @@ class StatCommand(Command):
         raise CommandException('The stat command only works with object URIs')
       try:
         if ContainsWildcard(uri_str):
-          blr_iter = self.WildcardIterator(uri_str,
-                                           bucket_listing_fields=stat_fields)
+          blr_iter = self.WildcardIterator(uri_str).IterObjects(
+              bucket_listing_fields=stat_fields)
         else:
           single_obj = self.gsutil_api.GetObjectMetadata(
               uri.bucket_name, uri.object_name, generation=uri.generation,

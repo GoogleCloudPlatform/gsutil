@@ -65,3 +65,23 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-q', 'stat', 'gs://'], expected_status=1)
     self.RunGsUtil(['-q', 'stat', 'gs://bucket/object'], expected_status=1)
     self.RunGsUtil(['-q', 'stat', 'file://tmp/abc'], expected_status=1)
+
+  def test_stat_bucket_wildcard(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents='z')
+    stat_string = suri(bucket_uri)[:-1] + '?/foo'
+    self.RunGsUtil(['stat', stat_string])
+    stat_string2 = suri(bucket_uri)[:-1] + '*/foo'
+    self.RunGsUtil(['stat', stat_string2])
+
+  def test_stat_object_wildcard(self):
+    bucket_uri = self.CreateBucket()
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo1',
+                                    contents='z')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo2',
+                                    contents='z')
+    stat_string = suri(object1_uri)[:-2] + '*'
+    stdout = self.RunGsUtil(['stat', stat_string], return_stdout=True)
+    self.assertIn(suri(object1_uri), stdout)
+    self.assertIn(suri(object2_uri), stdout)
+
