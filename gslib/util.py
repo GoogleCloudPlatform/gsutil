@@ -19,6 +19,7 @@ import math
 import multiprocessing
 import os
 import re
+import struct
 import sys
 import textwrap
 import threading
@@ -56,6 +57,7 @@ except ImportError, e:
 TWO_MB = 2 * 1024 * 1024
 TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
+_DEFAULT_LINES = 25
 
 # Make a progress callback every 64KB during uploads/downloads.
 CALLBACK_PER_X_BYTES = 1024*64
@@ -784,3 +786,32 @@ def IsCloudSubdirPlaceholder(url, blr=None):
   else:
     size = 0
   return size == 0 and url_str.endswith('/')
+
+
+def GetTermLines():
+  """Returns number of terminal lines."""
+  # fcntl isn't supported in Windows.
+  try:
+    import fcntl    # pylint: disable=g-import-not-at-top
+    import termios  # pylint: disable=g-import-not-at-top
+  except ImportError:
+    return _DEFAULT_LINES
+  def ioctl_GWINSZ(fd):  # pylint: disable=invalid-name
+    try:
+      return struct.unpack(
+          'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
+    except:  # pylint: disable=bare-except
+      return 0  # Failure (so will retry on different file descriptor below).
+  # Try to find a valid number of lines from termio for stdin, stdout,
+  # or stderr, in that order.
+  ioc = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+  if not ioc:
+    try:
+      fd = os.open(os.ctermid(), os.O_RDONLY)
+      ioc = ioctl_GWINSZ(fd)
+      os.close(fd)
+    except:  # pylint: disable=bare-except
+      pass
+  if not ioc:
+    ioc = os.environ.get('LINES', _DEFAULT_LINES)
+  return int(ioc)

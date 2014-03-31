@@ -17,7 +17,6 @@ import itertools
 import os
 import pkgutil
 import re
-import struct
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -183,7 +182,7 @@ class HelpCommand(Command):
     help_str = re.sub('<B>', '\033[1m', help_str)
     help_str = re.sub('</B>', '\033[0;0m', help_str)
     num_lines = len(help_str.split('\n'))
-    if 'PAGER' in os.environ and num_lines >= self.getTermLines():
+    if 'PAGER' in os.environ and num_lines >= gslib.util.GetTermLines():
       # Use -r option for less to make bolding work right.
       pager = os.environ['PAGER'].split(' ')
       if pager[0].endswith('less'):
@@ -195,36 +194,6 @@ class HelpCommand(Command):
                                (' '.join(pager), e))
     else:
       print help_str
-
-  _DEFAULT_LINES = 25
-
-  def getTermLines(self):
-    """Returns number of terminal lines."""
-    # fcntl isn't supported in Windows.
-    try:
-      import fcntl    # pylint: disable=g-import-not-at-top
-      import termios  # pylint: disable=g-import-not-at-top
-    except ImportError:
-      return self._DEFAULT_LINES
-    def ioctl_GWINSZ(fd):  # pylint: disable=invalid-name
-      try:
-        return struct.unpack(
-            'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
-      except:  # pylint: disable=bare-except
-        return 0  # Failure (so will retry on different file descriptor below).
-    # Try to find a valid number of lines from termio for stdin, stdout,
-    # or stderr, in that order.
-    ioc = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-    if not ioc:
-      try:
-        fd = os.open(os.ctermid(), os.O_RDONLY)
-        ioc = ioctl_GWINSZ(fd)
-        os.close(fd)
-      except:  # pylint: disable=bare-except
-        pass
-    if not ioc:
-      ioc = os.environ.get('LINES', self._DEFAULT_LINES)
-    return int(ioc)
 
   def _LoadHelpMaps(self):
     """Returns tuple of help type and help name.
