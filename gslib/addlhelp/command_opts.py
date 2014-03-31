@@ -66,11 +66,10 @@ _detailed_help_text = ("""
               See also "gsutil help setmeta" for the ability to set metadata
               fields on objects after they have been uploaded.
 
-  -m          Causes supported operations (acl ch, acl set, cp, mv, rm,
+  -m          Causes supported operations (acl ch, acl set, cp, mv, rm, rsync,
               and setmeta) to run in parallel. This can significantly improve
-              performance if you are uploading, downloading, moving, removing,
-              or changing ACLs on a large number of files over a fast network
-              connection.
+              performance if you are performing operations on a large number of
+              files over a reasonably fast network connection.
 
               gsutil performs the specified operation using a combination of
               multi-threading and multi-processing, using a number of threads
@@ -82,7 +81,10 @@ _detailed_help_text = ("""
 
               Using the -m option may make your performance worse if you
               are using a slower network, such as the typical network speeds
-              offered by non-business home network plans.
+              offered by non-business home network plans. It can also make
+              your performance worse for cases that perform all operations
+              locally (e.g., gsutil rsync, where both source and desination URLs
+              are on the local disk), because it can "thrash" your local disk.
 
               If a download or upload operation using parallel transfer fails
               before the entire transfer is complete (e.g. failing after 300 of

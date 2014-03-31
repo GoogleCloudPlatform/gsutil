@@ -67,6 +67,8 @@ from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
+OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
+
 if IS_WINDOWS:
   import ctypes  # pylint: disable=g-import-not-at-top
 
@@ -1082,6 +1084,15 @@ class Command(HelpProvider):
     if should_return_results:
       return global_return_values_map.Get(caller_id)
 
+  def _SuggestGsutilDashM(self):
+    """Outputs a sugestion to the user to use gsutil -m."""
+    self.logger.warn('\n' + textwrap.fill(
+        '==> NOTE: You are performing a sequence of gsutil operations that may '
+        'run significantly faster if you instead use gsutil -m %s ...\n'
+        'Please see the -m section under "gsutil help options" for further '
+        'information about when gsutil -m can be advantageous.'
+        % sys.argv[1]) + '\n')
+
   # pylint: disable=g-doc-args
   def _SequentialApply(self, func, args_iterator, exception_handler, caller_id,
                        arg_checker, should_return_results, fail_on_error):
@@ -1096,6 +1107,9 @@ class Command(HelpProvider):
     # is done in the current thread.
     worker_thread = WorkerThread(None, False)
     args_iterator = iter(args_iterator)
+    # Count of sequential calls that have been made. Used for producing
+    # suggestion to use gsutil -m.
+    sequential_call_count = 0
     while True:
 
       # Try to get the next argument, handling any exceptions that arise.
@@ -1115,11 +1129,22 @@ class Command(HelpProvider):
                 func, traceback.format_exc())
           continue
 
+      sequential_call_count += 1
+      if (sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD
+          and self.multiprocessing_is_available):
+        # Output suggestion near beginning of run, so user sees it early and can
+        # ^C and try gsutil -m.
+        self._SuggestGsutilDashM()
       if arg_checker(self, args):
         # Now that we actually have the next argument, perform the task.
         task = Task(func, args, caller_id, exception_handler,
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
+    if (sequential_call_count >= gslib.util.GetTermLines()
+        and self.multiprocessing_is_available):
+      # Output suggestion at end of long run, in case user missed it at the
+      # start and it scrolled off-screen.
+      self._SuggestGsutilDashM()
 
   # pylint: disable=g-doc-args
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
