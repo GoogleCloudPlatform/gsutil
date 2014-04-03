@@ -56,12 +56,21 @@ import gslib.exception
 from gslib.exception import CommandException
 import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
 
+GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
+# Google OAuth2 clients always have a secret, even if the client is an installed
+# application/utility such as gsutil.  Of course, in such cases the "secret" is
+# actually publicly known; security depends entirely on the secrecy of refresh  
+# tokens, which effectively become bearer tokens.  
+GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
+
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
 # authentication is performed.
 try:
   # pylint: disable=unused-import,g-import-not-at-top
-  from oauth2_plugin import oauth2_plugin
+  import oauth2_plugin
+  oauth2_plugin.SetFallbackClientIdAndSecret(
+      GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
 except ImportError:
   pass
 
