@@ -24,7 +24,9 @@ import oauth2client
 import oauth2client.client
 import oauth2client.gce
 import oauth2client.multistore_file
-import oauth2client.tools
+# TODO: This is unused in gsutil, but once apitools python 2.6 compatibility
+# testing is complete.
+# import oauth2client.tools
 from gslib.third_party.protorpc import messages
 
 import gflags as flags
