@@ -55,6 +55,7 @@ from gslib.command_runner import CommandRunner
 import gslib.exception
 from gslib.exception import CommandException
 import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
+from gslib.util import CreateLock
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
@@ -69,8 +70,6 @@ GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
 try:
   # pylint: disable=unused-import,g-import-not-at-top
   import oauth2_plugin
-  oauth2_plugin.SetFallbackClientIdAndSecret(
-      GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
 except ImportError:
   pass
 
@@ -149,6 +148,17 @@ def main():
     # called from within an "if __name__ == '__main__':" block.
     gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
+
+  # This needs to be done after gslib.util.InitializeMultiprocessingVariables(),
+  # since otherwise we can't call gslib.util.CreateLock.
+  try:
+    # pylint: disable=unused-import,g-import-not-at-top
+    import oauth2_plugin
+    oauth2_plugin.SetFallbackClientIdAndSecret(
+        GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
+    oauth2_plugin.SetLock(CreateLock())
+  except ImportError:
+    pass
 
   global debug
   global test_exception_traces
