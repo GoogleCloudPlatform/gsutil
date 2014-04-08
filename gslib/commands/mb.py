@@ -66,8 +66,10 @@ _detailed_help_text = ("""
   If you don't specify a -l option, the bucket will be created in the default
   location (US). Otherwise, you can specify one of the available locations:
 
+  - ASIA (Asia)
+  - ASIA-EAST1 (Eastern Asia-Pacific)
   - EU (European Union)
-  - US (United States
+  - US (United States)
   - US-EAST1 (Eastern United States) [1]_
   - US-EAST2 (Eastern United States) [1]_
   - US-EAST3 (Eastern United States) [1]_
