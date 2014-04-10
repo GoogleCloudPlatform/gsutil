@@ -333,7 +333,7 @@ OPTIONS_TEXT = """
   -e             Exclude symlinks. When specified, symbolic links will not be
                  copied.
 
-  -I files/objs  Causes gsutil to read the list of files or objects to copy from
+  -I             Causes gsutil to read the list of files or objects to copy from
                  stdin. This allows you to run a program that generates the list
                  of files to upload/download.
 
