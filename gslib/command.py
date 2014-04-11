@@ -1130,8 +1130,7 @@ class Command(HelpProvider):
           continue
 
       sequential_call_count += 1
-      if (sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD
-          and self.multiprocessing_is_available):
+      if sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD:
         # Output suggestion near beginning of run, so user sees it early and can
         # ^C and try gsutil -m.
         self._SuggestGsutilDashM()
@@ -1140,8 +1139,7 @@ class Command(HelpProvider):
         task = Task(func, args, caller_id, exception_handler,
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
-    if (sequential_call_count >= gslib.util.GetTermLines()
-        and self.multiprocessing_is_available):
+    if sequential_call_count >= gslib.util.GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
       self._SuggestGsutilDashM()
