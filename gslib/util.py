@@ -721,10 +721,11 @@ def MultiprocessingIsAvailable(logger=None):
     if limit < MIN_ACCEPTABLE_OPEN_FILES_LIMIT and not IS_WINDOWS:
       message += (
           '\nYour max number of open files, %s, is too low to allow safe '
-          'multiprocessing calls. If you are on a Unix-like OS, then you can '
-          'fix this by adding something like "ulimit -n 10000" to your '
-          '~/.bashrc (Linux), ~/.bash_profile (OS X), or equivalent file, '
-          'and opening a new terminal.' % limit)
+          'multiprocessing. On Linux you can fix this by adding something '
+          'like "ulimit -n 10000" to your ~/.bashrc or equivalent file, and '
+          'opening a new terminal. '
+          'On MacOS you can fix this by running a command like this once: '
+          '"launchctl limit maxfiles 10000"' % limit)
       raise Exception('Max number of open files, %s, is too low.' % limit)
   except:  # pylint: disable=bare-except
     stack_trace = traceback.format_exc()
