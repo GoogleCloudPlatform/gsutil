@@ -56,7 +56,6 @@ from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
-from gslib.hashing_helper import GetHashAlgs
 from gslib.hashing_helper import MD5_REGEX
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
@@ -328,6 +327,23 @@ class BotoTranslation(CloudApi):
                                        object_name=object_name,
                                        generation=generation)
 
+  def _CurryDigester(self, digester_object):
+    """Curries a digester object into a form consumable by boto.
+
+    Key instantiates its own digesters by calling hash_algs[alg]() [note there
+    are no arguments to this function].  So in order to pass in our caught-up
+    digesters during a resumable download, we need to pass the digester
+    object but don't get to look it up based on the algorithm name.  Here we
+    use a lambda to make lookup implicit.
+
+    Args:
+      digester_object: Input object to be returned by the created function.
+
+    Returns:
+      A function which when called will return the input object.
+    """
+    return lambda: digester_object
+
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream, provider=None,
       generation=None, download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
@@ -356,16 +372,12 @@ class BotoTranslation(CloudApi):
     else:
       key = self._GetBotoKey(bucket_name, object_name, generation=generation)
 
-    # Key instantiates its own digesters, so we have to ignore the caught-up
-    # digesters and pass in a clean set of hash_algs.
-    hash_algs = GetHashAlgs(
-        src_md5=((getattr(key, 'cloud_hashes', None)
-                  and 'md5' in key.cloud_hashes) or
-                 (getattr(key, 'etag', None)
-                  and self._GetMD5FromETag(key.etag))),
-        src_crc32c=(getattr(key, 'cloud_hashes', None)
-                    and 'crc32c' in key.cloud_hashes),
-        src_url_str='%s://%s/%s' % (self.provider, bucket_name, object_name))
+    if digesters and self.provider == 'gs':
+      hash_algs = {}
+      for alg in digesters:
+        hash_algs[alg] = self._CurryDigester(digesters[alg])
+    else:
+      hash_algs = {}
 
     total_size = 0
     if serialization_data:
@@ -373,7 +385,7 @@ class BotoTranslation(CloudApi):
 
     if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
       try:
-        num_progress_callbacks = total_size / CALLBACK_PER_X_BYTES
+        num_progress_callbacks = (total_size / CALLBACK_PER_X_BYTES) + 1
         self._PerformResumableDownload(
             download_stream, key, headers=headers, callback=progress_callback,
             num_callbacks=num_progress_callbacks, hash_algs=hash_algs)
@@ -393,29 +405,38 @@ class BotoTranslation(CloudApi):
       raise ArgumentException('Unsupported DownloadStrategy: %s' %
                               download_strategy)
 
-    if digesters:
+    if self.provider == 's3':
+      if digesters:
 
-      class HashToDigester(object):
-        """Wrapper class to expose hash digests.
+        class HashToDigester(object):
+          """Wrapper class to expose hash digests.
 
-        boto creates its own digesters in get_file, returning on-the-fly hashes
-        only by way of key.local_hashes.  To propagate the digest back to the
-        caller, this stub class implements the digest() function.
-        """
+          boto creates its own digesters in s3's get_file, returning on-the-fly
+          hashes only by way of key.local_hashes.  To propagate the digest back
+          to the caller, this stub class implements the digest() function.
+          """
 
-        def __init__(self, hash_val):
-          self.hash_val = hash_val
+          def __init__(self, hash_val):
+            self.hash_val = hash_val
 
-        def digest(self):  # pylint: disable=invalid-name
-          return self.hash_val
+          def digest(self):  # pylint: disable=invalid-name
+            return self.hash_val
 
-      for alg_name in digesters:
-        if getattr(key, 'local_hashes', None) and alg_name in key.local_hashes:
-          digesters[alg_name] = HashToDigester(key.local_hashes[alg_name])
-        else:
-          # Set the digester value to None to indicate that no digest was
-          # successfully calculated.
-          digesters[alg_name] = None
+        for alg_name in digesters:
+          if ((download_strategy == CloudApi.DownloadStrategy.RESUMABLE and
+               start_byte != 0) or
+              not ((getattr(key, 'local_hashes', None) and
+                    alg_name in key.local_hashes))):
+            # For resumable downloads, boto does not provide a mechanism to
+            # catch up the hash in the case of a partially complete download.
+            # In this case or in the case where no digest was successfully
+            # calculated, set the digester to None, which indicates that we'll
+            # need to manually calculate the hash from the local file once it
+            # is complete.
+            digesters[alg_name] = None
+          else:
+            # Use the on-the-fly hash.
+            digesters[alg_name] = HashToDigester(key.local_hashes[alg_name])
 
   def _PerformSimpleDownload(self, download_stream, key, headers=None,
                              hash_algs=None):
@@ -428,13 +449,13 @@ class BotoTranslation(CloudApi):
     except TypeError:  # s3 and mocks do not support hash_algs
       key.get_contents_to_file(download_stream, headers=headers)
 
-  def _PerformResumableDownload(self, key, fp, headers=None, callback=None,
+  def _PerformResumableDownload(self, fp, key, headers=None, callback=None,
                                 num_callbacks=0, hash_algs=None):
     """Downloads bytes from key to fp, resuming as needed.
 
     Args:
-      key: Key object from which data is to be downloaded
       fp: File pointer into which data should be downloaded
+      key: Key object from which data is to be downloaded
       headers: Headers to send when retrieving the file
       callback: (optional) a callback function that will be called to report
            progress on the download.  The callback should accept two integer
@@ -541,7 +562,7 @@ class BotoTranslation(CloudApi):
       except httplib.IncompleteRead:
         pass
 
-      sleep_time_secs = random.random() * (2**self.progress_less_iterations)
+      sleep_time_secs = random.random() * (2 ** self.progress_less_iterations)
       if debug >= 1:
         self.logger.info('Got retryable failure (%d progress-less in a row).\n'
                          'Sleeping %d seconds before re-trying' %
@@ -1060,13 +1081,13 @@ class BotoTranslation(CloudApi):
     if not fields or 'metadata' in fields:
       custom_metadata = self._TranslateBotoKeyCustomMetadata(key)
     cache_control = None
-    if not fields  or 'cacheControl' in fields:
+    if not fields or 'cacheControl' in fields:
       cache_control = getattr(key, 'cache_control', None)
     component_count = None
-    if not fields  or 'componentCount' in fields:
+    if not fields or 'componentCount' in fields:
       component_count = getattr(key, 'component_count', None)
     content_disposition = None
-    if not fields  or 'contentDisposition' in fields:
+    if not fields or 'contentDisposition' in fields:
       content_disposition = getattr(key, 'content_disposition', None)
     # Other fields like updated and ACL depend on the generation
     # of the object, so populate that regardless of whether it was requested.
@@ -1081,6 +1102,8 @@ class BotoTranslation(CloudApi):
     etag = None
     if not fields or 'etag' in fields:
       etag = getattr(key, 'etag', None)
+      if etag:
+        etag = etag.strip('"\'')
     crc32c = None
     if not fields or 'crc32c' in fields:
       if hasattr(key, 'cloud_hashes') and 'crc32c' in key.cloud_hashes:

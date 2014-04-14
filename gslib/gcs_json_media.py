@@ -165,8 +165,6 @@ class DownloadCallbackConnectionClassFactory(object):
       bytes_read_since_callback = 0
       outer_callback_per_bytes = self.callback_per_bytes
       outer_total_size = self.total_size
-      # TODO: Need to reconcile this by adjusting the callback for resumed
-      # downloads when we instantiate this class.
       total_bytes_downloaded = 0
       outer_digesters = self.digesters
       outer_progress_callback = self.progress_callback
@@ -190,6 +188,14 @@ class DownloadCallbackConnectionClassFactory(object):
         def read(amt=None):  # pylint: disable=invalid-name
           """Overrides HTTPConnection.getresponse.read."""
           old_debug = self.debuglevel
+          # If we fail partway through this function, we'll retry the entire
+          # read and therefore we need to restart our hash digesters from the
+          # last successful read. Therefore, make a copy of the digester's
+          # current hash object and commit it once we've read all the bytes.
+          inner_digesters = {}
+          if self.outer_digesters:
+            for alg in self.outer_digesters:
+              inner_digesters[alg] = self.outer_digesters[alg].copy()
           try:
             self.set_debuglevel(0)
             bytes_read = 0
@@ -207,12 +213,14 @@ class DownloadCallbackConnectionClassFactory(object):
                   self.outer_progress_callback(self.total_bytes_downloaded,
                                                self.outer_total_size)
                   self.bytes_read_since_callback = 0
-              if self.outer_digesters:
-                for alg in self.outer_digesters:
-                  self.outer_digesters[alg].update(data)
+              for alg in inner_digesters:
+                inner_digesters[alg].update(data)
               # TODO: gsutil-beta: Likely need to insert a test hook here
               # to simulate connection breaks.
               data = orig_read_func(TRANSFER_BUFFER_SIZE)
+            if self.outer_digesters:
+              for alg in self.outer_digesters:
+                self.outer_digesters[alg] = inner_digesters[alg].copy()
             return all_data.getvalue()
           finally:
             self.set_debuglevel(old_debug)
