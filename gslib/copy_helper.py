@@ -376,14 +376,14 @@ def _GetUploadTrackerData(tracker_file_name, logger):
       tracker_file.close()
 
 
-def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, src_url,
+def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
                                      api_selector):
   """Checks for a download tracker file and creates one if it does not exist.
 
   Args:
     src_obj_metadata: Metadata for the source object.  Must include
                       etag.
-    src_url: Source StorageUrl.
+    dst_url: Destination file StorageUrl.
     api_selector: API mode to use (for tracker file naming).
 
   Returns:
@@ -392,7 +392,7 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, src_url,
   """
   assert src_obj_metadata.etag
   tracker_file_name = GetTrackerFilePath(
-      src_url, TrackerFileType.DOWNLOAD, api_selector)
+      dst_url, TrackerFileType.DOWNLOAD, api_selector)
   tracker_file = None
 
   # Check to see if we already have a matching tracker file.
@@ -768,8 +768,8 @@ def _CheckHashes(logger, src_obj_metadata, file_name, digests):
     local_b64_digest = local_hashes[alg]
     cloud_b64_digest = cloud_hashes[alg]
     logger.debug(
-        'Comparing local vs cloud %s-checksum. (%s/%s)' % (
-            alg, local_b64_digest, cloud_b64_digest))
+        'Comparing local vs cloud %s-checksum for %s. (%s/%s)' % (
+            alg, file_name, local_b64_digest, cloud_b64_digest))
     if local_b64_digest != cloud_b64_digest:
       raise CommandException(
           '%s signature computed for local file (%s) doesn\'t match '
@@ -1683,7 +1683,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       api_selector == ApiSelector.XML):
     # We can't use tempfile.mkstemp() here because we need a predictable
     # filename for resumable downloads.
-    download_file_name = '%s_.gztmp' % file_name
+    download_file_name = _GetDownloadZipFileName(file_name)
     logger.info(
         'Downloading to temp gzip filename %s' % download_file_name)
     need_to_unzip = True
@@ -1700,6 +1700,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   fp = None
+  download_complete = False
   download_strategy = _SelectDownloadStrategy(src_obj_metadata, dst_url)
   download_start_point = 0
   # This is used for resuming downloads, but also for passing the mediaLink
@@ -1711,11 +1712,10 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
       fp = open(download_file_name, 'wb')
     elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-      # If this is a resumable download, we need to open the file for append,
-      # manage a tracker file, and prepare a callback function.
+      # If this is a resumable download, we need to open the file for append and
+      # manage a tracker file.
       fp = open(download_file_name, 'ab')
 
-      api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
       resuming = _ReadOrCreateDownloadTrackerFile(
           src_obj_metadata, dst_url, api_selector)
       if resuming:
@@ -1730,15 +1730,15 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
               'if you re-try this download it will start from scratch' %
               (fp.name, existing_file_size, src_url.object_name,
                src_obj_metadata.size))
-        if existing_file_size is src_obj_metadata.size:
-          logger.debug(
-              'Download already complete for file %s, just.'
-              'deleting tracker file' % fp.name)
-          _DeleteTrackerFile(GetTrackerFilePath(
-              dst_url, TrackerFileType.DOWNLOAD, api_selector))
         else:
-          download_start_point = existing_file_size
-          serialization_dict['progress'] = download_start_point
+          if existing_file_size == src_obj_metadata.size:
+            logger.info('Download already complete for file %s, skipping '
+                        'download but will run integrity checks.')
+            download_complete = True
+          else:
+            download_start_point = existing_file_size
+            serialization_dict['progress'] = download_start_point
+            logger.info('Resuming download for %s', src_url.GetUrlString())
           # Catch up our digester with the hash data.
           if existing_file_size > TEN_MB:
             for alg_name in digesters:
@@ -1774,12 +1774,13 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     # caught-up hash will be incorrect.  We recalculate the hash on
     # the local file in the case of a failed gzip hash anyway, but it would
     # be better if we actively detected this case.
-    gsutil_api.GetObjectMedia(
-        src_url.bucket_name, src_url.object_name, fp,
-        start_byte=download_start_point, generation=src_url.generation,
-        provider=src_url.scheme,
-        serialization_data=serialization_data, digesters=digesters,
-        progress_callback=progress_callback)
+    if not download_complete:
+      gsutil_api.GetObjectMedia(
+          src_url.bucket_name, src_url.object_name, fp,
+          start_byte=download_start_point, generation=src_url.generation,
+          download_strategy=download_strategy, provider=src_url.scheme,
+          serialization_data=serialization_data, digesters=digesters,
+          progress_callback=progress_callback)
 
     end_time = time.time()
 
@@ -1790,12 +1791,60 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if test_method:
       test_method(fp)
   except ResumableDownloadException as e:
-    logger.warning('Caught non-retryable ResumableDownloadException '
-                   '(%s).' % e.message)
+    logger.warning('Caught ResumableDownloadException (%s) for file %s.' %
+                   (e.reason, file_name))
+    raise
   finally:
     if fp:
       fp.close()
 
+  # If we decompressed a content-encoding gzip file on the fly, this may not
+  # be accurate, but it is the best we can do without going deep into the
+  # underlying HTTP libraries. Note that this value is only used for
+  # reporting in log messages; inaccuracy doesn't impact the integrity of the
+  # download.
+  bytes_transferred = src_obj_metadata.size - download_start_point
+
+  local_md5 = _ValidateDownloadHashes(logger, src_obj_metadata, dst_url,
+                                      need_to_unzip, digesters, hash_algs,
+                                      api_selector, bytes_transferred)
+
+  return (end_time - start_time, bytes_transferred, dst_url, local_md5)
+
+
+def _GetDownloadZipFileName(file_name):
+  """Returns the file name for a temporarily compressed downloaded file."""
+  return '%s_.gztmp' % file_name
+
+
+def _ValidateDownloadHashes(logger, src_obj_metadata, dst_url, need_to_unzip,
+                            digesters, hash_algs, api_selector,
+                            bytes_transferred):
+  """Validates a downloaded file's integrity.
+
+  Args:
+    logger: For outputting log messages.
+    src_obj_metadata: Metadata for the source object, potentially containing
+                      hash values.
+    dst_url: StorageUrl describing the destination file.
+    need_to_unzip: If true, a temporary zip file was used and must be
+                   uncompressed as part of validation.
+    digesters: dict of {string, hash digester} that contains up-to-date digests
+               computed during the download. If a digester for a particular
+               algorithm is None, an up-to-date digest is not available and the
+               hash must be recomputed from the local file.
+    hash_algs: dict of {string, hash algorithm} that can be used if digesters
+               don't have up-to-date digests.
+    api_selector: The Cloud API implementation used (used tracker file naming).
+    bytes_transferred: Number of bytes downloaded (used for logging).
+
+  Returns:
+    An MD5 of the local file, if one was calculated as part of the integrity
+    check.
+  """
+  file_name = dst_url.object_name
+  download_file_name = (_GetDownloadZipFileName(file_name) if need_to_unzip else
+                        file_name)
   digesters_succeeded = True
   for alg in digesters:
     # If we get a digester with a None algorithm, the underlying
@@ -1811,14 +1860,11 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     local_hashes = _CreateDigestsFromLocalFile(
         logger, hash_algs, download_file_name, src_obj_metadata)
 
-  # If we decompressed a content-encoding gzip file on the fly, this may not
-  # be accurate, but it is the best we can do without going deep into the
-  # underlying HTTP libraries.
-  bytes_transferred = src_obj_metadata.size - download_start_point
-
   digest_verified = True
   try:
     _CheckHashes(logger, src_obj_metadata, download_file_name, local_hashes)
+    _DeleteTrackerFile(GetTrackerFilePath(
+        dst_url, TrackerFileType.DOWNLOAD, api_selector))
   except CommandException, e:
     # If the digest doesn't match, we'll try checking it again after
     # unzipping.
@@ -1826,13 +1872,15 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
         (api_selector == ApiSelector.JSON or need_to_unzip)):
       digest_verified = False
     else:
-      os.unlink(download_file_name)
+      _DeleteTrackerFile(GetTrackerFilePath(
+          dst_url, TrackerFileType.DOWNLOAD, api_selector))
+      os.unlink(file_name)
       raise
 
   if need_to_unzip:
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
-    if bytes_transferred > 10 * 1024 * 1024:
+    if bytes_transferred > TEN_MB:
       logger.info(
           'Uncompressing downloaded tmp file to %s...', file_name)
 
@@ -1852,14 +1900,16 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       local_hashes = _CreateDigestsFromLocalFile(logger, hash_algs, file_name,
                                                  src_obj_metadata)
       _CheckHashes(logger, src_obj_metadata, file_name, local_hashes)
+      _DeleteTrackerFile(GetTrackerFilePath(
+          dst_url, TrackerFileType.DOWNLOAD, api_selector))
     except CommandException, e:
+      _DeleteTrackerFile(GetTrackerFilePath(
+          dst_url, TrackerFileType.DOWNLOAD, api_selector))
       os.unlink(file_name)
       raise
 
-  local_md5 = None
   if 'md5' in local_hashes:
-    local_md5 = local_hashes['md5']
-  return (end_time - start_time, bytes_transferred, dst_url, local_md5)
+    return local_hashes['md5']
 
 
 def _CopyFileToFile(src_url, dst_url):
@@ -1925,6 +1975,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
   (download_fh, download_path) = tempfile.mkstemp(dir=resumable_tracker_dir)
   download_fp = None
+  upload_fp = None
   tempfile.mkstemp(dir=resumable_tracker_dir)
   try:
     # Check for temp space. Assume the compressed object is at most 2x
