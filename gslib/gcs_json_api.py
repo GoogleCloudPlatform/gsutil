@@ -20,6 +20,8 @@ import tempfile
 
 import boto
 from boto import config
+import httplib2
+from oauth2_plugin import oauth2_helper
 
 import gslib
 from gslib.cloud_api import AccessDeniedException
@@ -30,6 +32,8 @@ from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
+from gslib.cloud_api import ResumableUploadAbortException
+from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.cred_types import CredTypes
@@ -52,8 +56,6 @@ from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
-import httplib2
-from oauth2_plugin import oauth2_helper
 
 # Implementation supports only 'gs' URIs, so provider is unused.
 # pylint: disable=unused-argument
@@ -85,8 +87,8 @@ class GcsJsonApi(CloudApi):
                    Storage.
       debug: Debug level for the API implementation (0..3).
     """
-    # TODO: gsutil-beta: plumb host_header for perfdiag / test_perfdiag.
-    # TODO: gsutil-beta: Add jitter to apitools' http_wrapper retry mechanism.
+    # TODO: Plumb host_header for perfdiag / test_perfdiag.
+    # TODO: Add jitter to apitools' http_wrapper retry mechanism.
     super(GcsJsonApi, self).__init__(bucket_storage_uri_class, logger,
                                      provider='gs', debug=debug)
     no_op_credentials = False
@@ -194,8 +196,7 @@ class GcsJsonApi(CloudApi):
         pass
 
   def _GetCertsFile(self):
-    # TODO: gsutil-beta.  This code is shared with main, merge the
-    # implementations.
+    # TODO: This code is shared with main, merge the implementations.
     certs_file = boto.config.get('Boto', 'ca_certificates_file', None)
     if not certs_file:
       disk_certs_file = os.path.abspath(
@@ -449,7 +450,7 @@ class GcsJsonApi(CloudApi):
       generation = long(generation)
 
     outer_total_size = None
-    callback_count = 0
+    callback_per_bytes = 0
     if serialization_data:
       outer_total_size = json.loads(serialization_data)['total_size']
 
@@ -458,11 +459,11 @@ class GcsJsonApi(CloudApi):
         raise ArgumentException('Download size is required when callbacks are '
                                 'requested for a download, but no size was '
                                 'provided.')
-      callback_count = outer_total_size / CALLBACK_PER_X_BYTES
+      callback_per_bytes = CALLBACK_PER_X_BYTES
       progress_callback(0, outer_total_size)
 
     callback_class_factory = DownloadCallbackConnectionClassFactory(
-        total_size=outer_total_size, callback_count=callback_count,
+        total_size=outer_total_size, callback_per_bytes=callback_per_bytes,
         progress_callback=progress_callback, digesters=digesters)
     download_http_class = callback_class_factory.GetConnectionClass()
 
@@ -568,16 +569,17 @@ class GcsJsonApi(CloudApi):
 
     bytes_uploaded_container = BytesUploadedContainer()
 
-    callback_count = 0
+    callback_per_bytes = 0
     total_size = 0
     if progress_callback and size:
-      callback_count = size / CALLBACK_PER_X_BYTES
+      callback_per_bytes = CALLBACK_PER_X_BYTES
       total_size = size
       progress_callback(0, size)
 
     callback_class_factory = UploadCallbackConnectionClassFactory(
         bytes_uploaded_container, total_size=total_size,
-        callback_count=callback_count, progress_callback=progress_callback)
+        callback_per_bytes=callback_per_bytes,
+        progress_callback=progress_callback)
 
     upload_http = self._GetNewHttp()
     upload_http_class = callback_class_factory.GetConnectionClass()
@@ -596,12 +598,8 @@ class GcsJsonApi(CloudApi):
         'user-agent': self.api_client.user_agent
     }
     try:
-      if serialization_data:
-        apitools_upload = apitools_transfer.Upload.FromData(
-            upload_stream, serialization_data, self.api_client.http)
-        apitools_upload.chunksize = RESUMABLE_CHUNK_SIZE
-        apitools_upload.bytes_http = authorized_upload_http
-      else:
+      if not serialization_data:
+        # This is a new upload, set up initial upload state.
         content_type = object_metadata.contentType
         if not content_type:
           content_type = DEFAULT_CONTENT_TYPE
@@ -617,26 +615,40 @@ class GcsJsonApi(CloudApi):
         global_params = apitools_messages.StandardQueryParameters()
         if fields:
           global_params.fields = ','.join(set(fields))
-        if apitools_strategy == 'simple':
-          apitools_upload = apitools_transfer.Upload(
-              upload_stream, content_type, total_size=size, auto_transfer=True)
-          apitools_upload.strategy = apitools_strategy
-          apitools_upload.bytes_http = authorized_upload_http
 
-          return self.api_client.objects.Insert(
-              apitools_request,
-              upload=apitools_upload,
-              global_params=global_params)
-        else:  # resumable
-          apitools_upload = apitools_transfer.Upload(
-              upload_stream, content_type, total_size=size,
-              chunksize=RESUMABLE_CHUNK_SIZE, auto_transfer=False)
-          apitools_upload.strategy = apitools_strategy
-          apitools_upload.bytes_http = authorized_upload_http
-          self.api_client.objects.Insert(
-              apitools_request,
-              upload=apitools_upload,
-              global_params=global_params)
+      if apitools_strategy == 'simple':  # One-shot upload.
+        apitools_upload = apitools_transfer.Upload(
+            upload_stream, content_type, total_size=size, auto_transfer=True)
+        apitools_upload.strategy = apitools_strategy
+        apitools_upload.bytes_http = authorized_upload_http
+
+        return self.api_client.objects.Insert(
+            apitools_request,
+            upload=apitools_upload,
+            global_params=global_params)
+      else:  # Resumable upload.
+        try:
+          if serialization_data:
+            # Resuming an existing upload.
+            apitools_upload = apitools_transfer.Upload.FromData(
+                upload_stream, serialization_data, self.api_client.http)
+            apitools_upload.chunksize = RESUMABLE_CHUNK_SIZE
+            apitools_upload.bytes_http = authorized_upload_http
+          else:
+            # New resumable upload.
+            apitools_upload = apitools_transfer.Upload(
+                upload_stream, content_type, total_size=size,
+                chunksize=RESUMABLE_CHUNK_SIZE, auto_transfer=False)
+            apitools_upload.strategy = apitools_strategy
+            apitools_upload.bytes_http = authorized_upload_http
+            self.api_client.objects.Insert(
+                apitools_request,
+                upload=apitools_upload,
+                global_params=global_params)
+
+          # If we're resuming an upload, apitools has at this point received
+          # from the server how many bytes it already has. Update our
+          # callback class with this information.
           bytes_uploaded_container.bytes_uploaded = apitools_upload.progress
           if tracker_callback:
             tracker_callback(json.dumps(apitools_upload.serialization_data))
@@ -646,7 +658,12 @@ class GcsJsonApi(CloudApi):
               additional_headers=additional_headers)
           return self.api_client.objects.ProcessHttpResponse(
               self.api_client.objects.GetMethodConfig('Insert'), http_response)
-
+        except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+          resumable_ex = self._TranslateApitoolsResumableUploadException(e)
+          if resumable_ex:
+            raise resumable_ex
+          else:
+            raise
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
@@ -821,6 +838,28 @@ class GcsJsonApi(CloudApi):
     else:
       raise
 
+  def _GetMessageFromHttpError(self, http_error):
+    if isinstance(http_error, apitools_exceptions.HttpError):
+      if getattr(http_error, 'content', None):
+        try:
+          json_obj = json.loads(http_error.content)
+          if 'error' in json_obj and 'message' in json_obj['error']:
+            return json_obj['error']['message']
+        except Exception:  # pylint: disable=broad-except
+          # If we couldn't decode anything, just leave the message as None.
+          pass
+
+  def _TranslateApitoolsResumableUploadException(
+      self, e, bucket_name=None, object_name=None, generation=None):
+    if isinstance(e, apitools_exceptions.HttpError):
+      message = self._GetMessageFromHttpError(e)
+      if e.status_code == 400:
+        return ResumableUploadAbortException(
+            message or 'Bad Request', status=e.status_code)
+      elif (e.status_code >= 500
+            and not self.http.disable_ssl_certificate_validation):
+        return ResumableUploadException(message, status=e.status_code)
+
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
                                   generation=None):
     """Translates apitools exceptions into their gsutil Cloud Api equivalents.
@@ -836,23 +875,27 @@ class GcsJsonApi(CloudApi):
       otherwise.
     """
     if isinstance(e, apitools_exceptions.HttpError):
+      message = self._GetMessageFromHttpError(e)
       if e.status_code == 400:
         # It is possible that the Project ID is incorrect.  Unfortunately the
         # JSON API does not give us much information about what part of the
         # request was bad.
-        return BadRequestException(e.message, status=e.status_code)
-      if e.status_code == 401:
+        return BadRequestException(message or 'Bad Request',
+                                   status=e.status_code)
+      elif e.status_code == 401:
         if 'Login Required' in str(e):
-          return AccessDeniedException('Access denied: login required.',
-                                       status=e.status_code)
-      if e.status_code == 403:
+          return AccessDeniedException(
+              message or 'Access denied: login required.',
+              status=e.status_code)
+      elif e.status_code == 403:
         if 'The account for the specified project has been disabled' in str(e):
-          return AccessDeniedException('Account disabled.',
+          return AccessDeniedException(message or 'Account disabled.',
                                        status=e.status_code)
         elif 'Daily Limit for Unauthenticated Use Exceeded' in str(e):
-          return AccessDeniedException('Access denied: quota exceeded. '
-                                       'Is your project ID valid?',
-                                       status=e.status_code)
+          return AccessDeniedException(
+              message or 'Access denied: quota exceeded. '
+              'Is your project ID valid?',
+              status=e.status_code)
         elif 'The bucket you tried to delete was not empty.' in str(e):
           return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                    status=e.status_code)
@@ -864,7 +907,7 @@ class GcsJsonApi(CloudApi):
               'https://developers.google.com/storage/docs/bucketnaming'
               '?hl=en#verification for more details.', status=e.status_code)
         return AccessDeniedException(e.message, status=e.status_code)
-      if e.status_code == 404:
+      elif e.status_code == 404:
         if bucket_name:
           if object_name:
             return CreateObjectNotFoundException(e.status_code, self.provider,
@@ -880,7 +923,7 @@ class GcsJsonApi(CloudApi):
         return ServiceException(
             'Bucket %s already exists.' % bucket_name, status=e.status_code)
       elif e.status_code == 412:
-        return PreconditionException(e.message, status=e.status_code)
+        return PreconditionException(message, status=e.status_code)
       elif (e.status_code == 503 and
             not self.http.disable_ssl_certificate_validation):
         return ServiceException(
@@ -889,6 +932,7 @@ class GcsJsonApi(CloudApi):
             'configuration file, please delete any cached access tokens '
             'in your filesystem and try again.',
             status=e.status_code)
+      return ServiceException(message, status=e.status_code)
     elif isinstance(e, apitools_exceptions.TransferInvalidError):
       return ServiceException('Transfer invalid (possible encoding error)')
 

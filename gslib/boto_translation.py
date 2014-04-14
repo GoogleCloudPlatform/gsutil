@@ -82,10 +82,12 @@ from gslib.util import UnaryDictToXml
 from gslib.util import UTF8
 
 
-TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.StorageResponseError,
+TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
+                                boto.exception.InvalidUriError,
+                                boto.exception.ResumableDownloadException,
+                                boto.exception.ResumableUploadException,
                                 boto.exception.StorageCreateError,
-                                boto.exception.BotoServerError,
-                                boto.exception.InvalidUriError)
+                                boto.exception.StorageResponseError)
 
 
 class BotoTranslation(CloudApi):
@@ -933,6 +935,7 @@ class BotoTranslation(CloudApi):
         get_fields.add(re.sub(r'items/', '', field))
       return get_fields
 
+  # pylint: disable=too-many-statements
   def _BotoBucketToBucket(self, bucket, fields=None):
     """Constructs an apitools Bucket from a boto bucket.
 

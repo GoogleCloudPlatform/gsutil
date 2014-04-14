@@ -41,7 +41,6 @@ import time
 import traceback
 
 from boto import config
-from boto.exception import ResumableUploadException
 
 import gslib
 from gslib.bucket_listing_ref import BucketListingRefType
@@ -51,6 +50,7 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
+from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
@@ -164,8 +164,6 @@ MAX_TRACKER_FILE_NAME_LENGTH = 100
 # Chunk size to use while unzipping gzip files.
 GUNZIP_CHUNK_SIZE = 8192
 
-RESUMABLE_THRESHOLD = config.getint('GSUtil', 'resumable_threshold', TWO_MB)
-
 
 class TrackerFileType(object):
   UPLOAD = 'upload'
@@ -176,6 +174,10 @@ class TrackerFileType(object):
 def _RmExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
+
+
+def _ResumableThreshold():
+  return config.getint('GSUtil', 'resumable_threshold', TWO_MB)
 
 
 def _ParallelUploadCopyExceptionHandler(cls, e):
@@ -240,14 +242,15 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
     'print_ver',
     'use_manifest',
     'preserve_acl',
-    'canned_acl'])
+    'canned_acl',
+    'halt_at_byte'])
 
 
 # pylint: disable=global-variable-undefined
 def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
                          read_args_from_stdin=False, print_ver=False,
                          use_manifest=False, preserve_acl=False,
-                         canned_acl=None):
+                         canned_acl=None, halt_at_byte=None):
   """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
@@ -260,7 +263,8 @@ def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
       print_ver=print_ver,
       use_manifest=use_manifest,
       preserve_acl=preserve_acl,
-      canned_acl=canned_acl)
+      canned_acl=canned_acl,
+      halt_at_byte=halt_at_byte)
   return global_copy_helper_opts
 
 
@@ -272,9 +276,10 @@ def GetCopyHelperOpts():
   return global_copy_helper_opts
 
 
-def _GetTrackerFilePath(dst_url, tracker_file_type, api_selector,
-                        src_url=None):
+def GetTrackerFilePath(dst_url, tracker_file_type, api_selector, src_url=None):
   """Gets the tracker file name described by the arguments.
+
+  Public for testing purposes.
 
   Args:
     dst_url: Destination URL for tracker file.
@@ -335,7 +340,7 @@ def _SelectDownloadStrategy(src_obj_metadata, dst_url):
     except OSError:
       pass
 
-  if src_obj_metadata.size >= RESUMABLE_THRESHOLD and not dst_is_special:
+  if src_obj_metadata.size >= _ResumableThreshold() and not dst_is_special:
     return CloudApi.DownloadStrategy.RESUMABLE
   else:
     return CloudApi.DownloadStrategy.ONE_SHOT
@@ -386,7 +391,7 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, src_url,
     False if we created a new tracker file (new download).
   """
   assert src_obj_metadata.etag
-  tracker_file_name = _GetTrackerFilePath(
+  tracker_file_name = GetTrackerFilePath(
       src_url, TrackerFileType.DOWNLOAD, api_selector)
   tracker_file = None
 
@@ -932,8 +937,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   api_selector = gsutil_api.GetApiSelector(provider=dst_url.scheme)
   # Determine which components, if any, have already been successfully
   # uploaded.
-  tracker_file = _GetTrackerFilePath(dst_url, TrackerFileType.PARALLEL_UPLOAD,
-                                     api_selector, src_url)
+  tracker_file = GetTrackerFilePath(dst_url, TrackerFileType.PARALLEL_UPLOAD,
+                                    api_selector, src_url)
   tracker_file_lock = CreateLock()
   (random_prefix, existing_components) = (
       _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock))
@@ -1188,6 +1193,29 @@ class _FileCopyCallbackHandler(object):
         sys.stderr.write('\n')
 
 
+class _HaltingCopyCallbackHandler(object):
+  """Test callback handler for intentionally stopping a resumable transfer."""
+
+  def __init__(self, is_upload, halt_at_byte, logger):
+    self.halt_at_byte = halt_at_byte
+    self.logger = logger
+    self.is_upload = is_upload
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_transferred, total_size):
+    """Forcibly exits if the transfer has passed the halting point."""
+    if total_bytes_transferred >= self.halt_at_byte:
+      if self.logger.isEnabledFor(logging.INFO):
+        sys.stderr.write(
+            'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
+                self.halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+                MakeHumanReadable(total_size)))
+      if self.is_upload:
+        raise ResumableUploadException('Artifically halting upload.')
+      else:
+        raise ResumableDownloadException('Artifically halting download.')
+
+
 class _StreamCopyCallbackHandler(object):
   """Outputs progress info for Stream copy to cloud.
 
@@ -1413,7 +1441,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
-  tracker_file_name = _GetTrackerFilePath(
+  tracker_file_name = GetTrackerFilePath(
       dst_url, TrackerFileType.UPLOAD,
       gsutil_api.GetApiSelector(provider=dst_url.scheme))
 
@@ -1426,6 +1454,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
     Args:
       serialization_data: Serialization data used in resuming the upload.
     """
+    tracker_file = None
     try:
       tracker_file = open(tracker_file_name, 'w')
       tracker_file.write(str(serialization_data))
@@ -1455,10 +1484,15 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
   # destination object.
   tracker_data = _GetUploadTrackerData(tracker_file_name, logger)
   if tracker_data:
-    logger.debug(
+    logger.info(
         'Resuming upload for %s', src_url.GetUrlString())
 
   retryable = False
+
+  progress_callback = _FileCopyCallbackHandler(True, logger).call
+  if global_copy_helper_opts.halt_at_byte:
+    progress_callback = _HaltingCopyCallbackHandler(
+        True, global_copy_helper_opts.halt_at_byte, logger).call
 
   start_time = time.time()
   try:
@@ -1469,8 +1503,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
         size=src_obj_size, serialization_data=tracker_data,
         fields=UPLOAD_RETURN_FIELDS,
         tracker_callback=_UploadTrackerCallback,
-        progress_callback=_FileCopyCallbackHandler(
-            True, logger).call)
+        progress_callback=progress_callback)
   except ResumableUploadException:
     retryable = True
     raise
@@ -1578,7 +1611,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           upload_stream, upload_url, dst_url, dst_obj_metadata,
           global_copy_helper_opts.canned_acl, upload_size, preconditions,
           gsutil_api, command_obj, copy_exception_handler)
-    elif upload_size < RESUMABLE_THRESHOLD or src_url.IsStream():
+    elif upload_size < _ResumableThreshold() or src_url.IsStream():
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
           upload_url, upload_stream, upload_size, dst_url, dst_obj_metadata,
           preconditions, gsutil_api, logger)
@@ -1612,6 +1645,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
 
 
 # TODO: Refactor this long function into smaller pieces.
+# pylint: disable=too-many-statements
 def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                           gsutil_api, logger, test_method=None):
   """Downloads an object to a local file.
@@ -1689,7 +1723,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
         # remaining range of the object.
         existing_file_size = GetFileSize(fp, position_to_eof=True)
         if existing_file_size > src_obj_metadata.size:
-          _DeleteTrackerFile(_GetTrackerFilePath(
+          _DeleteTrackerFile(GetTrackerFilePath(
               dst_url, TrackerFileType.DOWNLOAD, api_selector))
           raise CommandException(
               '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
@@ -1700,7 +1734,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
           logger.debug(
               'Download already complete for file %s, just.'
               'deleting tracker file' % fp.name)
-          _DeleteTrackerFile(_GetTrackerFilePath(
+          _DeleteTrackerFile(GetTrackerFilePath(
               dst_url, TrackerFileType.DOWNLOAD, api_selector))
         else:
           download_start_point = existing_file_size
@@ -1728,6 +1762,11 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if not dst_url.IsStream():
       serialization_data = json.dumps(serialization_dict)
 
+    progress_callback = _FileCopyCallbackHandler(False, logger).call
+    if global_copy_helper_opts.halt_at_byte:
+      progress_callback = _HaltingCopyCallbackHandler(
+          False, global_copy_helper_opts.halt_at_byte, logger).call
+
     start_time = time.time()
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
     # the object's metadata), when we request a range to resume, it's possible
@@ -1740,7 +1779,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
         start_byte=download_start_point, generation=src_url.generation,
         provider=src_url.scheme,
         serialization_data=serialization_data, digesters=digesters,
-        progress_callback=_FileCopyCallbackHandler(False, logger).call)
+        progress_callback=progress_callback)
 
     end_time = time.time()
 
@@ -1934,6 +1973,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
 
 # pylint: disable=undefined-variable
+# pylint: disable=too-many-statements
 def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
                 copy_exception_handler, allow_splitting=True,
                 headers=None, manifest=None, gzip_exts=None, test_method=None):

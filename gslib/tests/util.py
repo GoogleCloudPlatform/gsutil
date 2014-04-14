@@ -218,7 +218,7 @@ def PerformsFileToObjectUpload(func):
       RevertBotoConfig(boto_configs)
 
       # Try again, forcing parallel composite uploads.
-      with SetBotoConfigForTest(tmp_filename):
+      with SetBotoConfigFileForTest(tmp_filename):
         func(*args, **kwargs)
     finally:
       try:
@@ -230,7 +230,40 @@ def PerformsFileToObjectUpload(func):
 
 
 @contextmanager
-def SetBotoConfigForTest(boto_config_path):
+def SetBotoConfigForTest(boto_config_list):
+  """Sets the input list of boto configs for the duration of a 'with' clause.
+
+  Args:
+    boto_config_list: list of tuples of:
+      (boto config section to set, boto config name to set, value to set)
+
+  Yields:
+    Once after config is set.
+  """
+  revert_configs = []
+  tmp_filename = None
+  try:
+    tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
+    os.close(tmp_fd)
+    for boto_config in boto_config_list:
+      SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
+                    revert_configs)
+    with open(tmp_filename, 'w') as tmp_file:
+      boto.config.write(tmp_file)
+
+    with SetBotoConfigFileForTest(tmp_filename):
+      yield
+  finally:
+    RevertBotoConfig(revert_configs)
+    if tmp_filename:
+      try:
+        os.remove(tmp_filename)
+      except OSError:
+        pass
+
+
+@contextmanager
+def SetBotoConfigFileForTest(boto_config_path):
   """Sets a given file as the boto config file for a single test."""
   # Setup for entering "with" block.
   try:

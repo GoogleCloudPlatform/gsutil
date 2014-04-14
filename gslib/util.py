@@ -54,6 +54,7 @@ try:
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
+ONE_KB = 1024
 TWO_MB = 2 * 1024 * 1024
 TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
@@ -61,6 +62,9 @@ _DEFAULT_LINES = 25
 
 # Make a progress callback every 64KB during uploads/downloads.
 CALLBACK_PER_X_BYTES = 1024*64
+
+# Upload/download files in 8KB chunks over the HTTP connection.
+TRANSFER_BUFFER_SIZE = 1024*8
 
 NO_MAX = sys.maxint
 
@@ -417,6 +421,7 @@ def AddAcceptEncoding(headers):
     headers['accept-encoding'] = 'gzip'
 
 
+# pylint: disable=too-many-statements
 def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   """Print full info for given object (like what displays for gsutil ls -L).
 
