@@ -17,7 +17,6 @@
 # Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
-import logging
 import os
 import time
 import traceback
@@ -513,6 +512,7 @@ class CpCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      supported_private_args=['haltatbyte='],
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
@@ -524,6 +524,7 @@ class CpCommand(Command):
       subcommand_help_text={},
   )
 
+  # pylint: disable=too-many-statements
   def CopyFunc(self, name_expansion_result, thread_state=None):
     """Worker function for performing the actual copy (and rm, for mv)."""
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
@@ -786,6 +787,9 @@ class CpCommand(Command):
     # Files matching these extensions should be gzipped before uploading.
     self.gzip_exts = []
 
+    # Test hook for stopping transfers.
+    halt_at_byte = None
+
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
     self.manifest = None
@@ -800,6 +804,8 @@ class CpCommand(Command):
           daisy_chain = True
         elif o == '-e':
           self.exclude_symlinks = True
+        elif o == '--haltatbyte':
+          halt_at_byte = long(a)
         elif o == '-I':
           read_args_from_stdin = True
         elif o == '-L':
@@ -832,7 +838,8 @@ class CpCommand(Command):
         print_ver=print_ver,
         use_manifest=use_manifest,
         preserve_acl=preserve_acl,
-        canned_acl=canned_acl)
+        canned_acl=canned_acl,
+        halt_at_byte=halt_at_byte)
 
   def _GetBucketWithVersioningConfig(self, exp_dst_url):
     """Gets versioning config for a bucket and ensures that it exists.

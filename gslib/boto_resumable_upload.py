@@ -83,7 +83,10 @@ class BotoResumableUpload(object):
                    This count resets every time we make progress, so the upload
                    can span many more than this number of retries.
     """
-    self.upload_url = resume_url
+    if resume_url:
+      self._SetUploadUrl(resume_url)
+    else:
+      self.upload_url = None
     self.num_retries = num_retries
     self.service_has_bytes = 0  # Byte count at last service check.
     # Save upload_start_point in instance state so caller can find how

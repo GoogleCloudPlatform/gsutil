@@ -22,8 +22,7 @@ import urlparse
 import httplib2
 from httplib2 import parse_uri
 
-# Upload/download 8KB chunks over the HTTP connection.
-TRANSFER_BUFFER_SIZE = 1024*8
+from gslib.util import TRANSFER_BUFFER_SIZE
 
 
 class BytesUploadedContainer(object):
@@ -57,11 +56,11 @@ class UploadCallbackConnectionClassFactory(object):
 
   def __init__(self, bytes_uploaded_container,
                buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, callback_count=0, progress_callback=None):
+               total_size=0, callback_per_bytes=0, progress_callback=None):
     self.bytes_uploaded_container = bytes_uploaded_container
     self.buffer_size = buffer_size
     self.total_size = total_size
-    self.callback_count = callback_count
+    self.callback_per_bytes = callback_per_bytes
     self.progress_callback = progress_callback
 
   def GetConnectionClass(self):
@@ -69,19 +68,28 @@ class UploadCallbackConnectionClassFactory(object):
     outer_bytes_uploaded_container = self.bytes_uploaded_container
     outer_buffer_size = self.buffer_size
     outer_total_size = self.total_size
-    outer_callback_count = self.callback_count
+    outer_callback_per_bytes = self.callback_per_bytes
     outer_progress_callback = self.progress_callback
 
     class UploadCallbackConnection(httplib2.HTTPSConnectionWithTimeout):
+      """Connection class override for uploads."""
       bytes_uploaded_container = outer_bytes_uploaded_container
+      # After we instantiate this class, apitools will check with the server
+      # to find out how many bytes remain for a resumable upload.  This allows
+      # us to update our progress once based on that number.
+      got_bytes_uploaded_from_server = False
+      total_bytes_uploaded = 0
       GCS_JSON_BUFFER_SIZE = outer_buffer_size
-      send_iterations = 0
-      cb_count = outer_callback_count
+      bytes_sent_since_callback = 0
+      callback_per_bytes = outer_callback_per_bytes
       size = outer_total_size
 
       def send(self, data):
         """Overrides HTTPConnection.send."""
-        self.total_bytes_uploaded = self.bytes_uploaded_container.bytes_uploaded
+        if not self.got_bytes_uploaded_from_server:
+          self.total_bytes_uploaded = (
+              self.bytes_uploaded_container.bytes_uploaded)
+          self.got_bytes_uploaded_from_server = True
         full_buffer = cStringIO.StringIO(data)
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         old_debug = self.debuglevel
@@ -94,12 +102,13 @@ class UploadCallbackConnectionClassFactory(object):
             # TODO: Hash computation on the fly can occur here, but at present
             # there is no server-side support as the hash needs to be present in
             # the initial POST for resumable uploads.
-            self.total_bytes_uploaded += len(partial_buffer)
+            send_length = len(partial_buffer)
+            self.total_bytes_uploaded += send_length
             if outer_progress_callback:
-              self.send_iterations += 1
-              if self.send_iterations == self.cb_count:
+              self.bytes_sent_since_callback += send_length
+              if self.bytes_sent_since_callback >= self.callback_per_bytes:
                 outer_progress_callback(self.total_bytes_uploaded, self.size)
-                self.send_iterations = 0
+                self.bytes_sent_since_callback = 0
             partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         finally:
           self.set_debuglevel(old_debug)
@@ -140,11 +149,11 @@ class DownloadCallbackConnectionClassFactory(object):
   """
 
   def __init__(self, buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, callback_count=0, progress_callback=None,
+               total_size=0, callback_per_bytes=0, progress_callback=None,
                digesters=None):
     self.buffer_size = buffer_size
     self.total_size = total_size
-    self.callback_count = callback_count
+    self.callback_per_bytes = callback_per_bytes
     self.progress_callback = progress_callback
     self.digesters = digesters
 
@@ -152,9 +161,12 @@ class DownloadCallbackConnectionClassFactory(object):
     """Returns a connection class that overrides getresponse."""
 
     class DownloadCallbackConnection(httplib2.HTTPSConnectionWithTimeout):
-      read_iterations = 0
-      outer_callback_count = self.callback_count
+      """Connection class override for downloads."""
+      bytes_read_since_callback = 0
+      outer_callback_per_bytes = self.callback_per_bytes
       outer_total_size = self.total_size
+      # TODO: Need to reconcile this by adjusting the callback for resumed
+      # downloads when we instantiate this class.
       total_bytes_downloaded = 0
       outer_digesters = self.digesters
       outer_progress_callback = self.progress_callback
@@ -184,14 +196,17 @@ class DownloadCallbackConnectionClassFactory(object):
             all_data = cStringIO.StringIO()
             data = orig_read_func(TRANSFER_BUFFER_SIZE)
             while data and (amt is None or bytes_read < amt):
+              all_data.write(data)
+              read_length = len(data)
+              bytes_read += read_length
+              self.total_bytes_downloaded += read_length
               if self.outer_progress_callback:
-                self.read_iterations += 1
-                if self.read_iterations == self.outer_callback_count:
+                self.bytes_read_since_callback += read_length
+                if (self.bytes_read_since_callback >=
+                    self.outer_callback_per_bytes):
                   self.outer_progress_callback(self.total_bytes_downloaded,
                                                self.outer_total_size)
-                  self.read_iterations = 0
-              all_data.write(data)
-              bytes_read += len(data)
+                  self.bytes_read_since_callback = 0
               if self.outer_digesters:
                 for alg in self.outer_digesters:
                   self.outer_digesters[alg].update(data)
@@ -224,6 +239,7 @@ def WrapDownloadHttpRequest(download_http):
   # pylint: disable=protected-access,g-inconsistent-quotes,unused-variable
   # pylint: disable=g-equals-none,g-doc-return-or-yield
   # pylint: disable=g-short-docstring-punctuation,g-doc-args
+  # pylint: disable=too-many-statements
   def OverrideRequest(self, conn, host, absolute_uri, request_uri, method,
                       body, headers, redirections, cachekey):
     """Do the actual request using the connection object.

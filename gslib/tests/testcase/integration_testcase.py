@@ -27,7 +27,7 @@ from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import RUN_S3_TESTS
-from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -273,5 +273,5 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def SetAnonymousBotoCreds(self):
     boto_config_path = self.CreateTempFile(
         contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
-    with SetBotoConfigForTest(boto_config_path):
+    with SetBotoConfigFileForTest(boto_config_path):
       yield

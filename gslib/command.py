@@ -296,6 +296,8 @@ CommandSpec = namedtuple('CommandSpec', [
     'gs_api_support',
     # Default API to use for this command
     'gs_default_api',
+    # Private arguments (for internal testing)
+    'supported_private_args',
 ])
 
 
@@ -320,7 +322,7 @@ class Command(HelpProvider):
                         max_args=NO_MAX, supported_sub_args='',
                         file_url_ok=False, provider_url_ok=False,
                         urls_start_arg=0, gs_api_support=None,
-                        gs_default_api=None):
+                        gs_default_api=None, supported_private_args=None):
     """Creates an instance of CommandSpec, with defaults."""
     return CommandSpec(
         command_name=command_name,
@@ -332,7 +334,8 @@ class Command(HelpProvider):
         provider_url_ok=provider_url_ok,
         urls_start_arg=urls_start_arg,
         gs_api_support=gs_api_support or [ApiSelector.XML],
-        gs_default_api=gs_default_api or ApiSelector.XML)
+        gs_default_api=gs_default_api or ApiSelector.XML,
+        supported_private_args=supported_private_args)
 
   # Define a convenience property for command name, since it's used many places.
   def _GetDefaultCommandName(self):
@@ -425,7 +428,8 @@ class Command(HelpProvider):
     args = self._TranslateDeprecatedAliases(args)
     try:
       (self.sub_opts, self.args) = getopt.getopt(
-          args, self.command_spec.supported_sub_args)
+          args, self.command_spec.supported_sub_args,
+          self.command_spec.supported_private_args or [])
     except GetoptError, e:
       raise CommandException('%s for "%s" command.' % (e.msg,
                                                        self.command_name))
