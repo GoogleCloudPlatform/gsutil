@@ -612,6 +612,10 @@ class CpCommand(Command):
           self.manifest.Set(exp_src_url.GetUrlString(), 'md5', md5)
         self.manifest.SetResult(
             exp_src_url.GetUrlString(), bytes_transferred, 'OK')
+      if copy_helper_opts.print_ver:
+        # Some cases don't return a version-specific URL (e.g., if destination
+        # is a file).
+        self.logger.info('Created: %s' % result_url.GetUrlString())
     except ItemExistsError:
       message = 'Skipping existing item: %s' % dst_url.GetUrlString()
       self.logger.info(message)
@@ -637,11 +641,6 @@ class CpCommand(Command):
           self.manifest.SetResult(
               exp_src_url.GetUrlString(), 0, 'error', str(e))
         raise
-
-    if copy_helper_opts.print_ver:
-      # Some cases don't return a version-specific URL (e.g., if destination
-      # is a file).
-      self.logger.info('Created: %s' % result_url.GetUrlString())
 
     # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
     # since we call copy internally from move and don't specify the -n flag)
