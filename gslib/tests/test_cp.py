@@ -389,7 +389,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
 
     gen_match_header = 'x-goog-if-generation-match:%s' % g1
-    # First copy should succeed
+    # First copy should succeed.
     self.RunGsUtil(['-h', gen_match_header, 'cp', fpath1, suri(k1_uri)])
 
     # Second copy should fail the precondition.
@@ -400,7 +400,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('PreconditionException', stderr)
 
     # Specifiying a generation with -n should fail before the request hits the
-    # server
+    # server.
     stderr = self.RunGsUtil(['-h', gen_match_header, 'cp', '-n', fpath1,
                              suri(k1_uri)],
                             return_stderr=True, expected_status=1)
@@ -408,6 +408,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('ArgumentException', stderr)
     self.assertIn('Specifying x-goog-if-generation-match is not supported '
                   'with cp -n', stderr)
+
+  @PerformsFileToObjectUpload
+  def test_cp_nv(self):
+    """Tests that cp -nv works when skipping existing file."""
+    bucket_uri = self.CreateVersionedBucket()
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    g1 = k1_uri.generation
+
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
+
+    # First copy should succeed.
+    self.RunGsUtil(['cp', '-nv', fpath1, suri(k1_uri)])
+
+    # Second copy should skip copying.
+    stderr = self.RunGsUtil(['cp', '-nv', fpath1, suri(k1_uri)],
+                            return_stderr=True)
+    self.assertIn('Skipping existing item:', stderr)
 
   @PerformsFileToObjectUpload
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
