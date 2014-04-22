@@ -270,7 +270,7 @@ class UpdateCommand(Command):
     if os.environ.get('CLOUDSDK_WRAPPER'):
       raise CommandException(
           'This version of gsutil was installed as part of the Cloud SDK. To'
-          'update, run "gcloud components update".')
+          'update, run "$ gcloud components update".')
 
 
     if gslib.IS_PACKAGE_INSTALL:
