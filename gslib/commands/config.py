@@ -913,7 +913,8 @@ has one set of auth commands that work with all Google Cloud Platform CLIs.
 To authenticate the Cloud SDK with user credentials, please run
  $ gcloud auth login
 """
-      print 'Really run "gsutil config"? (y/N)'
+      print 'Really run "{command}"? (y/N)'.format(
+          command=' '.join(['gsutil']+sys.argv[1:]))
       if raw_input() not in ['y', 'Y']:
         return
 
