@@ -267,6 +267,11 @@ class UpdateCommand(Command):
 
   # Command entry point.
   def RunCommand(self):
+    if os.environ.get('CLOUDSDK_WRAPPER'):
+      raise CommandException(
+          'This version of gsutil was installed as part of the Cloud SDK. To'
+          'update, run "$ gcloud components update".')
+
 
     if gslib.IS_PACKAGE_INSTALL:
       raise CommandException(

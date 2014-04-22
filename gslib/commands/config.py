@@ -897,6 +897,27 @@ class ConfigCommand(Command):
             'PyCrypto 2.6 or later. Please install either of these\nto proceed,'
             ' or configure a different type of credentials.')
 
+    # If this gsutil is being run by the Cloud SDK, redirect to 'gcloud auth *'.
+    if os.environ.get('CLOUDSDK_WRAPPER'):
+      if has_e:
+        print """\
+This version of gsutil was installed as part of the Google Cloud SDK, which
+has one set of auth commands that work with all Google Cloud Platform CLIs.
+To authenticate the Cloud SDK with a service account, please run
+ $ gcloud auth activate-service-account
+"""
+      else:
+        print """\
+This version of gsutil was installed as part of the Google Cloud SDK, which
+has one set of auth commands that work with all Google Cloud Platform CLIs.
+To authenticate the Cloud SDK with user credentials, please run
+ $ gcloud auth login
+"""
+      print 'Really run "{command}"? (y/N)'.format(
+          command=' '.join(['gsutil']+sys.argv[1:]))
+      if raw_input() not in ['y', 'Y']:
+        return
+
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
 
