@@ -66,6 +66,11 @@ CALLBACK_PER_X_BYTES = 1024*64
 # Upload/download files in 8KB chunks over the HTTP connection.
 TRANSFER_BUFFER_SIZE = 1024*8
 
+# For files >= this size, output a message indicating that we're running an
+# operation on the file (like hashing or gzipping) so it does not appear to the
+# user that the command is hanging.
+MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MB
+
 NO_MAX = sys.maxint
 
 UTF8 = 'utf-8'

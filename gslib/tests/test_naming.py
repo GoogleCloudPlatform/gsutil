@@ -40,6 +40,7 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import UTF8
 
 
@@ -239,7 +240,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Tests copying from a bucket to a directory."""
     src_bucket_uri = self.CreateBucket(test_objects=['foo', 'dir/foo2'])
     dst_dir = self.CreateTempDir()
-    self.RunCommand('cp', ['-R', suri(src_bucket_uri), dst_dir])
+    # Mock objects don't support hash digestion.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunCommand('cp', ['-R', suri(src_bucket_uri), dst_dir])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_dir, src_bucket_uri.bucket_name, 'foo'),
@@ -349,8 +352,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_bucket_uri = self.CreateBucket(test_objects=['f1'])
     src_dir = self.CreateTempDir(test_files=['f2'])
     dst_dir = self.CreateTempDir()
-    self.RunCommand('cp', ['-R', suri(src_bucket_uri, '**'),
-                           os.path.join(src_dir, '**'), dst_dir])
+    # Mock objects don't support hash digestion.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunCommand('cp', ['-R', suri(src_bucket_uri, '**'),
+                             os.path.join(src_dir, '**'), dst_dir])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         os.path.join(dst_dir, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_dir, 'f1'), suri(dst_dir, 'f2')])
@@ -361,8 +366,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_bucket_uri = self.CreateBucket(test_objects=['f1'])
     dst_dir = self.CreateTempDir()
     for final_char in ('/', ''):
-      self.RunCommand('cp', [suri(src_bucket_uri, 'f1'), '.%s' % final_char],
-                      cwd=dst_dir)
+      # Mock objects don't support hash digestion.
+      with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+        self.RunCommand('cp', [suri(src_bucket_uri, 'f1'), '.%s' % final_char],
+                        cwd=dst_dir)
       actual = set()
       for dirname, dirnames, filenames in os.walk(dst_dir):
         for subdirname in dirnames:
@@ -421,7 +428,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Tests copying a file and subdirectory of the same name without -R."""
     src_bucket_uri = self.CreateBucket(test_objects=['f1', 'f1/f2'])
     dst_dir = self.CreateTempDir()
-    self.RunCommand('cp', [suri(src_bucket_uri, 'f1'), dst_dir])
+    # Mock objects don't support hash digestion.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunCommand('cp', [suri(src_bucket_uri, 'f1'), dst_dir])
     actual = list(self._test_wildcard_iterator(
         '%s%s*' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
     self.assertEqual(1, len(actual))
@@ -746,9 +755,11 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # Test with and without final slash on dest subdir.
     for (final_src_char, final_dst_char) in (
         ('', ''), ('', '/'), ('/', ''), ('/', '/')):
-      self.RunCommand(
-          'cp', ['-R', suri(src_bucket_uri, 'src_subdir') + final_src_char,
-                 dst_dir + final_dst_char])
+      # Mock objects don't support hash digestion.
+      with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+        self.RunCommand(
+            'cp', ['-R', suri(src_bucket_uri, 'src_subdir') + final_src_char,
+                   dst_dir + final_dst_char])
       actual = set(str(u) for u in self._test_wildcard_iterator(
           '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
       expected = set([suri(dst_dir, 'src_subdir', 'obj')])
@@ -763,9 +774,11 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # Test with and without final slash on dest subdir.
     for i, (final_src_char, final_dst_char) in enumerate((
         ('', ''), ('', '/'), ('/', ''), ('/', '/'))):
-      self.RunCommand(
-          'cp', ['-R', suri(src_bucket_uri, 'src_sub%d*' % i) + final_src_char,
-                 dst_dir + final_dst_char])
+      # Mock objects don't support hash digestion.
+      with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+        self.RunCommand(
+            'cp', ['-R', suri(src_bucket_uri, 'src_sub%d*' % i) +
+                   final_src_char, dst_dir + final_dst_char])
       actual = set(str(u) for u in self._test_wildcard_iterator(
           os.path.join(dst_dir, 'src_sub%ddir' % i, '**')).IterAll(
               expand_top_level_buckets=True))

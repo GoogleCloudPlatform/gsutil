@@ -41,9 +41,7 @@ in boto, where applicable.
 TODO: gsutil-beta: Add a similar comment to the boto code.
 """
 import errno
-from hashlib import md5
 import httplib
-import os
 import random
 import re
 import socket
@@ -54,7 +52,6 @@ from boto import UserAgent
 from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
 from boto.exception import ResumableUploadException
-from boto.s3.keyfile import KeyFile
 from gslib.exception import InvalidUrlError
 
 
@@ -332,8 +329,6 @@ class BotoResumableUpload(object):
     http_conn.set_debuglevel(0)
     while buf:
       http_conn.send(buf)
-      for alg in self.digesters:
-        self.digesters[alg].update(buf)
       total_bytes_uploaded += len(buf)
       if cb:
         i += 1
@@ -399,30 +394,6 @@ class BotoResumableUpload(object):
         (service_start, service_end) = (
             self._QueryServicePos(conn, file_length))
         self.service_has_bytes = service_start
-
-        if service_end:
-          # If the service already has some of the content, we need to
-          # update the digesters with the bytes that have already been
-          # uploaded to ensure we get a complete hash in the end.
-          self.logger.debug('Catching up hash digest(s) for resumed upload')
-          fp.seek(0)
-          # Read local file's bytes through position service has. For
-          # example, if service has (0, 3) we want to read 3-0+1=4 bytes.
-          bytes_to_go = service_end + 1
-          while bytes_to_go:
-            chunk = fp.read(min(key.BufferSize, bytes_to_go))
-            if not chunk:
-              raise ResumableUploadException(
-                  'Hit end of file during resumable upload hash '
-                  'catchup. This should not happen under\n'
-                  'normal circumstances, as it indicates the '
-                  'service has more bytes of this transfer\nthan'
-                  ' the current file size. Restarting upload.',
-                  ResumableTransferDisposition.START_OVER)
-            for alg in self.digesters:
-              self.digesters[alg].update(chunk)
-            bytes_to_go -= len(chunk)
-
         if conn.debug >= 1:
           self.logger.debug('Resuming transfer.')
       except ResumableUploadException, e:
@@ -476,33 +447,6 @@ class BotoResumableUpload(object):
     finally:
       http_conn.close()
 
-  def _CheckFinalMd5(self, key, etag):
-    """Checks that etag from service agrees with md5 computed before upload.
-
-    This is important, since the upload could have spanned a number of
-    hours and multiple processes (e.g., gsutil runs), and the user could
-    change some of the file and not realize they have inconsistent data.
-
-    Args:
-      key: Boto key representing the uploaded object.
-      etag: etag for the uploaded object.
-    """
-    if key.bucket.connection.debug >= 1:
-      self.logger.debug('Checking md5 against etag.')
-    if key.md5 != etag.strip('"\''):
-      # Call key.open_read() before attempting to delete the
-      # (incorrect-content) key, so we perform that request on a
-      # different HTTP connection. This is neededb because httplib
-      # will return a "Response not ready" error if you try to perform
-      # a second transaction on the connection.
-      key.open_read()
-      key.close()
-      key.delete()
-      raise ResumableUploadException(
-          'File changed during upload: md5 signature doesn\'t match etag '
-          '(incorrect uploaded object deleted)',
-          ResumableTransferDisposition.ABORT)
-
   def HandleResumableUploadException(self, e, debug):
     if e.disposition == ResumableTransferDisposition.ABORT_CUR_PROCESS:
       if debug >= 1:
@@ -520,7 +464,7 @@ class BotoResumableUpload(object):
                           e.message)
 
   def TrackProgressLessIterations(self, service_had_bytes_before_attempt,
-                                  roll_back_md5=True, debug=0):
+                                  debug=0):
     """Tracks the number of iterations without progress.
 
     Performs randomized exponential backoff.
@@ -528,7 +472,6 @@ class BotoResumableUpload(object):
     Args:
       service_had_bytes_before_attempt: Number of bytes the service had prior
                                        to this upload attempt.
-      roll_back_md5: If true, revert md5 to prior state.
       debug: debug level 0..3
     """
     # At this point we had a re-tryable failure; see if made progress.
@@ -536,10 +479,6 @@ class BotoResumableUpload(object):
       self.progress_less_iterations = 0   # If progress, reset counter.
     else:
       self.progress_less_iterations += 1
-      if roll_back_md5:
-        # Rollback any potential hash updates, as we did not
-        # make any progress in this iteration.
-        self.digesters = self.digesters_before_attempt
 
     if self.progress_less_iterations > self.num_retries:
       # Don't retry any longer in the current process.
@@ -556,13 +495,14 @@ class BotoResumableUpload(object):
                         self.progress_less_iterations, sleep_time_secs)
     time.sleep(sleep_time_secs)
 
-  def SendFile(self, key, fp, headers, canned_acl=None, cb=None, num_cb=10,
-               hash_algs=None):
+  def SendFile(self, key, fp, size, headers, canned_acl=None, cb=None,
+               num_cb=10):
     """Upload a file to a key into a bucket on GS, resumable upload protocol.
 
     Args:
       key: `boto.s3.key.Key` or subclass representing the upload destination.
       fp: File pointer to upload
+      size: Size of the file to upload.
       headers: The headers to pass along with the PUT request
       canned_acl: Optional canned ACL to apply to object.
       cb: Callback function that will be called to report progress on
@@ -575,10 +515,6 @@ class BotoResumableUpload(object):
               the maximum number of times the callback will be called during the
               file transfer. Providing a negative integer will cause your
               callback to be called with each buffer read.
-      hash_algs: (optional) Dictionary mapping hash algorithm
-                 descriptions to corresponding state-ful hashing objects that
-                 implement update(), digest(), and copy() (e.g. hashlib.md5()).
-                 Defaults to {'md5': md5()}.
 
     Raises:
       ResumableUploadException if a problem occurs during the transfer.
@@ -598,21 +534,8 @@ class BotoResumableUpload(object):
 
     headers['User-Agent'] = UserAgent
 
-    # Determine file size different ways for case where fp is actually a
-    # wrapper around a Key vs an actual file.
-    if isinstance(fp, KeyFile):
-      file_length = fp.getkey().size
-    else:
-      fp.seek(0, os.SEEK_END)
-      file_length = fp.tell()
-      fp.seek(0)
+    file_length = size
     debug = key.bucket.connection.debug
-
-    # Compute the MD5 checksum on the fly.
-    if hash_algs is None:
-      hash_algs = {'md5': md5}
-    self.digesters = dict(
-        (alg, hash_algs[alg]()) for alg in hash_algs or {})
 
     # Use num-retries from constructor if one was provided; else check
     # for a value specified in the boto config file; else default to 5.
@@ -622,22 +545,14 @@ class BotoResumableUpload(object):
 
     while True:  # Retry as long as we're making progress.
       service_had_bytes_before_attempt = self.service_has_bytes
-      self.digesters_before_attempt = dict(
-          (alg, self.digesters[alg].copy())
-          for alg in self.digesters)
       try:
         # Save generation and metageneration in class state so caller
         # can find these values, for use in preconditions of future
         # operations on the uploaded object.
-        (etag, self.generation, self.metageneration) = (
+        (_, self.generation, self.metageneration) = (
             self._AttemptResumableUpload(key, fp, file_length,
                                          headers, cb, num_cb))
 
-        # Get the final digests for the uploaded content.
-        for alg in self.digesters:
-          key.local_hashes[alg] = self.digesters[alg].digest()
-
-        self._CheckFinalMd5(key, etag)
         key.generation = self.generation
         if debug >= 1:
           self.logger.debug('Resumable upload complete.')
@@ -656,4 +571,4 @@ class BotoResumableUpload(object):
         self.HandleResumableUploadException(e, debug)
 
       self.TrackProgressLessIterations(service_had_bytes_before_attempt,
-                                       True, debug)
+                                       debug=debug)

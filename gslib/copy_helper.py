@@ -61,7 +61,9 @@ from gslib.file_part import FilePart
 from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateMd5FromContents
-from gslib.hashing_helper import GetHashAlgs
+from gslib.hashing_helper import GetDownloadHashAlgs
+from gslib.hashing_helper import GetUploadHashAlgs
+from gslib.hashing_helper import HashingFileUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
@@ -82,6 +84,7 @@ from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
+from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import TEN_MB
 from gslib.util import TWO_MB
 from gslib.util import UTF8
@@ -122,11 +125,6 @@ hash the original name.
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
 UPLOAD_RETURN_FIELDS = ['generation', 'md5Hash', 'size']
-
-# For files >= this size, output a message indicating that we're running an
-# operation on the file (like hashing or gzipping) so it does not appear to the
-# user that the command is hanging.
-MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MB
 
 # This tuple is used only to encapsulate the arguments needed for
 # command.Apply() in the parallel composite upload case.
@@ -707,9 +705,10 @@ def ConstructDstUrl(src_url, exp_src_url,
 
 def _CreateDigestsFromDigesters(digesters):
   digests = {}
-  for alg in digesters:
-    digests[alg] = base64.encodestring(
-        digesters[alg].digest()).rstrip('\n')
+  if digesters:
+    for alg in digesters:
+      digests[alg] = base64.encodestring(
+          digesters[alg].digest()).rstrip('\n')
   return digests
 
 
@@ -741,24 +740,27 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
   return digests
 
 
-def _CheckHashes(logger, src_obj_metadata, file_name, digests):
+def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
+                 is_upload=False):
   """Validates integrity by comparing cloud digest to local digest.
 
   Args:
     logger: for outputting log messages.
-    src_obj_metadata: Cloud object being downloaded.
-    file_name: Name of downloaded file on local disk.
+    obj_url: CloudUrl for cloud object.
+    obj_metadata: Cloud Object being downloaded from or uploaded to.
+    file_name: Local file name on disk being downloaded to or uploaded from.
     digests: Computed Digests for the object.
+    is_upload: If true, comparing for an uploaded object (controls logging).
 
   Raises:
     CommandException: if cloud digests don't match local digests.
   """
   local_hashes = digests
   cloud_hashes = {}
-  if src_obj_metadata.md5Hash:
-    cloud_hashes['md5'] = src_obj_metadata.md5Hash.rstrip('\n')
-  if src_obj_metadata.crc32c:
-    cloud_hashes['crc32c'] = src_obj_metadata.crc32c.rstrip('\n')
+  if obj_metadata.md5Hash:
+    cloud_hashes['md5'] = obj_metadata.md5Hash.rstrip('\n')
+  if obj_metadata.crc32c:
+    cloud_hashes['crc32c'] = obj_metadata.crc32c.rstrip('\n')
 
   checked_one = False
   for alg in local_hashes:
@@ -771,20 +773,25 @@ def _CheckHashes(logger, src_obj_metadata, file_name, digests):
         'Comparing local vs cloud %s-checksum for %s. (%s/%s)' % (
             alg, file_name, local_b64_digest, cloud_b64_digest))
     if local_b64_digest != cloud_b64_digest:
+
       raise CommandException(
           '%s signature computed for local file (%s) doesn\'t match '
-          'cloud-supplied digest (%s). Local file (%s) deleted.' % (
-              alg, local_b64_digest, cloud_b64_digest, file_name))
+          'cloud-supplied digest (%s). %s (%s) will be deleted.' % (
+              alg, local_b64_digest, cloud_b64_digest,
+              'Cloud object' if is_upload else 'Local file',
+              obj_url if is_upload else file_name))
     checked_one = True
-  # One known way this can currently happen is when downloading objects larger
-  # than 5GB from S3 (for which the etag is not an MD5).
-  # TODO: implement reverse-engineered algorithm for S3's multi-part etag
-  # computation
-  # (http://permalink.gmane.org/gmane.comp.file-systems.s3.s3tools/583).
   if not checked_one:
-    logger.warn(
-        'Found no hashes to validate object downloaded to %s. '
-        'Integrity cannot be assured without hashes.' % file_name)
+    if is_upload:
+      logger.warn(
+          'WARNING: Found no hashes to validate object uploaded to %s. '
+          'Integrity cannot be assured without hashes.' % obj_url)
+    else:
+    # One known way this can currently happen is when downloading objects larger
+    # than 5GB from S3 (for which the etag is not an MD5).
+      logger.warn(
+          'WARNING: Found no hashes to validate object downloaded to %s. '
+          'Integrity cannot be assured without hashes.' % file_name)
 
 
 def IsNoClobberServerException(e):
@@ -1376,7 +1383,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
 # pylint: disable=undefined-variable
 def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
                                     src_obj_size, dst_url, dst_obj_metadata,
-                                    preconditions, gsutil_api, logger):
+                                    preconditions, gsutil_api):
   """Uploads the file using a non-resumable strategy.
 
   Args:
@@ -1387,20 +1394,11 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     dst_obj_metadata: Metadata for the target object.
     preconditions: Preconditions for the upload, if any.
     gsutil_api: gsutil Cloud API instance to use for the upload.
-    logger: for outputting log messages.
 
   Returns:
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
-  if not src_url.IsStream() and not dst_obj_metadata.crc32c:
-    with open(src_url.object_name, 'rb') as f_in:
-      if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
-        logger.info(
-            'Computing CRC for %s...', src_url.GetUrlString())
-      crc32c_b64 = CalculateB64EncodedCrc32cFromContents(f_in)
-      dst_obj_metadata.crc32c = crc32c_b64
-
   start_time = time.time()
   if src_url.IsStream():
     # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
@@ -1469,17 +1467,6 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       if tracker_file:
         tracker_file.close()
 
-  # TODO: gsutil-beta: JSON resumable uploads require that you supply
-  # the hash on the initial POST.  Research if there is any way to do it
-  # on the fly (for both JSON and XML).
-  # Currently, the XML upload code will compute an MD5 on the fly.
-  if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
-    logger.info(
-        'Computing CRC for %s...', src_url.GetUrlString())
-  if not dst_obj_metadata.crc32c:
-    with open(src_url.object_name, 'rb') as f_in:
-      dst_obj_metadata.crc32c = CalculateB64EncodedCrc32cFromContents(f_in)
-
   # This contains the upload URL, which will uniquely identify the
   # destination object.
   tracker_data = _GetUploadTrackerData(tracker_file_name, logger)
@@ -1530,8 +1517,7 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
   Returns:
     StorageUrl path to compressed file, compressed file size.
   """
-  # TODO: gsutil-beta: When we add on-the-fly hash computation for uploads,
-  # calculate the hash by compressing and hashing one file block at a time.
+  # TODO: Compress using a streaming model as opposed to all at once here.
   if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
     logger.info(
         'Compressing %s (to tmp)...', src_url)
@@ -1603,6 +1589,12 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
 
   elapsed_time = None
   uploaded_object = None
+  hash_algs = GetUploadHashAlgs()
+  digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
+
+  wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
+                                                hash_algs, upload_url, logger)
+
   try:
     if _ShouldDoParallelCompositeUpload(
         allow_splitting, upload_url, dst_url, src_obj_size,
@@ -1613,12 +1605,12 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           gsutil_api, command_obj, copy_exception_handler)
     elif upload_size < _ResumableThreshold() or src_url.IsStream():
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
-          upload_url, upload_stream, upload_size, dst_url, dst_obj_metadata,
-          preconditions, gsutil_api, logger)
+          upload_url, wrapped_filestream, upload_size, dst_url,
+          dst_obj_metadata, preconditions, gsutil_api)
     else:
       elapsed_time, uploaded_object = _UploadFileToObjectResumable(
-          upload_url, upload_stream, upload_size, dst_url, dst_obj_metadata,
-          preconditions, gsutil_api, logger)
+          upload_url, wrapped_filestream, upload_size, dst_url,
+          dst_obj_metadata, preconditions, gsutil_api, logger)
 
   finally:
     if zipped_file:
@@ -1633,6 +1625,18 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     # In the gzip case, this is the gzip stream.  _CompressFileForUpload will
     # have already closed the original source stream.
     upload_stream.close()
+
+  try:
+    digests = _CreateDigestsFromDigesters(digesters)
+    _CheckHashes(logger, dst_url, uploaded_object, src_url.object_name,
+                 digests, is_upload=True)
+  except CommandException, e:
+    # If the digest doesn't match, delete the object.
+    if 'doesn\'t match cloud-supplied digest' in str(e):
+      gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
+                              generation=uploaded_object.generation,
+                              provider=dst_url.scheme)
+    raise
 
   result_url = dst_url.Clone()
 
@@ -1693,7 +1697,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     need_to_unzip = False
 
   # Set up hash digesters.
-  hash_algs = GetHashAlgs(
+  hash_algs = GetDownloadHashAlgs(
       src_md5=src_obj_metadata.md5Hash,
       src_crc32c=src_obj_metadata.crc32c,
       src_url_str=src_url.GetUrlString())
@@ -1805,9 +1809,10 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   # download.
   bytes_transferred = src_obj_metadata.size - download_start_point
 
-  local_md5 = _ValidateDownloadHashes(logger, src_obj_metadata, dst_url,
-                                      need_to_unzip, digesters, hash_algs,
-                                      api_selector, bytes_transferred)
+  local_md5 = _ValidateDownloadHashes(logger, src_url, src_obj_metadata,
+                                      dst_url, need_to_unzip, digesters,
+                                      hash_algs, api_selector,
+                                      bytes_transferred)
 
   return (end_time - start_time, bytes_transferred, dst_url, local_md5)
 
@@ -1817,13 +1822,14 @@ def _GetDownloadZipFileName(file_name):
   return '%s_.gztmp' % file_name
 
 
-def _ValidateDownloadHashes(logger, src_obj_metadata, dst_url, need_to_unzip,
-                            digesters, hash_algs, api_selector,
+def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
+                            need_to_unzip, digesters, hash_algs, api_selector,
                             bytes_transferred):
   """Validates a downloaded file's integrity.
 
   Args:
     logger: For outputting log messages.
+    src_url: StorageUrl for the source object.
     src_obj_metadata: Metadata for the source object, potentially containing
                       hash values.
     dst_url: StorageUrl describing the destination file.
@@ -1862,7 +1868,8 @@ def _ValidateDownloadHashes(logger, src_obj_metadata, dst_url, need_to_unzip,
 
   digest_verified = True
   try:
-    _CheckHashes(logger, src_obj_metadata, download_file_name, local_hashes)
+    _CheckHashes(logger, src_url, src_obj_metadata, download_file_name,
+                 local_hashes)
     _DeleteTrackerFile(GetTrackerFilePath(
         dst_url, TrackerFileType.DOWNLOAD, api_selector))
   except CommandException, e:
@@ -1899,7 +1906,7 @@ def _ValidateDownloadHashes(logger, src_obj_metadata, dst_url, need_to_unzip,
       # Recalculate hashes on the unzipped local file.
       local_hashes = _CreateDigestsFromLocalFile(logger, hash_algs, file_name,
                                                  src_obj_metadata)
-      _CheckHashes(logger, src_obj_metadata, file_name, local_hashes)
+      _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
       _DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
     except CommandException, e:

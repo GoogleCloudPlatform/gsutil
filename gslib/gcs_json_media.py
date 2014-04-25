@@ -97,11 +97,6 @@ class UploadCallbackConnectionClassFactory(object):
           self.set_debuglevel(0)
           while partial_buffer:
             httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
-            # TODO: gsutil-beta: Likely need to insert a test hook here
-            # to simulate connection breaks.
-            # TODO: Hash computation on the fly can occur here, but at present
-            # there is no server-side support as the hash needs to be present in
-            # the initial POST for resumable uploads.
             send_length = len(partial_buffer)
             self.total_bytes_uploaded += send_length
             if outer_progress_callback:
@@ -215,8 +210,6 @@ class DownloadCallbackConnectionClassFactory(object):
                   self.bytes_read_since_callback = 0
               for alg in inner_digesters:
                 inner_digesters[alg].update(data)
-              # TODO: gsutil-beta: Likely need to insert a test hook here
-              # to simulate connection breaks.
               data = orig_read_func(TRANSFER_BUFFER_SIZE)
             if self.outer_digesters:
               for alg in self.outer_digesters:

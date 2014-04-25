@@ -29,6 +29,7 @@ from boto import storage_uri
 
 from gslib.copy_helper import GetTrackerFilePath
 from gslib.copy_helper import TrackerFileType
+from gslib.cs_api_map import ApiSelector
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
@@ -70,7 +71,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(f.read(), 'bar')
 
   def test_object_and_prefix_same_name(self):
-    # TODO: Make this a a unit test when unit_testcase supports returning
+    # TODO: Make this a unit test when unit_testcase supports returning
     # stderr.
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
@@ -890,6 +891,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(num_test_files + 1, len(lines))  # +1 line for final \n
     _Check1()
 
+  def test_cp_upload_respects_no_hashes(self):
+    # TODO: Make this a unit test when unit_testcase supports returning
+    # stderr.
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='abcd')
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+                              return_stderr=True)
+    self.assertIn('Found no hashes to validate object upload', stderr)
+
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_break(self):
     """Tests that an upload can be resumed after a connection break."""
@@ -960,23 +971,54 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_break_file_content_change(self):
+    """Tests a resumable upload where the uploaded file changes content."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'XML doesn\'t make separate HTTP calls at fixed-size boundaries for '
+          'resumable uploads, so we can\'t guarantee that the server saves a '
+          'specific part of the upload.')
+    bucket_uri = self.CreateBucket()
+    tmp_dir = self.CreateTempDir()
+    fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
+                                contents='a' * ONE_KB * 512)
+    resumable_threshold_for_test = (
+        'GSUtil', 'resumable_threshold', str(ONE_KB))
+    resumable_chunk_size_for_test = (
+        'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
+    with SetBotoConfigForTest([resumable_threshold_for_test,
+                               resumable_chunk_size_for_test]):
+      stderr = self.RunGsUtil(['cp', '--haltatbyte', str(ONE_KB * 384), fpath,
+                               suri(bucket_uri)],
+                              expected_status=1, return_stderr=True)
+      self.assertIn('Artifically halting upload', stderr)
+      fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
+                                  contents='b' * ONE_KB * 512)
+      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+                              expected_status=1, return_stderr=True)
+      self.assertIn('doesn\'t match cloud-supplied digest', stderr)
+
+  @SkipForS3('No resumable upload support for S3.')
+  def test_cp_resumable_upload_break_file_smaller_size(self):
     """Tests a resumable upload where the uploaded file changes content.
 
     This should fail hash validation.
     """
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
-
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                contents='a' * self.halt_size)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
-    with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', fpath,
+                                contents='a' * ONE_KB * 512)
+    resumable_threshold_for_test = (
+        'GSUtil', 'resumable_threshold', str(ONE_KB))
+    resumable_chunk_size_for_test = (
+        'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
+    with SetBotoConfigForTest([resumable_threshold_for_test,
+                               resumable_chunk_size_for_test]):
+      stderr = self.RunGsUtil(['cp', '--haltatbyte', str(ONE_KB * 384), fpath,
                                suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                  contents='b' * self.halt_size)
+                                  contents='a' * ONE_KB)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
@@ -1030,17 +1072,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='a' * self.halt_size)
+    fpath = self.CreateTempFile()
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
       # This will create a tracker file with an ETag.
       stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', suri(object_uri),
-                               'foo'], expected_status=1, return_stderr=True)
+                               fpath], expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
       # Create a new object with different contents - it should have a
       # different ETag since the content has changed.
       object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                      contents='b' * self.halt_size)
-      stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
 
@@ -1174,10 +1217,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # around 128K in practice, but we assert specifically below that it is
     # larger than self.halt_size to guarantee that we can halt the download
     # partway through.
-    random.seed(0)
     object_uri = self.CreateObject()
+    random.seed(0)
     contents = str([random.choice(string.ascii_letters)
                     for _ in xrange(ONE_KB * 128)])
+    random.seed()  # Reset the seed for any other tests.
     fpath1 = self.CreateTempFile(file_name='unzipped.txt', contents=contents)
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath1), suri(object_uri)])
 

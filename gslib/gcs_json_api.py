@@ -57,7 +57,7 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
 
-# Implementation supports only 'gs' URIs, so provider is unused.
+# Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
 
 DEFAULT_GCS_JSON_VERSION = 'v1beta2'
@@ -65,10 +65,20 @@ DEFAULT_GCS_JSON_VERSION = 'v1beta2'
 NUM_BUCKETS_PER_LIST_PAGE = 100
 NUM_OBJECTS_PER_LIST_PAGE = 500
 
-# Resumable downloads and uploads make one HTTP call per 100MB chunk.
-RESUMABLE_CHUNK_SIZE = 1024*1024*100L
+
+# Resumable downloads and uploads make one HTTP call per chunk (and must be
+# in multiples of 256KB). Overridable for testing.
+def _ResumableChunkSize():
+  chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
+                             1024*1024*100L)
+  if chunk_size == 0:
+    chunk_size = 1024*256L
+  elif chunk_size % 1024*256L != 0:
+    chunk_size += (1024*256L - (chunk_size % 1024*256L))
+  return chunk_size
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
+                                    apitools_exceptions.TransferError,
                                     apitools_exceptions.TransferInvalidError)
 
 
@@ -476,10 +486,10 @@ class GcsJsonApi(CloudApi):
     if serialization_data:
       apitools_download = apitools_transfer.Download.FromData(
           download_stream, serialization_data, self.api_client.http)
-      apitools_download.chunksize = RESUMABLE_CHUNK_SIZE
+      apitools_download.chunksize = _ResumableChunkSize()
     else:
       apitools_download = apitools_transfer.Download(
-          download_stream, chunksize=RESUMABLE_CHUNK_SIZE, auto_transfer=False)
+          download_stream, chunksize=_ResumableChunkSize(), auto_transfer=False)
 
     apitools_download.bytes_http = authorized_download_http
     apitools_request = apitools_messages.StorageObjectsGetRequest(
@@ -597,6 +607,7 @@ class GcsJsonApi(CloudApi):
     additional_headers = {
         'user-agent': self.api_client.user_agent
     }
+
     try:
       if not serialization_data:
         # This is a new upload, set up initial upload state.
@@ -632,13 +643,13 @@ class GcsJsonApi(CloudApi):
             # Resuming an existing upload.
             apitools_upload = apitools_transfer.Upload.FromData(
                 upload_stream, serialization_data, self.api_client.http)
-            apitools_upload.chunksize = RESUMABLE_CHUNK_SIZE
+            apitools_upload.chunksize = _ResumableChunkSize()
             apitools_upload.bytes_http = authorized_upload_http
           else:
             # New resumable upload.
             apitools_upload = apitools_transfer.Upload(
                 upload_stream, content_type, total_size=size,
-                chunksize=RESUMABLE_CHUNK_SIZE, auto_transfer=False)
+                chunksize=_ResumableChunkSize(), auto_transfer=False)
             apitools_upload.strategy = apitools_strategy
             apitools_upload.bytes_http = authorized_upload_http
             self.api_client.objects.Insert(
@@ -859,6 +870,9 @@ class GcsJsonApi(CloudApi):
       elif (e.status_code >= 500
             and not self.http.disable_ssl_certificate_validation):
         return ResumableUploadException(message, status=e.status_code)
+    if (isinstance(e, apitools_exceptions.TransferError) and
+        'Aborting transfer' in e.message):
+      return ResumableUploadAbortException(e.message)
 
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
                                   generation=None):

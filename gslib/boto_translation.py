@@ -640,16 +640,15 @@ class BotoTranslation(CloudApi):
         os.close(temp_fh)
         os.unlink(temp_path)
 
-  def _PerformResumableUpload(self, key, upload_stream, tracker_callback,
-                              canned_acl=None, serialization_data=None,
-                              progress_callback=None, headers=None):
+  def _PerformResumableUpload(self, key, upload_stream, upload_size,
+                              tracker_callback, canned_acl=None,
+                              serialization_data=None, progress_callback=None,
+                              headers=None):
     resumable_upload = BotoResumableUpload(
         tracker_callback, self.logger, resume_url=serialization_data)
-    # TODO: gsutil-beta: Because we send hash_algs=None to SendFile, we will
-    # calculate an md5 on the fly by default.  Unify this approach within the
-    # cp command so that it works cleanly for XML and JSON.
-    resumable_upload.SendFile(key, upload_stream, canned_acl=canned_acl,
-                              cb=progress_callback, headers=headers)
+    resumable_upload.SendFile(key, upload_stream, upload_size,
+                              canned_acl=canned_acl, cb=progress_callback,
+                              headers=headers)
 
   def _UploadSetup(self, object_metadata, preconditions=None):
     """Shared upload implementation.
@@ -717,7 +716,7 @@ class BotoTranslation(CloudApi):
                               'resumable upload of %s' % dst_uri)
     try:
       self._PerformResumableUpload(dst_uri.new_key(headers=headers),
-                                   upload_stream, tracker_callback,
+                                   upload_stream, size, tracker_callback,
                                    canned_acl=canned_acl,
                                    serialization_data=serialization_data,
                                    progress_callback=progress_callback,
