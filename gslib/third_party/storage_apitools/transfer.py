@@ -694,6 +694,8 @@ class Upload(_Transfer):
     self.EnsureInitialized()
     if data is None:
       data = self.stream.read(self.chunksize)
+    if not data:
+      raise exceptions.TransferError('Aborting transfer, no data in stream.')
     end = start + len(data)
 
     request = http_wrapper.Request(url=self.url, http_method='PUT', body=data)
