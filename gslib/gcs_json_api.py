@@ -22,6 +22,7 @@ import boto
 from boto import config
 import httplib2
 from oauth2_plugin import oauth2_helper
+from oauth2client import multistore_file
 
 import gslib
 from gslib.cloud_api import AccessDeniedException
@@ -56,6 +57,7 @@ from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
+from gslib.util import GetCredentialStoreFilename
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
@@ -155,6 +157,10 @@ class GcsJsonApi(CloudApi):
                                   DEFAULT_GCS_JSON_VERSION)
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
+
+    self.credentials.set_store(
+        multistore_file.get_credential_storage_custom_string_key(
+            GetCredentialStoreFilename(), self.api_version))
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)

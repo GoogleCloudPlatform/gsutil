@@ -56,7 +56,6 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
-from gslib.util import CreateLock
 from gslib.util import GetConfigFilePath
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
@@ -178,25 +177,6 @@ OLD_ALIAS_MAP = {'chacl': ['acl', 'ch'],
                  'getwebcfg': ['web', 'get'],
                  'setwebcfg': ['web', 'set']}
 
-
-# TODO: gsutil-beta: Rework credentials to use a file-store.  In particular,
-# validate the refresh case so that we can refresh credentials once across
-# multiple threads/processes.
-class CredentialStore(object):
-  """Thread and process-safe credential storage."""
-
-  def __init__(self, credentials=None):
-    self.lock = CreateLock()
-    with self.lock:
-      self.credentials = credentials
-
-  def GetCredentials(self):
-    # Caller is responsible for locking.
-    return self.credentials
-
-  def SetCredentials(self, credentials):
-    # Caller is responsible for locking.
-    self.credentials = credentials
 
 # Declare all of the module level variables - see
 # InitializeMultiprocessingVariables for an explanation of why this is
@@ -457,11 +437,10 @@ class Command(HelpProvider):
     self.gsutil_api_map = GsutilApiMapFactory.GetApiMap(
         self.gsutil_api_class_map_factory, support_map, default_map)
 
-    self.credential_store = CredentialStore()
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(
         bucket_storage_uri_class, self.gsutil_api_map,
-        self.logger, credential_store=self.credential_store, debug=self.debug)
+        self.logger, debug=self.debug)
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
@@ -1321,13 +1300,11 @@ class Command(HelpProvider):
       worker_pool = WorkerPool(
           thread_count, self.logger,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
-          gsutil_api_map=self.gsutil_api_map,
-          credential_store=self.credential_store, debug=self.debug)
+          gsutil_api_map=self.gsutil_api_map, debug=self.debug)
     elif process_count > 1:
       worker_pool = SameThreadWorkerPool(
           self, bucket_storage_uri_class=self.bucket_storage_uri_class,
-          gsutil_api_map=self.gsutil_api_map,
-          credential_store=self.credential_store, debug=self.debug)
+          gsutil_api_map=self.gsutil_api_map, debug=self.debug)
 
     num_enqueued = 0
     while True:
@@ -1516,13 +1493,12 @@ class SameThreadWorkerPool(object):
   """Behaves like a WorkerPool, but used for the single-threaded case."""
 
   def __init__(self, cls, bucket_storage_uri_class=None,
-               gsutil_api_map=None, credential_store=None, debug=0):
+               gsutil_api_map=None, debug=0):
     self.cls = cls
     self.worker_thread = WorkerThread(
         None, cls.logger,
         bucket_storage_uri_class=bucket_storage_uri_class,
-        gsutil_api_map=gsutil_api_map, credential_store=credential_store,
-        debug=debug)
+        gsutil_api_map=gsutil_api_map, debug=debug)
 
   def AddTask(self, task):
     self.worker_thread.PerformTask(task, self.cls)
@@ -1532,15 +1508,14 @@ class WorkerPool(object):
   """Pool of worker threads to which tasks can be added."""
 
   def __init__(self, thread_count, logger, bucket_storage_uri_class=None,
-               gsutil_api_map=None, credential_store=None, debug=0):
+               gsutil_api_map=None, debug=0):
     self.task_queue = _NewThreadsafeQueue()
     self.threads = []
     for _ in range(thread_count):
       worker_thread = WorkerThread(
           self.task_queue, logger,
           bucket_storage_uri_class=bucket_storage_uri_class,
-          gsutil_api_map=gsutil_api_map, credential_store=credential_store,
-          debug=debug)
+          gsutil_api_map=gsutil_api_map, debug=debug)
       self.threads.append(worker_thread)
       worker_thread.start()
 
@@ -1559,7 +1534,7 @@ class WorkerThread(threading.Thread):
   """
 
   def __init__(self, task_queue, logger, bucket_storage_uri_class=None,
-               gsutil_api_map=None, credential_store=None, debug=0):
+               gsutil_api_map=None, debug=0):
     """Initializes the worker thread.
 
     Args:
@@ -1571,7 +1546,6 @@ class WorkerThread(threading.Thread):
       gsutil_api_map: Map of providers and API selector tuples to api classes
                       which can be used to communicate with those providers.
                       Used for the instantiating CloudApiDelegator class.
-      credential_store: Credential store for the CloudApiDelegator class.
       debug: debug level for the CloudApiDelegator class.
     """
     super(WorkerThread, self).__init__()
@@ -1583,8 +1557,7 @@ class WorkerThread(threading.Thread):
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
       self.thread_gsutil_api = CloudApiDelegator(
-          bucket_storage_uri_class, gsutil_api_map, logger,
-          credential_store=credential_store, debug=debug)
+          bucket_storage_uri_class, gsutil_api_map, logger, debug=debug)
 
   def PerformTask(self, task, cls):
     """Makes the function call for a task.

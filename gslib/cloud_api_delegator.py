@@ -19,7 +19,6 @@ from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
-from gslib.gcs_json_api import GcsJsonApi
 
 
 class CloudApiDelegator(CloudApi):
@@ -29,11 +28,9 @@ class CloudApiDelegator(CloudApi):
   implementation should service the request based on the Cloud storage provider,
   command-level API support, and configuration file override.
 
-  It takes two arguments during its initialization to inform this delegation.
-  First, a gsutil_api_map which maps providers to their default and supported
-  gsutil Cloud API implementations (see comments in cs_api_map for details).
-  Second, a lockable credential_store used to share credentials across multiple
-  delegators and implementations.
+  During initialization it takes as an argument a gsutil_api_map which maps
+  providers to their default and supported gsutil Cloud API implementations
+  (see comments in cs_api_map for details).
 
   Instantiation of multiple delegators per-thread is required for multiprocess
   and/or multithreaded operations. Calling methods on the same delegator in
@@ -41,7 +38,7 @@ class CloudApiDelegator(CloudApi):
   """
 
   def __init__(self, bucket_storage_uri_class, gsutil_api_map, logger,
-               provider=None, credential_store=None, debug=0):
+               provider=None, debug=0):
     """Performs necessary setup for delegating cloud storage requests.
 
     This function has different arguments than the gsutil Cloud API __init__
@@ -55,19 +52,11 @@ class CloudApiDelegator(CloudApi):
       logger: logging.logger for outputting log messages.
       provider: Default provider prefix describing cloud storage provider to
                 connect to.
-      credential_store: Credential store to be used when interacting with the
-                        cloud storage provider.  If this is None, the
-                        implementation will be responsible for acquiring
-                        credentials.  Note that individual APIs receive a
-                        credentials object whereas this delegator class
-                        interacts with a store so that credentials can be
-                        shared across multiple API instantiations.
       debug: Debug level for the API implementation (0..3).
     """
     super(CloudApiDelegator, self).__init__(bucket_storage_uri_class, logger,
                                             provider=provider, debug=debug)
     self.api_map = gsutil_api_map
-    self.credential_store = credential_store
     self.force_api = boto.config.get('GSUtil', 'force_api', '').upper()
     self.loaded_apis = {}
 
@@ -103,31 +92,16 @@ class CloudApiDelegator(CloudApi):
 
     if api_selector not in self.loaded_apis[provider]:
       # Need to load the API.
-
-      api_credentials = None
-
-      # Use the credential_store for the GcsJsonApi.
-      if ((self.api_map[ApiMapConstants.API_MAP][provider][api_selector] ==
-           GcsJsonApi)
-          and self.credential_store):
-        with self.credential_store.lock:
-          api_credentials = self.credential_store.GetCredentials()
-          self._LoadApi(provider, api_selector, api_credentials)
-          if not api_credentials:
-            self.credential_store.SetCredentials(
-                self.loaded_apis[provider][api_selector].credentials)
-      else:
-        self._LoadApi(provider, api_selector, api_credentials)
+      self._LoadApi(provider, api_selector)
 
     return self.loaded_apis[provider][api_selector]
 
-  def _LoadApi(self, provider, api_selector, api_credentials):
+  def _LoadApi(self, provider, api_selector):
     """Loads a CloudApi into the loaded_apis map for this class.
 
     Args:
       provider: Provider to load the API for.
       api_selector: cs_api_map.ApiSelector defining the API type.
-      api_credentials: Credentials to pass to the implementation's __init__.
     """
     if provider not in self.api_map[ApiMapConstants.API_MAP]:
       raise ArgumentException(
@@ -141,7 +115,6 @@ class CloudApiDelegator(CloudApi):
             self.bucket_storage_uri_class,
             self.logger,
             provider=provider,
-            credentials=api_credentials,
             debug=self.debug))
 
   def GetApiSelector(self, provider=None):
