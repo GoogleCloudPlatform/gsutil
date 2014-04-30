@@ -156,6 +156,10 @@ def UsingCrcmodExtension(crcmod):
           getattr(crcmod.crcmod, '_usingExtension', None))
 
 
+def GetCredentialStoreFilename():
+  return os.path.expanduser(os.path.join('~', '.gsutil', 'credcache'))
+
+
 def CreateTrackerDirIfNeeded():
   """Looks up or creates the gsutil tracker file directory.
 

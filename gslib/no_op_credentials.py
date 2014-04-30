@@ -15,9 +15,13 @@
 
 
 class NoOpCredentials(object):
+
   def __init__(self):
     pass
 
   def authorize(self, http_obj):  # pylint: disable=invalid-name
     return http_obj
+
+  def set_store(self, store):  # pylint: disable=invalid-name
+    pass
 

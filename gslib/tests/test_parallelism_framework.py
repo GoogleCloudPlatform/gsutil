@@ -55,6 +55,7 @@ def _HandleAlarm(signal_num, cur_stack_frame):
 
 
 class CustomException(Exception):
+
   def __init__(self, exception_str):
     super(CustomException, self).__init__(exception_str)
 
@@ -120,6 +121,7 @@ def _SkipEvenNumbersArgChecker(cls, arg):
 
 
 class FailingIterator(object):
+
   def __init__(self, size, failure_indices):
     self.size = size
     self.failure_indices = failure_indices
@@ -169,7 +171,6 @@ class FakeCommand(Command):
     self.gsutil_api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
         cs_api_map.GsutilApiClassMapFactory, support_map, default_map)
     self.logger = CreateGsutilLogger('FakeCommand')
-    self.credential_store = None
     self.parallel_operations = do_parallel
     self.failure_count = 0
     self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
@@ -177,6 +178,7 @@ class FakeCommand(Command):
 
 
 class FakeCommandWithoutMultiprocessingModule(FakeCommand):
+
   def __init__(self, do_parallel):
     super(FakeCommandWithoutMultiprocessingModule, self).__init__(do_parallel)
     self.multiprocessing_is_available = False

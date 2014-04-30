@@ -18,6 +18,7 @@ import os
 import sys
 import tempfile
 
+import base
 import boto
 from gslib import wildcard_iterator
 from gslib.boto_translation import BotoTranslation
@@ -27,8 +28,6 @@ from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.util as util
 from gslib.tests.util import unittest
-
-import base
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -185,7 +184,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     cls.gsutil_api = CloudApiDelegator(
         cls.mock_bucket_storage_uri, cls.gsutil_api_map, cls.logger,
-        credential_store=None, debug=debug)
+        debug=debug)
 
     return wildcard_iterator.CreateWildcardIterator(uri_string, cls.gsutil_api)
 
