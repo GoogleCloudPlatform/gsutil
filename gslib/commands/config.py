@@ -686,8 +686,8 @@ class ConfigCommand(Command):
                                       'key file? ')
       gs_service_key_file_password = raw_input(
           '\n'.join(textwrap.wrap(
-              "What is the password for your service key file? If you haven't "
-              " set one explicitly, leave this line blank. ")))
+              "What is the password for your service key file [if you haven't "
+              "set one explicitly, leave this line blank]?")) + " ")
       self._CheckPrivateKeyFilePermissions(gs_service_key_file)
     elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
       oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
