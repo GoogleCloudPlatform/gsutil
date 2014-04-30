@@ -91,13 +91,13 @@ _detailed_help_text = ("""
   email address and the path to your private key file. To get these data, visit
   the `Google Developers Console <https://cloud.google.com/console#/project>`_,
   click on the project you are using, then click "APIs & auth", then click
-  "Credentials", then click Service account and fill in the desired information.
-  The "Credentials" page lists the email address of your service account.
-  From this page you can also click Generate New Key, to generate and download
-  the private key file. Save this file somewhere accessible from the machine
-  where you run gsutil. Make sure to set its protection so only the users you
-  want to be able to authenticate as have access.
-
+  "Credentials", then click "CREATE NEW CLIENT ID"; on the pop-up dialog box
+  select "Service account" and click "Create Client ID". This will download
+  a private key file, which you should move to a somewhere
+  accessible from the machine where you run gsutil. Make sure to set its
+  protection so only the users you want to be able to authenticate as have
+  access.
+  
   Note that your service account will NOT be considered an Owner for the
   purposes of API access (see "gsutil help creds" for more information about
   this). See https://developers.google.com/accounts/docs/OAuth2ServiceAccount
@@ -671,8 +671,9 @@ class ConfigCommand(Command):
         - for HMAC, ask the user for access key and secret
         - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow
           and produce a config with an oauth2_refresh_token credential.
-        - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for client ID,
-          and private key file (and password for the file)
+        - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for service
+          account email address and private key file (and password for that
+          file).
     """
     # Collect credentials
     provider_map = {'aws': 'aws', 'google': 'gs'}
