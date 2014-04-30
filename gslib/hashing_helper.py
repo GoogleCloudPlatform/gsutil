@@ -47,7 +47,9 @@ hash computation will likely throttle download performance. For help
 installing the extension, please see:
   $ gsutil help crcmod
 To download regardless of crcmod performance or to skip slow integrity
-checks, see the "check_hashes" option in your boto config file."""
+checks, see the "check_hashes" option in your boto config file.
+NOTE: It is strongly recommended that you not disable integrity checks. Doing so
+could allow data corruption to go undetected during uploading/downloading."""
 
 SLOW_CRC_EXCEPTION = CommandException(SLOW_CRC_EXCEPTION_TEXT)
 
