@@ -25,7 +25,7 @@ from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
 
 

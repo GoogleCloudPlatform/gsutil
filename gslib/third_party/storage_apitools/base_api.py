@@ -37,7 +37,7 @@ __all__ = [
     'BaseApiClient',
     'BaseApiService',
     'NormalizeApiEndpoint',
-    ]
+]
 
 # TODO: Remove this once we quiet the spurious logging in
 # oauth2client (or drop oauth2client).
@@ -202,7 +202,7 @@ class BaseApiClient(object):
 
   def __init__(self, url, credentials=None, get_credentials=True, http=None,
                model=None, log_request=False, log_response=False, num_retries=5,
-               default_global_params=None):
+               credentials_args=None, default_global_params=None):
     _RequireClassAttrs(self, (
         '_package', '_scopes', '_client_id', '_client_secret',
         'messages_module'))
@@ -217,7 +217,8 @@ class BaseApiClient(object):
     self._url = url
     self._credentials = credentials
     if get_credentials and not credentials:
-      self._SetCredentials()
+      credentials_args = credentials_args or {}
+      self._SetCredentials(**credentials_args)
     self._http = http or http_wrapper.GetHttp()
     # Note that "no credentials" is totally possible.
     if self._credentials is not None:
@@ -241,13 +242,13 @@ class BaseApiClient(object):
       None. Sets self._credentials.
     """
     args = {
-        'package_name': self._PACKAGE,
-        'scopes': self._SCOPES,
-        'client_id': self._CLIENT_ID,
-        'client_secret': self._CLIENT_SECRET,
-        'user_agent': self._USER_AGENT,
         'api_key': self._API_KEY,
         'client': self,
+        'client_id': self._CLIENT_ID,
+        'client_secret': self._CLIENT_SECRET,
+        'package_name': self._PACKAGE,
+        'scopes': self._SCOPES,
+        'user_agent': self._USER_AGENT,
     }
     args.update(kwds)
     # TODO: It's a bit dangerous to pass this
@@ -264,7 +265,7 @@ class BaseApiClient(object):
         'client_secret': cls._CLIENT_SECRET,
         'scope': ' '.join(sorted(util.NormalizeScopes(cls._SCOPES))),
         'user_agent': cls._USER_AGENT,
-        }
+    }
 
   @property
   def base_model_class(self):
@@ -385,10 +386,28 @@ class BaseApiService(object):
 
   def __init__(self, client):
     self.__client = client
+    self._method_configs = {}
+    self._upload_configs = {}
 
   @property
   def _client(self):
     return self.__client
+
+  def GetMethodConfig(self, method):
+    return self._method_configs[method]
+
+  def GetUploadConfig(self, method):
+    return self._upload_configs.get(method)
+
+  def GetRequestType(self, method):
+    method_config = self.GetMethodConfig(method)
+    return getattr(self._client.MESSAGES_MODULE,
+                   method_config.request_type_name)
+
+  def GetResponseType(self, method):
+    method_config = self.GetMethodConfig(method)
+    return getattr(self._client.MESSAGES_MODULE,
+                   method_config.response_type_name)
 
   def __CombineGlobalParams(self, global_params, default_params):
     util.Typecheck(global_params, (types.NoneType, self.__client.params_type))
@@ -421,6 +440,7 @@ class BaseApiService(object):
   def __ConstructRelativePath(self, method_config, request, relative_path=None):
     """Determine the relative path for request."""
     path = relative_path or method_config.relative_path
+    path = path.replace('+', '')
     for param in method_config.path_params:
       param_template = '{%s}' % param
       if param_template not in path:
@@ -437,6 +457,8 @@ class BaseApiService(object):
         raise exceptions.InvalidUserInputError(
             'Request missing required parameter %s' % param)
       try:
+        if not isinstance(value, basestring):
+          value = str(value)
         path = path.replace(param_template,
                             urllib.quote(value.encode('utf_8'), ''))
       except TypeError as e:

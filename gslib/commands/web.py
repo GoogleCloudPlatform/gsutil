@@ -22,7 +22,7 @@ from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import encoding as encoding
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
 
 

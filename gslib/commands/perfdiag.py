@@ -51,7 +51,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable

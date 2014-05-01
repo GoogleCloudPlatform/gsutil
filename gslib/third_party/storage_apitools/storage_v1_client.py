@@ -11,39 +11,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generated client library for storage version v1beta2."""
+"""Generated client library for storage version v1."""
 
 import gslib
 import sys
 from gslib.third_party.storage_apitools import base_api
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as messages
+from gslib.third_party.storage_apitools import storage_v1_messages as messages
 
-class StorageV1beta2(base_api.BaseApiClient):
-  """Generated client library for service storage version v1beta2."""
+
+class StorageV1(base_api.BaseApiClient):
+  """Generated client library for service storage version v1."""
 
   MESSAGES_MODULE = messages
-  
+
   _PACKAGE = u'storage'
   _SCOPES = [u'https://www.googleapis.com/auth/devstorage.full_control', u'https://www.googleapis.com/auth/devstorage.read_only', u'https://www.googleapis.com/auth/devstorage.read_write']
-  _VERSION = u'v1beta2'
+  _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-  _CLIENT_CLASS_NAME = u'StorageV1beta2'
-  _URL_VERSION = u'v1beta2'
+  _CLIENT_CLASS_NAME = u'StorageV1'
+  _URL_VERSION = u'v1'
 
   def __init__(self, url='', credentials=None,
-               http=None, model=None,
+               get_credentials=True, http=None, model=None,
                log_request=False, log_response=False,
-               default_global_params=None, version=_VERSION):
+               credentials_args=None, default_global_params=None,
+               version=_VERSION):
     """Create a new storage handle."""
-    url = url
-    super(StorageV1beta2, self).__init__(
-        url, credentials=credentials, get_credentials=False,
-        http=http, model=model,
+    url = url or u'https://www.googleapis.com/storage/v1/'
+    super(StorageV1, self).__init__(
+        url, credentials=credentials,
+        get_credentials=get_credentials, http=http, model=model,
         log_request=log_request, log_response=log_response,
+        credentials_args=credentials_args,
         default_global_params=default_global_params)
-    self._version=version
+    self._version = version
     self.bucketAccessControls = self.BucketAccessControlsService(self)
     self.buckets = self.BucketsService(self)
     self.channels = self.ChannelsService(self)
@@ -55,8 +58,8 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the bucketAccessControls resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.BucketAccessControlsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.BucketAccessControlsService, self).__init__(client)
+      self._method_configs = {
           'Delete': base_api.ApiMethodInfo(
               http_method=u'DELETE',
               method_id=u'storage.bucketAccessControls.delete',
@@ -131,14 +134,8 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Delete(self, request, global_params=None):
       """Permanently deletes the ACL entry for the specified entity on the specified bucket.
@@ -222,8 +219,8 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the buckets resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.BucketsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.BucketsService, self).__init__(client)
+      self._method_configs = {
           'Delete': base_api.ApiMethodInfo(
               http_method=u'DELETE',
               method_id=u'storage.buckets.delete',
@@ -253,7 +250,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.buckets.insert',
               ordered_params=[u'project'],
               path_params=[],
-              query_params=[u'project', u'projection'],
+              query_params=[u'predefinedAcl', u'project', u'projection'],
               relative_path=u'b',
               request_field=u'bucket',
               request_type_name=u'StorageBucketsInsertRequest',
@@ -277,7 +274,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.buckets.patch',
               ordered_params=[u'bucket'],
               path_params=[u'bucket'],
-              query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection'],
+              query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection'],
               relative_path=u'b/{bucket}',
               request_field=u'bucketResource',
               request_type_name=u'StorageBucketsPatchRequest',
@@ -289,7 +286,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.buckets.update',
               ordered_params=[u'bucket'],
               path_params=[u'bucket'],
-              query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection'],
+              query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection'],
               relative_path=u'b/{bucket}',
               request_field=u'bucketResource',
               request_type_name=u'StorageBucketsUpdateRequest',
@@ -298,14 +295,8 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Delete(self, request, global_params=None):
       """Permanently deletes an empty bucket.
@@ -389,8 +380,8 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the channels resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.ChannelsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.ChannelsService, self).__init__(client)
+      self._method_configs = {
           'Stop': base_api.ApiMethodInfo(
               http_method=u'POST',
               method_id=u'storage.channels.stop',
@@ -405,14 +396,8 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Stop(self, request, global_params=None):
       """Stop watching resources through this channel.
@@ -431,8 +416,8 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the defaultObjectAccessControls resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.DefaultObjectAccessControlsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.DefaultObjectAccessControlsService, self).__init__(client)
+      self._method_configs = {
           'Delete': base_api.ApiMethodInfo(
               http_method=u'DELETE',
               method_id=u'storage.defaultObjectAccessControls.delete',
@@ -474,7 +459,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.defaultObjectAccessControls.list',
               ordered_params=[u'bucket'],
               path_params=[u'bucket'],
-              query_params=[],
+              query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch'],
               relative_path=u'b/{bucket}/defaultObjectAcl',
               request_field='',
               request_type_name=u'StorageDefaultObjectAccessControlsListRequest',
@@ -507,14 +492,8 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Delete(self, request, global_params=None):
       """Permanently deletes the default object ACL entry for the specified entity on the specified bucket.
@@ -598,8 +577,8 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the objectAccessControls resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.ObjectAccessControlsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.ObjectAccessControlsService, self).__init__(client)
+      self._method_configs = {
           'Delete': base_api.ApiMethodInfo(
               http_method=u'DELETE',
               method_id=u'storage.objectAccessControls.delete',
@@ -674,14 +653,8 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Delete(self, request, global_params=None):
       """Permanently deletes the ACL entry for the specified entity on the specified object.
@@ -765,14 +738,14 @@ class StorageV1beta2(base_api.BaseApiClient):
     """Service class for the objects resource."""
 
     def __init__(self, client):
-      super(StorageV1beta2.ObjectsService, self).__init__(client)
-      self.__configs = {
+      super(StorageV1.ObjectsService, self).__init__(client)
+      self._method_configs = {
           'Compose': base_api.ApiMethodInfo(
               http_method=u'POST',
               method_id=u'storage.objects.compose',
               ordered_params=[u'destinationBucket', u'destinationObject'],
               path_params=[u'destinationBucket', u'destinationObject'],
-              query_params=[u'ifGenerationMatch', u'ifMetagenerationMatch'],
+              query_params=[u'destinationPredefinedAcl', u'ifGenerationMatch', u'ifMetagenerationMatch'],
               relative_path=u'b/{destinationBucket}/o/{destinationObject}/compose',
               request_field=u'composeRequest',
               request_type_name=u'StorageObjectsComposeRequest',
@@ -784,7 +757,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.objects.copy',
               ordered_params=[u'sourceBucket', u'sourceObject', u'destinationBucket', u'destinationObject'],
               path_params=[u'destinationBucket', u'destinationObject', u'sourceBucket', u'sourceObject'],
-              query_params=[u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'ifSourceGenerationMatch', u'ifSourceGenerationNotMatch', u'ifSourceMetagenerationMatch', u'ifSourceMetagenerationNotMatch', u'projection', u'sourceGeneration'],
+              query_params=[u'destinationPredefinedAcl', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'ifSourceGenerationMatch', u'ifSourceGenerationNotMatch', u'ifSourceMetagenerationMatch', u'ifSourceMetagenerationNotMatch', u'projection', u'sourceGeneration'],
               relative_path=u'b/{sourceBucket}/o/{sourceObject}/copyTo/b/{destinationBucket}/o/{destinationObject}',
               request_field=u'object',
               request_type_name=u'StorageObjectsCopyRequest',
@@ -820,7 +793,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.objects.insert',
               ordered_params=[u'bucket'],
               path_params=[u'bucket'],
-              query_params=[u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'name', u'projection'],
+              query_params=[u'contentEncoding', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'name', u'predefinedAcl', u'projection'],
               relative_path=u'b/{bucket}/o',
               request_field=u'object',
               request_type_name=u'StorageObjectsInsertRequest',
@@ -844,7 +817,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.objects.patch',
               ordered_params=[u'bucket', u'object'],
               path_params=[u'bucket', u'object'],
-              query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection'],
+              query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection'],
               relative_path=u'b/{bucket}/o/{object}',
               request_field=u'objectResource',
               request_type_name=u'StorageObjectsPatchRequest',
@@ -856,7 +829,7 @@ class StorageV1beta2(base_api.BaseApiClient):
               method_id=u'storage.objects.update',
               ordered_params=[u'bucket', u'object'],
               path_params=[u'bucket', u'object'],
-              query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection'],
+              query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection'],
               relative_path=u'b/{bucket}/o/{object}',
               request_field=u'objectResource',
               request_type_name=u'StorageObjectsUpdateRequest',
@@ -877,22 +850,16 @@ class StorageV1beta2(base_api.BaseApiClient):
           ),
           }
 
-      self.__upload_configs = {
+      self._upload_configs = {
           'Insert': base_api.ApiUploadInfo(
               accept=['*/*'],
               max_size=None,
               resumable_multipart=True,
-              resumable_path=u'/resumable/upload/storage/' + self._client._version + '/b/{bucket}/o',
+              resumable_path=u'/resumable/upload/storage/v1/b/{bucket}/o',
               simple_multipart=True,
-              simple_path=u'/upload/storage/' + self._client._version + '/b/{bucket}/o',
+              simple_path=u'/upload/storage/v1/b/{bucket}/o',
           ),
           }
-
-    def GetMethodConfig(self, method):
-      return self.__configs.get(method)
-
-    def GetMethodUploadConfig(self, method):
-      return self.__upload_configs.get(method)
 
     def Compose(self, request, global_params=None, download=None):
       """Concatenates a list of existing objects into a new object in the same bucket.
@@ -911,7 +878,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           download=download)
 
     def Copy(self, request, global_params=None, download=None):
-      """Copies an object to a destination in the same location. Optionally overrides metadata.
+      """Copies an object to a specified location. Optionally overrides metadata.
 
       Args:
         request: (StorageObjectsCopyRequest) input message
@@ -927,7 +894,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           download=download)
 
     def Delete(self, request, global_params=None):
-      """Deletes data blobs and associated metadata. Deletions are permanent if versioning is not enabled for the bucket, or if the generation parameter is used.
+      """Deletes an object and its metadata. Deletions are permanent if versioning is not enabled for the bucket, or if the generation parameter is used.
 
       Args:
         request: (StorageObjectsDeleteRequest) input message
@@ -940,7 +907,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           config, request, global_params=global_params)
 
     def Get(self, request, global_params=None, download=None):
-      """Retrieves objects or their associated metadata.
+      """Retrieves objects or their metadata.
 
       Args:
         request: (StorageObjectsGetRequest) input message
@@ -956,7 +923,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           download=download)
 
     def Insert(self, request, global_params=None, upload=None, download=None):
-      """Stores new data blobs and associated metadata.
+      """Stores a new object and metadata.
 
       Args:
         request: (StorageObjectsInsertRequest) input message
@@ -969,7 +936,7 @@ class StorageV1beta2(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      upload_config = self.GetMethodUploadConfig('Insert')
+      upload_config = self.GetUploadConfig('Insert')
       return self._RunMethod(
           config, request, global_params=global_params,
           upload=upload, upload_config=upload_config,
@@ -989,7 +956,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           config, request, global_params=global_params)
 
     def Patch(self, request, global_params=None):
-      """Updates a data blob's associated metadata. This method supports patch semantics.
+      """Updates an object's metadata. This method supports patch semantics.
 
       Args:
         request: (StorageObjectsPatchRequest) input message
@@ -1002,7 +969,7 @@ class StorageV1beta2(base_api.BaseApiClient):
           config, request, global_params=global_params)
 
     def Update(self, request, global_params=None, download=None):
-      """Updates a data blob's associated metadata.
+      """Updates an object's metadata.
 
       Args:
         request: (StorageObjectsUpdateRequest) input message

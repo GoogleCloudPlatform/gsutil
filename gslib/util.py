@@ -171,7 +171,7 @@ def CreateTrackerDirIfNeeded():
   """
   tracker_dir = config.get(
       'GSUtil', 'resumable_tracker_dir',
-      os.path.expanduser('~' + os.sep + '.gsutil'))
+      os.path.expanduser(os.path.join('~', '.gsutil', 'tracker-files')))
   if not os.path.exists(tracker_dir):
     try:
       # Unfortunately, even though we catch and ignore EEXIST, this call will

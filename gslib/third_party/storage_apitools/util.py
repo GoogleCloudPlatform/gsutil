@@ -24,7 +24,7 @@ from gslib.third_party.storage_apitools import exceptions
 __all__ = [
     'DetectGae',
     'DetectGce',
-    ]
+]
 
 
 def DetectGae():
@@ -77,4 +77,3 @@ def Typecheck(arg, arg_type, msg=None):
         msg = 'Type of arg is "%s", not "%s"' % (type(arg), arg_type)
       raise exceptions.TypecheckError(msg)
   return arg
-

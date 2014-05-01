@@ -29,7 +29,9 @@ __all__ = [
     'MessageToJson',
     'DictToMessage',
     'MessageToDict',
-    ]
+    'PyValueToMessage',
+    'MessageToPyValue',
+]
 
 
 _Codec = collections.namedtuple('_Codec', ['encoder', 'decoder'])
@@ -103,6 +105,16 @@ def MessageToDict(message):
   return json.loads(MessageToJson(message))
 
 
+def PyValueToMessage(message_type, value):
+  """Convert the given python value to a message of type message_type."""
+  return JsonToMessage(message_type, json.dumps(value))
+
+
+def MessageToPyValue(message):
+  """Convert the given message to a python value."""
+  return json.loads(MessageToJson(message))
+
+
 def _IncludeFields(encoded_message, message, include_fields):
   """Add the requested fields to the encoded message."""
   if include_fields is None:
@@ -123,7 +135,7 @@ def _GetFieldCodecs(field, attr):
   result = [
       getattr(_CUSTOM_FIELD_CODECS.get(field), attr, None),
       getattr(_FIELD_TYPE_CODECS.get(type(field)), attr, None),
-      ]
+  ]
   return [x for x in result if x is not None]
 
 
@@ -142,12 +154,20 @@ class _ProtoJsonApiTools(protojson.ProtoJson):
       return _CUSTOM_MESSAGE_CODECS[message_type].decoder(encoded_message)
     result = super(_ProtoJsonApiTools, self).decode_message(
         message_type, encoded_message)
-    return _DecodeUnknownFields(result)
+    return _DecodeUnknownFields(result, encoded_message)
 
-  def decode_field(self, field, value):
-    """Decode the given JSON value."""
+  def decode_field(self, field, value):  # pylint: disable=g-bad-name
+    """Decode the given JSON value.
+
+    Args:
+      field: a messages.Field for the field we're decoding.
+      value: a python value we'd like to decode.
+
+    Returns:
+      A value suitable for assignment to field.
+    """
     for decoder in _GetFieldCodecs(field, 'decoder'):
-      result = decoder(value)
+      result = decoder(field, value)
       value = result.value
       if result.complete:
         return value
@@ -165,8 +185,16 @@ class _ProtoJsonApiTools(protojson.ProtoJson):
     message = _EncodeUnknownFields(message)
     return super(_ProtoJsonApiTools, self).encode_message(message)
 
-  def encode_field(self, field, value):
-    """Encode the given value as JSON."""
+  def encode_field(self, field, value):  # pylint: disable=g-bad-name
+    """Encode the given value as JSON.
+
+    Args:
+      field: a messages.Field for the field we're encoding.
+      value: a value for field.
+
+    Returns:
+      A python value suitable for json.dumps.
+    """
     for encoder in _GetFieldCodecs(field, 'encoder'):
       result = encoder(field, value)
       value = result.value
@@ -178,7 +206,7 @@ class _ProtoJsonApiTools(protojson.ProtoJson):
 
 
 # TODO: Fold this and _IncludeFields in as codecs.
-def _DecodeUnknownFields(message):
+def _DecodeUnknownFields(message, encoded_message):
   """Rewrite unknown fields in message into message.destination."""
   destination = _UNRECOGNIZED_FIELD_MAPPINGS.get(type(message))
   if destination is None:
@@ -191,9 +219,37 @@ def _DecodeUnknownFields(message):
   pair_type = pair_field.message_type
   # TODO: Add more error checking around the pair
   # type being exactly what we suspect (field names, etc).
+  if isinstance(pair_type.value, messages.MessageField):
+    new_values = _DecodeUnknownMessages(
+        message, json.loads(encoded_message), pair_type)
+  else:
+    new_values = _DecodeUnrecognizedFields(message, pair_type)
+  setattr(message, destination, new_values)
+  # We could probably get away with not setting this, but
+  # why not clear it?
+  setattr(message, '_Message__unrecognized_fields', {})
+  return message
+
+
+def _DecodeUnknownMessages(message, encoded_message, pair_type):
+  """Process unknown fields in encoded_message of a message type."""
+  field_type = pair_type.value.type
+  new_values = []
+  all_field_names = [x.name for x in message.all_fields()]
+  for name, value_dict in encoded_message.iteritems():
+    if name in all_field_names:
+      continue
+    value = PyValueToMessage(field_type, value_dict)
+    new_pair = pair_type(key=name, value=value)
+    new_values.append(new_pair)
+  return new_values
+
+
+def _DecodeUnrecognizedFields(message, pair_type):
+  """Process unrecognized fields in message."""
   new_values = []
   for unknown_field in message.all_unrecognized_fields():
-    # TODO: Consider validating the variant if
+    # TODO(craigcitro): Consider validating the variant if
     # the assignment below doesn't take care of it. It may
     # also be necessary to check it in the case that the
     # type has multiple encodings.
@@ -205,11 +261,7 @@ def _DecodeUnknownFields(message):
       decoded_value = value
     new_pair = pair_type(key=str(unknown_field), value=decoded_value)
     new_values.append(new_pair)
-  setattr(message, destination, new_values)
-  # We could probably get away with not setting this, but
-  # why not clear it?
-  setattr(message, '_Message__unrecognized_fields', {})
-  return message
+  return new_values
 
 
 def _EncodeUnknownFields(message):
@@ -249,7 +301,7 @@ def _SafeEncodeBytes(field, value):
   return CodecResult(value=result, complete=complete)
 
 
-def _SafeDecodeBytes(value):
+def _SafeDecodeBytes(unused_field, value):
   """Decode the urlsafe base64 value into bytes."""
   try:
     result = base64.urlsafe_b64decode(str(value))

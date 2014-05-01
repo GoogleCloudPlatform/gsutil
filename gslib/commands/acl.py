@@ -27,8 +27,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
-from gslib.translation_helper import AclTranslation
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
 from gslib.util import Retry
 from gslib.util import UrlsAreForSingleProvider
@@ -364,7 +363,6 @@ class AclCommand(Command):
           generation=url.generation,
           fields=['acl', 'generation', 'metageneration'])
       current_acl = gcs_object.acl
-    current_xml_acl = AclTranslation.BotoAclFromMessage(current_acl)
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
@@ -373,7 +371,7 @@ class AclCommand(Command):
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(url_string, current_xml_acl,
+      modification_count += change.Execute(url_string, current_acl,
                                            self.logger)
     if modification_count == 0:
       self.logger.info('No changes to {0}'.format(url_string))
@@ -382,9 +380,7 @@ class AclCommand(Command):
     try:
       if url.IsBucket():
         preconditions = Preconditions(meta_gen_match=bucket.metageneration)
-        acl_to_set = list(AclTranslation.BotoBucketAclToMessage(
-            current_xml_acl))
-        bucket_metadata = apitools_messages.Bucket(acl=acl_to_set)
+        bucket_metadata = apitools_messages.Bucket(acl=current_acl)
         gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                preconditions=preconditions,
                                provider=url.scheme, fields=['id'])
@@ -397,9 +393,7 @@ class AclCommand(Command):
         if not url.generation:
           preconditions.gen_match = gcs_object.generation
 
-        acl_to_set = list(AclTranslation.BotoObjectAclToMessage(
-            current_xml_acl))
-        object_metadata = apitools_messages.Object(acl=acl_to_set)
+        object_metadata = apitools_messages.Object(acl=current_acl)
         gsutil_api.PatchObjectMetadata(
             url.bucket_name, url.object_name, object_metadata,
             preconditions=preconditions, provider=url.scheme,

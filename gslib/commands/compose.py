@@ -20,7 +20,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import PreconditionsFromHeaders
 
 MAX_COMPONENT_COUNT = 1024

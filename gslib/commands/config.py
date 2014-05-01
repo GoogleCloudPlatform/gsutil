@@ -419,7 +419,7 @@ content_language = en
 
 # The ability to specify an alternative JSON API version is primarily for cloud
 # storage service developers.
-#json_api_version = v1beta2
+#json_api_version = v1
 
 # Specifies the API to use when interacting with cloud storage providers.  If
 # the gsutil command supports this API for the provider, it will be used

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generated message classes for storage version v1beta2_dev.
+"""Generated message classes for storage version v1.
 
 Lets you store and retrieve potentially-large, immutable data objects.
 """
@@ -21,6 +21,7 @@ from gslib.third_party.protorpc import messages
 
 from gslib.third_party.storage_apitools import encoding
 
+
 package = 'storage'
 
 
@@ -29,13 +30,13 @@ class Bucket(messages.Message):
 
   Messages:
     CorsValueListEntry: A CorsValueListEntry object.
-    LifecycleValue: The bucket's lifecycle configuration. See object lifecycle
+    LifecycleValue: The bucket's lifecycle configuration. See lifecycle
       management for more information.
     LoggingValue: The bucket's logging configuration, which defines the
       destination bucket and optional name prefix for the current bucket's
       logs.
-    OwnerValue: The owner of the bucket. This will always be the project
-      team's owner group.
+    OwnerValue: The owner of the bucket. This is always the project team's
+      owner group.
     VersioningValue: The bucket's versioning configuration.
     WebsiteValue: The bucket's website configuration.
 
@@ -48,21 +49,21 @@ class Bucket(messages.Message):
     id: The ID of the bucket.
     kind: The kind of item this is. For buckets, this is always
       storage#bucket.
-    lifecycle: The bucket's lifecycle configuration. See object lifecycle
-      management for more information.
+    lifecycle: The bucket's lifecycle configuration. See lifecycle management
+      for more information.
     location: The location of the bucket. Object data for objects in the
-      bucket resides in physical storage within this region. Typical values
-      are US and EU. Defaults to US. See the developer's guide for the
-      authoritative list.
+      bucket resides in physical storage within this region. Defaults to US.
+      See the developer's guide for the authoritative list.
     logging: The bucket's logging configuration, which defines the destination
       bucket and optional name prefix for the current bucket's logs.
     metageneration: The metadata generation of this bucket.
     name: The name of the bucket.
-    owner: The owner of the bucket. This will always be the project team's
-      owner group.
+    owner: The owner of the bucket. This is always the project team's owner
+      group.
+    projectNumber: The project number of the project the bucket belongs to.
     selfLink: The URI of this bucket.
     storageClass: The bucket's storage class. This defines how objects in the
-      bucket will be stored and determines the SLA and the cost of storage.
+      bucket are stored and determines the SLA and the cost of storage.
       Typical values are STANDARD and DURABLE_REDUCED_AVAILABILITY. Defaults
       to STANDARD. See the developer's guide for the authoritative list.
     timeCreated: Creation time of the bucket in RFC 3339 format.
@@ -77,7 +78,7 @@ class Bucket(messages.Message):
       maxAgeSeconds: The value, in seconds, to return in the  Access-Control-
         Max-Age header used in preflight responses.
       method: The list of HTTP methods on which to include CORS response
-        headers, e.g. GET, OPTIONS, POST. Note, "*" is permitted in the list
+        headers, (GET, OPTIONS, POST, etc) Note: "*" is permitted in the list
         of methods, and means "any method".
       origin: The list of Origins eligible to receive CORS response headers.
         Note: "*" is permitted in the list of origins, and means "any Origin".
@@ -91,8 +92,8 @@ class Bucket(messages.Message):
     responseHeader = messages.StringField(4, repeated=True)
 
   class LifecycleValue(messages.Message):
-    """The bucket's lifecycle configuration. See object lifecycle management
-    for more information.
+    """The bucket's lifecycle configuration. See lifecycle management for more
+    information.
 
     Messages:
       RuleValueListEntry: A RuleValueListEntry object.
@@ -118,7 +119,7 @@ class Bucket(messages.Message):
         """The action to take.
 
         Fields:
-          type: Type of the action, e.g. Delete.
+          type: Type of the action. Currently, only Delete is supported.
         """
 
         type = messages.StringField(1)
@@ -129,9 +130,9 @@ class Bucket(messages.Message):
         Fields:
           age: Age of an object (in days). This condition is satisfied when an
             object reaches the specified age.
-          createdBefore: A date in RFC 3339 format with only the date part,
-            e.g. "2013-01-15". This condition is satisfied when an object is
-            created before midnight of the specified date in UTC.
+          createdBefore: A date in RFC 3339 format with only the date part
+            (for instance, "2013-01-15"). This condition is satisfied when an
+            object is created before midnight of the specified date in UTC.
           isLive: Relevant only for versioned objects. If the value is true,
             this condition matches live objects; if the value is false, it
             matches archived objects.
@@ -165,11 +166,10 @@ class Bucket(messages.Message):
     logObjectPrefix = messages.StringField(2)
 
   class OwnerValue(messages.Message):
-    """The owner of the bucket. This will always be the project team's owner
-    group.
+    """The owner of the bucket. This is always the project team's owner group.
 
     Fields:
-      entity: The entity, in the form group-groupId.
+      entity: The entity, in the form project-owner-projectId.
       entityId: The ID for the entity.
     """
 
@@ -210,15 +210,19 @@ class Bucket(messages.Message):
   metageneration = messages.IntegerField(10)
   name = messages.StringField(11)
   owner = messages.MessageField('OwnerValue', 12)
-  selfLink = messages.StringField(13)
-  storageClass = messages.StringField(14)
-  timeCreated = message_types.DateTimeField(15)
-  versioning = messages.MessageField('VersioningValue', 16)
-  website = messages.MessageField('WebsiteValue', 17)
+  projectNumber = messages.IntegerField(13, variant=messages.Variant.UINT64)
+  selfLink = messages.StringField(14)
+  storageClass = messages.StringField(15)
+  timeCreated = message_types.DateTimeField(16)
+  versioning = messages.MessageField('VersioningValue', 17)
+  website = messages.MessageField('WebsiteValue', 18)
 
 
 class BucketAccessControl(messages.Message):
   """An access-control entry.
+
+  Messages:
+    ProjectTeamValue: The project team associated with the entity, if any.
 
   Fields:
     bucket: The name of the bucket.
@@ -226,20 +230,32 @@ class BucketAccessControl(messages.Message):
     email: The email address associated with the entity, if any.
     entity: The entity holding the permission, in one of the following forms:
       - user-userId  - user-email  - group-groupId  - group-email  - domain-
-      domain  - allUsers  - allAuthenticatedUsers Examples:  - The user
-      liz@example.com would be user-liz@example.com.  - The group
-      example@googlegroups.com would be group-example@googlegroups.com.  - To
-      refer to all members of the Google Apps for Business domain example.com,
-      the entity would be domain-example.com.
+      domain  - project-team-projectId  - allUsers  - allAuthenticatedUsers
+      Examples:  - The user liz@example.com would be user-liz@example.com.  -
+      The group example@googlegroups.com would be group-
+      example@googlegroups.com.  - To refer to all members of the Google Apps
+      for Business domain example.com, the entity would be domain-example.com.
     entityId: The ID for the entity, if any.
     etag: HTTP 1.1 Entity tag for the access-control entry.
     id: The ID of the access-control entry.
     kind: The kind of item this is. For bucket access control entries, this is
       always storage#bucketAccessControl.
+    projectTeam: The project team associated with the entity, if any.
     role: The access permission for the entity. Can be READER, WRITER, or
       OWNER.
     selfLink: The link to this access-control entry.
   """
+
+  class ProjectTeamValue(messages.Message):
+    """The project team associated with the entity, if any.
+
+    Fields:
+      projectNumber: The project number.
+      team: The team. Can be owners, editors, or viewers.
+    """
+
+    projectNumber = messages.StringField(1)
+    team = messages.StringField(2)
 
   bucket = messages.StringField(1)
   domain = messages.StringField(2)
@@ -249,8 +265,9 @@ class BucketAccessControl(messages.Message):
   etag = messages.StringField(6)
   id = messages.StringField(7)
   kind = messages.StringField(8, default=u'storage#bucketAccessControl')
-  role = messages.StringField(9)
-  selfLink = messages.StringField(10)
+  projectTeam = messages.MessageField('ProjectTeamValue', 9)
+  role = messages.StringField(10)
+  selfLink = messages.StringField(11)
 
 
 class BucketAccessControls(messages.Message):
@@ -284,7 +301,7 @@ class Buckets(messages.Message):
 
 
 class Channel(messages.Message):
-  """A Channel object.
+  """An notification channel used to watch for resource changes.
 
   Messages:
     ParamsValue: Additional parameters controlling delivery channel behavior.
@@ -351,7 +368,7 @@ class ComposeRequest(messages.Message):
     SourceObjectsValueListEntry: A SourceObjectsValueListEntry object.
 
   Fields:
-    destination: Properties of the resulting object
+    destination: Properties of the resulting object.
     kind: The kind of item this is.
     sourceObjects: The list of source objects that will be concatenated into a
       single object.
@@ -361,17 +378,19 @@ class ComposeRequest(messages.Message):
     """A SourceObjectsValueListEntry object.
 
     Messages:
-      ObjectPreconditionsValue: A ObjectPreconditionsValue object.
+      ObjectPreconditionsValue: Conditions that must be met for this operation
+        to execute.
 
     Fields:
       generation: The generation of this object to use as the source.
       name: The source object's name. The source object's bucket is implicitly
         the destination bucket.
-      objectPreconditions: A ObjectPreconditionsValue attribute.
+      objectPreconditions: Conditions that must be met for this operation to
+        execute.
     """
 
     class ObjectPreconditionsValue(messages.Message):
-      """A ObjectPreconditionsValue object.
+      """Conditions that must be met for this operation to execute.
 
       Fields:
         ifGenerationMatch: Only perform the composition if the generation of
@@ -401,11 +420,10 @@ class Object(messages.Message):
 
   Fields:
     acl: Access controls on the object.
-    bucket: The bucket containing this object.
+    bucket: The name of the bucket containing this object.
     cacheControl: Cache-Control directive for the object data.
     componentCount: Number of underlying components that make up this object.
-      Components are accumulated by compose operations and are limited to a
-      count of 32.
+      Components are accumulated by compose operations.
     contentDisposition: Content-Disposition of the object data.
     contentEncoding: Content-Encoding of the object data.
     contentLanguage: Content-Language of the object data.
@@ -421,14 +439,16 @@ class Object(messages.Message):
     md5Hash: MD5 hash of the data; encoded using base64.
     mediaLink: Media download link.
     metadata: User-provided metadata, in key/value pairs.
-    metageneration: The generation of the metadata for this object at this
-      generation. Used for metadata versioning. Has no meaning outside of the
-      context of this generation.
+    metageneration: The version of the metadata for this object at this
+      generation. Used for preconditions and for detecting changes in
+      metadata. A metageneration number is only meaningful in the context of a
+      particular generation of a particular object.
     name: The name of this object. Required if not specified by URL parameter.
     owner: The owner of the object. This will always be the uploader of the
       object.
     selfLink: The link to this object.
     size: Content-Length of the data in bytes.
+    storageClass: Storage class of the object.
     timeDeleted: Deletion time of the object in RFC 3339 format. Will be
       returned if and only if this version of the object has been deleted.
     updated: Modification time of the object metadata in RFC 3339 format.
@@ -491,12 +511,16 @@ class Object(messages.Message):
   owner = messages.MessageField('OwnerValue', 19)
   selfLink = messages.StringField(20)
   size = messages.IntegerField(21, variant=messages.Variant.UINT64)
-  timeDeleted = message_types.DateTimeField(22)
-  updated = message_types.DateTimeField(23)
+  storageClass = messages.StringField(22)
+  timeDeleted = message_types.DateTimeField(23)
+  updated = message_types.DateTimeField(24)
 
 
 class ObjectAccessControl(messages.Message):
   """An access-control entry.
+
+  Messages:
+    ProjectTeamValue: The project team associated with the entity, if any.
 
   Fields:
     bucket: The name of the bucket.
@@ -504,11 +528,11 @@ class ObjectAccessControl(messages.Message):
     email: The email address associated with the entity, if any.
     entity: The entity holding the permission, in one of the following forms:
       - user-userId  - user-email  - group-groupId  - group-email  - domain-
-      domain  - allUsers  - allAuthenticatedUsers Examples:  - The user
-      liz@example.com would be user-liz@example.com.  - The group
-      example@googlegroups.com would be group-example@googlegroups.com.  - To
-      refer to all members of the Google Apps for Business domain example.com,
-      the entity would be domain-example.com.
+      domain  - project-team-projectId  - allUsers  - allAuthenticatedUsers
+      Examples:  - The user liz@example.com would be user-liz@example.com.  -
+      The group example@googlegroups.com would be group-
+      example@googlegroups.com.  - To refer to all members of the Google Apps
+      for Business domain example.com, the entity would be domain-example.com.
     entityId: The ID for the entity, if any.
     etag: HTTP 1.1 Entity tag for the access-control entry.
     generation: The content generation of the object.
@@ -516,9 +540,21 @@ class ObjectAccessControl(messages.Message):
     kind: The kind of item this is. For object access control entries, this is
       always storage#objectAccessControl.
     object: The name of the object.
+    projectTeam: The project team associated with the entity, if any.
     role: The access permission for the entity. Can be READER or OWNER.
     selfLink: The link to this access-control entry.
   """
+
+  class ProjectTeamValue(messages.Message):
+    """The project team associated with the entity, if any.
+
+    Fields:
+      projectNumber: The project number.
+      team: The team. Can be owners, editors, or viewers.
+    """
+
+    projectNumber = messages.StringField(1)
+    team = messages.StringField(2)
 
   bucket = messages.StringField(1)
   domain = messages.StringField(2)
@@ -530,8 +566,9 @@ class ObjectAccessControl(messages.Message):
   id = messages.StringField(8)
   kind = messages.StringField(9, default=u'storage#objectAccessControl')
   object = messages.StringField(10)
-  role = messages.StringField(11)
-  selfLink = messages.StringField(12)
+  projectTeam = messages.MessageField('ProjectTeamValue', 11)
+  role = messages.StringField(12)
+  selfLink = messages.StringField(13)
 
 
 class ObjectAccessControls(messages.Message):
@@ -584,7 +621,7 @@ class StandardQueryParameters(messages.Message):
     quotaUser: Available to use for quota purposes for server-side
       applications. Can be any arbitrary string assigned to a user, but should
       not exceed 40 characters. Overrides userIp if both are provided.
-    trace: A tracing token of the form "trace:<traceid>" or "email:<ldap>" to
+    trace: A tracing token of the form "token:<tokenid>" or "email:<ldap>" to
       include in api requests.
     userIp: IP address of the site where the request originates. Use this if
       you want to enforce per-user limits.
@@ -613,8 +650,9 @@ class StorageBucketAccessControlsDeleteRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
   """
 
   bucket = messages.StringField(1, required=True)
@@ -630,8 +668,9 @@ class StorageBucketAccessControlsGetRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
   """
 
   bucket = messages.StringField(1, required=True)
@@ -653,16 +692,15 @@ class StorageBucketsDeleteRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    ifMetagenerationMatch: Makes the return of the bucket metadata conditional
-      on whether the bucket's current metageneration matches the given value.
-    ifMetagenerationNotMatch: Makes the return of the bucket metadata
-      conditional on whether the bucket's current metageneration does not
-      match the given value.
+    ifMetagenerationMatch: If set, only deletes the bucket if its
+      metageneration matches this value.
+    ifMetagenerationNotMatch: If set, only deletes the bucket if its
+      metageneration does not match this value.
   """
 
   bucket = messages.StringField(1, required=True)
-  ifMetagenerationMatch = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  ifMetagenerationMatch = messages.IntegerField(2)
+  ifMetagenerationNotMatch = messages.IntegerField(3)
 
 
 class StorageBucketsDeleteResponse(messages.Message):
@@ -696,8 +734,8 @@ class StorageBucketsGetRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.StringField(1, required=True)
-  ifMetagenerationMatch = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  ifMetagenerationMatch = messages.IntegerField(2)
+  ifMetagenerationNotMatch = messages.IntegerField(3)
   projection = messages.EnumField('ProjectionValueValuesEnum', 4)
 
 
@@ -705,17 +743,40 @@ class StorageBucketsInsertRequest(messages.Message):
   """A StorageBucketsInsertRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to noAcl,
       unless the bucket resource specifies acl or defaultObjectAcl properties,
       when it defaults to full.
 
   Fields:
     bucket: A Bucket resource to be passed as the request body.
+    predefinedAcl: Apply a predefined set of access controls to this bucket.
     project: A valid API project identifier.
     projection: Set of properties to return. Defaults to noAcl, unless the
       bucket resource specifies acl or defaultObjectAcl properties, when it
       defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this bucket.
+
+    Values:
+      authenticatedRead: Project team owners get OWNER access, and
+        allAuthenticatedUsers get READER access.
+      private: Project team owners get OWNER access.
+      projectPrivate: Project team members get access according to their
+        roles.
+      publicRead: Project team owners get OWNER access, and allUsers get
+        READER access.
+      publicReadWrite: Project team owners get OWNER access, and allUsers get
+        WRITER access.
+    """
+    authenticatedRead = 0
+    private = 1
+    projectPrivate = 2
+    publicRead = 3
+    publicReadWrite = 4
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to noAcl, unless the bucket
@@ -730,8 +791,9 @@ class StorageBucketsInsertRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.MessageField('Bucket', 1)
-  project = messages.StringField(2, required=True)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 3)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 2)
+  project = messages.StringField(3, required=True)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 4)
 
 
 class StorageBucketsListRequest(messages.Message):
@@ -768,6 +830,8 @@ class StorageBucketsPatchRequest(messages.Message):
   """A StorageBucketsPatchRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -778,8 +842,29 @@ class StorageBucketsPatchRequest(messages.Message):
     ifMetagenerationNotMatch: Makes the return of the bucket metadata
       conditional on whether the bucket's current metageneration does not
       match the given value.
+    predefinedAcl: Apply a predefined set of access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this bucket.
+
+    Values:
+      authenticatedRead: Project team owners get OWNER access, and
+        allAuthenticatedUsers get READER access.
+      private: Project team owners get OWNER access.
+      projectPrivate: Project team members get access according to their
+        roles.
+      publicRead: Project team owners get OWNER access, and allUsers get
+        READER access.
+      publicReadWrite: Project team owners get OWNER access, and allUsers get
+        WRITER access.
+    """
+    authenticatedRead = 0
+    private = 1
+    projectPrivate = 2
+    publicRead = 3
+    publicReadWrite = 4
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
@@ -793,15 +878,18 @@ class StorageBucketsPatchRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   bucketResource = messages.MessageField('Bucket', 2)
-  ifMetagenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 5)
+  ifMetagenerationMatch = messages.IntegerField(3)
+  ifMetagenerationNotMatch = messages.IntegerField(4)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 5)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 6)
 
 
 class StorageBucketsUpdateRequest(messages.Message):
   """A StorageBucketsUpdateRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -812,8 +900,29 @@ class StorageBucketsUpdateRequest(messages.Message):
     ifMetagenerationNotMatch: Makes the return of the bucket metadata
       conditional on whether the bucket's current metageneration does not
       match the given value.
+    predefinedAcl: Apply a predefined set of access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this bucket.
+
+    Values:
+      authenticatedRead: Project team owners get OWNER access, and
+        allAuthenticatedUsers get READER access.
+      private: Project team owners get OWNER access.
+      projectPrivate: Project team members get access according to their
+        roles.
+      publicRead: Project team owners get OWNER access, and allUsers get
+        READER access.
+      publicReadWrite: Project team owners get OWNER access, and allUsers get
+        WRITER access.
+    """
+    authenticatedRead = 0
+    private = 1
+    projectPrivate = 2
+    publicRead = 3
+    publicReadWrite = 4
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
@@ -827,9 +936,10 @@ class StorageBucketsUpdateRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   bucketResource = messages.MessageField('Bucket', 2)
-  ifMetagenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 5)
+  ifMetagenerationMatch = messages.IntegerField(3)
+  ifMetagenerationNotMatch = messages.IntegerField(4)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 5)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 6)
 
 
 class StorageChannelsStopResponse(messages.Message):
@@ -841,8 +951,9 @@ class StorageDefaultObjectAccessControlsDeleteRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
   """
 
   bucket = messages.StringField(1, required=True)
@@ -858,8 +969,9 @@ class StorageDefaultObjectAccessControlsGetRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
   """
 
   bucket = messages.StringField(1, required=True)
@@ -871,9 +983,15 @@ class StorageDefaultObjectAccessControlsListRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
+    ifMetagenerationMatch: If present, only return default ACL listing if the
+      bucket's current metageneration matches this value.
+    ifMetagenerationNotMatch: If present, only return default ACL listing if
+      the bucket's current metageneration does not match the given value.
   """
 
   bucket = messages.StringField(1, required=True)
+  ifMetagenerationMatch = messages.IntegerField(2)
+  ifMetagenerationNotMatch = messages.IntegerField(3)
 
 
 class StorageObjectAccessControlsDeleteRequest(messages.Message):
@@ -881,8 +999,9 @@ class StorageObjectAccessControlsDeleteRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
     generation: If present, selects a specific revision of this object (as
       opposed to the latest version, the default).
     object: Name of the object.
@@ -890,7 +1009,7 @@ class StorageObjectAccessControlsDeleteRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   entity = messages.StringField(2, required=True)
-  generation = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(3)
   object = messages.StringField(4, required=True)
 
 
@@ -903,8 +1022,9 @@ class StorageObjectAccessControlsGetRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
     generation: If present, selects a specific revision of this object (as
       opposed to the latest version, the default).
     object: Name of the object.
@@ -912,7 +1032,7 @@ class StorageObjectAccessControlsGetRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   entity = messages.StringField(2, required=True)
-  generation = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(3)
   object = messages.StringField(4, required=True)
 
 
@@ -929,7 +1049,7 @@ class StorageObjectAccessControlsInsertRequest(messages.Message):
   """
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
   object = messages.StringField(3, required=True)
   objectAccessControl = messages.MessageField('ObjectAccessControl', 4)
 
@@ -945,7 +1065,7 @@ class StorageObjectAccessControlsListRequest(messages.Message):
   """
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
   object = messages.StringField(3, required=True)
 
 
@@ -954,8 +1074,9 @@ class StorageObjectAccessControlsPatchRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
     generation: If present, selects a specific revision of this object (as
       opposed to the latest version, the default).
     object: Name of the object.
@@ -965,7 +1086,7 @@ class StorageObjectAccessControlsPatchRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   entity = messages.StringField(2, required=True)
-  generation = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(3)
   object = messages.StringField(4, required=True)
   objectAccessControl = messages.MessageField('ObjectAccessControl', 5)
 
@@ -975,8 +1096,9 @@ class StorageObjectAccessControlsUpdateRequest(messages.Message):
 
   Fields:
     bucket: Name of a bucket.
-    entity: The entity holding the permission. Can be user-userId, group-
-      groupId, allUsers, or allAuthenticatedUsers.
+    entity: The entity holding the permission. Can be user-userId, user-
+      emailAddress, group-groupId, group-emailAddress, allUsers, or
+      allAuthenticatedUsers.
     generation: If present, selects a specific revision of this object (as
       opposed to the latest version, the default).
     object: Name of the object.
@@ -986,7 +1108,7 @@ class StorageObjectAccessControlsUpdateRequest(messages.Message):
 
   bucket = messages.StringField(1, required=True)
   entity = messages.StringField(2, required=True)
-  generation = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(3)
   object = messages.StringField(4, required=True)
   objectAccessControl = messages.MessageField('ObjectAccessControl', 5)
 
@@ -994,28 +1116,60 @@ class StorageObjectAccessControlsUpdateRequest(messages.Message):
 class StorageObjectsComposeRequest(messages.Message):
   """A StorageObjectsComposeRequest object.
 
+  Enums:
+    DestinationPredefinedAclValueValuesEnum: Apply a predefined set of access
+      controls to the destination object.
+
   Fields:
     composeRequest: A ComposeRequest resource to be passed as the request
       body.
     destinationBucket: Name of the bucket in which to store the new object.
     destinationObject: Name of the new object.
+    destinationPredefinedAcl: Apply a predefined set of access controls to the
+      destination object.
     ifGenerationMatch: Makes the operation conditional on whether the object's
       current generation matches the given value.
     ifMetagenerationMatch: Makes the operation conditional on whether the
       object's current metageneration matches the given value.
   """
 
+  class DestinationPredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to the destination object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
   composeRequest = messages.MessageField('ComposeRequest', 1)
   destinationBucket = messages.StringField(2, required=True)
   destinationObject = messages.StringField(3, required=True)
-  ifGenerationMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
+  destinationPredefinedAcl = messages.EnumField('DestinationPredefinedAclValueValuesEnum', 4)
+  ifGenerationMatch = messages.IntegerField(5)
+  ifMetagenerationMatch = messages.IntegerField(6)
 
 
 class StorageObjectsCopyRequest(messages.Message):
   """A StorageObjectsCopyRequest object.
 
   Enums:
+    DestinationPredefinedAclValueValuesEnum: Apply a predefined set of access
+      controls to the destination object.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to noAcl,
       unless the object resource specifies the acl property, when it defaults
       to full.
@@ -1026,6 +1180,8 @@ class StorageObjectsCopyRequest(messages.Message):
     destinationObject: Name of the new object. Required when the object
       metadata is not otherwise provided. Overrides the object metadata's name
       value, if any.
+    destinationPredefinedAcl: Apply a predefined set of access controls to the
+      destination object.
     ifGenerationMatch: Makes the operation conditional on whether the
       destination object's current generation matches the given value.
     ifGenerationNotMatch: Makes the operation conditional on whether the
@@ -1053,6 +1209,29 @@ class StorageObjectsCopyRequest(messages.Message):
     sourceObject: Name of the source object.
   """
 
+  class DestinationPredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to the destination object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to noAcl, unless the object
     resource specifies the acl property, when it defaults to full.
@@ -1066,19 +1245,20 @@ class StorageObjectsCopyRequest(messages.Message):
 
   destinationBucket = messages.StringField(1, required=True)
   destinationObject = messages.StringField(2, required=True)
-  ifGenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(6, variant=messages.Variant.UINT64)
-  ifSourceGenerationMatch = messages.IntegerField(7, variant=messages.Variant.UINT64)
-  ifSourceGenerationNotMatch = messages.IntegerField(8, variant=messages.Variant.UINT64)
-  ifSourceMetagenerationMatch = messages.IntegerField(9, variant=messages.Variant.UINT64)
-  ifSourceMetagenerationNotMatch = messages.IntegerField(10, variant=messages.Variant.UINT64)
-  object = messages.MessageField('Object', 11)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 12)
-  sourceBucket = messages.StringField(13, required=True)
-  sourceGeneration = messages.IntegerField(14, variant=messages.Variant.UINT64)
-  sourceObject = messages.StringField(15, required=True)
+  destinationPredefinedAcl = messages.EnumField('DestinationPredefinedAclValueValuesEnum', 3)
+  ifGenerationMatch = messages.IntegerField(4)
+  ifGenerationNotMatch = messages.IntegerField(5)
+  ifMetagenerationMatch = messages.IntegerField(6)
+  ifMetagenerationNotMatch = messages.IntegerField(7)
+  ifSourceGenerationMatch = messages.IntegerField(8)
+  ifSourceGenerationNotMatch = messages.IntegerField(9)
+  ifSourceMetagenerationMatch = messages.IntegerField(10)
+  ifSourceMetagenerationNotMatch = messages.IntegerField(11)
+  object = messages.MessageField('Object', 12)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 13)
+  sourceBucket = messages.StringField(14, required=True)
+  sourceGeneration = messages.IntegerField(15)
+  sourceObject = messages.StringField(16, required=True)
 
 
 class StorageObjectsDeleteRequest(messages.Message):
@@ -1100,11 +1280,11 @@ class StorageObjectsDeleteRequest(messages.Message):
   """
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifGenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(6, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
+  ifGenerationMatch = messages.IntegerField(3)
+  ifGenerationNotMatch = messages.IntegerField(4)
+  ifMetagenerationMatch = messages.IntegerField(5)
+  ifMetagenerationNotMatch = messages.IntegerField(6)
   object = messages.StringField(7, required=True)
 
 
@@ -1145,11 +1325,11 @@ class StorageObjectsGetRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifGenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(6, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
+  ifGenerationMatch = messages.IntegerField(3)
+  ifGenerationNotMatch = messages.IntegerField(4)
+  ifMetagenerationMatch = messages.IntegerField(5)
+  ifMetagenerationNotMatch = messages.IntegerField(6)
   object = messages.StringField(7, required=True)
   projection = messages.EnumField('ProjectionValueValuesEnum', 8)
 
@@ -1158,6 +1338,8 @@ class StorageObjectsInsertRequest(messages.Message):
   """A StorageObjectsInsertRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this object.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to noAcl,
       unless the object resource specifies the acl property, when it defaults
       to full.
@@ -1165,6 +1347,11 @@ class StorageObjectsInsertRequest(messages.Message):
   Fields:
     bucket: Name of the bucket in which to store the new object. Overrides the
       provided object metadata's bucket value, if any.
+    contentEncoding: If set, sets the contentEncoding property of the final
+      object to this value. Setting this parameter is equivalent to setting
+      the contentEncoding metadata property. This can be useful when uploading
+      an object with uploadType=media to indicate the encoding of the content
+      being uploaded.
     ifGenerationMatch: Makes the operation conditional on whether the object's
       current generation matches the given value.
     ifGenerationNotMatch: Makes the operation conditional on whether the
@@ -1176,9 +1363,33 @@ class StorageObjectsInsertRequest(messages.Message):
     name: Name of the object. Required when the object metadata is not
       otherwise provided. Overrides the object metadata's name value, if any.
     object: A Object resource to be passed as the request body.
+    predefinedAcl: Apply a predefined set of access controls to this object.
     projection: Set of properties to return. Defaults to noAcl, unless the
       object resource specifies the acl property, when it defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to noAcl, unless the object
@@ -1192,13 +1403,15 @@ class StorageObjectsInsertRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.StringField(1, required=True)
-  ifGenerationMatch = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  name = messages.StringField(6)
-  object = messages.MessageField('Object', 7)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 8)
+  contentEncoding = messages.StringField(2)
+  ifGenerationMatch = messages.IntegerField(3)
+  ifGenerationNotMatch = messages.IntegerField(4)
+  ifMetagenerationMatch = messages.IntegerField(5)
+  ifMetagenerationNotMatch = messages.IntegerField(6)
+  name = messages.StringField(7)
+  object = messages.MessageField('Object', 8)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 9)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 10)
 
 
 class StorageObjectsListRequest(messages.Message):
@@ -1247,6 +1460,8 @@ class StorageObjectsPatchRequest(messages.Message):
   """A StorageObjectsPatchRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this object.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -1263,8 +1478,32 @@ class StorageObjectsPatchRequest(messages.Message):
       object's current metageneration does not match the given value.
     object: Name of the object.
     objectResource: A Object resource to be passed as the request body.
+    predefinedAcl: Apply a predefined set of access controls to this object.
     projection: Set of properties to return. Defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
@@ -1277,20 +1516,23 @@ class StorageObjectsPatchRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifGenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(6, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
+  ifGenerationMatch = messages.IntegerField(3)
+  ifGenerationNotMatch = messages.IntegerField(4)
+  ifMetagenerationMatch = messages.IntegerField(5)
+  ifMetagenerationNotMatch = messages.IntegerField(6)
   object = messages.StringField(7, required=True)
   objectResource = messages.MessageField('Object', 8)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 9)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 9)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 10)
 
 
 class StorageObjectsUpdateRequest(messages.Message):
   """A StorageObjectsUpdateRequest object.
 
   Enums:
+    PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
+      this object.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -1307,8 +1549,32 @@ class StorageObjectsUpdateRequest(messages.Message):
       object's current metageneration does not match the given value.
     object: Name of the object.
     objectResource: A Object resource to be passed as the request body.
+    predefinedAcl: Apply a predefined set of access controls to this object.
     projection: Set of properties to return. Defaults to full.
   """
+
+  class PredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to this object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
 
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
@@ -1321,14 +1587,15 @@ class StorageObjectsUpdateRequest(messages.Message):
     noAcl = 1
 
   bucket = messages.StringField(1, required=True)
-  generation = messages.IntegerField(2, variant=messages.Variant.UINT64)
-  ifGenerationMatch = messages.IntegerField(3, variant=messages.Variant.UINT64)
-  ifGenerationNotMatch = messages.IntegerField(4, variant=messages.Variant.UINT64)
-  ifMetagenerationMatch = messages.IntegerField(5, variant=messages.Variant.UINT64)
-  ifMetagenerationNotMatch = messages.IntegerField(6, variant=messages.Variant.UINT64)
+  generation = messages.IntegerField(2)
+  ifGenerationMatch = messages.IntegerField(3)
+  ifGenerationNotMatch = messages.IntegerField(4)
+  ifMetagenerationMatch = messages.IntegerField(5)
+  ifMetagenerationNotMatch = messages.IntegerField(6)
   object = messages.StringField(7, required=True)
   objectResource = messages.MessageField('Object', 8)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 9)
+  predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 9)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 10)
 
 
 class StorageObjectsWatchAllRequest(messages.Message):

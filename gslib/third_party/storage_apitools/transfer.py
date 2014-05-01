@@ -33,7 +33,7 @@ from gslib.third_party.storage_apitools import http_wrapper
 __all__ = [
     'Download',
     'Upload',
-    ]
+]
 
 _RESUMABLE_UPLOAD_THRESHOLD = 5 << 20
 _SIMPLE_UPLOAD = 'simple'
@@ -139,7 +139,7 @@ class Download(_Transfer):
       httplib.NO_CONTENT,
       httplib.PARTIAL_CONTENT,
       httplib.REQUESTED_RANGE_NOT_SATISFIABLE,
-      ))
+  ))
   _REQUIRED_SERIALIZATION_KEYS = set((
       'auto_transfer', 'progress', 'total_size', 'url'))
 
@@ -168,7 +168,7 @@ class Download(_Transfer):
     return cls(stream, auto_transfer=auto_transfer)
 
   @classmethod
-  def FromData(cls, stream, json_data, http=None):
+  def FromData(cls, stream, json_data, http=None, auto_transfer=None):
     """Create a new Download object from a stream and serialized data."""
     info = json.loads(json_data)
     missing_keys = cls._REQUIRED_SERIALIZATION_KEYS - set(info.keys())
@@ -177,7 +177,10 @@ class Download(_Transfer):
           'Invalid serialization data, missing keys: %s' % (
               ', '.join(missing_keys)))
     download = cls.FromStream(stream)
-    download.auto_transfer = info['auto_transfer']
+    if auto_transfer is not None:
+      download.auto_transfer = auto_transfer
+    else:
+      download.auto_transfer = info['auto_transfer']
     setattr(download, '_Download__progress', info['progress'])
     setattr(download, '_Download__total_size', info['total_size'])
     download._Initialize(http, info['url'])  # pylint: disable=protected-access
@@ -191,7 +194,7 @@ class Download(_Transfer):
         'progress': self.progress,
         'total_size': self.total_size,
         'url': self.url,
-        }
+    }
 
   @property
   def total_size(self):
@@ -422,7 +425,7 @@ class Upload(_Transfer):
                auto_transfer=auto_transfer)
 
   @classmethod
-  def FromData(cls, stream, json_data, http):
+  def FromData(cls, stream, json_data, http, auto_transfer=None):
     """Create a new Upload of stream from serialized json_data using http."""
     info = json.loads(json_data)
     missing_keys = cls._REQUIRED_SERIALIZATION_KEYS - set(info.keys())
@@ -435,7 +438,10 @@ class Upload(_Transfer):
     if isinstance(stream, io.IOBase) and not stream.seekable():
       raise exceptions.InvalidUserInputError(
           'Cannot restart resumable upload on non-seekable stream')
-    upload.auto_transfer = info['auto_transfer']
+    if auto_transfer is not None:
+      upload.auto_transfer = auto_transfer
+    else:
+      upload.auto_transfer = info['auto_transfer']
     upload.strategy = _RESUMABLE_UPLOAD
     upload._Initialize(http, info['url'])  # pylint: disable=protected-access
     upload._RefreshResumableUploadState()  # pylint: disable=protected-access
@@ -455,7 +461,7 @@ class Upload(_Transfer):
         'mime_type': self.mime_type,
         'total_size': self.total_size,
         'url': self.url,
-        }
+    }
 
   @property
   def complete(self):

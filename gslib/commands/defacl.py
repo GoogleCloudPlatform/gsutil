@@ -27,7 +27,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.util import NO_MAX
 from gslib.util import Retry
@@ -208,7 +208,6 @@ class DefAclCommand(Command):
         url.bucket_name, provider=url.scheme,
         fields=['defaultObjectAcl', 'metageneration'])
     current_acl = bucket.defaultObjectAcl
-    current_xml_acl = AclTranslation.BotoAclFromMessage(current_acl)
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
@@ -217,15 +216,14 @@ class DefAclCommand(Command):
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(url, current_xml_acl, self.logger)
+      modification_count += change.Execute(url, current_acl, self.logger)
     if modification_count == 0:
       self.logger.info('No changes to {0}'.format(url))
       return
 
     try:
       preconditions = Preconditions(meta_gen_match=bucket.metageneration)
-      acl_to_set = list(AclTranslation.BotoObjectAclToMessage(current_xml_acl))
-      bucket_metadata = apitools_messages.Bucket(defaultObjectAcl=acl_to_set)
+      bucket_metadata = apitools_messages.Bucket(defaultObjectAcl=current_acl)
       self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                   preconditions=preconditions,
                                   provider=url.scheme, fields=['id'])

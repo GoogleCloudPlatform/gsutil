@@ -54,7 +54,7 @@ from gslib.parallelism_framework_util import BasicIncrementDict
 from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.util import GetConfigFilePath
 from gslib.util import HaveFileUrls
