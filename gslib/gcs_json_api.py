@@ -49,8 +49,8 @@ from gslib.project_id import PopulateProjectId
 from gslib.third_party.storage_apitools import credentials_lib as credentials_lib
 from gslib.third_party.storage_apitools import encoding as encoding
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
-from gslib.third_party.storage_apitools import storage_v1beta2_client as apitools_client
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_client as apitools_client
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.third_party.storage_apitools import transfer as apitools_transfer
 from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
@@ -62,7 +62,7 @@ from gslib.util import GetCredentialStoreFilename
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
 
-DEFAULT_GCS_JSON_VERSION = 'v1beta2'
+DEFAULT_GCS_JSON_VERSION = 'v1'
 
 NUM_BUCKETS_PER_LIST_PAGE = 100
 NUM_OBJECTS_PER_LIST_PAGE = 500
@@ -165,7 +165,7 @@ class GcsJsonApi(CloudApi):
     log_request = (debug >= 3)
     log_response = (debug >= 3)
 
-    self.api_client = apitools_client.StorageV1beta2(
+    self.api_client = apitools_client.StorageV1(
         url=self.url_base, http=self.http, log_request=log_request,
         log_response=log_response, credentials=self.credentials,
         version=self.api_version)

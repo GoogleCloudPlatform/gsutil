@@ -34,7 +34,9 @@ __all__ = [
     'JsonArray',
     'JsonObject',
     'JsonValue',
-    ]
+    'JsonProtoEncoder',
+    'JsonProtoDecoder',
+]
 
 # We import from protorpc.
 # pylint:disable=invalid-name
@@ -165,7 +167,7 @@ _JSON_PROTO_TO_PYTHON_MAP = {
     JsonArray: _JsonArrayToPythonValue,
     JsonObject: _JsonObjectToPythonValue,
     JsonValue: _JsonValueToPythonValue,
-    }
+}
 _JSON_PROTO_TYPES = tuple(_JSON_PROTO_TO_PYTHON_MAP.keys())
 
 
@@ -191,12 +193,16 @@ def _JsonToJsonProto(json_data, unused_decoder=None):
   return _PythonValueToJsonProto(json.loads(json_data))
 
 
+# pylint:disable=invalid-name
+JsonProtoEncoder = _JsonProtoToJson
+JsonProtoDecoder = _JsonToJsonProto
+# pylint:enable=invalid-name
 encoding.RegisterCustomMessageCodec(
-    encoder=_JsonProtoToJson, decoder=_JsonToJsonProto)(JsonValue)
+    encoder=JsonProtoEncoder, decoder=JsonProtoDecoder)(JsonValue)
 encoding.RegisterCustomMessageCodec(
-    encoder=_JsonProtoToJson, decoder=_JsonToJsonProto)(JsonObject)
+    encoder=JsonProtoEncoder, decoder=JsonProtoDecoder)(JsonObject)
 encoding.RegisterCustomMessageCodec(
-    encoder=_JsonProtoToJson, decoder=_JsonToJsonProto)(JsonArray)
+    encoder=JsonProtoEncoder, decoder=JsonProtoDecoder)(JsonArray)
 
 
 def _EncodeDateTimeField(field, value):
@@ -204,7 +210,7 @@ def _EncodeDateTimeField(field, value):
   return encoding.CodecResult(value=result, complete=True)
 
 
-def _DecodeDateTimeField(value):
+def _DecodeDateTimeField(unused_field, value):
   result = protojson.ProtoJson().decode_field(
       message_types.DateTimeField(1), value)
   return encoding.CodecResult(value=result, complete=True)
@@ -212,3 +218,29 @@ def _DecodeDateTimeField(value):
 
 encoding.RegisterFieldTypeCodec(_EncodeDateTimeField, _DecodeDateTimeField)(
     message_types.DateTimeField)
+
+
+# Handle the int64<-->string conversion apiary requires
+def _EncodeInt64Field(field, value):
+  """Handle the special case of int64 as a string."""
+  capabilities = [
+      messages.Variant.INT64,
+      messages.Variant.UINT64,
+  ]
+  if field.variant not in capabilities:
+    return encoding.CodecResult(value=value, complete=False)
+
+  if field.repeated:
+    result = [str(x) for x in value]
+  else:
+    result = str(value)
+  return encoding.CodecResult(value=result, complete=True)
+
+
+def _DecodeInt64Field(unused_field, value):
+  # Don't need to do anything special, they're decoded just fine
+  return encoding.CodecResult(value=value, complete=False)
+
+encoding.RegisterFieldTypeCodec(_EncodeInt64Field, _DecodeInt64Field)(
+    messages.IntegerField)
+

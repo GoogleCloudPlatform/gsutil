@@ -60,7 +60,7 @@ from gslib.hashing_helper import MD5_REGEX
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CorsTranslation

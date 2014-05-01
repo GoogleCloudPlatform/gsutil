@@ -31,7 +31,7 @@ from gslib.third_party.storage_apitools import exceptions
 __all__ = [
     'GetHttp',
     'MakeRequest',
-    ]
+]
 
 
 # 308 and 429 don't have names in httplib.
@@ -43,7 +43,7 @@ _REDIRECT_STATUS_CODES = (
     httplib.SEE_OTHER,
     httplib.TEMPORARY_REDIRECT,
     RESUME_INCOMPLETE,
-    )
+)
 
 
 class Request(object):
@@ -110,7 +110,8 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
   This will also be the hook for error/retry handling.
 
   Args:
-    http: An httplib2.Http instance.
+    http: An httplib2.Http instance, or a http multiplexer that delegates to
+        an underlying http, for example, HTTPMultiplexer.
     http_request: A Request to send.
     retries: (int, default 5) Number of retries to attempt on 5XX replies.
     redirections: (int, default 5) Number of redirects to follow.
@@ -118,9 +119,19 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
   Returns:
     A Response object.
 
+  Raises:
+    InvalidDataFromServerError: if there is no response after retries.
   """
   response = None
   exc = None
+  connection_type = None
+  # Handle overrides for connection types.  This is used if the caller
+  # wants control over the underlying connection for managing callbacks
+  # or hash digestion.
+  if getattr(http, 'connections', None):
+    url_scheme = urlparse.urlsplit(http_request.url).scheme
+    if url_scheme and url_scheme in http.connections:
+      connection_type = http.connections[url_scheme]
   for retry in xrange(retries + 1):
     # Note that the str() calls here are important for working around
     # some funny business with message construction and unicode in
@@ -128,19 +139,10 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
     #   http://bugs.python.org/issue11898
     info = None
     try:
-      # Handle overrides for connection types.  This is used if the caller
-      # wants control over the underlying connectioon for managing callbacks
-      # or hash digestion.
-      connection_type = None
-      url_scheme = urlparse.urlsplit(http_request.url).scheme
-      if url_scheme:  # First index is the URL scheme
-        if http.connections and url_scheme in http.connections:
-          connection_type = http.connections[url_scheme]
       info, content = http.request(
           str(http_request.url), method=str(http_request.http_method),
           body=http_request.body, headers=http_request.headers,
-          redirections=redirections,
-          connection_type=connection_type)
+          redirections=redirections, connection_type=connection_type)
     except httplib.BadStatusLine as e:
       logging.error('Caught BadStatusLine from httplib, retrying: %s', e)
       exc = e
@@ -150,11 +152,11 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
       logging.error('Caught socket error, retrying: %s', e)
       exc = e
     except httplib.IncompleteRead as e:
-      exc = e
       if http_request.http_method != 'GET':
         raise
       logging.error('Caught IncompleteRead error, retrying: %s', e)
-    if info:
+      exc = e
+    if info is not None:
       response = Response(info, content, http_request.url)
       if (response.status_code < 500 and
           response.status_code != TOO_MANY_REQUESTS and

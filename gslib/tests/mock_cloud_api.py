@@ -14,7 +14,7 @@
 """Implements a simple mock gsutil Cloud API for unit testing."""
 
 from gslib.cloud_api import ServiceException
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 

@@ -22,6 +22,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.translation_helper import AclTranslation
 from gslib.util import Retry
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
@@ -215,62 +216,61 @@ class TestAcl(TestAclBase):
   def testAclChangeWithUserId(self):
     change = aclhelpers.AclChange(self.USER_TEST_ID + ':r',
                                   scope_type=aclhelpers.ChangeType.USER)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_uri, acl, self.logger)
-    self._AssertHas(acl, 'READ', 'UserById', self.USER_TEST_ID)
+    self._AssertHas(acl, 'READER', 'UserById', self.USER_TEST_ID)
 
   def testAclChangeWithGroupId(self):
     change = aclhelpers.AclChange(self.GROUP_TEST_ID + ':r',
                                   scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_uri, acl, self.logger)
-    self._AssertHas(acl, 'READ', 'GroupById', self.GROUP_TEST_ID)
+    self._AssertHas(acl, 'READER', 'GroupById', self.GROUP_TEST_ID)
 
   def testAclChangeWithUserEmail(self):
     change = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':r',
                                   scope_type=aclhelpers.ChangeType.USER)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_uri, acl, self.logger)
-    self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
+    self._AssertHas(acl, 'READER', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclChangeWithGroupEmail(self):
     change = aclhelpers.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
                                   scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_uri, acl, self.logger)
-    self._AssertHas(acl, 'FULL_CONTROL', 'GroupByEmail',
-                    self.GROUP_TEST_ADDRESS)
+    self._AssertHas(acl, 'OWNER', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 
   def testAclChangeWithDomain(self):
     change = aclhelpers.AclChange(self.DOMAIN_TEST + ':READ',
                                   scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHas(acl, 'READ', 'GroupByDomain', self.DOMAIN_TEST)
+    self._AssertHas(acl, 'READER', 'GroupByDomain', self.DOMAIN_TEST)
 
   def testAclChangeWithAllUsers(self):
     change = aclhelpers.AclChange('AllUsers:WRITE',
                                   scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHas(acl, 'WRITE', 'AllUsers')
+    self._AssertHas(acl, 'WRITER', 'AllUsers')
 
   def testAclChangeWithAllAuthUsers(self):
     change = aclhelpers.AclChange('AllAuthenticatedUsers:READ',
                                   scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHas(acl, 'READ', 'AllAuthenticatedUsers')
+    self._AssertHas(acl, 'READER', 'AllAuthenticatedUsers')
     remove = aclhelpers.AclDel('AllAuthenticatedUsers')
     remove.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHasNo(acl, 'READ', 'AllAuthenticatedUsers')
+    self._AssertHasNo(acl, 'READER', 'AllAuthenticatedUsers')
 
   def testAclDelWithUser(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
                                scope_type=aclhelpers.ChangeType.USER)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     add.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHas(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
+    self._AssertHas(acl, 'READER', 'UserByEmail', self.USER_TEST_ADDRESS)
 
     remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
     remove.Execute(str(self.sample_uri), acl, self.logger)
@@ -279,43 +279,59 @@ class TestAcl(TestAclBase):
   def testAclDelWithGroup(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
                                scope_type=aclhelpers.ChangeType.GROUP)
-    acl = self.sample_uri.get_acl()
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     add.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHas(acl, 'READ', 'GroupByEmail', self.USER_TEST_ADDRESS)
+    self._AssertHas(acl, 'READER', 'GroupByEmail', self.USER_TEST_ADDRESS)
 
     remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
     remove.Execute(str(self.sample_uri), acl, self.logger)
-    self._AssertHasNo(acl, 'READ', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
+    self._AssertHasNo(acl, 'READER', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 
   #
   # Here are a whole lot of verbose asserts
   #
 
   def _AssertHas(self, current_acl, perm, scope, value=None):
-    matches = list(self._YieldMatchingEntries(current_acl, perm, scope, value))
+    matches = list(self._YieldMatchingEntriesJson(current_acl, perm, scope,
+                                                  value))
     self.assertEqual(1, len(matches))
 
   def _AssertHasNo(self, current_acl, perm, scope, value=None):
-    matches = list(self._YieldMatchingEntries(current_acl, perm, scope, value))
+    matches = list(self._YieldMatchingEntriesJson(current_acl, perm, scope,
+                                                  value))
     self.assertEqual(0, len(matches))
 
-  def _YieldMatchingEntries(self, current_acl, perm, scope, value=None):
-    """Generator that finds entries that match the change descriptor."""
-    for entry in current_acl.entries.entry_list:
-      if entry.scope.type == scope:
-        if scope in ['UserById', 'GroupById']:
-          if value == entry.scope.id:
-            yield entry
-        elif scope in ['UserByEmail', 'GroupByEmail']:
-          if value == entry.scope.email_address:
-            yield entry
-        elif scope == 'GroupByDomain':
-          if value == entry.scope.domain:
-            yield entry
-        elif scope in ['AllUsers', 'AllAuthenticatedUsers']:
-          yield entry
-        else:
-          raise Exception('Found an unrecognized ACL entry type, aborting.')
+  def _YieldMatchingEntriesJson(self, current_acl, perm, scope, value=None):
+    """Generator that yields entries that match the change descriptor.
+
+    Args:
+      current_acl: A list of apitools_messages.BucketAccessControls or
+                   ObjectAccessControls which will be searched for matching
+                   entries.
+      perm: Role (permission) to match.
+      scope: Scope type to match.
+      value: Value to match (against the scope type).
+
+    Yields:
+      An apitools_messages.BucketAccessControl or ObjectAccessControl.
+    """
+    for entry in current_acl:
+      if (scope in ['UserById', 'GroupById'] and
+          entry.entityId and value == entry.entityId and
+          entry.role == perm):
+        yield entry
+      elif (scope in ['UserByEmail', 'GroupByEmail'] and
+            entry.email and value == entry.email and
+            entry.role == perm):
+        yield entry
+      elif (scope == 'GroupByDomain' and
+            entry.domain and value == entry.domain and
+            entry.role == perm):
+        yield entry
+      elif (scope in ['AllUsers', 'AllAuthenticatedUsers'] and
+            entry.entity.lower() == scope.lower() and
+            entry.role == perm):
+        yield entry
 
   def _MakeScopeRegex(self, role, entity_type, email_address):
     template_regex = (r'\{.*"entity":\s*"%s-%s".*"role":\s*"%s".*\}' %
@@ -402,6 +418,14 @@ class TestAcl(TestAclBase):
     """Tests recursively changing ACLs on nested objects."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, object_name='foo/bar',
                             contents='something')
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _GetObject():
+      stdout = self.RunGsUtil(['ls', suri(self.sample_uri)], return_stdout=True)
+      lines = stdout.strip().split('\n')
+      self.assertEqual(len(lines), 1)
+    _GetObject()
+
     test_regex = self._MakeScopeRegex(
         'READER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
@@ -471,7 +495,7 @@ class TestAcl(TestAclBase):
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(self._get_acl_prefix + [suri(object_uri)],
                               return_stderr=True, expected_status=1)
-      self.assertIn('Access denied', stderr)
+      self.assertIn('AccessDeniedException', stderr)
 
   def testTooFewArgumentsFails(self):
     """Tests calling ACL commands with insufficient number of arguments."""

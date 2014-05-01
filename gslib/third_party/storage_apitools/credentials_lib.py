@@ -121,17 +121,21 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
       return None
 
   def GetInstanceScopes(self):
+    # Extra header requirement can be found here:
+    # https://developers.google.com/compute/docs/metadata
     scopes_uri = (
         'http://metadata.google.internal/computeMetadata/v1beta1/instance/'
         'service-accounts/%s/scopes') % self.__service_account_name
+    additional_headers = {'X-Google-Metadata-Request': 'True'}
+    request = urllib2.Request(scopes_uri, headers=additional_headers)
     try:
-      response = urllib2.urlopen(scopes_uri)
+      response = urllib2.urlopen(request)
     except urllib2.URLError as e:
       raise exceptions.CommunicationError(
           'Could not reach metadata service: %s' % e.reason)
     return util.NormalizeScopes(scope.strip() for scope in response.readlines())
 
-  def _refresh(self, do_request):
+  def _refresh(self, do_request):  # pylint: disable=g-bad-name
     """Refresh self.access_token.
 
     Args:
@@ -140,7 +144,8 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     token_uri = (
         'http://metadata.google.internal/computeMetadata/v1beta1/instance/'
         'service-accounts/%s/token') % self.__service_account_name
-    response, content = do_request(token_uri)
+    extra_headers = {'X-Google-Metadata-Request': 'True'}
+    response, content = do_request(token_uri, headers=extra_headers)
     if response.status != httplib.OK:
       raise exceptions.CredentialsError(
           'Error refreshing credentials: %s' % content)
@@ -174,16 +179,17 @@ class GaeAssertionCredentials(oauth2client.client.AssertionCredentials):
       return None
 
   @classmethod
-  def from_json(cls, json_data):
+  def from_json(cls, json_data):  # pylint: disable=g-bad-name
     data = json.loads(json_data)
     return GaeAssertionCredentials(data['_scopes'])
 
-  def _refresh(self, _):
+  def _refresh(self, _):  # pylint: disable=g-bad-name
     """Refresh self.access_token.
 
     Args:
       _: (ignored) A function matching httplib2.Http.request's signature.
     """
+    # pylint: disable=g-import-not-at-top
     from google.appengine.api import app_identity
     try:
       token, _ = app_identity.get_access_token(self._scopes)

@@ -66,7 +66,7 @@ from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE

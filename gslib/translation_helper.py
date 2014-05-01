@@ -18,11 +18,12 @@ from boto.gs.acl import GROUP_BY_ID
 from boto.gs.acl import USER_BY_EMAIL
 from boto.gs.acl import USER_BY_ID
 from third_party.storage_apitools import encoding as encoding
-from third_party.storage_apitools import storage_v1beta2_messages as apitools_messages
+from third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import Preconditions
+from gslib.exception import CommandException
 
 # In Python 2.6, ElementTree raises ExpatError instead of ParseError.
 # pylint: disable=g-import-not-at-top
@@ -642,6 +643,7 @@ class AclTranslation(object):
 
   @classmethod
   def BotoEntryFromJson(cls, entry_json):
+    """Converts a JSON entry into a Boto ACL entry."""
     entity = entry_json['entity']
     permission = cls.JSON_TO_XML_ROLES[entry_json['role']]
     if entity.lower() == ALL_USERS.lower():
@@ -667,6 +669,11 @@ class AclTranslation(object):
         scope_type = GROUP_BY_DOMAIN
       return Entry(type=scope_type, domain=entry_json['domain'],
                    permission=permission)
+    elif 'project' in entry_json:
+      if entity.startswith('project'):
+        raise CommandException('XML API does not support project scopes, '
+                               'cannot translate ACL.')
+    raise CommandException('Failed to translate JSON ACL to XML.')
 
   @classmethod
   def BotoEntryToJson(cls, entry):
