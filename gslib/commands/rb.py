@@ -23,7 +23,7 @@ from gslib.util import NO_MAX
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil rb url...
+  gsutil [-f] rb url...
 
 <B>DESCRIPTION</B>
   The rb command deletes new bucket. Buckets must be empty before you can delete
@@ -33,6 +33,12 @@ _detailed_help_text = ("""
   deleted the name becomes available and another user may create a bucket with
   that name. (But see also "DOMAIN NAMED BUCKETS" under "gsutil help naming"
   for help carving out parts of the bucket name space.)
+
+
+<B>OPTIONS</B>
+  -f          Continues silently (without printing error messages) despite
+              errors when removing buckets. With this option the gsutil
+              exit status will be 0 even if some buckets couldn't be removed.
 """)
 
 
@@ -46,7 +52,7 @@ class RbCommand(Command):
           'deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='',
+      supported_sub_args='f',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -66,24 +72,48 @@ class RbCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the rb command."""
+    self.continue_on_error = False
+    if self.sub_opts:
+      for o, unused_a in self.sub_opts:
+        if o == '-f':
+          self.continue_on_error = True
+
     did_some_work = False
     for url_str in self.args:
       wildcard_url = StorageUrlFromString(url_str)
       if wildcard_url.IsObject():
         raise CommandException('"rb" command requires a provider or '
                                'bucket URL')
-      for blr in self.WildcardIterator(url_str).IterBuckets():
+      # Wrap WildcardIterator call in try/except so we can avoid printing errors
+      # with -f option if a non-existent URL listed, permission denial happens
+      # while listing, etc.
+      try:
+        # Need to materialize iterator results into a list to catch exceptions.
+        # Since this is listing buckets this list shouldn't be too large to fit
+        # in memory at once.
+        blrs = list(self.WildcardIterator(url_str).IterBuckets())
+      except:
+        if self.continue_on_error:
+          continue
+        else:
+          raise
+      for blr in blrs:
         url = StorageUrlFromString(blr.GetUrlString())
         self.logger.info('Removing %s...', url)
         try:
           self.gsutil_api.DeleteBucket(url.bucket_name, provider=url.scheme)
         except NotEmptyException as e:
-          if 'VersionedBucketNotEmpty' in e.reason:
+          if self.continue_on_error:
+            continue
+          elif 'VersionedBucketNotEmpty' in e.reason:
             raise CommandException('Bucket is not empty. Note: this is a '
-                                   'versioned bucket, so to delete all objects'
-                                   '\nyou need to use:\n\tgsutil rm -r %s'
-                                   % url)
+                                   'versioned bucket, so to delete all '
+                                   'objects\nyou need to use:'
+                                   '\n\tgsutil rm -r %s' % url)
           else:
+            raise
+        except: # pylint: disable=broad-except
+          if not self.continue_on_error:
             raise
         did_some_work = True
     if not did_some_work:
