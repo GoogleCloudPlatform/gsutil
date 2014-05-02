@@ -21,6 +21,12 @@ _detailed_help_text = ("""
   the ability to access public data anonymously (see "gsutil help anon" for more
   on anonymous access).
 
+  Note that when using the JSON API (which is the default behavior), you can
+  configure at most one of the following types of GCS credentials in a single
+  boto config file: OAuth2 User Account, OAuth2 Service Account, and
+  GCE Internal Service Account. You may have also S3 HMAC credentials, in
+  addition to the GCS credentials. This would be necessary for using s3:// URLs.
+
   OAuth2 User Account:
     This is the preferred type of credentials for authenticating requests on
     behalf of a specific user (which is probably the most common use of gsutil).
