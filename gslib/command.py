@@ -603,12 +603,12 @@ class Command(HelpProvider):
       # be a canned ACL or an XML ACL.
       try:
         # No canned ACL support in JSON, force XML API to be used.
-        orig_force_api = gsutil_api.force_api
-        gsutil_api.force_api = ApiSelector.XML
+        orig_prefer_api = gsutil_api.prefer_api
+        gsutil_api.prefer_api = ApiSelector.XML
         gsutil_api.XmlPassThroughSetAcl(
             self.acl_arg, url_string, canned=self.canned,
             def_obj_acl=self.def_acl, provider=url.scheme)
-        gsutil_api.force_api = orig_force_api
+        gsutil_api.prefer_api = orig_prefer_api
       except ServiceException as e:
         if self.continue_on_error:
           self.everything_set_okay = False

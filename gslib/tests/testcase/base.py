@@ -32,7 +32,7 @@ class GsUtilTestCase(unittest.TestCase):
       self.test_api = 'XML'
       self.default_provider = 's3'
     else:
-      self.test_api = boto.config.get('GSUtil', 'force_api', 'JSON').upper()
+      self.test_api = boto.config.get('GSUtil', 'prefer_api', 'JSON').upper()
       self.default_provider = 'gs'
     self.tempdirs = []
 

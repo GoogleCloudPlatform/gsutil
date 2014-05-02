@@ -57,7 +57,7 @@ HAS_GS_HOST = _HasGSHost()
 
 
 def _UsingJSONApi():
-  return boto.config.get('GSUtil', 'force_api', 'json').upper() != 'XML'
+  return boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
 
 USING_JSON_API = _UsingJSONApi()
 
