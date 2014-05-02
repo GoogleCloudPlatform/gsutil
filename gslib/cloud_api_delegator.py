@@ -57,7 +57,7 @@ class CloudApiDelegator(CloudApi):
     super(CloudApiDelegator, self).__init__(bucket_storage_uri_class, logger,
                                             provider=provider, debug=debug)
     self.api_map = gsutil_api_map
-    self.force_api = boto.config.get('GSUtil', 'force_api', '').upper()
+    self.prefer_api = boto.config.get('GSUtil', 'prefer_api', '').upper()
     self.loaded_apis = {}
 
     if not self.api_map[ApiMapConstants.API_MAP]:
@@ -159,9 +159,9 @@ class CloudApiDelegator(CloudApi):
          and config.has_option('Credentials', 'gs_secret_access_key'))):
       api = ApiSelector.XML
     # Try to force the user's preference to a supported API.
-    elif self.force_api in (self.api_map[ApiMapConstants.SUPPORT_MAP]
-                            [selected_provider]):
-      api = self.force_api
+    elif self.prefer_api in (self.api_map[ApiMapConstants.SUPPORT_MAP]
+                             [selected_provider]):
+      api = self.prefer_api
     return api
 
   # For function docstrings, see CloudApi class.

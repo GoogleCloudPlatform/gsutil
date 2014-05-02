@@ -215,8 +215,8 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
       if global_copy_helper_opts.canned_acl:
         # No canned ACL support in JSON, force XML API to be used for
         # upload/copy operations.
-        orig_force_api = gsutil_api.force_api
-        gsutil_api.force_api = ApiSelector.XML
+        orig_prefer_api = gsutil_api.prefer_api
+        gsutil_api.prefer_api = ApiSelector.XML
       ret = _UploadFileToObject(args.src_url, fp, args.file_length,
                                 args.dst_url, dst_object_metadata,
                                 preconditions, gsutil_api, cls.logger, cls,
@@ -224,7 +224,7 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
                                 gzip_exts=None, allow_splitting=False)
     finally:
       if global_copy_helper_opts.canned_acl:
-        gsutil_api.force_api = orig_force_api
+        gsutil_api.prefer_api = orig_prefer_api
 
   component = ret[2]
   _AppendComponentTrackerToParallelUploadTrackerFile(
@@ -2198,8 +2198,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   if global_copy_helper_opts.canned_acl:
     # No canned ACL support in JSON, force XML API to be used for
     # upload/copy operations.
-    orig_force_api = gsutil_api.force_api
-    gsutil_api.force_api = ApiSelector.XML
+    orig_prefer_api = gsutil_api.prefer_api
+    gsutil_api.prefer_api = ApiSelector.XML
 
   try:
     if src_url.IsCloudUrl():
@@ -2226,7 +2226,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
         return _CopyFileToFile(src_url, dst_url)
   finally:
     if global_copy_helper_opts.canned_acl:
-      gsutil_api.force_api = orig_force_api
+      gsutil_api.prefer_api = orig_prefer_api
 
 
 class Manifest(object):

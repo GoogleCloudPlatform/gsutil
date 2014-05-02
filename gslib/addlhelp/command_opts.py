@@ -60,8 +60,13 @@ _detailed_help_text = ("""
               prefix, such as:
                 x-goog-meta-
               
-              Note that for the Cache Control header, the Google Cloud Storage
-              JSON API respects only the no-cache and max-age parameters.
+              Note that for gs:// URLs, the Cache Control header is specific to
+              the API being used. The XML API will accept any cache control
+              headers and return them during object downloads.  The JSON API
+              respects only the public, private, no-cache, and max-age cache
+              control headers, and may add its own no-transform directive even
+              if it was not specified. See 'gsutil help apis' for more
+              information on gsutil's interaction with APIs.
 
               See also "gsutil help setmeta" for the ability to set metadata
               fields on objects after they have been uploaded.

@@ -177,12 +177,12 @@ _detailed_help_text = ("""
       content_language
       default_api_version
       default_project_id
-      force_api
       json_api_version
       parallel_composite_upload_component_size
       parallel_composite_upload_threshold
       parallel_process_count
       parallel_thread_count
+      prefer_api
       resumable_threshold
       resumable_tracker_dir
       rsync_buffer_lines
@@ -425,8 +425,8 @@ content_language = en
 # the gsutil command supports this API for the provider, it will be used
 # instead of the default.
 # Commands typically default to XML for S3 and JSON for GCS.
-#force_api = json
-#force_api = xml
+#prefer_api = json
+#prefer_api = xml
 
 """ % {'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
@@ -651,7 +651,8 @@ class ConfigCommand(Command):
         config_file, 'proxy_pass', config.get_value('Boto', 'proxy_pass', None),
         'proxy password')
 
-  def _WriteBotoConfigFile(self, config_file, launch_browser=True,  # pylint: disable=dangerous-default-value
+  # pylint: disable=dangerous-default-value,too-many-statements
+  def _WriteBotoConfigFile(self, config_file, launch_browser=True,
                            oauth2_scopes=[SCOPE_FULL_CONTROL],
                            cred_type=CredTypes.OAUTH2_USER_ACCOUNT):
     """Creates a boto config file interactively.
@@ -687,8 +688,8 @@ class ConfigCommand(Command):
                                       'key file? ')
       gs_service_key_file_password = raw_input(
           '\n'.join(textwrap.wrap(
-              "What is the password for your service key file [if you haven't "
-              "set one explicitly, leave this line blank]?")) + " ")
+              'What is the password for your service key file [if you haven\'t '
+              'set one explicitly, leave this line blank]?')) + ' ')
       self._CheckPrivateKeyFilePermissions(gs_service_key_file)
     elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
       oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
