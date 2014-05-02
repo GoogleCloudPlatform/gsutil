@@ -262,8 +262,8 @@ class HashingFileUploadWrapper(object):
       for alg in self.digesters:
         self.digesters_previous[alg] = self.digesters[alg].copy()
         if len(data) >= MIN_SIZE_COMPUTE_LOGGING:
-          self.logger.info(
-              'Catching up %s for %s...', (alg, self.src_url.GetUrlString()))
+          self.logger.info('Catching up %s for %s...', alg,
+                           self.src_url.GetUrlString())
         self.digesters[alg].update(data)
       self.digesters_current_mark += len(data)
     return data
@@ -319,8 +319,8 @@ class HashingFileUploadWrapper(object):
     if self.digesters:
       for alg in self.digesters:
         if bytes_to_read >= MIN_SIZE_COMPUTE_LOGGING:
-          self.logger.info(
-              'Catching up %s for %s...', (alg, self.src_url.GetUrlString()))
+          self.logger.info('Catching up %s for %s...', alg,
+                           self.src_url.GetUrlString())
         self.digesters_previous[alg] = self.digesters[alg].copy()
       self.digesters_previous_mark = self.digesters_current_mark
       bytes_remaining = bytes_to_read
