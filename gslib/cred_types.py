@@ -15,4 +15,7 @@
 
 
 class CredTypes(object):
-  HMAC, OAUTH2_SERVICE_ACCOUNT, OAUTH2_USER_ACCOUNT = range(3)
+  HMAC = "HMAC"
+  OAUTH2_SERVICE_ACCOUNT = "OAuth 2.0 Service Account"
+  OAUTH2_USER_ACCOUNT = "Oauth 2.0 User Account"
+  GCE = "GCE"

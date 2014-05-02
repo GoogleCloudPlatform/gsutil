@@ -59,6 +59,7 @@ from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
 from gslib.util import GetCredentialStoreFilename
 
+
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
 
@@ -105,11 +106,8 @@ class GcsJsonApi(CloudApi):
                                      provider='gs', debug=debug)
     no_op_credentials = False
     if not credentials:
-      loaded_credentials = self._GetUserAccountCredentials()
-      if not loaded_credentials:
-        loaded_credentials = self._GetServiceAccountCredentials()
-      if not loaded_credentials:
-        loaded_credentials = self._GetGceCredentials()
+      loaded_credentials = self._CheckAndGetCredentials(logger)
+
       if not loaded_credentials:
         loaded_credentials = NoOpCredentials()
         no_op_credentials = True
@@ -176,6 +174,73 @@ class GcsJsonApi(CloudApi):
       self.api_client.AddGlobalParam('key',
                                      u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
+  def _CheckAndGetCredentials(self, logger):
+    configured_cred_types = []
+    try:
+      if self._HasOauth2UserAccountCreds():
+        configured_cred_types.append(CredTypes.OAUTH2_USER_ACCOUNT)
+      if self._HasOauth2ServiceAccountCreds():
+        configured_cred_types.append(CredTypes.OAUTH2_SERVICE_ACCOUNT)
+      if self._HasGceCreds():
+        configured_cred_types.append(CredTypes.GCE)
+      if len(configured_cred_types) > 1:
+        # We only allow one set of configured credentials. Otherwise, we're
+        # choosing one arbitrarily, which can be very confusing to the user
+        # (e.g., if only one is authorized to perform some action) and can
+        # also mask errors.
+        failed_cred_type = None
+        raise CommandException(
+            ('You have multiple types of configured credentials (%s), which is '
+             'not supported. For more help, see "gsutil help creds".')
+            % configured_cred_types)
+
+      failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
+      user_creds = self._GetOauth2UserAccountCreds()
+      failed_cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
+      service_account_creds = self._GetOauth2ServiceAccountCreds()
+      failed_cred_type = CredTypes.GCE
+      gce_creds = self._GetGceCreds()
+      return user_creds or service_account_creds or gce_creds
+    except:  # pylint: disable=bare-except
+
+      # If we didn't actually try to authenticate because there were multiple
+      # types of configured credentials, don't emit this warning.
+      if failed_cred_type:
+        logger.warn(('Your "%s" credentials are invalid. For more help, see '
+                     '"gsutil help creds", or re-run the gsutil config command '
+                     '(see "gsutil help config").') % failed_cred_type)
+
+      # If there's any set of configured credentials, we'll fail if they're
+      # invalid, rather than silently falling back to anonymous config (as
+      # boto does). That approach leads to much confusion if users don't
+      # realize their credentials are invalid.
+      raise
+
+  def _HasOauth2ServiceAccountCreds(self):
+    return (config.has_option('Credentials', 'gs_service_client_id') and
+            config.has_option('Credentials', 'gs_service_key_file'))
+
+  def _HasOauth2UserAccountCreds(self):
+    return config.has_option('Credentials', 'gs_oauth2_refresh_token')
+
+  def _HasGceCreds(self):
+    return config.has_option('GoogleCompute', 'service_account')
+
+  def _GetOauth2ServiceAccountCreds(self):
+    if self._HasOauth2ServiceAccountCreds():
+      return oauth2_helper.OAuth2ClientFromBotoConfig(
+          boto.config,
+          cred_type=CredTypes.OAUTH2_SERVICE_ACCOUNT).GetCredentials()
+
+  def _GetOauth2UserAccountCreds(self):
+    if self._HasOauth2UserAccountCreds():
+      return oauth2_helper.OAuth2ClientFromBotoConfig(
+          boto.config).GetCredentials()
+
+  def _GetGceCreds(self):
+    if self._HasGceCreds():
+      return credentials_lib.GceAssertionCredentials()
+
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.
   def _GetNewHttp(self):
@@ -183,33 +248,6 @@ class GcsJsonApi(CloudApi):
       return httplib2.Http(ca_certs=self.certs_file)
     else:
       return httplib2.Http()
-
-  # TODO: gsutil-beta: Refine the broad exception handling in these functions
-  # to properly detect whether credentials are available and valid.
-  def _GetUserAccountCredentials(self):
-    try:
-      if config.has_option('Credentials', 'gs_oauth2_refresh_token'):
-        return oauth2_helper.OAuth2ClientFromBotoConfig(
-            boto.config).GetCredentials()
-    except:  # pylint: disable=bare-except
-      pass
-
-  def _GetServiceAccountCredentials(self):
-    try:
-      if (config.has_option('Credentials', 'gs_service_client_id') and
-          config.has_option('Credentials', 'gs_service_key_file')):
-        return oauth2_helper.OAuth2ClientFromBotoConfig(
-            boto.config,
-            cred_type=CredTypes.OAUTH2_SERVICE_ACCOUNT).GetCredentials()
-    except:  # pylint: disable=bare-except
-      pass
-
-  def _GetGceCredentials(self):
-    if config.has_option('GoogleCompute', 'service_account'):
-      try:
-        return credentials_lib.GceAssertionCredentials()
-      except:  # pylint: disable=bare-except
-        pass
 
   def _GetCertsFile(self):
     # TODO: This code is shared with main, merge the implementations.
