@@ -100,7 +100,8 @@ _detailed_help_text = ("""
 
 def _RemoveExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
-  cls.logger.error(str(e))
+  if not cls.continue_on_error:
+    cls.logger.error(str(e))
   cls.everything_removed_okay = False
 
 
