@@ -369,17 +369,11 @@ def _ConstructAccountProblemHelp(reason):
   """
   default_project_id = boto.config.get_value('GSUtil', 'default_project_id')
   # pylint: disable=line-too-long, g-inconsistent-quotes
-  if 'Account disabled' in reason or 'AccountProblem' in reason:
-    acct_help = "Your request resulted in an Account disabled error. "
-  else:
-    # Assume problem was 'AccountProblem'.
-    acct_help = (
-        "Your request resulted in an AccountProblem (403) error. Usually this "
-        "happens if you attempt to create a bucket without first having "
-        "enabled billing for the project you are using. ")
-  acct_help += (
-      "Please ensure billing is enabled for your project by following the "
-      "instructions at "
+  acct_help = (
+      "Your request resulted in an AccountProblem (403) error. Usually this "
+      "happens if you attempt to create a bucket without first having "
+      "enabled billing for the project you are using. Please ensure billing is "
+      "enabled for your project by following the instructions at "
       "`Google Developers Console<https://developers.google.com/console/help/billing>`. ")
   if default_project_id:
     acct_help += (
@@ -420,7 +414,8 @@ def _CheckAndHandleCredentialException(e, args):
         'https://cloud.google.com/console#/project and sign up for an '
         'account, and then run the "gsutil config" command to configure '
         'gsutil to use these credentials.')))
-  elif ((e.reason == 'AccountProblem' or e.reason == 'Account disabled.')
+  elif ((e.reason == 'AccountProblem' or e.reason == 'Account disabled.' or
+         'account for the specified project has been disabled' in e.reason)
         and ','.join(args).find('gs://') != -1):
     _OutputAndExit('\n'.join(textwrap.wrap(
         _ConstructAccountProblemHelp(e.reason))))
