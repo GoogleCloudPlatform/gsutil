@@ -1680,11 +1680,10 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     except OSError, e:
       if e.errno != errno.EEXIST:
         raise
-  # For gzipped objects not named *.gz download to a temp file and unzip.
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
+  # For gzipped objects download to a temp file and unzip.
   if (src_obj_metadata.contentEncoding and
-      src_obj_metadata.contentEncoding == 'gzip' and
-      api_selector == ApiSelector.XML):
+      src_obj_metadata.contentEncoding == 'gzip'):
     # We can't use tempfile.mkstemp() here because we need a predictable
     # filename for resumable downloads.
     download_file_name = _GetDownloadZipFileName(file_name)
@@ -1782,6 +1781,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       gsutil_api.GetObjectMedia(
           src_url.bucket_name, src_url.object_name, fp,
           start_byte=download_start_point, generation=src_url.generation,
+          object_size=src_obj_metadata.size,
           download_strategy=download_strategy, provider=src_url.scheme,
           serialization_data=serialization_data, digesters=digesters,
           progress_callback=progress_callback)
@@ -2686,4 +2686,3 @@ def FilterExistingComponents(dst_args, existing_components, bucket_url,
 
   return (components_to_upload, uploaded_components,
           existing_objects_to_delete)
-

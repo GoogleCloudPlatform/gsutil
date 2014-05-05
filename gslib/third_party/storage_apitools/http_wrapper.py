@@ -77,15 +77,22 @@ class Response(collections.namedtuple(
   __slots__ = ()
 
   def __len__(self):
+    def ProcessContentRange(content_range):
+      _, _, range_spec = content_range.partition(' ')
+      byte_range, _, _ = range_spec.partition('/')
+      start, _, end = byte_range.partition('-')
+      return int(end) - int(start) + 1
+
     if '-content-encoding' in self.info and 'content-range' in self.info:
       # httplib2 rewrites content-length in the case of a compressed
       # transfer; we can't trust the content-length header in that
       # case, but we *can* trust content-range, if it's present.
-      _, _, range_spec = self.info['content-range'].partition(' ')
-      byte_range, _, _ = range_spec.partition('/')
-      start, _, end = byte_range.partition('-')
-      return int(end) - int(start) + 1
-    return int(self.info.get('content-length', len(self.content)))
+      return ProcessContentRange(self.info['content-range'])
+    elif 'content-length' in self.info:
+      return int(self.info.get('content-length'))
+    elif 'content-range' in self.info:
+      return ProcessContentRange(self.info['content-range'])
+    return len(self.content)
 
   @property
   def status_code(self):

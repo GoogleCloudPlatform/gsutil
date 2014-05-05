@@ -19,6 +19,7 @@ from gslib.wildcard_iterator import StorageUrlFromString
 
 
 class CatHelper(object):
+
   def __init__(self, command_obj):
     """Initializes the helper object.
 
@@ -53,6 +54,7 @@ class CatHelper(object):
     try:
       for url_str in url_strings:
         did_some_work = False
+        # TODO: Get only the needed fields here.
         for blr in self.command_obj.WildcardIterator(url_str).IterObjects():
           did_some_work = True
           if show_header:
@@ -66,7 +68,8 @@ class CatHelper(object):
             self.command_obj.gsutil_api.GetObjectMedia(
                 cat_object.bucket, cat_object.name, cat_outfd,
                 start_byte=start_byte, end_byte=end_byte,
-                generation=storage_url.generation, provider=storage_url.scheme)
+                object_size=cat_object.size, generation=storage_url.generation,
+                provider=storage_url.scheme)
           else:
             cat_outfd.write(open(storage_url.object_name, 'rb').read())
         if not did_some_work:
