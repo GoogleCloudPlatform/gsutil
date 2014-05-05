@@ -965,7 +965,12 @@ class GcsJsonApi(CloudApi):
               'verification. Please see '
               'https://developers.google.com/storage/docs/bucketnaming'
               '?hl=en#verification for more details.', status=e.status_code)
-        return AccessDeniedException(e.message, status=e.status_code)
+        elif 'User Rate Limit Exceeded' in str(e):
+          return AccessDeniedException('Rate limit exceeded. Please retry this '
+                                       'request later.', status=e.status_code)
+        else:
+          return AccessDeniedException(message or e.message,
+                                       status_code=e.status_code)
       elif e.status_code == 404:
         if bucket_name:
           if object_name:
