@@ -53,7 +53,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
     elif self.test_api == ApiSelector.JSON:
       self.assertRegexpMatches(
-          stderr, '.*GET /%s/%s.*user-agent:.*gsutil/%s' %
+          stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s' %
           (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
       self.assertIn(('header: Cache-Control: private, max-age=0, '
                      'must-revalidate, no-transform'), stderr)

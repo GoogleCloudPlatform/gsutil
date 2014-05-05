@@ -16,12 +16,15 @@
 import copy
 import cStringIO
 import httplib
+import socket
 import types
 import urlparse
 
 import httplib2
 from httplib2 import parse_uri
 
+from gslib.cloud_api import BadRequestException
+from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import TRANSFER_BUFFER_SIZE
 
 
@@ -181,40 +184,46 @@ class DownloadCallbackConnectionClassFactory(object):
         orig_read_func = orig_response.read
 
         def read(amt=None):  # pylint: disable=invalid-name
-          """Overrides HTTPConnection.getresponse.read."""
+          """Overrides HTTPConnection.getresponse.read.
+
+          This function only supports reads of TRANSFER_BUFFER_SIZE or smaller.
+
+          Args:
+            amt: Integer n where 0 < n <= TRANSFER_BUFFER_SIZE. This is a
+                 keyword argument to match the read function it overrides,
+                 but it is required.
+
+          Returns:
+            Data read from HTTPConnection.
+          """
+          if not amt or amt > TRANSFER_BUFFER_SIZE:
+            raise BadRequestException(
+                'Invalid HTTP read size %s during download, expected %s.' %
+                amt, TRANSFER_BUFFER_SIZE)
+          else:
+            amt = amt or TRANSFER_BUFFER_SIZE
+
           old_debug = self.debuglevel
           # If we fail partway through this function, we'll retry the entire
           # read and therefore we need to restart our hash digesters from the
           # last successful read. Therefore, make a copy of the digester's
           # current hash object and commit it once we've read all the bytes.
-          inner_digesters = {}
-          if self.outer_digesters:
-            for alg in self.outer_digesters:
-              inner_digesters[alg] = self.outer_digesters[alg].copy()
           try:
             self.set_debuglevel(0)
-            bytes_read = 0
-            all_data = cStringIO.StringIO()
-            data = orig_read_func(TRANSFER_BUFFER_SIZE)
-            while data and (amt is None or bytes_read < amt):
-              all_data.write(data)
-              read_length = len(data)
-              bytes_read += read_length
-              self.total_bytes_downloaded += read_length
-              if self.outer_progress_callback:
-                self.bytes_read_since_callback += read_length
-                if (self.bytes_read_since_callback >=
-                    self.outer_callback_per_bytes):
-                  self.outer_progress_callback(self.total_bytes_downloaded,
-                                               self.outer_total_size)
-                  self.bytes_read_since_callback = 0
-              for alg in inner_digesters:
-                inner_digesters[alg].update(data)
-              data = orig_read_func(TRANSFER_BUFFER_SIZE)
+            data = orig_read_func(amt)
+            read_length = len(data)
+            self.total_bytes_downloaded += read_length
+            if self.outer_progress_callback:
+              self.bytes_read_since_callback += read_length
+              if (self.bytes_read_since_callback >=
+                  self.outer_callback_per_bytes):
+                self.outer_progress_callback(self.total_bytes_downloaded,
+                                             self.outer_total_size)
+                self.bytes_read_since_callback = 0
             if self.outer_digesters:
               for alg in self.outer_digesters:
-                self.outer_digesters[alg] = inner_digesters[alg].copy()
-            return all_data.getvalue()
+                self.outer_digesters[alg].update(data)
+            return data
           finally:
             self.set_debuglevel(old_debug)
         orig_response.read = read
@@ -356,3 +365,115 @@ def WrapDownloadHttpRequest(download_http):
   return download_http
 
 
+class HttpWithDownloadStream(httplib2.Http):
+  """httplib2.Http variant that only pushes bytes through a stream.
+
+  httplib2 handles media by storing entire chunks of responses in memory, which
+  is undesirable particularly when multiple instances are used during
+  multi-threaded/multi-process copy. This class copies and then overrides some
+  httplib2 functions to use a streaming copy approach that uses small memory
+  buffers.
+  """
+
+  def __init__(self, stream=None, *args, **kwds):
+    if stream is None:
+      raise apitools_exceptions.InvalidUserInputError(
+          'Cannot create HttpWithDownloadStream with no stream')
+    self._stream = stream
+    super(HttpWithDownloadStream, self).__init__(*args, **kwds)
+
+  @property
+  def stream(self):
+    return self._stream
+
+  # pylint: disable=too-many-statements
+  def _conn_request(self, conn, request_uri, method, body, headers):
+    i = 0
+    seen_bad_status_line = False
+    while i < httplib2.RETRIES:
+      i += 1
+      try:
+        if hasattr(conn, 'sock') and conn.sock is None:
+          conn.connect()
+        conn.request(method, request_uri, body, headers)
+      except socket.timeout:
+        raise
+      except socket.gaierror:
+        conn.close()
+        raise httplib2.ServerNotFoundError(
+            'Unable to find the server at %s' % conn.host)
+      except httplib2.ssl_SSLError:
+        conn.close()
+        raise
+      except socket.error, e:
+        err = 0
+        if hasattr(e, 'args'):
+          err = getattr(e, 'args')[0]
+        else:
+          err = e.errno
+        if err == httplib2.errno.ECONNREFUSED:  # Connection refused
+          raise
+      except httplib.HTTPException:
+        # Just because the server closed the connection doesn't apparently mean
+        # that the server didn't send a response.
+        if hasattr(conn, 'sock') and conn.sock is None:
+          if i < httplib2.RETRIES-1:
+            conn.close()
+            conn.connect()
+            continue
+          else:
+            conn.close()
+            raise
+        if i < httplib2.RETRIES-1:
+          conn.close()
+          conn.connect()
+          continue
+      try:
+        response = conn.getresponse()
+      except httplib.BadStatusLine:
+        # If we get a BadStatusLine on the first try then that means
+        # the connection just went stale, so retry regardless of the
+        # number of RETRIES set.
+        if not seen_bad_status_line and i == 1:
+          i = 0
+          seen_bad_status_line = True
+          conn.close()
+          conn.connect()
+          continue
+        else:
+          conn.close()
+          raise
+      except (socket.error, httplib.HTTPException):
+        if i < httplib2.RETRIES-1:
+          conn.close()
+          conn.connect()
+          continue
+        else:
+          conn.close()
+          raise
+      else:
+        content = ''
+        if method == 'HEAD':
+          conn.close()
+          response = httplib2.Response(response)
+        else:
+          if response.status in (httplib.OK, httplib.PARTIAL_CONTENT):
+            http_stream = response
+            # Start last_position and new_position at dummy values
+            last_position = -1
+            new_position = 0
+            while new_position != last_position:
+              last_position = new_position
+              new_data = http_stream.read(TRANSFER_BUFFER_SIZE)
+              self.stream.write(new_data)
+              new_position += len(new_data)
+            response = httplib2.Response(response)
+          else:
+            # We fall back to the current httplib2 behavior if we're
+            # not processing bytes (eg it's a redirect).
+            content = response.read()
+            response = httplib2.Response(response)
+            # pylint: disable=protected-access
+            content = httplib2._decompressContent(response, content)
+      break
+    return (response, content)

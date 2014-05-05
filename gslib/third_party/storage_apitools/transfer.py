@@ -14,7 +14,6 @@
 #!/usr/bin/env python
 """Upload and download support for apitools."""
 
-import collections
 import email.mime.multipart as mime_multipart
 import email.mime.nonmultipart as mime_nonmultipart
 import httplib
@@ -22,9 +21,9 @@ import io
 import json
 import mimetypes
 import os
+import sys
 import threading
 
-import httplib2
 from apiclient import mimeparse
 
 from gslib.third_party.storage_apitools import exceptions
@@ -44,7 +43,7 @@ class _Transfer(object):
   """Generic bits common to Uploads and Downloads."""
 
   def __init__(self, stream, close_stream=False, chunksize=None,
-               auto_transfer=True, http=None):
+               auto_transfer=True, total_size=None, http=None):
     self.__bytes_http = None
     self.__close_stream = close_stream
     self.__http = http
@@ -147,25 +146,27 @@ class Download(_Transfer):
     super(Download, self).__init__(*args, **kwds)
     self.__initial_response = None
     self.__progress = 0
-    self.__total_size = None
+    self.__total_size = kwds['total_size'] if 'total_size' in kwds else None
 
   @property
   def progress(self):
     return self.__progress
 
   @classmethod
-  def FromFile(cls, filename, overwrite=False, auto_transfer=True):
+  def FromFile(cls, filename, overwrite=False, auto_transfer=True, **kwds):
     """Create a new download object from a filename."""
     path = os.path.expanduser(filename)
     if os.path.exists(path) and not overwrite:
       raise exceptions.InvalidUserInputError(
           'File %s exists and overwrite not specified' % path)
-    return cls(open(path, 'wb'), close_stream=True, auto_transfer=auto_transfer)
+    return cls(open(path, 'wb'), close_stream=True, auto_transfer=auto_transfer,
+               **kwds)
 
   @classmethod
-  def FromStream(cls, stream, auto_transfer=True):
+  def FromStream(cls, stream, auto_transfer=True, total_size=None, **kwds):
     """Create a new Download object from a stream."""
-    return cls(stream, auto_transfer=auto_transfer)
+    return cls(stream, auto_transfer=auto_transfer, total_size=total_size,
+               **kwds)
 
   @classmethod
   def FromData(cls, stream, json_data, http=None, auto_transfer=None):
@@ -239,12 +240,7 @@ class Download(_Transfer):
     http = http or client.http
     if client is not None:
       http_request.url = client.FinalizeTransferUrl(http_request.url)
-    response = http_wrapper.MakeRequest(self.bytes_http or http, http_request)
-    if response.status_code not in self._ACCEPTABLE_STATUSES:
-      raise exceptions.HttpError.FromResponse(response)
-    self.__initial_response = response
-    self.__SetTotal(response.info)
-    url = response.info.get('content-location', response.request_url)
+    url = http_request.url
     if client is not None:
       url = client.FinalizeTransferUrl(url)
     self._Initialize(http, url)
@@ -293,7 +289,9 @@ class Download(_Transfer):
   def __GetChunk(self, start, end=None, additional_headers=None):
     """Retrieve a chunk, and return the full response."""
     self.EnsureInitialized()
-    end_byte = min(end or start + self.chunksize, self.total_size)
+    end_byte = end
+    if self.total_size and end:
+      end_byte = min(end, self.total_size)
     request = http_wrapper.Request(url=self.url)
     self.__SetRangeHeader(request, start, end=end_byte)
     if additional_headers is not None:
@@ -335,11 +333,19 @@ class Download(_Transfer):
       None. Streams bytes into self.stream.
     """
     self.EnsureInitialized()
-    progress, end = self.__NormalizeStartEnd(start, end)
-    while progress < end:
-      chunk_end = min(progress + self.chunksize, end)
-      response = self.__GetChunk(progress, end=chunk_end,
+    progress_end_normalized = False
+    if self.total_size is not None:
+      progress, end = self.__NormalizeStartEnd(start, end)
+      progress_end_normalized = True
+    else:
+      progress = start
+    while not progress_end_normalized or progress < end:
+      response = self.__GetChunk(progress, end=end,
                                  additional_headers=additional_headers)
+      if not progress_end_normalized:
+        self.__SetTotal(response.info)
+        progress, end = self.__NormalizeStartEnd(start, end)
+        progress_end_normalized = True
       response = self.__ProcessResponse(response)
       progress += len(response)
       if not response:
@@ -721,5 +727,6 @@ class Upload(_Transfer):
     # TODO: Add retries on no progress?
     last_byte = self.__GetLastByte(response.info['range'])
     if last_byte + 1 != end:
-      response = self.__SendChunk(last_byte + 1, data[last_byte + 1 - start:])
+      new_start = last_byte + 1 - start
+      response = self.__SendChunk(last_byte + 1, data=data[new_start:])
     return response

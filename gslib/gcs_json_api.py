@@ -41,6 +41,7 @@ from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.gcs_json_media import BytesUploadedContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
+from gslib.gcs_json_media import HttpWithDownloadStream
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
@@ -248,6 +249,13 @@ class GcsJsonApi(CloudApi):
       return httplib2.Http(ca_certs=self.certs_file)
     else:
       return httplib2.Http()
+
+  def _GetNewDownloadHttp(self, download_stream):
+    if self.certs_file:
+      return HttpWithDownloadStream(stream=download_stream,
+                                    ca_certs=self.certs_file)
+    else:
+      return HttpWithDownloadStream(stream=download_stream)
 
   def _GetCertsFile(self):
     # TODO: This code is shared with main, merge the implementations.
@@ -494,7 +502,7 @@ class GcsJsonApi(CloudApi):
 
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream,
-      provider=None, generation=None,
+      provider=None, generation=None, object_size=None,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT, start_byte=0,
       end_byte=None, progress_callback=None, serialization_data=None,
       digesters=None):
@@ -522,19 +530,17 @@ class GcsJsonApi(CloudApi):
         progress_callback=progress_callback, digesters=digesters)
     download_http_class = callback_class_factory.GetConnectionClass()
 
-    download_http = self._GetNewHttp()
+    download_http = self._GetNewDownloadHttp(download_stream)
     download_http.connections = {'https': download_http_class}
     authorized_download_http = self.credentials.authorize(download_http)
-
     WrapDownloadHttpRequest(authorized_download_http)
 
     if serialization_data:
       apitools_download = apitools_transfer.Download.FromData(
           download_stream, serialization_data, self.api_client.http)
-      apitools_download.chunksize = _ResumableChunkSize()
     else:
-      apitools_download = apitools_transfer.Download(
-          download_stream, chunksize=_ResumableChunkSize(), auto_transfer=False)
+      apitools_download = apitools_transfer.Download.FromStream(
+          download_stream, auto_transfer=False, total_size=object_size)
 
     apitools_download.bytes_http = authorized_download_http
     apitools_request = apitools_messages.StorageObjectsGetRequest(

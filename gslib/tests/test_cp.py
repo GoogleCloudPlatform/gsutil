@@ -1251,18 +1251,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       tracker_filename = GetTrackerFilePath(
           StorageUrlFromString(fpath2), TrackerFileType.DOWNLOAD, self.test_api)
       self.assertTrue(os.path.isfile(tracker_filename))
-      if self.test_api == 'XML':
-        # httplib2 used by JSON API will handle decompression on the fly,
-        # thus there is no need for a temporary file. XML uses temporary files.
-        self.assertIn('Downloading to temp gzip filename', stderr)
-        # We should have a temporary gzipped file, a tracker file, and no
-        # final file yet.
-        self.assertTrue(os.path.isfile('%s_.gztmp' % fpath2))
+      self.assertIn('Downloading to temp gzip filename', stderr)
+      # We should have a temporary gzipped file, a tracker file, and no
+      # final file yet.
+      self.assertTrue(os.path.isfile('%s_.gztmp' % fpath2))
       stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
       with open(fpath2, 'r') as f:
-        self.assertEqual(f.read(), contents)
+        self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
-      if self.test_api == 'XML':
-        self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
+      self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))

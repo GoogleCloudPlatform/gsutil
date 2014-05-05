@@ -346,7 +346,8 @@ class BotoTranslation(CloudApi):
 
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream, provider=None,
-      generation=None, download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+      generation=None, object_size=None,
+      download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
       start_byte=0, end_byte=None, progress_callback=None,
       serialization_data=None, digesters=None):
     """See CloudApi class for function doc strings."""
@@ -379,7 +380,7 @@ class BotoTranslation(CloudApi):
     else:
       hash_algs = {}
 
-    total_size = 0
+    total_size = object_size or 0
     if serialization_data:
       total_size = json.loads(serialization_data)['total_size']
 
