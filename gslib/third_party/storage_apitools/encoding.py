@@ -249,7 +249,7 @@ def _DecodeUnrecognizedFields(message, pair_type):
   """Process unrecognized fields in message."""
   new_values = []
   for unknown_field in message.all_unrecognized_fields():
-    # TODO(craigcitro): Consider validating the variant if
+    # TODO: Consider validating the variant if
     # the assignment below doesn't take care of it. It may
     # also be necessary to check it in the case that the
     # type has multiple encodings.

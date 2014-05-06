@@ -93,7 +93,12 @@ class UploadCallbackConnectionClassFactory(object):
           self.total_bytes_uploaded = (
               self.bytes_uploaded_container.bytes_uploaded)
           self.got_bytes_uploaded_from_server = True
-        full_buffer = cStringIO.StringIO(data)
+        # httplib.HTTPConnection.send accepts either a string or a file-like
+        # object (anything that implements read()).
+        if isinstance(data, basestring):
+          full_buffer = cStringIO.StringIO(data)
+        else:
+          full_buffer = data
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         old_debug = self.debuglevel
         try:

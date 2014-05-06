@@ -925,7 +925,9 @@ class GcsJsonApi(CloudApi):
             and not self.http.disable_ssl_certificate_validation):
         return ResumableUploadException(message, status=e.status_code)
     if (isinstance(e, apitools_exceptions.TransferError) and
-        'Aborting transfer' in e.message):
+        ('Aborting transfer' in e.message or
+         'Not enough bytes in stream' in e.message or
+         'additional bytes left in stream' in e.message)):
       return ResumableUploadAbortException(e.message)
 
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
@@ -1008,4 +1010,3 @@ class GcsJsonApi(CloudApi):
       return ServiceException(message, status=e.status_code)
     elif isinstance(e, apitools_exceptions.TransferInvalidError):
       return ServiceException('Transfer invalid (possible encoding error)')
-

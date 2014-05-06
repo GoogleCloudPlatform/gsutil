@@ -271,6 +271,9 @@ class HashingFileUploadWrapper(object):
   def tell(self):  # pylint: disable=invalid-name
     return self.orig_fp.tell()
 
+  def seekable(self):  # pylint: disable=invalid-name
+    return self.orig_fp.seekable()
+
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
     """"Seeks in the wrapped file pointer and catches up hash digests."""
     if self.digesters:

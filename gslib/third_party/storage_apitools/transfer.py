@@ -21,13 +21,13 @@ import io
 import json
 import mimetypes
 import os
-import sys
 import threading
 
 from apiclient import mimeparse
 
 from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import http_wrapper
+from gslib.third_party.storage_apitools import stream_slice
 
 __all__ = [
     'Download',
@@ -611,8 +611,7 @@ class Upload(_Transfer):
         url=self.url, http_method='PUT', headers={'Content-Range': 'bytes */*'})
     refresh_response = http_wrapper.MakeRequest(
         self.http, refresh_request, redirections=0)
-    range_header = refresh_response.info.get(
-        'Range', refresh_response.info.get('range'))
+    range_header = self._GetRangeHeaderFromResponse(refresh_response)
     if refresh_response.status_code in (httplib.OK, httplib.CREATED):
       self.__complete = True
     elif refresh_response.status_code == http_wrapper.RESUME_INCOMPLETE:
@@ -623,6 +622,9 @@ class Upload(_Transfer):
       self.stream.seek(self.progress)
     else:
       raise exceptions.HttpError.FromResponse(refresh_response)
+
+  def _GetRangeHeaderFromResponse(self, response):
+    return response.info.get('Range', response.info.get('range'))
 
   def InitializeUpload(self, http_request, http=None, client=None):
     """Initialize this upload from the given http_request."""
@@ -706,35 +708,43 @@ class Upload(_Transfer):
             'Failed to transfer all bytes in chunk, upload paused at byte '
             '%d' % self.progress)
       self._ExecuteCallback(callback, response)
+    if self.__complete:
+      # TODO: Decide how to handle errors in the non-seekable case.
+      current_pos = self.stream.tell()
+      self.stream.seek(0, io.SEEK_END)
+      end_pos = self.stream.tell()
+      self.stream.seek(current_pos)
+      if current_pos != end_pos:
+        raise exceptions.TransferInvalidError(
+          'Upload complete with additional bytes left in stream')
     self._ExecuteCallback(finish_callback, response)
     return response
 
-  def __SendChunk(self, start, additional_headers=None, data=None):
+  def __SendChunk(self, start, additional_headers=None):
     """Send the specified chunk."""
     self.EnsureInitialized()
-    if data is None:
-      data = self.stream.read(self.chunksize)
-    if not data:
-      raise exceptions.TransferError('Aborting transfer, no data in stream.')
-    end = start + len(data)
+    end = min(start + self.chunksize, self.total_size)
+    body_stream = stream_slice.StreamSlice(self.stream, end - start)
+    # TODO: Think about clearer errors on "no data in stream".
 
-    request = http_wrapper.Request(url=self.url, http_method='PUT', body=data)
+    request = http_wrapper.Request(url=self.url, http_method='PUT',
+                                   body=body_stream)
     request.headers['Content-Type'] = self.mime_type
-    if data:
-      request.headers['Content-Range'] = 'bytes %s-%s/%s' % (
-          start, end - 1, self.total_size)
+    request.headers['Content-Range'] = 'bytes %s-%s/%s' % (
+        start, end - 1, self.total_size)
     if additional_headers:
       request.headers.update(additional_headers)
 
     response = http_wrapper.MakeRequest(self.bytes_http, request)
     if response.status_code not in (httplib.OK, httplib.CREATED,
                                     http_wrapper.RESUME_INCOMPLETE):
+      # We want to reset our state to wherever the server left us
+      # before this failed request, and then raise.
+      self._RefreshResumableUploadState()
       raise exceptions.HttpError.FromResponse(response)
-    if response.status_code in (httplib.OK, httplib.CREATED):
-      return response
-    # TODO: Add retries on no progress?
-    last_byte = self.__GetLastByte(response.info['range'])
-    if last_byte + 1 != end:
-      new_start = last_byte + 1 - start
-      response = self.__SendChunk(last_byte + 1, data=data[new_start:])
+    if response.status_code == http_wrapper.RESUME_INCOMPLETE:
+      last_byte = self.__GetLastByte(
+          self._GetRangeHeaderFromResponse(response))
+      if last_byte + 1 != end:
+        self.stream.seek(last_byte)
     return response
