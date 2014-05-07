@@ -66,6 +66,26 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-q', 'stat', 'gs://bucket/object'], expected_status=1)
     self.RunGsUtil(['-q', 'stat', 'file://tmp/abc'], expected_status=1)
 
+  def test_stat_one_missing(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
+                      contents='z')
+    stdout = self.RunGsUtil(['stat', suri(bucket_uri, 'missing'),
+                             suri(bucket_uri, 'notmissing')], expected_status=1,
+                            return_stdout=True)
+    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missing'), stdout)
+    self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
+
+  def test_stat_one_missing_wildcard(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
+                      contents='z')
+    stdout = self.RunGsUtil(['stat', suri(bucket_uri, 'missin*'),
+                             suri(bucket_uri, 'notmissin*')], expected_status=1,
+                            return_stdout=True)
+    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missin*'), stdout)
+    self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
+
   def test_stat_bucket_wildcard(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents='z')
