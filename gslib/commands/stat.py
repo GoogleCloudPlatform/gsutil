@@ -33,11 +33,11 @@ from gslib.util import PrintFullInfoAboutObject
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil stat uri...
+  gsutil stat url...
 
 
 <B>DESCRIPTION</B>
-  The stat command will output details about the specified object URIs.
+  The stat command will output details about the specified object URLs.
   It is similar to running:
 
     gsutil ls -L gs://some-bucket/some-object
@@ -46,7 +46,7 @@ _detailed_help_text = ("""
   minimum necessary amount of object metadata.
 
   The gsutil stat command will, however, perform bucket listings if you specify
-  URIs using wildcards.
+  URLs using wildcards.
 
   If run with the gsutil -q option nothing will be printed, e.g.:
 
@@ -101,31 +101,36 @@ class StatCommand(Command):
                    'contentEncoding', 'contentLanguage', 'size', 'contentType',
                    'componentCount', 'metadata', 'crc32c', 'md5Hash', 'etag',
                    'generation', 'metageneration']
-    matches = 0
-    for uri_str in self.args:
-      uri = StorageUrlFromString(uri_str)
-      if not uri.IsObject():
-        raise CommandException('The stat command only works with object URIs')
+    found_nonmatching_arg = False
+    for url_str in self.args:
+      arg_matches = 0
+      url = StorageUrlFromString(url_str)
+      if not url.IsObject():
+        raise CommandException('The stat command only works with object URLs')
       try:
-        if ContainsWildcard(uri_str):
-          blr_iter = self.WildcardIterator(uri_str).IterObjects(
+        if ContainsWildcard(url_str):
+          blr_iter = self.WildcardIterator(url_str).IterObjects(
               bucket_listing_fields=stat_fields)
         else:
           single_obj = self.gsutil_api.GetObjectMetadata(
-              uri.bucket_name, uri.object_name, generation=uri.generation,
-              provider=uri.scheme, fields=stat_fields)
-          blr_iter = [BucketListingRef(uri_str,
+              url.bucket_name, url.object_name, generation=url.generation,
+              provider=url.scheme, fields=stat_fields)
+          blr_iter = [BucketListingRef(url_str,
                                        BucketListingRefType.OBJECT, single_obj)]
         for blr in blr_iter:
-          matches += 1
+          arg_matches += 1
           if logging.getLogger().isEnabledFor(logging.INFO):
             PrintFullInfoAboutObject(blr, incl_acl=False)
       except AccessDeniedException:
-        print 'You aren\'t authorized to read %s - skipping' % uri_str
+        print 'You aren\'t authorized to read %s - skipping' % url_str
       except InvalidUrlError:
         return 1
       except NotFoundException:
-        continue
-    if not matches:
+        pass
+      if not arg_matches:
+        if logging.getLogger().isEnabledFor(logging.INFO):
+          print 'No URLs matched %s' % url_str
+        found_nonmatching_arg = True
+    if found_nonmatching_arg:
       return 1
     return 0
