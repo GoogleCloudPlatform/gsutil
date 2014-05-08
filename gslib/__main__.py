@@ -60,8 +60,8 @@ from gslib.util import CreateLock
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
 # application/utility such as gsutil.  Of course, in such cases the "secret" is
-# actually publicly known; security depends entirely on the secrecy of refresh  
-# tokens, which effectively become bearer tokens.  
+# actually publicly known; security depends entirely on the secrecy of refresh
+# tokens, which effectively become bearer tokens.
 GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
 
 # We don't use the oauth2 authentication plugin directly; importing it here
@@ -167,18 +167,17 @@ def main():
     raise gslib.exception.CommandException(
         'gsutil requires python 2.6 or 2.7.')
 
-  if not BOTO_IS_SECURE:
-    raise CommandException('\n'.join(textwrap.wrap(
-        'Your boto configuration has is_secure = False. Gsutil cannot be '
-        'run this way, for security reasons.')))
-
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
   # config file for compatibility with previous versions and user convenience.
   # Many users have a .boto configuration file from previous versions, and it
   # is useful to have all of the configuration for gsutil stored in one place.
-  config_file_list = GetBotoConfigFileList()
-  command_runner = CommandRunner(config_file_list)
+  command_runner = CommandRunner()
+  if not BOTO_IS_SECURE:
+    raise CommandException('\n'.join(textwrap.wrap(
+        'Your boto configuration has is_secure = False. Gsutil cannot be '
+        'run this way, for security reasons.')))
+
   headers = {}
   parallel_operations = False
   quiet = False
@@ -278,7 +277,7 @@ def main():
         config_items.extend(boto.config.items('GSUtil'))
       except ConfigParser.NoSectionError:
         pass
-      sys.stderr.write('config_file_list: %s\n' % config_file_list)
+      sys.stderr.write('config_file_list: %s\n' % GetBotoConfigFileList())
       sys.stderr.write('config: %s\n' % str(config_items))
     elif quiet:
       _ConfigureLogging(level=logging.WARNING)

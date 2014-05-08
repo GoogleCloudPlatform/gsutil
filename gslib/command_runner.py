@@ -91,19 +91,16 @@ def HandleArgCoding(args):
 class CommandRunner(object):
   """Runs gsutil commands and does some top-level argument handling."""
 
-  def __init__(self, config_file_list,
-               bucket_storage_uri_class=BucketStorageUri,
+  def __init__(self, bucket_storage_uri_class=BucketStorageUri,
                gsutil_api_class_map_factory=GsutilApiClassMapFactory):
     """Instantiates a CommandRunner.
 
     Args:
-      config_file_list: Config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       gsutil_api_class_map_factory: Creates map of cloud storage interfaces.
                                     Settable for testing/mocking.
     """
-    self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
     self.command_map = self._LoadCommandMap()
@@ -191,7 +188,7 @@ class CommandRunner(object):
 
     command_class = self.command_map[command_name]
     command_inst = command_class(
-        self, args, headers, debug, parallel_operations, self.config_file_list,
+        self, args, headers, debug, parallel_operations,
         self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
         test_method, logging_filters, command_alias_used=command_name)
     return_values = command_inst.RunCommand()

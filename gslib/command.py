@@ -347,8 +347,7 @@ class Command(HelpProvider):
     return args
 
   def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               config_file_list, bucket_storage_uri_class,
-               gsutil_api_class_map_factory,
+               bucket_storage_uri_class, gsutil_api_class_map_factory,
                test_method=None, logging_filters=None,
                command_alias_used=None):
     """Instantiates a Command.
@@ -359,7 +358,6 @@ class Command(HelpProvider):
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
       parallel_operations: Should command operations be executed in parallel?
-      config_file_list: Config file list returned by GetBotoConfigFileList().
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       gsutil_api_class_map_factory: Creates map of cloud storage interfaces.
@@ -385,7 +383,6 @@ class Command(HelpProvider):
     self.headers = headers
     self.debug = debug
     self.parallel_operations = parallel_operations
-    self.config_file_list = config_file_list
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
     self.test_method = test_method

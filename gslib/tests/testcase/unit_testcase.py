@@ -65,9 +65,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     cls.mock_bucket_storage_uri = util.GSMockBucketStorageUri
     cls.mock_gsutil_api_class_map_factory = GsutilApiUnitTestClassMapFactory
     cls.logger = logging.getLogger()
-    cls.config_file_list = boto.pyami.config.BotoConfigLocations
     cls.command_runner = CommandRunner(
-        cls.config_file_list,
         bucket_storage_uri_class=cls.mock_bucket_storage_uri,
         gsutil_api_class_map_factory=cls.mock_gsutil_api_class_map_factory)
 
