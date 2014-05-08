@@ -155,11 +155,15 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
     return self.new_key()
 
 
-def SetBotoConfig(section, name, value, revert_list):
+TEST_BOTO_REMOVE_SECTION = 'TestRemoveSection'
+
+
+def _SetBotoConfig(section, name, value, revert_list):
   """Sets boto configuration temporarily for testing.
 
-  Configuration should later be reverted to its original setting using
-  RevertBotoConfig.
+  SetBotoConfigForTest and SetBotoConfigFileForTest should be called by tests
+  instead of this function. Those functions will ensure that the configuration
+  is reverted to its original setting using _RevertBotoConfig.
 
   Args:
     section: Boto config section to set
@@ -168,20 +172,27 @@ def SetBotoConfig(section, name, value, revert_list):
     revert_list: List for tracking configs to revert.
   """
   prev_value = boto.config.get(section, name, None)
-  revert_list.append((section, name, prev_value))
-  boto.config.set(section, name, value)
+  if boto.config.has_section(section):
+    revert_list.append((section, name, prev_value))
+    boto.config.set(section, name, value)
+  else:
+    revert_list.append((section, TEST_BOTO_REMOVE_SECTION, None))
+    boto.config.add_section(section)
+    boto.config.set(section, name, value)
 
 
-def RevertBotoConfig(revert_list):
-  """Reverts boto config modifications made by SetBotoConfig.
+def _RevertBotoConfig(revert_list):
+  """Reverts boto config modifications made by _SetBotoConfig.
 
   Args:
     revert_list: List of boto config modifications created by calls to
-                 SetBotoConfig.
+                 _SetBotoConfig.
   """
   for section, name, value in revert_list:
     if value is None:
       boto.config.remove_option(section, name)
+      if name == TEST_BOTO_REMOVE_SECTION:
+        boto.config.remove_section(section)
     else:
       boto.config.set(section, name, value)
 
@@ -189,8 +200,8 @@ def RevertBotoConfig(revert_list):
 def PerformsFileToObjectUpload(func):
   """Decorator indicating that a test uploads from a local file to an object.
 
-  This forces the test to run once normally, and again with a special .boto
-  config file that will ensure that the test follows the parallel composite
+  This forces the test to run once normally, and again with special boto
+  config settings that will ensure that the test follows the parallel composite
   upload code path.
 
   Args:
@@ -201,30 +212,14 @@ def PerformsFileToObjectUpload(func):
   """
   @functools.wraps(func)
   def Wrapper(*args, **kwargs):
-    tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
-    os.close(tmp_fd)
+    # Run the test normally once.
+    func(*args, **kwargs)
 
-    try:
-      # Run the test normally once.
+    # Try again, forcing parallel composite uploads.
+    with SetBotoConfigForTest([
+        ('GSUtil', 'parallel_composite_upload_threshold', '1'),
+        ('GSUtil', 'check_hashes', 'always')]):
       func(*args, **kwargs)
-
-      # Create config file that forces parallel composite uploads.
-      boto_configs = []
-      SetBotoConfig('GSUtil', 'parallel_composite_upload_threshold', '1',
-                    boto_configs)
-      SetBotoConfig('GSUtil', 'check_hashes', 'always', boto_configs)
-      with open(tmp_filename, 'w') as tmp_file:
-        boto.config.write(tmp_file)
-      RevertBotoConfig(boto_configs)
-
-      # Try again, forcing parallel composite uploads.
-      with SetBotoConfigFileForTest(tmp_filename):
-        func(*args, **kwargs)
-    finally:
-      try:
-        os.remove(tmp_filename)
-      except OSError:
-        pass
 
   return Wrapper
 
@@ -246,15 +241,15 @@ def SetBotoConfigForTest(boto_config_list):
     tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
     os.close(tmp_fd)
     for boto_config in boto_config_list:
-      SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
-                    revert_configs)
+      _SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
+                     revert_configs)
     with open(tmp_filename, 'w') as tmp_file:
       boto.config.write(tmp_file)
 
     with SetBotoConfigFileForTest(tmp_filename):
       yield
   finally:
-    RevertBotoConfig(revert_configs)
+    _RevertBotoConfig(revert_configs)
     if tmp_filename:
       try:
         os.remove(tmp_filename)

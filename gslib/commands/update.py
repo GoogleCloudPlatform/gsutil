@@ -29,6 +29,7 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.util import CompareVersions
+from gslib.util import GetBotoConfigFileList
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IS_CYGWIN
 from gslib.util import IS_WINDOWS
@@ -179,7 +180,7 @@ class UpdateCommand(Command):
 
     # Won't fail - this command runs after main startup code that insists on
     # having a config file.
-    config_files = ' '.join(self.config_file_list)
+    config_files = ' '.join(GetBotoConfigFileList())
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
     raise CommandException('\n'.join(textwrap.wrap(
         'Since it was installed by a different user previously, you will need '
