@@ -136,7 +136,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(p.returncode, 1)
     self.assertIn(
         'The update command cannot run with user data in the gsutil directory',
-        stderr.replace('\n', ' '))
+        stderr.replace(os.linesep, ' '))
 
     # Now do the real update, which should succeed.
     p = subprocess.Popen(prefix + ['gsutil', 'update', '-f', suri(src_tarball)],
