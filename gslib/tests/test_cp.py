@@ -1024,6 +1024,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('ResumableUploadAbortException', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
   def test_cp_unwritable_tracker_file(self):
     """Tests a resumable upload with an unwritable tracker file."""
     bucket_uri = self.CreateBucket()

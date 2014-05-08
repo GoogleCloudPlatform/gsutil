@@ -456,7 +456,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
   except OSError as e:
     _OutputAndExit('OSError: %s.' % e.strerror)
   except IOError as e:
-    if e.errno == errno.EPIPE and not IsRunningInteractively():
+    if (e.errno == errno.EPIPE or (IS_WINDOWS and e.errno == errno.EINVAL)
+        and not IsRunningInteractively()):
       # If we get a pipe error, this just means that the pipe to stdout or
       # stderr is broken. This can happen if the user pipes gsutil to a command
       # that doesn't use the entire output stream. Instead of raising an error,

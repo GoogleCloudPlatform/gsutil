@@ -19,7 +19,8 @@ import gslib.commands.signurl
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-
+from gslib.tests.util import unittest
+from gslib.util import IS_WINDOWS
 
 class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   """Integration tests for signurl command."""
@@ -45,6 +46,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
       self.ks_file = self.CreateTempFile(contents=contents)
     return self.ks_file
 
+  @unittest.skipIf(IS_WINDOWS, 'Windows sees binary file incorrectly.')
   def testSignUrlOutput(self):
     """Tests signurl output of a sample object."""
 
@@ -66,6 +68,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Expires=', stdout)
     self.assertIn('\tPUT\t', stdout)
 
+  @unittest.skipIf(IS_WINDOWS, 'Windows sees binary file incorrectly.')
   def testSignUrlWithWildcard(self):
     objs = ['test1', 'test2', 'test3']
     bucket = self.CreateBucket()
