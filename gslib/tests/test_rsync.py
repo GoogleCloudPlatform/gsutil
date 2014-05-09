@@ -13,6 +13,7 @@
 # limitations under the License.
 """Integration tests for rsync command."""
 
+import crcmod
 import os
 
 import gslib.tests.testcase as testcase
@@ -22,7 +23,6 @@ from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UsingCrcmodExtension
-
 
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization\n'
 
@@ -163,7 +163,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         ['rsync', '-r', suri(bucket1_uri), suri(bucket2_uri)],
         return_stderr=True))
 
-  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_dir_to_bucket(self):
     """Tests that flat and recursive rsync dir to bucket works correctly."""
     # Create dir and bucket with 1 overlapping object, 1 extra object at root
@@ -258,6 +259,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
         ['rsync', '-r', tmpdir, suri(bucket_uri)], return_stderr=True))
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_dir_to_dir(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
@@ -358,6 +361,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
         ['rsync', tmpdir1, tmpdir2], return_stderr=True))
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_bucket_to_dir(self):
     """Tests that flat and recursive rsync bucket to dir works correctly."""
     # Create bucket and dir with 1 overlapping object, 1 extra object at root

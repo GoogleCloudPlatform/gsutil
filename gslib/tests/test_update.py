@@ -60,6 +60,9 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # Copy gsutil to both source and destination directories.
     gsutil_src = os.path.join(tmpdir_src, 'gsutil')
     gsutil_dst = os.path.join(tmpdir_dst, 'gsutil')
+    # Path when executing from tmpdir (Windows doesn't support in-place rename)
+    gsutil_relative_dst = os.path.join('gsutil', 'gsutil')
+
     shutil.copytree(GSUTIL_DIR, gsutil_src)
     # Copy specific files rather than all of GSUTIL_DIR so we don't pick up temp
     # working files left in top-level directory by gsutil developers (like tags,
@@ -139,8 +142,9 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
         stderr.replace(os.linesep, ' '))
 
     # Now do the real update, which should succeed.
-    p = subprocess.Popen(prefix + ['gsutil', 'update', '-f', suri(src_tarball)],
-                         cwd=gsutil_dst, stdout=subprocess.PIPE,
+    p = subprocess.Popen(prefix + [gsutil_relative_dst, 'update', '-f',
+                                   suri(src_tarball)],
+                         cwd=tmpdir_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE)
     (_, stderr) = p.communicate(input='y\r\n')
     self.assertEqual(p.returncode, 0, msg=(
