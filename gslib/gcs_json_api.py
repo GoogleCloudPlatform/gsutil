@@ -976,7 +976,7 @@ class GcsJsonApi(CloudApi):
                                        'request later.', status=e.status_code)
         else:
           return AccessDeniedException(message or e.message,
-                                       status_code=e.status_code)
+                                       status=e.status_code)
       elif e.status_code == 404:
         if bucket_name:
           if object_name:
