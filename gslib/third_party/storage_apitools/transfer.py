@@ -147,10 +147,15 @@ class Download(_Transfer):
     self.__initial_response = None
     self.__progress = 0
     self.__total_size = kwds['total_size'] if 'total_size' in kwds else None
+    self.__encoding = None
 
   @property
   def progress(self):
     return self.__progress
+
+  @property
+  def encoding(self):
+    return self.__encoding
 
   @classmethod
   def FromFile(cls, filename, overwrite=False, auto_transfer=True, **kwds):
@@ -305,6 +310,9 @@ class Download(_Transfer):
     if response.status_code in (httplib.OK, httplib.PARTIAL_CONTENT):
       self.stream.write(response.content)
       self.__progress += len(response)
+      if response.info and 'content-encoding' in response.info:
+        # TODO: Handle the case where this changes over a download.
+        self.__encoding = response.info['content-encoding']
     elif response.status_code == httplib.NO_CONTENT:
       # It's important to write something to the stream for the case
       # of a 0-byte download to a file, as otherwise python won't

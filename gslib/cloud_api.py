@@ -277,6 +277,10 @@ class CloudApi(object):
     Raises:
       ArgumentException for errors during input validation.
       ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      Content-encoding string if it was detected that the server sent an encoded
+      object during transfer, None otherwise.
     """
     raise NotImplementedError('GetObjectMedia must be overloaded')
 

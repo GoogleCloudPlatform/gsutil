@@ -582,6 +582,7 @@ class GcsJsonApi(CloudApi):
         apitools_download.StreamInChunks(
             callback=_NoopCallback, finish_callback=_NoopCallback,
             additional_headers=additional_headers)
+      return apitools_download.encoding
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,

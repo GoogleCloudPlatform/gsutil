@@ -1681,9 +1681,14 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       if e.errno != errno.EEXIST:
         raise
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
-  # For gzipped objects download to a temp file and unzip.
+  # For gzipped objects download to a temp file and unzip. For the XML API,
+  # the represents the result of a HEAD request. For the JSON API, this is
+  # the stored encoding which the service may not respect. However, if the
+  # server sends decompressed bytes for a file that is stored compressed
+  # (double compressed case), there is no way we can validate the hash and
+  # we will fail our hash check for the object.
   if (src_obj_metadata.contentEncoding and
-      src_obj_metadata.contentEncoding == 'gzip'):
+      src_obj_metadata.contentEncoding.lower().endswith('gzip')):
     # We can't use tempfile.mkstemp() here because we need a predictable
     # filename for resumable downloads.
     download_file_name = _GetDownloadZipFileName(file_name)
@@ -1691,7 +1696,6 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
         'Downloading to temp gzip filename %s' % download_file_name)
     need_to_unzip = True
   else:
-    # httplib2 (used by JSON API) will decompress on-the-fly for us.
     download_file_name = file_name
     need_to_unzip = False
 
@@ -1703,6 +1707,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   fp = None
+  # Tracks whether the server used a gzip encoding.
+  server_encoding = None
   download_complete = False
   download_strategy = _SelectDownloadStrategy(src_obj_metadata, dst_url)
   download_start_point = 0
@@ -1778,7 +1784,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     # the local file in the case of a failed gzip hash anyway, but it would
     # be better if we actively detected this case.
     if not download_complete:
-      gsutil_api.GetObjectMedia(
+      server_encoding = gsutil_api.GetObjectMedia(
           src_url.bucket_name, src_url.object_name, fp,
           start_byte=download_start_point, generation=src_url.generation,
           object_size=src_obj_metadata.size,
@@ -1808,10 +1814,10 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   # reporting in log messages; inaccuracy doesn't impact the integrity of the
   # download.
   bytes_transferred = src_obj_metadata.size - download_start_point
-
+  server_gzip = server_encoding and server_encoding.lower().endswith('gzip')
   local_md5 = _ValidateDownloadHashes(logger, src_url, src_obj_metadata,
-                                      dst_url, need_to_unzip, digesters,
-                                      hash_algs, api_selector,
+                                      dst_url, need_to_unzip, server_gzip,
+                                      digesters, hash_algs, api_selector,
                                       bytes_transferred)
 
   return (end_time - start_time, bytes_transferred, dst_url, local_md5)
@@ -1823,8 +1829,8 @@ def _GetDownloadZipFileName(file_name):
 
 
 def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
-                            need_to_unzip, digesters, hash_algs, api_selector,
-                            bytes_transferred):
+                            need_to_unzip, server_gzip, digesters, hash_algs,
+                            api_selector, bytes_transferred):
   """Validates a downloaded file's integrity.
 
   Args:
@@ -1835,6 +1841,8 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     dst_url: StorageUrl describing the destination file.
     need_to_unzip: If true, a temporary zip file was used and must be
                    uncompressed as part of validation.
+    server_gzip: If true, the server gzipped the bytes (regardless of whether
+                 the object metadata claimed it was gzipped).
     digesters: dict of {string, hash digester} that contains up-to-date digests
                computed during the download. If a digester for a particular
                algorithm is None, an up-to-date digest is not available and the
@@ -1873,10 +1881,10 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     _DeleteTrackerFile(GetTrackerFilePath(
         dst_url, TrackerFileType.DOWNLOAD, api_selector))
   except CommandException, e:
-    # If the digest doesn't match, we'll try checking it again after
-    # unzipping.
-    if ('doesn\'t match cloud-supplied digest' in str(e) and
-        (api_selector == ApiSelector.JSON or need_to_unzip)):
+    # If an non-gzipped object gets sent with gzip content encoding, the hash
+    # we calculate will match the gzipped bytes, not the original object. Thus,
+    # we'll need to calculate and check it after unzipping.
+    if 'doesn\'t match cloud-supplied digest' in str(e) and server_gzip:
       digest_verified = False
     else:
       _DeleteTrackerFile(GetTrackerFilePath(
@@ -1884,7 +1892,12 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       os.unlink(file_name)
       raise
 
-  if need_to_unzip:
+  if server_gzip and not need_to_unzip:
+    # Server compressed bytes on-the-fly, thus we need to rename and decompress.
+    download_file_name = _GetDownloadZipFileName(file_name)
+    os.rename(file_name, download_file_name)
+
+  if need_to_unzip or server_gzip:
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
     if bytes_transferred > TEN_MB:
