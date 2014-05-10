@@ -85,7 +85,8 @@ class GsUtilTestCase(unittest.TestCase):
       self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents='test %d' % i)
     return tmpdir
 
-  def CreateTempFile(self, tmpdir=None, contents=None, file_name=None):
+  def CreateTempFile(self, tmpdir=None, contents=None,
+                     file_name=None, open_wb=False):
     """Creates a temporary file on disk.
 
     Args:
@@ -97,6 +98,7 @@ class GsUtilTestCase(unittest.TestCase):
                  test file name is constructed. This can also be a tuple, where
                  ('dir', 'foo') means to create a file named 'foo' inside a
                  subdirectory named 'dir'.
+      open_wb: Boolean, should the temporary file be opened in binary mode
 
     Returns:
       The path to the new temporary file.
@@ -109,7 +111,12 @@ class GsUtilTestCase(unittest.TestCase):
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
-    with open(fpath, 'w') as f:
+
+    mode = 'w'
+    if open_wb:
+      mode += 'b'
+
+    with open(fpath, mode) as f:
       contents = contents or self.MakeTempName('contents')
       f.write(contents)
     return fpath
