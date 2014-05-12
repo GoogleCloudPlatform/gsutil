@@ -855,9 +855,9 @@ class StorageV1(base_api.BaseApiClient):
               accept=['*/*'],
               max_size=None,
               resumable_multipart=True,
-              resumable_path=u'/resumable/upload/storage/v1/b/{bucket}/o',
+              resumable_path=u'/resumable/upload/storage/' + self._client._version + '/b/{bucket}/o',
               simple_multipart=True,
-              simple_path=u'/upload/storage/v1/b/{bucket}/o',
+              simple_path=u'/upload/storage/' + self._client._version + '/b/{bucket}/o',
           ),
           }
 
