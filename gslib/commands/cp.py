@@ -198,15 +198,25 @@ COPY_IN_CLOUD_TEXT = """
 
 RESUMABLE_TRANSFERS_TEXT = """
 <B>RESUMABLE TRANSFERS</B>
-  gsutil automatically uses the Google Cloud Storage resumable upload
-  feature whenever you use the cp command to upload an object that is larger
-  than 2 MB. You do not need to specify any special command line options
-  to make this happen. If your upload is interrupted you can restart the
-  upload by running the same cp command that you ran to start the upload.
+  gsutil automatically uses the Google Cloud Storage resumable upload feature
+  whenever you use the cp command to upload an object that is larger than 2
+  MB. You do not need to specify any special command line options to make this
+  happen. If your upload is interrupted you can restart the upload by running
+  the same cp command that you ran to start the upload. Until the upload
+  has completed successfully, it will not be visible at the destination object
+  and will not replace any existing object the upload is intended to overwrite.
+  (However, see the section on PARALLEL COMPOSITE UPLOADS, which may leave
+  temporary component objects in place during the upload process.)
 
   Similarly, gsutil automatically performs resumable downloads (using HTTP
   standard Range GET operations) whenever you use the cp command to download an
-  object larger than 2 MB.
+  object larger than 2 MB. In this case the partially downloaded file will be
+  visible as soon as it starts being written. Thus, before you attempt to use
+  any files downloaded by gsutil you should make sure the download completed
+  successfully, by checking the exit status from the gsutil command. This can
+  be done using a script like the following:
+
+     until gsutil cp gs://your-bucket/your-object ./local-file; do :; done
 
   Resumable uploads and downloads store some state information in a file
   in ~/.gsutil named by the destination object or file. If you attempt to
@@ -361,11 +371,7 @@ OPTIONS_TEXT = """
                  build a script that copies a large number of objects reliably,
                  using a bash script like the following:
 
-                     status=1
-                     while [ $status -ne 0 ] ; do
-                         gsutil cp -c -L cp.log -R ./dir gs://bucket
-                         status=$?
-                     done
+                   until gsutil cp -c -L cp.log -R ./dir gs://bucket; do :; done
 
                  The -c option will cause copying to continue after failures
                  occur, and the -L option will allow gsutil to pick up where it
