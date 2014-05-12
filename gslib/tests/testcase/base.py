@@ -112,9 +112,7 @@ class GsUtilTestCase(unittest.TestCase):
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
 
-    mode = 'w'
-    if open_wb:
-      mode += 'b'
+    mode = 'wb' if open_wb else 'w'
 
     with open(fpath, mode) as f:
       contents = contents or self.MakeTempName('contents')
