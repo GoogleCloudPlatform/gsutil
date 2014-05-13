@@ -53,7 +53,8 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
   def testMultipleConfiguredCreds(self):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
-        ('GoogleCompute', 'service_account', 'foo')]):
+        ('Credentials', 'gs_service_client_id', 'bar'),
+        ('Credentials', 'gs_service_key_file', 'baz')]):
 
       try:
         GcsJsonApi(None, self.logger)
@@ -62,7 +63,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         msg = str(e)
         self.assertIn('types of configured credentials', msg)
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
-        self.assertIn(CredTypes.GCE, msg)
+        self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
 
   def testExactlyOneInvalid(self):
     with SetBotoConfigForTest([

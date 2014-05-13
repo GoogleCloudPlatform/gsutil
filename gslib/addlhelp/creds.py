@@ -23,9 +23,10 @@ _detailed_help_text = ("""
 
   Note that when using the JSON API (which is the default behavior), you can
   configure at most one of the following types of GCS credentials in a single
-  boto config file: OAuth2 User Account, OAuth2 Service Account, and
-  GCE Internal Service Account. You may have also S3 HMAC credentials, in
-  addition to the GCS credentials. This would be necessary for using s3:// URLs.
+  boto config file: OAuth2 User Account, OAuth2 Service Account. In addition to
+  these, you may also have S3 HMAC credentials (necessary for using s3:// URLs)
+  and GCE Internal Service Account credentials. GCE Internal Service Account
+  credentials are used only when OAuth2 credentials are not present.
 
   OAuth2 User Account:
     This is the preferred type of credentials for authenticating requests on
@@ -109,10 +110,10 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'creds',
-      help_name_aliases = ['credentials', 'authentication', 'auth'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'Credential Types Supporting Various Use Cases',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='creds',
+      help_name_aliases=['credentials', 'authentication', 'auth'],
+      help_type='additional_help',
+      help_one_line_summary='Credential Types Supporting Various Use Cases',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )

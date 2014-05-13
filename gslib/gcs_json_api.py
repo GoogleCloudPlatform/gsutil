@@ -182,13 +182,15 @@ class GcsJsonApi(CloudApi):
         configured_cred_types.append(CredTypes.OAUTH2_USER_ACCOUNT)
       if self._HasOauth2ServiceAccountCreds():
         configured_cred_types.append(CredTypes.OAUTH2_SERVICE_ACCOUNT)
-      if self._HasGceCreds():
-        configured_cred_types.append(CredTypes.GCE)
       if len(configured_cred_types) > 1:
         # We only allow one set of configured credentials. Otherwise, we're
         # choosing one arbitrarily, which can be very confusing to the user
         # (e.g., if only one is authorized to perform some action) and can
         # also mask errors.
+        # Because boto merges config files, GCE credentials show up by default
+        # for GCE VMs. We don't want to fail when a user creates a boto file
+        # with their own credentials, so in this case we'll use the OAuth2
+        # user credentials.
         failed_cred_type = None
         raise CommandException(
             ('You have multiple types of configured credentials (%s), which is '
