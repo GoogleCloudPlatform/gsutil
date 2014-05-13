@@ -242,7 +242,12 @@ class GcsJsonApi(CloudApi):
 
   def _GetGceCreds(self):
     if self._HasGceCreds():
-      return credentials_lib.GceAssertionCredentials()
+      try:
+        return credentials_lib.GceAssertionCredentials()
+      except apitools_exceptions.ResourceUnavailableError, e:
+        if 'service account' in str(e) and 'does not exist' in str(e):
+          return None
+        raise
 
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.

@@ -24,7 +24,7 @@ import oauth2client
 import oauth2client.client
 import oauth2client.gce
 import oauth2client.multistore_file
-# TODO: This is unused in gsutil, but once apitools python 2.6 compatibility
+# TODO: This is unused in gsutil, add once apitools python 2.6 compatibility
 # testing is complete.
 # import oauth2client.tools
 from gslib.third_party.protorpc import messages
@@ -98,9 +98,21 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
   """Assertion credentials for GCE instances."""
 
   def __init__(self, scopes=None, service_account_name='default', **kwds):
+    """Initializes the credentials instance.
+
+    Args:
+      scopes: The scopes to get. If None, whatever scopes that are available
+              to the instance are used.
+      service_account_name: The service account to retrieve the scopes from.
+      **kwds: Additional keyword args.
+    """
     if not util.DetectGce():
       raise exceptions.ResourceUnavailableError(
           'GCE credentials requested outside a GCE instance')
+    if not self.GetServiceAccount(service_account_name):
+      raise exceptions.ResourceUnavailableError(
+          'GCE credentials requested but service account %s does not exist.' %
+          service_account_name)
     self.__service_account_name = service_account_name
     if scopes:
       scope_ls = util.NormalizeScopes(scopes)
@@ -120,11 +132,25 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     except exceptions.Error:
       return None
 
+  def GetServiceAccount(self, account):
+    account_uri = (
+        'http://metadata.google.internal/computeMetadata/'
+        'v1/instance/service-accounts')
+    additional_headers = {'X-Google-Metadata-Request': 'True'}
+    request = urllib2.Request(account_uri, headers=additional_headers)
+    try:
+      response = urllib2.urlopen(request)
+    except urllib2.URLError as e:
+      raise exceptions.CommunicationError(
+          'Could not reach metadata service: %s' % e.reason)
+    return (account in response.readlines() or
+            ('%s/' % account) in response.readlines())
+
   def GetInstanceScopes(self):
     # Extra header requirement can be found here:
     # https://developers.google.com/compute/docs/metadata
     scopes_uri = (
-        'http://metadata.google.internal/computeMetadata/v1beta1/instance/'
+        'http://metadata.google.internal/computeMetadata/v1/instance/'
         'service-accounts/%s/scopes') % self.__service_account_name
     additional_headers = {'X-Google-Metadata-Request': 'True'}
     request = urllib2.Request(scopes_uri, headers=additional_headers)
@@ -142,7 +168,7 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
       do_request: A function matching httplib2.Http.request's signature.
     """
     token_uri = (
-        'http://metadata.google.internal/computeMetadata/v1beta1/instance/'
+        'http://metadata.google.internal/computeMetadata/v1/instance/'
         'service-accounts/%s/token') % self.__service_account_name
     extra_headers = {'X-Google-Metadata-Request': 'True'}
     response, content = do_request(token_uri, headers=extra_headers)
