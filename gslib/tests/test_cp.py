@@ -34,6 +34,7 @@ from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
@@ -537,6 +538,45 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
     # Server now allows copy-in-the-cloud across storage classes.
     self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)])
+
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  def test_cross_provider_cp(self):
+    s3_bucket = self.CreateBucket(provider='s3')
+    gs_bucket = self.CreateBucket(provider='gs')
+    s3_key = self.CreateObject(bucket_uri=s3_bucket, contents='foo')
+    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents='bar')
+    self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
+    self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
+
+  @unittest.skip('This test is slow due to creating many objects, '
+                 'but remains here for debugging purposes.')
+  def test_daisy_chain_cp_file_sizes(self):
+    """Ensure daisy chain cp works with a wide of file sizes."""
+    bucket_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    exponent_cap = 22  # Up to 2MB in size.
+    for i in range(exponent_cap):
+      one_byte_smaller = 2**i - 1
+      normal = 2**i
+      one_byte_larger = 2**i + 1
+      self.CreateObject(bucket_uri=bucket_uri, contents='a'*one_byte_smaller)
+      self.CreateObject(bucket_uri=bucket_uri, contents='b'*normal)
+      self.CreateObject(bucket_uri=bucket_uri, contents='c'*one_byte_larger)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertNumLines(stdout, exponent_cap*3)
+    _Check()
+
+    self.RunGsUtil(['-m', 'cp', '-D', suri(bucket_uri, '**'),
+                    suri(bucket2_uri)])
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
+      self.assertNumLines(stdout, exponent_cap*3)
+    _Check2()
 
   def test_daisy_chain_cp(self):
     """Tests cp with the -D option."""

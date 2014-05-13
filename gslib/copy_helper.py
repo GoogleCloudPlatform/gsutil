@@ -56,6 +56,7 @@ from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
+from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
 from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
@@ -738,6 +739,55 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
     with open(file_name, 'rb') as fp:
       digests['crc32c'] = CalculateB64EncodedCrc32cFromContents(fp)
   return digests
+
+
+def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
+                      dst_obj_metadata):
+  """Validates integrity of two cloud objects copied via daisy-chain.
+
+  Args:
+    logger: for outputting log messages.
+    src_url: CloudUrl for source cloud object.
+    dst_url: CloudUrl for destination cloud object.
+    src_obj_metadata: Cloud Object metadata for object being downloaded from.
+    dst_obj_metadata: Cloud Object metadata for object being uploaded to.
+
+  Raises:
+    CommandException: if cloud digests don't match local digests.
+  """
+  checked_one = False
+  download_hashes = {}
+  upload_hashes = {}
+  if src_obj_metadata.md5Hash:
+    download_hashes['md5'] = src_obj_metadata.md5Hash
+  if src_obj_metadata.crc32c:
+    download_hashes['crc32c'] = src_obj_metadata.crc32c
+  if dst_obj_metadata.md5Hash:
+    upload_hashes['md5'] = dst_obj_metadata.md5Hash
+  if dst_obj_metadata.crc32c:
+    upload_hashes['crc32c'] = dst_obj_metadata.crc32c
+
+  for alg, upload_b64_digest in upload_hashes.iteritems():
+    if alg not in download_hashes:
+      continue
+
+    download_b64_digest = download_hashes[alg]
+    logger.debug(
+        'Comparing source vs destination %s-checksum for %s. (%s/%s)' % (
+            alg, dst_url, download_b64_digest, upload_b64_digest))
+    if download_b64_digest != upload_b64_digest:
+      raise CommandException(
+          '%s signature for source object (%s) doesn\'t match '
+          'destination object digest (%s). Object (%s) will be deleted.' % (
+              alg, download_b64_digest, upload_b64_digest, dst_url))
+    checked_one = True
+  if not checked_one:
+    # One known way this can currently happen is when downloading objects larger
+    # than 5GB from S3 (for which the etag is not an MD5).
+    logger.warn(
+        'WARNING: Found no hashes to validate object downloaded from %s and '
+        'uploaded to %s. Integrity cannot be assured without hashes.' %
+        (src_url, dst_url))
 
 
 def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
@@ -1958,7 +2008,8 @@ def _CopyFileToFile(src_url, dst_url):
 
 # pylint: disable=undefined-variable
 def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
-                                dst_obj_metadata, preconditions, gsutil_api):
+                                dst_obj_metadata, preconditions, gsutil_api,
+                                logger):
   """Copies from src_url to dst_url in "daisy chain" mode.
 
   See -D OPTION documentation about what daisy chain mode is.
@@ -1971,6 +2022,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
                       the copy.
     preconditions: Preconditions to use for the copy.
     gsutil_api: gsutil Cloud API to use for the copy.
+    logger: For outputting log messages.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url with generation,
@@ -1988,52 +2040,35 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
   if not global_copy_helper_opts.preserve_acl:
     dst_obj_metadata.acl = []
 
-  # TODO: gsutil-beta: For now, download the file locally in its entirety,
-  # then upload it.  Need to extend this to feature-parity with gsutil3
-  # via a KeyFile-like implementation that works for both XML and JSON.
-  resumable_tracker_dir = CreateTrackerDirIfNeeded()
-
-  (download_fh, download_path) = tempfile.mkstemp(dir=resumable_tracker_dir)
-  download_fp = None
-  upload_fp = None
-  tempfile.mkstemp(dir=resumable_tracker_dir)
-  try:
-    # Check for temp space. Assume the compressed object is at most 2x
-    # the size of the object (normally should compress to smaller than
-    # the object)
-    if (_CheckFreeSpace(download_path)
-        < 2*int(src_obj_metadata.size)):
-      raise CommandException('Inadequate temp space available to temporarily '
-                             'copy %s for daisy-chaining.' % src_url)
-    download_fp = open(download_path, 'wb')
-
-    serialization_dict = GetDownloadSerializationDict(src_obj_metadata)
-    serialization_data = json.dumps(serialization_dict)
-
-    start_time = time.time()
-    gsutil_api.GetObjectMedia(src_url.bucket_name,
-                              src_url.object_name,
-                              download_fp,
-                              provider=src_url.scheme,
-                              serialization_data=serialization_data)
-    download_fp.close()
-
-    upload_fp = open(download_path, 'rb')
+  start_time = time.time()
+  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api)
+  if src_obj_metadata.size == 0:
+    # Resumable uploads of size 0 are not supported.
     uploaded_object = gsutil_api.UploadObject(
         upload_fp, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size)
+  else:
+    # TODO: Actually support resuming uploads in the daisy chain case. We use
+    # resumable here for its good streaming implementation properties.
+    uploaded_object = gsutil_api.UploadObjectResumable(
+        upload_fp, object_metadata=dst_obj_metadata,
+        canned_acl=global_copy_helper_opts.canned_acl,
+        preconditions=preconditions, provider=dst_url.scheme,
+        fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
+        progress_callback=_FileCopyCallbackHandler(True, logger).call)
+  end_time = time.time()
 
-    end_time = time.time()
-  finally:
-    if download_fp:
-      download_fp.close()
-    if upload_fp:
-      upload_fp.close()
-    os.close(download_fh)
-    if os.path.exists(download_path):
-      os.unlink(download_path)
+  try:
+    _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
+                      dst_obj_metadata)
+  except CommandException, e:
+    if 'doesn\'t match cloud-supplied digest' in str(e):
+      gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
+                              generation=uploaded_object.generation,
+                              provider=dst_url.scheme)
+    raise
 
   result_url = dst_url.Clone()
   result_url.generation = GenerationFromUrlAndString(
@@ -2227,7 +2262,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       else:
         return _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
                                            dst_url, dst_obj_metadata,
-                                           preconditions, gsutil_api)
+                                           preconditions, gsutil_api, logger)
     else:  # src_url.IsFileUrl()
       if dst_url.IsCloudUrl():
         return _UploadFileToObject(

@@ -519,7 +519,7 @@ class GcsJsonApi(CloudApi):
     if generation:
       generation = long(generation)
 
-    outer_total_size = None
+    outer_total_size = object_size
     callback_per_bytes = 0
     if serialization_data:
       outer_total_size = json.loads(serialization_data)['total_size']

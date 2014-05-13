@@ -204,7 +204,7 @@ class DownloadCallbackConnectionClassFactory(object):
           if not amt or amt > TRANSFER_BUFFER_SIZE:
             raise BadRequestException(
                 'Invalid HTTP read size %s during download, expected %s.' %
-                amt, TRANSFER_BUFFER_SIZE)
+                (amt, TRANSFER_BUFFER_SIZE))
           else:
             amt = amt or TRANSFER_BUFFER_SIZE
 
