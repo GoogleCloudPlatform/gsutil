@@ -711,7 +711,7 @@ class Upload(_Transfer):
     if self.__complete:
       # TODO: Decide how to handle errors in the non-seekable case.
       current_pos = self.stream.tell()
-      self.stream.seek(0, io.SEEK_END)
+      self.stream.seek(0, os.SEEK_END)
       end_pos = self.stream.tell()
       self.stream.seek(current_pos)
       if current_pos != end_pos:
