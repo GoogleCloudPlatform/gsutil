@@ -798,8 +798,14 @@ class ConfigCommand(Command):
           '# is primarily for cloud storage service developers.\n'
           '# Setting a non-default gs_host only works if prefer_api=xml.\n'
           '#%s_host = <alternate storage host address>\n'
-          '#%s_port = <alternate storage host port>\n\n'
+          '#%s_port = <alternate storage host port>\n'
           % (host_key, host_key))
+      if host_key == 'gs':
+        config_file.write(
+            '#%s_json_host = <alternate JSON API storage host address>\n'
+            '#%s_json_port = <alternate JSON API storage host port>\n\n'
+            % (host_key, host_key))
+      config_file.write('\n')
 
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
