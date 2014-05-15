@@ -567,7 +567,8 @@ class Command(HelpProvider):
           self.command_name, self.debug,
           self.logger, self.gsutil_api,
           multi_threaded_url_args, self.recursion_requested,
-          all_versions=self.all_versions)
+          all_versions=self.all_versions,
+          continue_on_error=self.continue_on_error or self.parallel_operations)
 
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,

@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 """Unit tests for PluralityCheckableIterator."""
 
+import sys
+
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 import gslib.tests.testcase as testcase
 
@@ -78,6 +80,7 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
     """
 
     class IterTest(object):
+
       def __init__(self):
         self.position = 0
 
@@ -101,7 +104,7 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
     try:
       for value in pcit:
         iterated_value = value
-      raise AssertionError('Expected exception from iterator')
+      self.fail('Expected exception from iterator')
     except CustomTestException:
       pass
     self.assertEqual(iterated_value, 1)
@@ -110,6 +113,7 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
     """Tests PluralityCheckableIterator with 2 elements that both raise."""
 
     class IterTest(object):
+
       def __init__(self):
         self.position = 0
 
@@ -127,15 +131,53 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
     try:
       for _ in pcit:
         pass
-      raise AssertionError('Expected exception 1 from iterator')
+      self.fail('Expected exception 1 from iterator')
     except CustomTestException, e:
       self.assertIn(e.message, 'Test exception 1')
     try:
       for _ in pcit:
         pass
-      raise AssertionError('Expected exception 2 from iterator')
+      self.fail('Expected exception 2 from iterator')
     except CustomTestException, e:
       self.assertIn(e.message, 'Test exception 2')
     for _ in pcit:
-      raise AssertionError('Expected StopIteration')
+      self.fail('Expected StopIteration')
 
+  def testPluralityCheckableIteratorWithYieldedException(self):
+    """Tests PluralityCheckableIterator an iterator that yields an exception.
+
+    The yielded exception is in the form of a tuple and must also contain a
+    stack trace.
+    """
+
+    class IterTest(object):
+
+      def __init__(self):
+        self.position = 0
+
+      def __iter__(self):
+        return self
+
+      def next(self):
+        if self.position == 0:
+          try:
+            self.position += 1
+            raise CustomTestException('Test exception 0')
+          except CustomTestException, e:
+            return (e, sys.exc_info()[2])
+        elif self.position == 1:
+          self.position += 1
+          return 1
+        else:
+          raise StopIteration()
+
+    pcit = PluralityCheckableIterator(IterTest())
+    try:
+      for _ in pcit:
+        pass
+      self.fail('Expected exception 0 from iterator')
+    except CustomTestException, e:
+      self.assertIn(e.message, 'Test exception 0')
+    for value in pcit:
+      iterated_value = value
+    self.assertEqual(iterated_value, 1)

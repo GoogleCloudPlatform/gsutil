@@ -145,6 +145,17 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(stdout, '')
     _Check1()
 
+  def test_missing_first_force(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='present',
+                                   contents='foo')
+    self.RunGsUtil(['rm', '%s/missing' % suri(bucket_uri),
+                    suri(object_uri)], expected_status=1)
+    stderr = self.RunGsUtil(['rm', '-f', '%s/missing' % suri(bucket_uri),
+                             suri(object_uri)], return_stderr=True)
+    self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
+    self.RunGsUtil(['stat', suri(object_uri)], expected_status=1)
+
   def test_some_missing(self):
     """Test that 'rm -a' fails when some but not all uris don't exist."""
     bucket_uri = self.CreateVersionedBucket()

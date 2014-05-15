@@ -171,7 +171,8 @@ class SetMetaCommand(Command):
 
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug, self.logger, self.gsutil_api,
-        self.args, self.recursion_requested, all_versions=self.all_versions)
+        self.args, self.recursion_requested, all_versions=self.all_versions,
+        continue_on_error=self.parallel_operations)
 
     try:
       # Perform requests in parallel (-m) mode, if requested, using

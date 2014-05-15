@@ -178,11 +178,10 @@ class RmCommand(Command):
     try:
       # Expand wildcards, dirs, buckets, and bucket subdirs in URLs.
       name_expansion_iterator = NameExpansionIterator(
-          self.command_name, self.debug,
-          self.logger, self.gsutil_api,
-          self.args, self.recursion_requested,
-          project_id=self.project_id,
-          all_versions=self.all_versions)
+          self.command_name, self.debug, self.logger, self.gsutil_api,
+          self.args, self.recursion_requested, project_id=self.project_id,
+          all_versions=self.all_versions,
+          continue_on_error=self.continue_on_error or self.parallel_operations)
 
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,

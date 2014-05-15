@@ -715,7 +715,8 @@ class CpCommand(Command):
         self.logger, self.gsutil_api, url_strs,
         self.recursion_requested or copy_helper_opts.perform_mv,
         have_existing_dst_container=have_existing_dst_container,
-        project_id=self.project_id, all_versions=all_versions)
+        project_id=self.project_id, all_versions=all_versions,
+        continue_on_error=self.continue_on_error or self.parallel_operations)
     self.have_existing_dst_container = have_existing_dst_container
     self.exp_dst_url = exp_dst_url
 

@@ -25,6 +25,7 @@ the various rules for determining how these expansions are done.
 
 import multiprocessing
 import os
+import sys
 
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
@@ -111,15 +112,16 @@ class NameExpansionResult(object):
 
 
 class _NameExpansionIterator(object):
-  """
-  Class that iterates over all source URLs passed to the iterator.
+  """Class that iterates over all source URLs passed to the iterator.
+
   See details in __iter__ function doc.
   """
 
   def __init__(self, command_name, debug, logger,
                gsutil_api, url_strs, recursion_requested,
                have_existing_dst_container=None, all_versions=False,
-               cmd_supports_recursion=True, project_id=None):
+               cmd_supports_recursion=True, project_id=None,
+               continue_on_error=False):
     """Creates a NameExpansionIterator.
 
     Args:
@@ -139,6 +141,8 @@ class _NameExpansionIterator(object):
       cmd_supports_recursion: Bool indicating whether this command supports a
           '-R' flag. Useful for printing helpful error messages.
       project_id: Project id to use for bucket retrieval.
+      continue_on_error: If true, yield no-match exceptions encountered during
+                         iteration instead of raising them.
 
     Examples of _NameExpansionIterator with recursion_requested=True:
       - Calling with one of the url_strs being 'gs://bucket' will enumerate all
@@ -182,6 +186,7 @@ class _NameExpansionIterator(object):
     self.url_strs.has_plurality = self.url_strs.HasPlurality()
     self.cmd_supports_recursion = cmd_supports_recursion
     self.project_id = project_id
+    self.continue_on_error = continue_on_error
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -261,7 +266,15 @@ class _NameExpansionIterator(object):
       # raising it until the iterator is actually asked to yield the first
       # result.
       if post_step2_iter.IsEmpty():
-        raise CommandException('No URLs matched: %s' % url_str)
+        if self.continue_on_error:
+          try:
+            raise CommandException('No URLs matched: %s' % url_str)
+          except CommandException, e:
+            # Yield a specialized tuple of (exception, stack_trace) to
+            # the wrapping PluralityCheckableIterator.
+            yield (e, sys.exc_info()[2])
+        else:
+          raise CommandException('No URLs matched: %s' % url_str)
 
       # Step 3. Omit any directories, buckets, or bucket subdirectories for
       # non-recursive expansions.
@@ -338,7 +351,7 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api,
                           url_strs, recursion_requested,
                           have_existing_dst_container=None,
                           all_versions=False, cmd_supports_recursion=True,
-                          project_id=None):
+                          project_id=None, continue_on_error=False):
   """Static factory function for instantiating _NameExpansionIterator.
 
   This wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -362,6 +375,8 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api,
     cmd_supports_recursion: Bool indicating whether this command supports a '-R'
         flag. Useful for printing helpful error messages.
     project_id: Project id to use for the current command.
+    continue_on_error: If true, yield no-match exceptions encountered during
+                       iteration instead of raising them.
 
   Raises:
     CommandException if underlying iterator is empty.
@@ -377,7 +392,7 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api,
       gsutil_api, url_strs, recursion_requested,
       have_existing_dst_container, all_versions=all_versions,
       cmd_supports_recursion=cmd_supports_recursion,
-      project_id=project_id)
+      project_id=project_id, continue_on_error=continue_on_error)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.IsEmpty():
     raise CommandException('No URLs matched')

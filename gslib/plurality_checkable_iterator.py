@@ -28,7 +28,13 @@ class PluralityCheckableIterator(object):
   """Iterator wrapper class.
 
     Allows you to check whether the wrapped iterator is empty and
-    whether it has more than 1 element.
+    whether it has more than 1 element. This iterator accepts three types of
+    values from the iterator it wraps:
+      1. A yielded element (this is the normal case).
+      2. A raised exception, which will be buffered and re-raised when it
+         is reached in this iterator.
+      3. A yielded tuple of (exception, stack trace), which will be buffered
+         and raised with it is reached in this iterator.
   """
 
   def __init__(self, it):
@@ -50,7 +56,10 @@ class PluralityCheckableIterator(object):
           self.base_iterator = iter(self.orig_iterator)
         e = self.base_iterator.next()
         self.underlying_iter_empty = False
-        self.head.append(('element', e))
+        if isinstance(e, tuple) and isinstance(e[0], Exception):
+          self.head.append(('exception', e[0], e[1]))
+        else:
+          self.head.append(('element', e))
       except StopIteration:
         # Indicates we can no longer call next() on underlying iterator, but
         # there could still be elements left to iterate in head.
