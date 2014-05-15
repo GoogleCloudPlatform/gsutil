@@ -216,7 +216,7 @@ RESUMABLE_TRANSFERS_TEXT = """
   successfully, by checking the exit status from the gsutil command. This can
   be done using a script like the following:
 
-     until gsutil cp gs://your-bucket/your-object ./local-file; do :; done
+     until gsutil cp gs://your-bucket/your-object ./local-file; do sleep 1; done
 
   Resumable uploads and downloads store some state information in a file
   in ~/.gsutil named by the destination object or file. If you attempt to
@@ -265,6 +265,16 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   <random ID>%s<hash>
   where <random ID> is some numerical value, and <hash> is an MD5 hash (not
   related to the hash of the contents of the file or object).
+
+  To avoid leaving temporary objects around, you should make sure to check the
+  exit status from the gsutil command. This can be done using a script like the
+  following:
+
+     until gsutil cp ./file gs://your-bucket/obj; do sleep 1; done
+
+  If you're copying a whole directory use this instead:
+
+     until gsutil cp -c -L cp.log -R ./dir gs://bucket; do sleep 1; done
 
   One important caveat is that files uploaded in this fashion are still subject
   to the maximum number of components limit. For example, if you upload a large
@@ -371,7 +381,9 @@ OPTIONS_TEXT = """
                  build a script that copies a large number of objects reliably,
                  using a bash script like the following:
 
-                   until gsutil cp -c -L cp.log -R ./dir gs://bucket; do :; done
+                   until gsutil cp -c -L cp.log -R ./dir gs://bucket; do
+                     sleep 1
+                   done
 
                  The -c option will cause copying to continue after failures
                  occur, and the -L option will allow gsutil to pick up where it

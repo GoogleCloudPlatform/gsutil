@@ -796,6 +796,7 @@ class ConfigCommand(Command):
       config_file.write(
           '# The ability to specify an alternate storage host and port\n'
           '# is primarily for cloud storage service developers.\n'
+          '# Setting a non-default gs_host only works if prefer_api=xml.\n'
           '#%s_host = <alternate storage host address>\n'
           '#%s_port = <alternate storage host port>\n\n'
           % (host_key, host_key))
