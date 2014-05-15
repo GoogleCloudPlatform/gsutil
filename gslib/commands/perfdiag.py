@@ -58,6 +58,7 @@ from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
 from gslib.util import MakeHumanReadable
 from gslib.util import Percentile
+from gslib.util import ResumableThreshold
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -194,6 +195,10 @@ def _DeleteWrapper(cls, arg, thread_state=None):
 def _PerfdiagExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
+
+
+def _DummyTrackerCallback(_):
+  pass
 
 
 class DummyFile(object):
@@ -635,9 +640,16 @@ class PerfDiagCommand(Command):
                                                  md5Hash=thru_tuple.md5)
         io_fp = cStringIO.StringIO(self.file_contents[self.thru_local_file])
         t0 = time.time()
-        self.gsutil_api.UploadObject(
-            io_fp, upload_target, provider=self.provider,
-            size=self.thru_filesize, fields=['name'])
+        if self.thru_filesize < ResumableThreshold():
+          self.gsutil_api.UploadObject(
+              io_fp, upload_target, provider=self.provider,
+              size=self.thru_filesize, fields=['name'])
+        else:
+          self.gsutil_api.UploadObjectResumable(
+              io_fp, upload_target, provider=self.provider,
+              size=self.thru_filesize, fields=['name'],
+              tracker_callback=_DummyTrackerCallback)
+
         t1 = time.time()
         times.append(t1 - t0)
       for _ in range(self.num_iterations):
@@ -766,9 +778,16 @@ class PerfDiagCommand(Command):
     upload_target = apitools_messages.Object(
         bucket=thru_tuple.bucket_name, name=thru_tuple.object_name,
         md5Hash=md5hash)
-    gsutil_api.UploadObject(
-        cStringIO.StringIO(contents), upload_target,
-        provider=self.provider, size=len(contents), fields=['name'])
+    file_size = len(contents)
+    if file_size < ResumableThreshold():
+      gsutil_api.UploadObject(
+          cStringIO.StringIO(contents), upload_target,
+          provider=self.provider, size=file_size, fields=['name'])
+    else:
+      gsutil_api.UploadObjectResumable(
+          cStringIO.StringIO(contents), upload_target,
+          provider=self.provider, size=file_size, fields=['name'],
+          tracker_callback=_DummyTrackerCallback)
 
   def Download(self, download_tuple, thread_state=None):
     """Downloads a file.

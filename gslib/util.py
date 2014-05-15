@@ -423,6 +423,10 @@ def _BotoIsSecure():
 BOTO_IS_SECURE = _BotoIsSecure()
 
 
+def ResumableThreshold():
+  return config.getint('GSUtil', 'resumable_threshold', TWO_MB)
+
+
 def AddAcceptEncoding(headers):
   """Adds accept-encoding:gzip to the dictionary of headers."""
   # If Accept-Encoding is not already set, set it to enable gzip.

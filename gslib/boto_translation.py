@@ -713,7 +713,7 @@ class BotoTranslation(CloudApi):
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
     if not tracker_callback:
-      raise ArgumentException('No tracker callback function set for'
+      raise ArgumentException('No tracker callback function set for '
                               'resumable upload of %s' % dst_uri)
     try:
       self._PerformResumableUpload(dst_uri.new_key(headers=headers),

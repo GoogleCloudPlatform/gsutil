@@ -86,8 +86,8 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
+from gslib.util import ResumableThreshold
 from gslib.util import TEN_MB
-from gslib.util import TWO_MB
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
@@ -173,10 +173,6 @@ class TrackerFileType(object):
 def _RmExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
-
-
-def _ResumableThreshold():
-  return config.getint('GSUtil', 'resumable_threshold', TWO_MB)
 
 
 def _ParallelUploadCopyExceptionHandler(cls, e):
@@ -339,7 +335,7 @@ def _SelectDownloadStrategy(src_obj_metadata, dst_url):
     except OSError:
       pass
 
-  if src_obj_metadata.size >= _ResumableThreshold() and not dst_is_special:
+  if src_obj_metadata.size >= ResumableThreshold() and not dst_is_special:
     return CloudApi.DownloadStrategy.RESUMABLE
   else:
     return CloudApi.DownloadStrategy.ONE_SHOT
@@ -1653,7 +1649,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           upload_stream, upload_url, dst_url, dst_obj_metadata,
           global_copy_helper_opts.canned_acl, upload_size, preconditions,
           gsutil_api, command_obj, copy_exception_handler)
-    elif upload_size < _ResumableThreshold() or src_url.IsStream():
+    elif upload_size < ResumableThreshold() or src_url.IsStream():
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,
           dst_obj_metadata, preconditions, gsutil_api)
