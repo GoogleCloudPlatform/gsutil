@@ -1935,6 +1935,9 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     # we calculate will match the gzipped bytes, not the original object. Thus,
     # we'll need to calculate and check it after unzipping.
     if 'doesn\'t match cloud-supplied digest' in str(e) and server_gzip:
+      logger.debug(
+          'Hash did not match but server gzipped the content, will '
+          'recalculate.')
       digest_verified = False
     else:
       _DeleteTrackerFile(GetTrackerFilePath(
