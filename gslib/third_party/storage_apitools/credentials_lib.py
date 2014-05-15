@@ -143,8 +143,8 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     except urllib2.URLError as e:
       raise exceptions.CommunicationError(
           'Could not reach metadata service: %s' % e.reason)
-    return (account in response.readlines() or
-            ('%s/' % account) in response.readlines())
+    response_lines = [line.rstrip('/\n\r') for line in response.readlines()]
+    return account in response_lines
 
   def GetInstanceScopes(self):
     # Extra header requirement can be found here:
