@@ -67,7 +67,9 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
 
   def testExactlyOneInvalid(self):
     with SetBotoConfigForTest([
-        ('Credentials', 'gs_oauth2_refresh_token', 'foo')]):
+        ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None)]):
       succeeded = False
       try:
         GcsJsonApi(None, self.logger)

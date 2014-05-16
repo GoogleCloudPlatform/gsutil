@@ -172,12 +172,13 @@ def _SetBotoConfig(section, name, value, revert_list):
     revert_list: List for tracking configs to revert.
   """
   prev_value = boto.config.get(section, name, None)
-  if boto.config.has_section(section):
-    revert_list.append((section, name, prev_value))
-    boto.config.set(section, name, value)
-  else:
+  if not boto.config.has_section(section):
     revert_list.append((section, TEST_BOTO_REMOVE_SECTION, None))
     boto.config.add_section(section)
+  revert_list.append((section, name, prev_value))
+  if value is None:
+    boto.config.remove_option(section, name)
+  else:
     boto.config.set(section, name, value)
 
 
@@ -188,13 +189,17 @@ def _RevertBotoConfig(revert_list):
     revert_list: List of boto config modifications created by calls to
                  _SetBotoConfig.
   """
+  sections_to_remove = []
   for section, name, value in revert_list:
     if value is None:
-      boto.config.remove_option(section, name)
       if name == TEST_BOTO_REMOVE_SECTION:
-        boto.config.remove_section(section)
+        sections_to_remove.append(section)
+      else:
+        boto.config.remove_option(section, name)
     else:
       boto.config.set(section, name, value)
+  for section in sections_to_remove:
+    boto.config.remove_section(section)
 
 
 def PerformsFileToObjectUpload(func):
