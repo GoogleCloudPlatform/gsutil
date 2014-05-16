@@ -1954,12 +1954,17 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
           'Uncompressing downloaded tmp file to %s...', file_name)
 
     # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
-    with gzip.open(download_file_name, 'rb') as f_in:
+    gzip_fp = None
+    try:
+      gzip_fp = gzip.open(download_file_name, 'rb')
       with open(file_name, 'wb') as f_out:
-        data = f_in.read(GUNZIP_CHUNK_SIZE)
+        data = gzip_fp.read(GUNZIP_CHUNK_SIZE)
         while data:
           f_out.write(data)
-          data = f_in.read(GUNZIP_CHUNK_SIZE)
+          data = gzip_fp.read(GUNZIP_CHUNK_SIZE)
+    finally:
+      if gzip_fp:
+        gzip_fp.close()
 
     os.unlink(download_file_name)
 
