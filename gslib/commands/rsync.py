@@ -42,7 +42,6 @@ from gslib.util import TEN_MB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
-from gsutil import OutputAndExit
 
 SLOW_CRCMOD_WARNING = """
 WARNING: You have requested checksumming but your crcmod installation isn't
@@ -421,7 +420,7 @@ def _BatchSort(in_iter, out_file):
     out_file.writelines(heapq.merge(*chunk_files))
   except IOError as e:
     if e.errno == errno.EMFILE:
-      OutputAndExit('\n'.join(textwrap.wrap(
+      raise CommandException('\n'.join(textwrap.wrap(
           'Synchronization failed because too many open file handles were '
           'needed while building synchronization state. Please see the '
           'comments about rsync_buffer_lines in your .boto config file for a '
@@ -538,9 +537,6 @@ class _DiffIterator(object):
     """
     # One known way this can currently happen is when rsync'ing objects larger
     # than 5GB from S3 (for which the etag is not an MD5).
-    # TODO: implement reverse-engineered algorithm for S3's multi-part etag
-    # computation
-    # (http://permalink.gmane.org/gmane.comp.file-systems.s3.s3tools/583).
     if (StorageUrlFromString(url_str).IsCloudUrl()
         and crc32c == _NA and md5 == _NA):
       self.logger.warn(
