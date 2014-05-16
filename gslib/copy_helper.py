@@ -1638,13 +1638,18 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   hash_algs = GetUploadHashAlgs()
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
-  wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
-                                                hash_algs, upload_url, logger)
+  parallel_composite_upload = _ShouldDoParallelCompositeUpload(
+      allow_splitting, upload_url, dst_url, src_obj_size,
+      canned_acl=global_copy_helper_opts.canned_acl)
+
+  if not parallel_composite_upload:
+    # Parallel composite uploads calculate hashes per-object and then a crc32c
+    # checksum at the end.
+    wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
+                                                  hash_algs, upload_url, logger)
 
   try:
-    if _ShouldDoParallelCompositeUpload(
-        allow_splitting, upload_url, dst_url, src_obj_size,
-        canned_acl=global_copy_helper_opts.canned_acl):
+    if parallel_composite_upload:
       elapsed_time, uploaded_object = _DoParallelCompositeUpload(
           upload_stream, upload_url, dst_url, dst_obj_metadata,
           global_copy_helper_opts.canned_acl, upload_size, preconditions,
@@ -1672,17 +1677,18 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     # have already closed the original source stream.
     upload_stream.close()
 
-  try:
-    digests = _CreateDigestsFromDigesters(digesters)
-    _CheckHashes(logger, dst_url, uploaded_object, src_url.object_name,
-                 digests, is_upload=True)
-  except CommandException, e:
-    # If the digest doesn't match, delete the object.
-    if 'doesn\'t match cloud-supplied digest' in str(e):
-      gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
-                              generation=uploaded_object.generation,
-                              provider=dst_url.scheme)
-    raise
+  if not parallel_composite_upload:
+    try:
+      digests = _CreateDigestsFromDigesters(digesters)
+      _CheckHashes(logger, dst_url, uploaded_object, src_url.object_name,
+                   digests, is_upload=True)
+    except CommandException, e:
+      # If the digest doesn't match, delete the object.
+      if 'doesn\'t match cloud-supplied digest' in str(e):
+        gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
+                                generation=uploaded_object.generation,
+                                provider=dst_url.scheme)
+      raise
 
   result_url = dst_url.Clone()
 
