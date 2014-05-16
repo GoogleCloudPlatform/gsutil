@@ -32,7 +32,8 @@ _detailed_help_text = ("""
     prefer_api = json
 
   This will cause gsutil to use that API where possible (falling back to the
-  other API in cases as noted above).
+  other API in cases as noted above). This applies to the gsutil test command
+  as well; it will run integration tests against the preferred API.
 """)
 
 

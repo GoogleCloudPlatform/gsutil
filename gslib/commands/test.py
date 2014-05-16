@@ -47,7 +47,9 @@ _detailed_help_text = ("""
 <B>DESCRIPTION</B>
   The gsutil test command runs the gsutil unit tests and integration tests.
   The unit tests use an in-memory mock storage service implementation, while
-  the integration tests send requests to the production service.
+  the integration tests send requests to the production service using the
+  preferred API set in the boto configuration file (see "gsutil help apis" for
+  details).
 
   To run both the unit tests and integration tests, run the command with no
   arguments:
