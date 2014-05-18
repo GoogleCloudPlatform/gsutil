@@ -1745,6 +1745,14 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     download_file_name = file_name
     need_to_unzip = False
 
+  if download_file_name.endswith(dst_url.delim):
+    logger.warn('\n'.join(textwrap.wrap(
+        'Skipping attempt to download to filename ending with slash (%s). This '
+        'typically happens when using gsutil to download from a subdirectory '
+        'created by the Cloud Console (https://cloud.google.com/console)'
+        % download_file_name)))
+    return (0, 0, dst_url, '')
+
   # Set up hash digesters.
   hash_algs = GetDownloadHashAlgs(
       src_md5=src_obj_metadata.md5Hash,

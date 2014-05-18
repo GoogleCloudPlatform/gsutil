@@ -883,6 +883,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Copying file:', stderr)
 
+  def test_cp_object_ending_with_slash(self):
+    """Tests that cp works with object names ending with slash."""
+    tmpdir = self.CreateTempDir()
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='abc/',
+                      contents='dir')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='abc/def'),
+                      contents='def')
+    self.RunGsUtil(['cp', '-R', suri(bucket_uri), tmpdir])
+    # Check that files in the subdir got copied even though subdir object
+    # download was skipped.
+    with open(os.path.join(tmpdir, bucket_uri.bucket_name, 'abc', 'def')) as f:
+      self.assertEquals('def', '\n'.join(f.readlines()))
+
   def test_cp_without_read_access(self):
     """Tests that cp fails without read access to the object."""
     bucket_uri = self.CreateBucket()
