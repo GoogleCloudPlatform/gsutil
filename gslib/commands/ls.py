@@ -430,9 +430,8 @@ class LsCommand(Command):
         else:
           raise CommandException('Unknown listing style: %s' % listing_style)
 
-        (exp_objs, exp_bytes) = ls_helper.ExpandUrlAndPrint(storage_url)
-        if (storage_url.IsObject() and exp_objs == 0 and
-            ContainsWildcard(url_str)):
+        exp_dirs, exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
+        if storage_url.IsObject() and exp_objs == 0 and exp_dirs == 0:
           got_nomatch_errors = True
         total_bytes += exp_bytes
         total_objs += exp_objs

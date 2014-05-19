@@ -1326,7 +1326,8 @@ class BotoTranslation(CloudApi):
       return ServiceException(e.message, status=e.status, body=e.body)
 
     if isinstance(e, boto.exception.InvalidUriError):
-      if 'non-existent object' in e.message:
+      # Work around textwrap when searching for this string.
+      if 'non-existent object' in ' '.join(str(e).split()):
         return NotFoundException(e.message, status=404)
       return InvalidUrlError(e.message)
 

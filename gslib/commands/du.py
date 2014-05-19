@@ -244,7 +244,7 @@ class DuCommand(Command):
         if storage_url.IsBucket() and self.summary_only:
           storage_url = StorageUrlFromString(
               '%s://%s/**' % (storage_url.scheme, storage_url.bucket_name))
-        exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
+        _, exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
         if (storage_url.IsObject() and exp_objs == 0 and
             ContainsWildcard(url_arg) and not self.exclude_patterns):
           got_nomatch_errors = True

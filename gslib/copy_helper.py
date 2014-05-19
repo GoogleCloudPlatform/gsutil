@@ -2024,6 +2024,10 @@ def _CopyFileToFile(src_url, dst_url):
           dst_url, None)
 
 
+def _DummyTrackerCallback(_):
+  pass
+
+
 # pylint: disable=undefined-variable
 def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
                                 dst_obj_metadata, preconditions, gsutil_api,
@@ -2069,13 +2073,15 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size)
   else:
     # TODO: Actually support resuming uploads in the daisy chain case. We use
-    # resumable here for its good streaming implementation properties.
+    # resumable here for its good streaming implementation properties, but the
+    # tracker callback is a no-op.
     uploaded_object = gsutil_api.UploadObjectResumable(
         upload_fp, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
-        progress_callback=_FileCopyCallbackHandler(True, logger).call)
+        progress_callback=_FileCopyCallbackHandler(True, logger).call,
+        tracker_callback=_DummyTrackerCallback)
   end_time = time.time()
 
   try:

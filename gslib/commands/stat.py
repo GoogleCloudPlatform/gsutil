@@ -118,13 +118,14 @@ class StatCommand(Command):
           blr_iter = [BucketListingRef(url_str,
                                        BucketListingRefType.OBJECT, single_obj)]
         for blr in blr_iter:
-          arg_matches += 1
-          if logging.getLogger().isEnabledFor(logging.INFO):
-            PrintFullInfoAboutObject(blr, incl_acl=False)
+          if blr.ref_type == BucketListingRefType.OBJECT:
+            arg_matches += 1
+            if logging.getLogger().isEnabledFor(logging.INFO):
+              PrintFullInfoAboutObject(blr, incl_acl=False)
       except AccessDeniedException:
         print 'You aren\'t authorized to read %s - skipping' % url_str
       except InvalidUrlError:
-        return 1
+        raise
       except NotFoundException:
         pass
       if not arg_matches:

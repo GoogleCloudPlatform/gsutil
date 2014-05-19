@@ -458,7 +458,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
   def testAttemptCopyingToMultiMatchWildcard(self):
     """Attempts to copy where dst wildcard matches >1 obj."""
-    src_bucket_uri = self.CreateBucket()
+    src_bucket_uri = self.CreateBucket(test_objects=2)
     try:
       self.RunCommand('cp', [suri(src_bucket_uri, 'obj0'),
                              suri(src_bucket_uri, '*')])
@@ -524,7 +524,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('ls', [suri(src_bucket_uri, 'obj')])
     except CommandException, e:
-      self.assertIn('No such object', e.reason)
+      self.assertIn('matched no objects', e.reason)
 
   def testLsBucketNonRecursive(self):
     """Test that ls of a bucket returns expected results."""

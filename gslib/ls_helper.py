@@ -129,6 +129,7 @@ class LsHelper(object):
       (num_objects, num_bytes) total number of objects and bytes iterated.
     """
     num_objects = 0
+    num_dirs = 0
     num_bytes = 0
     print_newline = False
 
@@ -150,6 +151,7 @@ class LsHelper(object):
         if self._MatchesExcludedPattern(blr):
           continue
         if blr.ref_type == BucketListingRefType.OBJECT:
+          nd = 0
           no, nb = self._print_object_func(blr)
           print_newline = True
         elif blr.ref_type == BucketListingRefType.PREFIX:
@@ -161,15 +163,16 @@ class LsHelper(object):
             self._print_dir_header_func(blr)
           expansion_url_str = '%s/*' % StorageUrlFromString(
               blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
-          no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
+          nd, no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
           self._print_dir_summary_func(nb, blr)
         else:
           # We handle all buckets at the top level, so this should never happen.
           raise CommandException(
               'Sub-level iterator returned a CsBucketListingRef of type Bucket')
         num_objects += no
+        num_dirs += nd
         num_bytes += nb
-      return num_objects, num_bytes
+      return num_dirs, num_objects, num_bytes
 
   def _RecurseExpandUrlAndPrint(self, url_str, print_initial_newline=True):
     """Iterates over the given URL string and calls print functions.
@@ -184,6 +187,7 @@ class LsHelper(object):
       (num_objects, num_bytes) total number of objects and bytes iterated.
     """
     num_objects = 0
+    num_dirs = 0
     num_bytes = 0
     for blr in self._iterator_func(
         '%s' % url_str, all_versions=self.all_versions).IterAll(
@@ -193,6 +197,7 @@ class LsHelper(object):
         continue
 
       if blr.ref_type == BucketListingRefType.OBJECT:
+        nd = 0
         no, nb = self._print_object_func(blr)
       elif blr.ref_type == BucketListingRefType.PREFIX:
         if self.should_recurse:
@@ -204,19 +209,20 @@ class LsHelper(object):
           expansion_url_str = '%s/*' % StorageUrlFromString(
               blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
 
-          no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
+          nd, no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
           self._print_dir_summary_func(nb, blr)
         else:
-          no, nb = 0, 0
+          nd, no, nb = 1, 0, 0
           self._print_dir_func(blr)
       else:
         # We handle all buckets at the top level, so this should never happen.
         raise CommandException(
             'Sub-level iterator returned a bucketListingRef of type Bucket')
+      num_dirs += nd
       num_objects += no
       num_bytes += nb
 
-    return num_objects, num_bytes
+    return num_dirs, num_objects, num_bytes
 
   def _MatchesExcludedPattern(self, blr):
     """Checks bucket listing reference against patterns to exclude.

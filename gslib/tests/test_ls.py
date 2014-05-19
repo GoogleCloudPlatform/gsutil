@@ -124,6 +124,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         return_stderr=True, expected_status=1)
     self.assertIn('404', stderr)
 
+  def test_list_missing_object(self):
+    """Tests listing a non-existent object."""
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'missing')],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('matched no objects', stderr)
+
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket()
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
@@ -188,7 +195,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
     # TODO: When testcase setup can use JSON, match against the exact JSON
     # etag.
-    etag = obj_uri.get_key().etag
+    etag = obj_uri.get_key().etag.strip('"\'')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -289,14 +296,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertIn(
           'metageneration=%s' % key_uri.get_key().metageneration, stdout)
       if self.test_api == ApiSelector.XML:
-        self.assertIn(key_uri.get_key().etag, stdout)
+        self.assertIn(key_uri.get_key().etag.strip('"\''), stdout)
       else:
         # TODO: When testcase setup can use JSON, match against the exact JSON
         # etag.
         self.assertIn('etag=', stdout)
     elif self.default_provider == 's3':
       self.assertIn(key_uri.version_id, stdout)
-      self.assertIn(key_uri.get_key().etag, stdout)
+      self.assertIn(key_uri.get_key().etag.strip('"\''), stdout)
 
   def test_list_gzip_content_length(self):
     """Tests listing a gzipped object."""
