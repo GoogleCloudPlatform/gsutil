@@ -20,12 +20,10 @@ import errno
 import getopt
 import logging
 import os
-import pkgutil
 import re
 import signal
 import socket
 import sys
-import tempfile
 import textwrap
 import traceback
 
@@ -56,6 +54,9 @@ import gslib.exception
 from gslib.exception import CommandException
 import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
 from gslib.util import CreateLock
+from gslib.util import GetBotoConfigFileList
+from gslib.util import GetCertsFile
+from gslib.util import GetCleanupFiles
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
@@ -95,12 +96,9 @@ HTTP_WARNING = """
 debug = 0
 test_exception_traces = False
 
-# Temp files to delete, if possible, when program exits.
-cleanup_files = []
-
 
 def _Cleanup():
-  for fname in cleanup_files:
+  for fname in GetCleanupFiles():
     try:
       os.remove(fname)
     except OSError:
@@ -134,13 +132,13 @@ def _ConfigureLogging(level=logging.INFO):
 
 
 def main():
-  # These modules must be imported after importing gslib.__main__.
+  # Any modules used in initializing multiprocessing variables must be
+  # imported after importing gslib.__main__.
   # pylint: disable=redefined-outer-name,g-import-not-at-top
   import gslib.command
   import gslib.util
   from gslib.util import BOTO_IS_SECURE
   from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-  from gslib.util import GetBotoConfigFileList
   from oauth2_plugin import oauth2_client
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
@@ -196,28 +194,7 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  # If ca_certificates_file is configured use it; otherwise configure boto to
-  # use the cert roots distributed with gsutil.
-  if not boto.config.get_value('Boto', 'ca_certificates_file', None):
-    disk_certs_file = os.path.abspath(
-        os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
-    if not os.path.exists(disk_certs_file):
-      # If the file is not present on disk, this means the gslib module doesn't
-      # actually exist on disk anywhere. This can happen if it's being imported
-      # from a zip file. Unfortunately, we have to copy the certs file to a
-      # local temp file on disk because the underlying SSL socket requires it
-      # to be a filesystem path.
-      certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
-      if not certs_data:
-        raise gslib.exception.CommandException(
-            'Certificates file not found. Please reinstall gsutil from scratch')
-      fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
-      f = os.fdopen(fd, 'w')
-      f.write(certs_data)
-      f.close()
-      disk_certs_file = fname
-      cleanup_files.append(disk_certs_file)
-    boto.config.set('Boto', 'ca_certificates_file', disk_certs_file)
+  GetCertsFile()
 
   try:
     try:

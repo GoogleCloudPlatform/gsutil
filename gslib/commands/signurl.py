@@ -34,6 +34,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
+from gslib.util import GetNewHttp
 from gslib.util import NO_MAX
 
 try:
@@ -226,7 +227,7 @@ class UrlSignCommand(Command):
                                'HEAD', '', '',
                                int(time.time()) + 10,
                                gcs_path)
-    h = httplib2.Http()
+    h = GetNewHttp()
     try:
       response, _ = h.request(signed_url, 'HEAD')
 

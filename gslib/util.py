@@ -18,9 +18,11 @@ import errno
 import math
 import multiprocessing
 import os
+import pkgutil
 import re
 import struct
 import sys
+import tempfile
 import textwrap
 import threading
 import traceback
@@ -33,6 +35,7 @@ from boto.exception import NoAuthHandlerFound
 from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
+import httplib2
 from oauth2client.client import HAS_CRYPTO
 from retry_decorator import retry_decorator
 
@@ -89,6 +92,8 @@ _EXP_STRINGS = [
     (50, 'PB', 'Pbit', 'P'),
     (60, 'EB', 'Ebit', 'E'),
 ]
+
+configured_certs_file = None
 
 global manager  # pylint: disable=global-at-module-level
 
@@ -265,6 +270,58 @@ def GetBotoConfigFileList():
   for config_file in config_files:
     cf_list.append(config_file)
   return cf_list
+
+
+def GetCertsFile():
+  """Configures and returns the CA Certificates file.
+
+  If one is already configured, use it. Otherwise, amend the configuration
+  (in boto.config) to use the cert roots distributed with gsutil.
+
+  Returns:
+    string filename of the certs file to use.
+  """
+  certs_file = boto.config.get('Boto', 'ca_certificates_file', None)
+  if not certs_file:
+    if configured_certs_file:
+      disk_certs_file = configured_certs_file
+    else:
+      disk_certs_file = os.path.abspath(
+          os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
+      if not os.path.exists(disk_certs_file):
+        # If the file is not present on disk, this means the gslib module
+        # doesn't actually exist on disk anywhere. This can happen if it's
+        # being imported from a zip file. Unfortunately, we have to copy the
+        # certs file to a local temp file on disk because the underlying SSL
+        # socket requires it to be a filesystem path.
+        certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
+        if not certs_data:
+          raise CommandException('Certificates file not found. Please '
+                                 'reinstall gsutil from scratch')
+        fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
+        f = os.fdopen(fd, 'w')
+        f.write(certs_data)
+        f.close()
+        disk_certs_file = fname
+    certs_file = disk_certs_file
+  return certs_file
+
+
+def GetCleanupFiles():
+  """Returns a list of temp files to delete (if possible) when program exits."""
+  cleanup_files = []
+  if configured_certs_file:
+    cleanup_files.append(configured_certs_file)
+  return cleanup_files
+
+
+def GetNewHttp():
+  # Some installers don't package a certs file with httplib2, so use the
+  # one included with gsutil.
+  if GetCertsFile():
+    return httplib2.Http(ca_certs=GetCertsFile())
+  else:
+    return httplib2.Http()
 
 
 def _RoundToNearestExponent(num):

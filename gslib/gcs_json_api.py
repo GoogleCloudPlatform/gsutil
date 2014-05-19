@@ -14,17 +14,12 @@
 """JSON gsutil Cloud API implementation for Google Cloud Storage."""
 
 import json
-import os
-import pkgutil
-import tempfile
 
 import boto
 from boto import config
-import httplib2
 from oauth2_plugin import oauth2_helper
 from oauth2client import multistore_file
 
-import gslib
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import BadRequestException
@@ -58,7 +53,9 @@ from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import CALLBACK_PER_X_BYTES
+from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
+from gslib.util import GetNewHttp
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -118,9 +115,9 @@ class GcsJsonApi(CloudApi):
 
     self.credentials = credentials or loaded_credentials
 
-    self.certs_file = self._GetCertsFile()
+    self.certs_file = GetCertsFile()
 
-    self.http = self._GetNewHttp()
+    self.http = GetNewHttp()
 
     self.http.disable_ssl_certificate_validation = (not config.getbool(
         'Boto', 'https_validate_certificates'))
@@ -249,39 +246,13 @@ class GcsJsonApi(CloudApi):
           return None
         raise
 
-  # Some installers don't package a certs file with httplib2, so use the
-  # one included with gsutil.
-  def _GetNewHttp(self):
-    if self.certs_file:
-      return httplib2.Http(ca_certs=self.certs_file)
-    else:
-      return httplib2.Http()
-
   def _GetNewDownloadHttp(self, download_stream):
-    if self.certs_file:
+    certs_file = GetCertsFile()
+    if certs_file:
       return HttpWithDownloadStream(stream=download_stream,
-                                    ca_certs=self.certs_file)
+                                    ca_certs=certs_file)
     else:
       return HttpWithDownloadStream(stream=download_stream)
-
-  def _GetCertsFile(self):
-    # TODO: This code is shared with main, merge the implementations.
-    certs_file = boto.config.get('Boto', 'ca_certificates_file', None)
-    if not certs_file:
-      disk_certs_file = os.path.abspath(
-          os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
-      if not os.path.exists(disk_certs_file):
-        certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
-        if not certs_data:
-          raise CommandException('Certificates file not found. Please '
-                                 'reinstall gsutil from scratch')
-        fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
-        f = os.fdopen(fd, 'w')
-        f.write(certs_data)
-        f.close()
-        disk_certs_file = fname
-      certs_file = disk_certs_file
-    return certs_file
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -650,7 +621,7 @@ class GcsJsonApi(CloudApi):
         callback_per_bytes=callback_per_bytes,
         progress_callback=progress_callback)
 
-    upload_http = self._GetNewHttp()
+    upload_http = GetNewHttp()
     upload_http_class = callback_class_factory.GetConnectionClass()
     upload_http.connections = {'http': upload_http_class,
                                'https': upload_http_class}
