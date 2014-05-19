@@ -891,7 +891,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                       object_name='abc/',
                       contents='dir')
     self.CreateObject(bucket_uri=bucket_uri,
-                      object_name='abc/def'),
+                      object_name='abc/def',
                       contents='def')
     self.RunGsUtil(['cp', '-R', suri(bucket_uri), tmpdir])
     # Check that files in the subdir got copied even though subdir object
