@@ -218,18 +218,20 @@ class CloudApiDelegator(CloudApi):
         serialization_data=serialization_data, digesters=digesters)
 
   def UploadObject(self, upload_stream, object_metadata, size=None,
-                   canned_acl=None, preconditions=None, provider=None,
-                   fields=None):
+                   canned_acl=None, preconditions=None, progress_callback=None,
+                   provider=None, fields=None):
     return self._GetApi(provider).UploadObject(
         upload_stream, object_metadata, size=size, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields)
+        preconditions=preconditions, progress_callback=progress_callback,
+        fields=fields)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None, provider=None,
-                            fields=None):
+                            canned_acl=None, preconditions=None,
+                            progress_callback=None, provider=None, fields=None):
     return self._GetApi(provider).UploadObjectStreaming(
         upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields)
+        preconditions=preconditions, progress_callback=progress_callback,
+        fields=fields)
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,

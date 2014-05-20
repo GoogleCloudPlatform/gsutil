@@ -285,8 +285,8 @@ class CloudApi(object):
     raise NotImplementedError('GetObjectMedia must be overloaded')
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
-                   size=None, preconditions=None, provider=None,
-                   fields=None):
+                   size=None, preconditions=None, progress_callback=None,
+                   provider=None, fields=None):
     """Uploads object data and metadata.
 
     Args:
@@ -297,6 +297,9 @@ class CloudApi(object):
                   in object_metadata.
       size: Optional object size.
       preconditions: Preconditions for the request.
+      progress_callback: Optional callback function for progress notifications.
+                         Receives calls with arguments
+                         (bytes_transferred, total_size).
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
       fields: If present, return only these Object metadata fields.
@@ -311,7 +314,8 @@ class CloudApi(object):
     raise NotImplementedError('UploadObject must be overloaded')
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None, provider=None,
+                            canned_acl=None, preconditions=None,
+                            progress_callback=None, provider=None,
                             fields=None):
     """Uploads object data and metadata.
 
@@ -322,6 +326,10 @@ class CloudApi(object):
       canned_acl: Optional canned ACL to apply to object. Overrides ACL set
                   in object_metadata.
       preconditions: Preconditions for the request.
+      progress_callback: Optional callback function for progress notifications.
+                         Receives calls with arguments
+                         (bytes_transferred, total_size), but fills in only
+                         bytes_transferred.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
       fields: If present, return only these Object metadata fields.

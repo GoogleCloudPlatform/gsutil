@@ -1235,14 +1235,19 @@ class _FileCopyCallbackHandler(object):
 
   # pylint: disable=invalid-name
   def call(self, total_bytes_transferred, total_size):
-    # Use sys.stderr.write instead of self.logger.info so progress messages
-    # output on a single continuously overwriting line.
+    # Handle streaming case specially where we don't know the total size:
+    if total_size:
+      total_size_string = '/%s' % MakeHumanReadable(total_size)
+    else:
+      total_size_string = ''
     if self.logger.isEnabledFor(logging.INFO):
-      sys.stderr.write('%s: %s/%s    \r' % (
+      # Use sys.stderr.write instead of self.logger.info so progress messages
+      # output on a single continuously overwriting line.
+      sys.stderr.write('%s: %s%s    \r' % (
           self.announce_text,
           MakeHumanReadable(total_bytes_transferred),
-          MakeHumanReadable(total_size)))
-      if total_bytes_transferred == total_size:
+          total_size_string))
+      if total_size and total_bytes_transferred == total_size:
         sys.stderr.write('\n')
 
 
@@ -1429,7 +1434,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
 # pylint: disable=undefined-variable
 def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
                                     src_obj_size, dst_url, dst_obj_metadata,
-                                    preconditions, gsutil_api):
+                                    preconditions, gsutil_api, logger):
   """Uploads the file using a non-resumable strategy.
 
   Args:
@@ -1440,25 +1445,28 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     dst_obj_metadata: Metadata for the target object.
     preconditions: Preconditions for the upload, if any.
     gsutil_api: gsutil Cloud API instance to use for the upload.
+    logger: For outputting log messages.
 
   Returns:
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
+  progress_callback = _FileCopyCallbackHandler(True, logger).call
   start_time = time.time()
+
   if src_url.IsStream():
     # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
     uploaded_object = gsutil_api.UploadObjectStreaming(
         src_obj_filestream, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,
-        preconditions=preconditions, provider=dst_url.scheme,
-        fields=UPLOAD_RETURN_FIELDS)
+        preconditions=preconditions, progress_callback=progress_callback,
+        provider=dst_url.scheme, fields=UPLOAD_RETURN_FIELDS)
   else:
     uploaded_object = gsutil_api.UploadObject(
         src_obj_filestream, object_metadata=dst_obj_metadata,
-        canned_acl=global_copy_helper_opts.canned_acl,
-        preconditions=preconditions, provider=dst_url.scheme,
-        size=src_obj_size, fields=UPLOAD_RETURN_FIELDS)
+        canned_acl=global_copy_helper_opts.canned_acl, size=src_obj_size,
+        preconditions=preconditions, progress_callback=progress_callback,
+        provider=dst_url.scheme, fields=UPLOAD_RETURN_FIELDS)
   end_time = time.time()
   elapsed_time = end_time - start_time
 
@@ -1657,7 +1665,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     elif upload_size < ResumableThreshold() or src_url.IsStream():
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,
-          dst_obj_metadata, preconditions, gsutil_api)
+          dst_obj_metadata, preconditions, gsutil_api, logger)
     else:
       elapsed_time, uploaded_object = _UploadFileToObjectResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,

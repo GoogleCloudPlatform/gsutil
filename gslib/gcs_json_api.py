@@ -609,10 +609,9 @@ class GcsJsonApi(CloudApi):
 
     bytes_uploaded_container = BytesUploadedContainer()
 
-    callback_per_bytes = 0
+    callback_per_bytes = CALLBACK_PER_X_BYTES
     total_size = 0
     if progress_callback and size:
-      callback_per_bytes = CALLBACK_PER_X_BYTES
       total_size = size
       progress_callback(0, size)
 
@@ -710,21 +709,25 @@ class GcsJsonApi(CloudApi):
                                        object_name=object_metadata.name)
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
-                   size=None, preconditions=None, provider=None, fields=None):
+                   size=None, preconditions=None, progress_callback=None,
+                   provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     return self._UploadObject(
         upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields, size=size,
+        size=size, preconditions=preconditions,
+        progress_callback=progress_callback, fields=fields,
         apitools_strategy='simple')
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None, provider=None,
+                            canned_acl=None, preconditions=None,
+                            progress_callback=None, provider=None,
                             fields=None):
     """See CloudApi class for function doc strings."""
     # Streaming indicated by not passing a size.
     return self._UploadObject(
         upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields, apitools_strategy='simple')
+        preconditions=preconditions, progress_callback=progress_callback,
+        fields=fields, apitools_strategy='simple')
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,

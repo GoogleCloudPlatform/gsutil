@@ -132,10 +132,13 @@ def WrapUploadHttpRequest(upload_http):
   def NewRequest(uri, method='GET', body=None, headers=None,
                  redirections=httplib2.DEFAULT_MAX_REDIRECTS,
                  connection_type=None):
-    connection_type = connection_type if method == 'PUT' else None
+    if method == 'PUT' or method == 'POST':
+      override_connection_type = connection_type
+    else:
+      override_connection_type = None
     return request_orig(uri, method=method, body=body,
                         headers=headers, redirections=redirections,
-                        connection_type=connection_type)
+                        connection_type=override_connection_type)
   # Replace the request method with our own closure.
   upload_http.request = NewRequest
 

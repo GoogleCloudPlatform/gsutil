@@ -580,8 +580,11 @@ class BaseApiService(object):
     if upload is not None:
       http_response = upload.InitializeUpload(http_request, client=self._client)
     if http_response is None:
+      http = self.__client.http
+      if upload and upload.bytes_http:
+        http = upload.bytes_http
       http_response = http_wrapper.MakeRequest(
-          self.__client.http, http_request, retries=self.__client.num_retries)
+          http, http_request, retries=self.__client.num_retries)
 
     return self.ProcessHttpResponse(method_config, http_response)
 

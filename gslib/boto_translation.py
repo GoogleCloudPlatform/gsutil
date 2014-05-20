@@ -615,15 +615,15 @@ class BotoTranslation(CloudApi):
                                   generation=generation, fields=fields)
 
   def _PerformSimpleUpload(self, dst_uri, upload_stream, canned_acl=None,
-                           headers=None):
+                           progress_callback=None, headers=None):
     dst_uri.set_contents_from_file(upload_stream, policy=canned_acl,
-                                   headers=headers)
+                                   cb=progress_callback, headers=headers)
 
   def _PerformStreamingUpload(self, dst_uri, upload_stream, canned_acl=None,
-                              headers=None):
+                              progress_callback=None, headers=None):
     if dst_uri.get_provider().supports_chunked_transfer():
       dst_uri.set_contents_from_stream(upload_stream, policy=canned_acl,
-                                       headers=headers)
+                                       cb=progress_callback, headers=headers)
     else:
       # Provider doesn't support chunked transfer, so copy to a temporary
       # file.
@@ -731,15 +731,16 @@ class BotoTranslation(CloudApi):
                                        object_name=object_metadata.name)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None, provider=None,
-                            fields=None):
+                            canned_acl=None, progress_callback=None,
+                            preconditions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 
     try:
-      self._PerformStreamingUpload(dst_uri, upload_stream,
-                                   canned_acl=canned_acl, headers=headers)
+      self._PerformStreamingUpload(
+          dst_uri, upload_stream, canned_acl=canned_acl,
+          progress_callback=progress_callback, headers=headers)
       self._SetObjectAcl(object_metadata, dst_uri)
 
       new_key = dst_uri.get_key()
@@ -750,13 +751,15 @@ class BotoTranslation(CloudApi):
                                        object_name=object_metadata.name)
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
-                   preconditions=None, size=None, provider=None, fields=None):
+                   preconditions=None, size=None, progress_callback=None,
+                   provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 
     try:
       self._PerformSimpleUpload(dst_uri, upload_stream, canned_acl=canned_acl,
+                                progress_callback=progress_callback,
                                 headers=headers)
       self._SetObjectAcl(object_metadata, dst_uri)
 
