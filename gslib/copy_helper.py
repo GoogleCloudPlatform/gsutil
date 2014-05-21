@@ -160,8 +160,8 @@ MAX_TRACKER_FILE_NAME_LENGTH = 100
 # different paths (e.g., uploading a file to an object vs. downloading an
 # object to a file) could be split into separate files.
 
-# Chunk size to use while unzipping gzip files.
-GUNZIP_CHUNK_SIZE = 8192
+# Chunk size to use while zipping/unzipping gzip files.
+GZIP_CHUNK_SIZE = 8192
 
 
 class TrackerFileType(object):
@@ -1586,7 +1586,10 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
     gzip_fp = gzip.open(gzip_path, 'wb')
-    gzip_fp.writelines(src_obj_filestream)
+    data = src_obj_filestream.read(GZIP_CHUNK_SIZE)
+    while data:
+      gzip_fp.write(data)
+      data = src_obj_filestream.read(GZIP_CHUNK_SIZE)
   finally:
     if gzip_fp:
       gzip_fp.close()
@@ -1980,10 +1983,10 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     try:
       gzip_fp = gzip.open(download_file_name, 'rb')
       with open(file_name, 'wb') as f_out:
-        data = gzip_fp.read(GUNZIP_CHUNK_SIZE)
+        data = gzip_fp.read(GZIP_CHUNK_SIZE)
         while data:
           f_out.write(data)
-          data = gzip_fp.read(GUNZIP_CHUNK_SIZE)
+          data = gzip_fp.read(GZIP_CHUNK_SIZE)
     finally:
       if gzip_fp:
         gzip_fp.close()
