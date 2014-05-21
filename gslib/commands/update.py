@@ -123,14 +123,13 @@ class UpdateCommand(Command):
     Raises:
       CommandException: if files other than those distributed with gsutil found.
     """
-    # Manifest includes recursive-includes of gslib and scripts. Directly add
+    # Manifest includes recursive-includes of gslib. Directly add
     # those to the list here so we will skip them in os.listdir() loop without
     # having to build deeper handling of the MANIFEST file here. Also include
     # 'third_party', which isn't present in manifest but gets added to the
     # gsutil distro by the gsutil submodule configuration; and the MANIFEST.in
     # and CHANGES.md files.
-    manifest_lines = ['gslib', 'scripts', 'third_party', 'MANIFEST.in',
-                      'CHANGES.md']
+    manifest_lines = ['gslib', 'third_party', 'MANIFEST.in', 'CHANGES.md']
 
     try:
       with open(os.path.join(gslib.GSUTIL_DIR, 'MANIFEST.in'), 'r') as fp:

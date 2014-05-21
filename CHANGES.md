@@ -19,7 +19,7 @@ Major New Gsutil Version - Backwards-Incompatible Changes
   credentials configured simultaneously will now fail with an error message
   to avoid confusion.  Also, a single invalid credential will fail with an
   error message.  See "gsutil help creds" for details.
-- Bucket relocate scripts have been temporarily removed.
+- Bucket relocate scripts have been removed.
 - Downloading object names ending with '/' is no longer supported to avoid
   problems this caused for directores using the Google Cloud Console.
 - rm -r now implies rm -ra (removing all object versions recursively).
