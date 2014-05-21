@@ -38,12 +38,3 @@ For community support, visit:
 
 https://developers.google.com/storage/docs/resources-support#community
 
-## Scripts
-
-The scripts directory contains useful scripts built atop gsutil.
-
-### Bucket Relocation
-
-The `bucket_relocate.sh` script can be used to migrate one or more buckets to a
-different location and/or storage class. Detailed instructions are provided
-if you run the script with no arguments.
