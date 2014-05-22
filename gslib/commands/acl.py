@@ -112,9 +112,10 @@ _SET_DESCRIPTION = """
     -a          Performs "acl set" request on all object versions.
 
     -f          Normally gsutil stops at the first error. The -f option causes
-                it to continue when it encounters errors. With this option the
-                gsutil exit status will be 0 even if some ACLs couldn't be
-                set.
+                it to continue when it encounters errors. If some of the ACLs
+                couldn't be set, gsutil's exit status will be non-zero even if
+                this flag is set. This option is implicitly set when running
+                "gsutil -m acl...".
 """
 
 _CH_DESCRIPTION = """

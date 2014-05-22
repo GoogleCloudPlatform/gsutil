@@ -270,7 +270,6 @@ class TestCommandRunnerIntegrationTests(
   def tearDown(self):
     """Tears down the command runner mock objects."""
     super(TestCommandRunnerIntegrationTests, self).tearDown()
-
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
         self.previous_update_file)
     command_runner.raw_input = raw_input

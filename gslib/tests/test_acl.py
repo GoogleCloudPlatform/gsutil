@@ -518,6 +518,22 @@ class TestAcl(TestAclBase):
     stderr = self.RunGsUtil(['acl'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
+  def testMinusF(self):
+    """Tests -f option to continue after failure."""
+    bucket_uri = self.CreateBucket()
+    obj_uri = suri(self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                     contents='foo'))
+    acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
+                                return_stdout=True)
+    inpath = self.CreateTempFile(contents=acl_string)
+    self.RunGsUtil(self._set_acl_prefix +
+                   ['-f', 'public-read', suri(bucket_uri) + 'foo2', obj_uri],
+                   expected_status=1)
+    acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
+                                 return_stdout=True)
+
+    self.assertNotEqual(acl_string, acl_string2)
+
 
 class TestS3CompatibleAcl(TestAclBase):
   """ACL integration tests that work for s3 and gs URLs."""

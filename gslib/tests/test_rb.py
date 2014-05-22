@@ -45,7 +45,7 @@ class TestRb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil([
         'rb', '-f', 'gs://%s' % self.nonexistent_bucket_name,
-        suri(bucket_uri)], return_stderr=True)
+        suri(bucket_uri)], return_stderr=True, expected_status=1)
     # There should be no error output, and existing bucket named after
     # non-existent bucket should be gone.
     self.assertNotIn('bucket does not exist.', stderr)

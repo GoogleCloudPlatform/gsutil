@@ -27,6 +27,7 @@ import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
 from gslib.command import Command
+from gslib.command import GetFailureCount
 from gslib.command import OLD_ALIAS_MAP
 from gslib.command import ShutDownGsutil
 import gslib.commands
@@ -191,11 +192,13 @@ class CommandRunner(object):
         self, args, headers, debug, parallel_operations,
         self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
         test_method, logging_filters, command_alias_used=command_name)
-    return_values = command_inst.RunCommand()
+    return_code = command_inst.RunCommand()
 
     if MultiprocessingIsAvailable()[0] and do_shutdown:
       ShutDownGsutil()
-    return return_values
+    if GetFailureCount() > 0:
+      return_code = 1
+    return return_code
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update and offers one if needed.

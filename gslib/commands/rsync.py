@@ -177,8 +177,9 @@ _detailed_help_text = ("""
                 if either src_url or dst_url are on the local file system.
 
   -C            If an error occurs, continue to attempt to copy the remaining
-                files. Note that this option is always true when running
-                "gsutil -m rsync".
+                files. If errors occurred, gsutil's exit status will be non-zero
+                even if this flag is set. This option is implicitly set when
+                running "gsutil -m rsync...".
 
   -e            Exclude symlinks. When specified, symbolic links will be
                 ignored.

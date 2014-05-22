@@ -37,8 +37,8 @@ _detailed_help_text = ("""
 
 <B>OPTIONS</B>
   -f          Continues silently (without printing error messages) despite
-              errors when removing buckets. With this option the gsutil
-              exit status will be 0 even if some buckets couldn't be removed.
+              errors when removing buckets. If some buckets couldn't be removed,
+              gsutil's exit status will be non-zero even if this flag is set.
 """)
 
 
@@ -79,6 +79,7 @@ class RbCommand(Command):
           self.continue_on_error = True
 
     did_some_work = False
+    some_failed = False
     for url_str in self.args:
       wildcard_url = StorageUrlFromString(url_str)
       if wildcard_url.IsObject():
@@ -93,6 +94,7 @@ class RbCommand(Command):
         # in memory at once.
         blrs = list(self.WildcardIterator(url_str).IterBuckets())
       except:
+        some_failed = True
         if self.continue_on_error:
           continue
         else:
@@ -118,5 +120,5 @@ class RbCommand(Command):
         did_some_work = True
     if not did_some_work:
       raise CommandException('No URLs matched')
-    return 0
+    return 1 if some_failed else 0
 

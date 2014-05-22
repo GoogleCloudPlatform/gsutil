@@ -1319,3 +1319,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
+
+  def test_cp_minus_c(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='foo')
+    self.RunGsUtil(
+        ['cp', '-c', suri(bucket_uri) + '/foo2', suri(object_uri),
+         suri(bucket_uri) + '/dir/'],
+        expected_status=1)
+    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])

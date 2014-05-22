@@ -337,8 +337,9 @@ OPTIONS_TEXT = """
                   'gsutil help acls' for further details.
 
   -c             If an error occurrs, continue to attempt to copy the remaining
-                 files. Note that this option is always true when running
-                 "gsutil -m cp".
+                 files. If any copies were unsuccessful, gsutil's exit status
+                 will be non-zero even if this flag is set. This option is
+                 implicitly set when running "gsutil -m cp...".
 
   -D             Copy in "daisy chain" mode, i.e., copying between two buckets
                  by hooking a download to an upload, via the machine where
@@ -759,7 +760,8 @@ class CpCommand(Command):
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
     self.Apply(_CopyFuncWrapper, name_expansion_iterator,
-               _CopyExceptionHandler, shared_attrs, fail_on_error=True)
+               _CopyExceptionHandler, shared_attrs,
+               fail_on_error=(not self.continue_on_error))
     self.logger.debug(
         'total_bytes_transferred: %d', self.total_bytes_transferred)
 

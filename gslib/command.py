@@ -186,7 +186,7 @@ global manager, consumer_pools, task_queues, caller_id_lock, caller_id_counter
 global total_tasks, call_completed_map, global_return_values_map
 global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
 global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-global class_map, worker_checking_level_lock
+global class_map, worker_checking_level_lock, failure_count
 
 
 def InitializeMultiprocessingVariables():
@@ -203,7 +203,7 @@ def InitializeMultiprocessingVariables():
   global total_tasks, call_completed_map, global_return_values_map
   global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
   global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-  global class_map, worker_checking_level_lock
+  global class_map, worker_checking_level_lock, failure_count
 
   manager = multiprocessing.Manager()
 
@@ -251,6 +251,9 @@ def InitializeMultiprocessingVariables():
 
   # Map from caller_id to calling class.
   class_map = manager.dict()
+
+  # Number of tasks that resulted in an exception in calls to Apply().
+  failure_count = multiprocessing.Value('i', 0)
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -1028,13 +1031,14 @@ class Command(HelpProvider):
 
       if is_main_thread:
         # pylint: disable=global-variable-undefined
-        global global_return_values_map, shared_vars_map
+        global global_return_values_map, shared_vars_map, failure_count
         global caller_id_finished_count, shared_vars_list_map
         global_return_values_map = BasicIncrementDict()
         global_return_values_map.Put(caller_id, [])
         shared_vars_map = BasicIncrementDict()
         caller_id_finished_count = BasicIncrementDict()
         shared_vars_list_map = {}
+        failure_count = 0
 
     # If any shared attributes passed by caller, create a dictionary of
     # shared memory variables for every element in the list of shared
@@ -1099,6 +1103,7 @@ class Command(HelpProvider):
       except StopIteration, e:
         break
       except Exception, e:  # pylint: disable=broad-except
+        _IncrementFailureCount()
         if fail_on_error:
           raise
         else:
@@ -1441,6 +1446,7 @@ class ProducerThread(threading.Thread):
         except StopIteration, e:
           break
         except Exception, e:  # pylint: disable=broad-except
+          _IncrementFailureCount()
           if self.fail_on_error:
             self.iterator_exception = e
             raise
@@ -1571,6 +1577,7 @@ class WorkerThread(threading.Thread):
       if task.should_return_results:
         global_return_values_map.Update(caller_id, [results], default_value=[])
     except Exception, e:  # pylint: disable=broad-except
+      _IncrementFailureCount()
       if task.fail_on_error:
         raise  # Only happens for single thread and process case.
       else:
@@ -1686,3 +1693,32 @@ def ShutDownGsutil():
   for consumer_pool in consumer_pools:
     consumer_pool.ShutDown()
 
+def _IncrementFailureCount():
+  global failure_count
+  if isinstance(failure_count, int):
+    failure_count += 1
+  else:  # Otherwise it's a multiprocessing.Value() of type 'i'.
+    failure_count.value += 1
+
+
+def GetFailureCount():
+  """Returns the number of failures processed during calls to Apply()."""
+  try:
+    if isinstance(failure_count, int):
+      return failure_count
+    else:  # It's a multiprocessing.Value() of type 'i'.
+      return failure_count.value
+  except NameError:  # If it wasn't initialized, Apply() wasn't called.
+    return 0
+
+
+def ResetFailureCount():
+  """Resets the failure_count variable to 0 - useful if error is expected."""
+  try:
+    global failure_count
+    if isinstance(failure_count, int):
+      failure_count = 0
+    else:  # It's a multiprocessing.Value() of type 'i'.
+      failure_count = multiprocessing.Value('i', 0)
+  except NameError:  # If it wasn't initialized, Apply() wasn't called.
+    pass

@@ -151,8 +151,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                                    contents='foo')
     self.RunGsUtil(['rm', '%s/missing' % suri(bucket_uri),
                     suri(object_uri)], expected_status=1)
-    stderr = self.RunGsUtil(['rm', '-f', '%s/missing' % suri(bucket_uri),
-                             suri(object_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['rm', '-f', '%s/missing' % suri(bucket_uri), suri(object_uri)],
+        return_stderr=True, expected_status=1)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     self.RunGsUtil(['stat', suri(object_uri)], expected_status=1)
 
@@ -172,8 +173,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = bucket_uri.clone_replace_name('foo')
     key_uri.set_contents_from_string('bar')
-    stderr = self.RunGsUtil(['rm', '-af', suri(key_uri), '%s/missing'
-                             % suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['rm', '-af', suri(key_uri), '%s/missing' % suri(bucket_uri)],
+        return_stderr=True, expected_status=1)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
