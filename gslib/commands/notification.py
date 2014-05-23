@@ -37,8 +37,8 @@ _SYNOPSIS = _WATCHBUCKET_SYNOPSIS + _STOPCHANNEL_SYNOPSIS.lstrip('\n')
 
 _WATCHBUCKET_DESCRIPTION = """
 <B>WATCHBUCKET</B>
-  The watchbucket sub-command can be used to watch a bucket for object
-  changes.
+  The watchbucket sub-command can be used to watch a bucket for object changes.
+  A service account must be used when running this command.
 
   The app_url parameter must be an HTTPS URL to an application that will be
   notified of changes to any object in the bucket. The URL endpoint must be
@@ -118,7 +118,9 @@ You attempted to watch a bucket with an application URL of:
 
   {watch_url}
 
-which is not authorized for your project. Notification endpoint URLs must be
+which is not authorized for your project. Please ensure that you are using
+Service Account authentication and that the Service Account's project is
+authorized for the application URL. Notification endpoint URLs must also be
 whitelisted in your Cloud Console project. To do that, the domain must also be
 verified using Google Webmaster Tools. For instructions, please see:
 
