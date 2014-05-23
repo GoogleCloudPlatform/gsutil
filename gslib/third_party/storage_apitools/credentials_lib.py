@@ -171,15 +171,18 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
         'http://metadata.google.internal/computeMetadata/v1/instance/'
         'service-accounts/%s/token') % self.__service_account_name
     extra_headers = {'X-Google-Metadata-Request': 'True'}
-    response, content = do_request(token_uri, headers=extra_headers)
-    if response.status != httplib.OK:
-      raise exceptions.CredentialsError(
-          'Error refreshing credentials: %s' % content)
+    request = urllib2.Request(token_uri, headers=extra_headers)
+    try:
+      content = urllib2.urlopen(request).read()
+    except urllib2.URLError as e:
+      raise exceptions.CommunicationError(
+          'Could not reach metadata service: %s' % e.reason)
     try:
       credential_info = json.loads(content)
     except ValueError:
       raise exceptions.CredentialsError(
-          'Invalid credentials response: %s' % content)
+          'Invalid credentials response: uri %s' % token_uri)
+
     self.access_token = credential_info['access_token']
 
 
