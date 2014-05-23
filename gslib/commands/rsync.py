@@ -51,18 +51,24 @@ installing the extension, please see:
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil rsync [-c] [-C] [-e] [-n] [-p] [-R] src_url dst_url
+  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-R] src_url dst_url
 
 
 <B>DESCRIPTION</B>
   The gsutil rsync command makes the contents under dst_url the same as the
-  contents under src_url, by copying any missing files/objects, and removing
-  any extra files/objects. For example, to make gs://mybucket/data match the
-  contents of the local directory "data" you could do:
+  contents under src_url, by copying any missing files/objects, and (if the
+  -d option is specified) deleting any extra files/objects. For example, to
+  make gs://mybucket/data match the contents of the local directory "data"
+  you could do:
 
-    gsutil rsync data gs://mybucket/data
+    gsutil rsync -d data gs://mybucket/data
 
   To recurse into directories use the -r option:
+
+    gsutil rsync -d -r data gs://mybucket/data
+
+  To copy only new/changed files without deleting extra files from
+  gs://mybucket/data leave off the -d option:
 
     gsutil rsync -r data gs://mybucket/data
 
@@ -70,7 +76,7 @@ _detailed_help_text = ("""
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   synchronization:
 
-    gsutil -m rsync -r data gs://mybucket/data
+    gsutil -m rsync -d -r data gs://mybucket/data
 
   The -m option typically will provide a large performance boost if either the
   source or destination (or both) is a cloud URL. If both source and
@@ -80,28 +86,28 @@ _detailed_help_text = ("""
   To make the local directory "data" the same as the contents of
   gs://mybucket/data:
 
-    gsutil rsync -r gs://mybucket/data data
+    gsutil rsync -d -r gs://mybucket/data data
 
   To make the contents of gs://mybucket2 the same as gs://mybucket1:
 
-    gsutil rsync -r gs://mybucket1 gs://mybucket2
+    gsutil rsync -d -r gs://mybucket1 gs://mybucket2
 
   To mirror your content across clouds:
 
-    gsutil rsync -r gs://my-gs-bucket s3://my-s3-bucket
+    gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
 
   You can also mirror data across local directories:
 
-    gsutil rsync -r dir1 dir2
+    gsutil rsync -d -r dir1 dir2
 
 
 <B>FAILURE HANDLING</B>
   The rsync command will retry when failures occur, but if enough failures
-  happen during a particular copy or remove operation the command will skip that
+  happen during a particular copy or delete operation the command will skip that
   object and move on. At the end of the synchronization run if any failures were
   not successfully retried, the rsync command will report the count of failures,
   and exit with non-zero status. At this point you can run the rsync command
-  again, and it will attempt any remaining needed copy and/or remove operations.
+  again, and it will attempt any remaining needed copy and/or delete operations.
 
   Note that there are cases where retrying will never succeed, such as if you
   don't have write permission to the destination bucket or if the destination
@@ -180,6 +186,9 @@ _detailed_help_text = ("""
                 files. If errors occurred, gsutil's exit status will be non-zero
                 even if this flag is set. This option is implicitly set when
                 running "gsutil -m rsync...".
+
+  -d            Delete extra files under dst_url not found under src_url. By
+                default extra files are not deleted.
 
   -e            Exclude symlinks. When specified, symbolic links will be
                 ignored.
@@ -442,6 +451,7 @@ class _DiffIterator(object):
   def __init__(self, command_obj, base_src_url, base_dst_url):
     self.command_obj = command_obj
     self.compute_checksums = command_obj.compute_checksums
+    self.delete_extras = command_obj.delete_extras
     self.recursion_requested = command_obj.recursion_requested
     self.logger = self.command_obj.logger
     self.base_src_url = base_src_url
@@ -634,8 +644,10 @@ class _DiffIterator(object):
             src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
-        # dst object without a corresponding src object, so remove dst.
-        yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
+        # dst object without a corresponding src object, so remove dst if -d
+        # option was specified.
+        if self.delete_extras:
+          yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -650,7 +662,10 @@ class _DiffIterator(object):
           yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY)
           dst_url_str = None
 
-    # Any files/objects left in dst iteration should be removed.
+    # If -d option specified any files/objects left in dst iteration should be
+    # removed.
+    if not self.delete_extras:
+      return
     if dst_url_str:
       yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
       dst_url_str = None
@@ -711,7 +726,7 @@ class RsyncCommand(Command):
       command_name_aliases=[],
       min_args=2,
       max_args=2,
-      supported_sub_args='cCenprR',
+      supported_sub_args='cCdenprR',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -790,6 +805,7 @@ class RsyncCommand(Command):
     # continue_on_error is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
+    self.delete_extras = False
     preserve_acl = False
     self.compute_checksums = False
     self.dryrun = False
@@ -805,6 +821,8 @@ class RsyncCommand(Command):
         # command options).
         elif o == '-C':
           self.continue_on_error = True
+        elif o == '-d':
+          self.delete_extras = True
         elif o == '-e':
           self.exclude_symlinks = True
         elif o == '-n':

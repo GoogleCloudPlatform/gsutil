@@ -13,8 +13,8 @@
 # limitations under the License.
 """Integration tests for rsync command."""
 
-import crcmod
 import os
+import crcmod
 
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -92,6 +92,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rsync', tmpdir, suri(obj1), self.nonexistent_bucket_name],
                    expected_status=1)
 
+  # Note: The tests below exercise the cases
+  # {src_dir, src_bucket} X {dst_dir, dst_bucket}. We use gsutil rsync -d for
+  # all the cases but then have just one test without -d (test_bucket_to_bucket)
+  # as representative of handling without the -d option. This provides
+  # reasonable test coverage because the -d handling it src/dest URI-type
+  # independent, and keeps the test case combinations more manageable.
+
   def test_bucket_to_bucket(self):
     """Tests that flat and recursive rsync between 2 buckets works correctly."""
     # Create 2 buckets with 1 overlapping object, 1 extra object at root level
@@ -122,11 +129,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/obj2', '/subdir/obj3']))
-      # Second bucket should have content like first bucket but without the
+      # Second bucket should have new objects added from source bucket (without
+      # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
-      # Assert that the src/dest objects that had same length but different were
-      # correctly synchronized (bucket to bucket sync uses checksums).
+      self.assertEquals(listing2,
+                        set(['/obj1', '/obj2', '/obj4', '/subdir/obj5']))
+      # Assert that the src/dest objects that had same length but different
+      # content were correctly synchronized (bucket to bucket sync uses
+      # checksums).
       self.assertEquals('obj2', self.RunGsUtil(
           ['cat', suri(bucket1_uri, 'obj2')], return_stdout=True))
       self.assertEquals('obj2', self.RunGsUtil(
@@ -153,9 +163,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj2', '/obj6', '/subdir/obj3']))
-      # Second bucket should have content like first bucket but without the
+      # Second bucket should have objects tha were newly added to first bucket
+      # (wihout removing extraneous dest bucket objects), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing2, set(['/obj1', '/obj2', '/obj4', '/obj6',
+                                       '/obj7', '/subdir/obj3',
+                                       '/subdir/obj5']))
     _Check2()
 
     # Check that re-running the same rsync command causes no more changes.
@@ -163,9 +176,83 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         ['rsync', '-r', suri(bucket1_uri), suri(bucket2_uri)],
         return_stderr=True))
 
+  def test_bucket_to_bucket_minus_d(self):
+    """Tests that flat and recursive rsync between 2 buckets works correctly."""
+    # Create 2 buckets with 1 overlapping object, 1 extra object at root level
+    # in each, and 1 extra object 1 level down in each. Make the overlapping
+    # objects named the same but with different content, to test that we detect
+    # and properly copy in that case.
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
+                      contents='obj1')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj2',
+                      contents='obj2')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
+                      contents='subdir/obj3')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj2',
+                      contents='OBJ2')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
+                      contents='obj4')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
+                      contents='subdir/obj5')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Tests rsync works as expected."""
+      self.RunGsUtil(['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)])
+      listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
+      listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
+      # First bucket should have un-altered content.
+      self.assertEquals(listing1, set(['/obj1', '/obj2', '/subdir/obj3']))
+      # Second bucket should have content like first bucket but without the
+      # subdir objects synchronized.
+      self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
+      # Assert that the src/dest objects that had same length but different
+      # content were correctly synchronized (bucket to bucket sync uses
+      # checksums).
+      self.assertEquals('obj2', self.RunGsUtil(
+          ['cat', suri(bucket1_uri, 'obj2')], return_stdout=True))
+      self.assertEquals('obj2', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, 'obj2')], return_stdout=True))
+    _Check1()
+
+    # Check that re-running the same rsync command causes no more changes.
+    self.assertEquals(NO_CHANGES, self.RunGsUtil(
+        ['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
+
+    # Now add and remove some objects in each bucket and test rsync -r.
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
+                      contents='obj6')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj7',
+                      contents='obj7')
+    self.RunGsUtil(['rm', suri(bucket1_uri, 'obj1')])
+    self.RunGsUtil(['rm', suri(bucket2_uri, 'obj2')])
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      self.RunGsUtil(['rsync', '-d', '-r',
+                      suri(bucket1_uri), suri(bucket2_uri)])
+      listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
+      listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
+      # First bucket should have un-altered content.
+      self.assertEquals(listing1, set(['/obj2', '/obj6', '/subdir/obj3']))
+      # Second bucket should have content like first bucket but without the
+      # subdir objects synchronized.
+      self.assertEquals(listing2, set(['/obj2', '/obj6', '/subdir/obj3']))
+    _Check2()
+
+    # Check that re-running the same rsync command causes no more changes.
+    self.assertEquals(NO_CHANGES, self.RunGsUtil(
+        ['rsync', '-d', '-r', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
+
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
-  def test_dir_to_bucket(self):
+  def test_dir_to_bucket_minus_d(self):
     """Tests that flat and recursive rsync dir to bucket works correctly."""
     # Create dir and bucket with 1 overlapping object, 1 extra object at root
     # level in each, and 1 extra object 1 level down in each. Make the
@@ -189,7 +276,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -197,9 +284,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Bucket should have content like dir but without the subdir objects
       # synchronized.
       self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
-      # Assert that the src/dest objects that had same length but different were
-      # not synchronized (dir to bucket sync doesn't use checksums unless you
-      # specify -c).
+      # Assert that the src/dest objects that had same length but different
+      # content were not synchronized (dir to bucket sync doesn't use checksums
+      # unless you specify -c).
       with open(os.path.join(tmpdir, 'obj2')) as f:
         self.assertEquals('obj2', '\n'.join(f.readlines()))
       self.assertEquals('OBJ2', self.RunGsUtil(
@@ -208,14 +295,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', tmpdir, suri(bucket_uri)], return_stderr=True))
+        ['rsync', '-d', tmpdir, suri(bucket_uri)], return_stderr=True))
 
     # Now rerun the sync with the -c option.
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       """Tests rsync -c works as expected."""
-      self.RunGsUtil(['rsync', '-c', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', '-c', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -223,8 +310,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Bucket should have content like dir but without the subdir objects
       # synchronized.
       self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
-      # Assert that the src/dest objects that had same length but different were
-      # synchronized (dir to bucket sync with -c uses checksums).
+      # Assert that the src/dest objects that had same length but different
+      # content were synchronized (dir to bucket sync with -c uses checksums).
       with open(os.path.join(tmpdir, 'obj2')) as f:
         self.assertEquals('obj2', '\n'.join(f.readlines()))
       self.assertEquals('obj2', self.RunGsUtil(
@@ -233,7 +320,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-c', tmpdir, suri(bucket_uri)], return_stderr=True))
+        ['rsync', '-d', '-c', tmpdir, suri(bucket_uri)], return_stderr=True))
 
     # Now add and remove some objects in dir and bucket and test rsync -r.
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents='obj6')
@@ -245,7 +332,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
-      self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', '-r', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -257,11 +344,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-r', tmpdir, suri(bucket_uri)], return_stderr=True))
+        ['rsync', '-d', '-r', tmpdir, suri(bucket_uri)], return_stderr=True))
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
-  def test_dir_to_dir(self):
+  def test_dir_to_dir_minus_d(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
     # level in each, and 1 extra file 1 level down in each. Make the
@@ -282,7 +369,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(
         tmpdir=subdir2, file_name='obj5', contents='subdir2/obj5')
 
-    self.RunGsUtil(['rsync', tmpdir1, tmpdir2])
+    self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
@@ -300,10 +387,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', tmpdir1, tmpdir2], return_stderr=True))
+        ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
 
     # Now rerun the sync with the -c option.
-    self.RunGsUtil(['rsync', '-c', tmpdir1, tmpdir2])
+    self.RunGsUtil(['rsync', '-d', '-c', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
@@ -311,8 +398,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # dir2 should have content like dir but without the subdir objects
     # synchronized.
     self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir2/obj5']))
-    # Assert that the src/dest objects that had same length but different were
-    # synchronized (dir to dir sync with -c uses checksums).
+    # Assert that the src/dest objects that had same length but different
+    # content were synchronized (dir to dir sync with -c uses checksums).
     with open(os.path.join(tmpdir1, 'obj2')) as f:
       self.assertEquals('obj2', '\n'.join(f.readlines()))
     with open(os.path.join(tmpdir1, 'obj2')) as f:
@@ -320,7 +407,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-c', tmpdir1, tmpdir2], return_stderr=True))
+        ['rsync', '-d', '-c', tmpdir1, tmpdir2], return_stderr=True))
 
     # Now add and remove some objects in both dirs and test rsync -r.
     self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6')
@@ -328,7 +415,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     os.unlink(os.path.join(tmpdir1, 'obj1'))
     os.unlink(os.path.join(tmpdir2, 'obj2'))
 
-    self.RunGsUtil(['rsync', '-r', tmpdir1, tmpdir2])
+    self.RunGsUtil(['rsync', '-d', '-r', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
@@ -339,9 +426,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-r', tmpdir1, tmpdir2], return_stderr=True))
+        ['rsync', '-d', '-r', tmpdir1, tmpdir2], return_stderr=True))
 
-  def test_dir_to_dir_more_files_than_bufsize(self):
+  def test_dir_to_dir_minus_d_more_files_than_bufsize(self):
     """Tests concurrently building listing from multiple tmp file ranges."""
     # Create 2 dirs, where each dir has 1000 objects and differing names.
     tmpdir1 = self.CreateTempDir()
@@ -352,18 +439,18 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Run gsutil with config option to make buffer size << # files.
     self.RunGsUtil(
-        ['-o GSUtil:rsync_buffer_lines=2', 'rsync', tmpdir1, tmpdir2])
+        ['-o GSUtil:rsync_buffer_lines=2', 'rsync', '-d', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     self.assertEquals(listing1, listing2)
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', tmpdir1, tmpdir2], return_stderr=True))
+        ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
-  def test_bucket_to_dir(self):
+  def test_bucket_to_dir_minus_d(self):
     """Tests that flat and recursive rsync bucket to dir works correctly."""
     # Create bucket and dir with 1 overlapping object, 1 extra object at root
     # level in each, and 1 extra object 1 level down in each. Make the
@@ -387,7 +474,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', suri(bucket_uri), tmpdir])
+      self.RunGsUtil(['rsync', '-d', suri(bucket_uri), tmpdir])
       listing1 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
@@ -395,9 +482,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Dir should have content like bucket but without the subdir objects
       # synchronized.
       self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
-      # Assert that the src/dest objects that had same length but different were
-      # not synchronized (bucket to dir sync doesn't use checksums unless you
-      # specify -c).
+      # Assert that the src/dest objects that had same length but different
+      # content were not synchronized (bucket to dir sync doesn't use checksums
+      # unless you specify -c).
       self.assertEquals('obj2', self.RunGsUtil(
           ['cat', suri(bucket_uri, 'obj2')], return_stdout=True))
       with open(os.path.join(tmpdir, 'obj2')) as f:
@@ -406,14 +493,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', suri(bucket_uri), tmpdir], return_stderr=True))
+        ['rsync', '-d', suri(bucket_uri), tmpdir], return_stderr=True))
 
     # Now rerun the sync with the -c option.
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       """Tests rsync -c works as expected."""
-      self.RunGsUtil(['rsync', '-c', suri(bucket_uri), tmpdir])
+      self.RunGsUtil(['rsync', '-d', '-c', suri(bucket_uri), tmpdir])
       listing1 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
@@ -421,8 +508,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Dir should have content like bucket but without the subdir objects
       # synchronized.
       self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj5']))
-      # Assert that the src/dest objects that had same length but different were
-      # synchronized (bucket to dir sync with -c uses checksums).
+      # Assert that the src/dest objects that had same length but different
+      # content were synchronized (bucket to dir sync with -c uses checksums).
       self.assertEquals('obj2', self.RunGsUtil(
           ['cat', suri(bucket_uri, 'obj2')], return_stdout=True))
       with open(os.path.join(tmpdir, 'obj2')) as f:
@@ -431,7 +518,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-c', suri(bucket_uri), tmpdir], return_stderr=True))
+        ['rsync', '-d', '-c', suri(bucket_uri), tmpdir], return_stderr=True))
 
     # Now add and remove some objects in dir and bucket and test rsync -r.
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
@@ -443,7 +530,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
-      self.RunGsUtil(['rsync', '-r', suri(bucket_uri), tmpdir])
+      self.RunGsUtil(['rsync', '-d', '-r', suri(bucket_uri), tmpdir])
       listing1 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
@@ -455,9 +542,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-r', suri(bucket_uri), tmpdir], return_stderr=True))
+        ['rsync', '-d', '-r', suri(bucket_uri), tmpdir], return_stderr=True))
 
-  def test_bucket_to_dir_with_fname_case_change(self):
+  def test_bucket_to_dir_minus_d_with_fname_case_change(self):
     """Tests that name case changes work correctly.
 
     Example:
@@ -486,7 +573,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       """Tests rsync works as expected."""
       output = self.RunGsUtil(
-          ['rsync', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
+          ['rsync', '-d', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
       # Nothing should be copied or removed under Windows.
       if IS_WINDOWS:
         self.assertEquals(NO_CHANGES, output)
@@ -494,7 +581,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         self.assertNotEquals(NO_CHANGES, output)
     _Check1()
 
-  def test_bucket_to_dir_with_leftover_dir_placeholder(self):
+  def test_bucket_to_dir_minus_d_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders.
 
     See comments in gslib.commands.rsync._FieldedListingIterator for details.
@@ -512,7 +599,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       """Tests rsync works as expected."""
       output = self.RunGsUtil(
-          ['rsync', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
+          ['rsync', '-d', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
       listing1 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
@@ -524,7 +611,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
-  def test_rsync_minus_e(self):
+  def test_rsync_minus_d_minus_e(self):
     """Tests that rsync -e ignores symlinks."""
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
@@ -546,7 +633,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      self.RunGsUtil(['rsync', '-e', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', '-e', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -562,7 +649,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -578,10 +665,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', tmpdir, suri(bucket_uri)], return_stderr=True))
+        ['rsync', '-d', tmpdir, suri(bucket_uri)], return_stderr=True))
 
   @SkipForS3('S3 does not support composite objects')
-  def test_bucket_to_bucket_with_composites(self):
+  def test_bucket_to_bucket_minus_d_with_composites(self):
     """Tests that rsync works with composite objects (which don't have MD5s)."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -600,7 +687,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      self.RunGsUtil(['rsync', suri(bucket1_uri), suri(bucket2_uri)])
+      self.RunGsUtil(['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)])
       listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
@@ -612,9 +699,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True))
+        ['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
 
-  def test_bucket_to_bucket_empty_dest(self):
+  def test_bucket_to_bucket_minus_d_empty_dest(self):
     """Tests working with empty dest bucket (iter runs out before src iter)."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -626,7 +714,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      self.RunGsUtil(['rsync', suri(bucket1_uri), suri(bucket2_uri)])
+      self.RunGsUtil(['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)])
       listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       self.assertEquals(listing1, set(['/obj1', '/obj2']))
@@ -635,9 +723,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True))
+        ['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
 
-  def test_bucket_to_bucket_empty_src(self):
+  def test_bucket_to_bucket_minus_d_empty_src(self):
     """Tests working with empty src bucket (iter runs out before dst iter)."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -649,7 +738,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      self.RunGsUtil(['rsync', suri(bucket1_uri), suri(bucket2_uri)])
+      self.RunGsUtil(['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)])
       stderr = self.RunGsUtil(['ls', suri(bucket1_uri, '**')],
                               expected_status=1, return_stderr=True)
       self.assertIn('One or more URLs matched no objects', stderr)
@@ -660,9 +749,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True))
+        ['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
 
-  def test_rsync_minus_p(self):
+  def test_rsync_minus_d_minus_p(self):
     """Tests that rsync -p preserves ACLs."""
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -675,7 +765,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       """Tests rsync -p works as expected."""
-      self.RunGsUtil(['rsync', '-p', suri(bucket1_uri), suri(bucket2_uri)])
+      self.RunGsUtil(['rsync', '-d', '-p', suri(bucket1_uri),
+                      suri(bucket2_uri)])
       listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       self.assertEquals(listing1, set(['/obj1']))
@@ -689,5 +780,5 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
-        ['rsync', '-p', suri(bucket1_uri), suri(bucket2_uri)],
+        ['rsync', '-d', '-p', suri(bucket1_uri), suri(bucket2_uri)],
         return_stderr=True))
