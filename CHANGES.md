@@ -1,4 +1,4 @@
-Release 4.0 (release date: 2014-05-22)
+Release 4.0 (release date: 2014-05-27)
 =======================================
 
 Major New Gsutil Version - Backwards-Incompatible Changes
