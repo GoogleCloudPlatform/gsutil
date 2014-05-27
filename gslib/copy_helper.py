@@ -2741,7 +2741,7 @@ def FilterExistingComponents(dst_args, existing_components, bucket_url,
       dst_metadata = gsutil_api.GetObjectMetadata(
           dst_url.bucket_name, dst_url.object_name,
           generation=dst_url.generation, provider=dst_url.scheme,
-          fields='md5Hash,etag')
+          fields=['md5Hash', 'etag'])
       cloud_md5 = dst_metadata.md5Hash
     except Exception:  # pylint: disable=broad-except
       # We don't actually care what went wrong - we couldn't retrieve the
