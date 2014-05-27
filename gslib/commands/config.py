@@ -93,9 +93,9 @@ _detailed_help_text = ("""
   click on the project you are using, then click "APIs & auth", then click
   "Credentials", then click "CREATE NEW CLIENT ID"; on the pop-up dialog box
   select "Service account" and click "Create Client ID". This will download
-  a private key file, which you should move to a somewhere
+  a private key file, which you should move to somewhere
   accessible from the machine where you run gsutil. Make sure to set its
-  protection so only the users you want to be able to authenticate as have
+  protection so only the users you want to be able to authenticate have
   access.
   
   Note that your service account will NOT be considered an Owner for the

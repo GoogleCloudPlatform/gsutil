@@ -84,7 +84,7 @@ _detailed_help_text = ("""
   tests in "gslib/tests/test_ls.py".
 
   You can also run an individual test class or function name by passing the
-  the test module followed by the class name and optionally a test name. For
+  test module followed by the class name and optionally a test name. For
   example, to run the an entire test class by name:
 
     gsutil test naming.GsutilNamingTests

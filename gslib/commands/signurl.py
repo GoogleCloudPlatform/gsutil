@@ -96,11 +96,11 @@ _detailed_help_text = ("""
 
 <B>USAGE</B>
 
-  Create a signed url for downloading an object valid for 10 minutes
+  Create a signed url for downloading an object valid for 10 minutes:
 
     gsutil signurl -d 10m gs://<bucket>/<object>
 
-  Create a signed url for uploading a plain text file via HTTP PUT
+  Create a signed url for uploading a plain text file via HTTP PUT:
 
     gsutil signurl -m PUT -d 1h gs://<bucket>/<object>
 

@@ -110,11 +110,11 @@ _DESCRIPTION = """
      http://example.com/photos would retrieve
      http://example.com/photos/index.html.
 
-  2. There is just one 404.html page: For example, a GET request for
+  3. There is just one 404.html page: For example, a GET request for
      http://example.com/photos/missing would retrieve
      http://example.com/404.html, not http://example.com/photos/404.html.
 
-  3. For additional details see
+  4. For additional details see
      https://developers.google.com/storage/docs/website-configuration.
 
   The web command has two sub-commands:

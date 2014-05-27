@@ -129,13 +129,13 @@ NAME_CONSTRUCTION_TEXT = """
   create objects named like gs://my_bucket/subdir/a/b/c.
 
   Note: If you use the
-  `Google Cloud Console <https://cloud.google.com/console>`_ to create folders,
-  it does so by creating a "placeholder" object that ends with a "/" character.
-  gsutil skips these objects when downloading from the cloud to the local file
-  system, because attempting to create a file that ends with a "/" is not
-  allowed on Linux and MacOS. Because of this, it is recommended that you not
-  create objects that end with "/" (unless you don't need to be able to download
-  such objects using gsutil).
+  `Google Developers Console <https://console.developers.google.com>`_
+  to create folders, it does so by creating a "placeholder" object that ends
+  with a "/" character. gsutil skips these objects when downloading from the
+  cloud to the local file system, because attempting to create a file that
+  ends with a "/" is not allowed on Linux and MacOS. Because of this, it is
+  recommended that you not create objects that end with "/" (unless you don't
+  need to be able to download such objects using gsutil).
 """
 
 SUBDIRECTORIES_TEXT = """
