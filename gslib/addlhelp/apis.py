@@ -29,6 +29,7 @@ _detailed_help_text = ("""
   To use a certain API for interacting with Google Cloud Storage, you can set
   the 'prefer_api' variable in the "GSUtil" section of .boto config file to
   'xml' or 'json' like so:
+
     prefer_api = json
 
   This will cause gsutil to use that API where possible (falling back to the

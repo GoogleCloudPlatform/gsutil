@@ -56,14 +56,14 @@ _DESCRIPTION = ("""
   more buckets. This command is supported for buckets only, not objects. An
   example CORS JSON document looks like the folllowing:
 
-  [
-    {
-      "origin": ["http://origin1.example.com"],
-      "responseHeader": ["Content-Type"],
-      "method": ["GET"],
-      "maxAgeSeconds": 3600
-    }
-  ]
+    [
+      {
+        "origin": ["http://origin1.example.com"],
+        "responseHeader": ["Content-Type"],
+        "method": ["GET"],
+        "maxAgeSeconds": 3600
+      }
+    ]
 
   The above JSON document explicitly allows cross-origin GET requests from
   http://origin1.example.com and may include the Content-Type response header.

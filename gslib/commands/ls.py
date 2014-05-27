@@ -141,14 +141,14 @@ _detailed_help_text = ("""
             Generation:         1378862725952000
             Metageneration:     1
             ACL:
-[
-  {
-    "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "role": "OWNER"
-  }
-]
-TOTAL: 1 objects, 2276224 bytes (2.17 MB)
+    [
+      {
+        "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "role": "OWNER"
+      }
+    ]
+    TOTAL: 1 objects, 2276224 bytes (2.17 MB)
 
   See also "gsutil help acl" for getting a more readable version of the ACL.
 
@@ -169,21 +169,21 @@ TOTAL: 1 objects, 2276224 bytes (2.17 MB)
             WebsiteConfiguration:         None
             CORS configuration:           Present
             Lifecycle configuration:      None
-[
-  {
-    "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "role": "OWNER"
-  }
-]
+    [
+      {
+        "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "role": "OWNER"
+      }
+    ]
             Default ACL:
-[
-  {
-    "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-    "role": "OWNER"
-  }
-]
+    [
+      {
+        "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "role": "OWNER"
+      }
+    ]
 
 
 <B>OPTIONS</B>

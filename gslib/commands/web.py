@@ -60,10 +60,10 @@ _GET_DESCRIPTION = """
 
   In Google Cloud Storage, this would look like:
 
-  {
-    "notFoundPage": "404.html",
-    "mainPageSuffix": "index.html"
-  }
+    {
+      "notFoundPage": "404.html",
+      "mainPageSuffix": "index.html"
+    }
 
 """
 

@@ -48,7 +48,7 @@ _detailed_help_text = ("""
               contain spaces (such as "Content-Disposition: attachment;
               filename=filename.ext"), to avoid having the shell split them
               into separate arguments.
-              
+
               The following headers are supported:
               Cache-Control
               Content-Disposition
@@ -58,8 +58,9 @@ _detailed_help_text = ("""
               Content-Type
               Custom metadata headers with a matching Cloud Storage Provider
               prefix, such as:
+
                 x-goog-meta-
-              
+
               Note that for gs:// URLs, the Cache Control header is specific to
               the API being used. The XML API will accept any cache control
               headers and return them during object downloads.  The JSON API
@@ -95,7 +96,7 @@ _detailed_help_text = ("""
               before the entire transfer is complete (e.g. failing after 300 of
               1000 files have been transferred), you will need to restart the
               entire transfer.
-              
+
               Also, although most commands will normally fail upon encountering
               an error when the -m flag is disabled, all commands will
               continue to try all operations when -m is enabled with multiple

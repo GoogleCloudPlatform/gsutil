@@ -63,20 +63,20 @@ _DESCRIPTION = """
   The following lifecycle configuration JSON document specifies that all objects
   in this bucket that are more than 365 days old will be deleted automatically:
 
-  {
-    "rule":
-    [
-      {
-        "action": {"type": "Delete"},
-        "condition": {"age": 365}
-      }
-    ]
-  }
+    {
+      "rule":
+      [
+        {
+          "action": {"type": "Delete"},
+          "condition": {"age": 365}
+        }
+      ]
+    }
 
   The following (empty) lifecycle configuration JSON document removes all
   lifecycle configuration for a bucket:
 
-  {}
+    {}
 
 """
 

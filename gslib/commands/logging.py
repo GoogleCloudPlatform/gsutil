@@ -81,10 +81,10 @@ _GET_DESCRIPTION = """
   If logging is enabled for the specified bucket url, the server responds
   with a JSON document that looks something like this:
 
-  {
-    "logObjectPrefix": "AccessLog",
-    "logBucket": "my_logging_bucket"
-  }
+    {
+      "logObjectPrefix": "AccessLog",
+      "logBucket": "my_logging_bucket"
+    }
 
   You can download log data from your log bucket using the gsutil cp command.
 
