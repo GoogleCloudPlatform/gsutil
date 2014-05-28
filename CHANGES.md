@@ -1,4 +1,4 @@
-Release 4.01 (release date: 2014-05-28)
+Release 4.1 (release date: 2014-05-28)
 =======================================
 
 Bug Fixes
