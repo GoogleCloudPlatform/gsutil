@@ -152,9 +152,9 @@ def main():
   try:
     # pylint: disable=unused-import,g-import-not-at-top
     import oauth2_plugin
-    oauth2_plugin.SetFallbackClientIdAndSecret(
+    oauth2_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
         GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
-    oauth2_plugin.SetLock(CreateLock())
+    oauth2_plugin.oauth2_helper.SetLock(CreateLock())
   except ImportError:
     pass
 
