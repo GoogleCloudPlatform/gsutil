@@ -197,7 +197,11 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
   fp = FilePart(args.filename, args.file_start, args.file_length)
   gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
   with fp:
-    preconditions = Preconditions(gen_match=0)
+    # We take many precautions with the component names that make collisions
+    # effectively impossible. Specifying preconditions will just allow us to
+    # reach a state in which uploads will always fail on retries.
+    preconditions = None
+
     # Fill in content type if one was provided.
     dst_object_metadata = apitools_messages.Object(
         name=args.dst_url.object_name,
