@@ -13,23 +13,15 @@
 # limitations under the License.
 """Common credentials classes and constructors."""
 
-import httplib
 import json
 import os
 import urllib2
 
 
 import httplib2
-import oauth2client
 import oauth2client.client
 import oauth2client.gce
 import oauth2client.multistore_file
-# TODO: This is unused in gsutil, add once apitools python 2.6 compatibility
-# testing is complete.
-# import oauth2client.tools
-from gslib.third_party.protorpc import messages
-
-import gflags as flags
 
 from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import util
@@ -235,8 +227,6 @@ def CredentialsFromFile(path, client_info):
       client_info['client_id'],
       client_info['user_agent'],
       client_info['scope'])
-  if hasattr(flags.FLAGS, 'auth_local_webserver'):
-    flags.FLAGS.auth_local_webserver = False
   credentials = credential_store.get()
   if credentials is None or credentials.invalid:
     print 'Generating new OAuth credentials ...'
@@ -246,7 +236,16 @@ def CredentialsFromFile(path, client_info):
       # retry loop, they can ^C.
       try:
         flow = oauth2client.client.OAuth2WebServerFlow(**client_info)
-        credentials = oauth2client.tools.run(flow, credential_store)
+        flow.redirect_uri = oauth2client.client.OOB_CALLBACK_URN
+        authorize_url = flow.step1_get_authorize_url()
+        print 'Go to the following link in your browser:'
+        print
+        print '    ' + authorize_url
+        print
+        code = raw_input('Enter verification code: ').strip()
+        credential = flow.step2_exchange(code)
+        credential_store.put(credential)
+        credential.set_store(credential_store)
         break
       except (oauth2client.client.FlowExchangeError, SystemExit) as e:
         # Here SystemExit is "no credential at all", and the
