@@ -1,3 +1,22 @@
+Release 4.01 (release date: 2014-05-28)
+=======================================
+
+Bug Fixes
+---------
+- Fixed a bug in parallel composite uploads where uploads with
+  existing components would fail.
+- Moved gcs-oauth2-boto-plugin to version 1.5, fixing a bug in the PyPi gsutil
+  distribution that would cause gsutil to unnecessarily attempt to query
+  the Google Compute Engine metadata service.
+
+Other Changes
+-------------
+- Parallel composite uploads no longer specify an if-not-match precondition
+  when uploading component parts.
+- Parallel composite uploads no longer calculate a CRC32c hash prior to
+  uploading component parts (these are still validated by an MD5 hash).
+- Removed apitools dependency on gflags.
+
 Release 4.0 (release date: 2014-05-27)
 =======================================
 
