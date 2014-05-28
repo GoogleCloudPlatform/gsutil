@@ -196,17 +196,13 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
   """
   fp = FilePart(args.filename, args.file_start, args.file_length)
   gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
-  # Calculate a crc32c for the filepart so the component can be validated
-  # upon upload.
   with fp:
-    crc32c_b64 = CalculateB64EncodedCrc32cFromContents(fp)
     preconditions = Preconditions(gen_match=0)
     # Fill in content type if one was provided.
     dst_object_metadata = apitools_messages.Object(
         name=args.dst_url.object_name,
         bucket=args.dst_url.bucket_name,
-        contentType=args.content_type,
-        crc32c=crc32c_b64)
+        contentType=args.content_type)
 
     try:
       if global_copy_helper_opts.canned_acl:
@@ -1654,8 +1650,9 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       canned_acl=global_copy_helper_opts.canned_acl)
 
   if not parallel_composite_upload:
-    # Parallel composite uploads calculate hashes per-object and then a crc32c
-    # checksum at the end.
+    # Parallel composite uploads calculate hashes per-component in subsequent
+    # calls to this function, but the composition of the final object is a
+    # cloud-only operation.
     wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
                                                   hash_algs, upload_url, logger)
 
