@@ -563,7 +563,7 @@ class BotoTranslation(CloudApi):
       except httplib.IncompleteRead:
         pass
 
-      sleep_time_secs = random.random() * (2 ** self.progress_less_iterations)
+      sleep_time_secs = random.random() * (2 ** progress_less_iterations)
       if debug >= 1:
         self.logger.info('Got retryable failure (%d progress-less in a row).\n'
                          'Sleeping %d seconds before re-trying' %
