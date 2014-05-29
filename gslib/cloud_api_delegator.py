@@ -84,12 +84,10 @@ class CloudApiDelegator(CloudApi):
       raise ArgumentException('No provider selected for _GetApi')
 
     provider = str(provider)
-
     if provider not in self.loaded_apis:
       self.loaded_apis[provider] = {}
 
     api_selector = self.GetApiSelector(provider)
-
     if api_selector not in self.loaded_apis[provider]:
       # Need to load the API.
       self._LoadApi(provider, api_selector)

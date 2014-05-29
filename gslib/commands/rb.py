@@ -93,7 +93,7 @@ class RbCommand(Command):
         # Since this is listing buckets this list shouldn't be too large to fit
         # in memory at once.
         blrs = list(self.WildcardIterator(url_str).IterBuckets())
-      except:
+      except:  # pylint: disable=bare-except
         some_failed = True
         if self.continue_on_error:
           continue
@@ -114,7 +114,7 @@ class RbCommand(Command):
                                    '\n\tgsutil rm -r %s' % url)
           else:
             raise
-        except: # pylint: disable=broad-except
+        except:  # pylint: disable=bare-except
           if not self.continue_on_error:
             raise
         did_some_work = True
