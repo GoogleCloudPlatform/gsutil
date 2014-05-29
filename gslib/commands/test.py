@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import logging
 
 from gslib.command import Command
+from gslib.command import ResetFailureCount
 from gslib.exception import CommandException
 import gslib.tests as tests
 from gslib.util import NO_MAX
@@ -240,5 +241,6 @@ class TestCommand(Command):
                                      resultclass=resultclass, failfast=failfast)
     ret = runner.run(suite)
     if ret.wasSuccessful():
+      ResetFailureCount()
       return 0
     return 1
