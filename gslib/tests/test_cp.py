@@ -866,14 +866,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file:', stderr)
 
   def test_gzip_upload_and_download(self):
-    key_uri = self.CreateObject()
+    bucket_uri = self.CreateBucket()
     contents = 'x' * 10000
-    fpath1 = self.CreateTempFile(file_name='test.html', contents=contents)
-    self.RunGsUtil(['cp', '-z', 'html', suri(fpath1), suri(key_uri)])
-    fpath2 = self.CreateTempFile()
-    self.RunGsUtil(['cp', suri(key_uri), suri(fpath2)])
-    with open(fpath2, 'r') as f:
-      self.assertEqual(f.read(), contents)
+    tmpdir = self.CreateTempDir()
+    self.CreateTempFile(file_name='test.html', tmpdir=tmpdir, contents=contents)
+    self.CreateTempFile(file_name='test.js', tmpdir=tmpdir, contents=contents)
+    self.CreateTempFile(file_name='test.txt', tmpdir=tmpdir, contents=contents)
+    # Test that copying specifying only 2 of the 3 prefixes gzips the correct
+    # files, and test that including whitespace in the extension list works.
+    self.RunGsUtil(['cp', '-z', 'js, html',
+                    os.path.join(tmpdir, 'test.*'), suri(bucket_uri)])
+    uri1 = suri(bucket_uri, 'test.html')
+    uri2 = suri(bucket_uri, 'test.js')
+    uri3 = suri(bucket_uri, 'test.txt')
+    stdout = self.RunGsUtil(['stat', uri1], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    stdout = self.RunGsUtil(['stat', uri2], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    stdout = self.RunGsUtil(['stat', uri3], return_stdout=True)
+    self.assertNotIn('Content-Encoding:', stdout)
+    fpath4 = self.CreateTempFile()
+    for uri in (uri1, uri2, uri3):
+      self.RunGsUtil(['cp', uri, suri(fpath4)])
+      with open(fpath4, 'r') as f:
+        self.assertEqual(f.read(), contents)
 
   def test_upload_with_subdir_and_unexpanded_wildcard(self):
     fpath1 = self.CreateTempFile(file_name=('tmp', 'x', 'y', 'z'))

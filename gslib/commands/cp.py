@@ -856,7 +856,7 @@ class CpCommand(Command):
         elif o == '-v':
           print_ver = True
         elif o == '-z':
-          self.gzip_exts = a.split(',')
+          self.gzip_exts = [x.strip() for x in a.split(',')]
     if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
