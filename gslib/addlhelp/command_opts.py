@@ -111,6 +111,8 @@ _detailed_help_text = ("""
 
   -o          Set/override values in the boto configuration value, in the format
               <section>:<name>=<value>, e.g. gsutil -o "Boto:proxy=host" ...
+              This will not pass the option to gsutil integration tests, which
+              run in a separate process.
 
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,
