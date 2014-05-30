@@ -18,6 +18,7 @@ import posixpath
 from xml.dom.minidom import parseString
 
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.translation_helper import LifecycleTranslation
@@ -122,6 +123,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
+  # Script lists buckets with wildcards while they are being deleted by other
+  # tests, which can cause an XML metadata get for the buckets' lifecycle
+  # configurations to fail on a just-deleted bucket.
+  @NotParallelizable
   def test_set_lifecycle_wildcard(self):
     """Tests setting lifecycle with a wildcarded bucket URI."""
     random_prefix = self.MakeRandomTestString()

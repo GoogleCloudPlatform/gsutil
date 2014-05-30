@@ -171,7 +171,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       headers = {}
 
-    bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
+    # Parallel tests can easily run into bucket creation quotas.
+    # Retry with exponential backoff so that we create them as fast as we
+    # reasonably can.
+    @Retry(StorageResponseError, tries=6, timeout_secs=1)
+    def _CreateBucketWithExponentialBackoff():
+      bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
+
+    _CreateBucketWithExponentialBackoff()
     self.bucket_uris.append(bucket_uri)
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,

@@ -33,6 +33,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
@@ -1095,6 +1096,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1, return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
 
+  # This temporarily changes the tracker directory to unwritable which
+  # interferes with any parallel running tests that use the tracker directory.
+  @NotParallelizable
   @SkipForS3('No resumable upload support for S3.')
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
   def test_cp_unwritable_tracker_file(self):

@@ -17,11 +17,17 @@
 from __future__ import absolute_import
 
 import logging
+import subprocess
+import sys
+import textwrap
+import time
 
+import gslib
 from gslib.command import Command
 from gslib.command import ResetFailureCount
 from gslib.exception import CommandException
 import gslib.tests as tests
+from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.util import NO_MAX
 
 
@@ -60,6 +66,10 @@ _detailed_help_text = ("""
   To run the unit tests only (which run quickly):
 
     gsutil test -u
+
+  To run integration tests in parallel (CPU-intensive but much faster):
+
+    gsutil -m test
 
   To see additional details for test failures:
 
@@ -102,13 +112,13 @@ _detailed_help_text = ("""
 
 
 <B>OPTIONS</B>
-  -l          List available tests.
-
-  -u          Only run unit tests.
-
   -f          Exit on first test failure.
 
-  -s          Run tests against S3 instead of GS.
+  -l          List available tests.
+
+  -s          Run tests against S3 instead of GS. Not supported with -p.
+
+  -u          Only run unit tests.
 """)
 
 
@@ -139,6 +149,71 @@ def MakeCustomTestResultClass(total_tests):
   return CustomTestResult
 
 
+def GetTestNamesFromSuites(test_suite):
+  """Takes a list of test suites and returns a list of contained test names."""
+  suites = [test_suite]
+  test_names = []
+  while suites:
+    suite = suites.pop()
+    for test in suite:
+      if isinstance(test, unittest.TestSuite):
+        suites.append(test)
+      else:
+        test_names.append(test.id()[len('gslib.tests.test_'):])
+  return test_names
+
+
+# pylint: disable=protected-access
+# Need to get into the guts of unittest to evaluate test cases for parallelism.
+def TestCaseToName(test_case):
+  """Converts a python.unittest to its gsutil test-callable name."""
+  return (str(test_case.__class__).split('\'')[1] + '.' +
+          test_case._testMethodName)
+
+
+# pylint: disable=protected-access
+# Need to get into the guts of unittest to evaluate test cases for parallelism.
+def SplitParallelizableTestSuite(test_suite):
+  """Splits a test suite into groups with different running properties.
+
+  Args:
+    test_suite: A python unittest test suite.
+
+  Returns:
+    3-part tuple of lists of test names:
+    (tests that must be run sequentially,
+     integration tests that can run in parallel,
+     unit tests that can be run in parallel)
+  """
+  sequential_tests = []
+  parallelizable_integration_tests = []
+  parallelizable_unit_tests = []
+
+  items_to_evaluate = [test_suite]
+  cases_to_evaluate = []
+  # Expand the test suites into individual test cases:
+  while items_to_evaluate:
+    suite_or_case = items_to_evaluate.pop()
+    if isinstance(suite_or_case, unittest.suite.TestSuite):
+      for item in suite_or_case._tests:
+        items_to_evaluate.append(item)
+    elif isinstance(suite_or_case, unittest.TestCase):
+      cases_to_evaluate.append(suite_or_case)
+
+  for test_case in cases_to_evaluate:
+    test_method = getattr(test_case, test_case._testMethodName, None)
+    if not getattr(test_method, 'is_parallelizable', True):
+      sequential_tests.append(TestCaseToName(test_case))
+    elif isinstance(test_case, GsUtilUnitTestCase):
+      parallelizable_unit_tests.append(TestCaseToName(test_case))
+    else:
+      parallelizable_integration_tests.append(TestCaseToName(test_case))
+
+  return (sorted(sequential_tests),
+          sorted(parallelizable_integration_tests),
+          sorted(parallelizable_unit_tests))
+
+
 class TestCommand(Command):
   """Implementation of gsutil test command."""
 
@@ -148,7 +223,7 @@ class TestCommand(Command):
       command_name_aliases=[],
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='ufls',
+      supported_sub_args='uflps',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -186,6 +261,10 @@ class TestCommand(Command):
                                    'file and re-run.')
           tests.util.RUN_S3_TESTS = True
 
+    if self.parallel_operations and tests.util.RUN_S3_TESTS:
+      raise CommandException('-p and -s options are not compatible due to '
+                             'S3 bucket creation limits.')
+
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:
       print 'Found %d test names:' % len(test_names)
@@ -215,15 +294,7 @@ class TestCommand(Command):
         raise CommandException('Invalid test argument name: %s' % e)
 
     if list_tests:
-      suites = [suite]
-      test_names = []
-      while suites:
-        suite = suites.pop()
-        for test in suite:
-          if isinstance(test, unittest.TestSuite):
-            suites.append(test)
-          else:
-            test_names.append(test.id().lstrip('gslib.tests.test_'))
+      test_names = GetTestNamesFromSuites(suite)
       print 'Found %d test names:' % len(test_names)
       print ' ', '\n  '.join(sorted(test_names))
       return 0
@@ -234,13 +305,105 @@ class TestCommand(Command):
       verbosity = 2
       logging.disable(logging.ERROR)
 
-    total_tests = suite.countTestCases()
-    resultclass = MakeCustomTestResultClass(total_tests)
+    num_parallel_failures = 0
+    if self.parallel_operations:
+      sequential_tests, parallel_integration_tests, parallel_unit_tests = (
+          SplitParallelizableTestSuite(suite))
 
-    runner = unittest.TextTestRunner(verbosity=verbosity,
-                                     resultclass=resultclass, failfast=failfast)
-    ret = runner.run(suite)
-    if ret.wasSuccessful():
+      # TODO: For now, run unit tests sequentially because they are fast.
+      # We could potentially shave off several seconds of execution time
+      # by executing them in parallel with the integration tests.
+      # Note that parallelism_framework unit tests cannot be run in a
+      # subprocess.
+      print 'Running %d tests sequentially.' % (len(sequential_tests) +
+                                                len(parallel_unit_tests))
+      sequential_tests_to_run = sequential_tests + parallel_unit_tests
+      suite = loader.loadTestsFromNames(
+          sorted([test_name for test_name in sequential_tests_to_run]))
+      num_sequential_tests = suite.countTestCases()
+      resultclass = MakeCustomTestResultClass(num_sequential_tests)
+      runner = unittest.TextTestRunner(verbosity=verbosity,
+                                       resultclass=resultclass,
+                                       failfast=failfast)
+      ret = runner.run(suite)
+
+      print ('\n'.join(textwrap.wrap(
+          'Running %d integration tests in parallel mode! '
+          'Please be patient while your CPU is incinerated. '
+          'If your machine becomes unresponsive, consider running '
+          '\'nice gsutil test\'.' % len(parallel_integration_tests))))
+      num_parallel_tests = len(parallel_integration_tests)
+      process_list = []
+      process_done = []
+      process_results = []  # Tuples of (name, return code, stdout, stderr)
+      process_create_start_time = time.time()
+      last_log_time = process_create_start_time
+      executable_prefix = [sys.executable] if sys.executable else []
+      for test_name in parallel_integration_tests:
+        process_list.append(subprocess.Popen(
+            executable_prefix + [gslib.GSUTIL_PATH] + ['test'] +
+            [test_name[len('gslib.tests.test_'):]],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+        process_done.append(False)
+        if time.time() - last_log_time > 5:
+          print 'Created %d/%d processes' % (len(process_list),
+                                             len(parallel_integration_tests))
+          last_log_time = time.time()
+      process_create_finish_time = time.time()
+      print ('Test processes created in %.3f seconds.' %
+             float(process_create_finish_time - process_create_start_time))
+      last_log_time = time.time()
+      while len(process_results) < len(process_list):
+        for proc_num in xrange(len(process_list)):
+          if process_done[proc_num] or process_list[proc_num].poll() is None:
+            continue
+          process_done[proc_num] = True
+          stdout, stderr = process_list[proc_num].communicate()
+          # TODO: Differentiate test failures from errors.
+          if process_list[proc_num].returncode != 0:
+            num_parallel_failures += 1
+          process_results.append((parallel_integration_tests[proc_num],
+                                  process_list[proc_num].returncode,
+                                  stdout, stderr))
+        if len(process_results) < len(process_list):
+          if time.time() - last_log_time > 5:
+            print '%d/%d finished - %d failures' % (
+                len(process_results), num_parallel_tests, num_parallel_failures)
+            last_log_time = time.time()
+          time.sleep(1)
+      process_run_finish_time = time.time()
+      if num_parallel_failures:
+        for result in process_results:
+          if result[1] != 0:
+            new_stderr = result[3].split('\n')
+            print 'Results for failed test %s:' % result[0]
+            for line in new_stderr:
+              print line
+
+      # TODO: Properly track test skips.
+      print 'Success: %s Fail: %s' % (
+          num_parallel_tests - num_parallel_failures, num_parallel_failures)
+      print 'Ran %d tests in %.3fs' % (
+          num_parallel_tests,
+          float(process_run_finish_time - process_create_start_time))
+      print
+      if not num_parallel_failures and ret.wasSuccessful():
+        print 'OK'
+      else:
+        if num_parallel_failures:
+          print 'FAILED (parallel tests)'
+        if not ret.wasSuccessful():
+          print 'FAILED (sequential tests)'
+    else:
+      total_tests = suite.countTestCases()
+      resultclass = MakeCustomTestResultClass(total_tests)
+
+      runner = unittest.TextTestRunner(verbosity=verbosity,
+                                       resultclass=resultclass,
+                                       failfast=failfast)
+      ret = runner.run(suite)
+
+    if ret.wasSuccessful() and not num_parallel_failures:
       ResetFailureCount()
       return 0
     return 1

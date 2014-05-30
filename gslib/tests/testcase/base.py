@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base test case class for unit and integration tests."""
+from functools import wraps
 import os.path
 import random
 import shutil
@@ -22,6 +23,14 @@ import gslib.tests.util as util
 from gslib.tests.util import unittest
 
 MAX_BUCKET_LENGTH = 63
+
+
+def NotParallelizable(func):
+  @wraps(func)
+  def ParallelAnnotatedFunc(*args, **kwargs):
+    return func(*args, **kwargs)
+  ParallelAnnotatedFunc.is_parallelizable = False
+  return ParallelAnnotatedFunc
 
 
 class GsUtilTestCase(unittest.TestCase):
