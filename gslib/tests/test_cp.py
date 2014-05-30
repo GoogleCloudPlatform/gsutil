@@ -884,7 +884,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['stat', uri2], return_stdout=True)
     self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri3], return_stdout=True)
-    self.assertNotIn('Content-Encoding:', stdout)
+    self.assertNotRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
     fpath4 = self.CreateTempFile()
     for uri in (uri1, uri2, uri3):
       self.RunGsUtil(['cp', uri, suri(fpath4)])
