@@ -1069,14 +1069,16 @@ class Command(HelpProvider):
     if should_return_results:
       return global_return_values_map.Get(caller_id)
 
-  def _SuggestGsutilDashM(self):
+  def _MaybeSuggestGsutilDashM(self):
     """Outputs a sugestion to the user to use gsutil -m."""
-    self.logger.warn('\n' + textwrap.fill(
-        '==> NOTE: You are performing a sequence of gsutil operations that may '
-        'run significantly faster if you instead use gsutil -m %s ...\n'
-        'Please see the -m section under "gsutil help options" for further '
-        'information about when gsutil -m can be advantageous.'
-        % sys.argv[1]) + '\n')
+    if not (boto.config.getint('GSUtil', 'parallel_process_count', 0) == 1 and
+            boto.config.getint('GSUtil', 'parallel_thread_count', 0) == 1):
+      self.logger.warn('\n' + textwrap.fill(
+          '==> NOTE: You are performing a sequence of gsutil operations that '
+          'may run significantly faster if you instead use gsutil -m %s ...\n'
+          'Please see the -m section under "gsutil help options" for further '
+          'information about when gsutil -m can be advantageous.'
+          % sys.argv[1]) + '\n')
 
   # pylint: disable=g-doc-args
   def _SequentialApply(self, func, args_iterator, exception_handler, caller_id,
@@ -1119,7 +1121,7 @@ class Command(HelpProvider):
       if sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD:
         # Output suggestion near beginning of run, so user sees it early and can
         # ^C and try gsutil -m.
-        self._SuggestGsutilDashM()
+        self._MaybeSuggestGsutilDashM()
       if arg_checker(self, args):
         # Now that we actually have the next argument, perform the task.
         task = Task(func, args, caller_id, exception_handler,
@@ -1128,7 +1130,7 @@ class Command(HelpProvider):
     if sequential_call_count >= gslib.util.GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
-      self._SuggestGsutilDashM()
+      self._MaybeSuggestGsutilDashM()
 
   # pylint: disable=g-doc-args
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
@@ -1693,6 +1695,8 @@ def ShutDownGsutil():
   for consumer_pool in consumer_pools:
     consumer_pool.ShutDown()
 
+
+# pylint: disable=global-variable-undefined
 def _IncrementFailureCount():
   global failure_count
   if isinstance(failure_count, int):
@@ -1701,6 +1705,7 @@ def _IncrementFailureCount():
     failure_count.value += 1
 
 
+# pylint: disable=global-variable-undefined
 def GetFailureCount():
   """Returns the number of failures processed during calls to Apply()."""
   try:

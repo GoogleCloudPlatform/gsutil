@@ -2539,7 +2539,6 @@ def _GetPartitionInfo(file_size, max_components, default_component_size):
 
 def _DeleteObjectFn(cls, url_to_delete, thread_state=None):
   """Wrapper function to be used with command.Apply()."""
-  assert thread_state, 'Parallel delete must use separate Cloud API instance.'
   gsutil_api = GetCloudApiInstance(cls, thread_state)
   gsutil_api.DeleteObject(
       url_to_delete.bucket_name, url_to_delete.object_name,
