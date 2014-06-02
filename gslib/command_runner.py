@@ -34,8 +34,8 @@ import gslib.commands
 from gslib.cs_api_map import GsutilApiClassMapFactory
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
+from gslib.no_op_credentials import NoOpCredentials
 from gslib.util import CompareVersions
-from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IsRunningInteractively
@@ -148,7 +148,6 @@ class CommandRunner(object):
     Returns:
       Return value(s) from Command that was run.
     """
-    ConfigureNoOpAuthIfNeeded()
     if (not skip_update_check and
         self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
@@ -264,7 +263,7 @@ class CommandRunner(object):
       # Create a credential-less gsutil API to check for the public
       # update tarball.
       gsutil_api = GcsJsonApi(self.bucket_storage_uri_class, logger,
-                              credentials=None, debug=debug)
+                              credentials=NoOpCredentials(), debug=debug)
 
       cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
       with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:

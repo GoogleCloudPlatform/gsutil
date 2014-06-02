@@ -135,6 +135,7 @@ def main():
   # Any modules used in initializing multiprocessing variables must be
   # imported after importing gslib.__main__.
   # pylint: disable=redefined-outer-name,g-import-not-at-top
+  import gslib.boto_translation
   import gslib.command
   import gslib.util
   from gslib.util import BOTO_IS_SECURE
@@ -146,6 +147,7 @@ def main():
     # called from within an "if __name__ == '__main__':" block.
     gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
+    gslib.boto_translation.InitializeMultiprocessingVariables()
 
   # This needs to be done after gslib.util.InitializeMultiprocessingVariables(),
   # since otherwise we can't call gslib.util.CreateLock.

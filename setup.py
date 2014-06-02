@@ -35,7 +35,7 @@ management tasks, including:
 """
 
 requires = [
-    'boto==2.26.1',
+    'boto==2.29.1',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.5',
     'google-api-python-client>=1.1',
@@ -52,7 +52,7 @@ dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
     # pylint: disable=line-too-long
-    'https://github.com/boto/boto/archive/70d15b84b9dc97fa944eef492d47213dc12dcfc0.tar.gz#egg=boto-2.26.1',
+    'https://github.com/boto/boto/archive/5a6fab80b2021c588388f8819a3332454b02fe46.tar.gz#egg=boto-2.29.1',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))

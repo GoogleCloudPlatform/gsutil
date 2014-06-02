@@ -237,7 +237,7 @@ def ConfigureNoOpAuthIfNeeded():
           'Your gsutil is configured with an OAuth2 service account, but you '
           'do not have PyOpenSSL or PyCrypto 2.6 or later installed.  Service '
           'account authentication requires one of these libraries; please '
-          'install either of them to proceed, or configure  a different type '
+          'install either of them to proceed, or configure a different type '
           'of credentials with "gsutil config".')))
     else:
       # With no boto config file the user can still access publicly readable

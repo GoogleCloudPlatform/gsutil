@@ -20,6 +20,7 @@ import datetime
 import errno
 import httplib
 import json
+import multiprocessing
 import os
 import pickle
 import random
@@ -74,8 +75,10 @@ from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CALLBACK_PER_X_BYTES
+from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
+from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
 from gslib.util import UnaryDictToXml
 from gslib.util import UTF8
@@ -87,6 +90,20 @@ TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
                                 boto.exception.ResumableUploadException,
                                 boto.exception.StorageCreateError,
                                 boto.exception.StorageResponseError)
+
+# If multiprocessing is available, this will be overridden to a (thread-safe)
+# multiprocessing.Value in a call to InitializeMultiprocessingVariables.
+boto_auth_initialized = False
+
+
+def InitializeMultiprocessingVariables():
+  """Perform necessary initialization for multiprocessing.
+
+    See gslib.command.InitializeMultiprocessingVariables for an explanation
+    of why this is necessary.
+  """
+  global boto_auth_initialized  # pylint: disable=global-variable-undefined
+  boto_auth_initialized = multiprocessing.Value('i', 0)
 
 
 class BotoTranslation(CloudApi):
@@ -114,6 +131,13 @@ class BotoTranslation(CloudApi):
     super(BotoTranslation, self).__init__(bucket_storage_uri_class, logger,
                                           provider=provider, debug=debug)
     _ = credentials
+    global boto_auth_initialized  # pylint: disable=global-variable-undefined
+    if MultiprocessingIsAvailable()[0] and not boto_auth_initialized.value:
+      ConfigureNoOpAuthIfNeeded()
+      boto_auth_initialized.value = 1
+    elif not boto_auth_initialized:
+      ConfigureNoOpAuthIfNeeded()
+      boto_auth_initialized = True
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
 
