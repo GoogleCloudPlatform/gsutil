@@ -958,6 +958,13 @@ class GcsJsonApi(CloudApi):
         elif 'User Rate Limit Exceeded' in str(e):
           return AccessDeniedException('Rate limit exceeded. Please retry this '
                                        'request later.', status=e.status_code)
+        elif 'Access Not Configured' in str(e):
+          return AccessDeniedException(
+              'Access Not Configured. Please go to the Google Developers '
+              'Console (https://cloud.google.com/console#/project) for your '
+              'project, select APIs and Auth and enable the '
+              'Google Cloud Storage JSON API.',
+              status=e.status_code)
         else:
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)
