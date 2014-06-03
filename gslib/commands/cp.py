@@ -40,6 +40,7 @@ from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
+from gslib.util import RemoveCRLFFromString
 
 SYNOPSIS_TEXT = """
 <B>SYNOPSIS</B>
@@ -664,7 +665,8 @@ class CpCommand(Command):
         self.logger.error(message)
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
-              exp_src_url.GetUrlString(), 0, 'error', message)
+              exp_src_url.GetUrlString(), 0, 'error',
+              RemoveCRLFFromString(message))
       else:
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(

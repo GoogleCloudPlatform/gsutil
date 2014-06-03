@@ -406,6 +406,11 @@ def Percentile(values, percent, key=lambda x: x):
   return d0 + d1
 
 
+def RemoveCRLFFromString(input_str):
+  """Returns the input string with all \\n and \\r removed."""
+  return re.sub(r'[\r\n]', '', input_str)
+
+
 def UnaryDictToXml(message):
   """Generates XML representation of a nested dict.
 
