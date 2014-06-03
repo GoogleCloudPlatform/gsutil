@@ -19,13 +19,14 @@ import gslib.commands.signurl
 from gslib.commands.signurl import HAVE_OPENSSL
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
 
 
 # pylint: disable=protected-access
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@SkipForS3('Signed URLs are only supported for gs:// URLs.')
 class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   """Integration tests for signurl command."""
 

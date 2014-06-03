@@ -27,7 +27,7 @@ from gslib.command import Command
 from gslib.command import ResetFailureCount
 from gslib.exception import CommandException
 import gslib.tests as tests
-from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 
 
@@ -44,6 +44,10 @@ except ImportError as e:
     GetTestNames = None  # pylint: disable=invalid-name
   else:
     raise
+
+
+DEFAULT_TEST_PARALLEL_PROCESSES = 500
+DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
 
 
 _detailed_help_text = ("""
@@ -70,6 +74,10 @@ _detailed_help_text = ("""
   To run integration tests in parallel (CPU-intensive but much faster):
 
     gsutil -m test
+
+  To limit the number of tests run in parallel to 50 at a time:
+
+    gsutil -m test -p 50
 
   To see additional details for test failures:
 
@@ -116,10 +124,12 @@ _detailed_help_text = ("""
 
   -l          List available tests.
 
-  -s          Run tests against S3 instead of GS. Not supported with -p.
+  -p          Run at most N tests in parallel. The default value is %d.
+
+  -s          Run tests against S3 instead of GS.
 
   -u          Only run unit tests.
-""")
+""" % DEFAULT_TEST_PARALLEL_PROCESSES)
 
 
 def MakeCustomTestResultClass(total_tests):
@@ -185,6 +195,9 @@ def SplitParallelizableTestSuite(test_suite):
      integration tests that can run in parallel,
      unit tests that can be run in parallel)
   """
+  # pylint: disable=import-not-at-top
+  # Need to import this after test globals are set so that skip functions work.
+  from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
   sequential_tests = []
   parallelizable_integration_tests = []
   parallelizable_unit_tests = []
@@ -214,6 +227,56 @@ def SplitParallelizableTestSuite(test_suite):
           sorted(parallelizable_unit_tests))
 
 
+def CountFalseInList(input_list):
+  """Counts number of falses in the input list."""
+  num_false = 0
+  for item in input_list:
+    if not item:
+      num_false += 1
+  return num_false
+
+
+def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
+                        max_parallel_tests):
+  """Creates test processes to run tests in parallel.
+
+  Args:
+    parallel_tests: List of all parallel tests.
+    test_index: List index of last created test before this function call.
+    process_list: List of running subprocesses. Created processes are appended
+                  to this list.
+    process_done: List of booleans indicating process completion. One 'False'
+                  will be added per process created.
+    max_parallel_tests: Maximum number of tests to run in parallel.
+
+  Returns:
+    Index of last created test.
+  """
+  orig_test_index = test_index
+  executable_prefix = [sys.executable] if sys.executable else []
+  s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
+
+  process_create_start_time = time.time()
+  last_log_time = process_create_start_time
+  while (CountFalseInList(process_done) < max_parallel_tests and
+         test_index < len(parallel_tests)):
+    process_list.append(subprocess.Popen(
+        executable_prefix + [gslib.GSUTIL_PATH] + ['test'] + s3_argument +
+        [parallel_tests[test_index][len('gslib.tests.test_'):]],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+    test_index += 1
+    process_done.append(False)
+    if time.time() - last_log_time > 5:
+      print ('Created %d new processes (total %d/%d created)' %
+             (test_index - orig_test_index, len(process_list),
+              len(parallel_tests)))
+      last_log_time = time.time()
+  if test_index == len(parallel_tests):
+    print ('Test process creation finished (%d/%d created)' %
+           (len(process_list), len(parallel_tests)))
+  return test_index
+
+
 class TestCommand(Command):
   """Implementation of gsutil test command."""
 
@@ -223,7 +286,7 @@ class TestCommand(Command):
       command_name_aliases=[],
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='uflps',
+      supported_sub_args='uflp:s',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -246,14 +309,17 @@ class TestCommand(Command):
 
     failfast = False
     list_tests = False
+    max_parallel_tests = DEFAULT_TEST_PARALLEL_PROCESSES
     if self.sub_opts:
-      for o, _ in self.sub_opts:
+      for o, a in self.sub_opts:
         if o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
         elif o == '-f':
           failfast = True
         elif o == '-l':
           list_tests = True
+        elif o == '-p':
+          max_parallel_tests = long(a)
         elif o == '-s':
           if not tests.util.HAS_S3_CREDS:
             raise CommandException('S3 tests require S3 credentials. Please '
@@ -261,9 +327,15 @@ class TestCommand(Command):
                                    'file and re-run.')
           tests.util.RUN_S3_TESTS = True
 
-    if self.parallel_operations and tests.util.RUN_S3_TESTS:
-      raise CommandException('-p and -s options are not compatible due to '
-                             'S3 bucket creation limits.')
+    if self.parallel_operations:
+      if IS_WINDOWS:
+        raise CommandException('-m test is not supported on Windows.')
+      elif (tests.util.RUN_S3_TESTS and
+            max_parallel_tests > DEFAULT_S3_TEST_PARALLEL_PROCESSES):
+        self.logger.warn('Reducing parallel tests to %d due to S3 '
+                         'maximum bucket limitations.' %
+                         DEFAULT_S3_TEST_PARALLEL_PROCESSES)
+      max_parallel_tests = DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:
@@ -310,6 +382,7 @@ class TestCommand(Command):
       sequential_tests, parallel_integration_tests, parallel_unit_tests = (
           SplitParallelizableTestSuite(suite))
 
+      sequential_start_time = time.time()
       # TODO: For now, run unit tests sequentially because they are fast.
       # We could potentially shave off several seconds of execution time
       # by executing them in parallel with the integration tests.
@@ -327,33 +400,24 @@ class TestCommand(Command):
                                        failfast=failfast)
       ret = runner.run(suite)
 
-      print ('\n'.join(textwrap.wrap(
-          'Running %d integration tests in parallel mode! '
-          'Please be patient while your CPU is incinerated. '
-          'If your machine becomes unresponsive, consider running '
-          '\'nice gsutil test\'.' % len(parallel_integration_tests))))
       num_parallel_tests = len(parallel_integration_tests)
+      max_processes = min(max_parallel_tests, num_parallel_tests)
+
+      print ('\n'.join(textwrap.wrap(
+          'Running %d integration tests in parallel mode (%d processes)! '
+          'Please be patient while your CPU is incinerated. '
+          'If your machine becomes unresponsive, consider reducing '
+          'the amount of parallel test processes by running '
+          '\'gsutil -m test -p <num_processes>\'.' %
+          (num_parallel_tests, max_processes))))
       process_list = []
       process_done = []
       process_results = []  # Tuples of (name, return code, stdout, stderr)
-      process_create_start_time = time.time()
-      last_log_time = process_create_start_time
-      executable_prefix = [sys.executable] if sys.executable else []
-      for test_name in parallel_integration_tests:
-        process_list.append(subprocess.Popen(
-            executable_prefix + [gslib.GSUTIL_PATH] + ['test'] +
-            [test_name[len('gslib.tests.test_'):]],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE))
-        process_done.append(False)
-        if time.time() - last_log_time > 5:
-          print 'Created %d/%d processes' % (len(process_list),
-                                             len(parallel_integration_tests))
-          last_log_time = time.time()
-      process_create_finish_time = time.time()
-      print ('Test processes created in %.3f seconds.' %
-             float(process_create_finish_time - process_create_start_time))
-      last_log_time = time.time()
-      while len(process_results) < len(process_list):
+      parallel_start_time = last_log_time = time.time()
+      test_index = CreateTestProcesses(
+          parallel_integration_tests, 0, process_list, process_done,
+          max_parallel_tests)
+      while len(process_results) < num_parallel_tests:
         for proc_num in xrange(len(process_list)):
           if process_done[proc_num] or process_list[proc_num].poll() is None:
             continue
@@ -365,7 +429,11 @@ class TestCommand(Command):
           process_results.append((parallel_integration_tests[proc_num],
                                   process_list[proc_num].returncode,
                                   stdout, stderr))
-        if len(process_results) < len(process_list):
+        if len(process_list) < num_parallel_tests:
+          test_index = CreateTestProcesses(
+              parallel_integration_tests, test_index, process_list,
+              process_done, max_parallel_tests)
+        if len(process_results) < num_parallel_tests:
           if time.time() - last_log_time > 5:
             print '%d/%d finished - %d failures' % (
                 len(process_results), num_parallel_tests, num_parallel_failures)
@@ -381,11 +449,16 @@ class TestCommand(Command):
               print line
 
       # TODO: Properly track test skips.
-      print 'Success: %s Fail: %s' % (
+      print 'Parallel tests complete. Success: %s Fail: %s' % (
           num_parallel_tests - num_parallel_failures, num_parallel_failures)
-      print 'Ran %d tests in %.3fs' % (
-          num_parallel_tests,
-          float(process_run_finish_time - process_create_start_time))
+      print (
+          'Ran %d tests in %.3fs (%d sequential in %.3fs, %d parallel in %.3fs)'
+          % (num_parallel_tests + num_sequential_tests,
+             float(process_run_finish_time - sequential_start_time),
+             num_sequential_tests,
+             float(parallel_start_time - sequential_start_time),
+             num_parallel_tests,
+             float(process_run_finish_time - parallel_start_time)))
       print
       if not num_parallel_failures and ret.wasSuccessful():
         print 'OK'
