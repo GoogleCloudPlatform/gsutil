@@ -151,6 +151,11 @@ _CH_DESCRIPTION = """
       -u 84fac329bceSAMPLE777d5d22b8SAMPLE785ac2SAMPLE2dfcf7c4adf34da46:R \\
       gs://example-bucket/folder/
 
+  Grant the service account foo@developer.gserviceaccount.com WRITE access to
+  the bucket example-bucket:
+
+    gsutil acl ch -u foo@developer.gserviceaccount.com:W gs://example-bucket
+
   Grant all users from my-domain.org READ access to the bucket
   gcs.my-domain.org:
 
@@ -188,7 +193,7 @@ _CH_DESCRIPTION = """
   and All Users.
 
   Users are added with -u and a plain ID or email address, as in
-  "-u john-doe@gmail.com:r"
+  "-u john-doe@gmail.com:r". Note: Service Accounts are considered to be users.
 
   Groups are like users, but specified with the -g flag, as in
   "-g power-users@example.com:fc". Groups may also be specified as a full
