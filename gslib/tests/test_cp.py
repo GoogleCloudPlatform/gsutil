@@ -549,6 +549,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
     self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
 
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  @unittest.skip('This test performs a large copy but remains here for '
+                 'debugging purposes.')
+  def test_cross_provider_large_cp(self):
+    s3_bucket = self.CreateBucket(provider='s3')
+    gs_bucket = self.CreateBucket(provider='gs')
+    s3_key = self.CreateObject(bucket_uri=s3_bucket, contents='f'*1024*1024)
+    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents='b'*1024*1024)
+    self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
+    self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
+
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')
   def test_daisy_chain_cp_file_sizes(self):

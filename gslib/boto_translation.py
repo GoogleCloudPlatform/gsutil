@@ -638,9 +638,10 @@ class BotoTranslation(CloudApi):
     return self.GetObjectMetadata(bucket_name, object_name,
                                   generation=generation, fields=fields)
 
-  def _PerformSimpleUpload(self, dst_uri, upload_stream, canned_acl=None,
-                           progress_callback=None, headers=None):
-    dst_uri.set_contents_from_file(upload_stream, policy=canned_acl,
+  def _PerformSimpleUpload(self, dst_uri, upload_stream, md5=None,
+                           canned_acl=None, progress_callback=None,
+                           headers=None):
+    dst_uri.set_contents_from_file(upload_stream, md5=md5, policy=canned_acl,
                                    cb=progress_callback, headers=headers)
 
   def _PerformStreamingUpload(self, dst_uri, upload_stream, canned_acl=None,
@@ -782,7 +783,15 @@ class BotoTranslation(CloudApi):
                                          preconditions=preconditions)
 
     try:
-      self._PerformSimpleUpload(dst_uri, upload_stream, canned_acl=canned_acl,
+      md5 = None
+      if object_metadata.md5Hash:
+        md5 = []
+        # boto expects hex at index 0, base64 at index 1
+        md5.append(binascii.hexlify(
+            base64.decodestring(object_metadata.md5Hash.strip('\n"\''))))
+        md5.append(object_metadata.md5Hash.strip('\n"\''))
+      self._PerformSimpleUpload(dst_uri, upload_stream, md5=md5,
+                                canned_acl=canned_acl,
                                 progress_callback=progress_callback,
                                 headers=headers)
       self._SetObjectAcl(object_metadata, dst_uri)

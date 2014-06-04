@@ -98,6 +98,7 @@ class DaisyChainWrapper(object):
     # with the upload.
     self.gsutil_api = gsutil_api
 
+    self.download_thread = None
     self.StartDownloadThread()
 
   def StartDownloadThread(self):
@@ -147,6 +148,7 @@ class DaisyChainWrapper(object):
       return self.position
 
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
+    restart_download = False
     if whence == os.SEEK_END:
       with self.lock:
         self.last_position = self.position
@@ -164,10 +166,23 @@ class DaisyChainWrapper(object):
             # get it on the next call to read.
             self.buffer.appendleft(self.last_data)
             self.bytes_buffered += len(self.last_data)
+        elif offset == 0 and self.download_thread:
+          # Once a download is complete, boto seeks to 0 and re-reads to
+          # compute the hash if an md5 isn't already present (for example a GCS
+          # composite object), so we have to re-download the whole object.
+          restart_download = True
         else:
           raise BadRequestException(
               'Invalid seek during daisy chain operation, seek only allowed to '
               'position %s or %s.' % (self.last_position, self.position))
+      if restart_download:
+        with self.lock:
+          self.position = 0
+          self.buffer = deque()
+          self.bytes_buffered = 0
+          self.last_position = 0
+          self.last_data = None
+        self.StartDownloadThread()
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)
