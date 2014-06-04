@@ -413,6 +413,8 @@ class TestCommand(Command):
       process_list = []
       process_done = []
       process_results = []  # Tuples of (name, return code, stdout, stderr)
+      hang_detection_counter = 0
+      completed_as_of_last_log = 0
       parallel_start_time = last_log_time = time.time()
       test_index = CreateTestProcesses(
           parallel_integration_tests, 0, process_list, process_done,
@@ -437,6 +439,17 @@ class TestCommand(Command):
           if time.time() - last_log_time > 5:
             print '%d/%d finished - %d failures' % (
                 len(process_results), num_parallel_tests, num_parallel_failures)
+            if len(process_results) == completed_as_of_last_log:
+              hang_detection_counter += 1
+            else:
+              completed_as_of_last_log = len(process_results)
+              hang_detection_counter = 0
+            if hang_detection_counter > 4:
+              still_running = []
+              for proc_num in xrange(len(process_list)):
+                if not process_done[proc_num]:
+                  still_running.append(parallel_integration_tests[proc_num])
+                print 'Still running: %s' % still_running
             last_log_time = time.time()
           time.sleep(1)
       process_run_finish_time = time.time()
