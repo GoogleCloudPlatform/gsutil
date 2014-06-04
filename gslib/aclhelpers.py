@@ -32,7 +32,9 @@ class AclChange(object):
   domain_scopes = ['GroupByDomain']
   scope_types = public_scopes + id_scopes + email_scopes + domain_scopes
 
-  public_entity_types = ('allUsers', 'allAuthenticatedUsers')
+  public_entity_all_users = 'allUsers'
+  public_entity_all_auth_users = 'allAuthenticatedUsers'
+  public_entity_types = (public_entity_all_users, public_entity_all_auth_users)
   project_entity_prefixes = ('project-editors-', 'project-owners-',
                              'project-viewers-')
   group_entity_prefix = 'group-'
@@ -181,8 +183,11 @@ class AclChange(object):
     elif self.scope_type == 'GroupByDomain':
       entry = entry_class(domain=self.identifier, role=self.perm,
                           entity=self.domain_entity_prefix + self.identifier)
-    elif self.scope_type in ('AllUsers', 'AllAuthenticatedUsers'):
-      entry = entry_class(entity=self.scope_type, role=self.perm)
+    elif self.scope_type == 'AllAuthenticatedUsers':
+      entry = entry_class(entity=self.public_entity_all_auth_users,
+                          role=self.perm)
+    elif self.scope_type == 'AllUsers':
+      entry = entry_class(entity=self.public_entity_all_users, role=self.perm)
     else:
       raise CommandException('Add entry to ACL got unexpected scope type %s.' %
                              self.scope_type)

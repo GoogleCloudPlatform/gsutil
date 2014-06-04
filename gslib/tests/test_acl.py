@@ -379,6 +379,21 @@ class TestAcl(TestAclBase):
                                return_stdout=True)
     self.assertNotRegexpMatches(json_text, test_regex)
 
+  def testObjectAclChangeAllUsers(self):
+    """Tests acl ch AllUsers:R on an object."""
+    obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
+    all_users_regex = re.compile(
+        r'\{.*"entity":\s*"allUsers".*"role":\s*"READER".*\}', flags=re.DOTALL)
+    json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                               return_stdout=True)
+    self.assertNotRegexpMatches(json_text, all_users_regex)
+
+    self.RunGsUtil(self._ch_acl_prefix +
+                   ['-g', 'AllUsers:R', suri(obj)])
+    json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                               return_stdout=True)
+    self.assertRegexpMatches(json_text, all_users_regex)
+
   def testMultithreadedAclChange(self, count=10):
     """Tests multi-threaded acl changing on several objects."""
     objects = []
@@ -525,7 +540,6 @@ class TestAcl(TestAclBase):
                                      contents='foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string)
     self.RunGsUtil(self._set_acl_prefix +
                    ['-f', 'public-read', suri(bucket_uri) + 'foo2', obj_uri],
                    expected_status=1)
