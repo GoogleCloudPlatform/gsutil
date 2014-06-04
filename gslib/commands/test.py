@@ -335,7 +335,7 @@ class TestCommand(Command):
         self.logger.warn('Reducing parallel tests to %d due to S3 '
                          'maximum bucket limitations.' %
                          DEFAULT_S3_TEST_PARALLEL_PROCESSES)
-      max_parallel_tests = DEFAULT_S3_TEST_PARALLEL_PROCESSES
+        max_parallel_tests = DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:
