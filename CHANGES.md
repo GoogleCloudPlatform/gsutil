@@ -1,3 +1,26 @@
+Release 4.2 (release date: 2014-06-05)
+=======================================
+
+New Features
+------------
+- Added parallel test execution support to test command, ex: "gsutil -m test"
+
+Bug Fixes
+---------
+- Fix failure during retry of an XML download.
+- Moved to boto release 2.29.1 fixing boto authentication erroneously
+  reporting OAuth2 credentials as invalid.
+- Fix parallel composite uploads when using only a single process and thread.
+- Fix file copy from Google Cloud Storage -> S3 for files greater than
+  8KB in size.
+- Fix "gsutil acl ch" with AllUsers or AllAuthenticatedUsers groups.
+- Fix some copy errors writing new lines to the manifest file.
+- Fix "gsutil test" return code to properly be 0 on success.
+
+Other Changes
+-------------
+- "gsutil cp -z" now ignores whitespace in the extension list.
+
 Release 4.1 (release date: 2014-05-28)
 =======================================
 
