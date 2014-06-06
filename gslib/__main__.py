@@ -256,6 +256,7 @@ def main():
         config_items.extend(boto.config.items('GSUtil'))
       except ConfigParser.NoSectionError:
         pass
+      sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
       sys.stderr.write('config_file_list: %s\n' % GetBotoConfigFileList())
       sys.stderr.write('config: %s\n' % str(config_items))
     elif quiet:
