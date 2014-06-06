@@ -15,7 +15,6 @@
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-from gslib.util import Retry
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):
@@ -24,19 +23,9 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   def test_moving(self):
     """Tests moving two buckets, one with 2 objects and one with 0 objects."""
     bucket1_uri = self.CreateBucket(test_objects=2)
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 2)
-    _Check1()
+    self.AssertNObjectsInBucket(bucket1_uri, 2)
     bucket2_uri = self.CreateBucket()
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 0)
-    _Check2()
+    self.AssertNObjectsInBucket(bucket2_uri, 0)
 
     # Move two objects from bucket1 to bucket2.
     objs = [bucket1_uri.clone_replace_key(key).versionless_uri
@@ -46,15 +35,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Copying'), 2)
     self.assertEqual(stderr.count('Removing'), 2)
 
-    # Verify objects were moved.
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check3():
-      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 0)
-      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 2)
-    _Check3()
+    self.AssertNObjectsInBucket(bucket1_uri, 0)
+    self.AssertNObjectsInBucket(bucket2_uri, 2)
 
     # Remove one of the objects.
     objs = [bucket2_uri.clone_replace_key(key).versionless_uri
@@ -62,15 +44,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     obj1 = objs[0]
     self.RunGsUtil(['rm', obj1])
 
-    # Verify there are now 1 and 0 objects.
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check4():
-      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 0)
-      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 1)
-    _Check4()
+    self.AssertNObjectsInBucket(bucket1_uri, 0)
+    self.AssertNObjectsInBucket(bucket2_uri, 1)
 
     # Move the 1 remaining object back.
     objs = [suri(bucket2_uri.clone_replace_key(key))
@@ -80,28 +55,15 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Copying'), 1)
     self.assertEqual(stderr.count('Removing'), 1)
 
-    # Verify object moved.
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check5():
-      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 1)
-      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-      self.assertNumLines(stdout, 0)
-    _Check5()
+    self.AssertNObjectsInBucket(bucket1_uri, 1)
+    self.AssertNObjectsInBucket(bucket2_uri, 0)
 
   def test_move_dir_to_bucket(self):
     """Tests moving a local directory to a bucket."""
     bucket_uri = self.CreateBucket()
     dir_to_move = self.CreateTempDir(test_files=2)
     self.RunGsUtil(['mv', dir_to_move, suri(bucket_uri)])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri) + '/**'],
-                              return_stdout=True)
-      self.assertNumLines(stdout, 2)
-    _Check()
+    self.AssertNObjectsInBucket(bucket_uri, 2)
 
 
 

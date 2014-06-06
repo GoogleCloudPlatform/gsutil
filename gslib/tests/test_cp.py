@@ -362,16 +362,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
                       contents='longer_data1')
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
-                                return_stdout=True).split('\n')
-      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
-                                return_stdout=True).split('\n')
-      self.assertEquals(len(listing1), 4)
-      self.assertEquals(len(listing2), 1)  # Single empty line from \n split.
-    _Check1()
+    self.AssertNObjectsInBucket(bucket1_uri, 2, versioned=True)
+    self.AssertNObjectsInBucket(bucket2_uri, 0, versioned=True)
 
     # Recursively copy to second versioned bucket.
     self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'), suri(bucket2_uri)])
@@ -575,20 +567,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.CreateObject(bucket_uri=bucket_uri, contents='b'*normal)
       self.CreateObject(bucket_uri=bucket_uri, contents='c'*one_byte_larger)
 
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      self.assertNumLines(stdout, exponent_cap*3)
-    _Check()
-
+    self.AssertNObjectsInBucket(bucket_uri, exponent_cap*3)
     self.RunGsUtil(['-m', 'cp', '-D', suri(bucket_uri, '**'),
                     suri(bucket2_uri)])
 
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', suri(bucket2_uri)], return_stdout=True)
-      self.assertNumLines(stdout, exponent_cap*3)
-    _Check2()
+    self.AssertNObjectsInBucket(bucket2_uri, exponent_cap*3)
 
   def test_daisy_chain_cp(self):
     """Tests cp with the -D option."""
@@ -933,12 +916,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(2, len(lines))
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 1)
 
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
@@ -966,14 +944,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     wildcard_uri = '%s%s*' % (tmp_dir, os.sep)
     self.RunGsUtil(['-m', 'cp', wildcard_uri, suri(bucket_uri)])
-
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(num_test_files + 1, len(lines))  # +1 line for final \n
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, num_test_files)
 
   def test_cp_upload_respects_no_hashes(self):
     # TODO: Make this a unit test when unit_testcase supports returning

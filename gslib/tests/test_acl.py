@@ -23,7 +23,6 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.translation_helper import AclTranslation
-from gslib.util import Retry
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
@@ -168,20 +167,9 @@ class TestAcl(TestAclBase):
     inpath = self.CreateTempFile(contents='def')
     self.RunGsUtil(['cp', inpath, uri.uri])
 
-    # TODO: The common case of creating a single object (and maybe a single
-    # versioned object) and then ensuring that it comes back in a listing
-    # should be an integration_testcase helper function.
     # Find out the two object version IDs.
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _GetVersions():
-      stdout = self.RunGsUtil(['ls', '-a', uri.uri], return_stdout=True)
-      lines = stdout.split('\n')
-      # There should be 3 lines, counting final \n.
-      self.assertEqual(len(lines), 3)
-      return lines[0], lines[1]
-
-    v0_uri_str, v1_uri_str = _GetVersions()
+    lines = self.AssertNObjectsInBucket(bucket_uri, 2, versioned=True)
+    v0_uri_str, v1_uri_str = lines[0], lines[1]
 
     # Check that neither version currently has public-read permission
     # (default ACL is project-private).
@@ -361,6 +349,8 @@ class TestAcl(TestAclBase):
   def testObjectAclChange(self):
     """Tests acl change on an object."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
+    self.AssertNObjectsInBucket(self.sample_uri, 1)
+
     test_regex = self._MakeScopeRegex(
         'READER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
@@ -382,6 +372,8 @@ class TestAcl(TestAclBase):
   def testObjectAclChangeAllUsers(self):
     """Tests acl ch AllUsers:R on an object."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
+    self.AssertNObjectsInBucket(self.sample_uri, 1)
+
     all_users_regex = re.compile(
         r'\{.*"entity":\s*"allUsers".*"role":\s*"READER".*\}', flags=re.DOTALL)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
@@ -402,12 +394,7 @@ class TestAcl(TestAclBase):
           bucket_uri=self.sample_uri,
           contents='something {0}'.format(i)))
 
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _ListObjects():
-      stdout = self.RunGsUtil(['ls', suri(self.sample_uri)], return_stdout=True)
-      lines = stdout.strip().split('\n')
-      self.assertEqual(len(lines), count)
-    _ListObjects()
+    self.AssertNObjectsInBucket(self.sample_uri, count)
 
     test_regex = self._MakeScopeRegex(
         'READER', 'group', self.GROUP_TEST_ADDRESS)
@@ -433,13 +420,7 @@ class TestAcl(TestAclBase):
     """Tests recursively changing ACLs on nested objects."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, object_name='foo/bar',
                             contents='something')
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _GetObject():
-      stdout = self.RunGsUtil(['ls', suri(self.sample_uri)], return_stdout=True)
-      lines = stdout.strip().split('\n')
-      self.assertEqual(len(lines), 1)
-    _GetObject()
+    self.AssertNObjectsInBucket(self.sample_uri, 1)
 
     test_regex = self._MakeScopeRegex(
         'READER', 'group', self.GROUP_TEST_ADDRESS)
@@ -464,21 +445,15 @@ class TestAcl(TestAclBase):
     """Tests changing ACLs on multiple object versions."""
     bucket = self.CreateVersionedBucket()
     object_name = self.MakeTempName('obj')
-    obj = self.CreateObject(
+    self.CreateObject(
         bucket_uri=bucket, object_name=object_name, contents='One thing')
     # Create another on the same URI, giving us a second version.
     self.CreateObject(
         bucket_uri=bucket, object_name=object_name, contents='Another thing')
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _GetObjects():
-      stdout = self.RunGsUtil(['ls', '-a', suri(obj)], return_stdout=True)
-      lines = stdout.strip().split('\n')
-      self.assertEqual(len(lines), 2)
-      return lines
+    lines = self.AssertNObjectsInBucket(bucket, 2, versioned=True)
 
-    obj_v1, obj_v2 = _GetObjects()
+    obj_v1, obj_v2 = lines[0], lines[1]
 
     test_regex = self._MakeScopeRegex(
         'READER', 'group', self.GROUP_TEST_ADDRESS)
@@ -553,15 +528,9 @@ class TestS3CompatibleAcl(TestAclBase):
   """ACL integration tests that work for s3 and gs URLs."""
 
   def testAclObjectGetSet(self):
-    obj_uri = self.CreateObject(contents='foo')
-
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _ListObject():
-      stdout = self.RunGsUtil(['ls', suri(obj_uri)], return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(len(lines), 2)
-    _ListObject()
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
 
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(obj_uri)],
                             return_stdout=True)

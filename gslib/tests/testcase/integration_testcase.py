@@ -26,6 +26,7 @@ from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
 import gslib.tests.util as util
+from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import unittest
@@ -139,6 +140,34 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       # these must be deleted before we can remove an S3 bucket.
       return list(v for v in bucket_uri.get_bucket().list_versions())
     return list(bucket_uri.list_bucket(all_versions=True))
+
+  def AssertNObjectsInBucket(self, bucket_uri, num_objects, versioned=False):
+    """Checks (with retries) that 'ls bucket_uri/**' returns num_objects.
+
+    This is a common test pattern to deal with eventual listing consistency for
+    tests that rely on a set of objects to be listed.
+
+    Args:
+      bucket_uri: storage_uri for the bucket.
+      num_objects: number of objects expected in the bucket.
+      versioned: If True, perform a versioned listing.
+
+    Raises:
+      AssertionError if number of objects does not match expected value.
+
+    Returns:
+      Listing split across lines.
+    """
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      command = ['ls', '-a'] if versioned else ['ls']
+      b_uri = [suri(bucket_uri) + '/**'] if num_objects else [suri(bucket_uri)]
+      listing = self.RunGsUtil(command + b_uri, return_stdout=True).split('\n')
+      # num_objects + one trailing newline.
+      self.assertEquals(len(listing), num_objects + 1)
+      return listing
+    return _Check1()
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
                    provider=None):

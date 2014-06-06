@@ -39,12 +39,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_empty_bucket(self):
     bucket_uri = self.CreateBucket()
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      self.assertEqual('', stdout)
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 0)
 
   def test_empty_bucket_with_b(self):
     bucket_uri = self.CreateBucket()
@@ -162,15 +157,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     """Tests listing a versioned bucket."""
     bucket1_uri = self.CreateBucket(test_objects=1)
     bucket2_uri = self.CreateVersionedBucket(test_objects=1)
+    self.AssertNObjectsInBucket(bucket1_uri, 1, versioned=True)
     bucket_list = list(bucket1_uri.list_bucket())
-
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket1_uri)],
-                              return_stdout=True)
-      self.assertNumLines(stdout, 1)
-    _Check1()
 
     objuri = [bucket1_uri.clone_replace_key(key).versionless_uri
               for key in bucket_list][0]

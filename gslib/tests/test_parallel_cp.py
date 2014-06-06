@@ -50,15 +50,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri)])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(2, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'f0'), lines[0])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 1)
+    self.assertEqual(suri(dst_bucket_uri, 'f0'), lines[0])
 
   @PerformsFileToObjectUpload
   def testCopyingMultipleFilesToBucket(self):
@@ -68,16 +61,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunGsUtil(['cp', src_file0, src_file1, suri(dst_bucket_uri)])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(3, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'f0'), lines[0])
-      self.assertEqual(suri(dst_bucket_uri, 'f1'), lines[1])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 2)
+    self.assertEqual(suri(dst_bucket_uri, 'f0'), lines[0])
+    self.assertEqual(suri(dst_bucket_uri, 'f1'), lines[1])
 
   @PerformsFileToObjectUpload
   def testCopyingNestedFileToBucketSubdir(self):
@@ -95,16 +81,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri, 'subdir/a')])
     self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri, 'subdir')])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(3, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'subdir/a'), lines[0])
-      self.assertEqual(suri(dst_bucket_uri, 'subdir/obj'), lines[1])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 2)
+    self.assertEqual(suri(dst_bucket_uri, 'subdir/a'), lines[0])
+    self.assertEqual(suri(dst_bucket_uri, 'subdir/obj'), lines[1])
 
   @PerformsFileToObjectUpload
   def testCopyingAbsolutePathDirToBucket(self):
@@ -115,21 +94,12 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-R', src_dir_root, suri(dst_bucket_uri)])
     src_tmpdir = os.path.split(src_dir_root)[1]
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      """Validate files were copied to the correct destinations."""
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(5, len(lines))
-
-      self.assertEqual(suri(dst_bucket_uri, src_tmpdir,
-                            'dir0', 'dir1', 'nested'), lines[0])
-      self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f0'), lines[1])
-      self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f1'), lines[2])
-      self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f2.txt'), lines[3])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 4)
+    self.assertEqual(suri(dst_bucket_uri, src_tmpdir,
+                          'dir0', 'dir1', 'nested'), lines[0])
+    self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f0'), lines[1])
+    self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f1'), lines[2])
+    self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f2.txt'), lines[3])
 
   @PerformsFileToObjectUpload
   def testCopyingDirContainingOneFileToBucket(self):
@@ -143,15 +113,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-R', os.path.join(src_dir, 'dir0', 'dir1'),
                     suri(dst_bucket_uri)])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(2, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'dir1', 'foo'), lines[0])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 1)
+    self.assertEqual(suri(dst_bucket_uri, 'dir1', 'foo'), lines[0])
 
   @PerformsFileToObjectUpload
   def testCopyingFileToObjectWithConsecutiveSlashes(self):
@@ -160,15 +123,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri) + '//obj'])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(2, len(lines))
-      self.assertEqual(suri(dst_bucket_uri) + '//obj', lines[0])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 1)
+    self.assertEqual(suri(dst_bucket_uri) + '//obj', lines[0])
 
   @PerformsFileToObjectUpload
   def testCopyingObjsAndFilesToBucket(self):
@@ -180,15 +136,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-R', suri(src_bucket_uri, '**'),
                     '%s%s**' % (src_dir, os.sep), suri(dst_bucket_uri)])
 
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(3, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'f1'), lines[0])
-      self.assertEqual(suri(dst_bucket_uri, 'f2'), lines[1])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 2)
+    self.assertEqual(suri(dst_bucket_uri, 'f1'), lines[0])
+    self.assertEqual(suri(dst_bucket_uri, 'f2'), lines[1])
 
   @PerformsFileToObjectUpload
   def testCopyingSubdirRecursiveToNonexistentSubdir(self):
@@ -208,14 +158,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-R', src_dir + '/dir1',
                     suri(dst_bucket_uri, 'dir3')])
 
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                              return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(2, len(lines))
-      self.assertEqual(suri(dst_bucket_uri, 'dir3/dir2/foo'), lines[0])
-    _Check1()
+    lines = self.AssertNObjectsInBucket(dst_bucket_uri, 1)
+    self.assertEqual(suri(dst_bucket_uri, 'dir3/dir2/foo'), lines[0])
 
   @PerformsFileToObjectUpload
   def testCopyingWildcardedFilesToBucketSubDir(self):
@@ -266,19 +210,11 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
         self.RunGsUtil(['cp', '-r', suri(src_dir, 'd3'),
                         suri(dst_bucket_uri, 'd%d' % i) + final_dst_char])
 
-      @Retry(AssertionError, tries=3, timeout_secs=1)
-      def _Check1():
-        """Validate files were copied to the correct destinations."""
-        stdout = self.RunGsUtil(['ls', suri(dst_bucket_uri, '**')],
-                                return_stdout=True)
-        lines = stdout.split('\n')
-        self.assertEqual(5, len(lines))
-        self.assertEqual(suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'),
-                         lines[0])
-        self.assertEqual(suri(dst_bucket_uri, 'd0', 'placeholder'),
-                         lines[1])
-        self.assertEqual(suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1'),
-                         lines[2])
-        self.assertEqual(suri(dst_bucket_uri, 'd1', 'placeholder'), lines[3])
-      _Check1()
+      lines = self.AssertNObjectsInBucket(dst_bucket_uri, 4)
+      self.assertEqual(suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'),
+                       lines[0])
+      self.assertEqual(suri(dst_bucket_uri, 'd0', 'placeholder'), lines[1])
+      self.assertEqual(suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1'),
+                       lines[2])
+      self.assertEqual(suri(dst_bucket_uri, 'd1', 'placeholder'), lines[3])
 

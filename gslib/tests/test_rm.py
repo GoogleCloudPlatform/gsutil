@@ -43,13 +43,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     all_stderr_lines = set()
     _Check1(all_stderr_lines)
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check2()
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def test_all_versions_no_current(self):
     """Test that 'rm -a' for an object without a current version works."""
@@ -68,12 +62,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def test_fails_for_missing_obj(self):
     bucket_uri = self.CreateVersionedBucket()
@@ -94,6 +83,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2_uri.set_contents_from_string('baz2')
     k1g2 = k1_uri.generation or k1_uri.version_id
     k2g2 = k2_uri.generation or k2_uri.version_id
+
+    self.AssertNObjectsInBucket(bucket_uri, 4, versioned=True)
 
     all_stderr_lines = set()
     stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
@@ -129,6 +120,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     k2_uri.set_contents_from_string('baz2')
     k1g2 = k1_uri.generation or k1_uri.version_id
     k2g2 = k2_uri.generation or k2_uri.version_id
+    self.AssertNObjectsInBucket(bucket_uri, 4, versioned=True)
 
     stderr = self.RunGsUtil(['rm', '-r', '%s/dir' % suri(bucket_uri)],
                             return_stderr=True)
@@ -137,18 +129,13 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Removing %s#%s...' % (suri(k1_uri), k1g2), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g1), stderr)
     self.assertIn('Removing %s#%s...' % (suri(k2_uri), k2g2), stderr)
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def test_missing_first_force(self):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='present',
                                    contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
     self.RunGsUtil(['rm', '%s/missing' % suri(bucket_uri),
                     suri(object_uri)], expected_status=1)
     stderr = self.RunGsUtil(
@@ -162,6 +149,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = bucket_uri.clone_replace_name('foo')
     key_uri.set_contents_from_string('bar')
+    self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stderr = self.RunGsUtil(['rm', '-a', suri(key_uri), '%s/missing'
                              % suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
@@ -173,17 +161,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = bucket_uri.clone_replace_name('foo')
     key_uri.set_contents_from_string('bar')
+    self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stderr = self.RunGsUtil(
         ['rm', '-af', suri(key_uri), '%s/missing' % suri(bucket_uri)],
         return_stderr=True, expected_status=1)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
-                              return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 0)
 
   def test_folder_objects_deleted(self):
     """Test for 'rm -r' of a folder with a dir_$folder$ marker."""
@@ -192,13 +175,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('foobar')
     folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)])
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 2, versioned=True)
+    self.RunGsUtil(['rm', '-r', '%s/abc' % suri(bucket_uri)])
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
     # Bucket should not be deleted (Should not get ServiceException).
     bucket_uri.get_location(validate=False)
 
@@ -210,25 +189,13 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     folderkey = bucket_uri.clone_replace_name('abc_$folder$')
     folderkey.set_contents_from_string('')
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      lines = stdout.split('\n')
-      self.assertEqual(3, len(lines))
-    _Check1()
-
+    self.AssertNObjectsInBucket(bucket_uri, 2, versioned=True)
     stderr = self.RunGsUtil(['rm', '-r', '%s/**' % suri(bucket_uri)],
                             return_stderr=True)
     # Folder wildcard should not generate an error if it's not matched.
     self.assertNotIn('No URLs matched', stderr)
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check2():
-      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
-      self.assertEqual(stdout, '')
-    _Check2()
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
     # Bucket should not be deleted (Should not get ServiceException).
     bucket_uri.get_location(validate=False)
 
@@ -252,6 +219,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri, 'obj', 'z')
     self.CreateObject(bucket_uri, 'obj', 'z')
     self.CreateObject(bucket_uri, 'obj', 'z')
+    self.AssertNObjectsInBucket(bucket_uri, 3, versioned=True)
     self.RunGsUtil(['rm', suri(bucket_uri, '**')])
     stderr = self.RunGsUtil(['rb', suri(bucket_uri)],
                             return_stderr=True, expected_status=1)
@@ -295,6 +263,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     """Test that 'rm -q' outputs no progress indications."""
     bucket_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
     stderr = self.RunGsUtil(['-q', 'rm', suri(key_uri)], return_stderr=True)
     self.assertEqual(stderr.count('Removing '), 0)
 
@@ -307,9 +276,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                               object_name='dirnoslash/foo', contents='z')
     ouri3 = self.CreateObject(bucket_uri=bucket_uri,
                               object_name='dirnoslash/foo2', contents='z')
+
+    self.AssertNObjectsInBucket(bucket_uri, 3, versioned=True)
+
     # Test with and without final slash on dest subdir.
     all_stderr_lines = set()
-    stderr = self.RunGsUtil(['rm', '-ar', suri(bucket_uri)],
+    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
                             return_stderr=True)
     all_stderr_lines.update(set(stderr.splitlines()))
     stderr = '\n'.join(all_stderr_lines)
@@ -350,14 +322,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         object_name='everything/is/better/with/slashes///////',
         contents='Maniac')
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      listing = self.RunGsUtil(['ls', suri(bucket_uri) + '/**'],
-                               return_stdout=True).split('\n')
-      # 9 objects + one trailing newline.
-      self.assertEquals(len(listing), 10)
-    _Check1()
+    self.AssertNObjectsInBucket(bucket_uri, 9, versioned=True)
 
     all_stderr_lines = set()
     stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri)],
