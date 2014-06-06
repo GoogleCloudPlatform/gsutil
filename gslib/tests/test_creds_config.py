@@ -13,33 +13,12 @@
 # limitations under the License.
 """Tests for various combinations of configured credentials."""
 
-import logging
-
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
+from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetBotoConfigForTest
-
-
-class MockLoggingHandler(logging.Handler):
-  """Mock logging handler to check for expected logs."""
-
-  def __init__(self, *args, **kwargs):
-    self.reset()
-    logging.Handler.__init__(self, *args, **kwargs)
-
-  def emit(self, record):
-    self.messages[record.levelname.lower()].append(record.getMessage())
-
-  def reset(self):
-    self.messages = {
-        'debug': [],
-        'info': [],
-        'warning': [],
-        'error': [],
-        'critical': [],
-    }
 
 
 class TestCredsConfig(testcase.GsUtilUnitTestCase):

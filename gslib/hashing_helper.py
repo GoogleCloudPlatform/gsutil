@@ -21,7 +21,6 @@ import binascii
 from hashlib import md5
 import os
 import re
-import sys
 
 from boto import config
 import crcmod
@@ -66,16 +65,6 @@ To force integrity checking, see the "check_hashes" option in your boto config
 file.
 """
 
-NO_SERVER_HASH_EXCEPTION_TEXT = """
-%s has no server-supplied hash for performing integrity checks. To skip
-integrity checking for such objects, see the "check_hashes" option in your boto
-config file."""
-
-NO_SERVER_HASH_WARNING = """
-WARNING: This object has no server-supplied hash for performing integrity
-checks. To force integrity checking, see the "check_hashes" option in your
-boto config file.
-"""
 
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
 
@@ -161,13 +150,13 @@ def GetUploadHashAlgs():
   return {'md5': md5}
 
 
-def GetDownloadHashAlgs(src_md5=False, src_crc32c=False, src_url_str=None):
+def GetDownloadHashAlgs(logger, src_md5=False, src_crc32c=False):
   """Returns a dict of hash algorithms for validating an object.
 
   Args:
+    logger: For outputting log messages.
     src_md5: If True, source object has an md5 hash.
     src_crc32c: If True, source object has a crc32c hash.
-    src_url_str: URL string of object being hashed.
 
   Returns:
     Dict of (string, hash algorithm).
@@ -193,19 +182,14 @@ def GetDownloadHashAlgs(src_md5=False, src_crc32c=False, src_url_str=None):
       if check_hashes_config == 'if_fast_else_fail':
         raise SLOW_CRC_EXCEPTION
       elif check_hashes_config == 'if_fast_else_skip':
-        sys.stderr.write(NO_HASH_CHECK_WARNING)
+        logger.warn(NO_HASH_CHECK_WARNING)
       elif check_hashes_config == 'always':
-        sys.stderr.write(SLOW_CRC_WARNING)
+        logger.warn(SLOW_CRC_WARNING)
         hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
       else:
         raise CommandException(
             'Your boto config \'check_hashes\' option is misconfigured.')
 
-  if not hash_algs:
-    if check_hashes_config == 'if_fast_else_skip':
-      sys.stderr.write(NO_SERVER_HASH_WARNING % src_url_str)
-    else:
-      raise CommandException(NO_SERVER_HASH_EXCEPTION_TEXT % src_url_str)
   return hash_algs
 
 

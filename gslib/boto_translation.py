@@ -1155,9 +1155,8 @@ class BotoTranslation(CloudApi):
         # S3 etags are MD5s for non-multi-part objects, but multi-part objects
         # (which include all objects >= 5GB) have a custom checksum
         # implementation that is not currently supported by gsutil.
-        raise ServiceException('Non-MD5 etag (%s) present for key %s, data '
-                               'integrity checks are not possible.'
-                               % (key.etag, key))
+        self.logger.warn('Non-MD5 etag (%s) present for key %s, data '
+                         'integrity checks are not possible.' % (key.etag, key))
 
     # Serialize the boto key in the media link if it is requested.  This
     # way we can later access the key without adding an HTTP call.

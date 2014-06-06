@@ -211,7 +211,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     return boto.storage_uri(uri_str, default_scheme, debug, validate,
                             util.GSMockBucketStorageUri)
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None):
+  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
+                   provider='gs'):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -223,13 +224,14 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
                     a list of object names to place in the bucket. Defaults to
                     0.
       storage_class: storage class to use. If not provided we us standard.
+      provider: string provider to use, default gs.
 
     Returns:
       StorageUri for the created bucket.
     """
     bucket_name = bucket_name or self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri(
-        'gs://%s' % bucket_name.lower(),
+        '%s://%s' % (provider, bucket_name.lower()),
         suppress_consec_slashes=False,
         bucket_storage_uri_class=util.GSMockBucketStorageUri)
     bucket_uri.create_bucket(storage_class=storage_class)

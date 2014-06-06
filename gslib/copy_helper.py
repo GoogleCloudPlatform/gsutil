@@ -1773,9 +1773,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
 
   # Set up hash digesters.
   hash_algs = GetDownloadHashAlgs(
-      src_md5=src_obj_metadata.md5Hash,
-      src_crc32c=src_obj_metadata.crc32c,
-      src_url_str=src_url.GetUrlString())
+      logger, src_md5=src_obj_metadata.md5Hash,
+      src_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   fp = None

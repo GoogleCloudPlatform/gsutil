@@ -449,7 +449,7 @@ class TestCommand(Command):
               for proc_num in xrange(len(process_list)):
                 if not process_done[proc_num]:
                   still_running.append(parallel_integration_tests[proc_num])
-                print 'Still running: %s' % still_running
+              print 'Still running: %s' % still_running
             last_log_time = time.time()
           time.sleep(1)
       process_run_finish_time = time.time()
