@@ -46,7 +46,7 @@ except ImportError as e:
     raise
 
 
-DEFAULT_TEST_PARALLEL_PROCESSES = 500
+DEFAULT_TEST_PARALLEL_PROCESSES = 15
 DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
 
 
@@ -75,9 +75,9 @@ _detailed_help_text = ("""
 
     gsutil -m test
 
-  To limit the number of tests run in parallel to 50 at a time:
+  To limit the number of tests run in parallel to 10 at a time:
 
-    gsutil -m test -p 50
+    gsutil -m test -p 10
 
   To see additional details for test failures:
 

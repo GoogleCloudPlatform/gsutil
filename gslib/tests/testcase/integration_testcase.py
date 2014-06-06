@@ -94,7 +94,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   # TODO: As long as we're still using boto to do the teardown,
   # we decorate with boto exceptions.  Eventually this should be migrated
   # to CloudApi exceptions.
-  @Retry(StorageResponseError, tries=6, timeout_secs=1)
+  @Retry(StorageResponseError, tries=7, timeout_secs=1)
   def tearDown(self):
     super(GsUtilIntegrationTestCase, self).tearDown()
 
@@ -203,7 +203,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # Parallel tests can easily run into bucket creation quotas.
     # Retry with exponential backoff so that we create them as fast as we
     # reasonably can.
-    @Retry(StorageResponseError, tries=6, timeout_secs=1)
+    @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
       bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
 
