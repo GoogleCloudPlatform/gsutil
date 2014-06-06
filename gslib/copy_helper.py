@@ -178,7 +178,7 @@ def _RmExceptionHandler(cls, e):
 def _ParallelUploadCopyExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
-  cls.copy_failure_count += 1
+  cls.op_failure_count += 1
   cls.logger.debug('\n\nEncountered exception while copying:\n%s\n' %
                    traceback.format_exc())
 
@@ -1013,7 +1013,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   # uploaded to temporary objects.
   cp_results = command_obj.Apply(
       _PerformParallelUploadFileToObject, components_to_upload,
-      copy_exception_handler, ('copy_failure_count', 'total_bytes_transferred'),
+      copy_exception_handler, ('op_failure_count', 'total_bytes_transferred'),
       arg_checker=gslib.command.DummyArgChecker,
       parallel_operations_override=True, should_return_results=True)
   uploaded_components = []

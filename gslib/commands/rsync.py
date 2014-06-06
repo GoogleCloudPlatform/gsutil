@@ -742,6 +742,7 @@ class RsyncCommand(Command):
       help_text=_detailed_help_text,
       subcommand_help_text={},
   )
+  total_bytes_transferred = 0
 
   def _InsistContainer(self, url_str):
     """Sanity checks that URL names an existing container.

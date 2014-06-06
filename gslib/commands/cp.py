@@ -498,7 +498,7 @@ def _CopyFuncWrapper(cls, args, thread_state=None):
 def _CopyExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
-  cls.copy_failure_count += 1
+  cls.op_failure_count += 1
   cls.logger.debug('\n\nEncountered exception while copying:\n%s\n' %
                    traceback.format_exc())
 
@@ -661,7 +661,7 @@ class CpCommand(Command):
               exp_src_url.GetUrlString(), 0, 'skip', message)
       elif self.continue_on_error:
         message = 'Error copying %s: %s' % (src_url.GetUrlString(), str(e))
-        self.copy_failure_count += 1
+        self.op_failure_count += 1
         self.logger.error(message)
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
@@ -749,14 +749,14 @@ class CpCommand(Command):
     self.stats_lock = CreateLock()
 
     # Tracks if any copies failed.
-    self.copy_failure_count = 0
+    self.op_failure_count = 0
 
     # Start the clock.
     start_time = time.time()
 
     # Tuple of attributes to share/manage across multiple processes in
     # parallel (-m) mode.
-    shared_attrs = ('copy_failure_count', 'total_bytes_transferred')
+    shared_attrs = ('op_failure_count', 'total_bytes_transferred')
 
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
@@ -790,10 +790,10 @@ class CpCommand(Command):
             'Total bytes copied=%d, total elapsed time=%5.3f secs (%sps)',
             self.total_bytes_transferred, self.total_elapsed_time,
             MakeHumanReadable(self.total_bytes_per_second))
-    if self.copy_failure_count:
-      plural_str = 's' if self.copy_failure_count else ''
+    if self.op_failure_count:
+      plural_str = 's' if self.op_failure_count else ''
       raise CommandException('%d file%s/object%s could not be transferred.' % (
-          self.copy_failure_count, plural_str, plural_str))
+          self.op_failure_count, plural_str, plural_str))
 
     return 0
 

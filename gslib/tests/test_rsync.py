@@ -14,11 +14,14 @@
 """Integration tests for rsync command."""
 
 import os
+
 import crcmod
 
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -250,6 +253,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         ['rsync', '-d', '-r', suri(bucket1_uri), suri(bucket2_uri)],
         return_stderr=True))
 
+  # Test sequential upload as well as parallel composite upload case.
+  @PerformsFileToObjectUpload
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
   def test_dir_to_bucket_minus_d(self):
@@ -438,8 +443,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.CreateTempFile(tmpdir=tmpdir2, file_name='d2-%s' %i, contents='y')
 
     # Run gsutil with config option to make buffer size << # files.
-    self.RunGsUtil(
-        ['-o GSUtil:rsync_buffer_lines=2', 'rsync', '-d', tmpdir1, tmpdir2])
+    with SetBotoConfigForTest([('GSUtil', 'rsync_buffer_lines', '2')]):
+      self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     self.assertEquals(listing1, listing2)
