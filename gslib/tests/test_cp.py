@@ -779,14 +779,25 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5))
     _Check1()
 
+  @unittest.skipIf(IS_WINDOWS,
+                   'Unicode handling on Windows requires mods to site-packages')
+  @PerformsFileToObjectUpload
+  def test_cp_manifest_upload_unicode(self):
+    return self._ManifestUpload('foo-unicöde', 'bar-unicöde',
+                                'manifest-unicöde')
+
   @PerformsFileToObjectUpload
   def test_cp_manifest_upload(self):
+    """Tests uploading with a mnifest file."""
+    return self._ManifestUpload('foo', 'bar', 'manifest')
+
+  def _ManifestUpload(self, file_name, object_name, manifest_name):
     """Tests uploading with a manifest file."""
     bucket_uri = self.CreateBucket()
-    dsturi = suri(bucket_uri, 'foo')
+    dsturi = suri(bucket_uri, 'foo-unicöde')
 
-    fpath = self.CreateTempFile(contents='bar')
-    logpath = self.CreateTempFile(contents='')
+    fpath = self.CreateTempFile(file_name='bar-unicöde', contents='bar')
+    logpath = self.CreateTempFile(file_name='manifest-unicöde', contents='')
     # Ensure the file is empty.
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
@@ -811,7 +822,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # calculate the MD5 hash. Since RunGsUtil is overriden in
       # TestCpParallelUploads to force parallel uploads, we can check which
       # method was used.
-      self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
+      self.assertEqual(results[4], 'rL0Y20zC+Fzt72VPzMSk2A==')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
     self.assertEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
@@ -842,8 +853,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     start_date = datetime.datetime.strptime(results[2], date_format)
     end_date = datetime.datetime.strptime(results[3], date_format)
     self.assertEqual(end_date > start_date, True)
-    # TODO: fix this when CRC32C's are added to the manifest.
-    # self.assertEqual(results[4], '37b51d194a7513e45b56f6524f2d51f2')  # md5
+    self.assertEqual(results[4], 'rL0Y20zC+Fzt72VPzMSk2A==')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
     # Bytes transferred might be more than 3 if the file was gzipped, since
     # the minimum gzip header is 10 bytes.
@@ -1085,6 +1095,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @NotParallelizable
   @SkipForS3('No resumable upload support for S3.')
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
+  @PerformsFileToObjectUpload
   def test_cp_unwritable_tracker_file(self):
     """Tests a resumable upload with an unwritable tracker file."""
     bucket_uri = self.CreateBucket()

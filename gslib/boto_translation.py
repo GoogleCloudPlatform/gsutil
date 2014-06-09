@@ -95,6 +95,9 @@ TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
 # multiprocessing.Value in a call to InitializeMultiprocessingVariables.
 boto_auth_initialized = False
 
+NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
+                                       flags=re.DOTALL)
+
 
 def InitializeMultiprocessingVariables():
   """Perform necessary initialization for multiprocessing.
@@ -1362,7 +1365,7 @@ class BotoTranslation(CloudApi):
 
     if isinstance(e, boto.exception.InvalidUriError):
       # Work around textwrap when searching for this string.
-      if 'non-existent object' in ' '.join(str(e).split()):
+      if NON_EXISTENT_OBJECT_REGEX.match(str(e)):
         return NotFoundException(e.message, status=404)
       return InvalidUrlError(e.message)
 

@@ -123,6 +123,10 @@ name. Note that there will be no problems with object name length since we
 hash the original name.
 """
 
+TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
+    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is ' 
+    'configured to save tracker files to an unwritable directory)')
+
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
 UPLOAD_RETURN_FIELDS = ['generation', 'md5Hash', 'size']
@@ -418,11 +422,8 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
       tf.write('%s\n' % src_obj_metadata.etag)
     return False
   except IOError as e:
-    raise CommandException('\n'.join(textwrap.wrap(
-        'Couldn\'t write tracker file (%s): %s. This can happen '
-        'if you\'re using an incorrectly configured download tool '
-        '(e.g., gsutil configured to save tracker files to an '
-        'unwritable directory)' % (tracker_file_name, e.strerror))))
+    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
+                           (tracker_file_name, e.strerror))
   finally:
     if tracker_file:
       tracker_file.close()
@@ -1507,12 +1508,8 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       tracker_file = open(tracker_file_name, 'w')
       tracker_file.write(str(serialization_data))
     except IOError as e:
-      raise CommandException(
-          'Couldn\'t write tracker file (%s): %s.\nThis can happen'
-          'if you\'re using an incorrectly configured download tool\n'
-          '(e.g., gsutil configured to save tracker files to an '
-          'unwritable directory)' %
-          (tracker_file_name, e.strerror))
+      raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
+                             (tracker_file_name, e.strerror))
     finally:
       if tracker_file:
         tracker_file.close()
@@ -2406,8 +2403,8 @@ class Manifest(object):
     """Writes a manifest entry to the manifest file for the url argument."""
     row_item = self.items[url]
     data = [
-        str(row_item['source_uri']),
-        str(row_item['destination_uri']),
+        str(row_item['source_uri'].encode(UTF8)),
+        str(row_item['destination_uri'].encode(UTF8)),
         '%sZ' % row_item['start_time'].isoformat(),
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
@@ -2415,7 +2412,7 @@ class Manifest(object):
         str(row_item['size']) if 'size' in row_item else '',
         str(row_item['bytes']) if 'bytes' in row_item else '',
         row_item['result'],
-        row_item['description']]
+        row_item['description'].encode(UTF8)]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
@@ -2640,10 +2637,14 @@ def _CreateParallelUploadTrackerFile(tracker_file, random_prefix, components,
   lines = [random_prefix]
   lines += _GetParallelUploadTrackerFileLinesForComponents(components)
   lines = [line + '\n' for line in lines]
-  with tracker_file_lock:
-    open(tracker_file, 'w').close()  # Clear the file.
-    with open(tracker_file, 'w') as f:
-      f.writelines(lines)
+  try:
+    with tracker_file_lock:
+      open(tracker_file, 'w').close()  # Clear the file.
+      with open(tracker_file, 'w') as f:
+        f.writelines(lines)
+  except IOError as e:
+    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
+                           (tracker_file, e.strerror))
 
 
 def _GetParallelUploadTrackerFileLinesForComponents(components):
