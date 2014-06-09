@@ -36,7 +36,6 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetCloudApiInstance
-from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import TEN_MB
 from gslib.util import UsingCrcmodExtension
@@ -483,19 +482,9 @@ class _DiffIterator(object):
         (self.base_dst_url.GetUrlString(), self.sorted_list_dst_file_name,
          'destination')
     ])
-    if IS_WINDOWS:
-      # Don't use multi-processing on Windows (very broken).
-      thread_count = 2
-      process_count = 1
-    else:
-      # Otherwise use multi-processing, to avoid Python global thread lock
-      # contention.
-      thread_count = 1
-      process_count = 2
     command_obj.Apply(_ListUrlRootFunc, args_iter, _RootListingExceptionHandler,
                       arg_checker=DummyArgChecker,
                       parallel_operations_override=True,
-                      thread_count=thread_count, process_count=process_count,
                       fail_on_error=True)
 
     self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'r')
