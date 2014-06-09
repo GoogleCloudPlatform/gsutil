@@ -203,7 +203,8 @@ class AclChange(object):
 
     Args:
       url_string: URL string representing the object to change.
-      current_acl: An instance of boto.gs.acl.ACL to permute.
+      current_acl: A list of ObjectAccessControls or
+                   BucketAccessControls to permute.
       logger: An instance of logging.Logger.
 
     Returns:
@@ -222,8 +223,8 @@ class AclChange(object):
     change_count = 0
     if matching_entries:
       for entry in matching_entries:
-        if entry.permission != self.perm:
-          entry.permission = self.perm
+        if entry.role != self.perm:
+          entry.role = self.perm
           change_count += 1
     else:
       self._AddEntry(current_acl, entry_class)

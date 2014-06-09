@@ -340,11 +340,19 @@ class TestAcl(TestAclBase):
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
     self.assertRegexpMatches(json_text, test_regex)
 
+    test_regex2 = self._MakeScopeRegex(
+        'WRITER', 'user', self.USER_TEST_ADDRESS)
+    self.RunGsUtil(self._ch_acl_prefix +
+                   ['-u', self.USER_TEST_ADDRESS+':w', suri(self.sample_uri)])
+    json_text2 = self.RunGsUtil(
+        self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
+    self.assertRegexpMatches(json_text2, test_regex2)
+
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.USER_TEST_ADDRESS, suri(self.sample_uri)])
-    json_text = self.RunGsUtil(
+    json_text3 = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegexpMatches(json_text3, test_regex)
 
   def testObjectAclChange(self):
     """Tests acl change on an object."""
@@ -363,11 +371,19 @@ class TestAcl(TestAclBase):
                                return_stdout=True)
     self.assertRegexpMatches(json_text, test_regex)
 
+    test_regex2 = self._MakeScopeRegex(
+        'OWNER', 'group', self.GROUP_TEST_ADDRESS)
+    self.RunGsUtil(self._ch_acl_prefix +
+                   ['-g', self.GROUP_TEST_ADDRESS+':OWNER', suri(obj)])
+    json_text2 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                return_stdout=True)
+    self.assertRegexpMatches(json_text2, test_regex2)
+
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
-    json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
-                               return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    json_text3 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                return_stdout=True)
+    self.assertNotRegexpMatches(json_text3, test_regex2)
 
   def testObjectAclChangeAllUsers(self):
     """Tests acl ch AllUsers:R on an object."""
