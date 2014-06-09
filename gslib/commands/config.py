@@ -242,7 +242,7 @@ _detailed_help_text = ("""
 
 
 try:
-  from oauth2_plugin import oauth2_helper  # pylint: disable=g-import-not-at-top
+  from gcs_oauth2_boto_plugin import oauth2_helper  # pylint: disable=g-import-not-at-top
 except ImportError:
   pass
 

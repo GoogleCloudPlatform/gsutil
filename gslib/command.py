@@ -693,9 +693,10 @@ class Command(HelpProvider):
     When one of the metadata-related commands fails due to AccessDenied, user
     must ensure that they are listed as an Owner in the API console.
     """
-    # Import this here so that the value will be set first in oauth2_plugin.
+    # Import this here so that the value will be set first in
+    # gcs_oauth2_boto_plugin.
     # pylint: disable=g-import-not-at-top
-    from oauth2_plugin.oauth2_plugin import IS_SERVICE_ACCOUNT
+    from gcs_oauth2_boto_plugin.oauth2_plugin import IS_SERVICE_ACCOUNT
 
     if IS_SERVICE_ACCOUNT:
       # This method is only called when canned ACLs are used, so the warning

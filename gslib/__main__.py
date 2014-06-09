@@ -70,7 +70,7 @@ GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
 # authentication is performed.
 try:
   # pylint: disable=unused-import,g-import-not-at-top
-  import oauth2_plugin
+  import gcs_oauth2_boto_plugin
 except ImportError:
   pass
 
@@ -140,7 +140,7 @@ def main():
   import gslib.util
   from gslib.util import BOTO_IS_SECURE
   from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-  from oauth2_plugin import oauth2_client
+  from gcs_oauth2_boto_plugin import oauth2_client
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
     # These setup methods must be called, and, on Windows, they can only be
@@ -153,10 +153,10 @@ def main():
   # since otherwise we can't call gslib.util.CreateLock.
   try:
     # pylint: disable=unused-import,g-import-not-at-top
-    import oauth2_plugin
-    oauth2_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
+    import gcs_oauth2_boto_plugin
+    gcs_oauth2_boto_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
         GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
-    oauth2_plugin.oauth2_helper.SetLock(CreateLock())
+    gcs_oauth2_boto_plugin.oauth2_helper.SetLock(CreateLock())
   except ImportError:
     pass
 

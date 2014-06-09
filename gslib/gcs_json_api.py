@@ -17,7 +17,7 @@ import json
 
 import boto
 from boto import config
-from oauth2_plugin import oauth2_helper
+from gcs_oauth2_boto_plugin import oauth2_helper
 from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
