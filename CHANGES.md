@@ -1,3 +1,24 @@
+Release 4.3 (release date: 2014-06-10)
+=======================================
+
+Bug Fixes
+---------
+- Fix acl/defacl ch changing the role of an existing group.
+- Fix unicode and 404 errors when using manifests.
+- Fix parallelism configuration bug that limited gsutil rsync to two threads
+  and could lead to rsync hangs. "gsutil -m rsync" runs much faster, and rsync
+  uploads of large local files are now faster via parallel composite upload.
+  Parallel composite uploads of large files are also faster.
+- Fix rsync bug with parallel composite uploads.
+- Fix TypeError that could occur when running the cp command with no
+  credentials.
+
+Other Changes
+-------------
+- Progress indicators for -m cp/rsync commands are now more readable.
+- Added command being run to gsutil -d/-D output.
+- Lowered default parallelism for 'gsutil -m test' and added hang detection.
+
 Release 4.2 (release date: 2014-06-05)
 =======================================
 
@@ -11,8 +32,8 @@ Bug Fixes
 - Moved to boto release 2.29.1 fixing boto authentication erroneously
   reporting OAuth2 credentials as invalid.
 - Fix parallel composite uploads when using only a single process and thread.
-- Fix file copy from Google Cloud Storage -> S3 for files greater than
-  8KB in size.
+- Fix an invalid seek during daisy chain operation that affected file copy
+  from Google Cloud Storage -> S3 for files greater than 8KB in size.
 - Fix "gsutil acl ch" with AllUsers or AllAuthenticatedUsers groups.
 - Fix some copy errors writing new lines to the manifest file.
 - Fix "gsutil test" return code to properly be 0 on success.
