@@ -163,6 +163,10 @@ MAX_TRACKER_FILE_NAME_LENGTH = 100
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
 
+# Max width of URL to display in progress indicator. Wide enough to allow
+# 15 chars for x/y display on an 80 char wide terminal.
+MAX_PROGRESS_INDICATOR_WIDTH = 65
+
 
 class TrackerFileType(object):
   UPLOAD = 'upload'
@@ -1226,11 +1230,23 @@ def SrcDstSame(src_url, dst_url):
 class _FileCopyCallbackHandler(object):
   """Outputs progress info for large copy requests."""
 
-  def __init__(self, upload, logger):
-    if upload:
-      self.announce_text = 'Uploading'
+  def __init__(self, is_upload, display_url, logger):
+    # Use fixed-width announce text so concurrent output (gsutil -m) leaves
+    # progress counters in readable (fixed) position.
+    start_len = len('Uploading   ')  # Same as len('Downloading ')
+    display_urlstr = display_url.GetUrlString()
+    end_len = len(': ')
+    elip_len = len('... ')
+    if (start_len + len(display_urlstr) + end_len >
+        MAX_PROGRESS_INDICATOR_WIDTH):
+      display_urlstr = '%s...' % display_urlstr[
+          -(MAX_PROGRESS_INDICATOR_WIDTH - start_len - end_len - elip_len):]
+    if is_upload:
+      base_announce_text = 'Uploading   %s:' % display_urlstr
     else:
-      self.announce_text = 'Downloading'
+      base_announce_text = 'Downloading %s:' % display_urlstr
+    format_str = '{:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
+    self.announce_text = format_str.format(base_announce_text)
     self.logger = logger
 
   # pylint: disable=invalid-name
@@ -1243,7 +1259,7 @@ class _FileCopyCallbackHandler(object):
     if self.logger.isEnabledFor(logging.INFO):
       # Use sys.stderr.write instead of self.logger.info so progress messages
       # output on a single continuously overwriting line.
-      sys.stderr.write('%s: %s%s    \r' % (
+      sys.stderr.write('%s%s%s    \r' % (
           self.announce_text,
           MakeHumanReadable(total_bytes_transferred),
           total_size_string))
@@ -1254,10 +1270,11 @@ class _FileCopyCallbackHandler(object):
 class _HaltingCopyCallbackHandler(object):
   """Test callback handler for intentionally stopping a resumable transfer."""
 
-  def __init__(self, is_upload, halt_at_byte, logger):
+  def __init__(self, is_upload, display_url, halt_at_byte, logger):
+    self.is_upload = is_upload
+    self.display_url = display_url
     self.halt_at_byte = halt_at_byte
     self.logger = logger
-    self.is_upload = is_upload
 
   # pylint: disable=invalid-name
   def call(self, total_bytes_transferred, total_size):
@@ -1272,27 +1289,6 @@ class _HaltingCopyCallbackHandler(object):
         raise ResumableUploadException('Artifically halting upload.')
       else:
         raise ResumableDownloadException('Artifically halting download.')
-
-
-class _StreamCopyCallbackHandler(object):
-  """Outputs progress info for Stream copy to cloud.
-
-   Total Size of the stream is not known, so we output
-   only the bytes transferred.
-  """
-
-  def __init__(self, logger):
-    self.logger = logger
-
-  # pylint: disable=invalid-name
-  def call(self, total_bytes_transferred, total_size):
-    # Use sys.stderr.write instead of self.logger.info so progress messages
-    # output on a single continuously overwriting line.
-    if self.logger.isEnabledFor(logging.INFO):
-      sys.stderr.write('Uploading: %s    \r' %
-                       MakeHumanReadable(total_bytes_transferred))
-      if total_size and total_bytes_transferred == total_size:
-        sys.stderr.write('\n')
 
 
 def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
@@ -1451,7 +1447,7 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
-  progress_callback = _FileCopyCallbackHandler(True, logger).call
+  progress_callback = _FileCopyCallbackHandler(True, dst_url, logger).call
   start_time = time.time()
 
   if src_url.IsStream():
@@ -1530,10 +1526,10 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
 
   retryable = False
 
-  progress_callback = _FileCopyCallbackHandler(True, logger).call
+  progress_callback = _FileCopyCallbackHandler(True, dst_url, logger).call
   if global_copy_helper_opts.halt_at_byte:
     progress_callback = _HaltingCopyCallbackHandler(
-        True, global_copy_helper_opts.halt_at_byte, logger).call
+        True, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
 
   start_time = time.time()
   try:
@@ -1842,10 +1838,10 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if not dst_url.IsStream():
       serialization_data = json.dumps(serialization_dict)
 
-    progress_callback = _FileCopyCallbackHandler(False, logger).call
+    progress_callback = _FileCopyCallbackHandler(False, dst_url, logger).call
     if global_copy_helper_opts.halt_at_byte:
       progress_callback = _HaltingCopyCallbackHandler(
-          False, global_copy_helper_opts.halt_at_byte, logger).call
+          False, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
 
     start_time = time.time()
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
@@ -2091,7 +2087,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
-        progress_callback=_FileCopyCallbackHandler(True, logger).call,
+        progress_callback=_FileCopyCallbackHandler(True, dst_url, logger).call,
         tracker_callback=_DummyTrackerCallback)
   end_time = time.time()
 

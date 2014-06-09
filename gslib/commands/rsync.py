@@ -92,13 +92,21 @@ _detailed_help_text = ("""
 
     gsutil rsync -d -r gs://mybucket1 gs://mybucket2
 
+  You can also mirror data across local directories:
+
+    gsutil rsync -d -r dir1 dir2
+
   To mirror your content across clouds:
 
     gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
 
-  You can also mirror data across local directories:
-
-    gsutil rsync -d -r dir1 dir2
+  Note: If you are synchronizing a large amount of data between clouds you might
+  consider setting up a
+  `Google Compute Engine <https://cloud.google.com/products/compute-engine>`_
+  account and running gsutil there. Since cross-provider gsutil data transfers
+  flow through the machine where gsutil is running, doing this can make your
+  transfer run singificantly faster than running gsutil on your local
+  workstation.
 
 
 <B>FAILURE HANDLING</B>
