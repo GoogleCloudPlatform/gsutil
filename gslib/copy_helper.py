@@ -1247,7 +1247,7 @@ class _FileCopyCallbackHandler(object):
     else:
       base_announce_text = 'Downloading %s:' % display_urlstr
     format_str = '{:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
-    self.announce_text = format_str.format(base_announce_text)
+    self.announce_text = format_str.format(base_announce_text.encode(UTF8))
     self.logger = logger
 
   # pylint: disable=invalid-name
