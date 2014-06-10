@@ -600,7 +600,7 @@ class Upload(_Transfer):
   def __ConfigureResumableRequest(self, http_request):
     http_request.headers['X-Upload-Content-Type'] = self.mime_type
     if self.total_size is not None:
-      http_request.headers['X-Upload-Content-Length'] = self.total_size
+      http_request.headers['X-Upload-Content-Length'] = str(self.total_size)
 
   def _RefreshResumableUploadState(self):
     """Talk to the server and refresh the state of this resumable upload."""
