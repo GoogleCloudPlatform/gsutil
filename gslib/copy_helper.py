@@ -1246,7 +1246,7 @@ class _FileCopyCallbackHandler(object):
       base_announce_text = 'Uploading   %s:' % display_urlstr
     else:
       base_announce_text = 'Downloading %s:' % display_urlstr
-    format_str = '{:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
+    format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
     self.announce_text = format_str.format(base_announce_text.encode(UTF8))
     self.logger = logger
 
