@@ -442,8 +442,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.CreateTempFile(tmpdir=tmpdir1, file_name='d1-%s' %i, contents='x')
       self.CreateTempFile(tmpdir=tmpdir2, file_name='d2-%s' %i, contents='y')
 
+    reduce_buffer_config = [('GSUtil', 'rsync_buffer_lines',
+                             '50' if IS_WINDOWS else '2')]
     # Run gsutil with config option to make buffer size << # files.
-    with SetBotoConfigForTest([('GSUtil', 'rsync_buffer_lines', '2')]):
+    with SetBotoConfigForTest(reduce_buffer_config):
       self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
