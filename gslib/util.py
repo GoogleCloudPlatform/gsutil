@@ -193,8 +193,10 @@ def CreateTrackerDirIfNeeded():
 
 # Name of file where we keep the timestamp for the last time we checked whether
 # a new version of gsutil is available.
+CreateTrackerDirIfNeeded()
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-    os.path.join(CreateTrackerDirIfNeeded(), '.last_software_update_check'))
+    os.path.expanduser(os.path.join(
+        '~', '.gsutil', '.last_software_update_check')))
 
 
 def HasConfiguredCredentials():
