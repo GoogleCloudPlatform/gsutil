@@ -794,10 +794,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def _ManifestUpload(self, file_name, object_name, manifest_name):
     """Tests uploading with a manifest file."""
     bucket_uri = self.CreateBucket()
-    dsturi = suri(bucket_uri, 'foo-unicöde')
+    dsturi = suri(bucket_uri, object_name)
 
-    fpath = self.CreateTempFile(file_name='bar-unicöde', contents='bar')
-    logpath = self.CreateTempFile(file_name='manifest-unicöde', contents='')
+    fpath = self.CreateTempFile(file_name=file_name, contents='bar')
+    logpath = self.CreateTempFile(file_name=manifest_name, contents='')
     # Ensure the file is empty.
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
