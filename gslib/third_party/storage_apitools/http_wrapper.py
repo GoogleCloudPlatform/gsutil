@@ -158,11 +158,6 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
         raise
       logging.error('Caught socket error, retrying: %s', e)
       exc = e
-    except httplib.IncompleteRead as e:
-      if http_request.http_method != 'GET':
-        raise
-      logging.error('Caught IncompleteRead error, retrying: %s', e)
-      exc = e
     if info is not None:
       response = Response(info, content, http_request.url)
       if (response.status_code < 500 and
@@ -171,9 +166,6 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
         break
       logging.info('Retrying request to url <%s> after status code %s',
                    response.request_url, response.status_code)
-    elif isinstance(exc, httplib.IncompleteRead):
-      logging.info('Retrying request to url <%s> after incomplete read.',
-                   str(http_request.url))
     else:
       logging.info('Retrying request to url <%s> after connection break.',
                    str(http_request.url))
@@ -183,7 +175,7 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
     else:
       time.sleep(2 ** retry)
   if response is None:
-    raise exceptions.InvalidDataFromServerError(
+    raise exc if exc else exceptions.InvalidDataFromServerError(
         'HTTP error on final retry: %s' % exc)
   return response
 

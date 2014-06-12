@@ -716,7 +716,7 @@ class Upload(_Transfer):
       self.stream.seek(current_pos)
       if current_pos != end_pos:
         raise exceptions.TransferInvalidError(
-          'Upload complete with additional bytes left in stream')
+            'Upload complete with additional bytes left in stream')
     self._ExecuteCallback(finish_callback, response)
     return response
 

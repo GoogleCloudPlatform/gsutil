@@ -27,6 +27,11 @@ from gslib.cloud_api import BadRequestException
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import TRANSFER_BUFFER_SIZE
 
+# By default, the timeout for ssl read errors is infinite. This could
+# cause gsutil to hang on network disconnect, so pick a more reasonable
+# timeout.
+SSL_TIMEOUT = 60
+
 
 class BytesUploadedContainer(object):
   """Container class for passing number of bytes uploaded to lower layers.
@@ -86,6 +91,10 @@ class UploadCallbackConnectionClassFactory(object):
       bytes_sent_since_callback = 0
       callback_per_bytes = outer_callback_per_bytes
       size = outer_total_size
+
+      def __init__(self, *args, **kwargs):
+        kwargs['timeout'] = SSL_TIMEOUT
+        httplib2.HTTPSConnectionWithTimeout.__init__(self, *args, **kwargs)
 
       def send(self, data):
         """Overrides HTTPConnection.send."""
@@ -174,6 +183,10 @@ class DownloadCallbackConnectionClassFactory(object):
       total_bytes_downloaded = 0
       outer_digesters = self.digesters
       outer_progress_callback = self.progress_callback
+
+      def __init__(self, *args, **kwargs):
+        kwargs['timeout'] = SSL_TIMEOUT
+        httplib2.HTTPSConnectionWithTimeout.__init__(self, *args, **kwargs)
 
       def getresponse(self, buffering=False):
         """Wraps an HTTPResponse to perform callbacks and hashing.

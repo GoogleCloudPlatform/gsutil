@@ -13,11 +13,16 @@
 # limitations under the License.
 """JSON gsutil Cloud API implementation for Google Cloud Storage."""
 
+import httplib
 import json
+import socket
+import ssl
+import time
 
 import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
+import httplib2
 from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
@@ -28,6 +33,7 @@ from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
+from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ServiceException
@@ -66,6 +72,8 @@ DEFAULT_GCS_JSON_VERSION = 'v1'
 NUM_BUCKETS_PER_LIST_PAGE = 100
 NUM_OBJECTS_PER_LIST_PAGE = 500
 
+MAX_TRANSFER_RETRIES = 7
+
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be
 # in multiples of 256KB). Overridable for testing.
@@ -81,6 +89,15 @@ def _ResumableChunkSize():
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
                                     apitools_exceptions.TransferError,
                                     apitools_exceptions.TransferInvalidError)
+
+
+HTTP_TRANSFER_EXCEPTIONS = (httplib.IncompleteRead,
+                            httplib.ResponseNotReady,
+                            httplib2.ServerNotFoundError,
+                            socket.error,
+                            socket.gaierror,
+                            socket.timeout,
+                            ssl.SSLError)
 
 
 class GcsJsonApi(CloudApi):
@@ -524,6 +541,49 @@ class GcsJsonApi(CloudApi):
     apitools_request = apitools_messages.StorageObjectsGetRequest(
         bucket=bucket_name, object=object_name, generation=generation)
 
+    if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
+      return self._PerformResumableDownload(
+          bucket_name, object_name, download_stream, apitools_request,
+          apitools_download, generation=generation, start_byte=start_byte,
+          end_byte=end_byte, serialization_data=serialization_data)
+    else:
+      return self._PerformDownload(
+          bucket_name, object_name, download_stream, apitools_request,
+          apitools_download, generation=generation, start_byte=start_byte,
+          end_byte=end_byte, serialization_data=serialization_data)
+
+  def _PerformResumableDownload(
+      self, bucket_name, object_name, download_stream, apitools_request,
+      apitools_download, generation=None, start_byte=0, end_byte=None,
+      serialization_data=None):
+    retries = 0
+    last_progress_byte = start_byte
+    while retries <= MAX_TRANSFER_RETRIES:
+      try:
+        return self._PerformDownload(
+            bucket_name, object_name, download_stream, apitools_request,
+            apitools_download, generation=generation, start_byte=start_byte,
+            end_byte=end_byte, serialization_data=serialization_data)
+      except HTTP_TRANSFER_EXCEPTIONS, e:
+        start_byte = download_stream.tell()
+        if start_byte > last_progress_byte:
+          # We've made progress, so allow a fresh set of retries.
+          last_progress_byte = start_byte
+          retries = 0
+        retries += 1
+        if retries > MAX_TRANSFER_RETRIES:
+          raise ResumableDownloadException(
+              'Transfer failed after %d retries. Final exception: %s' %
+              MAX_TRANSFER_RETRIES, str(e))
+        time.sleep(2 ** retries)
+        self.logger.info('Retrying download from byte %s after exception.' %
+                         start_byte)
+        self._RebuildHttpConnections(apitools_download.bytes_http)
+
+  def _PerformDownload(
+      self, bucket_name, object_name, download_stream, apitools_request,
+      apitools_download, generation=None, start_byte=0, end_byte=None,
+      serialization_data=None):
     if not serialization_data:
       try:
         self.api_client.objects.Get(apitools_request,
@@ -599,6 +659,18 @@ class GcsJsonApi(CloudApi):
                                        object_name=object_name,
                                        generation=generation)
 
+  def _RebuildHttpConnections(self, http):
+    # We need to rebuild the connection. Luckily, httplib2 overloads the map
+    # in http.connections to contain two different types of values:
+    # { scheme string:  connection class } and
+    # { scheme + authority string : actual http connection }
+    # Here we remove all of the entries for actual connections so that on the
+    # next request httplib2 will rebuild them from the connection types.
+    if getattr(http, 'connections', None):
+      for conn_key in http.connections.keys():
+        if ':' in conn_key:
+          del http.connections[conn_key]
+
   def _UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                     size=None, preconditions=None, provider=None, fields=None,
                     serialization_data=None, tracker_callback=None,
@@ -638,6 +710,9 @@ class GcsJsonApi(CloudApi):
     }
 
     try:
+      content_type = None
+      apitools_request = None
+      global_params = None
       if not serialization_data:
         # This is a new upload, set up initial upload state.
         content_type = object_metadata.contentType
@@ -667,46 +742,93 @@ class GcsJsonApi(CloudApi):
             upload=apitools_upload,
             global_params=global_params)
       else:  # Resumable upload.
-        try:
-          if serialization_data:
-            # Resuming an existing upload.
-            apitools_upload = apitools_transfer.Upload.FromData(
-                upload_stream, serialization_data, self.api_client.http)
-            apitools_upload.chunksize = _ResumableChunkSize()
-            apitools_upload.bytes_http = authorized_upload_http
-          else:
-            # New resumable upload.
-            apitools_upload = apitools_transfer.Upload(
-                upload_stream, content_type, total_size=size,
-                chunksize=_ResumableChunkSize(), auto_transfer=False)
-            apitools_upload.strategy = apitools_strategy
-            apitools_upload.bytes_http = authorized_upload_http
-            self.api_client.objects.Insert(
-                apitools_request,
-                upload=apitools_upload,
-                global_params=global_params)
-
-          # If we're resuming an upload, apitools has at this point received
-          # from the server how many bytes it already has. Update our
-          # callback class with this information.
-          bytes_uploaded_container.bytes_uploaded = apitools_upload.progress
-          if tracker_callback:
-            tracker_callback(json.dumps(apitools_upload.serialization_data))
-
-          http_response = apitools_upload.StreamInChunks(
-              callback=_NoopCallback, finish_callback=_NoopCallback,
-              additional_headers=additional_headers)
-          return self.api_client.objects.ProcessHttpResponse(
-              self.api_client.objects.GetMethodConfig('Insert'), http_response)
-        except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
-          resumable_ex = self._TranslateApitoolsResumableUploadException(e)
-          if resumable_ex:
-            raise resumable_ex
-          else:
-            raise
+        return self._PerformResumableUpload(
+            upload_stream, authorized_upload_http, content_type, size,
+            serialization_data, apitools_strategy, apitools_request,
+            global_params, bytes_uploaded_container, tracker_callback,
+            _NoopCallback, additional_headers)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
+
+  def _PerformResumableUpload(
+      self, upload_stream, authorized_upload_http, content_type, size,
+      serialization_data, apitools_strategy, apitools_request, global_params,
+      bytes_uploaded_container, tracker_callback, noop_callback, addl_headers):
+    try:
+      if serialization_data:
+        # Resuming an existing upload.
+        apitools_upload = apitools_transfer.Upload.FromData(
+            upload_stream, serialization_data, self.api_client.http)
+        apitools_upload.chunksize = _ResumableChunkSize()
+        apitools_upload.bytes_http = authorized_upload_http
+      else:
+        # New resumable upload.
+        apitools_upload = apitools_transfer.Upload(
+            upload_stream, content_type, total_size=size,
+            chunksize=_ResumableChunkSize(), auto_transfer=False)
+        apitools_upload.strategy = apitools_strategy
+        apitools_upload.bytes_http = authorized_upload_http
+        self.api_client.objects.Insert(
+            apitools_request,
+            upload=apitools_upload,
+            global_params=global_params)
+
+      # If we're resuming an upload, apitools has at this point received
+      # from the server how many bytes it already has. Update our
+      # callback class with this information.
+      bytes_uploaded_container.bytes_uploaded = apitools_upload.progress
+      if tracker_callback:
+        tracker_callback(json.dumps(apitools_upload.serialization_data))
+
+      retries = 0
+      last_progress_byte = apitools_upload.progress
+      while retries <= MAX_TRANSFER_RETRIES:
+        try:
+          # TODO: On retry, this will seek to the bytes that the server has,
+          # causing the hash to be recalculated. Make HashingFileUploadWrapper
+          # save a digest according to json_resumable_chunk_size.
+          http_response = apitools_upload.StreamInChunks(
+              callback=noop_callback, finish_callback=noop_callback,
+              additional_headers=addl_headers)
+          return self.api_client.objects.ProcessHttpResponse(
+              self.api_client.objects.GetMethodConfig('Insert'), http_response)
+        except HTTP_TRANSFER_EXCEPTIONS, e:
+          self._RebuildHttpConnections(apitools_upload.bytes_http)
+          while retries <= MAX_TRANSFER_RETRIES:
+            try:
+              # pylint: disable=protected-access
+              # TODO: Update this exposure based on apitools changes.
+              apitools_upload._RefreshResumableUploadState()
+              start_byte = apitools_upload.progress
+              break
+            except HTTP_TRANSFER_EXCEPTIONS, e2:
+              self._RebuildHttpConnections(apitools_upload.bytes_http)
+              retries += 1
+              if retries > MAX_TRANSFER_RETRIES:
+                raise ResumableUploadException(
+                    'Transfer failed after %d retries. Final exception: %s' %
+                    (MAX_TRANSFER_RETRIES, e2))
+              time.sleep(2 ** retries)
+          if start_byte > last_progress_byte:
+            # We've made progress, so allow a fresh set of retries.
+            last_progress_byte = start_byte
+            retries = 0
+          else:
+            retries += 1
+            if retries > MAX_TRANSFER_RETRIES:
+              raise ResumableUploadException(
+                  'Transfer failed after %d retries. Final exception: %s' %
+                  (MAX_TRANSFER_RETRIES, e))
+            time.sleep(2 ** retries)
+          self.logger.info('Retrying upload from byte %s after exception.'
+                           %start_byte)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      resumable_ex = self._TranslateApitoolsResumableUploadException(e)
+      if resumable_ex:
+        raise resumable_ex
+      else:
+        raise
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    size=None, preconditions=None, progress_callback=None,
