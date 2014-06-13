@@ -393,7 +393,7 @@ class BotoTranslation(CloudApi):
 
     # Since in most cases we already made a call to get the object metadata,
     # here we avoid an extra HTTP call by unpickling the key.  This is coupled
-    # with the impelmentation in _BotoKeyToObject.
+    # with the implementation in _BotoKeyToObject.
     if serialization_data:
       serialization_dict = json.loads(serialization_data)
       key = pickle.loads(binascii.a2b_base64(serialization_dict['url']))
@@ -992,6 +992,10 @@ class BotoTranslation(CloudApi):
     if list_fields:
       get_fields = set()
       for field in list_fields:
+        if field in ['kind', 'nextPageToken', 'prefixes']:
+          # These are not actually object / bucket metadata fields.
+          # They are fields specific to listing, so we don't consider them.
+          continue
         get_fields.add(re.sub(r'items/', '', field))
       return get_fields
 
