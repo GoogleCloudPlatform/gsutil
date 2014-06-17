@@ -58,10 +58,10 @@ from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
-from gslib.util import CALLBACK_PER_X_BYTES
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
 from gslib.util import GetNewHttp
+from gslib.util import START_CALLBACK_PER_BYTES
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -517,7 +517,7 @@ class GcsJsonApi(CloudApi):
         raise ArgumentException('Download size is required when callbacks are '
                                 'requested for a download, but no size was '
                                 'provided.')
-      callback_per_bytes = CALLBACK_PER_X_BYTES
+      callback_per_bytes = START_CALLBACK_PER_BYTES
       progress_callback(0, outer_total_size)
 
     callback_class_factory = DownloadCallbackConnectionClassFactory(
@@ -681,7 +681,7 @@ class GcsJsonApi(CloudApi):
 
     bytes_uploaded_container = BytesUploadedContainer()
 
-    callback_per_bytes = CALLBACK_PER_X_BYTES
+    callback_per_bytes = START_CALLBACK_PER_BYTES
     total_size = 0
     if progress_callback and size:
       total_size = size

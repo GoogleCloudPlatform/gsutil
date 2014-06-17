@@ -42,10 +42,10 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.util import CALLBACK_PER_X_BYTES
 from gslib.util import IS_WINDOWS
 from gslib.util import ONE_KB
 from gslib.util import Retry
+from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UTF8
 
 
@@ -54,7 +54,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   # For tests that artificially halt, we need to ensure at least one callback
   # occurs.
-  halt_size = CALLBACK_PER_X_BYTES * 2
+  halt_size = START_CALLBACK_PER_BYTES * 2
 
   def _get_test_file(self, name):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % name)

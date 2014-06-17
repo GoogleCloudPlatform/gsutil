@@ -74,15 +74,15 @@ from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
-from gslib.util import CALLBACK_PER_X_BYTES
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
+from gslib.util import TWO_MB
 from gslib.util import UnaryDictToXml
 from gslib.util import UTF8
-
+from gslib.util import XML_PROGRESS_CALLBACKS
 
 TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
                                 boto.exception.InvalidUriError,
@@ -413,7 +413,11 @@ class BotoTranslation(CloudApi):
 
     if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
       try:
-        num_progress_callbacks = (total_size / CALLBACK_PER_X_BYTES) + 1
+        if total_size:
+          num_progress_callbacks = max(int(total_size) / TWO_MB,
+                                       XML_PROGRESS_CALLBACKS)
+        else:
+          num_progress_callbacks = XML_PROGRESS_CALLBACKS
         self._PerformResumableDownload(
             download_stream, key, headers=headers, callback=progress_callback,
             num_callbacks=num_progress_callbacks, hash_algs=hash_algs)
@@ -478,7 +482,8 @@ class BotoTranslation(CloudApi):
       key.get_contents_to_file(download_stream, headers=headers)
 
   def _PerformResumableDownload(self, fp, key, headers=None, callback=None,
-                                num_callbacks=0, hash_algs=None):
+                                num_callbacks=XML_PROGRESS_CALLBACKS,
+                                hash_algs=None):
     """Downloads bytes from key to fp, resuming as needed.
 
     Args:

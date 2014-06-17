@@ -63,11 +63,18 @@ TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
 _DEFAULT_LINES = 25
 
-# Make a progress callback every 64KB during uploads/downloads.
-CALLBACK_PER_X_BYTES = 1024*64
+
+# Start with a progress callback every 64KB during uploads/downloads (JSON API).
+# Callback implementation should back off until it hits the maximum size
+# so that callbacks do not create huge amounts of log output.
+START_CALLBACK_PER_BYTES = 1024*64
+MAX_CALLBACK_PER_BYTES = 1024*1024*100
 
 # Upload/download files in 8KB chunks over the HTTP connection.
 TRANSFER_BUFFER_SIZE = 1024*8
+
+# Default number of progress callbacks during transfer (XML API).
+XML_PROGRESS_CALLBACKS = 10
 
 # For files >= this size, output a message indicating that we're running an
 # operation on the file (like hashing or gzipping) so it does not appear to the

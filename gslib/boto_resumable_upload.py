@@ -53,6 +53,7 @@ from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
 from boto.exception import ResumableUploadException
 from gslib.exception import InvalidUrlError
+from gslib.util import XML_PROGRESS_CALLBACKS
 
 
 class BotoResumableUpload(object):
@@ -496,7 +497,7 @@ class BotoResumableUpload(object):
     time.sleep(sleep_time_secs)
 
   def SendFile(self, key, fp, size, headers, canned_acl=None, cb=None,
-               num_cb=10):
+               num_cb=XML_PROGRESS_CALLBACKS):
     """Upload a file to a key into a bucket on GS, resumable upload protocol.
 
     Args:
