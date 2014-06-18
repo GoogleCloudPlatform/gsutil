@@ -124,7 +124,7 @@ hash the original name.
 """
 
 TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
-    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is ' 
+    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is '
     'configured to save tracker files to an unwritable directory)')
 
 # When uploading a file, get the following fields in the response for

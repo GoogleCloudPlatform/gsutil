@@ -73,7 +73,7 @@ class BufferWrapper(object):
       raise BadRequestException('Invalid seek to position %s on daisy chain '
                                 'buffer wrapper, expected %s or %s.' %
                                 (offset, self.seek_position, self.total_bytes))
-                              
+
 
 class DaisyChainWrapper(object):
   """Wrapper class for daisy-chaining a cloud download to an upload.
