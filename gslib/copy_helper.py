@@ -2067,7 +2067,8 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
     dst_obj_metadata.acl = []
 
   start_time = time.time()
-  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api)
+  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api,
+                                logger)
   if src_obj_metadata.size == 0:
     # Resumable uploads of size 0 are not supported.
     uploaded_object = gsutil_api.UploadObject(

@@ -35,6 +35,8 @@ class BufferWrapper(object):
                            locking.
     """
     self.daisy_chain_wrapper = daisy_chain_wrapper
+    self.total_bytes = 0
+    self.seek_position = 0
 
   def write(self, data):  # pylint: disable=invalid-name
     """Waits for space in the buffer, then writes data to the buffer."""
@@ -49,7 +51,29 @@ class BufferWrapper(object):
     with self.daisy_chain_wrapper.lock:
       self.daisy_chain_wrapper.buffer.append(data)
       self.daisy_chain_wrapper.bytes_buffered += data_len
+      self.total_bytes += data_len
 
+  def tell(self):  # pylint: disable=invalid-name
+    # Return how much we've read so far.
+    with self.daisy_chain_wrapper.lock:
+      return self.total_bytes
+
+  def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
+    # We don't actually support moving the file pointer; a new BufferWrapper
+    # needs to be created to restart the download. However, we respond to seek
+    # and tell calls so that GetFileSize() can interact as if this were an
+    # on-disk file.
+    with self.daisy_chain_wrapper.lock:
+      if whence == os.SEEK_END:
+        self.seek_position = self.total_bytes
+        return
+      elif whence == os.SEEK_SET:
+        if offset == self.seek_position or offset == self.total_bytes:
+          return
+      raise BadRequestException('Invalid seek to position %s on daisy chain '
+                                'buffer wrapper, expected %s or %s.' %
+                                (offset, self.seek_position, self.total_bytes))
+                              
 
 class DaisyChainWrapper(object):
   """Wrapper class for daisy-chaining a cloud download to an upload.
@@ -64,13 +88,14 @@ class DaisyChainWrapper(object):
   used.
   """
 
-  def __init__(self, src_url, src_obj_size, gsutil_api):
+  def __init__(self, src_url, src_obj_size, gsutil_api, logger):
     """Initializes the daisy chain wrapper.
 
     Args:
       src_url: Source CloudUrl to copy from.
       src_obj_size: Size of source object.
       gsutil_api: gsutil Cloud API to use for the copy.
+      logger: for outputting log messages.
     """
     # Current read position for the upload file pointer.
     self.position = 0
@@ -97,21 +122,24 @@ class DaisyChainWrapper(object):
     # independent of gsutil_api. Thus, it will not share an HTTP connection
     # with the upload.
     self.gsutil_api = gsutil_api
+    self.logger = logger
 
     self.download_thread = None
     self.StartDownloadThread()
 
-  def StartDownloadThread(self):
+  def StartDownloadThread(self, start_byte=0):
     """Starts the download of the source object."""
     def PerformDownload():
       self.gsutil_api.GetObjectMedia(
           self.src_url.bucket_name, self.src_url.object_name,
-          BufferWrapper(self), start_byte=0,
+          BufferWrapper(self), start_byte=start_byte,
           generation=self.src_url.generation, object_size=self.src_obj_size,
-          download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+          download_strategy=CloudApi.DownloadStrategy.RESUMABLE,
           provider=self.src_url.scheme)
 
     # TODO: If we do gzip encoding transforms mid-transfer, this will fail.
+    self.logger.info('DaisyChainWrapper starting download thread with '
+                     'offset %s' % start_byte)
     self.download_thread = threading.Thread(target=PerformDownload)
     self.download_thread.start()
 
@@ -166,7 +194,7 @@ class DaisyChainWrapper(object):
             # get it on the next call to read.
             self.buffer.appendleft(self.last_data)
             self.bytes_buffered += len(self.last_data)
-        elif offset == 0 and self.download_thread:
+        elif self.download_thread:
           # Once a download is complete, boto seeks to 0 and re-reads to
           # compute the hash if an md5 isn't already present (for example a GCS
           # composite object), so we have to re-download the whole object.
@@ -182,7 +210,7 @@ class DaisyChainWrapper(object):
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
-        self.StartDownloadThread()
+        self.StartDownloadThread(start_byte=offset)
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)

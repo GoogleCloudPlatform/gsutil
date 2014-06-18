@@ -25,6 +25,7 @@ import os
 import pickle
 import random
 import re
+import ssl
 import socket
 import tempfile
 import time
@@ -506,6 +507,8 @@ class BotoTranslation(CloudApi):
 
     retryable_exceptions = (httplib.HTTPException, IOError, socket.error,
                             socket.gaierror)
+    rebuildable_exceptions = (socket.timeout, httplib.IncompleteRead,
+                              httplib.ResponseNotReady, ssl.SSLError)
 
     debug = key.bucket.connection.debug
 
@@ -558,6 +561,9 @@ class BotoTranslation(CloudApi):
           else:  # self.provider == 'gs'
             key.get_file(fp, headers, cb, num_callbacks,
                          override_num_retries=0, hash_algs=hash_algs)
+      except rebuildable_exceptions, e:
+        self.logger.error('Caught exception that requires connection rebuild')
+        key.bucket.connection.close()
       except BotoResumableDownloadException, e:
         if (e.disposition ==
             ResumableTransferDisposition.ABORT_CUR_PROCESS):
