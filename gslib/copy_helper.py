@@ -1961,6 +1961,8 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
 
   if server_gzip and not need_to_unzip:
     # Server compressed bytes on-the-fly, thus we need to rename and decompress.
+    # We can't decompress on-the-fly because prior to Python 3.2 the gzip
+    # module makes a bunch of seek calls on the stream.
     download_file_name = _GetDownloadZipFileName(file_name)
     os.rename(file_name, download_file_name)
 
