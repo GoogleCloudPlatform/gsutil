@@ -26,6 +26,7 @@ from boto import config
 import crcmod
 
 from gslib.exception import CommandException
+from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import TRANSFER_BUFFER_SIZE
@@ -69,6 +70,10 @@ file.
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
 
 
+def Base64EncodeHash(digest_value):
+  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
+
+
 def CalculateB64EncodedCrc32cFromContents(fp):
   return CalculateB64EncodedHashFromContents(
       fp, crcmod.predefined.Crc('crc-32c'))
@@ -79,22 +84,7 @@ def CalculateB64EncodedMd5FromContents(fp):
 
 
 def CalculateB64EncodedHashFromContents(fp, hash_alg):
-  return base64.encodestring(binascii.unhexlify(
-      CalculateHashFromContents(fp, hash_alg))).rstrip('\n')
-
-
-def _CalculateCrc32cFromContents(fp):
-  """Calculates the Crc32c hash of the contents of a file.
-
-  This function resets the file pointer to position 0.
-
-  Args:
-    fp: An already-open file object.
-
-  Returns:
-    CRC32C digest of the file in hex string format.
-  """
-  return CalculateHashFromContents(fp, crcmod.predefined.Crc('crc-32c'))
+  return Base64EncodeHash(CalculateHashFromContents(fp, hash_alg))
 
 
 def CalculateMd5FromContents(fp):
@@ -112,7 +102,7 @@ def CalculateMd5FromContents(fp):
 
 
 def CalculateHashFromContents(fp, hash_alg):
-  """Calculates the MD5 hash of the contents of a file.
+  """Calculates a hash of the contents of a file.
 
   This function resets the file pointer to position 0.
 
@@ -123,14 +113,36 @@ def CalculateHashFromContents(fp, hash_alg):
   Returns:
     Hash of the file in hex string format.
   """
+  hash_dict = {'placeholder': hash_alg}
   fp.seek(0)
+  CalculateHashesFromContents(fp, hash_dict)
+  fp.seek(0)
+  return hash_dict['placeholder'].hexdigest()
+
+
+def CalculateHashesFromContents(fp, hash_dict, size=None, progress_func=None):
+  """Calculates hashes of the contents of a file.
+
+  Args:
+    fp: An already-open file object (stream will be consumed).
+    hash_dict: Dict of (string alg_name: initialized hashing class)
+               Hashing class will be populated with digests upon return.
+    size: Size of fp, if known, for outputting progress.
+    progress_func: Function with arguments (int bytes_processed,
+                                            int total_size).
+                   If present, called to report progress.
+  """
+  callback_processor = None
+  if progress_func:
+    callback_processor = ProgressCallbackWithBackoff(size, progress_func)
   while True:
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
     if not data:
       break
-    hash_alg.update(data)
-  fp.seek(0)
-  return hash_alg.hexdigest()
+    for hash_alg in hash_dict.itervalues():
+      hash_alg.update(data)
+    if callback_processor:
+      callback_processor.Progress(len(data))
 
 
 def GetUploadHashAlgs():

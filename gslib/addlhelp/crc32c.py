@@ -20,7 +20,10 @@ _detailed_help_text = ("""
   Google Cloud Storage provides a cyclic redundancy check (CRC) header that
   allows clients to verify the integrity of object contents. For non-composite
   objects GCS also provides an MD5 header to allow clients to verify object
-  integrity, but for composite objects only the CRC is available.
+  integrity, but for composite objects only the CRC is available. Gsutil
+  automatically performs integrity checks on all uploads and downloads.
+  Additionally, you can use the "gsutil hash" command to calculate a CRC for
+  any local file.
 
   The CRC variant used by Google Cloud Storage is called CRC32C (Castagnoli),
   which is not available in the standard Python distribution. The implementation
@@ -107,10 +110,10 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'crc32c',
-      help_name_aliases = ['crc32', 'crc', 'crcmod'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'CRC32C and Installing crcmod',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_name='crc32c',
+      help_name_aliases=['crc32', 'crc', 'crcmod'],
+      help_type='additional_help',
+      help_one_line_summary='CRC32C and Installing crcmod',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )

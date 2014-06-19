@@ -24,8 +24,8 @@ import httplib2
 from httplib2 import parse_uri
 
 from gslib.cloud_api import BadRequestException
+from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
-from gslib.util import MAX_CALLBACK_PER_BYTES
 from gslib.util import TRANSFER_BUFFER_SIZE
 
 # By default, the timeout for ssl read errors is infinite. This could
@@ -55,26 +55,6 @@ class BytesUploadedContainer(object):
     self.__bytes_uploaded = value
 
 
-def UpdateCallbackRate(callbacks_made, callback_per_bytes):
-  """Returns a new callback_per_bytes value based on the number already made.
-
-  This ensures callbacks don't result in too many log messages for large files.
-
-  Args:
-    callbacks_made: Number of callbacks made at current rate.
-    callback_per_bytes: Current # of bytes between callbacks.
-
-  Returns:
-    Tuple of (callbacks_made, callback_per_bytes). callbacks_made will either
-    be incremented or reset based on whether callbacks_per_bytes changed.
-  """
-  callbacks_made += 1
-  if callbacks_made > 10:
-    callback_per_bytes = min(callback_per_bytes * 2, MAX_CALLBACK_PER_BYTES)
-    callbacks_made = 0
-  return (callbacks_made, callback_per_bytes)
-
-
 class UploadCallbackConnectionClassFactory(object):
   """Creates a class that can override an httplib2 connection.
 
@@ -85,11 +65,10 @@ class UploadCallbackConnectionClassFactory(object):
 
   def __init__(self, bytes_uploaded_container,
                buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, callback_per_bytes=0, progress_callback=None):
+               total_size=0, progress_callback=None):
     self.bytes_uploaded_container = bytes_uploaded_container
     self.buffer_size = buffer_size
     self.total_size = total_size
-    self.callback_per_bytes = callback_per_bytes
     self.progress_callback = progress_callback
 
   def GetConnectionClass(self):
@@ -97,7 +76,6 @@ class UploadCallbackConnectionClassFactory(object):
     outer_bytes_uploaded_container = self.bytes_uploaded_container
     outer_buffer_size = self.buffer_size
     outer_total_size = self.total_size
-    outer_callback_per_bytes = self.callback_per_bytes
     outer_progress_callback = self.progress_callback
 
     class UploadCallbackConnection(httplib2.HTTPSConnectionWithTimeout):
@@ -106,13 +84,9 @@ class UploadCallbackConnectionClassFactory(object):
       # After we instantiate this class, apitools will check with the server
       # to find out how many bytes remain for a resumable upload.  This allows
       # us to update our progress once based on that number.
-      got_bytes_uploaded_from_server = False
-      total_bytes_uploaded = 0
+      processed_initial_bytes = False
       GCS_JSON_BUFFER_SIZE = outer_buffer_size
-      bytes_sent_since_callback = 0
-      callback_per_bytes = outer_callback_per_bytes
-      # Callbacks made at current rate.
-      callbacks_made = 0
+      callback_processor = None
       size = outer_total_size
 
       def __init__(self, *args, **kwargs):
@@ -121,10 +95,13 @@ class UploadCallbackConnectionClassFactory(object):
 
       def send(self, data):
         """Overrides HTTPConnection.send."""
-        if not self.got_bytes_uploaded_from_server:
-          self.total_bytes_uploaded = (
-              self.bytes_uploaded_container.bytes_uploaded)
-          self.got_bytes_uploaded_from_server = True
+        if not self.processed_initial_bytes:
+          self.processed_initial_bytes = True
+          if outer_progress_callback:
+            self.callback_processor = ProgressCallbackWithBackoff(
+                outer_total_size, outer_progress_callback)
+            self.callback_processor.Progress(
+                self.bytes_uploaded_container.bytes_uploaded)
         # httplib.HTTPConnection.send accepts either a string or a file-like
         # object (anything that implements read()).
         if isinstance(data, basestring):
@@ -138,15 +115,8 @@ class UploadCallbackConnectionClassFactory(object):
           while partial_buffer:
             httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
             send_length = len(partial_buffer)
-            self.total_bytes_uploaded += send_length
-            if outer_progress_callback:
-              self.bytes_sent_since_callback += send_length
-              if self.bytes_sent_since_callback >= self.callback_per_bytes:
-                outer_progress_callback(self.total_bytes_uploaded, self.size)
-                self.callbacks_made, self.callback_per_bytes = (
-                    UpdateCallbackRate(self.callbacks_made,
-                                       self.callback_per_bytes))
-                self.bytes_sent_since_callback = 0
+            if self.callback_processor:
+              self.callback_processor.Progress(send_length)
             partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         finally:
           self.set_debuglevel(old_debug)
@@ -190,11 +160,9 @@ class DownloadCallbackConnectionClassFactory(object):
   """
 
   def __init__(self, buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, callback_per_bytes=0, progress_callback=None,
-               digesters=None):
+               total_size=0, progress_callback=None, digesters=None):
     self.buffer_size = buffer_size
     self.total_size = total_size
-    self.callback_per_bytes = callback_per_bytes
     self.progress_callback = progress_callback
     self.digesters = digesters
 
@@ -203,14 +171,13 @@ class DownloadCallbackConnectionClassFactory(object):
 
     class DownloadCallbackConnection(httplib2.HTTPSConnectionWithTimeout):
       """Connection class override for downloads."""
-      bytes_read_since_callback = 0
-      outer_callback_per_bytes = self.callback_per_bytes
       outer_total_size = self.total_size
-      total_bytes_downloaded = 0
       outer_digesters = self.digesters
       outer_progress_callback = self.progress_callback
-      # Callbacks made at current rate.
-      callbacks_made = 0
+      callback_processor = None
+      if self.progress_callback:
+        callback_processor = ProgressCallbackWithBackoff(self.total_size,
+                                                         self.progress_callback)
 
       def __init__(self, *args, **kwargs):
         kwargs['timeout'] = SSL_TIMEOUT
@@ -261,17 +228,8 @@ class DownloadCallbackConnectionClassFactory(object):
             self.set_debuglevel(0)
             data = orig_read_func(amt)
             read_length = len(data)
-            self.total_bytes_downloaded += read_length
-            if self.outer_progress_callback:
-              self.bytes_read_since_callback += read_length
-              if (self.bytes_read_since_callback >=
-                  self.outer_callback_per_bytes):
-                self.callbacks_made, self.outer_callback_per_bytes = (
-                    UpdateCallbackRate(self.callbacks_made,
-                                       self.outer_callback_per_bytes))
-                self.outer_progress_callback(self.total_bytes_downloaded,
-                                             self.outer_total_size)
-                self.bytes_read_since_callback = 0
+            if self.callback_processor:
+              self.callback_processor.Progress(read_length)
             if self.outer_digesters:
               for alg in self.outer_digesters:
                 self.outer_digesters[alg].update(data)

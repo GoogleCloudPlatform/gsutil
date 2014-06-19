@@ -61,7 +61,6 @@ from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
 from gslib.util import GetNewHttp
-from gslib.util import START_CALLBACK_PER_BYTES
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -508,7 +507,6 @@ class GcsJsonApi(CloudApi):
       generation = long(generation)
 
     outer_total_size = object_size
-    callback_per_bytes = 0
     if serialization_data:
       outer_total_size = json.loads(serialization_data)['total_size']
 
@@ -517,12 +515,11 @@ class GcsJsonApi(CloudApi):
         raise ArgumentException('Download size is required when callbacks are '
                                 'requested for a download, but no size was '
                                 'provided.')
-      callback_per_bytes = START_CALLBACK_PER_BYTES
       progress_callback(0, outer_total_size)
 
     callback_class_factory = DownloadCallbackConnectionClassFactory(
-        total_size=outer_total_size, callback_per_bytes=callback_per_bytes,
-        progress_callback=progress_callback, digesters=digesters)
+        total_size=outer_total_size, progress_callback=progress_callback,
+        digesters=digesters)
     download_http_class = callback_class_factory.GetConnectionClass()
 
     download_http = self._GetNewDownloadHttp(download_stream)
@@ -681,7 +678,6 @@ class GcsJsonApi(CloudApi):
 
     bytes_uploaded_container = BytesUploadedContainer()
 
-    callback_per_bytes = START_CALLBACK_PER_BYTES
     total_size = 0
     if progress_callback and size:
       total_size = size
@@ -689,7 +685,6 @@ class GcsJsonApi(CloudApi):
 
     callback_class_factory = UploadCallbackConnectionClassFactory(
         bytes_uploaded_container, total_size=total_size,
-        callback_per_bytes=callback_per_bytes,
         progress_callback=progress_callback)
 
     upload_http = GetNewHttp()
@@ -801,6 +796,7 @@ class GcsJsonApi(CloudApi):
               # TODO: Update this exposure based on apitools changes.
               apitools_upload._RefreshResumableUploadState()
               start_byte = apitools_upload.progress
+              bytes_uploaded_container.bytes_uploaded = start_byte
               break
             except HTTP_TRANSFER_EXCEPTIONS, e2:
               self._RebuildHttpConnections(apitools_upload.bytes_http)

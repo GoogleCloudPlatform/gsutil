@@ -41,6 +41,7 @@ import time
 import traceback
 
 from boto import config
+import crcmod
 
 import gslib
 from gslib.bucket_listing_ref import BucketListingRefType
@@ -59,12 +60,13 @@ from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
-from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.hashing_helper import Base64EncodeHash
+from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
+from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
@@ -124,7 +126,7 @@ hash the original name.
 """
 
 TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
-    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is ' 
+    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is '
     'configured to save tracker files to an unwritable directory)')
 
 # When uploading a file, get the following fields in the response for
@@ -166,10 +168,6 @@ MAX_TRACKER_FILE_NAME_LENGTH = 100
 
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
-
-# Max width of URL to display in progress indicator. Wide enough to allow
-# 15 chars for x/y display on an 80 char wide terminal.
-MAX_PROGRESS_INDICATOR_WIDTH = 65
 
 
 class TrackerFileType(object):
@@ -715,7 +713,7 @@ def _CreateDigestsFromDigesters(digesters):
 
 
 def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
-  """Creates CRC32C and/or MD5 digest from file_name.
+  """Creates a base64 CRC32C and/or MD5 digest from file_name.
 
   Args:
     logger: for outputting log messages.
@@ -726,19 +724,22 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
   Returns:
     Dict of algorithm name : base 64 encoded digest
   """
-  digests = {}
+  hash_dict = {}
   if 'md5' in algs:
     if src_obj_metadata.size and src_obj_metadata.size > TEN_MB:
       logger.info(
           'Computing MD5 for %s...', file_name)
-    with open(file_name, 'rb') as fp:
-      digests['md5'] = CalculateB64EncodedMd5FromContents(fp)
+    hash_dict['md5'] = md5()
   if 'crc32c' in algs:
-    if src_obj_metadata.size and src_obj_metadata.size > TEN_MB:
-      logger.info(
-          'Computing CRC32C for %s...', file_name)
-    with open(file_name, 'rb') as fp:
-      digests['crc32c'] = CalculateB64EncodedCrc32cFromContents(fp)
+    hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
+  with open(file_name, 'rb') as fp:
+    CalculateHashesFromContents(
+        fp, hash_dict, size=src_obj_metadata.size,
+        progress_func=FileProgressCallbackHandler(
+            'Hashing', StorageUrlFromString(file_name), logger))
+  digests = {}
+  for alg_name, digest in hash_dict.iteritems():
+    digests[alg_name] = Base64EncodeHash(digest.hexdigest())
   return digests
 
 
@@ -1228,46 +1229,6 @@ def SrcDstSame(src_url, dst_url):
             src_url.generation == dst_url.generation)
 
 
-class _FileCopyCallbackHandler(object):
-  """Outputs progress info for large copy requests."""
-
-  def __init__(self, is_upload, display_url, logger):
-    # Use fixed-width announce text so concurrent output (gsutil -m) leaves
-    # progress counters in readable (fixed) position.
-    start_len = len('Uploading   ')  # Same as len('Downloading ')
-    display_urlstr = display_url.GetUrlString()
-    end_len = len(': ')
-    elip_len = len('... ')
-    if (start_len + len(display_urlstr) + end_len >
-        MAX_PROGRESS_INDICATOR_WIDTH):
-      display_urlstr = '%s...' % display_urlstr[
-          -(MAX_PROGRESS_INDICATOR_WIDTH - start_len - end_len - elip_len):]
-    if is_upload:
-      base_announce_text = 'Uploading   %s:' % display_urlstr
-    else:
-      base_announce_text = 'Downloading %s:' % display_urlstr
-    format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
-    self.announce_text = format_str.format(base_announce_text.encode(UTF8))
-    self.logger = logger
-
-  # pylint: disable=invalid-name
-  def call(self, total_bytes_transferred, total_size):
-    # Handle streaming case specially where we don't know the total size:
-    if total_size:
-      total_size_string = '/%s' % MakeHumanReadable(total_size)
-    else:
-      total_size_string = ''
-    if self.logger.isEnabledFor(logging.INFO):
-      # Use sys.stderr.write instead of self.logger.info so progress messages
-      # output on a single continuously overwriting line.
-      sys.stderr.write('%s%s%s    \r' % (
-          self.announce_text,
-          MakeHumanReadable(total_bytes_transferred),
-          total_size_string))
-      if total_size and total_bytes_transferred == total_size:
-        sys.stderr.write('\n')
-
-
 class _HaltingCopyCallbackHandler(object):
   """Test callback handler for intentionally stopping a resumable transfer."""
 
@@ -1448,7 +1409,8 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
-  progress_callback = _FileCopyCallbackHandler(True, dst_url, logger).call
+  progress_callback = FileProgressCallbackHandler('Uploading',
+                                                  dst_url, logger).call
   start_time = time.time()
 
   if src_url.IsStream():
@@ -1523,7 +1485,8 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
 
   retryable = False
 
-  progress_callback = _FileCopyCallbackHandler(True, dst_url, logger).call
+  progress_callback = FileProgressCallbackHandler('Uploading', dst_url,
+                                                  logger).call
   if global_copy_helper_opts.halt_at_byte:
     progress_callback = _HaltingCopyCallbackHandler(
         True, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
@@ -1835,7 +1798,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if not dst_url.IsStream():
       serialization_data = json.dumps(serialization_dict)
 
-    progress_callback = _FileCopyCallbackHandler(False, dst_url, logger).call
+    progress_callback = FileProgressCallbackHandler('Downloading', dst_url,
+                                                    logger).call
     if global_copy_helper_opts.halt_at_byte:
       progress_callback = _HaltingCopyCallbackHandler(
           False, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
@@ -2086,7 +2050,8 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
-        progress_callback=_FileCopyCallbackHandler(True, dst_url, logger).call,
+        progress_callback=FileProgressCallbackHandler('Uploading', dst_url,
+                                                      logger).call,
         tracker_callback=_DummyTrackerCallback)
   end_time = time.time()
 
