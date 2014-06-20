@@ -14,6 +14,7 @@
 #!/usr/bin/env python
 """Upload and download support for apitools."""
 
+import email.generator as email_generator
 import email.mime.multipart as mime_multipart
 import email.mime.nonmultipart as mime_nonmultipart
 import httplib
@@ -21,6 +22,7 @@ import io
 import json
 import mimetypes
 import os
+import StringIO
 import threading
 
 from apiclient import mimeparse
@@ -592,7 +594,13 @@ class Upload(_Transfer):
     msg.set_payload(self.stream.read())
     msg_root.attach(msg)
 
-    http_request.body = msg_root.as_string()
+    # encode the body: note that we can't use `as_string`, because
+    # it plays games with `From ` lines.
+    fp = StringIO.StringIO()
+    g = email_generator.Generator(fp, mangle_from_=False)
+    g.flatten(msg_root, unixfrom=False)
+    http_request.body = fp.getvalue()
+
     multipart_boundary = msg_root.get_boundary()
     http_request.headers['content-type'] = (
         'multipart/related; boundary=%r' % multipart_boundary)
