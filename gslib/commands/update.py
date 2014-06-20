@@ -179,17 +179,26 @@ class UpdateCommand(Command):
 
     # Won't fail - this command runs after main startup code that insists on
     # having a config file.
-    config_files = ' '.join(GetBotoConfigFileList())
+    config_file_list = GetBotoConfigFileList()
+    config_files = ' '.join(config_file_list)
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
+
+    # Pick current protection of each boto config file for command that restores
+    # protection (rather than fixing at 600) to support use cases like how GCE
+    # installs a service account with an /etc/boto.cfg file protected to 644.
+    chmod_cmds = []
+    for config_file in config_file_list:
+      mode = oct(stat.S_IMODE((os.stat(config_file)[stat.ST_MODE])))
+      chmod_cmds.append('\n\tsudo chmod %s %s' % (mode, config_file))
+
     raise CommandException('\n'.join(textwrap.wrap(
         'Since it was installed by a different user previously, you will need '
         'to update using the following commands. You will be prompted for your '
         'password, and the install will run as "root". If you\'re unsure what '
         'this means please ask your system administrator for help:')) + (
-            '\n\tsudo chmod 644 %s\n\tsudo env BOTO_CONFIG="%s" gsutil update'
-            '\n\tsudo chmod 600 %s') %
-                           (config_files, config_files, config_files),
-                           informational=True)
+            '\n\tsudo chmod 0644 %s\n\tsudo env BOTO_CONFIG="%s" %s update'
+            '%s') % (config_files, config_files, self.gsutil_path,
+                     ' '.join(chmod_cmds)), informational=True)
 
   # This list is checked during gsutil update by doing a lowercased
   # slash-left-stripped check. For example "/Dev" would match the "dev" entry.
