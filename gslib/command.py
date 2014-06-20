@@ -757,7 +757,7 @@ class Command(HelpProvider):
     wildcard_url = StorageUrlFromString(url_str)
     if wildcard_url.IsObject():
       plurality_iter = PluralityCheckableIterator(
-          self.WildcardIterator(url_str).IterAll(
+          self.WildcardIterator(url_str).IterObjects(
               bucket_listing_fields=['acl']))
     else:
       # Bucket or provider.  We call IterBuckets explicitly here to ensure that
