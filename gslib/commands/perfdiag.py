@@ -543,7 +543,7 @@ class PerfDiagCommand(Command):
 
     # Copy the file to remote location before reading.
     thru_url = StorageUrlFromString(str(self.bucket_url))
-    thru_url.object_name = self.thru_local_file
+    thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
     thru_target.md5Hash = self.file_md5s[self.thru_local_file]
 
@@ -617,7 +617,7 @@ class PerfDiagCommand(Command):
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
 
     thru_url = StorageUrlFromString(str(self.bucket_url))
-    thru_url.object_name = self.thru_local_file
+    thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
     thru_tuple = UploadObjectTuple(
         thru_target.bucket, thru_target.name, filepath=self.thru_local_file)
