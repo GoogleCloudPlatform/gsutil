@@ -100,8 +100,33 @@ class TransferError(CommunicationError):
   """Errors related to transfers."""
 
 
+class TransferRetryError(TransferError):
+  """Retryable errors related to transfers."""
+
+
 class TransferInvalidError(TransferError):
   """The given transfer is invalid."""
+
+
+class RequestError(CommunicationError):
+  """The request was not successful."""
+
+
+class RetryAfterError(HttpError):
+  """The response contained a retry-after header."""
+
+  def __init__(self, response, content, url, retry_after):
+    super(RetryAfterError, self).__init__(response, content, url)
+    self.retry_after = int(retry_after)
+
+  @classmethod
+  def FromResponse(cls, http_response):
+    return cls(http_response.info, http_response.content,
+               http_response.request_url, http_response.retry_after)
+
+
+class BadStatusCodeError(HttpError):
+  """The request completed but returned a bad status code."""
 
 
 class NotYetImplementedError(GeneratedClientError):

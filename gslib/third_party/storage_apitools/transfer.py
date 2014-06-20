@@ -52,6 +52,7 @@ class _Transfer(object):
     self.__stream = stream
     self.__url = None
 
+    self.retry_func = http_wrapper.HandleExceptionsAndRebuildHttpConnections
     self.auto_transfer = auto_transfer
     self.chunksize = chunksize or 1048576L
 
@@ -303,12 +304,13 @@ class Download(_Transfer):
     self.__SetRangeHeader(request, start, end=end_byte)
     if additional_headers is not None:
       request.headers.update(additional_headers)
-    return http_wrapper.MakeRequest(self.bytes_http, request)
+    return http_wrapper.MakeRequest(
+        self.bytes_http, request, retry_func=self.retry_func)
 
   def __ProcessResponse(self, response):
     """Process this response (by updating self and writing to self.stream)."""
     if response.status_code not in self._ACCEPTABLE_STATUSES:
-      raise exceptions.TransferInvalidError(response.content)
+      raise exceptions.TransferRetryError(response.content)
     if response.status_code in (httplib.OK, httplib.PARTIAL_CONTENT):
       self.stream.write(response.content)
       self.__progress += len(response)
@@ -359,7 +361,7 @@ class Download(_Transfer):
       response = self.__ProcessResponse(response)
       progress += len(response)
       if not response:
-        raise exceptions.TransferInvalidError(
+        raise exceptions.TransferRetryError(
             'Zero bytes unexpectedly returned in download response')
 
   def StreamInChunks(self, callback=None, finish_callback=None,
@@ -743,7 +745,8 @@ class Upload(_Transfer):
     if additional_headers:
       request.headers.update(additional_headers)
 
-    response = http_wrapper.MakeRequest(self.bytes_http, request)
+    response = http_wrapper.MakeRequest(
+        self.bytes_http, request, retry_func=self.retry_func)
     if response.status_code not in (httplib.OK, httplib.CREATED,
                                     http_wrapper.RESUME_INCOMPLETE):
       # We want to reset our state to wherever the server left us

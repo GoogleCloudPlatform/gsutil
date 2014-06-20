@@ -964,6 +964,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_cp_without_read_access(self):
     """Tests that cp fails without read access to the object."""
+    # TODO: With 401's triggering retries in apitools, this test will take
+    # a long time.  Ideally, make apitools accept a num_retries config for this
+    # until we stop retrying the 401's.
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
 

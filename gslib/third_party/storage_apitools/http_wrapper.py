@@ -45,6 +45,14 @@ _REDIRECT_STATUS_CODES = (
     RESUME_INCOMPLETE,
 )
 
+# http: An httplib2.Http instance.
+# http_request: A http_wrapper.Request.
+# exc: Exception being raised.
+# num_retries: Number of retries consumed; used for exponential backoff.
+ExceptionRetryArgs = collections.namedtuple('ExceptionRetryArgs',
+                                            ['http', 'http_request', 'exc',
+                                             'num_retries'])
+
 
 class Request(object):
   """Class encapsulating the data for an HTTP request."""
@@ -109,77 +117,152 @@ class Response(collections.namedtuple(
             'location' in self.info)
 
 
-def MakeRequest(http, http_request, retries=7, max_retry_delay=60,
-                redirections=5):
-  """Send http_request via the given http.
+def CheckResponse(response):
+  if response is None:
+    # Caller shouldn't call us if the response is None, but handle anyway.
+    raise exceptions.RequestError('Request to url %s did not return a response.'
+                                  % response.request_url)
+  elif (response.status_code >= 500 or
+        response.status_code == TOO_MANY_REQUESTS):
+    raise exceptions.BadStatusCodeError.FromResponse(response)
+  elif response.status_code == httplib.UNAUTHORIZED:
+    # Sometimes we get a 401 after a connection break.
+    # TODO: this shouldn't be a retryable exception, but for now we retry.
+    raise exceptions.BadStatusCodeError.FromResponse(response)
+  elif response.retry_after:
+    raise exceptions.RetryAfterError.FromResponse(response)
 
-  This wrapper exists to handle translation between the plain httplib2
-  request/response types and the Request and Response types above.
-  This will also be the hook for error/retry handling.
+
+def RebuildHttpConnections(http):
+  """Rebuilds all http connections in the httplib2.Http instance.
+
+  httplib2 overloads the map in http.connections to contain two different
+  types of values:
+  { scheme string:  connection class } and
+  { scheme + authority string : actual http connection }
+  Here we remove all of the entries for actual connections so that on the
+  next request httplib2 will rebuild them from the connection types.
+
+  Args:
+    http: An httplib2.Http instance.
+  """
+  if getattr(http, 'connections', None):
+    for conn_key in http.connections.keys():
+      if ':' in conn_key:
+        del http.connections[conn_key]
+
+
+def RethrowExceptionHandler(*unused_args):
+  raise
+
+
+def HandleExceptionsAndRebuildHttpConnections(retry_args):
+  """Exception handler for http failures.
+
+  This catches known failures and rebuilds the underlying HTTP connections.
+
+  Args:
+    retry_args: An ExceptionRetryArgs tuple.
+  """
+  retry_after = None
+  if isinstance(retry_args.exc, httplib.BadStatusLine):
+    logging.error('Caught BadStatusLine from httplib, retrying: %s',
+                  retry_args.exc)
+  elif isinstance(retry_args.exc, socket.error):
+    logging.error('Caught socket error, retrying: %s', retry_args.exc)
+  elif isinstance(retry_args.exc, exceptions.BadStatusCodeError):
+    logging.error('Response returned status %s, retrying',
+                  retry_args.exc.status_code)
+  elif isinstance(retry_args.exc, exceptions.RetryAfterError):
+    logging.error('Response returned a retry-after header, retrying')
+    retry_after = retry_args.exc.retry_after
+  elif isinstance(retry_args.exc, ValueError):
+    # oauth2_client tries to JSON-decode the response, which can result
+    # in a ValueError if the response was invalid. Until that is fixed in
+    # oauth2_client, need to handle it here.
+    logging.error('Response content was invalid (%s), retrying',
+                  retry_args.exc)
+  elif isinstance(retry_args.exc, exceptions.RequestError):
+    logging.error('Request returned no response, retrying')
+  else:
+    raise
+  RebuildHttpConnections(retry_args.http)
+  logging.error('Retrying request to url %s after exception %s',
+                retry_args.http_request.url, retry_args.exc)
+  time.sleep(retry_after or 2 ** retry_args.num_retries)
+
+
+def MakeRequest(http, http_request, retries=7, redirections=5,
+                retry_func=HandleExceptionsAndRebuildHttpConnections,
+                check_response_func=CheckResponse):
+  """Send http_request via the given http, performing error/retry handling.
 
   Args:
     http: An httplib2.Http instance, or a http multiplexer that delegates to
         an underlying http, for example, HTTPMultiplexer.
     http_request: A Request to send.
     retries: (int, default 5) Number of retries to attempt on 5XX replies.
-    max_retry_delay: (int, default 60) Max retry delay during binary exponential
-                     backoff.
     redirections: (int, default 5) Number of redirects to follow.
+    retry_func: Function to handle retries on exceptions. Arguments are
+                (Httplib2.Http, Request, Exception, int num_retries).
+    check_response_func: Function to validate the HTTP response. Arguments are
+                         (Response, response content, url).
 
   Returns:
     A Response object.
+  """
+  retry = 0
+  while True:
+    try:
+      return _MakeRequestNoRetry(http, http_request, redirections=redirections,
+                                 check_response_func=check_response_func)
+    # retry_func will consume the exception types it handles and raise.
+    # pylint: disable=broad-except
+    except Exception as e:
+      retry += 1
+      if retry >= retries:
+        raise
+      else:
+        retry_func(ExceptionRetryArgs(http, http_request, e, retry))
+
+
+def _MakeRequestNoRetry(http, http_request, redirections=5,
+                        check_response_func=CheckResponse):
+  """Send http_request via the given http.
+
+  This wrapper exists to handle translation between the plain httplib2
+  request/response types and the Request and Response types above.
+
+  Args:
+    http: An httplib2.Http instance, or a http multiplexer that delegates to
+        an underlying http, for example, HTTPMultiplexer.
+    http_request: A Request to send.
+    redirections: (int, default 5) Number of redirects to follow.
+    check_response_func: Function to validate the HTTP response. Arguments are
+                         (Response, response content, url).
+
+  Returns:
+    Response object.
 
   Raises:
-    InvalidDataFromServerError: if there is no response after retries.
+    RequestError if no response could be parsed.
   """
-  response = None
-  exc = None
   connection_type = None
-  # Handle overrides for connection types.  This is used if the caller
-  # wants control over the underlying connection for managing callbacks
-  # or hash digestion.
   if getattr(http, 'connections', None):
     url_scheme = urlparse.urlsplit(http_request.url).scheme
     if url_scheme and url_scheme in http.connections:
       connection_type = http.connections[url_scheme]
-  for retry in xrange(retries + 1):
-    # Note that the str() calls here are important for working around
-    # some funny business with message construction and unicode in
-    # httplib itself. See, eg,
-    #   http://bugs.python.org/issue11898
-    info = None
-    try:
-      info, content = http.request(
-          str(http_request.url), method=str(http_request.http_method),
-          body=http_request.body, headers=http_request.headers,
-          redirections=redirections, connection_type=connection_type)
-    except httplib.BadStatusLine as e:
-      logging.error('Caught BadStatusLine from httplib, retrying: %s', e)
-      exc = e
-    except socket.error as e:
-      if http_request.http_method != 'GET':
-        raise
-      logging.error('Caught socket error, retrying: %s', e)
-      exc = e
-    if info is not None:
-      response = Response(info, content, http_request.url)
-      if (response.status_code < 500 and
-          response.status_code != TOO_MANY_REQUESTS and
-          not response.retry_after):
-        break
-      logging.info('Retrying request to url <%s> after status code %s',
-                   response.request_url, response.status_code)
-    else:
-      logging.info('Retrying request to url <%s> after connection break.',
-                   str(http_request.url))
-    # TODO: Make this timeout configurable.
-    if response:
-      time.sleep(response.retry_after or min(2 ** retry, max_retry_delay))
-    else:
-      time.sleep(min(2 ** retry, max_retry_delay))
-  if response is None:
-    raise exc if exc else exceptions.InvalidDataFromServerError(
-        'HTTP error on final retry: %s' % exc)
+
+  info, content = http.request(
+      str(http_request.url), method=str(http_request.http_method),
+      body=http_request.body, headers=http_request.headers,
+      redirections=redirections, connection_type=connection_type)
+
+  if info is None:
+    raise exceptions.RequestError()
+
+  response = Response(info, content, http_request.url)
+  check_response_func(response)
   return response
 
 

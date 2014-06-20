@@ -51,6 +51,7 @@ from gslib.project_id import PopulateProjectId
 from gslib.third_party.storage_apitools import credentials_lib as credentials_lib
 from gslib.third_party.storage_apitools import encoding as encoding
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
+from gslib.third_party.storage_apitools import http_wrapper as apitools_http_wrapper
 from gslib.third_party.storage_apitools import storage_v1_client as apitools_client
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.third_party.storage_apitools import transfer as apitools_transfer
@@ -89,14 +90,26 @@ TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
                                     apitools_exceptions.TransferError,
                                     apitools_exceptions.TransferInvalidError)
 
-
-HTTP_TRANSFER_EXCEPTIONS = (httplib.IncompleteRead,
+# TODO: Distribute these exceptions better through apitools and here.
+# Right now, apitools is configured not to handle any exceptions on
+# uploads/downloads.
+# oauth2_client tries to JSON-decode the response, which can result
+# in a ValueError if the response was invalid. Until that is fixed in
+# oauth2_client, need to handle it here.
+HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
+                            apitools_exceptions.BadStatusCodeError,
+                            # TODO: Honor retry-after headers.
+                            apitools_exceptions.RetryAfterError,
+                            apitools_exceptions.RequestError,
+                            httplib.BadStatusLine,
+                            httplib.IncompleteRead,
                             httplib.ResponseNotReady,
                             httplib2.ServerNotFoundError,
                             socket.error,
                             socket.gaierror,
                             socket.timeout,
-                            ssl.SSLError)
+                            ssl.SSLError,
+                            ValueError)
 
 
 class GcsJsonApi(CloudApi):
@@ -534,17 +547,25 @@ class GcsJsonApi(CloudApi):
     apitools_request = apitools_messages.StorageObjectsGetRequest(
         bucket=bucket_name, object=object_name, generation=generation)
 
-    if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
-      return self._PerformResumableDownload(
-          bucket_name, object_name, download_stream, apitools_request,
-          apitools_download, bytes_downloaded_container, generation=generation,
-          start_byte=start_byte, end_byte=end_byte,
-          serialization_data=serialization_data)
-    else:
-      return self._PerformDownload(
-          bucket_name, object_name, download_stream, apitools_request,
-          apitools_download, generation=generation, start_byte=start_byte,
-          end_byte=end_byte, serialization_data=serialization_data)
+    try:
+      if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
+        # Disable retries in apitools. We will handle them explicitly here.
+        apitools_download.retry_func = (
+            apitools_http_wrapper.RethrowExceptionHandler)
+        return self._PerformResumableDownload(
+            bucket_name, object_name, download_stream, apitools_request,
+            apitools_download, bytes_downloaded_container,
+            generation=generation, start_byte=start_byte, end_byte=end_byte,
+            serialization_data=serialization_data)
+      else:
+        return self._PerformDownload(
+            bucket_name, object_name, download_stream, apitools_request,
+            apitools_download, generation=generation, start_byte=start_byte,
+            end_byte=end_byte, serialization_data=serialization_data)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
+                                       object_name=object_name,
+                                       generation=generation)
 
   def _PerformResumableDownload(
       self, bucket_name, object_name, download_stream, apitools_request,
@@ -573,7 +594,8 @@ class GcsJsonApi(CloudApi):
         time.sleep(min(2 ** retries, GetMaxRetryDelay()))
         self.logger.info('Retrying download from byte %s after exception.' %
                          start_byte)
-        self._RebuildHttpConnections(apitools_download.bytes_http)
+        apitools_http_wrapper.RebuildHttpConnections(
+            apitools_download.bytes_http)
 
   def _PerformDownload(
       self, bucket_name, object_name, download_stream, apitools_request,
@@ -607,22 +629,14 @@ class GcsJsonApi(CloudApi):
         'accept-encoding': 'gzip',
         'user-agent': self.api_client.user_agent
     }
-    try:
-      if start_byte or end_byte:
-        apitools_download.GetRange(additional_headers=additional_headers,
-                                   start=start_byte, end=end_byte)
-      else:
-        apitools_download.StreamInChunks(
-            callback=_NoopCallback, finish_callback=_NoopCallback,
-            additional_headers=additional_headers)
-      return apitools_download.encoding
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
-      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                       object_name=object_name,
-                                       generation=generation)
-    except apitools_exceptions.TransferInvalidError, _:
-      raise ServiceException(
-          'Transfer invalid (possible encoding error)')
+    if start_byte or end_byte:
+      apitools_download.GetRange(additional_headers=additional_headers,
+                                 start=start_byte, end=end_byte)
+    else:
+      apitools_download.StreamInChunks(
+          callback=_NoopCallback, finish_callback=_NoopCallback,
+          additional_headers=additional_headers)
+    return apitools_download.encoding
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
                           generation=None, preconditions=None, provider=None,
@@ -653,18 +667,6 @@ class GcsJsonApi(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
-
-  def _RebuildHttpConnections(self, http):
-    # We need to rebuild the connection. Luckily, httplib2 overloads the map
-    # in http.connections to contain two different types of values:
-    # { scheme string:  connection class } and
-    # { scheme + authority string : actual http connection }
-    # Here we remove all of the entries for actual connections so that on the
-    # next request httplib2 will rebuild them from the connection types.
-    if getattr(http, 'connections', None):
-      for conn_key in http.connections.keys():
-        if ':' in conn_key:
-          del http.connections[conn_key]
 
   def _UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                     size=None, preconditions=None, provider=None, fields=None,
@@ -766,6 +768,9 @@ class GcsJsonApi(CloudApi):
             apitools_request,
             upload=apitools_upload,
             global_params=global_params)
+      # Disable retries in apitools. We will handle them explicitly here.
+      apitools_upload.retry_func = (
+          apitools_http_wrapper.RethrowExceptionHandler)
 
       # If we're resuming an upload, apitools has at this point received
       # from the server how many bytes it already has. Update our
@@ -787,7 +792,8 @@ class GcsJsonApi(CloudApi):
           return self.api_client.objects.ProcessHttpResponse(
               self.api_client.objects.GetMethodConfig('Insert'), http_response)
         except HTTP_TRANSFER_EXCEPTIONS, e:
-          self._RebuildHttpConnections(apitools_upload.bytes_http)
+          apitools_http_wrapper.RebuildHttpConnections(
+              apitools_upload.bytes_http)
           while retries <= self.num_retries:
             try:
               # pylint: disable=protected-access
@@ -797,7 +803,8 @@ class GcsJsonApi(CloudApi):
               bytes_uploaded_container.bytes_transferred = start_byte
               break
             except HTTP_TRANSFER_EXCEPTIONS, e2:
-              self._RebuildHttpConnections(apitools_upload.bytes_http)
+              apitools_http_wrapper.RebuildHttpConnections(
+                  apitools_upload.bytes_http)
               retries += 1
               if retries > self.num_retries:
                 raise ResumableUploadException(
@@ -816,7 +823,7 @@ class GcsJsonApi(CloudApi):
                   (self.num_retries, e))
             time.sleep(min(2 ** retries, GetMaxRetryDelay()))
           self.logger.info('Retrying upload from byte %s after exception.'
-                           %start_byte)
+                           % start_byte)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:
@@ -1111,4 +1118,5 @@ class GcsJsonApi(CloudApi):
             status=e.status_code)
       return ServiceException(message, status=e.status_code)
     elif isinstance(e, apitools_exceptions.TransferInvalidError):
-      return ServiceException('Transfer invalid (possible encoding error)')
+      return ServiceException('Transfer invalid (possible encoding error: %s)'
+                              % str(e))
