@@ -33,7 +33,14 @@ from gslib.util import TRANSFER_BUFFER_SIZE
 from gslib.util import UsingCrcmodExtension
 
 
-SLOW_CRC_WARNING = """
+SLOW_CRCMOD_WARNING = """
+WARNING: You have requested checksumming but your crcmod installation isn't
+using the module's C extension, so checksumming will run very slowly. For help
+installing the extension, please see:
+  $ gsutil help crcmod"""
+
+
+SLOW_CRCMOD_DOWNLOAD_WARNING = """
 WARNING: Downloading this composite object requires integrity checking with
 CRC32c, but your crcmod installation isn't using the module's C extension,
 so the hash computation will likely throttle download performance. For help
@@ -196,7 +203,7 @@ def GetDownloadHashAlgs(logger, src_md5=False, src_crc32c=False):
       elif check_hashes_config == 'if_fast_else_skip':
         logger.warn(NO_HASH_CHECK_WARNING)
       elif check_hashes_config == 'always':
-        logger.warn(SLOW_CRC_WARNING)
+        logger.warn(SLOW_CRCMOD_DOWNLOAD_WARNING)
         hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
       else:
         raise CommandException(

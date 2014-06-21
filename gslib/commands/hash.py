@@ -24,9 +24,11 @@ from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateHashesFromContents
+from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
+from gslib.util import UsingCrcmodExtension
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
@@ -42,7 +44,7 @@ _detailed_help_text = ("""
   script that separately checks the hash for some reason.
 
   If you calculate a CRC32c hash for the file without a precompiled crcmod
-  installation, hashing may be very slow. See "gsutil help crcmod" for details. 
+  installation, hashing may be very slow. See "gsutil help crcmod" for details.
 
 <B>OPTIONS</B>
   -c          Calculate a CRC32c hash for the file.
@@ -68,7 +70,7 @@ class HashCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
@@ -100,22 +102,22 @@ class HashCommand(Command):
     if not self.found_hash_option:
       self.calc_crc32c = True
       self.calc_md5 = True
+    if self.calc_crc32c and not UsingCrcmodExtension(crcmod):
+      self.logger.warn(SLOW_CRCMOD_WARNING)
 
     matched_one = False
 
     for url_str in self.args:
-      wildcard_url = StorageUrlFromString(url_str)
-      if not wildcard_url.IsFileUrl():
+      if not StorageUrlFromString(url_str).IsFileUrl():
         raise CommandException('"hash" command requires a file URL')
-      file_refs = self.WildcardIterator(url_str).IterAll()
-      for file_ref in file_refs:
+      for file_ref in self.WildcardIterator(url_str):
         matched_one = True
-        hash_dict = {}
         file_url = StorageUrlFromString(file_ref.GetUrlString())
         file_name = file_url.object_name
         file_size = os.path.getsize(file_name)
         progress_callback = FileProgressCallbackHandler('Hashing', file_url,
                                                         self.logger).call
+        hash_dict = {}
         if self.calc_crc32c:
           hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
         if self.calc_md5:

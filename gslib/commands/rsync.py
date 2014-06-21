@@ -33,6 +33,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetCloudApiInstance
@@ -42,11 +43,6 @@ from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
-SLOW_CRCMOD_WARNING = """
-WARNING: You have requested checksumming but your crcmod installation isn't
-using the module's C extension, so checksumming will run very slowly. For help
-installing the extension, please see:
-  $ gsutil help crcmod"""
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
