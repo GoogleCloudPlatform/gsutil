@@ -40,7 +40,7 @@ from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
-from gslib.gcs_json_media import BytesUploadedContainer
+from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
@@ -518,9 +518,12 @@ class GcsJsonApi(CloudApi):
                                 'provided.')
       progress_callback(0, outer_total_size)
 
+    bytes_downloaded_container = BytesTransferredContainer()
+    bytes_downloaded_container.bytes_transferred = start_byte
+
     callback_class_factory = DownloadCallbackConnectionClassFactory(
-        total_size=outer_total_size, progress_callback=progress_callback,
-        digesters=digesters)
+        bytes_downloaded_container, total_size=outer_total_size,
+        progress_callback=progress_callback, digesters=digesters)
     download_http_class = callback_class_factory.GetConnectionClass()
 
     download_http = self._GetNewDownloadHttp(download_stream)
@@ -542,8 +545,9 @@ class GcsJsonApi(CloudApi):
     if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
       return self._PerformResumableDownload(
           bucket_name, object_name, download_stream, apitools_request,
-          apitools_download, generation=generation, start_byte=start_byte,
-          end_byte=end_byte, serialization_data=serialization_data)
+          apitools_download, bytes_downloaded_container, generation=generation,
+          start_byte=start_byte, end_byte=end_byte,
+          serialization_data=serialization_data)
     else:
       return self._PerformDownload(
           bucket_name, object_name, download_stream, apitools_request,
@@ -552,8 +556,8 @@ class GcsJsonApi(CloudApi):
 
   def _PerformResumableDownload(
       self, bucket_name, object_name, download_stream, apitools_request,
-      apitools_download, generation=None, start_byte=0, end_byte=None,
-      serialization_data=None):
+      apitools_download, bytes_downloaded_container, generation=None,
+      start_byte=0, end_byte=None, serialization_data=None):
     retries = 0
     last_progress_byte = start_byte
     while retries <= self.num_retries:
@@ -564,6 +568,7 @@ class GcsJsonApi(CloudApi):
             end_byte=end_byte, serialization_data=serialization_data)
       except HTTP_TRANSFER_EXCEPTIONS, e:
         start_byte = download_stream.tell()
+        bytes_downloaded_container.bytes_transferred = start_byte
         if start_byte > last_progress_byte:
           # We've made progress, so allow a fresh set of retries.
           last_progress_byte = start_byte
@@ -677,7 +682,7 @@ class GcsJsonApi(CloudApi):
     ValidateDstObjectMetadata(object_metadata)
     assert not canned_acl, 'Canned ACLs not supported by JSON API.'
 
-    bytes_uploaded_container = BytesUploadedContainer()
+    bytes_uploaded_container = BytesTransferredContainer()
 
     total_size = 0
     if progress_callback and size:
@@ -773,7 +778,7 @@ class GcsJsonApi(CloudApi):
       # If we're resuming an upload, apitools has at this point received
       # from the server how many bytes it already has. Update our
       # callback class with this information.
-      bytes_uploaded_container.bytes_uploaded = apitools_upload.progress
+      bytes_uploaded_container.bytes_transferred = apitools_upload.progress
       if tracker_callback:
         tracker_callback(json.dumps(apitools_upload.serialization_data))
 
@@ -797,7 +802,7 @@ class GcsJsonApi(CloudApi):
               # TODO: Update this exposure based on apitools changes.
               apitools_upload._RefreshResumableUploadState()
               start_byte = apitools_upload.progress
-              bytes_uploaded_container.bytes_uploaded = start_byte
+              bytes_uploaded_container.bytes_transferred = start_byte
               break
             except HTTP_TRANSFER_EXCEPTIONS, e2:
               self._RebuildHttpConnections(apitools_upload.bytes_http)
