@@ -100,6 +100,7 @@ class FileProgressCallbackHandler(object):
     self.logger = logger
 
   # pylint: disable=invalid-name
+  # Function signature is in boto callback format, which cannot be changed.
   def call(self, total_bytes_transferred, total_size):
     # Handle streaming case specially where we don't know the total size:
     if total_size:

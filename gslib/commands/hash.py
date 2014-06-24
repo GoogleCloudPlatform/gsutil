@@ -13,8 +13,6 @@
 # limitations under the License.
 """Implementation of hash command for calculating hashes of local files."""
 
-import base64
-import binascii
 from hashlib import md5
 import os
 
@@ -23,6 +21,7 @@ import crcmod
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.progress_callback import FileProgressCallbackHandler
@@ -54,8 +53,6 @@ _detailed_help_text = ("""
   -m          Calculate a MD5 hash for the file.
 """)
 
-HEX_FORMAT = 'hex'
-
 
 class HashCommand(Command):
   """Implementation of gsutil hash command."""
@@ -83,19 +80,20 @@ class HashCommand(Command):
       subcommand_help_text={},
   )
 
-  def RunCommand(self):
-    """Command entry point for the hash command."""
+  def ParseOpts(self):
     self.calc_md5 = False
     self.calc_crc32c = False
     self.found_hash_option = False
     self.output_format = 'base64'
+    self.format_func = lambda digest: Base64EncodeHash(digest.hexdigest())
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
         if o == '-c':
           self.calc_crc32c = True
           self.found_hash_option = True
         elif o == '-h':
-          self.output_format = HEX_FORMAT
+          self.output_format = 'hex'
+          self.format_func = lambda digest: digest.hexdigest()
         elif o == '-m':
           self.calc_md5 = True
           self.found_hash_option = True
@@ -105,12 +103,16 @@ class HashCommand(Command):
     if self.calc_crc32c and not UsingCrcmodExtension(crcmod):
       self.logger.warn(SLOW_CRCMOD_WARNING)
 
+  def RunCommand(self):
+    """Command entry point for the hash command."""
+    self.ParseOpts()
+
     matched_one = False
 
     for url_str in self.args:
       if not StorageUrlFromString(url_str).IsFileUrl():
         raise CommandException('"hash" command requires a file URL')
-      for file_ref in self.WildcardIterator(url_str):
+      for file_ref in self.WildcardIterator(url_str).IterObjects():
         matched_one = True
         file_url = StorageUrlFromString(file_ref.GetUrlString())
         file_name = file_url.object_name
@@ -127,12 +129,7 @@ class HashCommand(Command):
                                       progress_callback)
         print 'Hashes [%s] for %s:' % (self.output_format, file_name)
         for name, digest in hash_dict.iteritems():
-          if self.output_format == HEX_FORMAT:
-            output_digest = digest.hexdigest()
-          else:
-            output_digest = base64.encodestring(binascii.unhexlify(
-                digest.hexdigest())).rstrip()
-          print '\tHash (%s):\t\t%s' % (name, output_digest)
+          print '\tHash (%s):\t\t%s' % (name, self.format_func(digest))
     if not matched_one:
       raise CommandException('No files matched')
 

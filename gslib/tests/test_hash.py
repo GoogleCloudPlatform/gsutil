@@ -13,6 +13,8 @@
 # limitations under the License.
 """Unit tests for hash command."""
 
+import os
+
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 
@@ -47,6 +49,13 @@ class TestHash(testcase.GsUtilUnitTestCase):
     self.assertIn('Hashes [hex]', stdout)
     self.assertIn('\tHash (crc32c):\t\t9D899288', stdout)
     self.assertIn('\tHash (md5):\t\tf447b20a7fcbf53a5d5be013ea0b15af', stdout)
+
+  def testHashWildcard(self):
+    tmp_dir = self.CreateTempDir(test_files=2)
+    stdout = self.RunCommand('hash', args=[os.path.join(tmp_dir, '*')],
+                             return_stdout=True)
+    # One summary line and two hash lines per file.
+    self.assertEquals(len(stdout.splitlines()), 6)
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents='123456\n')
