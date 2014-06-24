@@ -114,7 +114,11 @@ def _OutputAndExit(message):
            re.sub('\\n', '\n    ', stack_trace))
   else:
     err = '%s\n' % message
-  sys.stderr.write(err.encode(UTF8))
+  try:
+    sys.stderr.write(err.encode(UTF8))
+  except UnicodeDecodeError:
+    # Can happen when outputting invalid Unicode filenames.
+    sys.stderr.write(err)
   sys.exit(1)
 
 

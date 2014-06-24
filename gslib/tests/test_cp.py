@@ -872,6 +872,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Copying file:', stderr)
 
+  @PerformsFileToObjectUpload
+  def test_copy_invalid_unicode_filename(self):
+    key_uri = self.CreateObject()
+    tmpdir = self.CreateTempDir()
+    self.CreateTempFile(file_name='\xc3\x28', tmpdir=tmpdir, contents='xyz')
+    stderr = self.RunGsUtil(['cp', '-r', tmpdir, suri(key_uri)],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('Invalid Unicode path encountered', stderr)
+
   def test_gzip_upload_and_download(self):
     bucket_uri = self.CreateBucket()
     contents = 'x' * 10000

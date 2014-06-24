@@ -188,7 +188,10 @@ _detailed_help_text = ("""
   -C            If an error occurs, continue to attempt to copy the remaining
                 files. If errors occurred, gsutil's exit status will be non-zero
                 even if this flag is set. This option is implicitly set when
-                running "gsutil -m rsync...".
+                running "gsutil -m rsync...".  Note: -C only applies to the
+                actual copying operation. If an error occurs while iterating
+                over the files in the local directory (e.g., invalid Unicode
+                file name) gsutil will print an error message and abort.
 
   -d            Delete extra files under dst_url not found under src_url. By
                 default extra files are not deleted.

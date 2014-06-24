@@ -18,16 +18,19 @@ import glob
 import os
 import re
 import sys
+import textwrap
 
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import CloudApi
+from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
 from gslib.storage_url import WILDCARD_REGEX
 from gslib.translation_helper import GenerationFromUrlAndString
+from gslib.util import UTF8
 
 
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
@@ -527,9 +530,46 @@ class FileWildcardIterator(WildcardIterator):
 
   def _IterDir(self, directory, wildcard):
     """An iterator over the specified dir and wildcard."""
-    for dirpath, unused_dirnames, filenames in os.walk(directory):
+    # UTF8-encode directory before passing it to os.walk() so if there are
+    # non-valid UTF8 chars in the file name (e.g., that can happen if the file
+    # originated on Windows) os.walk() will not attempt to decode and then die
+    # with a "codec can't decode byte" error, and instead we can catch the error
+    # at yield time and print a more informative error message.
+    for dirpath, unused_dirnames, filenames in os.walk(directory.encode(UTF8)):
       for f in fnmatch.filter(filenames, wildcard):
-        yield os.path.join(dirpath, f)
+        try:
+          yield os.path.join(dirpath, f).decode(UTF8)
+        except UnicodeDecodeError:
+          # Note: We considered several ways to deal with this, but each had
+          # problems:
+          # 1. Raise an exception and try to catch in a higher layer (the
+          #    gsutil cp command), so we can properly support the gsutil cp -c
+          #    option. That doesn't work because raising an exception during
+          #    iteration terminates the generator.
+          # 2. Accumulate a list of bad filenames and skip processing each
+          #    during iteration, then raise at the end, with exception text
+          #    printing the bad paths. That doesn't work because iteration is
+          #    wrapped in PluralityCheckableIterator, so it's possible there
+          #    are not-yet-performed copy operations at the time we reach the
+          #    end of the iteration and raise the exception - which would cause
+          #    us to skip copying validly named files. Moreover, the gsutil
+          #    cp command loops over argv, so if you run the command gsutil cp
+          #    -rc dir1 dir2 gs://bucket, an invalid unicode name inside dir1
+          #    would cause dir2 never to be visited.
+          # 3. Print the invalid pathname and skip it during iteration. That
+          #    would work but would mean gsutil cp could exit with status 0
+          #    even though some files weren't copied.
+          # 4. Change the WildcardIterator to include an error status along with
+          #    the result. That would solve the problem but would be a
+          #    substantial change (WildcardIterator is used in many parts of
+          #    gsutil), and we didn't feel that magnitude of change was
+          #    warranted by this relatively uncommon corner case.
+          # Instead we chose to abort when one such file is encountered, and
+          # require the user to remove or rename the files and try again.
+          raise CommandException('\n'.join(textwrap.wrap(
+              'Invalid Unicode path encountered (%s). gsutil cannot proceed '
+              'with such files present. Please remove or rename this file and '
+              'try again.' % repr(os.path.join(dirpath, f)))))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):

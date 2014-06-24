@@ -340,7 +340,11 @@ OPTIONS_TEXT = """
   -c             If an error occurrs, continue to attempt to copy the remaining
                  files. If any copies were unsuccessful, gsutil's exit status
                  will be non-zero even if this flag is set. This option is
-                 implicitly set when running "gsutil -m cp...".
+                 implicitly set when running "gsutil -m cp...". Note: -c only
+                 applies to the actual copying operation. If an error occurs
+                 while iterating over the files in the local directory (e.g.,
+                 invalid Unicode file name) gsutil will print an error message
+                 and abort.
 
   -D             Copy in "daisy chain" mode, i.e., copying between two buckets
                  by hooking a download to an upload, via the machine where
