@@ -61,6 +61,7 @@ from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
 from gslib.util import GetNewHttp
+from gslib.util import GetNumRetries
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -70,8 +71,6 @@ DEFAULT_GCS_JSON_VERSION = 'v1'
 
 NUM_BUCKETS_PER_LIST_PAGE = 100
 NUM_OBJECTS_PER_LIST_PAGE = 500
-
-MAX_TRANSFER_RETRIES = 7
 
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be
@@ -173,6 +172,8 @@ class GcsJsonApi(CloudApi):
     self.credentials.set_store(
         multistore_file.get_credential_storage_custom_string_key(
             GetCredentialStoreFilename(), self.api_version))
+
+    self.num_retries = GetNumRetries()
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
@@ -555,7 +556,7 @@ class GcsJsonApi(CloudApi):
       serialization_data=None):
     retries = 0
     last_progress_byte = start_byte
-    while retries <= MAX_TRANSFER_RETRIES:
+    while retries <= self.num_retries:
       try:
         return self._PerformDownload(
             bucket_name, object_name, download_stream, apitools_request,
@@ -568,10 +569,10 @@ class GcsJsonApi(CloudApi):
           last_progress_byte = start_byte
           retries = 0
         retries += 1
-        if retries > MAX_TRANSFER_RETRIES:
+        if retries > self.num_retries:
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
-              MAX_TRANSFER_RETRIES, str(e))
+              self.num_retries, str(e))
         time.sleep(2 ** retries)
         self.logger.info('Retrying download from byte %s after exception.' %
                          start_byte)
@@ -778,7 +779,7 @@ class GcsJsonApi(CloudApi):
 
       retries = 0
       last_progress_byte = apitools_upload.progress
-      while retries <= MAX_TRANSFER_RETRIES:
+      while retries <= self.num_retries:
         try:
           # TODO: On retry, this will seek to the bytes that the server has,
           # causing the hash to be recalculated. Make HashingFileUploadWrapper
@@ -790,7 +791,7 @@ class GcsJsonApi(CloudApi):
               self.api_client.objects.GetMethodConfig('Insert'), http_response)
         except HTTP_TRANSFER_EXCEPTIONS, e:
           self._RebuildHttpConnections(apitools_upload.bytes_http)
-          while retries <= MAX_TRANSFER_RETRIES:
+          while retries <= self.num_retries:
             try:
               # pylint: disable=protected-access
               # TODO: Update this exposure based on apitools changes.
@@ -801,10 +802,10 @@ class GcsJsonApi(CloudApi):
             except HTTP_TRANSFER_EXCEPTIONS, e2:
               self._RebuildHttpConnections(apitools_upload.bytes_http)
               retries += 1
-              if retries > MAX_TRANSFER_RETRIES:
+              if retries > self.num_retries:
                 raise ResumableUploadException(
                     'Transfer failed after %d retries. Final exception: %s' %
-                    (MAX_TRANSFER_RETRIES, e2))
+                    (self.num_retries, e2))
               time.sleep(2 ** retries)
           if start_byte > last_progress_byte:
             # We've made progress, so allow a fresh set of retries.
@@ -812,10 +813,10 @@ class GcsJsonApi(CloudApi):
             retries = 0
           else:
             retries += 1
-            if retries > MAX_TRANSFER_RETRIES:
+            if retries > self.num_retries:
               raise ResumableUploadException(
                   'Transfer failed after %d retries. Final exception: %s' %
-                  (MAX_TRANSFER_RETRIES, e))
+                  (self.num_retries, e))
             time.sleep(2 ** retries)
           self.logger.info('Retrying upload from byte %s after exception.'
                            %start_byte)

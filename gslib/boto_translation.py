@@ -33,7 +33,6 @@ from xml.dom.minidom import parseString as XmlParseString
 from xml.sax import _exceptions as SaxExceptions
 
 import boto
-from boto import config
 from boto import handler
 from boto.exception import ResumableDownloadException as BotoResumableDownloadException
 from boto.exception import ResumableTransferDisposition
@@ -77,6 +76,7 @@ from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
+from gslib.util import GetNumRetries
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
 from gslib.util import TWO_MB
@@ -514,7 +514,7 @@ class BotoTranslation(CloudApi):
 
     debug = key.bucket.connection.debug
 
-    num_retries = config.getint('Boto', 'num_retries', 6)
+    num_retries = GetNumRetries()
     progress_less_iterations = 0
 
     while True:  # Retry as long as we're making progress.
