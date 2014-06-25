@@ -1148,7 +1148,7 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
       and have_existing_dst_container is a bool indicating whether
       exp_url names an existing directory, bucket, or bucket subdirectory.
       In the case where we match a subdirectory AND an object, the
-      subdirectory is returned.
+      object is returned.
 
   Raises:
     CommandException: if url_str matched more than 1 URL.

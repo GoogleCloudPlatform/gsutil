@@ -85,9 +85,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket_uri,
                       object_name='foo/bar', contents='bar')
     fpath = self.CreateTempFile()
-    stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
-                            return_stderr=True)
-    self.assertIn('Omitting prefix "%s/"' % suri(bucket_uri, 'foo'), stderr)
+    self.RunGsUtil(['cp', suri(object_uri), fpath], return_stderr=True)
+    with open(fpath, 'r') as f:
+      self.assertEqual(f.read(), 'foo')
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents='foo')
