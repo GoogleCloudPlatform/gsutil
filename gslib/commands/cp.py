@@ -38,6 +38,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
+from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import RemoveCRLFFromString
@@ -586,6 +587,19 @@ class CpCommand(Command):
     if have_multiple_srcs:
       copy_helper.InsistDstUrlNamesContainer(
           exp_dst_url, have_existing_dst_container, cmd_name)
+
+    # Various GUI tools (like the GCS web console) create placeholder objects
+    # ending with '/' when the user creates an empty directory. Normally these
+    # tools should delete those placeholders once objects have been written
+    # "under" the directory, but sometimes the placeholders are left around. We
+    # need to filter them out here, otherwise if the user tries to rsync from
+    # GCS to a local directory it will result in a directory/file conflict
+    # (e.g., trying to download an object called "mydata/" where the local
+    # directory "mydata" exists).
+    if IsCloudSubdirPlaceholder(exp_src_url):
+      self.logger.info('Skipping cloud sub-directory placeholder object %s',
+                       exp_src_url.GetUrlString())
+      return
 
     if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(
         exp_src_url.GetUrlString()):
