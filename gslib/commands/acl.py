@@ -391,13 +391,8 @@ class AclCommand(Command):
                                preconditions=preconditions,
                                provider=url.scheme, fields=['id'])
       else:  # Object
-        preconditions = Preconditions(meta_gen_match=gcs_object.metageneration)
-        # If we're operating on the live version of the object, only apply
-        # if the live version hasn't changed or been overwritten.  If we're
-        # referring to a version explicitly, then we don't care what the live
-        # version is and we will change the ACL on the requested version.
-        if not url.generation:
-          preconditions.gen_match = gcs_object.generation
+        preconditions = Preconditions(gen_match = gcs_object.generation,
+                                      meta_gen_match=gcs_object.metageneration)
 
         object_metadata = apitools_messages.Object(acl=current_acl)
         gsutil_api.PatchObjectMetadata(
