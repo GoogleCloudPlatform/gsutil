@@ -97,7 +97,7 @@ class FileProgressCallbackHandler(object):
     elip_len = len('... ')
     if (start_len + len(display_urlstr) + end_len >
         MAX_PROGRESS_INDICATOR_WIDTH):
-      display_urlstr = '%s...' % display_urlstr[
+      display_urlstr = '...%s' % display_urlstr[
           -(MAX_PROGRESS_INDICATOR_WIDTH - start_len - end_len - elip_len):]
     base_announce_text = '%s%s:' % (justified_op_string, display_urlstr)
     format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
