@@ -553,6 +553,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     gs_key = self.CreateObject(bucket_uri=gs_bucket, contents='b'*1024*1024)
     self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
     self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
+    with SetBotoConfigForTest([
+        ('GSUtil', 'resumable_threshold', str(ONE_KB)),
+        ('GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))]):
+      # Ensure copy also works across json upload chunk boundaries.
+      self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
 
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')

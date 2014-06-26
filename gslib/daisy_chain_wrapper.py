@@ -117,8 +117,9 @@ class DaisyChainWrapper(object):
 
   def read(self, amt=None):  # pylint: disable=invalid-name
     """Exposes a stream from the in-memory buffer to the upload."""
-    if self.position == self.src_obj_size:
-      # No data left, return nothing so callers can call still call len().
+    if self.position == self.src_obj_size or amt == 0:
+      # If there is no data left or 0 bytes were requested, return an empty
+      # string so callers can call still call len() and read(0).
       return ''
     if amt is None or amt > TRANSFER_BUFFER_SIZE:
       raise BadRequestException(
