@@ -194,7 +194,7 @@ def GetDownloadHashAlgs(logger, src_md5=False, src_crc32c=False):
   # If the cloud provider supplies a CRC, we'll compute a checksum to
   # validate if we're using a native crcmod installation or MD5 isn't
   # offered as an alternative.
-  if src_crc32c:
+  elif src_crc32c:
     if UsingCrcmodExtension(crcmod):
       hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
     elif not hash_algs:
