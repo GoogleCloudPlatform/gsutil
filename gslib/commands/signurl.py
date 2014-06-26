@@ -50,7 +50,7 @@ except ImportError:
 
 _detailed_help_text = ("""
 <B>SYNOPSIS</B>
-  gsutil signurl pkc12 url...
+  gsutil signurl pkcs12-file url...
 
 
 <B>DESCRIPTION</B>
@@ -68,7 +68,7 @@ _detailed_help_text = ("""
   Note: Unlike the gsutil ls command, the signurl command does not support
   operations on sub-directories. For example, if you run the command:
 
-    gsutil signurl gs://some-bucket/some-object/
+    gsutil signurl <pkcs12-file> gs://some-bucket/some-object/
 
   gsutil will look up information about the object "some-object/" (with a
   trailing slash) inside bucket "some-bucket", as opposed to operating on
@@ -98,17 +98,17 @@ _detailed_help_text = ("""
 
   Create a signed url for downloading an object valid for 10 minutes:
 
-    gsutil signurl -d 10m gs://<bucket>/<object>
+    gsutil signurl <pkcs12-file> -d 10m gs://<bucket>/<object>
 
   Create a signed url for uploading a plain text file via HTTP PUT:
 
-    gsutil signurl -m PUT -d 1h gs://<bucket>/<object>
+    gsutil signurl <pkcs12-file> -m PUT -d 1h gs://<bucket>/<object>
 
   To construct a signed URL that allows anyone in possession of 
   the URL to PUT to the specified bucket for one day, creating 
   any object of Content-Type image/jpg, run:
 
-    gsutil signurl -m PUT -d 1d -c image/jpg gs://<bucket>/<object>
+    gsutil signurl <pkcs12-file> -m PUT -d 1d -c image/jpg gs://<bucket>/<obj>
 
 
 """)
