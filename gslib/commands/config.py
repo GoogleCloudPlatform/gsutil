@@ -21,6 +21,7 @@ import multiprocessing
 import os
 import platform
 import signal
+import socket
 import stat
 import sys
 import textwrap
@@ -697,7 +698,7 @@ class ConfigCommand(Command):
       try:
         oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
             oauth2_client, oauth2_scopes, launch_browser)
-      except (ResponseNotReady, ServerNotFoundError):
+      except (ResponseNotReady, ServerNotFoundError, socket.error):
         # TODO: Determine condition to check for in the ResponseNotReady
         # exception so we only run proxy config flow if failure was caused by
         # request being blocked because it wasn't sent through proxy. (This
