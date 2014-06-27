@@ -134,10 +134,6 @@ class GcsJsonApi(CloudApi):
     self.certs_file = GetCertsFile()
 
     self.http = GetNewHttp()
-
-    self.http.disable_ssl_certificate_validation = (not config.getbool(
-        'Boto', 'https_validate_certificates'))
-
     self.http_base = 'https://'
     gs_json_host = config.get('Credentials', 'gs_json_host', None)
     self.host_base = gs_json_host or 'www.googleapis.com'
@@ -265,12 +261,7 @@ class GcsJsonApi(CloudApi):
         raise
 
   def _GetNewDownloadHttp(self, download_stream):
-    certs_file = GetCertsFile()
-    if certs_file:
-      return HttpWithDownloadStream(stream=download_stream,
-                                    ca_certs=certs_file)
-    else:
-      return HttpWithDownloadStream(stream=download_stream)
+    return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""

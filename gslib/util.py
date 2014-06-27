@@ -324,19 +324,29 @@ def GetCleanupFiles():
   return cleanup_files
 
 
-def GetNewHttp():
-  # Some installers don't package a certs file with httplib2, so use the
-  # one included with gsutil.
+def GetNewHttp(http_class=httplib2.Http, **kwargs):
+  """Creates and returns a new httplib2.Http instance.
+
+  Args:
+    http_class: Optional custom Http class to use.
+    **kwargs: Arguments to pass to http_class constructor.
+
+  Returns:
+    An initialized httplib2.Http instance.
+  """
   proxy_info = httplib2.ProxyInfo(
       proxy_type=3,
       proxy_host=boto.config.get('Boto', 'proxy', None),
       proxy_port=boto.config.getint('Boto', 'proxy_port', 0),
       proxy_user=boto.config.get('Boto', 'proxy_user', None),
       proxy_pass=boto.config.get('Boto', 'proxy_pass', None))
-  if GetCertsFile():
-    return httplib2.Http(proxy_info=proxy_info, ca_certs=GetCertsFile())
-  else:
-    return httplib2.Http(proxy_info=proxy_info)
+  # Some installers don't package a certs file with httplib2, so use the
+  # one included with gsutil.
+  kwargs['ca_certs'] = GetCertsFile()
+  http = http_class(proxy_info=proxy_info, **kwargs)
+  http.disable_ssl_certificate_validation = (not config.getbool(
+      'Boto', 'https_validate_certificates'))
+  return http
 
 
 def GetNumRetries():
@@ -646,7 +656,7 @@ def _IncreaseSoftLimitForResource(resource_name, fallback_value):
 
   The soft limit is used for this process (and its children), but the
   hard limit is set by the system and cannot be exceeded.
-  
+
   We will first try to set the soft limit to the hard limit's value; if that
   fails, we will try to set the soft limit to the fallback_value iff this would
   increase the soft limit.

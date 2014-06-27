@@ -736,7 +736,7 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
     CalculateHashesFromContents(
         fp, hash_dict, size=src_obj_metadata.size,
         progress_func=FileProgressCallbackHandler(
-            'Hashing', StorageUrlFromString(file_name), logger))
+            'Hashing', StorageUrlFromString(file_name), logger).call)
   digests = {}
   for alg_name, digest in hash_dict.iteritems():
     digests[alg_name] = Base64EncodeHash(digest.hexdigest())
