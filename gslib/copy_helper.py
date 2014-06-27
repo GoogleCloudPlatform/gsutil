@@ -1903,6 +1903,7 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
         logger, hash_algs, download_file_name, src_obj_metadata)
 
   digest_verified = True
+  hash_invalid_exception = None
   try:
     _CheckHashes(logger, src_url, src_obj_metadata, download_file_name,
                  local_hashes)
@@ -1912,10 +1913,18 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     # If an non-gzipped object gets sent with gzip content encoding, the hash
     # we calculate will match the gzipped bytes, not the original object. Thus,
     # we'll need to calculate and check it after unzipping.
-    if 'doesn\'t match cloud-supplied digest' in str(e) and server_gzip:
-      logger.debug(
-          'Hash did not match but server gzipped the content, will '
-          'recalculate.')
+    if ('doesn\'t match cloud-supplied digest' in str(e) and
+        (server_gzip or api_selector == ApiSelector.XML)):
+      if server_gzip:
+        logger.debug(
+            'Hash did not match but server gzipped the content, will '
+            'recalculate.')
+      else:
+        logger.debug(
+            'Hash did not match but server may have gzipped the content, will '
+            'recalculate.')
+        # Save off the exception in case this isn't a gzipped file.
+        hash_invalid_exception = e
       digest_verified = False
     else:
       _DeleteTrackerFile(GetTrackerFilePath(
@@ -1946,6 +1955,13 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
         while data:
           f_out.write(data)
           data = gzip_fp.read(GZIP_CHUNK_SIZE)
+    except IOError, e:
+      # In the XML case where we don't know if the file was gzipped, raise
+      # the original hash exception if we find that it wasn't.
+      if 'Not a gzipped file' in str(e) and hash_invalid_exception:
+        # Linter improperly thinks we're raising None despite the above check.
+        # pylint: disable=raising-bad-type
+        raise hash_invalid_exception
     finally:
       if gzip_fp:
         gzip_fp.close()
