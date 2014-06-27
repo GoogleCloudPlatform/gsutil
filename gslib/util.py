@@ -637,24 +637,54 @@ def CompareVersions(first, second):
   return (False, False)
 
 
-def _IncreaseSoftLimitForResource(resource_name):
+def _IncreaseSoftLimitForResource(resource_name, fallback_value):
   """Sets a new soft limit for the maximum number of open files.
 
   The soft limit is used for this process (and its children), but the
   hard limit is set by the system and cannot be exceeded.
+  
+  We will first try to set the soft limit to the hard limit's value; if that
+  fails, we will try to set the soft limit to the fallback_value iff this would
+  increase the soft limit.
 
   Args:
     resource_name: Name of the resource to increase the soft limit for.
+    fallback_value: Fallback value to be used if we couldn't set the
+                    soft value to the hard value (e.g., if the hard value
+                    is "unlimited").
 
   Returns:
-    Hard limit for the resource
+    Current soft limit for the resource (after any changes we were able to
+    make), or -1 if the resource doesn't exist.
   """
+
+  # Get the value of the resource.
   try:
-    (_, hard_limit) = resource.getrlimit(resource_name)
-    resource.setrlimit(resource_name, (hard_limit, hard_limit))
-    return hard_limit
+    (soft_limit, hard_limit) = resource.getrlimit(resource_name)
   except (resource.error, ValueError):
-    return 0
+    # The resource wasn't present, so we can't do anything here.
+    return -1
+
+  # Try to set the value of the soft limit to the value of the hard limit.
+  if hard_limit > soft_limit:  # Some OS's report 0 for "unlimited".
+    try:
+      resource.setrlimit(resource_name, (hard_limit, hard_limit))
+      return hard_limit
+    except (resource.error, ValueError):
+      # We'll ignore this and try the fallback value.
+      pass
+
+  # Try to set the value of the soft limit to the fallback value.
+  if soft_limit < fallback_value:
+    try:
+      resource.setrlimit(resource_name, (fallback_value, hard_limit))
+      return fallback_value
+    except (resource.error, ValueError):
+      # We couldn't change the soft limit, so just report the current
+      # value of the soft limit.
+      return soft_limit
+  else:
+    return soft_limit
 
 
 def GetCloudApiInstance(cls, thread_state=None):
@@ -770,18 +800,18 @@ def MultiprocessingIsAvailable(logger=None):
   if cached_multiprocessing_is_available is not None:
     if logger:
       logger.debug(cached_multiprocessing_check_stack_trace)
-      logger.warn('\n'.join(textwrap.wrap(
-          cached_multiprocessing_is_available_message + '\n')))
+      logger.warn(cached_multiprocessing_is_available_message)
     return (cached_multiprocessing_is_available,
             cached_multiprocessing_check_stack_trace)
 
   stack_trace = None
   multiprocessing_is_available = True
-  message = (
-      'You have requested multiple threads or processes for an operation,'
-      ' but the required functionality of Python\'s multiprocessing '
-      'module is not available. Your operations will be performed '
-      'sequentially, and any requests for parallelism will be ignored.')
+  message = """
+You have requested multiple threads or processes for an operation, but the
+required functionality of Python\'s multiprocessing module is not available.
+Your operations will be performed sequentially, and any requests for
+parallelism will be ignored.
+"""
   try:
     # Fails if /dev/shm (or some equivalent thereof) is not available for use
     # (e.g., there's no implementation, or we can't write to it, etc.).
@@ -789,8 +819,9 @@ def MultiprocessingIsAvailable(logger=None):
       multiprocessing.Value('i', 0)
     except:
       if not IS_WINDOWS:
-        message += ('\nPlease ensure that you have write access to both '
-                    '/dev/shm and /run/shm.')
+        message += """
+Please ensure that you have write access to both /dev/shm and /run/shm.
+"""
       raise  # We'll handle this in one place below.
 
     # Manager objects and Windows are generally a pain to work with, so try it
@@ -802,36 +833,47 @@ def MultiprocessingIsAvailable(logger=None):
     # Check that the max number of open files is reasonable. Always check this
     # after we're sure that the basic multiprocessing functionality is
     # available, since this won't matter unless that's true.
-    limit = 0
+    limit = -1
     if HAS_RESOURCE_MODULE:
       # Try to set this with both resource names - RLIMIT_NOFILE for most Unix
       # platforms, and RLIMIT_OFILE for BSD. Ignore AttributeError because the
       # "resource" module is not guaranteed to know about these names.
       try:
         limit = max(limit,
-                    _IncreaseSoftLimitForResource(resource.RLIMIT_NOFILE))
+                    _IncreaseSoftLimitForResource(
+                        resource.RLIMIT_NOFILE,
+                        MIN_ACCEPTABLE_OPEN_FILES_LIMIT))
       except AttributeError:
         pass
       try:
         limit = max(limit,
-                    _IncreaseSoftLimitForResource(resource.RLIMIT_OFILE))
+                    _IncreaseSoftLimitForResource(
+                        resource.RLIMIT_OFILE, MIN_ACCEPTABLE_OPEN_FILES_LIMIT))
       except AttributeError:
         pass
+
     if limit < MIN_ACCEPTABLE_OPEN_FILES_LIMIT and not IS_WINDOWS:
-      message += (
-          '\nYour max number of open files, %s, is too low to allow safe '
-          'multiprocessing. On Linux you can fix this by adding something '
-          'like "ulimit -n 10000" to your ~/.bashrc or equivalent file, and '
-          'opening a new terminal. '
-          'On MacOS you can fix this by running a command like this once: '
-          '"launchctl limit maxfiles 10000"' % limit)
+      message += ("""
+Your max number of open files, %s, is too low to allow safe multiprocessing.
+On Linux you can fix this by adding something like "ulimit -n 10000" to your
+~/.bashrc or equivalent file and opening a new terminal.
+
+On MacOS, you may also need to run a command like this once (in addition to the
+above instructions), which might require a restart of your system to take
+effect:
+  launchctl limit maxfiles 10000
+
+Alternatively, edit /etc/launchd.conf with something like:
+  limit maxfiles 10000 10000
+
+""" % limit)
       raise Exception('Max number of open files, %s, is too low.' % limit)
   except:  # pylint: disable=bare-except
     stack_trace = traceback.format_exc()
     multiprocessing_is_available = False
     if logger is not None:
       logger.debug(stack_trace)
-      logger.warn('\n'.join(textwrap.wrap(message + '\n')))
+      logger.warn(message)
 
   # Set the cached values so that we never need to do this check again.
   cached_multiprocessing_is_available = multiprocessing_is_available
