@@ -31,21 +31,16 @@ _detailed_help_text = ("""
   or download a file larger than a configurable threshold (by default, this
   threshold is 2 MB). When a transfer fails partway through (e.g., because of
   an intermittent network problem), gsutil uses a truncated randomized binary
-  exponential backoff-and-retry strategy:
-  wait a random period between [0..1] seconds and retry; if that fails,
-  wait a random period between [0..2] seconds and retry; and if that
-  fails, wait a random period between [0..4] seconds, and so on, up to a
-  configurable number of times (the default is 6 times). Thus, the retry
-  actually spans a randomized period up to 1+2+4+8+16+32=63 seconds.
-
-  If the transfer fails each of these attempts with no intervening
-  progress, gsutil gives up on the transfer, but keeps a "tracker" file
-  for it in a configurable location (the default location is ~/.gsutil/,
-  in a file named by a combination of the SHA1 hash of the name of the
-  bucket and object being transferred and the last 16 characters of the
-  file name). When transfers fail in this fashion, you can rerun gsutil
-  at some later time (e.g., after the networking problem has been
-  resolved), and the resumable transfer picks up where it left off.
+  exponential backoff-and-retry strategy that by default will retry transfers up
+  to 6 times over a 63 second period of time (see "gsutil help retries" for
+  details). If the transfer fails each of these attempts with no intervening
+  progress, gsutil gives up on the transfer, but keeps a "tracker" file for
+  it in a configurable location (the default location is ~/.gsutil/, in a file
+  named by a combination of the SHA1 hash of the name of the bucket and object
+  being transferred and the last 16 characters of the file name). When transfers
+  fail in this fashion, you can rerun gsutil at some later time (e.g., after
+  the networking problem has been resolved), and the resumable transfer picks
+  up where it left off.
 
 
 <B>SCRIPTING DATA TRANSFER TASKS</B>
@@ -155,12 +150,12 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'prod',
-      help_name_aliases = [
+      help_name='prod',
+      help_name_aliases=[
           'production', 'resumable', 'resumable upload', 'resumable transfer',
           'resumable download', 'scripts', 'scripting'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'Scripting Production Transfers',
-      help_text = _detailed_help_text,
-      subcommand_help_text = {},
+      help_type='additional_help',
+      help_one_line_summary='Scripting Production Transfers',
+      help_text=_detailed_help_text,
+      subcommand_help_text={},
   )

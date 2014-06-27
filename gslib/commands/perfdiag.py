@@ -53,6 +53,7 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import GetCloudApiInstance
+from gslib.util import GetMaxRetryDelay
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
 from gslib.util import MakeBitsHumanReadable
@@ -423,8 +424,7 @@ class PerfDiagCommand(Command):
     i = 0
     return_val = None
     while not success:
-      next_sleep = min(random.random() * (2 ** i) + 1,
-                       boto.config.get('Boto', 'max_retry_delay', 60))
+      next_sleep = min(random.random() * (2 ** i) + 1, GetMaxRetryDelay())
       try:
         return_val = func()
         self.total_requests += 1

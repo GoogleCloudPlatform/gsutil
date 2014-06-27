@@ -109,7 +109,8 @@ class Response(collections.namedtuple(
             'location' in self.info)
 
 
-def MakeRequest(http, http_request, retries=7, redirections=5):
+def MakeRequest(http, http_request, retries=7, max_retry_delay=60,
+                redirections=5):
   """Send http_request via the given http.
 
   This wrapper exists to handle translation between the plain httplib2
@@ -121,6 +122,8 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
         an underlying http, for example, HTTPMultiplexer.
     http_request: A Request to send.
     retries: (int, default 5) Number of retries to attempt on 5XX replies.
+    max_retry_delay: (int, default 60) Max retry delay during binary exponential
+                     backoff.
     redirections: (int, default 5) Number of redirects to follow.
 
   Returns:
@@ -171,10 +174,9 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
                    str(http_request.url))
     # TODO: Make this timeout configurable.
     if response:
-      time.sleep(response.retry_after or
-                 min(2**retry, boto.config.get('Boto', 'max_retry_delay', 60)))
+      time.sleep(response.retry_after or min(2 ** retry, max_retry_delay))
     else:
-      time.sleep(min(2**retry, boto.config.get('Boto', 'max_retry_delay', 60)))
+      time.sleep(min(2 ** retry, max_retry_delay))
   if response is None:
     raise exc if exc else exceptions.InvalidDataFromServerError(
         'HTTP error on final retry: %s' % exc)

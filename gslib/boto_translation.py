@@ -76,6 +76,7 @@ from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
+from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNumRetries
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
@@ -596,7 +597,7 @@ class BotoTranslation(CloudApi):
         pass
 
       sleep_time_secs = min(random.random() * (2 ** progress_less_iterations),
-                            boto.config.get('Boto', 'max_retry_delay', 60))
+                            GetMaxRetryDelay())
       if debug >= 1:
         self.logger.info('Got retryable failure (%d progress-less in a row).\n'
                          'Sleeping %d seconds before re-trying' %

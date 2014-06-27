@@ -225,9 +225,12 @@ RESUMABLE_TRANSFERS_TEXT = """
   visible as soon as it starts being written. Thus, before you attempt to use
   any files downloaded by gsutil you should make sure the download completed
   successfully, by checking the exit status from the gsutil command. This can
-  be done using a script like the following:
+  be done in a bash script, for example, by doing:
 
-     until gsutil cp gs://your-bucket/your-object ./local-file; do sleep 1; done
+     gsutil cp gs://your-bucket/your-object ./local-file
+     if [ "$status" -ne "0" ] ; then
+       << Code that handles failures >>
+     fi
 
   Resumable uploads and downloads store some state information in a file
   in ~/.gsutil named by the destination object or file. If you attempt to
@@ -278,15 +281,21 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   related to the hash of the contents of the file or object).
 
   To avoid leaving temporary objects around, you should make sure to check the
-  exit status from the gsutil command. This can be done using a script like the
-  following:
+  exit status from the gsutil command.  This can be done in a bash script, for
+  example, by doing:
 
-     until gsutil cp ./file gs://your-bucket/obj; do sleep 1; done
+     gsutil cp ./local-file gs://your-bucket/your-object
+     if [ "$status" -ne "0" ] ; then
+       << Code that handles failures >>
+     fi
+  
+  Or, for copying a while directory, use this instead:
 
-  If you're copying a whole directory use this instead:
-
-     until gsutil cp -c -L cp.log -R ./dir gs://bucket; do sleep 1; done
-
+     gsutil cp -c -L cp.log -R ./dir gs://bucket
+     if [ "$status" -ne "0" ] ; then
+       << Code that handles failures >>
+     fi
+  
   One important caveat is that files uploaded in this fashion are still subject
   to the maximum number of components limit. For example, if you upload a large
   file that gets split into %d components, and try to compose it with another
@@ -302,6 +311,7 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
 """ % (PARALLEL_UPLOAD_TEMP_NAMESPACE, 10, MAX_COMPONENT_COUNT - 9,
        MAX_COMPONENT_COUNT)
+
 
 CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>

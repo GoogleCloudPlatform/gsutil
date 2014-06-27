@@ -309,13 +309,24 @@ https_validate_certificates = True
 #debug = <0, 1, or 2>
 
 # 'num_retries' controls the number of retry attempts made when errors occur
-# during data transfers. The default is 6. Note: don't set this value to 0, as
-# it will cause boto to fail when reusing HTTP connections.
+# during data transfers. The default is 6.
+# Note 1: You can cause gsutil to retry failures effectively infinitely by
+# setting this value to a large number (like 10000). Doing that could be useful
+# in cases where your network connection occasionally fails and is down for an
+# extended period of time, because when it comes back up gsutil will continue
+# retrying.  However, in general we recommend not setting the value above 10,
+# because otherwise gsutil could appear to "hang" due to excessive retries
+# (since unless you run gsutil -D you won't see any logged evidence that gsutil
+# is retrying).
+# Note 2: Don't set this value to 0, as it will cause boto to fail when reusing
+# HTTP connections.
 #num_retries = <integer value>
 
 # 'max_retry_delay' controls the max delay (in seconds) between retries. The
 # default value is 60, so the backoff sequence will be 1 seconds, 2 seconds, 4,
 # 8, 16, 32, and then 60 for all subsequent retries for a given HTTP request.
+# Note: At present this value only impacts the XML API and the JSON API uses a
+# fixed value of 60.
 #max_retry_delay = <integer value>
 """
 

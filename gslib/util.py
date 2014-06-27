@@ -343,6 +343,10 @@ def GetNumRetries():
   return config.getint('Boto', 'num_retries', 6)
 
 
+def GetMaxRetryDelay():
+  return config.getint('Boto', 'max_retry_delay', 60)
+
+
 def _RoundToNearestExponent(num):
   i = 0
   while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
