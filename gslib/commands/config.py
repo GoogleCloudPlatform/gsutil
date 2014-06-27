@@ -171,6 +171,7 @@ _detailed_help_text = ("""
       http_socket_timeout
       https_validate_certificates
       debug
+      max_retry_delay
       num_retries
 
     [GSUtil]
@@ -311,6 +312,11 @@ https_validate_certificates = True
 # during data transfers. The default is 6. Note: don't set this value to 0, as
 # it will cause boto to fail when reusing HTTP connections.
 #num_retries = <integer value>
+
+# 'max_retry_delay' controls the max delay (in seconds) between retries. The
+# default value is 60, so the backoff sequence will be 1 seconds, 2 seconds, 4,
+# 8, 16, 32, and then 60 for all subsequent retries for a given HTTP request.
+#max_retry_delay = <integer value>
 """
 
 CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """

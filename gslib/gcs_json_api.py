@@ -578,7 +578,8 @@ class GcsJsonApi(CloudApi):
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
               self.num_retries, str(e))
-        time.sleep(2 ** retries)
+        time.sleep(min(2 ** retries,
+                       boto.config.get('Boto', 'max_retry_delay', 60)))
         self.logger.info('Retrying download from byte %s after exception.' %
                          start_byte)
         self._RebuildHttpConnections(apitools_download.bytes_http)
@@ -811,7 +812,8 @@ class GcsJsonApi(CloudApi):
                 raise ResumableUploadException(
                     'Transfer failed after %d retries. Final exception: %s' %
                     (self.num_retries, e2))
-              time.sleep(2 ** retries)
+              time.sleep(min(2 ** retries,
+                             boto.config.get('Boto', 'max_retry_delay', 60)))
           if start_byte > last_progress_byte:
             # We've made progress, so allow a fresh set of retries.
             last_progress_byte = start_byte
@@ -822,7 +824,8 @@ class GcsJsonApi(CloudApi):
               raise ResumableUploadException(
                   'Transfer failed after %d retries. Final exception: %s' %
                   (self.num_retries, e))
-            time.sleep(2 ** retries)
+            time.sleep(min(2 ** retries,
+                           boto.config.get('Boto', 'max_retry_delay', 60)))
           self.logger.info('Retrying upload from byte %s after exception.'
                            %start_byte)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:

@@ -171,9 +171,10 @@ def MakeRequest(http, http_request, retries=7, redirections=5):
                    str(http_request.url))
     # TODO: Make this timeout configurable.
     if response:
-      time.sleep(response.retry_after or 2 ** retry)
+      time.sleep(response.retry_after or
+                 min(2**retry, boto.config.get('Boto', 'max_retry_delay', 60)))
     else:
-      time.sleep(2 ** retry)
+      time.sleep(min(2**retry, boto.config.get('Boto', 'max_retry_delay', 60)))
   if response is None:
     raise exc if exc else exceptions.InvalidDataFromServerError(
         'HTTP error on final retry: %s' % exc)

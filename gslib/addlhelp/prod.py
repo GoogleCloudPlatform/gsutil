@@ -30,8 +30,8 @@ _detailed_help_text = ("""
   reliably. gsutil uses resumable transfer support when you attempt to upload
   or download a file larger than a configurable threshold (by default, this
   threshold is 2 MB). When a transfer fails partway through (e.g., because of
-  an intermittent network problem), gsutil uses a randomized binary exponential
-  backoff-and-retry strategy:
+  an intermittent network problem), gsutil uses a truncated randomized binary
+  exponential backoff-and-retry strategy:
   wait a random period between [0..1] seconds and retry; if that fails,
   wait a random period between [0..2] seconds and retry; and if that
   fails, wait a random period between [0..4] seconds, and so on, up to a
@@ -142,8 +142,8 @@ _detailed_help_text = ("""
   same OAuth2 refresh token, it is possible to encounter rate limiting errors
   for the refresh requests (especially if all of these machines are likely to
   start running gsutil at the same time). To account for this, gsutil will
-  automatically retry OAuth2 refresh requests with a randomized exponential
-  backoff strategy like that which is described in the
+  automatically retry OAuth2 refresh requests with a truncated randomized
+  exponential backoff strategy like that which is described in the
   "BACKGROUND ON RESUMABLE TRANSFERS" section above. The number of retries
   attempted for OAuth2 refresh requests can be controlled via the
   "oauth2_refresh_retries" variable in the .boto config file.

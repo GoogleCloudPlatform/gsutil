@@ -423,7 +423,8 @@ class PerfDiagCommand(Command):
     i = 0
     return_val = None
     while not success:
-      next_sleep = random.random() * (2 ** i) + 1
+      next_sleep = min(random.random() * (2 ** i) + 1,
+                       boto.config.get('Boto', 'max_retry_delay', 60))
       try:
         return_val = func()
         self.total_requests += 1

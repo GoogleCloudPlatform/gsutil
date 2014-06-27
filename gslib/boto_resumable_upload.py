@@ -489,7 +489,8 @@ class BotoResumableUpload(object):
           ResumableTransferDisposition.ABORT_CUR_PROCESS)
 
     # Use binary exponential backoff to desynchronize client requests.
-    sleep_time_secs = random.random() * (2**self.progress_less_iterations)
+    sleep_time_secs = min(random.random() * (2**self.progress_less_iterations),
+                          boto.config.get('Boto', 'max_retry_delay', 60))
     if debug >= 1:
       self.logger.debug('Got retryable failure (%d progress-less in a row).\n'
                         'Sleeping %3.1f seconds before re-trying',
