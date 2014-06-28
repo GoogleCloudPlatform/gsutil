@@ -20,8 +20,7 @@ _detailed_help_text = ("""
   There are a number of reasons that gsutil operations can fail; some are not
   retryable, and require that the user take some action, for example:
     - Invalid credentials
-    - Network unreachable, because of a proxy configuration problem or temporary
-      problem with your ISP
+    - Network unreachable because of a proxy configuration problem
     - Access denied, because the bucket or object you are trying to use has an
       ACL that doesn't permit the action you're trying to perform.
 
@@ -56,7 +55,7 @@ class CommandOptions(HelpProvider):
       help_name='retries',
       help_name_aliases=['retry', 'backoff'],
       help_type='additional_help',
-      help_one_line_summary='Retry handling strategy',
+      help_one_line_summary='Retry Handling Strategy',
       help_text=_detailed_help_text,
       subcommand_help_text={},
   )
