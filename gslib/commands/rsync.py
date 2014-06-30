@@ -326,7 +326,7 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   (url_str, out_file_name, desc) = args_tuple
   # We sort while iterating over url_str, allowing parallelism of batched
   # sorting with collecting the listing.
-  out_file = open(out_file_name, 'w')
+  out_file = open(out_file_name, 'wb')
   _BatchSort(_FieldedListingIterator(cls, gsutil_api, url_str, desc), out_file)
   out_file.close()
 
@@ -486,8 +486,8 @@ class _DiffIterator(object):
                       parallel_operations_override=True,
                       fail_on_error=True)
 
-    self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'r')
-    self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'r')
+    self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'rb')
+    self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'rb')
 
     # Wrap iterators in PluralityCheckableIterator so we can check emptiness.
     self.sorted_src_urls_it = PluralityCheckableIterator(
