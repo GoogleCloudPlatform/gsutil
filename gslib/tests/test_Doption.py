@@ -62,13 +62,15 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     if gslib.IS_PACKAGE_INSTALL:
       self.assertIn('PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS', stdout)
     else:
-      self.assertRegexpMatches(stdout, r'.*checksum [0-9a-f]{32}.*')
-    self.assertIn('gsutil version %s' % gslib.VERSION, stdout)
-    self.assertIn('boto version ', stdout)
-    self.assertIn('python version ', stdout)
+      self.assertRegexpMatches(stdout, r'.*checksum: [0-9a-f]{32}.*')
+    self.assertIn('gsutil version: %s' % gslib.VERSION, stdout)
+    self.assertIn('boto version: ', stdout)
+    self.assertIn('python version: ', stdout)
+    self.assertIn('OS: ', stdout)
+    self.assertIn('multiprocessing available: ', stdout)
+    self.assertIn('using cloud sdk: ', stdout)
     self.assertIn('config path: ', stdout)
     self.assertIn('gsutil path: ', stdout)
     self.assertIn('compiled crcmod: ', stdout)
     self.assertIn('installed via package manager: ', stdout)
     self.assertIn('editable install: ', stdout)
-      

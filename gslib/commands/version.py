@@ -24,6 +24,7 @@ import crcmod
 import gslib
 from gslib.command import Command
 from gslib.util import GetConfigFilePath
+from gslib.util import MultiprocessingIsAvailable
 from gslib.util import UsingCrcmodExtension
 
 _detailed_help_text = ("""
@@ -86,7 +87,7 @@ class VersionCommand(Command):
     else:
       checksum_ok_str = '!= %s' % shipped_checksum
 
-    sys.stdout.write('gsutil version %s\n' % gslib.VERSION)
+    sys.stdout.write('gsutil version: %s\n' % gslib.VERSION)
 
     if long_form:
 
@@ -95,6 +96,7 @@ class VersionCommand(Command):
           'boto version: {boto_version}\n'
           'python version: {python_version}\n'
           'OS: {os_version}\n'
+          'multiprocessing available: {multiprocessing_available}\n'
           'using cloud sdk: {cloud_sdk}\n'
           'config path: {config_path}\n'
           'gsutil path: {gsutil_path}\n'
@@ -109,6 +111,7 @@ class VersionCommand(Command):
           boto_version=boto.__version__,
           python_version=sys.version.replace('\n', ''),
           os_version='%s %s' % (platform.system(), platform.release()),
+          multiprocessing_available=MultiprocessingIsAvailable()[0],
           cloud_sdk=(os.environ.get('CLOUDSDK_WRAPPER') == '1'),
           config_path=config_path,
           gsutil_path=gslib.GSUTIL_PATH,

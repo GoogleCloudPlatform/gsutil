@@ -253,7 +253,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     Index of last created test.
   """
   orig_test_index = test_index
-  executable_prefix = [sys.executable] if sys.executable else []
+  executable_prefix = [sys.executable] if sys.executable and IS_WINDOWS else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
 
   process_create_start_time = time.time()
