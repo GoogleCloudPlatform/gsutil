@@ -131,7 +131,7 @@ TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
 
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
-UPLOAD_RETURN_FIELDS = ['generation', 'md5Hash', 'size']
+UPLOAD_RETURN_FIELDS = ['crc32c', 'generation', 'md5Hash', 'size']
 
 # This tuple is used only to encapsulate the arguments needed for
 # command.Apply() in the parallel composite upload case.
@@ -2058,9 +2058,9 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size)
   else:
-    # TODO: Actually support resuming uploads in the daisy chain case. We use
-    # resumable here for its good streaming implementation properties, but the
-    # tracker callback is a no-op.
+    # TODO: Support process-break resumes. This will resume across connection
+    # breaks and server errors, but the tracker callback is a no-op so this
+    # won't resume across gsutil runs.
     uploaded_object = gsutil_api.UploadObjectResumable(
         upload_fp, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,
@@ -2073,7 +2073,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
   try:
     _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
-                      dst_obj_metadata)
+                      uploaded_object)
   except CommandException, e:
     if 'doesn\'t match cloud-supplied digest' in str(e):
       gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,

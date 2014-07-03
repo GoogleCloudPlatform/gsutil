@@ -24,6 +24,13 @@ from gslib.util import CreateLock
 from gslib.util import TRANSFER_BUFFER_SIZE
 
 
+# This controls the amount of bytes downloaded per download request.
+# We do not buffer this many bytes in memory at a time - that is controlled by
+# DaisyChainWrapper.max_buffer_size. This is the upper bound of bytes that may
+# be unnecessarily downloaded if there is a break in the resumable upload.
+DAISY_CHAIN_CHUNK_SIZE = 1024*1024*100
+
+
 class BufferWrapper(object):
   """Wraps the download file pointer to use our in-memory buffer."""
 
@@ -99,20 +106,49 @@ class DaisyChainWrapper(object):
     self.gsutil_api = gsutil_api
 
     self.download_thread = None
+    self.stop_download = threading.Event()
     self.StartDownloadThread()
 
-  def StartDownloadThread(self):
-    """Starts the download of the source object."""
-    def PerformDownload():
+  def StartDownloadThread(self, start_byte=0):
+    """Starts the download thread for the source object (from start_byte)."""
+
+    def PerformDownload(start_byte):
+      """Downloads the source object in chunks.
+
+      This function checks the stop_download event and exits early if it is set.
+      It should be set when there is an error during the daisy-chain upload,
+      then this function can be called again with the upload's current position
+      as start_byte.
+
+      Args:
+        start_byte: Byte from which to begin the download.
+      """
+      # TODO: Support resumable downloads. This would require the BufferWrapper
+      # object to support seek() and tell() which requires coordination with
+      # the upload.
+      while start_byte + DAISY_CHAIN_CHUNK_SIZE < self.src_obj_size:
+        self.gsutil_api.GetObjectMedia(
+            self.src_url.bucket_name, self.src_url.object_name,
+            BufferWrapper(self), start_byte=start_byte,
+            end_byte=start_byte + DAISY_CHAIN_CHUNK_SIZE - 1,
+            generation=self.src_url.generation, object_size=self.src_obj_size,
+            download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+            provider=self.src_url.scheme)
+        if self.stop_download.is_set():
+          # Download thread needs to be restarted, so exit.
+          self.stop_download.clear()
+          return
+        start_byte += DAISY_CHAIN_CHUNK_SIZE
       self.gsutil_api.GetObjectMedia(
           self.src_url.bucket_name, self.src_url.object_name,
-          BufferWrapper(self), start_byte=0,
+          BufferWrapper(self), start_byte=start_byte,
           generation=self.src_url.generation, object_size=self.src_obj_size,
           download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
           provider=self.src_url.scheme)
 
     # TODO: If we do gzip encoding transforms mid-transfer, this will fail.
-    self.download_thread = threading.Thread(target=PerformDownload)
+    self.download_thread = threading.Thread(target=PerformDownload,
+                                            args=(start_byte,))
     self.download_thread.start()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
@@ -151,6 +187,10 @@ class DaisyChainWrapper(object):
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
     restart_download = False
     if whence == os.SEEK_END:
+      if offset:
+        raise BadRequestException(
+            'Invalid seek during daisy chain operation. Non-zero offset %s '
+            'from os.SEEK_END is not supported' % offset)
       with self.lock:
         self.last_position = self.position
         self.last_data = None
@@ -167,27 +207,33 @@ class DaisyChainWrapper(object):
             # get it on the next call to read.
             self.buffer.appendleft(self.last_data)
             self.bytes_buffered += len(self.last_data)
-        elif offset == 0 and self.download_thread:
+        else:
           # Once a download is complete, boto seeks to 0 and re-reads to
           # compute the hash if an md5 isn't already present (for example a GCS
           # composite object), so we have to re-download the whole object.
-
-          # TODO: When daisy-chaining to a resumable upload, need to support
-          # arbitrary seeks as the service may have received any number of the
-          # bytes; the download needs to be restarted from that point.
+          # Also, when daisy-chaining to a resumable upload, on error the
+          # service may have received any number of the bytes; the download
+          # needs to be restarted from that point.
           restart_download = True
-        else:
-          raise BadRequestException(
-              'Invalid seek during daisy chain operation, seek only allowed to '
-              'position %s or %s.' % (self.last_position, self.position))
+
       if restart_download:
+        self.stop_download.set()
+
+        # Consume any remaining bytes in the download thread so that
+        # the thread can exit, then restart the thread at the desired position.
+        while self.download_thread.is_alive():
+          with self.lock:
+            while self.bytes_buffered:
+              self.bytes_buffered -= len(self.buffer.popleft())
+          time.sleep(0)
+
         with self.lock:
-          self.position = 0
+          self.position = offset
           self.buffer = deque()
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
-        self.StartDownloadThread()
+        self.StartDownloadThread(start_byte=offset)
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)
