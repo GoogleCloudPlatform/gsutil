@@ -22,15 +22,15 @@ class TestGsUtil(testcase.GsUtilIntegrationTestCase):
 
   def test_long_version_arg(self):
     stdout = self.RunGsUtil(['--version'], return_stdout=True)
-    self.assertEqual('gsutil version %s\n' % gslib.VERSION, stdout)
+    self.assertEqual('gsutil version: %s\n' % gslib.VERSION, stdout)
 
   def test_version_command(self):
     stdout = self.RunGsUtil(['version'], return_stdout=True)
-    self.assertEqual('gsutil version %s\n' % gslib.VERSION, stdout)
+    self.assertEqual('gsutil version: %s\n' % gslib.VERSION, stdout)
 
   def test_version_long(self):
     stdout = self.RunGsUtil(['version', '-l'], return_stdout=True)
-    self.assertIn('gsutil version %s\n' % gslib.VERSION, stdout)
+    self.assertIn('gsutil version: %s\n' % gslib.VERSION, stdout)
     self.assertIn('boto version', stdout)
     self.assertIn('checksum', stdout)
     self.assertIn('config path', stdout)
