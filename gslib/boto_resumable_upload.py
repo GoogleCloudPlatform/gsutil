@@ -412,12 +412,12 @@ class BotoResumableUpload(object):
       self.upload_start_point = service_end
 
     total_bytes_uploaded = service_end + 1
-    # Corner case: Don't attempt to seek if we've already uploaded the
-    # entire file, because if the file is a stream (e.g., the KeyFile
-    # wrapper around input key when copying between providers), attempting
-    # to seek to the end of file would result in an InvalidRange error.
-    if file_length < total_bytes_uploaded:
+
+    # Start reading from the file based upon the number of bytes that the
+    # server has so far.
+    if total_bytes_uploaded < file_length:
       fp.seek(total_bytes_uploaded)
+
     conn = key.bucket.connection
 
     # Get a new HTTP connection (vs conn.get_http_connection(), which reuses

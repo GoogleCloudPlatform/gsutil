@@ -171,6 +171,10 @@ class DaisyChainWrapper(object):
           # Once a download is complete, boto seeks to 0 and re-reads to
           # compute the hash if an md5 isn't already present (for example a GCS
           # composite object), so we have to re-download the whole object.
+
+          # TODO: When daisy-chaining to a resumable upload, need to support
+          # arbitrary seeks as the service may have received any number of the
+          # bytes; the download needs to be restarted from that point.
           restart_download = True
         else:
           raise BadRequestException(
