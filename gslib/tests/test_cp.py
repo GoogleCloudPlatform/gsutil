@@ -299,7 +299,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self._get_test_file('test.gif')
 
     self.RunGsUtil(['-h', 'Cache-Control:public,max-age=12',
-                    '-h', 'x-goog-meta-1:abcd', 'cp',
+                    '-h', 'x-%s-meta-1:abcd' % self.provider_custom_meta, 'cp',
                     fpath, dsturi])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -590,7 +590,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # presereved by daisy-chain copy.
     self.RunGsUtil(['setmeta', '-h', 'Cache-Control:public,max-age=12',
                     '-h', 'Content-Type:image/gif',
-                    '-h', 'x-goog-meta-1:abcd', suri(key_uri)])
+                    '-h', 'x-%s-meta-1:abcd' % self.provider_custom_meta,
+                    suri(key_uri)])
     # Set public-read (non-default) ACL so we can verify that cp -D -p works.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
     acl_json = self.RunGsUtil(['acl', 'get', suri(key_uri)], return_stdout=True)

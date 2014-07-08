@@ -149,7 +149,7 @@ class SetMetaCommand(Command):
               'removed in the future.\nPlease use gsutil acl set ... to set '
               'canned ACLs.')
         elif o == '-h':
-          if 'x-goog-acl' in a:
+          if 'x-goog-acl' in a or 'x-amz-acl' in a:
             raise CommandException(
                 'gsutil setmeta no longer allows canned ACLs. Use gsutil acl '
                 'set ... to set canned ACLs.')

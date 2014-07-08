@@ -40,9 +40,11 @@ class GsUtilTestCase(unittest.TestCase):
     if util.RUN_S3_TESTS:
       self.test_api = 'XML'
       self.default_provider = 's3'
+      self.provider_custom_meta = 'amz'
     else:
       self.test_api = boto.config.get('GSUtil', 'prefer_api', 'JSON').upper()
       self.default_provider = 'gs'
+      self.provider_custom_meta = 'goog'
     self.tempdirs = []
 
   def tearDown(self):

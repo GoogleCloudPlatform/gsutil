@@ -45,11 +45,14 @@ GOOG_METAGENERATION_MATCH_REGEX = re.compile(
 CUSTOM_GOOG_METADATA_REGEX = re.compile(r'^x-goog-meta-(?P<header_key>.*)',
                                         re.I)
 CUSTOM_AMZ_METADATA_REGEX = re.compile(r'^x-amz-meta-(?P<header_key>.*)', re.I)
+CUSTOM_AMZ_HEADER_REGEX = re.compile(r'^x-amz-(?P<header_key>.*)', re.I)
 
 # gsutil-specific GUIDs for marking special metadata for S3 compatibility.
 S3_ACL_MARKER_GUID = '3b89a6b5-b55a-4900-8c44-0b0a2f5eab43-s3-AclMarker'
 S3_DELETE_MARKER_GUID = 'eadeeee8-fa8c-49bb-8a7d-0362215932d8-s3-DeleteMarker'
 S3_MARKER_GUIDS = [S3_ACL_MARKER_GUID, S3_DELETE_MARKER_GUID]
+# This distinguishes S3 custom headers from S3 metadata on objects.
+S3_HEADER_PREFIX = 'custom-amz-header'
 
 DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 
@@ -113,11 +116,17 @@ def ObjectMetadataFromHeaders(headers):
     else:
       custom_goog_metadata_match = CUSTOM_GOOG_METADATA_REGEX.match(header)
       custom_amz_metadata_match = CUSTOM_AMZ_METADATA_REGEX.match(header)
+      custom_amz_header_match = CUSTOM_AMZ_HEADER_REGEX.match(header)
       header_key = None
       if custom_goog_metadata_match:
         header_key = custom_goog_metadata_match.group('header_key')
       elif custom_amz_metadata_match:
         header_key = custom_amz_metadata_match.group('header_key')
+      elif custom_amz_header_match:
+        # If we got here we are guaranteed by the prior statement that this is
+        # not an x-amz-meta- header.
+        header_key = (S3_HEADER_PREFIX +
+                      custom_amz_header_match.group('header_key'))
       if header_key:
         if header_key.lower() == 'x-goog-content-language':
           # Work around content-language being inserted into custom metadata.
@@ -193,7 +202,11 @@ def HeadersFromObjectMetadata(dst_obj_metadata, provider):
       if provider == 'gs':
         header_name = 'x-goog-meta-' + additional_property.key
       elif provider == 's3':
-        header_name = 'x-amz-meta-' + additional_property.key
+        if additional_property.key.startswith(S3_HEADER_PREFIX):
+          header_name = ('x-amz-' +
+                         additional_property.key[len(S3_HEADER_PREFIX):])
+        else:
+          header_name = 'x-amz-meta-' + additional_property.key
       else:
         raise ArgumentException('Invalid provider specified: %s' % provider)
       if (additional_property.value is not None and
