@@ -43,7 +43,7 @@ from gslib.util import IS_WINDOWS
 from gslib.util import TWO_MB
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil [-D] config [-a] [-b] [-e] [-f] [-o <file>] [-r] [-s <scope>] [-w]
 
@@ -526,7 +526,7 @@ class ConfigCommand(Command):
       help_type='command_help',
       help_one_line_summary=(
           'Obtain credentials and create configuration file'),
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

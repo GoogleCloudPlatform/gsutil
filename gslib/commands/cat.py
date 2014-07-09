@@ -22,7 +22,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.util import NO_MAX
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil cat [-h] url...
 
@@ -88,7 +88,7 @@ class CatCommand(Command):
       help_name_aliases=[],
       help_type='command_help',
       help_one_line_summary='Concatenate object content to stdout',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

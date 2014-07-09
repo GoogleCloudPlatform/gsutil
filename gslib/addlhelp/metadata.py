@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW OF METADATA</B>
   Objects can have associated metadata, which control aspects of how
   GET requests are handled, including Content-Type, Cache-Control,
@@ -191,6 +191,6 @@ class CommandOptions(HelpProvider):
                            'mime type', 'mime', 'type'],
       help_type = 'additional_help',
       help_one_line_summary = 'Working With Object Metadata',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

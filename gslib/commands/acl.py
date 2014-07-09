@@ -235,7 +235,7 @@ _DESCRIPTION = ("""
   The acl command has three sub-commands:
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
 
-_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+_DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
@@ -273,7 +273,7 @@ class AclCommand(Command):
       help_name_aliases=['getacl', 'setacl', 'chmod', 'chacl'],
       help_type='command_help',
       help_one_line_summary='Get, set, or change bucket and/or object ACLs',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
   )

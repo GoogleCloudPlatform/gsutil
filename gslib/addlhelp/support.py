@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>TECHNICAL SUPPORT</B>
   If you have any questions or encounter any problems with Google Cloud Storage,
   please first read the `FAQ <https://developers.google.com/storage/docs/faq>`_.
@@ -80,6 +80,6 @@ class CommandOptions(HelpProvider):
                            'billing', 'faq', 'questions'],
       help_type = 'additional_help',
       help_one_line_summary = 'Google Cloud Storage Support',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

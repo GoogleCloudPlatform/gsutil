@@ -21,7 +21,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil [-f] rb url...
 
@@ -66,7 +66,7 @@ class RbCommand(Command):
           'deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
       help_type='command_help',
       help_one_line_summary='Remove buckets',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

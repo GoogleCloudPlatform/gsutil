@@ -79,7 +79,7 @@ _DESCRIPTION = ("""
 For more info about CORS, see http://www.w3.org/TR/cors/.
 """)
 
-_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+_DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
@@ -108,7 +108,7 @@ class CorsCommand(Command):
       help_type='command_help',
       help_one_line_summary=(
           'Set a CORS JSON document for one or more buckets'),
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
   )
 

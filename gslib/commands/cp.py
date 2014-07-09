@@ -491,7 +491,7 @@ OPTIONS_TEXT = """
                    the Content-Type header.
 """
 
-_detailed_help_text = '\n\n'.join([SYNOPSIS_TEXT,
+_DETAILED_HELP_TEXT = '\n\n'.join([SYNOPSIS_TEXT,
                                    DESCRIPTION_TEXT,
                                    NAME_CONSTRUCTION_TEXT,
                                    SUBDIRECTORIES_TEXT,
@@ -564,7 +564,7 @@ class CpCommand(Command):
       help_name_aliases=['copy'],
       help_type='command_help',
       help_one_line_summary='Copy files and objects',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

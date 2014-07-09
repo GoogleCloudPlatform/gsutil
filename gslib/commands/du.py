@@ -25,7 +25,7 @@ from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import UTF8
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil du url...
 
@@ -111,7 +111,7 @@ class DuCommand(Command):
       help_name_aliases=[],
       help_type='command_help',
       help_one_line_summary='Display object size usage',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

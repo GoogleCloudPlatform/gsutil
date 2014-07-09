@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   If you use gsutil in large production tasks (such as uploading or
   downloading many GBs of data each night), there are a number of things
@@ -156,6 +156,6 @@ class CommandOptions(HelpProvider):
           'resumable download', 'scripts', 'scripting'],
       help_type='additional_help',
       help_one_line_summary='Scripting Production Transfers',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )

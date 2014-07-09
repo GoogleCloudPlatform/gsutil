@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>RETRY STRATEGY</B>
   There are a number of reasons that gsutil operations can fail; some are not
   retryable, and require that the user take some action, for example:
@@ -56,6 +56,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases=['retry', 'backoff'],
       help_type='additional_help',
       help_one_line_summary='Retry Handling Strategy',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )

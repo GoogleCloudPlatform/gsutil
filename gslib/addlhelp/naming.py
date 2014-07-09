@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>BUCKET NAME REQUIREMENTS</B>
   Google Cloud Storage has a single namespace, so you will not be allowed
   to create a bucket with a name already in use by another user. You can,
@@ -176,6 +176,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases = ['domain', 'limits', 'name', 'names'],
       help_type = 'additional_help',
       help_one_line_summary = 'Object and Bucket Naming',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

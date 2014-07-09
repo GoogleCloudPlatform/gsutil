@@ -26,7 +26,7 @@ from gslib.translation_helper import PreconditionsFromHeaders
 MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil compose gs://bucket/obj1 gs://bucket/obj2 ... gs://bucket/composite
 
@@ -86,7 +86,7 @@ class ComposeCommand(Command):
       help_type='command_help',
       help_one_line_summary=(
           'Concatenate a sequence of objects into a new composite object.'),
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

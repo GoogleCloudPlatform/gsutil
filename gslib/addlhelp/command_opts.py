@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   Top-level gsutil Options
 
@@ -133,6 +133,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases = ['arg', 'args', 'cli', 'opt', 'opts'],
       help_type = 'additional_help',
       help_one_line_summary = 'Top-Level Command-Line Options',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

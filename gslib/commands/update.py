@@ -37,7 +37,7 @@ from gslib.util import LookUpGsutilVersion
 from gslib.util import RELEASE_NOTES_URL
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil update [-f] [-n] [uri]
 
@@ -106,7 +106,7 @@ class UpdateCommand(Command):
       help_name_aliases=['refresh'],
       help_type='command_help',
       help_one_line_summary='Update to the latest gsutil release',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

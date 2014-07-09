@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   gsutil currently supports four types of credentials/authentication, as well as
   the ability to access public data anonymously (see "gsutil help anon" for more
@@ -114,6 +114,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases=['credentials', 'authentication', 'auth'],
       help_type='additional_help',
       help_one_line_summary='Credential Types Supporting Various Use Cases',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )

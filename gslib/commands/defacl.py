@@ -100,7 +100,7 @@ _DESCRIPTION = """
   The defacl command has three sub-commands:
 """ + '\n'.join([_SET_DESCRIPTION + _GET_DESCRIPTION + _CH_DESCRIPTION])
 
-_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+_DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
@@ -130,7 +130,7 @@ class DefAclCommand(Command):
           'default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
       help_type='command_help',
       help_one_line_summary='Get, set, or change default ACL on buckets',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
   )

@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   We're open to incorporating gsutil code changes authored by users. Here
   are some guidelines:
@@ -140,6 +140,6 @@ class CommandOptions(HelpProvider):
           'development', 'developer', 'code', 'mods', 'software'],
       help_type = 'additional_help',
       help_one_line_summary = 'Contributing Code to gsutil',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

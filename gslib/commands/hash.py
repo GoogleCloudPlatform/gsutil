@@ -29,7 +29,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil [-c] [-h] [-m] hash filename...
 
@@ -76,7 +76,7 @@ class HashCommand(Command):
       help_name_aliases=['checksum'],
       help_type='command_help',
       help_one_line_summary='Calculate file hashes',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

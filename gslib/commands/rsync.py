@@ -44,7 +44,7 @@ from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-R] src_url dst_url
 
@@ -735,7 +735,7 @@ class RsyncCommand(Command):
       help_name_aliases=['sync', 'synchronize'],
       help_type='command_help',
       help_one_line_summary='Synchronize content of two buckets/directories',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
   total_bytes_transferred = 0

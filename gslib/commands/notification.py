@@ -127,7 +127,7 @@ verified using Google Webmaster Tools. For instructions, please see:
   https://developers.google.com/storage/docs/object-change-notification#_Authorization
 """
 
-_detailed_help_text = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+_DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
 _watchbucket_help_text = (
     CreateHelpText(_WATCHBUCKET_SYNOPSIS, _WATCHBUCKET_DESCRIPTION))
@@ -158,7 +158,7 @@ class NotificationCommand(Command):
       help_name_aliases=['watchbucket', 'stopchannel', 'notifyconfig'],
       help_type='command_help',
       help_one_line_summary='Configure object change notification',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={'watchbucket': _watchbucket_help_text,
                             'stopchannel': _stopchannel_help_text},
   )

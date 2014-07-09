@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   Versioning-enabled buckets maintain an archive of objects, providing a way to
   un-delete data that you accidentally deleted, or to retrieve older versions of
@@ -265,6 +265,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases = ['concurrency', 'concurrency control'],
       help_type = 'additional_help',
       help_one_line_summary = 'Object Versioning and Concurrency Control',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

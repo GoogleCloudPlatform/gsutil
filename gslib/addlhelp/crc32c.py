@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   Google Cloud Storage provides a cyclic redundancy check (CRC) header that
   allows clients to verify the integrity of object contents. For non-composite
@@ -114,6 +114,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases=['crc32', 'crc', 'crcmod'],
       help_type='additional_help',
       help_one_line_summary='CRC32C and Installing crcmod',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )

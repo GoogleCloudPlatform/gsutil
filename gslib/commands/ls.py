@@ -36,7 +36,7 @@ from gslib.util import UTF8
 # 2013-07-03 20:32:53.048000+00:00
 JSON_TIMESTAMP_RE = re.compile(r'([^\s]*)\s([^\.\+]*).*')
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil ls [-a] [-b] [-l] [-L] [-R] [-p proj_id] url...
 
@@ -232,7 +232,7 @@ class LsCommand(Command):
       help_name_aliases=['dir', 'list'],
       help_type='command_help',
       help_one_line_summary='List providers, buckets, or objects',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

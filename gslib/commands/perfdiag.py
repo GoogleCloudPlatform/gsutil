@@ -61,7 +61,7 @@ from gslib.util import MakeHumanReadable
 from gslib.util import Percentile
 from gslib.util import ResumableThreshold
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c processes]
   [-k threads] [-s size] [-t tests] url...
@@ -231,7 +231,7 @@ class PerfDiagCommand(Command):
       help_name_aliases=[],
       help_type='command_help',
       help_one_line_summary='Run performance diagnostic',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

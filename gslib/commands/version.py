@@ -27,7 +27,7 @@ from gslib.util import GetConfigFilePath
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import UsingCrcmodExtension
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil version
 
@@ -63,7 +63,7 @@ class VersionCommand(Command):
       help_name_aliases=['ver'],
       help_type='command_help',
       help_one_line_summary='Print version info about gsutil',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

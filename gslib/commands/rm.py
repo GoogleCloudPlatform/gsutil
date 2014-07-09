@@ -27,7 +27,7 @@ from gslib.util import NO_MAX
 from gslib.util import Retry
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil rm [-f] [-R] url...
 
@@ -145,7 +145,7 @@ class RmCommand(Command):
       help_name_aliases=['del', 'delete', 'remove'],
       help_type='command_help',
       help_one_line_summary='Remove objects',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

@@ -20,7 +20,7 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil mv [-p] src_url dst_url
   gsutil mv [-p] url... dst_url
@@ -105,7 +105,7 @@ class MvCommand(Command):
       help_name_aliases=['move', 'rename'],
       help_type='command_help',
       help_one_line_summary='Move/rename objects and/or subdirectories',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

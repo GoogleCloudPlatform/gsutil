@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   This section discusses how to work with projects in Google Cloud Storage.
 
@@ -94,6 +94,6 @@ class CommandOptions(HelpProvider):
                            'dev console', 'project', 'proj', 'project-id'],
       help_type = 'additional_help',
       help_one_line_summary = 'Working With Projects',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

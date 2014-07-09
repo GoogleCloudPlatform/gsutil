@@ -24,7 +24,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.util import NO_MAX
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil mb [-c class] [-l location] [-p proj_id] uri...
 
@@ -124,7 +124,7 @@ class MbCommand(Command):
           'reduced_redundancy', 'standard', 'storage class'],
       help_type='command_help',
       help_one_line_summary='Make buckets',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

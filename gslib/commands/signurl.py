@@ -48,7 +48,7 @@ except ImportError:
   sign = None
   HAVE_OPENSSL = False
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil signurl pkcs12-file url...
 
@@ -187,7 +187,7 @@ class UrlSignCommand(Command):
       help_name_aliases=['signedurl', 'queryauth'],
       help_type='command_help',
       help_one_line_summary='Create a signed url',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

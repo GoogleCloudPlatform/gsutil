@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>DESCRIPTION</B>
   gsutil supports URI wildcards. For example, the command:
 
@@ -166,6 +166,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases = ['wildcard', '*', '**'],
       help_type = 'additional_help',
       help_one_line_summary = 'Wildcard Names',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )

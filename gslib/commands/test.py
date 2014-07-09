@@ -50,7 +50,7 @@ DEFAULT_TEST_PARALLEL_PROCESSES = 15
 DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
 
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil test [-l] [-u] [-f] [command command...]
 
@@ -297,7 +297,7 @@ class TestCommand(Command):
       help_name_aliases=[],
       help_type='command_help',
       help_one_line_summary='Run gsutil tests',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

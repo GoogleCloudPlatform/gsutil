@@ -29,7 +29,7 @@ from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
 from gslib.util import IsRunningInteractively
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
   gsutil help [command or topic]
 
@@ -89,7 +89,7 @@ class HelpCommand(Command):
       help_name_aliases=['?'],
       help_type='command_help',
       help_one_line_summary='Get help about commands and topics',
-      help_text=_detailed_help_text,
+      help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
 

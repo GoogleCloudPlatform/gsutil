@@ -15,7 +15,7 @@
 
 from gslib.help_provider import HelpProvider
 
-_detailed_help_text = ("""
+_DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   gsutil users can access publicly readable data without obtaining
   credentials. For example, the gs://uspto-pair bucket contains a number
@@ -43,6 +43,6 @@ class CommandOptions(HelpProvider):
       help_name_aliases = ['anonymous', 'public'],
       help_type = 'additional_help',
       help_one_line_summary = 'Accessing Public Data Without Credentials',
-      help_text = _detailed_help_text,
+      help_text = _DETAILED_HELP_TEXT,
       subcommand_help_text = {},
   )
