@@ -77,7 +77,6 @@ class GsutilApiMapFactory(object):
         (value) Default ApiSelector for this command and provider.
       }
     }
-
   """
 
   @classmethod

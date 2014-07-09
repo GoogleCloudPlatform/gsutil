@@ -20,12 +20,12 @@ from gslib.util import MakeHumanReadable
 from gslib.util import UTF8
 
 # Default upper and lower bounds for progress callback frequency.
-START_CALLBACK_PER_BYTES = 1024*64
-MAX_CALLBACK_PER_BYTES = 1024*1024*100
+_START_BYTES_PER_CALLBACK = 1024*64
+_MAX_BYTES_PER_CALLBACK = 1024*1024*100
 
 # Max width of URL to display in progress indicator. Wide enough to allow
 # 15 chars for x/y display on an 80 char wide terminal.
-MAX_PROGRESS_INDICATOR_WIDTH = 65
+MAX_PROGRESS_INDICATOR_COLUMNS = 65
 
 
 class ProgressCallbackWithBackoff(object):
@@ -35,8 +35,8 @@ class ProgressCallbackWithBackoff(object):
   """
 
   def __init__(self, total_size, callback_func,
-               start_callback_per_bytes=START_CALLBACK_PER_BYTES,
-               max_callback_per_bytes=MAX_CALLBACK_PER_BYTES,
+               start_bytes_per_callback=_START_BYTES_PER_CALLBACK,
+               max_bytes_per_callback=_MAX_BYTES_PER_CALLBACK,
                calls_per_exponent=10):
     """Initializes the callback with backoff.
 
@@ -44,13 +44,13 @@ class ProgressCallbackWithBackoff(object):
       total_size: Total bytes to process.
       callback_func: Func of (int: processed_so_far, int: total_bytes)
                      used to make callbacks.
-      start_callback_per_bytes: Lower bound of bytes per callback.
-      max_callback_per_bytes: Upper bound of bytes per callback.
+      start_bytes_per_callback: Lower bound of bytes per callback.
+      max_bytes_per_callback: Upper bound of bytes per callback.
       calls_per_exponent: Number of calls to make before reducing rate.
     """
     self.callbacks_made = 0
-    self.callback_per_bytes = start_callback_per_bytes
-    self.max_per_bytes = max_callback_per_bytes
+    self.bytes_per_callback = start_bytes_per_callback
+    self.max_bytes_per_callback = max_bytes_per_callback
     self.bytes_processed_since_callback = 0
     self.total_bytes_processed = 0
     self.total_size = total_size
@@ -62,7 +62,7 @@ class ProgressCallbackWithBackoff(object):
     self.bytes_processed_since_callback += bytes_processed
     # TODO: We check if >= total_size and truncate because JSON uploads count
     # metadata during their send progress.
-    if (self.bytes_processed_since_callback > self.callback_per_bytes or
+    if (self.bytes_processed_since_callback > self.bytes_per_callback or
         (self.total_bytes_processed + self.bytes_processed_since_callback >=
          self.total_size)):
       self.total_bytes_processed += self.bytes_processed_since_callback
@@ -71,8 +71,8 @@ class ProgressCallbackWithBackoff(object):
       self.bytes_processed_since_callback = 0
       self.callbacks_made += 1
       if self.callbacks_made > self.calls_per_exponent:
-        self.callback_per_bytes = min(self.callback_per_bytes * 2,
-                                      self.max_per_bytes)
+        self.bytes_per_callback = min(self.bytes_per_callback * 2,
+                                      self.max_bytes_per_callback)
         self.callbacks_made = 0
 
 
@@ -96,17 +96,16 @@ class FileProgressCallbackHandler(object):
     end_len = len(': ')
     elip_len = len('... ')
     if (start_len + len(display_urlstr) + end_len >
-        MAX_PROGRESS_INDICATOR_WIDTH):
+        MAX_PROGRESS_INDICATOR_COLUMNS):
       display_urlstr = '...%s' % display_urlstr[
-          -(MAX_PROGRESS_INDICATOR_WIDTH - start_len - end_len - elip_len):]
+          -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - elip_len):]
     base_announce_text = '%s%s:' % (justified_op_string, display_urlstr)
-    format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_WIDTH
+    format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
     self.announce_text = format_str.format(base_announce_text.encode(UTF8))
     self.logger = logger
 
-  # pylint: disable=invalid-name
   # Function signature is in boto callback format, which cannot be changed.
-  def call(self, total_bytes_transferred, total_size):
+  def call(self, total_bytes_transferred, total_size):  # pylint: disable=invalid-name
     # Handle streaming case specially where we don't know the total size:
     if total_size:
       total_size_string = '/%s' % MakeHumanReadable(total_size)

@@ -56,7 +56,6 @@ from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
-from gslib.hashing_helper import MD5_REGEX
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
@@ -98,7 +97,8 @@ boto_auth_initialized = False
 
 NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
                                        flags=re.DOTALL)
-
+# Determines whether an etag is a valid MD5.
+MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
 
 def InitializeMultiprocessingVariables():
   """Perform necessary initialization for multiprocessing.
