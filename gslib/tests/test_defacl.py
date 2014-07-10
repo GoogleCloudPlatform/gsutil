@@ -106,6 +106,9 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
   def testEmptyDefAcl(self):
     bucket = self.CreateBucket()
     self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
+    stdout = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                            return_stdout=True)
+    self.assertEquals(stdout.rstrip(), '[]')
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-u', self.USER_TEST_ADDRESS+':fc', suri(bucket)])
 

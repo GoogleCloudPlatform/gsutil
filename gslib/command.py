@@ -731,14 +731,21 @@ class Command(HelpProvider):
     else:
       if self.command_name == 'defacl':
         acl = blr.root_object.defaultObjectAcl
+        if not acl:
+          self.logger.warn(
+              'No default object ACL present for %s. This could occur if '
+              'the default object ACL is private, in which case objects '
+              'created in this bucket will be readable only by their '
+              'creators. It could also mean you do not have OWNER permission '
+              'on %s and therefore do not have permission to read the '
+              'default object ACL.', url_str, url_str)
       else:
         acl = blr.root_object.acl
-      if not acl:
-        self._WarnServiceAccounts()
-        raise AccessDeniedException('Access denied. Please ensure you have '
-                                    'OWNER permission on %s.' % url_str)
-      else:
-        print AclTranslation.JsonFromMessage(acl)
+        if not acl:
+          self._WarnServiceAccounts()
+          raise AccessDeniedException('Access denied. Please ensure you have '
+                                      'OWNER permission on %s.' % url_str)
+      print AclTranslation.JsonFromMessage(acl)
 
   def GetAclCommandBucketListingReference(self, url_str):
     """Gets a single bucket listing reference for an acl get command.
