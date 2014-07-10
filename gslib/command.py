@@ -595,8 +595,9 @@ class Command(HelpProvider):
     else:
       gsutil_api = self.gsutil_api
     url_string = name_expansion_result.GetExpandedUrlStr()
+    op_string = 'default object ACL' if self.def_acl else 'ACL'
     url = StorageUrlFromString(url_string)
-    self.logger.info('Setting ACL on %s...' % url_string)
+    self.logger.info('Setting %s on %s...', op_string, url_string)
     if ((gsutil_api.GetApiSelector(url.scheme) == ApiSelector.XML
          and url.scheme != 'gs') or self.canned):
       # If we are using canned ACLs or interacting with a non-google ACL
