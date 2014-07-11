@@ -56,15 +56,19 @@ class ProgressCallbackWithBackoff(object):
     self.total_size = total_size
     self.callback_func = callback_func
     self.calls_per_exponent = calls_per_exponent
+    self.final_callback = False
 
   def Progress(self, bytes_processed):
     """Tracks byte processing progress, making a callback if necessary."""
     self.bytes_processed_since_callback += bytes_processed
-    # TODO: We check if >= total_size and truncate because JSON uploads count
-    # metadata during their send progress.
+    # We check if >= total_size and truncate because JSON uploads count
+    # metadata during their send progress; only make the final callback once.
+    if self.final_callback: return
+    if (self.total_bytes_processed + self.bytes_processed_since_callback >=
+        self.total_size):
+      self.final_callback = True
     if (self.bytes_processed_since_callback > self.bytes_per_callback or
-        (self.total_bytes_processed + self.bytes_processed_since_callback >=
-         self.total_size)):
+        self.final_callback):
       self.total_bytes_processed += self.bytes_processed_since_callback
       self.callback_func(min(self.total_bytes_processed, self.total_size),
                          self.total_size)
