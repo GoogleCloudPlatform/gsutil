@@ -159,7 +159,8 @@ class CloudWildcardIterator(WildcardIterator):
           # Rstrip any prefixes to correspond with rstripped prefix wildcard
           # from _BuildBucketFilterStrings().
           url_string = '%s%s' % (bucket_url_string,
-                                 StripOneSlash(self.wildcard_url.object_name))
+                                 StripOneSlash(self.wildcard_url.object_name)
+                                 or '/')  # Cover root object named '/' case.
         urls_needing_expansion = [url_string]
         while urls_needing_expansion:
           url = StorageUrlFromString(urls_needing_expansion.pop(0))
