@@ -489,6 +489,10 @@ OPTIONS_TEXT = """
                    browser will know to uncompress the data based on the
                    Content-Encoding header, and to render it as HTML based on
                    the Content-Type header.
+                 
+                 Note that if you download an object with Content-Encoding:gzip
+                 gsutil will decompress the content before writing the local
+                 file.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([SYNOPSIS_TEXT,
