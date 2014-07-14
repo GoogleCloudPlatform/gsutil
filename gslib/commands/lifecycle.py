@@ -30,7 +30,7 @@ _GET_SYNOPSIS = """
 """
 
 _SET_SYNOPSIS = """
-  gsutil lifecycle set config-xml-file url...
+  gsutil lifecycle set config-json-file url...
 """
 
 _SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS.lstrip('\n') + '\n'
