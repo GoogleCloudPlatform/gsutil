@@ -207,6 +207,28 @@ COPY_IN_CLOUD_TEXT = """
   will cause all versions of gs://bucket1/obj to be copied to gs://bucket2.
 """
 
+FAILURE_HANDLING_TEXT = """
+<B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
+  At the end of every upload or download, the gsutil cp command validates that
+  the checksum of the local file matches that of the checksum of the object
+  stored in GCS. If it does not, gsutil will delete the invalid copy and print a
+  warning message. This very rarely happens. If it does, please contact
+  gs-team@google.com.
+
+  The cp command will retry when failures occur, but if enough failures happen
+  during a particular copy or delete operation the command will skip that object
+  and move on. At the end of the copy run if any failures were not successfully
+  retried, the cp command will report the count of failures, and exit with
+  non-zero status.
+
+  Note that there are cases where retrying will never succeed, such as if you
+  don't have write permission to the destination bucket or if the destination
+  path for some objects is longer than the maximum allowed length.
+
+  For more details about gsutil's retry handling, please see
+  "gsutil help retries".
+"""
+
 RESUMABLE_TRANSFERS_TEXT = """
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload feature
@@ -500,6 +522,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([SYNOPSIS_TEXT,
                                    NAME_CONSTRUCTION_TEXT,
                                    SUBDIRECTORIES_TEXT,
                                    COPY_IN_CLOUD_TEXT,
+                                   FAILURE_HANDLING_TEXT,
                                    RESUMABLE_TRANSFERS_TEXT,
                                    STREAMING_TRANSFERS_TEXT,
                                    PARALLEL_COMPOSITE_UPLOADS_TEXT,

@@ -36,6 +36,12 @@ _DETAILED_HELP_TEXT = ("""
   with a precompiled crcmod C extension for Mac OS X; for other platforms, see
   the installation instructions below.
 
+  At the end of each copy operation, the gsutil cp and rsync commands validate
+  that the checksum of the local file matches that of the checksum of the object
+  stored in GCS. If it does not, gsutil will delete the invalid copy and print a
+  warning message. This very rarely happens. If it does, please contact
+  gs-team@google.com.
+
 
 <B>CONFIGURATION</B>
   To determine if the compiled version of crcmod is available in your Python
