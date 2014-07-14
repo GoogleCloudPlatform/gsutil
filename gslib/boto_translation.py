@@ -27,6 +27,7 @@ import random
 import re
 import socket
 import tempfile
+import textwrap
 import time
 import xml
 from xml.dom.minidom import parseString as XmlParseString
@@ -99,6 +100,7 @@ NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
                                        flags=re.DOTALL)
 # Determines whether an etag is a valid MD5.
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
+
 
 def InitializeMultiprocessingVariables():
   """Perform necessary initialization for multiprocessing.
@@ -725,6 +727,36 @@ class BotoTranslation(CloudApi):
                                         object_metadata.name)
     return headers, dst_uri
 
+  def _HandleSuccessfulUpload(self, dst_uri, object_metadata, fields=None):
+    """Set ACLs on an uploaded object and return its metadata.
+
+    Args:
+      dst_uri: Generation-specific StorageUri describing the object.
+      object_metadata: Metadata for the object, including an ACL if applicable.
+      fields: If present, return only these Object metadata fields.
+
+    Returns:
+      gsutil Cloud API Object metadata.
+
+    Raises:
+      CommandException if the object was overwritten / deleted concurrently.
+    """
+    try:
+      # The XML API does not support if-generation-match for GET requests.
+      # Therefore, if the object gets overwritten before the ACL and get_key
+      # operations, the best we can do is warn that it happened.
+      self._SetObjectAcl(object_metadata, dst_uri)
+      return self._BotoKeyToObject(dst_uri.get_key(), fields=fields)
+    except boto.exception.InvalidUriError as e:
+      check_for_str = 'Attempt to get key for "%s" failed.' % dst_uri.uri
+      if check_for_str in e.message:
+        raise CommandException('\n'.join(textwrap.wrap(
+            'Uploaded object (%s) was deleted or overwritten immediately '
+            'after it was uploaded. This can happen if you attempt to upload '
+            'to the same object multiple times concurrently.' % dst_uri.uri)))
+      else:
+        raise
+
   def _SetObjectAcl(self, object_metadata, dst_uri):
     """Sets the ACL (if present in object_metadata) on an uploaded object."""
     if object_metadata.acl:
@@ -757,10 +789,8 @@ class BotoTranslation(CloudApi):
                                    serialization_data=serialization_data,
                                    progress_callback=progress_callback,
                                    headers=headers)
-      self._SetObjectAcl(object_metadata, dst_uri)
-      new_key = dst_uri.get_key()
-
-      return self._BotoKeyToObject(new_key, fields=fields)
+      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
+                                          fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
@@ -776,11 +806,8 @@ class BotoTranslation(CloudApi):
       self._PerformStreamingUpload(
           dst_uri, upload_stream, canned_acl=canned_acl,
           progress_callback=progress_callback, headers=headers)
-      self._SetObjectAcl(object_metadata, dst_uri)
-
-      new_key = dst_uri.get_key()
-
-      return self._BotoKeyToObject(new_key, fields=fields)
+      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
+                                          fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
@@ -804,11 +831,8 @@ class BotoTranslation(CloudApi):
                                 canned_acl=canned_acl,
                                 progress_callback=progress_callback,
                                 headers=headers)
-      self._SetObjectAcl(object_metadata, dst_uri)
-
-      new_key = dst_uri.get_key()
-
-      return self._BotoKeyToObject(new_key, fields=fields)
+      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
+                                          fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)

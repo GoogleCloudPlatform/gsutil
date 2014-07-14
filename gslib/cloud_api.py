@@ -398,7 +398,7 @@ class CloudApi(object):
       preconditions: Destination object preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
-      fields: If present, return only these Object metadata fields..
+      fields: If present, return only these Object metadata fields.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -421,7 +421,7 @@ class CloudApi(object):
       preconditions: Destination object preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
-      fields: If present, return only these Object metadata fields..
+      fields: If present, return only these Object metadata fields.
 
     Raises:
       ArgumentException for errors during input validation.
