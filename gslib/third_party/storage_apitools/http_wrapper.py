@@ -85,6 +85,18 @@ class Response(collections.namedtuple(
   __slots__ = ()
 
   def __len__(self):
+    return self.length
+
+  @property
+  def length(self):
+    """Return the length of this response.
+
+    We expose this as an attribute since using len() directly can fail
+    for responses larger than sys.maxint.
+
+    Returns:
+      Response length (as int or long)
+    """
     def ProcessContentRange(content_range):
       _, _, range_spec = content_range.partition(' ')
       byte_range, _, _ = range_spec.partition('/')

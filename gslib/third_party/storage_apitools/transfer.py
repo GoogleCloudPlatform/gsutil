@@ -262,7 +262,7 @@ class Download(_Transfer):
     if 'content-range' in response.info:
       print 'Received %s' % response.info['content-range']
     else:
-      print 'Received %d bytes' % len(response)
+      print 'Received %d bytes' % response.length
 
   @staticmethod
   def _CompletePrinter(*unused_args):
@@ -313,7 +313,7 @@ class Download(_Transfer):
       raise exceptions.TransferRetryError(response.content)
     if response.status_code in (httplib.OK, httplib.PARTIAL_CONTENT):
       self.stream.write(response.content)
-      self.__progress += len(response)
+      self.__progress += response.length
       if response.info and 'content-encoding' in response.info:
         # TODO: Handle the case where this changes over a download.
         self.__encoding = response.info['content-encoding']
@@ -359,7 +359,7 @@ class Download(_Transfer):
         progress, end = self.__NormalizeStartEnd(start, end)
         progress_end_normalized = True
       response = self.__ProcessResponse(response)
-      progress += len(response)
+      progress += response.length
       if not response:
         raise exceptions.TransferRetryError(
             'Zero bytes unexpectedly returned in download response')
