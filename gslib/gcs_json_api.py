@@ -796,9 +796,12 @@ class GcsJsonApi(CloudApi):
               apitools_upload.bytes_http)
           while retries <= self.num_retries:
             try:
-              # pylint: disable=protected-access
-              # TODO: Update this exposure based on apitools changes.
-              apitools_upload._RefreshResumableUploadState()
+              refresh_response = apitools_upload.RefreshResumableUploadState()
+              if refresh_response:
+                # Server actually got all the bytes, upload complete.
+                return self.api_client.objects.ProcessHttpResponse(
+                    self.api_client.objects.GetMethodConfig('Insert'),
+                    refresh_response)
               start_byte = apitools_upload.progress
               bytes_uploaded_container.bytes_transferred = start_byte
               break

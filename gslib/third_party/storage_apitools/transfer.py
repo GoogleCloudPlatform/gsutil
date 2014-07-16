@@ -462,7 +462,7 @@ class Upload(_Transfer):
       upload.auto_transfer = info['auto_transfer']
     upload.strategy = _RESUMABLE_UPLOAD
     upload._Initialize(http, info['url'])  # pylint: disable=protected-access
-    upload._RefreshResumableUploadState()  # pylint: disable=protected-access
+    upload.RefreshResumableUploadState()
     upload.EnsureInitialized()
     if upload.auto_transfer:
       upload.StreamInChunks()
@@ -612,8 +612,12 @@ class Upload(_Transfer):
     if self.total_size is not None:
       http_request.headers['X-Upload-Content-Length'] = str(self.total_size)
 
-  def _RefreshResumableUploadState(self):
-    """Talk to the server and refresh the state of this resumable upload."""
+  def RefreshResumableUploadState(self):
+    """Talk to the server and refresh the state of this resumable upload.
+
+    Returns:
+      Response if the upload is complete.
+    """
     if self.strategy != _RESUMABLE_UPLOAD:
       return
     self.EnsureInitialized()
@@ -624,6 +628,9 @@ class Upload(_Transfer):
     range_header = self._GetRangeHeaderFromResponse(refresh_response)
     if refresh_response.status_code in (httplib.OK, httplib.CREATED):
       self.__complete = True
+      # If we're finished, the refresh response will contain the metadata
+      # originally requested. Return it so the client can use it.
+      return refresh_response
     elif refresh_response.status_code == http_wrapper.RESUME_INCOMPLETE:
       if range_header is None:
         self.__progress = 0
@@ -751,7 +758,7 @@ class Upload(_Transfer):
                                     http_wrapper.RESUME_INCOMPLETE):
       # We want to reset our state to wherever the server left us
       # before this failed request, and then raise.
-      self._RefreshResumableUploadState()
+      self.RefreshResumableUploadState()
       raise exceptions.HttpError.FromResponse(response)
     if response.status_code == http_wrapper.RESUME_INCOMPLETE:
       last_byte = self.__GetLastByte(
