@@ -41,7 +41,7 @@ class TestHash(testcase.GsUtilUnitTestCase):
       self.RunCommand('hash', args=['non-existent-file'])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertEquals('No files matched', e.reason)
+      self.assertRaisesRegexp(e, r'No files matched')
 
   def testHashCloudObject(self):
     try:
@@ -59,11 +59,13 @@ class TestHash(testcase.GsUtilUnitTestCase):
     self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_HEX_MD5, stdout)
 
   def testHashWildcard(self):
-    tmp_dir = self.CreateTempDir(test_files=2)
+    num_test_files = 2
+    tmp_dir = self.CreateTempDir(test_files=num_test_files)
     stdout = self.RunCommand('hash', args=[os.path.join(tmp_dir, '*')],
                              return_stdout=True)
     # One summary line and two hash lines per file.
-    self.assertEquals(len(stdout.splitlines()), 6)
+    num_expected_lines = num_test_files * (1 + 2)
+    self.assertEquals(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,

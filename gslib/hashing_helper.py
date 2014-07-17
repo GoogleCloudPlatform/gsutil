@@ -21,8 +21,11 @@ import os
 from boto import config
 import crcmod
 
+from gslib.commands.config import CHECK_HASH_ALWAYS
+from gslib.commands.config import CHECK_HASH_IF_FAST_ELSE_FAIL
+from gslib.commands.config import CHECK_HASH_IF_FAST_ELSE_SKIP
+from gslib.commands.config import CHECK_HASH_NEVER
 from gslib.exception import CommandException
-from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import TRANSFER_BUFFER_SIZE
@@ -33,7 +36,8 @@ SLOW_CRCMOD_WARNING = """
 WARNING: You have requested checksumming but your crcmod installation isn't
 using the module's C extension, so checksumming will run very slowly. For help
 installing the extension, please see:
-  $ gsutil help crcmod"""
+  $ gsutil help crcmod
+"""
 
 
 _SLOW_CRCMOD_DOWNLOAD_WARNING = """
@@ -51,13 +55,15 @@ Downloading this composite object requires integrity checking with CRC32c,
 but your crcmod installation isn't using the module's C extension, so the
 hash computation will likely throttle download performance. For help
 installing the extension, please see:
+
   $ gsutil help crcmod
+
 To download regardless of crcmod performance or to skip slow integrity
 checks, see the "check_hashes" option in your boto config file.
+
 NOTE: It is strongly recommended that you not disable integrity checks. Doing so
 could allow data corruption to go undetected during uploading/downloading."""
 
-_SLOW_CRC_EXCEPTION = CommandException(_SLOW_CRC_EXCEPTION_TEXT)
 
 _NO_HASH_CHECK_WARNING = """
 WARNING: This download will not be validated since your crcmod installation
@@ -70,39 +76,8 @@ file.
 """
 
 
-def CalculateB64EncodedCrc32cFromContents(fp):
-  return _CalculateB64EncodedHashFromContents(
-      fp, crcmod.predefined.Crc('crc-32c'))
-
-
-def CalculateB64EncodedMd5FromContents(fp):
-  return _CalculateB64EncodedHashFromContents(fp, md5())
-
-
-def CalculateMd5FromContents(fp):
-  """Calculates the MD5 hash of the contents of a file.
-
-  This function resets the file pointer to position 0.
-
-  Args:
-    fp: An already-open file object.
-
-  Returns:
-    MD5 digest of the file in hex string format.
-  """
-  return _CalculateHashFromContents(fp, md5())
-
-
-def Base64EncodeHash(digest_value):
-  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
-
-
-def _CalculateB64EncodedHashFromContents(fp, hash_alg):
-  return Base64EncodeHash(_CalculateHashFromContents(fp, hash_alg))
-
-
 def _CalculateHashFromContents(fp, hash_alg):
-  """Calculates a hash of the contents of a file.
+  """Calculates a base64 digest of the contents of a seekable stream.
 
   This function resets the file pointer to position 0.
 
@@ -111,7 +86,7 @@ def _CalculateHashFromContents(fp, hash_alg):
     hash_alg: Instance of hashing class initialized to start state.
 
   Returns:
-    Hash of the file in hex string format.
+    Hash of the stream in hex string format.
   """
   hash_dict = {'placeholder': hash_alg}
   fp.seek(0)
@@ -120,21 +95,16 @@ def _CalculateHashFromContents(fp, hash_alg):
   return hash_dict['placeholder'].hexdigest()
 
 
-def CalculateHashesFromContents(fp, hash_dict, size=None, progress_func=None):
+def CalculateHashesFromContents(fp, hash_dict, callback_processor=None):
   """Calculates hashes of the contents of a file.
 
   Args:
     fp: An already-open file object (stream will be consumed).
     hash_dict: Dict of (string alg_name: initialized hashing class)
-               Hashing class will be populated with digests upon return.
-    size: Size of fp, if known, for outputting progress.
-    progress_func: Function with arguments (int bytes_processed,
-                                            int total_size).
-                   If present, called to report progress.
+        Hashing class will be populated with digests upon return.
+    callback_processor: Optional callback processing class that implements
+        Progress(integer amount of bytes processed).
   """
-  callback_processor = None
-  if progress_func:
-    callback_processor = ProgressCallbackWithBackoff(size, progress_func)
   while True:
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
     if not data:
@@ -143,6 +113,69 @@ def CalculateHashesFromContents(fp, hash_dict, size=None, progress_func=None):
       hash_alg.update(data)
     if callback_processor:
       callback_processor.Progress(len(data))
+
+
+def CalculateB64EncodedCrc32cFromContents(fp):
+  """Calculates a base64 CRC32c checksum of the contents of a seekable stream.
+
+  This function sets the stream position 0 before and after calculation.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    CRC32c checksum of the file in base64 format.
+  """
+  return _CalculateB64EncodedHashFromContents(
+      fp, crcmod.predefined.Crc('crc-32c'))
+
+
+def CalculateB64EncodedMd5FromContents(fp):
+  """Calculates a base64 MD5 digest of the contents of a seekable stream.
+
+  This function sets the stream position 0 before and after calculation.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    MD5 digest of the file in base64 format.
+  """
+  return _CalculateB64EncodedHashFromContents(fp, md5())
+
+
+def CalculateMd5FromContents(fp):
+  """Calculates a base64 MD5 digest of the contents of a seekable stream.
+
+  This function sets the stream position 0 before and after calculation.
+
+  Args:
+    fp: An already-open file object.
+
+  Returns:
+    MD5 digest of the file in hex format.
+  """
+  return _CalculateHashFromContents(fp, md5())
+
+
+def Base64EncodeHash(digest_value):
+  """Returns the base64-encoded version of the input hex digest value."""
+  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
+
+
+def _CalculateB64EncodedHashFromContents(fp, hash_alg):
+  """Calculates a base64 digest of the contents of a seekable stream.
+
+  This function sets the stream position 0 before and after calculation.
+
+  Args:
+    fp: An already-open file object.
+    hash_alg: Instance of hashing class initialized to start state.
+
+  Returns:
+    Hash of the stream in base64 format.
+  """
+  return Base64EncodeHash(_CalculateHashFromContents(fp, hash_alg))
 
 
 def GetUploadHashAlgs():
@@ -156,19 +189,19 @@ def GetUploadHashAlgs():
     dict of (algorithm_name: hash_algorithm)
   """
   check_hashes_config = config.get(
-      'GSUtil', 'check_hashes', 'if_fast_else_fail')
+      'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == 'never':
     return {}
   return {'md5': md5}
 
 
-def GetDownloadHashAlgs(logger, src_md5=False, src_crc32c=False):
+def GetDownloadHashAlgs(logger, src_has_md5=False, src_has_crc32c=False):
   """Returns a dict of hash algorithms for validating an object.
 
   Args:
-    logger: For outputting log messages.
-    src_md5: If True, source object has an md5 hash.
-    src_crc32c: If True, source object has a crc32c hash.
+    logger: logging.Logger for outputting log messages.
+    src_has_md5: If True, source object has an md5 hash.
+    src_has_crc32c: If True, source object has a crc32c hash.
 
   Returns:
     Dict of (string, hash algorithm).
@@ -177,25 +210,26 @@ def GetDownloadHashAlgs(logger, src_md5=False, src_crc32c=False):
     CommandException if hash algorithms satisfying the boto config file
     cannot be returned.
   """
-  hash_algs = {}
   check_hashes_config = config.get(
-      'GSUtil', 'check_hashes', 'if_fast_else_fail')
-  if check_hashes_config == 'never':
-    return hash_algs
-  if src_md5:
+      'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
+  if check_hashes_config == CHECK_HASH_NEVER:
+    return {}
+
+  hash_algs = {}
+  if src_has_md5:
     hash_algs['md5'] = md5
-  # If the cloud provider supplies a CRC, we'll compute a checksum to
-  # validate if we're using a native crcmod installation and MD5 isn't
-  # offered as an alternative.
-  elif src_crc32c:
+  elif src_has_crc32c:
+    # If the cloud provider supplies a CRC, we'll compute a checksum to
+    # validate if we're using a native crcmod installation and MD5 isn't
+    # offered as an alternative.
     if UsingCrcmodExtension(crcmod):
       hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
     elif not hash_algs:
-      if check_hashes_config == 'if_fast_else_fail':
-        raise _SLOW_CRC_EXCEPTION
-      elif check_hashes_config == 'if_fast_else_skip':
+      if check_hashes_config == CHECK_HASH_IF_FAST_ELSE_FAIL:
+        raise CommandException(_SLOW_CRC_EXCEPTION_TEXT)
+      elif check_hashes_config == CHECK_HASH_IF_FAST_ELSE_SKIP:
         logger.warn(_NO_HASH_CHECK_WARNING)
-      elif check_hashes_config == 'always':
+      elif check_hashes_config == CHECK_HASH_ALWAYS:
         logger.warn(_SLOW_CRCMOD_DOWNLOAD_WARNING)
         hash_algs['crc32c'] = lambda: crcmod.predefined.Crc('crc-32c')
       else:
@@ -212,7 +246,7 @@ class HashingFileUploadWrapper(object):
   following properties:
 
   Calls to read will appropriately update digesters with all bytes read.
-  Calls to seek (assuming it is supported by the underlying stream) using
+  Calls to seek (assuming it is supported by the wrapped stream) using
       os.SEEK_SET will catch up / reset the digesters to the specified
       position. If seek is called with a different os.SEEK mode, the caller
       must return to the original position using os.SEEK_SET before further
@@ -227,107 +261,144 @@ class HashingFileUploadWrapper(object):
 
     Args:
       stream: Input stream.
-      digesters: dict of {string, hash digester} containing digesters.
-      hash_algs: dict of {string, hash algorithm} for use if digesters need
-                 to be reset.
+      digesters: dict of {string: hash digester} containing digesters, where
+          string is the name of the hash algorithm.
+      hash_algs: dict of {string: hash algorithm} for resetting and
+          recalculating digesters. String is the name of the hash algorithm.
       src_url: Source FileUrl that is being copied.
       logger: For outputting log messages.
     """
-    self.orig_fp = stream
-    self.digesters = digesters
-    self.src_url = src_url
-    self.logger = logger
-    if self.digesters:
-      self.digesters_previous = {}
-      for alg in self.digesters:
-        self.digesters_previous[alg] = self.digesters[alg].copy()
-      self.digesters_previous_mark = 0
-      self.digesters_current_mark = 0
-      self.hash_algs = hash_algs
-      self.seek_away = None
+    if not digesters:
+      raise CommandException('HashingFileUploadWrapper used with no digesters.')
+    elif not hash_algs:
+      raise CommandException('HashingFileUploadWrapper used with no hash_algs.')
+
+    self._orig_fp = stream
+    self._digesters = digesters
+    self._src_url = src_url
+    self._logger = logger
+    self._seek_away = None
+
+    self._digesters_previous = {}
+    for alg in self._digesters:
+      self._digesters_previous[alg] = self._digesters[alg].copy()
+    self._digesters_previous_mark = 0
+    self._digesters_current_mark = 0
+    self._hash_algs = hash_algs
 
   def read(self, size=-1):  # pylint: disable=invalid-name
-    """"Reads from the wrapped file pointer and calculates hash digests."""
-    data = self.orig_fp.read(size)
-    if self.digesters:
-      if self.seek_away is not None:
-        raise CommandException('Read called on hashing file pointer in an '
-                               'unknown position, cannot correctly compute '
-                               'digest.')
-      self.digesters_previous_mark = self.digesters_current_mark
-      for alg in self.digesters:
-        self.digesters_previous[alg] = self.digesters[alg].copy()
-        if len(data) >= MIN_SIZE_COMPUTE_LOGGING:
-          self.logger.info('Catching up %s for %s...', alg,
-                           self.src_url.GetUrlString())
-        self.digesters[alg].update(data)
-      self.digesters_current_mark += len(data)
+    """"Reads from the wrapped file pointer and calculates hash digests.
+
+    Args:
+      size: The amount of bytes to read. If ommited or negative, the entire
+          contents of the file will be read, hashed, and returned.
+
+    Returns:
+      Bytes from the wrapped stream.
+
+    Raises:
+      CommandException if the position of the wrapped stream is unknown.
+    """
+    if self._seek_away is not None:
+      raise CommandException('Read called on hashing file pointer in an '
+                             'unknown position; cannot correctly compute '
+                             'digest.')
+
+    data = self._orig_fp.read(size)
+    self._digesters_previous_mark = self._digesters_current_mark
+    for alg in self._digesters:
+      self._digesters_previous[alg] = self._digesters[alg].copy()
+      if len(data) >= MIN_SIZE_COMPUTE_LOGGING:
+        self._logger.info('Catching up %s for %s...', alg,
+                          self._src_url.GetUrlString())
+      self._digesters[alg].update(data)
+    self._digesters_current_mark += len(data)
     return data
 
   def tell(self):  # pylint: disable=invalid-name
-    return self.orig_fp.tell()
+    """Returns the current stream position."""
+    return self._orig_fp.tell()
 
   def seekable(self):  # pylint: disable=invalid-name
-    return self.orig_fp.seekable()
+    """Returns true if the stream is seekable."""
+    return self._orig_fp.seekable()
 
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
-    """"Seeks in the wrapped file pointer and catches up hash digests."""
-    if self.digesters:
-      if whence != os.SEEK_SET:
-        # We do not catch up hashes for non-absolute seeks, and rely on the
-        # caller to seek to an absolute position before reading.
-        self.seek_away = self.orig_fp.tell()
+    """Seeks in the wrapped file pointer and catches up hash digests.
+
+    Args:
+      offset: The offset to seek to.
+      whence: os.SEEK_CUR, or SEEK_END, SEEK_SET.
+
+    Returns:
+      Return value from the wrapped stream's seek call.
+    """
+    if whence != os.SEEK_SET:
+      # We do not catch up hashes for non-absolute seeks, and rely on the
+      # caller to seek to an absolute position before reading.
+      self._seek_away = self._orig_fp.tell()
+
+    else:
+      # Hashes will be correct and it's safe to call read().
+      self._seek_away = None
+      if offset < self._digesters_previous_mark:
+        # This is earlier than our earliest saved digest, so we need to
+        # reset the digesters and scan from the beginning.
+        for alg in self._digesters:
+          self._digesters[alg] = self._hash_algs[alg]()
+        self._digesters_current_mark = 0
+        self._orig_fp.seek(0)
+        self._CatchUp(offset)
+
+      elif offset == self._digesters_previous_mark:
+        # Just load the saved digests.
+        self._digesters_current_mark = self._digesters_previous_mark
+        for alg in self._digesters:
+          self._digesters[alg] = self._digesters_previous[alg]
+
+      elif offset < self._digesters_current_mark:
+        # Reset the position to our previous digest and scan forward.
+        self._digesters_current_mark = self._digesters_previous_mark
+        for alg in self._digesters:
+          self._digesters[alg] = self._digesters_previous[alg]
+        self._orig_fp.seek(self._digesters_previous_mark)
+        self._CatchUp(offset - self._digesters_previous_mark)
+
       else:
-        # Hashes will be correct and it's safe to call read().
-        self.seek_away = None
-        if offset < self.digesters_previous_mark:
-          # This is earlier than our earliest saved digest, so we need to
-          # reset the digesters and scan from the beginning.
-          for alg in self.digesters:
-            self.digesters[alg] = self.hash_algs[alg]()
-          self.digesters_current_mark = 0
-          self.orig_fp.seek(0)
-          self._CatchUp(offset)
-        elif offset == self.digesters_previous_mark:
-          # Just load the saved digests.
-          self.digesters_current_mark = self.digesters_previous_mark
-          for alg in self.digesters:
-            self.digesters[alg] = self.digesters_previous[alg]
-        elif offset < self.digesters_current_mark:
-          # Reset the position to our previous digest and scan forward.
-          self.digesters_current_mark = self.digesters_previous_mark
-          for alg in self.digesters:
-            self.digesters[alg] = self.digesters_previous[alg]
-          self.orig_fp.seek(self.digesters_previous_mark)
-          self._CatchUp(offset - self.digesters_previous_mark)
-        else:
-          # Scan forward from our current digest and position.
-          self._CatchUp(offset - self.digesters_current_mark)
-    return self.orig_fp.seek(offset, whence)
+        # Scan forward from our current digest and position.
+        self._orig_fp.seek(self._digesters_current_mark)
+        self._CatchUp(offset - self._digesters_current_mark)
+
+    return self._orig_fp.seek(offset, whence)
 
   def _CatchUp(self, bytes_to_read):
     """Catches up hashes, but does not return data and uses little memory.
 
     Before calling this function, digesters_current_mark should be updated
-    to the current location of the original stream and the self.digesters
+    to the current location of the original stream and the self._digesters
     should be current to that point (but no further).
 
     Args:
       bytes_to_read: Number of bytes to catch up from the original stream.
     """
-    if self.digesters:
-      for alg in self.digesters:
-        if bytes_to_read >= MIN_SIZE_COMPUTE_LOGGING:
-          self.logger.info('Catching up %s for %s...', alg,
-                           self.src_url.GetUrlString())
-        self.digesters_previous[alg] = self.digesters[alg].copy()
-      self.digesters_previous_mark = self.digesters_current_mark
-      bytes_remaining = bytes_to_read
+    if self._orig_fp.tell() != self._digesters_current_mark:
+      raise CommandException(
+          'Invalid mark when catching up hashes. Stream position %s, hash '
+          'position %s' % (self._orig_fp.tell(), self._digesters_current_mark))
+
+    for alg in self._digesters:
+      if bytes_to_read >= MIN_SIZE_COMPUTE_LOGGING:
+        self._logger.info('Catching up %s for %s...', alg,
+                          self._src_url.GetUrlString())
+      self._digesters_previous[alg] = self._digesters[alg].copy()
+
+    self._digesters_previous_mark = self._digesters_current_mark
+    bytes_remaining = bytes_to_read
+    bytes_this_round = min(bytes_remaining, TRANSFER_BUFFER_SIZE)
+    while bytes_this_round:
+      data = self._orig_fp.read(bytes_this_round)
+      bytes_remaining -= bytes_this_round
+      for alg in self._digesters:
+        self._digesters[alg].update(data)
       bytes_this_round = min(bytes_remaining, TRANSFER_BUFFER_SIZE)
-      while bytes_this_round:
-        data = self.orig_fp.read(bytes_this_round)
-        bytes_remaining -= bytes_this_round
-        for alg in self.digesters:
-          self.digesters[alg].update(data)
-        bytes_this_round = min(bytes_remaining, TRANSFER_BUFFER_SIZE)
-      self.digesters_current_mark += bytes_to_read
+    self._digesters_current_mark += bytes_to_read

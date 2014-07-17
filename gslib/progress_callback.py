@@ -43,84 +43,110 @@ class ProgressCallbackWithBackoff(object):
     Args:
       total_size: Total bytes to process.
       callback_func: Func of (int: processed_so_far, int: total_bytes)
-                     used to make callbacks.
+          used to make callbacks.
       start_bytes_per_callback: Lower bound of bytes per callback.
       max_bytes_per_callback: Upper bound of bytes per callback.
       calls_per_exponent: Number of calls to make before reducing rate.
     """
-    self.callbacks_made = 0
-    self.bytes_per_callback = start_bytes_per_callback
-    self.max_bytes_per_callback = max_bytes_per_callback
-    self.bytes_processed_since_callback = 0
-    self.total_bytes_processed = 0
-    self.total_size = total_size
-    self.callback_func = callback_func
-    self.calls_per_exponent = calls_per_exponent
-    self.final_callback = False
+    self._bytes_per_callback = start_bytes_per_callback
+    self._callback_func = callback_func
+    self._calls_per_exponent = calls_per_exponent
+    self._max_bytes_per_callback = max_bytes_per_callback
+    self._total_size = total_size
+
+    self._bytes_processed_since_callback = 0
+    self._callbacks_made = 0
+    self._total_bytes_processed = 0
 
   def Progress(self, bytes_processed):
     """Tracks byte processing progress, making a callback if necessary."""
-    self.bytes_processed_since_callback += bytes_processed
-    # We check if >= total_size and truncate because JSON uploads count
-    # metadata during their send progress; only make the final callback once.
-    if self.final_callback: return
-    if (self.total_bytes_processed + self.bytes_processed_since_callback >=
-        self.total_size):
-      self.final_callback = True
-    if (self.bytes_processed_since_callback > self.bytes_per_callback or
-        self.final_callback):
-      self.total_bytes_processed += self.bytes_processed_since_callback
-      self.callback_func(min(self.total_bytes_processed, self.total_size),
-                         self.total_size)
-      self.bytes_processed_since_callback = 0
-      self.callbacks_made += 1
-      if self.callbacks_made > self.calls_per_exponent:
-        self.bytes_per_callback = min(self.bytes_per_callback * 2,
-                                      self.max_bytes_per_callback)
-        self.callbacks_made = 0
+    self._bytes_processed_since_callback += bytes_processed
+    # TODO: We check if >= total_size and truncate because JSON uploads count
+    # metadata during their send progress.
+    if (self._bytes_processed_since_callback > self._bytes_per_callback or
+        (self._total_bytes_processed + self._bytes_processed_since_callback >=
+         self._total_size)):
+      self._total_bytes_processed += self._bytes_processed_since_callback
+      self._callback_func(min(self._total_bytes_processed, self._total_size),
+                          self._total_size)
+      self._bytes_processed_since_callback = 0
+      self._callbacks_made += 1
+
+      if self._callbacks_made > self._calls_per_exponent:
+        self._bytes_per_callback = min(self._bytes_per_callback * 2,
+                                       self._max_bytes_per_callback)
+        self._callbacks_made = 0
+
+
+def ConstructAnnounceText(operation_name, url_string):
+  """Constructs announce text for ongoing operations on url_to_display.
+
+  This truncates the text to a maximum of MAX_PROGRESS_INDICATOR_COLUMNS.
+  Thus, concurrent output (gsutil -m) leaves progress counters in a readable
+  (fixed) position.
+
+  Args:
+    operation_name: String describing the operation, i.e.
+        'Uploading' or 'Hashing'.
+    url_string: String describing the file/object being processed.
+
+  Returns:
+    Formatted announce text for outputting operation progress.
+  """
+  # Operation name occupies 11 characters (enough for 'Downloading'), plus a
+  # space. The rest is used for url_to_display. If a longer operation name is
+  # used, it will be truncated. We can revisit this size if we need to support
+  # a longer operation, but want to make sure the terminal output is meaningful.
+  justified_op_string = operation_name[:11].ljust(12)
+  start_len = len(justified_op_string)
+  end_len = len(': ')
+  if (start_len + len(url_string) + end_len >
+      MAX_PROGRESS_INDICATOR_COLUMNS):
+    ellipsis_len = len('...')
+    url_string = '...%s' % url_string[
+        -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - ellipsis_len):]
+  base_announce_text = '%s%s:' % (justified_op_string, url_string)
+  format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
+  return format_str.format(base_announce_text.encode(UTF8))
 
 
 class FileProgressCallbackHandler(object):
   """Outputs progress info for large operations like file copy or hash."""
 
-  def __init__(self, op_string, display_url, logger):
+  def __init__(self, announce_text, logger):
     """Initializes the callback handler.
 
     Args:
-      op_string: String describing the progress operation, i.e.
-                 'Uploading' or 'Hashing'.
-      display_url: StorageUrl describe the file/object being processed.
+      announce_text: String describing the operation.
       logger: For outputting log messages.
     """
-    # Use fixed-width announce text so concurrent output (gsutil -m) leaves
-    # progress counters in readable (fixed) position.
-    justified_op_string = op_string[:11].ljust(12)
-    start_len = len(justified_op_string)
-    display_urlstr = display_url.GetUrlString()
-    end_len = len(': ')
-    elip_len = len('... ')
-    if (start_len + len(display_urlstr) + end_len >
-        MAX_PROGRESS_INDICATOR_COLUMNS):
-      display_urlstr = '...%s' % display_urlstr[
-          -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - elip_len):]
-    base_announce_text = '%s%s:' % (justified_op_string, display_urlstr)
-    format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
-    self.announce_text = format_str.format(base_announce_text.encode(UTF8))
-    self.logger = logger
+    self._announce_text = announce_text
+    self._logger = logger
 
   # Function signature is in boto callback format, which cannot be changed.
-  def call(self, total_bytes_transferred, total_size):  # pylint: disable=invalid-name
+  def call(self,  # pylint: disable=invalid-name
+           total_bytes_processed,
+           total_size):
+    """Prints an overwriting line to stderr describing the operation progress.
+
+    Args:
+      total_bytes_processed: Number of bytes processed so far.
+      total_size: Total size of the ongoing operation.
+    """
+    if not self._logger.isEnabledFor(logging.INFO):
+      return
+
     # Handle streaming case specially where we don't know the total size:
     if total_size:
       total_size_string = '/%s' % MakeHumanReadable(total_size)
     else:
       total_size_string = ''
-    if self.logger.isEnabledFor(logging.INFO):
-      # Use sys.stderr.write instead of self.logger.info so progress messages
-      # output on a single continuously overwriting line.
-      sys.stderr.write('%s%s%s    \r' % (
-          self.announce_text,
-          MakeHumanReadable(total_bytes_transferred),
-          total_size_string))
-      if total_size and total_bytes_transferred == total_size:
-        sys.stderr.write('\n')
+    # Use sys.stderr.write instead of self.logger.info so progress messages
+    # output on a single continuously overwriting line.
+    # TODO: Make this work with logging.Logger.
+    sys.stderr.write('%s%s%s    \r' % (
+        self._announce_text,
+        MakeHumanReadable(total_bytes_processed),
+        total_size_string))
+    if total_size and total_bytes_processed == total_size:
+      sys.stderr.write('\n')

@@ -284,6 +284,11 @@ else:
 DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '0'
 DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
 
+CHECK_HASH_IF_FAST_ELSE_FAIL = 'if_fast_else_fail'
+CHECK_HASH_IF_FAST_ELSE_SKIP = 'if_fast_else_skip'
+CHECK_HASH_ALWAYS = 'always'
+CHECK_HASH_NEVER = 'never'
+
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
 
@@ -430,14 +435,15 @@ content_language = en
 
 # 'check_hashes' specifies how strictly to require integrity checking for
 # downloaded data. Legal values are:
-#   'if_fast_else_fail' - (default) Only integrity check if the digest will run
-#       efficiently (using compiled code), else fail the download.
-#   'if_fast_else_skip' - Only integrity check if the server supplies a hash and
-#       the local digest computation will run quickly, else skip the check.
-#   'always' - Always check download integrity regardless of possible
+#   '%(hash_fast_else_fail)s' - (default) Only integrity check if the digest
+#       will run efficiently (using compiled code), else fail the download.
+#   '%(hash_fast_else_skip)s' - Only integrity check if the server supplies a
+#       hash and the local digest computation will run quickly, else skip the
+#       check.
+#   '%(hash_always)s' - Always check download integrity regardless of possible
 #       performance costs.
-#   'never' - Don't perform download integrity checks. This settings is not
-#       recommended except for special cases such as measuring download
+#   '%(hash_never)s' - Don't perform download integrity checks. This setting is
+#       not recommended except for special cases such as measuring download
 #       performance excluding time for integrity checking.
 # This option exists to assist users who wish to download a GCS composite object
 # and are unable to install crcmod with the C-extension. CRC32c is the only
@@ -456,7 +462,11 @@ content_language = en
 #prefer_api = json
 #prefer_api = xml
 
-""" % {'resumable_threshold': TWO_MB,
+""" % {'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
+       'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
+       'hash_always': CHECK_HASH_ALWAYS,
+       'hash_never': CHECK_HASH_NEVER,
+       'resumable_threshold': TWO_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
        'parallel_composite_upload_threshold': (

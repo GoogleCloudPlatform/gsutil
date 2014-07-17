@@ -67,7 +67,9 @@ from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
+from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
+from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
@@ -739,9 +741,10 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
     hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
   with open(file_name, 'rb') as fp:
     CalculateHashesFromContents(
-        fp, hash_dict, size=src_obj_metadata.size,
-        progress_func=FileProgressCallbackHandler(
-            'Hashing', StorageUrlFromString(file_name), logger).call)
+        fp, hash_dict, ProgressCallbackWithBackoff(
+            src_obj_metadata.size,
+            FileProgressCallbackHandler(
+                ConstructAnnounceText('Hashing', file_name), logger).call))
   digests = {}
   for alg_name, digest in hash_dict.iteritems():
     digests[alg_name] = Base64EncodeHash(digest.hexdigest())
@@ -1432,8 +1435,8 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
-  progress_callback = FileProgressCallbackHandler('Uploading',
-                                                  dst_url, logger).call
+  progress_callback = FileProgressCallbackHandler(
+      ConstructAnnounceText('Uploading', dst_url.GetUrlString()), logger).call
   start_time = time.time()
 
   if src_url.IsStream():
@@ -1508,8 +1511,8 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
 
   retryable = True
 
-  progress_callback = FileProgressCallbackHandler('Uploading', dst_url,
-                                                  logger).call
+  progress_callback = FileProgressCallbackHandler(
+      ConstructAnnounceText('Uploading', dst_url.GetUrlString()), logger).call
   if global_copy_helper_opts.halt_at_byte:
     progress_callback = _HaltingCopyCallbackHandler(
         True, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
@@ -1633,12 +1636,14 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       logger, allow_splitting, upload_url, dst_url, src_obj_size,
       canned_acl=global_copy_helper_opts.canned_acl)
 
-  if not parallel_composite_upload:
+  if not parallel_composite_upload and len(hash_algs):
     # Parallel composite uploads calculate hashes per-component in subsequent
     # calls to this function, but the composition of the final object is a
     # cloud-only operation.
     wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
                                                   hash_algs, upload_url, logger)
+  else:
+    wrapped_filestream = upload_stream
 
   try:
     if parallel_composite_upload:
@@ -1753,8 +1758,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
 
   # Set up hash digesters.
   hash_algs = GetDownloadHashAlgs(
-      logger, src_md5=src_obj_metadata.md5Hash,
-      src_crc32c=src_obj_metadata.crc32c)
+      logger, src_has_md5=src_obj_metadata.md5Hash,
+      src_has_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   fp = None
@@ -1822,8 +1827,9 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if not dst_url.IsStream():
       serialization_data = json.dumps(serialization_dict)
 
-    progress_callback = FileProgressCallbackHandler('Downloading', dst_url,
-                                                    logger).call
+    progress_callback = FileProgressCallbackHandler(
+        ConstructAnnounceText('Downloading', dst_url.GetUrlString()),
+        logger).call
     if global_copy_helper_opts.halt_at_byte:
       progress_callback = _HaltingCopyCallbackHandler(
           False, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
@@ -2090,8 +2096,9 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         canned_acl=global_copy_helper_opts.canned_acl,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
-        progress_callback=FileProgressCallbackHandler('Uploading', dst_url,
-                                                      logger).call,
+        progress_callback=FileProgressCallbackHandler(
+            ConstructAnnounceText('Uploading', dst_url.GetUrlString()),
+            logger).call,
         tracker_callback=_DummyTrackerCallback)
   end_time = time.time()
 

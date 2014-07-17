@@ -24,7 +24,9 @@ from gslib.exception import CommandException
 from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
+from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
+from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
@@ -80,56 +82,91 @@ class HashCommand(Command):
       subcommand_help_text={},
   )
 
-  def ParseOpts(self):
-    self.calc_md5 = False
-    self.calc_crc32c = False
-    self.found_hash_option = False
-    self.output_format = 'base64'
-    self.format_func = lambda digest: Base64EncodeHash(digest.hexdigest())
-    if self.sub_opts:
-      for o, unused_a in self.sub_opts:
+  @classmethod
+  def _ParseOpts(cls, sub_opts, logger):
+    """Returns behavior variables based on input options.
+
+    Args:
+      sub_opts: getopt sub-arguments for the command.
+      logger: logging.Logger for the command.
+
+    Returns:
+      Tuple of
+      calc_crc32c: Boolean, if True, command should calculate a CRC32c checksum.
+      calc_md5: Boolean, if True, command should calculate an MD5 hash.
+      format_func: Function used for formatting the hash in the desired format.
+      output_format: String describing the hash output format.
+    """
+    calc_crc32c = False
+    calc_md5 = False
+    format_func = lambda digest: Base64EncodeHash(digest.hexdigest())
+    found_hash_option = False
+    output_format = 'base64'
+
+    if sub_opts:
+      for o, unused_a in sub_opts:
         if o == '-c':
-          self.calc_crc32c = True
-          self.found_hash_option = True
+          calc_crc32c = True
+          found_hash_option = True
         elif o == '-h':
-          self.output_format = 'hex'
-          self.format_func = lambda digest: digest.hexdigest()
+          output_format = 'hex'
+          format_func = lambda digest: digest.hexdigest()
         elif o == '-m':
-          self.calc_md5 = True
-          self.found_hash_option = True
-    if not self.found_hash_option:
-      self.calc_crc32c = True
-      self.calc_md5 = True
-    if self.calc_crc32c and not UsingCrcmodExtension(crcmod):
-      self.logger.warn(SLOW_CRCMOD_WARNING)
+          calc_md5 = True
+          found_hash_option = True
+
+    if not found_hash_option:
+      calc_crc32c = True
+      calc_md5 = True
+
+    if calc_crc32c and not UsingCrcmodExtension(crcmod):
+      logger.warn(SLOW_CRCMOD_WARNING)
+
+    return calc_crc32c, calc_md5, format_func, output_format
+
+  def _GetHashClassesFromArgs(self, calc_crc32c, calc_md5):
+    """Constructs the dictionary of hashes to compute based on the arguments.
+
+    Args:
+      calc_crc32c: If True, CRC32c should be included.
+      calc_md5: If True, MD5 should be included.
+
+    Returns:
+      Dictionary of {string: hash digester}, where string the name of the
+          digester algorithm.
+    """
+    hash_dict = {}
+    if calc_crc32c:
+      hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
+    if calc_md5:
+      hash_dict['md5'] = md5()
+    return hash_dict
 
   def RunCommand(self):
     """Command entry point for the hash command."""
-    self.ParseOpts()
+    (calc_crc32c, calc_md5, format_func, output_format) = (
+        self._ParseOpts(self.sub_opts, self.logger))
 
     matched_one = False
-
     for url_str in self.args:
       if not StorageUrlFromString(url_str).IsFileUrl():
         raise CommandException('"hash" command requires a file URL')
+
       for file_ref in self.WildcardIterator(url_str).IterObjects():
         matched_one = True
-        file_url = StorageUrlFromString(file_ref.GetUrlString())
-        file_name = file_url.object_name
+        file_name = StorageUrlFromString(file_ref.GetUrlString()).object_name
         file_size = os.path.getsize(file_name)
-        progress_callback = FileProgressCallbackHandler('Hashing', file_url,
-                                                        self.logger).call
-        hash_dict = {}
-        if self.calc_crc32c:
-          hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
-        if self.calc_md5:
-          hash_dict['md5'] = md5()
+        callback_processor = ProgressCallbackWithBackoff(
+            file_size, FileProgressCallbackHandler(
+                ConstructAnnounceText('Hashing', file_name), self.logger).call)
+        hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
         with open(file_name, 'rb') as fp:
-          CalculateHashesFromContents(fp, hash_dict, file_size,
-                                      progress_callback)
-        print 'Hashes [%s] for %s:' % (self.output_format, file_name)
+          CalculateHashesFromContents(fp, hash_dict,
+                                      callback_processor=callback_processor)
+        print 'Hashes [%s] for %s:' % (output_format, file_name)
         for name, digest in hash_dict.iteritems():
-          print '\tHash (%s):\t\t%s' % (name, self.format_func(digest))
+          print '\tHash (%s):\t\t%s' % (name, format_func(digest))
+
     if not matched_one:
       raise CommandException('No files matched')
 
