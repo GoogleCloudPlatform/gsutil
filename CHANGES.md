@@ -1,3 +1,44 @@
+Release 4.4 (release date: 2014-07-17)
+=======================================
+
+New Features
+------------
+- Added the hash command, which can calculate hashes of local files.
+  gsutil already calculates hashes for integrity checking, but this allows
+  the user to separately calculate the MD5 and CRC32c hashes of a local file.
+
+Bug Fixes
+---------
+- Many improvements to JSON API media transfers, including far
+  more robust retry logic.
+- Fixed "File changed during upload: EOF..." errors on XML resumable uploads.
+- Fixed rsync command to read and write index files in binary mode.
+- Fix potential TypeError in _CheckAndHandleCredentialException.
+- Fixed possible data corruption when using JSON API uploads for
+  small files with lines starting with "From:", which would cause
+  integrity checks to fail.
+- Fixed gsutil cp to skip directory placeholders when downloading, avoiding
+  "directory exists where the file needs to be created" errors.
+- Fixed daisy chain cp/rsync for files >= 100MB.
+- Fixed a bug in JSON proxy support where the proxy info was sometimes unused.
+- Fixed a bug where an acl get on a private default object ACL returned an
+  error instead of a blank ACL.
+- Fixed a JSON API issue with large HTTP responses on 32-bit systems.
+
+Other Changes
+-------------
+- Improved object listing performance when using the XML API.
+- Improved various error messages.
+- Improved progress display during media transfer.
+- Switched to truncated exponential backoff for retries.
+- Improved OS-specific ulimit checks.
+- Added some information such as OS and Cloud SDK wrapping to gsutil version,
+  and changed the output format to be more uniform.
+- Daisy chain cp/rsync now supports resumable uploads.
+- Improved proxy support for proxy username and passwords.
+- x-amz headers are now supported for cp, rsync, and setmeta.  x-amz-meta
+  headers continue to be supported as well.
+
 Release 4.3 (release date: 2014-06-10)
 =======================================
 
