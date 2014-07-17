@@ -923,6 +923,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # files, and test that including whitespace in the extension list works.
     self.RunGsUtil(['cp', '-z', 'js, html',
                     os.path.join(tmpdir, 'test.*'), suri(bucket_uri)])
+    self.AssertNObjectsInBucket(bucket_uri, 3)
     uri1 = suri(bucket_uri, 'test.html')
     uri2 = suri(bucket_uri, 'test.js')
     uri3 = suri(bucket_uri, 'test.txt')
