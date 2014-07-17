@@ -106,10 +106,10 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
   At the end of every upload or download, the gsutil rsync command validates
-  that the checksum of the local file matches that of the checksum of the object
-  stored in GCS. If it does not, gsutil will delete the invalid copy and print a
-  warning message. This very rarely happens. If it does, please contact
-  gs-team@google.com.
+  that the checksum of the source file/object matches the checksum of the
+  destination file/object. If the checksums do not match, gsutil will delete
+  the invalid copy and print a warning message. This very rarely happens, but
+  if it does, please contact gs-team@google.com.
 
   The rsync command will retry when failures occur, but if enough failures
   happen during a particular copy or delete operation the command will skip that

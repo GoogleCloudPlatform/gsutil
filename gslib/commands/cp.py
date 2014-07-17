@@ -210,10 +210,10 @@ COPY_IN_CLOUD_TEXT = """
 FAILURE_HANDLING_TEXT = """
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
   At the end of every upload or download, the gsutil cp command validates that
-  the checksum of the local file matches that of the checksum of the object
-  stored in GCS. If it does not, gsutil will delete the invalid copy and print a
-  warning message. This very rarely happens. If it does, please contact
-  gs-team@google.com.
+  that the checksum of the source file/object matches the checksum of the
+  destination file/object. If the checksums do not match, gsutil will delete
+  the invalid copy and print a warning message. This very rarely happens, but
+  if it does, please contact gs-team@google.com.
 
   The cp command will retry when failures occur, but if enough failures happen
   during a particular copy or delete operation the command will skip that object
@@ -311,7 +311,7 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
        << Code that handles failures >>
      fi
   
-  Or, for copying a while directory, use this instead:
+  Or, for copying a directory, use this instead:
 
      gsutil cp -c -L cp.log -R ./dir gs://bucket
      if [ "$status" -ne "0" ] ; then
