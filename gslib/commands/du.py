@@ -86,6 +86,10 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil du -e "*.bak" -0 gs://bucketname
 
+  To get a total of all buckets in a project with a grand total for an entire
+  project:
+
+      gsutil -o GSUtil:default_project_id=project-name du -shc
 """)
 
 
