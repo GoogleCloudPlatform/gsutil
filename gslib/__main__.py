@@ -16,6 +16,7 @@
 """Main module for Google Cloud Storage command line tool."""
 
 import ConfigParser
+import datetime
 import errno
 import getopt
 import logging
@@ -127,9 +128,24 @@ def _OutputUsageAndExit(command_runner):
   sys.exit(1)
 
 
+class GsutilFormatter(logging.Formatter):
+  """A logging.Formatter that supports logging microseconds (%f)."""
+
+  def formatTime(self, record, datefmt=None):
+    if datefmt:
+      return datetime.datetime.fromtimestamp(record.created).strftime(datefmt)
+
+    # Use default implementation if datefmt is not specified.
+    return super(GsutilFormatter, self).formatTime(record, datefmt=datefmt)
+
+
 def _ConfigureLogging(level=logging.INFO):
   """Similar to logging.basicConfig() except it always adds a handler."""
+  log_format = '%(levelname)s %(asctime)s %(filename)s] %(message)s'
+  date_format = '%m%d %H:%M:%S.%f'
+  formatter = GsutilFormatter(fmt=log_format, datefmt=date_format)
   handler = logging.StreamHandler()
+  handler.setFormatter(formatter)
   root_logger = logging.getLogger()
   root_logger.addHandler(handler)
   root_logger.setLevel(level)
