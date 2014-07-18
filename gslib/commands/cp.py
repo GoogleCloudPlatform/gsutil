@@ -277,20 +277,28 @@ STREAMING_TRANSFERS_TEXT = """
 
 PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
-  gsutil automatically uses
+  gsutil can automatically use
   `object composition <https://developers.google.com/storage/docs/composite-objects>`_
-  to perform uploads in parallel for large, local files being uploaded to
-  Google Cloud Storage. This means that, by default, a large file will be split
-  into component pieces that will be uploaded in parallel. Those components will
-  then be composed in the cloud, and the temporary components in the cloud will
-  be deleted after successful composition. No additional local disk space is
-  required for this operation.
+  to perform uploads in parallel for large, local files being uploaded to Google
+  Cloud Storage. This means that, if enabled (see next paragraph), a large file
+  will be split into component pieces that will be uploaded in parallel. Those
+  components will then be composed in the cloud, and the temporary components in
+  the cloud will be deleted after successful composition. No additional local
+  disk space is required for this operation.
 
-  Any file whose size exceeds the "parallel_composite_upload_threshold" config
-  variable will trigger this feature by default. The ideal size of a
-  component can also be set with the "parallel_composite_upload_component_size"
-  config variable. See the .boto config file for details about how these values
-  are used.
+  If the "parallel_composite_upload_threshold" config value is not 0 (which
+  disbles the feature), any file whose size exceeds the specified size will
+  trigger a parallel composite upload. Note that at present parallel composite
+  uploads are disabled by default, because using composite objects requires a
+  compiled crcmod (see "gsutil help crcmod"), and for operating systems that
+  don't already have this package installed this makes gsutil harder to use.
+  Google is actively working with a number of the Linux distributions to get
+  crcmod included with the stock distribution. Once that is done we will
+  re-enable parallel composite uploads by default in gsutil.
+
+  The ideal size of a component can also be set with the
+  "parallel_composite_upload_component_size" config variable. See the comments
+  in the .boto config file for details about how these values are used.
 
   If the transfer fails prior to composition, running the command again will
   take advantage of resumable uploads for those components that failed, and

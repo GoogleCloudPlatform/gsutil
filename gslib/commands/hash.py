@@ -43,7 +43,7 @@ _DETAILED_HELP_TEXT = ("""
   script that separately checks the hash for some reason.
 
   If you calculate a CRC32c hash for the file without a precompiled crcmod
-  installation, hashing may be very slow. See "gsutil help crcmod" for details.
+  installation, hashing will be very slow. See "gsutil help crcmod" for details.
 
 <B>OPTIONS</B>
   -c          Calculate a CRC32c hash for the file.

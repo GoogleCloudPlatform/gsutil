@@ -169,6 +169,10 @@ MAX_TRACKER_FILE_NAME_LENGTH = 100
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
 
+PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
+
+suggested_parallel_composites = False
+
 
 class TrackerFileType(object):
   UPLOAD = 'upload'
@@ -1085,11 +1089,12 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   return elapsed_time, composed_object
 
 
-def _ShouldDoParallelCompositeUpload(allow_splitting, src_url, dst_url,
+def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
                                      file_size, canned_acl=None):
   """Determines whether parallel composite upload strategy should be used.
 
   Args:
+    logger: for outputting log messages.
     allow_splitting: If false, then this function returns false.
     src_url: FileUrl corresponding to a local file.
     dst_url: CloudUrl corresponding to destination cloud object.
@@ -1099,13 +1104,35 @@ def _ShouldDoParallelCompositeUpload(allow_splitting, src_url, dst_url,
   Returns:
     True iff a parallel upload should be performed on the source file.
   """
+  global suggested_parallel_composites
   parallel_composite_upload_threshold = HumanReadableToBytes(config.get(
       'GSUtil', 'parallel_composite_upload_threshold',
       DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))
-  return (allow_splitting  # Don't split the pieces multiple times.
-          and not src_url.IsStream()  # We can't partition streams.
-          and dst_url.scheme == 'gs'  # Compose is only for gs.
-          and not canned_acl  # TODO: Implement canned ACL support for compose.
+
+  all_factors_but_size = (
+      allow_splitting  # Don't split the pieces multiple times.
+      and not src_url.IsStream()  # We can't partition streams.
+      and dst_url.scheme == 'gs'  # Compose is only for gs.
+      and not canned_acl)  # TODO: Implement canned ACL support for compose.
+
+  # Since parallel composite uploads are disabled by default, make user aware of
+  # them.
+  # TODO: Once compiled crcmod is being distributed by major Linux distributions
+  # remove this check.
+  if (all_factors_but_size and parallel_composite_upload_threshold == 0
+      and file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD
+      and not suggested_parallel_composites):
+    logger.info('\n'.join(textwrap.wrap(
+        '==> NOTE: You are uploading one or more large file(s), which would '
+        'run significantly faster if you enable parallel composite uploads. '
+        'This feature can be enabled by editing the '
+        '"parallel_composite_upload_threshold" value in your .boto '
+        'configuration file. However, note that if you do this you and any '
+        'users that download such composite files will need to have a compiled '
+        'crcmod installed (see "gsutil help crcmod").')) + '\n')
+    suggested_parallel_composites = True
+
+  return (all_factors_but_size
           and parallel_composite_upload_threshold > 0
           and file_size >= parallel_composite_upload_threshold)
 
@@ -1606,7 +1633,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   parallel_composite_upload = _ShouldDoParallelCompositeUpload(
-      allow_splitting, upload_url, dst_url, src_obj_size,
+      logger, allow_splitting, upload_url, dst_url, src_obj_size,
       canned_acl=global_copy_helper_opts.canned_acl)
 
   if not parallel_composite_upload:

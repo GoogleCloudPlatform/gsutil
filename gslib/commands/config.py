@@ -279,7 +279,9 @@ else:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
   DEFAULT_PARALLEL_THREAD_COUNT = 24
 
-DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '150M'
+# TODO: Once compiled crcmod is being distributed by major Linux distributions
+# revert DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD value to '150M'.
+DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '0'
 DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
 
 CONFIG_BOTO_SECTION_CONTENT = """
@@ -400,6 +402,14 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # less than MAX_COMPONENT_COUNT.
 # Values can be provided either in bytes or as human-readable values
 # (e.g., "150M" to represent 150 megabytes)
+#
+# Note: At present parallel composite uploads are disabled by default, because
+# using composite objects requires a compiled crcmod (see "gsutil help crcmod"),
+# and for operating systems that don't already have this package installed this
+# makes gsutil harder to use. Google is actively working with a number of the
+# Linux distributions to get crcmod included with the stock distribution. Once
+# that is done we will re-enable parallel composite uploads by default in
+# gsutil.
 #parallel_composite_upload_threshold = %(parallel_composite_upload_threshold)s
 #parallel_composite_upload_component_size = %(parallel_composite_upload_component_size)s
 
