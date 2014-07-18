@@ -112,6 +112,13 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             ValueError)
 
 
+_VALIDATE_CERTIFICATES_503_MESSAGE = (
+    """Service Unavailable. If you have recently changed
+    https_validate_certificates from True to False in your boto configuration
+    file, please delete any cached access tokens in your filesystem (at %s)
+    and try again.""" % GetCredentialStoreFilename())
+
+
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
@@ -796,12 +803,6 @@ class GcsJsonApi(CloudApi):
               apitools_upload.bytes_http)
           while retries <= self.num_retries:
             try:
-              refresh_response = apitools_upload.RefreshResumableUploadState()
-              if refresh_response:
-                # Server actually got all the bytes, upload complete.
-                return self.api_client.objects.ProcessHttpResponse(
-                    self.api_client.objects.GetMethodConfig('Insert'),
-                    refresh_response)
               start_byte = apitools_upload.progress
               bytes_uploaded_container.bytes_transferred = start_byte
               break
@@ -1023,12 +1024,16 @@ class GcsJsonApi(CloudApi):
       self, e, bucket_name=None, object_name=None, generation=None):
     if isinstance(e, apitools_exceptions.HttpError):
       message = self._GetMessageFromHttpError(e)
-      if e.status_code == 400:
+      if (e.status_code == 503 and
+          self.http.disable_ssl_certificate_validation):
+        return ServiceException(_VALIDATE_CERTIFICATES_503_MESSAGE,
+                                status=e.status_code)
+      elif e.status_code >= 500:
+        return ResumableUploadException(
+            message or 'Server Error', status=e.status_code)
+      elif e.status_code >= 400:
         return ResumableUploadAbortException(
             message or 'Bad Request', status=e.status_code)
-      elif (e.status_code >= 500
-            and not self.http.disable_ssl_certificate_validation):
-        return ResumableUploadException(message, status=e.status_code)
     if (isinstance(e, apitools_exceptions.TransferError) and
         ('Aborting transfer' in e.message or
          'Not enough bytes in stream' in e.message or
@@ -1113,12 +1118,8 @@ class GcsJsonApi(CloudApi):
         return PreconditionException(message, status=e.status_code)
       elif (e.status_code == 503 and
             not self.http.disable_ssl_certificate_validation):
-        return ServiceException(
-            'Service Unavailable. If you have recently changed '
-            'https_validate_certificates from True to False in your boto '
-            'configuration file, please delete any cached access tokens '
-            'in your filesystem and try again.',
-            status=e.status_code)
+        return ServiceException(_VALIDATE_CERTIFICATES_503_MESSAGE,
+                                status=e.status_code)
       return ServiceException(message, status=e.status_code)
     elif isinstance(e, apitools_exceptions.TransferInvalidError):
       return ServiceException('Transfer invalid (possible encoding error: %s)'

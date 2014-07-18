@@ -407,6 +407,7 @@ class Upload(_Transfer):
         stream, close_stream=close_stream, chunksize=chunksize,
         auto_transfer=auto_transfer, http=http)
     self.__complete = False
+    self.__final_response = None
     self.__mime_type = mime_type
     self.__progress = 0
     self.__server_chunk_granularity = None
@@ -628,9 +629,11 @@ class Upload(_Transfer):
     range_header = self._GetRangeHeaderFromResponse(refresh_response)
     if refresh_response.status_code in (httplib.OK, httplib.CREATED):
       self.__complete = True
+      self.__progress = self.total_size
+      self.stream.seek(self.progress)
       # If we're finished, the refresh response will contain the metadata
-      # originally requested. Return it so the client can use it.
-      return refresh_response
+      # originally requested. Cache it so it can be returned in StreamInChunks.
+      self.__final_response = refresh_response
     elif refresh_response.status_code == http_wrapper.RESUME_INCOMPLETE:
       if range_header is None:
         self.__progress = 0
@@ -709,7 +712,8 @@ class Upload(_Transfer):
           'Cannot stream upload without total size')
     callback = callback or self._ArgPrinter
     finish_callback = finish_callback or self._CompletePrinter
-    response = None
+    # final_response is set if we resumed an already-completed upload.
+    response = self.__final_response
     self.__ValidateChunksize(self.chunksize)
     self.EnsureInitialized()
     while not self.complete:
@@ -733,7 +737,8 @@ class Upload(_Transfer):
       self.stream.seek(current_pos)
       if current_pos != end_pos:
         raise exceptions.TransferInvalidError(
-            'Upload complete with additional bytes left in stream')
+            'Upload complete with %s additional bytes left in stream' %
+            (long(end_pos) - long(current_pos)))
     self._ExecuteCallback(finish_callback, response)
     return response
 

@@ -51,6 +51,7 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
+from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.commands.compose import MAX_COMPOSE_ARITY
@@ -61,8 +62,8 @@ from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
 from gslib.hashing_helper import Base64EncodeHash
+from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateHashesFromContents
-from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
@@ -1045,7 +1046,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
           apitools_messages.ComposeRequest.SourceObjectsValueListEntry(
               name=component_url.object_name))
       if component_url.HasGeneration():
-        src_obj_metadata.generation = component_url.generation
+        src_obj_metadata.generation = long(component_url.generation)
       request_components.append(src_obj_metadata)
 
     composed_object = gsutil_api.ComposeObject(
@@ -1062,18 +1063,13 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       command_obj.Apply(_DeleteObjectFn, objects_to_delete, _RmExceptionHandler,
                         arg_checker=gslib.command.DummyArgChecker,
                         parallel_operations_override=True)
-    except Exception, e:  # pylint: disable=broad-except
-      if (e.message and ('unexpected failure in' in e.message)
-          and ('sub-processes, aborting' in e.message)):
-        # If some of the delete calls fail, don't cause the whole command to
-        # fail. The copy was successful iff the compose call succeeded, so
-        # just raise whatever exception (if any) happened before this instead,
-        # and reduce this to a warning.
-        logging.warning(
-            'Failed to delete some of the following temporary objects:\n' +
-            '\n'.join(dst_args.keys()))
-      else:
-        raise e
+    except Exception:  # pylint: disable=broad-except
+      # If some of the delete calls fail, don't cause the whole command to
+      # fail. The copy was successful iff the compose call succeeded, so
+      # reduce this to a warning.
+      logging.warning(
+          'Failed to delete some of the following temporary objects:\n' +
+          '\n'.join(dst_args.keys()))
     finally:
       with tracker_file_lock:
         if os.path.exists(tracker_file):
@@ -1510,7 +1506,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
     logger.info(
         'Resuming upload for %s', src_url.GetUrlString())
 
-  retryable = False
+  retryable = True
 
   progress_callback = FileProgressCallbackHandler('Uploading', dst_url,
                                                   logger).call
@@ -1528,8 +1524,9 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
         fields=UPLOAD_RETURN_FIELDS,
         tracker_callback=_UploadTrackerCallback,
         progress_callback=progress_callback)
-  except ResumableUploadException:
-    retryable = True
+    retryable = False
+  except ResumableUploadAbortException:
+    retryable = False
     raise
   finally:
     if not retryable:
@@ -2739,7 +2736,7 @@ def FilterExistingComponents(dst_args, existing_components, bucket_url,
     file_part = FilePart(dst_arg.filename, dst_arg.file_start,
                          dst_arg.file_length)
     # TODO: calculate MD5's in parallel when possible.
-    content_md5 = CalculateMd5FromContents(file_part)
+    content_md5 = CalculateB64EncodedMd5FromContents(file_part)
 
     try:
       # Get the MD5 of the currently-existing component.
