@@ -378,7 +378,7 @@ class AclCommand(Command):
     modification_count = 0
     for change in self.changes:
       modification_count += change.Execute(url_string, current_acl,
-                                           self.logger)
+                                           'acl', self.logger)
     if modification_count == 0:
       self.logger.info('No changes to {0}'.format(url_string))
       return
@@ -391,7 +391,7 @@ class AclCommand(Command):
                                preconditions=preconditions,
                                provider=url.scheme, fields=['id'])
       else:  # Object
-        preconditions = Preconditions(gen_match = gcs_object.generation,
+        preconditions = Preconditions(gen_match=gcs_object.generation,
                                       meta_gen_match=gcs_object.metageneration)
 
         object_metadata = apitools_messages.Object(acl=current_acl)

@@ -28,7 +28,6 @@ from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import AclTranslation
 from gslib.util import NO_MAX
 from gslib.util import Retry
 from gslib.util import UrlsAreForSingleProvider
@@ -216,9 +215,10 @@ class DefAclCommand(Command):
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(url, current_acl, self.logger)
+      modification_count += change.Execute(
+          url_string, current_acl, 'defacl', self.logger)
     if modification_count == 0:
-      self.logger.info('No changes to {0}'.format(url))
+      self.logger.info('No changes to {0}'.format(url_string))
       return
 
     try:
@@ -231,7 +231,7 @@ class DefAclCommand(Command):
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
 
-    self.logger.info('Updated default ACL on {0}'.format(url))
+    self.logger.info('Updated default ACL on {0}'.format(url_string))
 
   def RunCommand(self):
     """Command entry point for the defacl command."""

@@ -58,6 +58,12 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
                                 [suri(bucket)], return_stdout=True)
     self.assertRegexpMatches(json_text3, test_regex2)
 
+    stderr = self.RunGsUtil(self._defacl_ch_prefix +
+                            ['-g', self.GROUP_TEST_ADDRESS+':WRITE',
+                             suri(bucket)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('WRITER cannot be set as a default object ACL', stderr)
+
   def testChangeMultipleBuckets(self):
     """Tests defacl ch on multiple buckets."""
     bucket1 = self.CreateBucket()

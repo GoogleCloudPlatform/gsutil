@@ -198,25 +198,31 @@ class AclChange(object):
     for acl_entry in current_acl:
       return acl_entry.__class__
 
-  def Execute(self, url_string, current_acl, logger):
+  def Execute(self, url_string, current_acl, command_name, logger):
     """Executes the described change on an ACL.
 
     Args:
       url_string: URL string representing the object to change.
       current_acl: A list of ObjectAccessControls or
                    BucketAccessControls to permute.
+      command_name: String name of comamnd being run (e.g., 'acl').
       logger: An instance of logging.Logger.
 
     Returns:
       The number of changes that were made.
     """
-    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, url_string))
+    logger.debug('Executing {0} {1} on {2}'
+                 .format(command_name, self.raw_descriptor, url_string))
 
-    if self.perm == 'WRITER' and StorageUrlFromString(url_string).IsObject():
-      logger.warning(
-          'Skipping {0} on {1}, as WRITER does not apply to objects'
-          .format(self.raw_descriptor, url_string))
-      return 0
+    if self.perm == 'WRITER':
+      if command_name == 'acl' and StorageUrlFromString(url_string).IsObject():
+        logger.warning(
+            'Skipping {0} on {1}, as WRITER does not apply to objects'
+            .format(self.raw_descriptor, url_string))
+        return 0
+      elif command_name == 'defacl':
+        raise CommandException('WRITER cannot be set as a default object ACL '
+                               'because WRITER does not apply to objects')
 
     entry_class = self._GetEntriesClass(current_acl)
     matching_entries = list(self._YieldMatchingEntries(current_acl))
@@ -274,8 +280,9 @@ class AclDel(object):
             self.identifier == 'AllAuthenticatedUsers'):
         yield entry
 
-  def Execute(self, uri, current_acl, logger):
-    logger.debug('Executing {0} on {1}'.format(self.raw_descriptor, uri))
+  def Execute(self, url_string, current_acl, command_name, logger):
+    logger.debug('Executing {0} {1} on {2}'
+                 .format(command_name, self.raw_descriptor, url_string))
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:
       current_acl.remove(entry)
