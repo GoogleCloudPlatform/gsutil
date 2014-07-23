@@ -805,6 +805,9 @@ class GcsJsonApi(CloudApi):
               apitools_upload.bytes_http)
           while retries <= self.num_retries:
             try:
+              # TODO: Simulate the refresh case in tests. Right now, our
+              # mocks are not complex enough to simulate a failure.
+              apitools_upload.RefreshResumableUploadState()
               start_byte = apitools_upload.progress
               bytes_uploaded_container.bytes_transferred = start_byte
               break
