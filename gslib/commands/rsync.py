@@ -15,6 +15,7 @@
 
 import errno
 import heapq
+import io
 from itertools import islice
 import os
 import tempfile
@@ -335,7 +336,7 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   (url_str, out_file_name, desc) = args_tuple
   # We sort while iterating over url_str, allowing parallelism of batched
   # sorting with collecting the listing.
-  out_file = open(out_file_name, 'wb')
+  out_file = io.open(out_file_name, mode='w', encoding=UTF8)
   _BatchSort(_FieldedListingIterator(cls, gsutil_api, url_str, desc), out_file)
   out_file.close()
 
@@ -436,10 +437,10 @@ def _BatchSort(in_iter, out_file):
       current_chunk = sorted(islice(in_iter, buffer_size))
       if not current_chunk:
         break
-      output_chunk = open('%s-%06i' % (out_file.name, len(chunk_files)),
-                          'w+b', _OUTPUT_BUFFER_SIZE)
+      output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
+                             mode='w+', encoding=UTF8)
       chunk_files.append(output_chunk)
-      output_chunk.writelines(current_chunk)
+      output_chunk.writelines(unicode(''.join(current_chunk)))
       output_chunk.flush()
       output_chunk.seek(0)
     out_file.writelines(heapq.merge(*chunk_files))
@@ -495,8 +496,8 @@ class _DiffIterator(object):
                       parallel_operations_override=True,
                       fail_on_error=True)
 
-    self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'rb')
-    self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'rb')
+    self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'r')
+    self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'r')
 
     # Wrap iterators in PluralityCheckableIterator so we can check emptiness.
     self.sorted_src_urls_it = PluralityCheckableIterator(
