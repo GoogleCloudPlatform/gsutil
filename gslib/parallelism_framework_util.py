@@ -13,6 +13,8 @@
 # limitations under the License.
 """Utility classes for the parallelism framework."""
 
+from __future__ import absolute_import
+
 import multiprocessing
 import threading
 

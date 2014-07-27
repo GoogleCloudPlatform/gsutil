@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of logging configuration command for buckets."""
 
+from __future__ import absolute_import
+
 import getopt
 import sys
 

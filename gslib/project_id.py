@@ -13,6 +13,8 @@
 # limitations under the License.
 """Helper module for Google Cloud Storage project IDs."""
 
+from __future__ import absolute_import
+
 import boto
 
 from gslib.cloud_api import ProjectIdException

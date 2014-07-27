@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of rb command for deleting cloud storage buckets."""
 
+from __future__ import absolute_import
+
 from gslib.cloud_api import NotEmptyException
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector

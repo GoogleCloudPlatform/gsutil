@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of compose command for Google Cloud Storage."""
 
+from __future__ import absolute_import
+
 from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.command import Command

@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 """Unit tests for gsutil wildcard_iterator."""
 
+from __future__ import absolute_import
+
 import tempfile
 
 from gslib import wildcard_iterator

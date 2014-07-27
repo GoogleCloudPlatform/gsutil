@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """XML/boto gsutil Cloud API implementation for GCS and Amazon S3."""
+
 from __future__ import absolute_import
 
 import base64

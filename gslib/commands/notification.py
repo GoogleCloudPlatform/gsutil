@@ -13,6 +13,8 @@
 # limitations under the License.
 """This module provides the notification command to gsutil."""
 
+from __future__ import absolute_import
+
 import getopt
 import uuid
 

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Module defining help types and providers for gsutil commands."""
 
+from __future__ import absolute_import
+
 import collections
 from gslib.exception import CommandException
 

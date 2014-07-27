@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 """Tests for gsutil utility functions."""
 
+from __future__ import absolute_import
+
 from gslib import util
 import gslib.tests.testcase as testcase
 from gslib.util import CompareVersions

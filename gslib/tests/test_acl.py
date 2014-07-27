@@ -14,6 +14,8 @@
 # limitations under the License.
 """Integration tests for the acl command."""
 
+from __future__ import absolute_import
+
 import re
 
 from gslib import aclhelpers

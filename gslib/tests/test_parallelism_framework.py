@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 """Unit tests for gsutil parallelism framework."""
 
+from __future__ import absolute_import
+
 import functools
 import signal
 

@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utility functions and class for listing commands such as ls and du."""
+
+from __future__ import absolute_import
+
 import fnmatch
 
 from gslib.bucket_listing_ref import BucketListingRefType

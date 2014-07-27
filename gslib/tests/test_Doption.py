@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for gsutil -D option."""
 
+from __future__ import absolute_import
+
 import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase

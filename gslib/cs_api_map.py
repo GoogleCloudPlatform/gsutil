@@ -13,6 +13,8 @@
 # limitations under the License.
 """API map classes used with the CloudApiDelegator class."""
 
+from __future__ import absolute_import
+
 from gslib.boto_translation import BotoTranslation
 from gslib.gcs_json_api import GcsJsonApi
 

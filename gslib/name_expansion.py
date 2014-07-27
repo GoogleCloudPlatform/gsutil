@@ -23,6 +23,8 @@ the various rules for determining how these expansions are done.
 # an interface which does not follow lint guidelines.
 # pylint: disable=invalid-name
 
+from __future__ import absolute_import
+
 import multiprocessing
 import os
 import sys

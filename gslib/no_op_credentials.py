@@ -13,6 +13,8 @@
 # limitations under the License.
 """No-op implementation of credentials for JSON HTTP requests."""
 
+from __future__ import absolute_import
+
 
 class NoOpCredentials(object):
 

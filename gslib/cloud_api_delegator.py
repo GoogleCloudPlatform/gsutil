@@ -13,6 +13,8 @@
 # limitations under the License.
 """Gsutil API delegator for interacting with cloud storage providers."""
 
+from __future__ import absolute_import
+
 import boto
 from boto import config
 from gslib.cloud_api import ArgumentException

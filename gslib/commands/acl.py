@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of acl command for cloud storage providers."""
 
+from __future__ import absolute_import
+
 import getopt
 
 from gslib import aclhelpers

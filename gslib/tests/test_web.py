@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for the webcfg command."""
 
+from __future__ import absolute_import
+
 import json
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3

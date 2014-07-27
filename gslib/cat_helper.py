@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Helper for cat and cp streaming download."""
+
+from __future__ import absolute_import
+
 import sys
 
 from gslib.exception import CommandException

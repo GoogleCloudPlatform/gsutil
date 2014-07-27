@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """File and Cloud URL representation classes."""
+
+from __future__ import absolute_import
+
 import os
 import re
 

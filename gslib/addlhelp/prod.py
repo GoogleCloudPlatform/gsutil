@@ -13,6 +13,8 @@
 # limitations under the License.
 """Additional help about using gsutil for production tasks."""
 
+from __future__ import absolute_import
+
 from gslib.help_provider import HelpProvider
 
 _DETAILED_HELP_TEXT = ("""

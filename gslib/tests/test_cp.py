@@ -15,6 +15,8 @@
 # limitations under the License.
 """Integration tests for cp command."""
 
+from __future__ import absolute_import
+
 import base64
 import binascii
 import datetime

@@ -13,12 +13,13 @@
 # limitations under the License.
 """Contains gsutil base unit test case class."""
 
+from __future__ import absolute_import
+
 import logging
 import os
 import sys
 import tempfile
 
-import base
 import boto
 from gslib import wildcard_iterator
 from gslib.boto_translation import BotoTranslation
@@ -26,6 +27,7 @@ from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command_runner import CommandRunner
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
+from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 

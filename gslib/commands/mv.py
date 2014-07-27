@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of Unix-like mv command for cloud storage providers."""
 
+from __future__ import absolute_import
+
 from gslib.command import Command
 from gslib.commands.cp import CP_SUB_ARGS
 from gslib.cs_api_map import ApiSelector

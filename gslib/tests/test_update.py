@@ -18,8 +18,9 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
 """Tests for the update command."""
+
+from __future__ import absolute_import
 
 import os.path
 import shutil

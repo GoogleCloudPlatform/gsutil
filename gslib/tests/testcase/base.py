@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base test case class for unit and integration tests."""
+
+from __future__ import absolute_import
+
 from functools import wraps
 import os.path
 import random

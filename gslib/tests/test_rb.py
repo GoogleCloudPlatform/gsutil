@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for rb command."""
 
+from __future__ import absolute_import
+
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 

@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Integration tests for perfdiag command."""
+
+from __future__ import absolute_import
+
 import socket
 
 import gslib.tests.testcase as testcase

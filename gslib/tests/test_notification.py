@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for notification command."""
 
+from __future__ import absolute_import
+
 import re
 import uuid
 

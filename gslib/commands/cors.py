@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of cors configuration command for GCS buckets."""
 
+from __future__ import absolute_import
+
 import sys
 
 from gslib.command import Command

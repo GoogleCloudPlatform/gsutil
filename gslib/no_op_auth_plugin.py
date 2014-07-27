@@ -17,6 +17,8 @@ This allows users to use gsutil for accessing publicly readable buckets and
 objects without first signing up for an account.
 """
 
+from __future__ import absolute_import
+
 from boto.auth_handler import AuthHandler
 
 

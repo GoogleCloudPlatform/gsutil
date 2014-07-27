@@ -13,6 +13,8 @@
 # limitations under the License.
 """Contains helper objects for changing and deleting ACLs."""
 
+from __future__ import absolute_import
+
 import re
 
 from gslib.exception import CommandException

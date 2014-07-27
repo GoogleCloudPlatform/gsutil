@@ -13,6 +13,8 @@
 # limitations under the License.
 """Classes for cloud/file references yielded by gsutil iterators."""
 
+from __future__ import absolute_import
+
 
 class BucketListingRefType(object):
   """Enum class for describing BucketListingRefs."""

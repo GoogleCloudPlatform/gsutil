@@ -14,7 +14,6 @@
 # limitations under the License.
 """Implementation of Unix-like cp command for cloud storage providers."""
 
-# Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
 import os

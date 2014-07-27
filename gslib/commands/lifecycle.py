@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implementation of lifecycle configuration command for GCS buckets."""
+
+from __future__ import absolute_import
+
 import sys
 
 from gslib.command import Command

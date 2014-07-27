@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for cors command."""
 
+from __future__ import absolute_import
+
 import json
 import posixpath
 from xml.dom.minidom import parseString

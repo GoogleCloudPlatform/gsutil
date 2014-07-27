@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of default object acl command for Google Cloud Storage."""
 
+from __future__ import absolute_import
+
 import getopt
 
 from gslib import aclhelpers

@@ -40,6 +40,9 @@ in boto, where applicable.
 
 TODO: gsutil-beta: Add a similar comment to the boto code.
 """
+
+from __future__ import absolute_import
+
 import errno
 import httplib
 import random

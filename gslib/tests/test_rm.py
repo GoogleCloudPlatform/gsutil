@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for rm command."""
 
+from __future__ import absolute_import
+
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import MAX_BUCKET_LENGTH
 from gslib.tests.util import ObjectToURI as suri

@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Contains test case base classes for gsutil tests."""
 
-from integration_testcase import GsUtilIntegrationTestCase
-from unit_testcase import GsUtilUnitTestCase
+from __future__ import absolute_import
+
+from gslib.tests.testcase.integration_testcase import GsUtilIntegrationTestCase
+from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase

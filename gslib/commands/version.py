@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of gsutil version command."""
 
+from __future__ import absolute_import
+
 from hashlib import md5
 import os
 import platform

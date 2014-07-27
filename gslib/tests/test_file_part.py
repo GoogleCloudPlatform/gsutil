@@ -13,6 +13,8 @@
 # limitations under the License.
 """Unit tests for FilePart class."""
 
+from __future__ import absolute_import
+
 import os
 
 from gslib.file_part import FilePart

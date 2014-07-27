@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of Unix-like rm command for cloud storage providers."""
 
+from __future__ import absolute_import
+
 from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command

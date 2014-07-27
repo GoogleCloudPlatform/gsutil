@@ -13,6 +13,8 @@
 # limitations under the License.
 """Gsutil API for interacting with cloud storage providers."""
 
+from __future__ import absolute_import
+
 
 class CloudApi(object):
   """Abstract base class for interacting with cloud storage providers.

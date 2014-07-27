@@ -13,6 +13,8 @@
 # limitations under the License.
 """Defines gsutil-supported credential types."""
 
+from __future__ import absolute_import
+
 
 class CredTypes(object):
   HMAC = "HMAC"

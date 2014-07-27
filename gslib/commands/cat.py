@@ -14,6 +14,8 @@
 # limitations under the License.
 """Implementation of Unix-like cat command for cloud storage providers."""
 
+from __future__ import absolute_import
+
 import re
 
 from gslib.cat_helper import CatHelper

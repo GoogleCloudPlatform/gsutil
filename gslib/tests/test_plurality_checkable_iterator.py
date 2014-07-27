@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 """Unit tests for PluralityCheckableIterator."""
 
+from __future__ import absolute_import
+
 import sys
 
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Media helper functions and classes for Google Cloud Storage JSON API."""
 
+from __future__ import absolute_import
+
 import copy
 import cStringIO
 import httplib

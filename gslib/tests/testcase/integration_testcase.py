@@ -13,6 +13,8 @@
 # limitations under the License.
 """Contains gsutil base integration test case class."""
 
+from __future__ import absolute_import
+
 from contextlib import contextmanager
 import logging
 import subprocess

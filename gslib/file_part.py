@@ -13,6 +13,8 @@
 # limitations under the License.
 """FilePart implementation for representing part of a file."""
 
+from __future__ import absolute_import
+
 import os
 
 

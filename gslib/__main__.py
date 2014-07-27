@@ -15,6 +15,8 @@
 # limitations under the License.
 """Main module for Google Cloud Storage command line tool."""
 
+from __future__ import absolute_import
+
 import ConfigParser
 import datetime
 import errno

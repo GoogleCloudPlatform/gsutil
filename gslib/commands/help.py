@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of gsutil help command."""
 
+from __future__ import absolute_import
+
 import itertools
 import os
 import pkgutil

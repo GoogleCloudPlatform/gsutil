@@ -19,6 +19,8 @@ instantiate this frequently constructed object with just one param for most
 cases.
 """
 
+from __future__ import absolute_import
+
 import boto
 
 

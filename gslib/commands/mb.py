@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of mb command for creating cloud storage buckets."""
 
+from __future__ import absolute_import
+
 import textwrap
 
 from gslib.cloud_api import BadRequestException

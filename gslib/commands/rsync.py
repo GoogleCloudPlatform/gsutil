@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of Unix-like rsync command."""
 
+from __future__ import absolute_import
+
 import errno
 import heapq
 import io

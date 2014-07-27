@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of versioning configuration command for buckets."""
 
+from __future__ import absolute_import
+
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException

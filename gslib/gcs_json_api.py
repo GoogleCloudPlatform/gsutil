@@ -13,6 +13,8 @@
 # limitations under the License.
 """JSON gsutil Cloud API implementation for Google Cloud Storage."""
 
+from __future__ import absolute_import
+
 import httplib
 import json
 import socket

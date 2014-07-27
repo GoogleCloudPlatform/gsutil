@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for top-level gsutil command."""
 
+from __future__ import absolute_import
+
 import gslib
 import gslib.tests.testcase as testcase
 

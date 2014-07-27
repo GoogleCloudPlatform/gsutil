@@ -13,6 +13,8 @@
 # limitations under the License.
 """Helper functions for Cloud API implementations."""
 
+from __future__ import absolute_import
+
 from gslib.cloud_api import ArgumentException
 
 

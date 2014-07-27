@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for mb command."""
 
+from __future__ import absolute_import
+
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri

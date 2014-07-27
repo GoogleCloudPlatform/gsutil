@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Base class for gsutil commands.
 
 In addition to base class code, this file contains helpers that depend on base
@@ -20,6 +19,8 @@ class state and that are used by multiple commands belong in this file.
 Functions that don't depend on class state belong in util.py, and non-shared
 helpers belong in individual subclasses.
 """
+
+from __future__ import absolute_import
 
 import codecs
 from collections import namedtuple

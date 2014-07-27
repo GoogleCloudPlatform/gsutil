@@ -13,6 +13,8 @@
 # limitations under the License.
 """Implementation of setmeta command for setting cloud object metadata."""
 
+from __future__ import absolute_import
+
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions

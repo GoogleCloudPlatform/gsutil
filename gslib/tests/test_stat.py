@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tests for stat command."""
+
+from __future__ import absolute_import
+
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri

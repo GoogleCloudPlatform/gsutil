@@ -29,6 +29,8 @@ end-to-end tests (which send traffic to the production Google Cloud Storage
 service) are available via the gsutil test command.
 """
 
+from __future__ import absolute_import
+
 import gzip
 import os
 import StringIO
