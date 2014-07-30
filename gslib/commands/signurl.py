@@ -57,8 +57,8 @@ _DETAILED_HELP_TEXT = ("""
   The signurl command will generate signed urls that can be used to access
   the specified objects without authentication for a specific period of time.
 
-  Please see the `Signed URLs documentation 
-  https://developers.google.com/storage/docs/accesscontrol#Signed-URLs` for 
+  Please see the `Signed URLs documentation
+  https://developers.google.com/storage/docs/accesscontrol#Signed-URLs` for
   background about signed URLs.
 
   Multiple gs:// urls may be provided and may contain wildcards.  A signed url
@@ -68,7 +68,16 @@ _DETAILED_HELP_TEXT = ("""
   Note: Unlike the gsutil ls command, the signurl command does not support
   operations on sub-directories. For example, if you run the command:
 
-    gsutil signurl <pkcs12-file> gs://some-bucket/some-object/
+    gsutil signurl <private-key-file> gs://some-bucket/some-object/
+
+  The signurl command uses the private key for a  service account (the
+  '<private-key-file>' argument) to generate the cryptographic
+  signature for the generated URL.  The private key file must be in PKCS12
+  format. The signurl command will prompt for the passphrase used to protect
+  the private key file (default 'notasecret').  For more information
+  regarding generating a private key for use with the signurl command please
+  see the `Authentication documentation.
+  https://developers.google.com/storage/docs/authentication#generating-a-private-key`
 
   gsutil will look up information about the object "some-object/" (with a
   trailing slash) inside bucket "some-bucket", as opposed to operating on
@@ -76,20 +85,20 @@ _DETAILED_HELP_TEXT = ("""
   have an object with that name, the operation will fail.
 
 <B>OPTIONS</B>
-  -m          Specifies the HTTP method to be authorized for use 
+  -m          Specifies the HTTP method to be authorized for use
               with the signed url, default is GET.
 
   -d          Specifies the duration that the signed url should be valid
               for, default duration is 1 hour.
 
-              Times may be specified with no suffix (default hours), or 
+              Times may be specified with no suffix (default hours), or
               with s = seconds, m = minutes, h = hours, d = days.
 
               This option may be specified multiple times, in which case
               the duration the link remains valid is the sum of all the
               duration options.
 
-  -c          Specifies the content type for which the signed url is 
+  -c          Specifies the content type for which the signed url is
               valid for.
 
   -p          Specify the keystore password instead of prompting.
@@ -98,17 +107,17 @@ _DETAILED_HELP_TEXT = ("""
 
   Create a signed url for downloading an object valid for 10 minutes:
 
-    gsutil signurl <pkcs12-file> -d 10m gs://<bucket>/<object>
+    gsutil signurl <private-key-file> -d 10m gs://<bucket>/<object>
 
   Create a signed url for uploading a plain text file via HTTP PUT:
 
-    gsutil signurl <pkcs12-file> -m PUT -d 1h gs://<bucket>/<object>
+    gsutil signurl <private-key-file> -m PUT -d 1h gs://<bucket>/<object>
 
-  To construct a signed URL that allows anyone in possession of 
-  the URL to PUT to the specified bucket for one day, creating 
+  To construct a signed URL that allows anyone in possession of
+  the URL to PUT to the specified bucket for one day, creating
   any object of Content-Type image/jpg, run:
 
-    gsutil signurl <pkcs12-file> -m PUT -d 1d -c image/jpg gs://<bucket>/<obj>
+    gsutil signurl <private-key-file> -m PUT -d 1d -c image/jpg gs://<bucket>/<obj>
 
 
 """)
