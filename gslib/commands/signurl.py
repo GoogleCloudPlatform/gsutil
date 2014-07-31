@@ -70,11 +70,13 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil signurl <private-key-file> gs://some-bucket/some-object/
 
-  The signurl command uses the private key for a cloud project service
-  account (the '<private-key-file>' argument) to generate the cryptographic
-  signature of the generated url.  For more information about generating a
-  private key for use with the signurl command please see the `Authentication
-  documentation.
+  The signurl command uses the private key for a  service account (the
+  '<private-key-file>' argument) to generate the cryptographic
+  signature for the generated URL.  The private key file must be in PKCS12
+  format. The signurl command will prompt for the passphrase used to protect
+  the private key file (default 'notasecret').  For more information
+  regarding generating a private key for use with the signurl command please
+  see the `Authentication documentation.
   https://developers.google.com/storage/docs/authentication#generating-a-private-key`
 
   gsutil will look up information about the object "some-object/" (with a
