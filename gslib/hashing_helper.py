@@ -298,7 +298,7 @@ class HashingFileUploadWrapper(object):
           self.digesters_current_mark = self.digesters_previous_mark
           for alg in self.digesters:
             self.digesters[alg] = self.digesters_previous[alg]
-          self.orig_fp.seek(offset)
+          self.orig_fp.seek(self.digesters_previous_mark)
           self._CatchUp(offset - self.digesters_previous_mark)
         else:
           # Scan forward from our current digest and position.
