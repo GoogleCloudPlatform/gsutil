@@ -164,8 +164,11 @@ class AclChange(object):
       elif (self.scope_type == 'GroupByDomain' and
             entry.domain and self.identifier == entry.domain):
         yield entry
-      elif (self.scope_type in ('AllUsers', 'AllAuthenticatedUsers') and
-            entry.entity in self.public_entity_types):
+      elif (self.scope_type == 'AllUsers' and
+            entry.entity.lower() == self.public_entity_all_users.lower()):
+        yield entry
+      elif (self.scope_type == 'AllAuthenticatedUsers' and
+            entry.entity.lower() == self.public_entity_all_auth_users.lower()):
         yield entry
 
   def _AddEntry(self, current_acl, entry_class):

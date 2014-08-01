@@ -1002,7 +1002,12 @@ class BotoTranslation(CloudApi):
     object_uri = self._StorageUriForObject(bucket_name, object_name,
                                            generation=generation)
     try:
-      return object_uri.get_key()
+      key = object_uri.get_key()
+      if not key:
+        raise CreateObjectNotFoundException('404', self.provider,
+                                            bucket_name, object_name,
+                                            generation=generation)
+      return key
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
@@ -1401,7 +1406,7 @@ class BotoTranslation(CloudApi):
 
     if isinstance(e, boto.exception.InvalidUriError):
       # Work around textwrap when searching for this string.
-      if NON_EXISTENT_OBJECT_REGEX.match(str(e)):
+      if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message.encode(UTF8)):
         return NotFoundException(e.message, status=404)
       return InvalidUrlError(e.message)
 

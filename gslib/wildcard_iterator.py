@@ -26,6 +26,7 @@ from gslib.bucket_listing_ref import BucketListingRef
 from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import CloudApi
+from gslib.cloud_api import NotFoundException
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
@@ -149,6 +150,26 @@ class CloudWildcardIterator(WildcardIterator):
         else:
           yield BucketListingRef(bucket_url_string, BucketListingRefType.BUCKET)
       else:
+        # By default, assume a non-wildcarded URL is an object, not a prefix.
+        # This prevents unnecessary listings (which are slower, more expensive,
+        # and also subject to eventual consistency).
+        if (not ContainsWildcard(self.wildcard_url.GetUrlString()) and
+            self.wildcard_url.IsObject() and not self.all_versions):
+          try:
+            get_object = self.gsutil_api.GetObjectMetadata(
+                self.wildcard_url.bucket_name,
+                self.wildcard_url.object_name,
+                generation=self.wildcard_url.generation,
+                provider=self.wildcard_url.scheme,
+                fields=get_fields)
+            yield self._GetObjectRef(
+                self.wildcard_url.GetBucketUrlString(), get_object,
+                with_version=(self.all_versions or single_version_request))
+            return
+          except (NotFoundException, AccessDeniedException):
+            # It's possible this is a prefix - try to list instead.
+            pass
+
         # Expand iteratively by building prefix/delimiter bucket listing
         # request, filtering the results per the current level's wildcard
         # (if present), and continuing with the next component of the
@@ -171,56 +192,37 @@ class CloudWildcardIterator(WildcardIterator):
           prog = re.compile(fnmatch.translate(prefix_wildcard))
 
           # List bucket for objects matching prefix up to delimiter.
-          try:
-            for obj_or_prefix in self.gsutil_api.ListObjects(
-                url.bucket_name, prefix=prefix, delimiter=delimiter,
-                all_versions=self.all_versions or single_version_request,
-                provider=self.wildcard_url.scheme,
-                fields=bucket_listing_fields):
-              if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
-                gcs_object = obj_or_prefix.data
-                if prog.match(gcs_object.name):
-                  if not suffix_wildcard or (
-                      StripOneSlash(gcs_object.name) == suffix_wildcard):
-                    if not single_version_request or (
-                        self._SingleVersionMatches(gcs_object.generation)):
-                      yield self._GetObjectRef(
-                          bucket_url_string, gcs_object, with_version=(
-                              self.all_versions or single_version_request))
-              else:  # CloudApi.CsObjectOrPrefixType.PREFIX
-                prefix = obj_or_prefix.data
-                # If the prefix ends with a slash, remove it.  Note that we only
-                # remove one slash so that we can successfully enumerate dirs
-                # containing multiple slashes.
-                rstripped_prefix = StripOneSlash(prefix)
-                if prog.match(rstripped_prefix):
-                  if suffix_wildcard and rstripped_prefix != suffix_wildcard:
-                    # There's more wildcard left to expand.
-                    url_append_string = '%s%s' % (
-                        bucket_url_string, rstripped_prefix + '/' +
-                        suffix_wildcard)
-                    urls_needing_expansion.append(url_append_string)
-                  else:
-                    # No wildcard to expand, just yield the prefix
-                    yield self._GetPrefixRef(bucket_url_string, prefix)
-          except AccessDeniedException, e:
-            # If we don't have permission to list the bucket and we're
-            # attempting to iterate a single object, see if we have permission
-            # to do a get on that object alone.
-            if (not ContainsWildcard(self.wildcard_url.GetUrlString()) and
-                self.wildcard_url.IsObject()):
-              try:
-                get_object = self.gsutil_api.GetObjectMetadata(
-                    self.wildcard_url.bucket_name,
-                    self.wildcard_url.object_name,
-                    generation=self.wildcard_url.generation,
-                    provider=self.wildcard_url.scheme,
-                    fields=get_fields)
-                yield self._GetObjectRef(
-                    self.wildcard_url.GetBucketUrlString(), get_object,
-                    with_version=(self.all_versions or single_version_request))
-              except:
-                raise e
+          for obj_or_prefix in self.gsutil_api.ListObjects(
+              url.bucket_name, prefix=prefix, delimiter=delimiter,
+              all_versions=self.all_versions or single_version_request,
+              provider=self.wildcard_url.scheme,
+              fields=bucket_listing_fields):
+            if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
+              gcs_object = obj_or_prefix.data
+              if prog.match(gcs_object.name):
+                if not suffix_wildcard or (
+                    StripOneSlash(gcs_object.name) == suffix_wildcard):
+                  if not single_version_request or (
+                      self._SingleVersionMatches(gcs_object.generation)):
+                    yield self._GetObjectRef(
+                        bucket_url_string, gcs_object, with_version=(
+                            self.all_versions or single_version_request))
+            else:  # CloudApi.CsObjectOrPrefixType.PREFIX
+              prefix = obj_or_prefix.data
+              # If the prefix ends with a slash, remove it.  Note that we only
+              # remove one slash so that we can successfully enumerate dirs
+              # containing multiple slashes.
+              rstripped_prefix = StripOneSlash(prefix)
+              if prog.match(rstripped_prefix):
+                if suffix_wildcard and rstripped_prefix != suffix_wildcard:
+                  # There's more wildcard left to expand.
+                  url_append_string = '%s%s' % (
+                      bucket_url_string, rstripped_prefix + '/' +
+                      suffix_wildcard)
+                  urls_needing_expansion.append(url_append_string)
+                else:
+                  # No wildcard to expand, just yield the prefix
+                  yield self._GetPrefixRef(bucket_url_string, prefix)
 
   def _BuildBucketFilterStrings(self, wildcard):
     """Builds strings needed for querying a bucket and filtering results.

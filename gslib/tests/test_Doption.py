@@ -57,8 +57,8 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s' %
           (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
-      self.assertIn(('header: Cache-Control: private, max-age=0, '
-                     'must-revalidate, no-transform'), stderr)
+      self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
+                     'must-revalidate'), stderr)
       self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
 
     if gslib.IS_PACKAGE_INSTALL:

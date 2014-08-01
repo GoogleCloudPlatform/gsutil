@@ -30,14 +30,25 @@ def PrintNewLine():
 
 
 def PrintDirHeader(bucket_listing_ref):
-  """Default function for printing headers for buckets or prefixes.
+  """Default function for printing headers for prefixes.
 
-  Header is printed prior to listing the contents of the bucket or prefix.
+  Header is printed prior to listing the contents of the prefix.
 
   Args:
-    bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
+    bucket_listing_ref: BucketListingRef of type PREFIX.
   """
   print '%s:' % bucket_listing_ref.GetUrlString().encode(UTF8)
+
+
+def PrintBucketHeader(_):
+  """Default function for printing headers for buckets.
+
+  Header is printed prior to listing the contents of the bucket.
+
+  Args:
+    bucket_listing_ref: BucketListingRef of type BUCKET.
+  """
+  pass
 
 
 def PrintDir(bucket_listing_ref):
@@ -80,6 +91,7 @@ class LsHelper(object):
                print_object_func=PrintObject,
                print_dir_func=PrintDir,
                print_dir_header_func=PrintDirHeader,
+               print_bucket_header_func=PrintBucketHeader,
                print_dir_summary_func=PrintDirSummary,
                print_newline_func=PrintNewLine,
                all_versions=False, should_recurse=False,
@@ -98,6 +110,8 @@ class LsHelper(object):
       print_dir_func:    Function for printing buckets/prefixes.
       print_dir_header_func: Function for printing header line for buckets
                              or prefixes.
+      print_bucket_header_func: Function for printing header line for buckets
+                                or prefixes.
       print_dir_summary_func: Function for printing size summaries about
                               buckets/prefixes.
       print_newline_func: Function for printing new lines between dirs.
@@ -115,6 +129,7 @@ class LsHelper(object):
     self._print_object_func = print_object_func
     self._print_dir_func = print_dir_func
     self._print_dir_header_func = print_dir_header_func
+    self._print_bucket_header_func = print_bucket_header_func
     self._print_dir_summary_func = print_dir_summary_func
     self._print_newline_func = print_newline_func
     self.all_versions = all_versions
@@ -122,7 +137,7 @@ class LsHelper(object):
     self.exclude_patterns = exclude_patterns
     self.bucket_listing_fields = fields
 
-  def ExpandUrlAndPrint(self, url):
+  def ExpandUrlAndPrint(self, url, print_trailing_newline=False):
     """Iterates over the given URL and calls print functions.
 
     Args:
@@ -138,6 +153,8 @@ class LsHelper(object):
 
     if url.IsBucket() or self.should_recurse:
       # IsBucket() implies a top-level listing.
+      if url.IsBucket():
+        self._print_bucket_header_func(url)
       return self._RecurseExpandUrlAndPrint(url.GetUrlString(),
                                             print_initial_newline=False)
     else:

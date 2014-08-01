@@ -363,16 +363,16 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
   for blr in CreateWildcardIterator(
       wildcard, gsutil_api, debug=cls.debug,
       project_id=cls.project_id).IterObjects(
-          # Request just the needed fields, to heavily reduce bandwidth usage.
+          # Request just the needed fields, to reduce bandwidth usage.
           bucket_listing_fields=['crc32c', 'md5Hash', 'name', 'size']):
     # Various GUI tools (like the GCS web console) create placeholder objects
     # ending with '/' when the user creates an empty directory. Normally these
     # tools should delete those placeholders once objects have been written
-    # "under" the directory, but sometimes the placeholders are left around. We
-    # need to filter them out here, otherwise if the user tries to rsync from
-    # GCS to a local directory it will result in a directory/file conflict
-    # (e.g., trying to download an object called "mydata/" where the local
-    # directory "mydata" exists).
+    # "under" the directory, but sometimes the placeholders are left around.
+    # We need to filter them out here, otherwise if the user tries to rsync
+    # from GCS to a local directory it will result in a directory/file
+    # conflict (e.g., trying to download an object called "mydata/" where the
+    # local directory "mydata" exists).
     url = StorageUrlFromString(blr.GetUrlString())
     if IsCloudSubdirPlaceholder(url, blr=blr):
       cls.logger.info('Skipping cloud sub-directory placeholder object %s',

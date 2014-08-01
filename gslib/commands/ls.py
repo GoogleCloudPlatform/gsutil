@@ -360,6 +360,11 @@ class LsCommand(Command):
     total_objs = 0
     total_bytes = 0
 
+    def MaybePrintBucketHeader(blr):
+      if len(self.args) > 1:
+        print '%s:' % blr.GetUrlString().encode(UTF8)
+    print_bucket_header = MaybePrintBucketHeader
+
     for url_str in self.args:
       storage_url = StorageUrlFromString(url_str)
       if storage_url.IsFileUrl():
@@ -398,13 +403,14 @@ class LsCommand(Command):
       else:
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
-        def _PrintPrefixOrBucketLong(blr):
+        def _PrintPrefixLong(blr):
           print '%-33s%s' % ('', blr.GetUrlString().encode(UTF8))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
           ls_helper = LsHelper(self.WildcardIterator, self.logger,
                                all_versions=self.all_versions,
+                               print_bucket_header_func=print_bucket_header,
                                should_recurse=self.recursion_requested)
         elif listing_style == ListingStyle.LONG:
           bucket_listing_fields = ['name', 'updated', 'size']
@@ -415,7 +421,8 @@ class LsCommand(Command):
 
           ls_helper = LsHelper(self.WildcardIterator, self.logger,
                                print_object_func=self._PrintLongListing,
-                               print_dir_func=_PrintPrefixOrBucketLong,
+                               print_dir_func=_PrintPrefixLong,
+                               print_bucket_header_func=print_bucket_header,
                                all_versions=self.all_versions,
                                should_recurse=self.recursion_requested,
                                fields=bucket_listing_fields)
@@ -425,7 +432,8 @@ class LsCommand(Command):
           bucket_listing_fields = None
           ls_helper = LsHelper(self.WildcardIterator, self.logger,
                                print_object_func=PrintFullInfoAboutObject,
-                               print_dir_func=_PrintPrefixOrBucketLong,
+                               print_dir_func=_PrintPrefixLong,
+                               print_bucket_header_func=print_bucket_header,
                                all_versions=self.all_versions,
                                should_recurse=self.recursion_requested,
                                fields=bucket_listing_fields)
