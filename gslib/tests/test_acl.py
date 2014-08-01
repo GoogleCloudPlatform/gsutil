@@ -387,6 +387,15 @@ class TestAcl(TestAclBase):
                                 return_stdout=True)
     self.assertNotRegexpMatches(json_text3, test_regex2)
 
+    all_auth_regex = re.compile(
+        r'\{.*"entity":\s*"allAuthenticatedUsers".*"role":\s*"OWNER".*\}',
+        flags=re.DOTALL)
+
+    self.RunGsUtil(self._ch_acl_prefix + ['-g', 'AllAuth:O', suri(obj)])
+    json_text4 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                return_stdout=True)
+    self.assertRegexpMatches(json_text4, all_auth_regex)
+
   def testObjectAclChangeAllUsers(self):
     """Tests acl ch AllUsers:R on an object."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
