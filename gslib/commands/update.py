@@ -260,9 +260,18 @@ class UpdateCommand(Command):
 
     if gslib.IS_PACKAGE_INSTALL:
       raise CommandException(
-          'Update command is only available for gsutil installed from a '
+          'The update command is only available for gsutil installed from a '
           'tarball. If you installed gsutil via another method, use the same '
           'method to update it.')
+
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      raise CommandException(
+          'The update command is disabled for Cloud SDK installs. Please run '
+          '"gcloud components update" to update it. Note: the Cloud SDK '
+          'incorporates updates to the underlying tools approximately every 2 '
+          'weeks, so if you are attempting to update to a recently created '
+          'release / pre-release of gsutil it may not yet be available via '
+          'the Cloud SDK.')
 
     https_validate_certificates = CERTIFICATE_VALIDATION_ENABLED
     if not https_validate_certificates:
