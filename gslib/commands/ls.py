@@ -270,6 +270,19 @@ class LsCommand(Command):
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
 
+    # For field values that are multiline, add indenting to make it look
+    # prettier.
+    for key in fields.keys():
+      previous_value = fields[key]
+      if (not isinstance(previous_value, basestring) or
+          '\n' not in previous_value):
+        continue
+      new_value = previous_value.replace('\n', '\n\t  ')
+      # Start multiline values on a new line if they aren't already.
+      if not new_value.startswith('\n'):
+        new_value = '\n\t  ' + new_value
+      fields[key] = new_value
+
     print('{bucket} :\n'
           '\tStorage class:\t\t\t{storage_class}\n'
           '\tLocation constraint:\t\t{location_constraint}\n'
