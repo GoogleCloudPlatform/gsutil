@@ -68,6 +68,9 @@ GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # tokens, which effectively become bearer tokens.
 GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
 
+CONFIG_KEYS_TO_REDACT = ['proxy', 'proxy_port', 'proxy_user', 'proxy_pass']
+
+
 # We don't use the oauth2 authentication plugin directly; importing it here
 # ensures that it's loaded and available by default when an operation requiring
 # authentication is performed.
@@ -278,6 +281,10 @@ def main():
         config_items.extend(boto.config.items('GSUtil'))
       except ConfigParser.NoSectionError:
         pass
+      for i in xrange(len(config_items)):
+        config_item_key = config_items[i][0]
+        if config_item_key in CONFIG_KEYS_TO_REDACT:
+          config_items[i] = (config_item_key, 'REDACTED')
       sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
       sys.stderr.write('config_file_list: %s\n' % GetBotoConfigFileList())
       sys.stderr.write('config: %s\n' % str(config_items))

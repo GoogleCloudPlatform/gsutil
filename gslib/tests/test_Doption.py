@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import gslib
 from gslib.cs_api_map import ApiSelector
+from gslib.tests.util import SetBotoConfigForTest
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
@@ -29,11 +30,14 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
   def test_minus_D_cat(self):
     """Tests cat command with debug option."""
     key_uri = self.CreateObject(contents='0123456789')
-    (stdout, stderr) = self.RunGsUtil(['-D', 'cat', suri(key_uri)],
-                                      return_stdout=True, return_stderr=True)
+    with SetBotoConfigForTest([('Boto', 'proxy_pass', 'secret')]):
+        (stdout, stderr) = self.RunGsUtil(['-D', 'cat', suri(key_uri)],
+                                          return_stdout=True,
+                                          return_stderr=True)
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
-    self.assertIn('config: [', stderr)
+    self.assertIn('config:', stderr)
+    self.assertIn("('proxy_pass', 'REDACTED')", stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('header: Expires: ', stderr)
     self.assertIn('header: Date: ', stderr)
