@@ -64,6 +64,10 @@ TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
 _DEFAULT_LINES = 25
 
+# By default, the timeout for SSL read errors is infinite. This could
+# cause gsutil to hang on network disconnect, so pick a more reasonable
+# timeout.
+SSL_TIMEOUT = 60
 
 # Start with a progress callback every 64KB during uploads/downloads (JSON API).
 # Callback implementation should back off until it hits the maximum size
@@ -344,6 +348,8 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.
   kwargs['ca_certs'] = GetCertsFile()
+  # Use a non-infinite SSL timeout to avoid hangs during network flakiness.
+  kwargs['timeout'] = SSL_TIMEOUT
   http = http_class(proxy_info=proxy_info, **kwargs)
   http.disable_ssl_certificate_validation = (not config.getbool(
       'Boto', 'https_validate_certificates'))
