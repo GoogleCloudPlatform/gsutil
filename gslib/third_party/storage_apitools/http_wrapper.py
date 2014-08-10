@@ -27,6 +27,7 @@ import urlparse
 import httplib2
 
 from gslib.third_party.storage_apitools import exceptions
+from gslib.third_party.storage_apitools import util
 
 __all__ = [
     'GetHttp',
@@ -201,7 +202,7 @@ def HandleExceptionsAndRebuildHttpConnections(retry_args):
   RebuildHttpConnections(retry_args.http)
   logging.error('Retrying request to url %s after exception %s',
                 retry_args.http_request.url, retry_args.exc)
-  time.sleep(retry_after or 2 ** retry_args.num_retries)
+  time.sleep(retry_after or util.CalculateWaitForRetry(retry_args.num_retries))
 
 
 def MakeRequest(http, http_request, retries=7, redirections=5,
