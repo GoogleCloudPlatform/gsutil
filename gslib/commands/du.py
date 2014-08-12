@@ -35,8 +35,13 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The du command displays the amount of space (in bytes) being used by the
-  objects for a given URL. The syntax emulates the Linux du command (which
-  stands for disk usage).
+  objects in the file or object hierarchy under a given URL. The syntax emulates
+  the Linux du command (which stands for disk usage). For example, the command:
+
+  gsutil du -s gs://your-bucket/dir
+
+  will report the total space used by all objects under gs://your-bucket/dir and
+  any sub-directories.
 
 
 <B>OPTIONS</B>
