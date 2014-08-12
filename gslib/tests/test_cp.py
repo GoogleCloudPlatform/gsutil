@@ -297,20 +297,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_other_headers(self):
     """Tests that non-content-type headers are applied successfully on copy."""
     bucket_uri = self.CreateBucket()
-    dsturi = suri(bucket_uri, 'foo')
+    dst_uri = suri(bucket_uri, 'foo')
     fpath = self._get_test_file('test.gif')
 
     self.RunGsUtil(['-h', 'Cache-Control:public,max-age=12',
                     '-h', 'x-%s-meta-1:abcd' % self.provider_custom_meta, 'cp',
-                    fpath, dsturi])
+                    fpath, dst_uri])
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-      self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
-    _Check1()
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
+    self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
+
+    dst_uri2 = suri(bucket_uri, 'bar')
+    self.RunGsUtil(['cp', dst_uri, dst_uri2])
+    # Ensure metadata was preserved across copy.
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
+    self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
 
   @PerformsFileToObjectUpload
   def test_versioning(self):

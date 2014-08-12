@@ -2264,17 +2264,15 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     # Cloud storage API gets object and bucket name from metadata.
     dst_obj_metadata.name = dst_url.object_name
     dst_obj_metadata.bucket = dst_url.bucket_name
-  else:
-    # Files don't have Cloud API metadata.
-    dst_obj_metadata = None
-
-  if src_url.IsCloudUrl():
-    if dst_url.IsCloudUrl() and not copy_in_the_cloud:
+    if src_url.IsCloudUrl():
       # Preserve relevant metadata from the source object if it's not already
       # provided from the headers.
       CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
-  elif dst_url.IsCloudUrl():
-    _SetContentTypeFromFile(src_url, dst_obj_metadata)
+    else:
+      _SetContentTypeFromFile(src_url, dst_obj_metadata)
+  else:
+    # Files don't have Cloud API metadata.
+    dst_obj_metadata = None
 
   _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata)
 
