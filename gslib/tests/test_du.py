@@ -133,6 +133,24 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
       ]))
     _Check()
 
+  def test_subdir_summary(self):
+    """Tests summary listing with the -s flag on a subdirectory."""
+    bucket_uri1, _ = self._create_nested_subdir()
+    bucket_uri2, _ = self._create_nested_subdir()
+    subdir1 = suri(bucket_uri1, 'sub1')
+    subdir2 = suri(bucket_uri2, 'sub1')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stdout = self.RunGsUtil(
+          ['du', '-s', subdir1, subdir2], return_stdout=True)
+      self.assertSetEqual(set(stdout.splitlines()), set([
+          '%-10s  %s' % (18, subdir1),
+          '%-10s  %s' % (18, subdir2),
+      ]))
+    _Check()
+
   @SkipForS3('S3 lists versions in reverse order.')
   def test_versioned(self):
     """Tests listing all versions with the -a flag."""

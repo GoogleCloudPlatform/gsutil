@@ -215,8 +215,9 @@ class DuCommand(Command):
     def _PrintNothing(unused_blr=None):
       pass
 
-    def _SummaryLine(num_bytes, name):
-      return self._PrintSummaryLine(num_bytes, name)
+    def _PrintDirectory(num_bytes, name):
+      if not self.summary_only:
+        self._PrintSummaryLine(num_bytes, name)
 
     for url_arg in self.args:
       top_level_storage_url = StorageUrlFromString(url_arg)
@@ -229,9 +230,10 @@ class DuCommand(Command):
           self.WildcardIterator, self.logger,
           print_object_func=_PrintObjectLong, print_dir_func=_PrintNothing,
           print_dir_header_func=_PrintNothing,
-          print_dir_summary_func=_SummaryLine, print_newline_func=_PrintNothing,
-          all_versions=self.all_versions, should_recurse=True,
-          exclude_patterns=self.exclude_patterns, fields=bucket_listing_fields)
+          print_dir_summary_func=_PrintDirectory,
+          print_newline_func=_PrintNothing, all_versions=self.all_versions,
+          should_recurse=True, exclude_patterns=self.exclude_patterns,
+          fields=bucket_listing_fields)
 
       # ls_helper expands to objects and prefixes, so perform a top-level
       # expansion first.
