@@ -1,3 +1,33 @@
+Release 4.5 (release date: 2014-08-14)
+=======================================
+
+Bug Fixes
+---------
+- Fixed a bug that caused resumable uploads to restart if gsutil was
+  terminated with CTRL-C.
+- Fixed a bug in defacl ch command that caused a failure when updating
+  an existing default object ACL entry.
+- Fixed an invalid literal bug during rsync file listing.
+- Made several improvements to JSON upload stability, including fixing a bug
+  which occasionally caused resumable upload hashes not to catch up properly.
+- All JSON calls now have socket timeouts, eliminating hangs under
+  flaky network conditions.
+- Fixed a bug where acl ch -g AllAuthenticatedUsers would instead add
+  AllUsers.
+- Fixed a bug that caused object custom metadata not to be preserved when
+  copying in the cloud.
+- Fixed a bug where du -s did not properly elide subdirectories.
+
+Other Changes
+-------------
+- Parallel composite uploads are now disabled by default until crcmod is
+  available in major Linux distributions. To re-enable the setting from
+  prior versions, in the [GSUtil] section of your .boto config file, add:
+  parallel_composite_upload_threshold=150M
+- Non-wildcarded URLs for existing objects now use Get before trying List
+  (as in gsutil3), and thus are not subject to eventual listing consistency.
+- gsutil -D now redacts proxy configuration values in the output.
+
 Release 4.4 (release date: 2014-07-17)
 =======================================
 
