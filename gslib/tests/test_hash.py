@@ -22,12 +22,19 @@ import gslib.tests.testcase as testcase
 class TestHash(testcase.GsUtilUnitTestCase):
   """Unit tests for hash command."""
 
+  _TEST_FILE_CONTENTS = '123456\n'
+  _TEST_FILE_B64_CRC = 'nYmSiA=='
+  _TEST_FILE_B64_MD5 = '9EeyCn/L9TpdW+AT6gsVrw=='
+  _TEST_FILE_HEX_CRC = '9D899288'
+  _TEST_FILE_HEX_MD5 = 'f447b20a7fcbf53a5d5be013ea0b15af'
+
   def testHashContents(self):
-    tmp_file = self.CreateTempFile(contents='123456\n')
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
+                                   open_wb=True)
     stdout = self.RunCommand('hash', args=[tmp_file], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
-    self.assertIn('\tHash (crc32c):\t\tnYmSiA==', stdout)
-    self.assertIn('\tHash (md5):\t\t9EeyCn/L9TpdW+AT6gsVrw==', stdout)
+    self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_B64_CRC, stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_B64_MD5, stdout)
 
   def testHashNoMatch(self):
     try:
@@ -44,11 +51,12 @@ class TestHash(testcase.GsUtilUnitTestCase):
       self.assertEquals('"hash" command requires a file URL', e.reason)
 
   def testHashHexFormat(self):
-    tmp_file = self.CreateTempFile(contents='123456\n')
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
+                                   open_wb=True)
     stdout = self.RunCommand('hash', args=['-h', tmp_file], return_stdout=True)
     self.assertIn('Hashes [hex]', stdout)
-    self.assertIn('\tHash (crc32c):\t\t9D899288', stdout)
-    self.assertIn('\tHash (md5):\t\tf447b20a7fcbf53a5d5be013ea0b15af', stdout)
+    self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_HEX_CRC, stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_HEX_MD5, stdout)
 
   def testHashWildcard(self):
     tmp_dir = self.CreateTempDir(test_files=2)
@@ -58,7 +66,8 @@ class TestHash(testcase.GsUtilUnitTestCase):
     self.assertEquals(len(stdout.splitlines()), 6)
 
   def testHashSelectAlg(self):
-    tmp_file = self.CreateTempFile(contents='123456\n')
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
+                                   open_wb=True)
     stdout_crc = self.RunCommand('hash', args=['-c', tmp_file],
                                  return_stdout=True)
     stdout_md5 = self.RunCommand('hash', args=['-m', tmp_file],
@@ -66,9 +75,9 @@ class TestHash(testcase.GsUtilUnitTestCase):
     stdout_both = self.RunCommand('hash', args=['-c', '-m', tmp_file],
                                   return_stdout=True)
     for stdout in (stdout_crc, stdout_both):
-      self.assertIn('\tHash (crc32c):\t\tnYmSiA==', stdout)
+      self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_B64_CRC, stdout)
     for stdout in (stdout_md5, stdout_both):
-      self.assertIn('\tHash (md5):\t\t9EeyCn/L9TpdW+AT6gsVrw==', stdout)
+      self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_B64_MD5, stdout)
     self.assertNotIn('md5', stdout_crc)
     self.assertNotIn('crc32c', stdout_md5)
 
