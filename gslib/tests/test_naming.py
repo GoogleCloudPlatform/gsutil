@@ -104,11 +104,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_file1 = self.CreateTempFile(file_name='f1')
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', [src_file0, src_file1, suri(dst_bucket_uri)])
-    actual = list(self._test_wildcard_iterator(
+    actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    self.assertEqual(2, len(actual))
-    self.assertEqual('f0', actual[0].root_object.name)
-    self.assertEqual('f1', actual[1].root_object.name)
+    expected = set([
+        suri(dst_bucket_uri, 'f0'),
+        suri(dst_bucket_uri, 'f1'),
+    ])
+    self.assertEqual(expected, actual)
 
   # @PerformsFileToObjectUpload
   def testCopyingNestedFileToBucketSubdir(self):
@@ -125,11 +127,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # Make an object under subdir so next copy will treat subdir as a subdir.
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir/a')])
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir')])
-    actual = list(self._test_wildcard_iterator(
+    actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterObjects())
-    self.assertEqual(2, len(actual))
-    self.assertEqual('subdir/a', actual[0].root_object.name)
-    self.assertEqual('subdir/obj', actual[1].root_object.name)
+    expected = set([
+        suri(dst_bucket_uri, 'subdir', 'a'),
+        suri(dst_bucket_uri, 'subdir', 'obj'),
+    ])
+    self.assertEqual(expected, actual)
 
   # @PerformsFileToObjectUpload
   def testCopyingAbsolutePathDirToBucket(self):
