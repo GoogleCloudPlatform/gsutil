@@ -53,6 +53,9 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     if self.test_api == 'XML':
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
 
+  def test_write_throughput_single_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('wthru', 1, 1)
+
   def test_write_throughput_single_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 1, 2)
 
@@ -63,6 +66,9 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_write_throughput_multi_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 2, 2)
+
+  def test_read_throughput_single_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('rthru', 1, 1)
 
   def test_read_throughput_single_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 1, 2)

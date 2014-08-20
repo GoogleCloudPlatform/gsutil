@@ -637,27 +637,29 @@ class PerfDiagCommand(Command):
 
       times = []
 
-      def _Upload(thru_tuple):
-        """Uploads the write throughput measurement object."""
-        upload_target = apitools_messages.Object(bucket=thru_tuple.bucket_name,
-                                                 name=thru_tuple.object_name,
-                                                 md5Hash=thru_tuple.md5)
-        io_fp = cStringIO.StringIO(self.file_contents[self.thru_local_file])
-        t0 = time.time()
-        if self.thru_filesize < ResumableThreshold():
-          self.gsutil_api.UploadObject(
-              io_fp, upload_target, provider=self.provider,
-              size=self.thru_filesize, fields=['name'])
-        else:
-          self.gsutil_api.UploadObjectResumable(
-              io_fp, upload_target, provider=self.provider,
-              size=self.thru_filesize, fields=['name'],
-              tracker_callback=_DummyTrackerCallback)
-
-        t1 = time.time()
-        times.append(t1 - t0)
       for i in xrange(self.num_iterations):
-        self._RunOperation(_Upload(thru_tuples[i]))
+        thru_tuple = thru_tuples[i]
+        def _Upload():
+          """Uploads the write throughput measurement object."""
+          upload_target = apitools_messages.Object(
+              bucket=thru_tuple.bucket_name, name=thru_tuple.object_name,
+              md5Hash=thru_tuple.md5)
+          io_fp = cStringIO.StringIO(self.file_contents[self.thru_local_file])
+          t0 = time.time()
+          if self.thru_filesize < ResumableThreshold():
+            self.gsutil_api.UploadObject(
+                io_fp, upload_target, provider=self.provider,
+                size=self.thru_filesize, fields=['name'])
+          else:
+            self.gsutil_api.UploadObjectResumable(
+                io_fp, upload_target, provider=self.provider,
+                size=self.thru_filesize, fields=['name'],
+                tracker_callback=_DummyTrackerCallback)
+
+          t1 = time.time()
+          times.append(t1 - t0)
+
+        self._RunOperation(_Upload)
       time_took = sum(times)
 
     else:
