@@ -160,6 +160,8 @@ Major New Gsutil Version - Backwards-Incompatible Changes
 - All commands using the global -m option or a force option (such as 
   rm -f or cp -c) will now return a non-zero exit code if there are any
   failures during the operation.
+- MD5 and CRC32c values are now represented in base64 encoding instead
+  of hex encoding (this includes manifest files).
 
 New Features
 ------------
