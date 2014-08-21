@@ -66,8 +66,8 @@ _DETAILED_HELP_TEXT = ("""
 """)
 
 top_level_usage_string = (
-    'Usage: gsutil [-d][-D] [-h header]... '
-    '[-m] [command [opts...] args...] [-q]'
+    'Usage: gsutil [-D] [-DD] [-h header]... '
+    '[-m] [-o] [-q] [command [opts...] args...]'
 )
 
 
