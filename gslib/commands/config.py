@@ -186,9 +186,10 @@ _DETAILED_HELP_TEXT = ("""
       parallel_thread_count
       prefer_api
       resumable_threshold
-      resumable_tracker_dir
+      resumable_tracker_dir (deprecated in 4.6, use state_dir)
       rsync_buffer_lines
       software_update_check_period
+      state_dir
       use_magicfile
 
     [OAuth2]
@@ -366,13 +367,14 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # operations.
 #rsync_buffer_lines = 32000
 
-# 'resumable_tracker_dir' specifies the base location where resumable
-# transfer tracker files are saved. By default they're in ~/.gsutil
-#resumable_tracker_dir = <file path>
-# gsutil also saves a file called .last_software_update_check in this directory,
-# that tracks the last time a check was made whether a new version of the gsutil
-# software is available. 'software_update_check_period' specifies the number of
-# days between such checks. The default is 30. Setting the value to 0 disables
+# 'state_dir' specifies the base location where files that
+# need a static location are stored, such as pointers to credentials,
+# resumable transfer tracker files, and the last software update check.
+# By default these files are stored in ~/.gsutil
+#state_dir = <file_path>
+# gsutil periodically checks whether a new version of the gsutil software is
+# available. 'software_update_check_period' specifies the number of days
+# between such checks. The default is 30. Setting the value to 0 disables
 # periodic software update checks.
 #software_update_check_period = 30
 

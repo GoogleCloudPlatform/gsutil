@@ -173,8 +173,43 @@ def UsingCrcmodExtension(crcmod):
           getattr(crcmod.crcmod, '_usingExtension', None))
 
 
+def CreateDirIfNeeded(dir_path):
+  """Creates a directory, suppressing already-exists errors."""
+  if not os.path.exists(dir_path):
+    try:
+      # Unfortunately, even though we catch and ignore EEXIST, this call will
+      # output a (needless) error message (no way to avoid that in Python).
+      os.makedirs(dir_path)
+    # Ignore 'already exists' in case user tried to start up several
+    # resumable uploads concurrently from a machine where no tracker dir had
+    # yet been created.
+    except OSError as e:
+      if e.errno != errno.EEXIST:
+        raise
+
+
+def GetGsutilStateDir():
+  """Returns the location of the directory for gsutil state files.
+
+  Certain operations, such as cross-process credential sharing and
+  resumable transfer tracking, need a known location for state files which
+  are created by gsutil as-needed.
+
+  This location should only be used for storing data that is required to be in
+  a static location.
+
+  Returns:
+    Path to directory for gsutil static state files.
+  """
+  config_file_dir = config.get(
+      'GSUtil', 'state_dir',
+      os.path.expanduser(os.path.join('~', '.gsutil')))
+  CreateDirIfNeeded(config_file_dir)
+  return config_file_dir
+
+
 def GetCredentialStoreFilename():
-  return os.path.expanduser(os.path.join('~', '.gsutil', 'credcache'))
+  return os.path.join(GetGsutilStateDir(), 'credcache')
 
 
 def CreateTrackerDirIfNeeded():
@@ -188,27 +223,27 @@ def CreateTrackerDirIfNeeded():
   """
   tracker_dir = config.get(
       'GSUtil', 'resumable_tracker_dir',
-      os.path.expanduser(os.path.join('~', '.gsutil', 'tracker-files')))
-  if not os.path.exists(tracker_dir):
-    try:
-      # Unfortunately, even though we catch and ignore EEXIST, this call will
-      # will output a (needless) error message (no way to avoid that in Python).
-      os.makedirs(tracker_dir)
-    # Ignore 'already exists' in case user tried to start up several
-    # resumable uploads concurrently from a machine where no tracker dir had
-    # yet been created.
-    except OSError as e:
-      if e.errno != errno.EEXIST:
-        raise
+      os.path.join(GetGsutilStateDir(), 'tracker-files'))
+  CreateDirIfNeeded(tracker_dir)
   return tracker_dir
+
+
+def PrintTrackerDirDeprecationWarningIfNeeded():
+  # TODO: Remove this along with the tracker_dir config value 1 year after
+  # 4.6 release date. Use state_dir instead.
+  if config.has_option('GSUtil', 'resumable_tracker_dir'):
+    sys.stderr.write('Warning: you have set resumable_tracker_dir in your '
+                     '.boto configuration file. This configuration option is '
+                     'deprecated; please use the state_dir configuration '
+                     'option instead.\n')
 
 
 # Name of file where we keep the timestamp for the last time we checked whether
 # a new version of gsutil is available.
-CreateTrackerDirIfNeeded()
+PrintTrackerDirDeprecationWarningIfNeeded()
+CreateDirIfNeeded(GetGsutilStateDir())
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-    os.path.expanduser(os.path.join(
-        '~', '.gsutil', '.last_software_update_check')))
+    os.path.join(GetGsutilStateDir(), '.last_software_update_check'))
 
 
 def HasConfiguredCredentials():
