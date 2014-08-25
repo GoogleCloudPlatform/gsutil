@@ -25,7 +25,6 @@ from __future__ import absolute_import
 import tempfile
 
 from gslib import wildcard_iterator
-from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.exception import InvalidUrlError
 from gslib.storage_url import ContainsWildcard
 import gslib.tests.testcase as testcase
@@ -123,7 +122,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     prefixes = set()
     for blr in self._test_wildcard_iterator(
         self.test_bucket0_uri.clone_replace_name('*')):
-      if blr.ref_type == BucketListingRefType.PREFIX:
+      if blr.IsPrefix():
         prefixes.add(blr.root_object)
       else:
         uri_strs.add(blr.GetUrlString())
@@ -139,7 +138,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     actual_prefixes = set()
     for blr in self._test_wildcard_iterator(
         self.test_bucket0_uri.clone_replace_name('*/nested1')):
-      if blr.ref_type == BucketListingRefType.PREFIX:
+      if blr.IsPrefix():
         actual_prefixes.add(blr.root_object)
       else:
         actual_uri_strs.add(blr.GetUrlString())
@@ -154,7 +153,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     actual_prefixes = set()
     for blr in self._test_wildcard_iterator(
         self.test_bucket0_uri.clone_replace_name('*/nested2/*')):
-      if blr.ref_type == BucketListingRefType.PREFIX:
+      if blr.IsPrefix():
         actual_prefixes.add(blr.root_object)
       else:
         actual_uri_strs.add(blr.GetUrlString())

@@ -22,8 +22,9 @@ import re
 import sys
 import textwrap
 
-from gslib.bucket_listing_ref import BucketListingRef
-from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.bucket_listing_ref import BucketListingBucket
+from gslib.bucket_listing_ref import BucketListingObject
+from gslib.bucket_listing_ref import BucketListingPrefix
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
@@ -148,7 +149,7 @@ class CloudWildcardIterator(WildcardIterator):
             else:  # CloudApi.CsObjectOrPrefixType.PREFIX:
               yield self._GetPrefixRef(bucket_url_string, obj_or_prefix.data)
         else:
-          yield BucketListingRef(bucket_url_string, BucketListingRefType.BUCKET)
+          yield BucketListingBucket(bucket_url_string)
       else:
         # By default, assume a non-wildcarded URL is an object, not a prefix.
         # This prevents unnecessary listings (which are slower, more expensive,
@@ -325,14 +326,13 @@ class CloudWildcardIterator(WildcardIterator):
         not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we just want the name of a non-wildcarded bucket URL,
       # don't make an RPC.
-      yield BucketListingRef(self.wildcard_url.GetBucketUrlString(),
-                             BucketListingRefType.BUCKET)
+      yield BucketListingBucket(self.wildcard_url.GetBucketUrlString())
     elif(self.wildcard_url.IsBucket() and
          not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we have a non-wildcarded bucket URL, get just that bucket.
-      yield BucketListingRef(
+      yield BucketListingBucket(
           self.wildcard_url.GetBucketUrlString(),
-          BucketListingRefType.BUCKET, root_object=self.gsutil_api.GetBucket(
+          root_object=self.gsutil_api.GetBucket(
               self.wildcard_url.bucket_name, provider=self.wildcard_url.scheme,
               fields=bucket_fields))
     else:
@@ -347,8 +347,7 @@ class CloudWildcardIterator(WildcardIterator):
           provider=self.wildcard_url.scheme):
         if prog.match(bucket.id):
           url_str = '%s://%s/' % (self.wildcard_url.scheme, bucket.id)
-          yield BucketListingRef(url_str, BucketListingRefType.BUCKET,
-                                 root_object=bucket)
+          yield BucketListingBucket(url_str, root_object=bucket)
 
   def _GetToListFields(self, get_fields=None):
     """Prepends 'items/' to the input fields and converts it to a set.
@@ -388,14 +387,10 @@ class CloudWildcardIterator(WildcardIterator):
                                                   gcs_object.generation)
       object_string = '%s%s#%s' % (bucket_url_string, gcs_object.name,
                                    generation_str)
-      return BucketListingRef(object_string,
-                              ref_type=BucketListingRefType.OBJECT,
-                              root_object=gcs_object)
+      return BucketListingObject(object_string, root_object=gcs_object)
     else:
       object_string = '%s%s' % (bucket_url_string, gcs_object.name)
-      return BucketListingRef(object_string,
-                              ref_type=BucketListingRefType.OBJECT,
-                              root_object=gcs_object)
+      return BucketListingObject(object_string, root_object=gcs_object)
 
   def _GetPrefixRef(self, bucket_url_string, prefix):
     """Creates a BucketListingRef of type PREFIX from the arguments.
@@ -408,8 +403,7 @@ class CloudWildcardIterator(WildcardIterator):
       BucketListingRef of type PREFIX.
     """
     prefix_string = '%s%s' % (bucket_url_string, prefix)
-    return BucketListingRef(prefix_string, ref_type=BucketListingRefType.PREFIX,
-                            root_object=prefix)
+    return BucketListingPrefix(prefix_string, root_object=prefix)
 
   def IterBuckets(self, bucket_fields=None):
     """Iterates over the wildcard, returning refs for each expanded bucket.
@@ -465,7 +459,7 @@ class CloudWildcardIterator(WildcardIterator):
     """
     for blr in self. __iter__(bucket_listing_fields=bucket_listing_fields,
                               expand_top_level_buckets=True):
-      if blr.ref_type == BucketListingRefType.OBJECT:
+      if blr.IsObject():
         yield blr
 
 
@@ -527,11 +521,9 @@ class FileWildcardIterator(WildcardIterator):
     for filepath in filepaths:
       expanded_url = StorageUrlFromString(filepath)
       if os.path.isdir(filepath):
-        yield BucketListingRef(expanded_url.GetUrlString(),
-                               ref_type=BucketListingRefType.PREFIX)
+        yield BucketListingPrefix(expanded_url.GetUrlString())
       else:
-        yield BucketListingRef(expanded_url.GetUrlString(),
-                               ref_type=BucketListingRefType.OBJECT)
+        yield BucketListingObject(expanded_url.GetUrlString())
 
   def _IterDir(self, directory, wildcard):
     """An iterator over the specified dir and wildcard."""
@@ -587,7 +579,7 @@ class FileWildcardIterator(WildcardIterator):
       BucketListingRefs of type OBJECT or empty iterator if no matches.
     """
     for bucket_listing_ref in self.IterAll():
-      if bucket_listing_ref.ref_type == BucketListingRefType.OBJECT:
+      if bucket_listing_ref.IsObject():
         yield bucket_listing_ref
 
   # pylint: disable=unused-argument

@@ -17,8 +17,7 @@ from __future__ import absolute_import
 
 import logging
 
-from gslib.bucket_listing_ref import BucketListingRef
-from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
@@ -115,10 +114,9 @@ class StatCommand(Command):
           single_obj = self.gsutil_api.GetObjectMetadata(
               url.bucket_name, url.object_name, generation=url.generation,
               provider=url.scheme, fields=stat_fields)
-          blr_iter = [BucketListingRef(url_str,
-                                       BucketListingRefType.OBJECT, single_obj)]
+          blr_iter = [BucketListingObject(url_str, root_object=single_obj)]
         for blr in blr_iter:
-          if blr.ref_type == BucketListingRefType.OBJECT:
+          if blr.IsObject():
             arg_matches += 1
             if logging.getLogger().isEnabledFor(logging.INFO):
               PrintFullInfoAboutObject(blr, incl_acl=False)

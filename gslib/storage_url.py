@@ -85,7 +85,7 @@ class StorageUrl(object):
       'gs://bucket/' becomes 'gs://bucket'
       'gs://bucket/subdir/' where subdir/ is actually an object becomes
            'gs://bucket/subdir', but this is enumerated as a
-           BucketListingRefType.OBJECT, so we will not recurse on it as a subdir
+           BucketListingObject, so we will not recurse on it as a subdir
            during listing.
 
     Returns:

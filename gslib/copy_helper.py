@@ -44,7 +44,6 @@ from boto import config
 import crcmod
 
 import gslib
-from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
@@ -1167,8 +1166,7 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
     blr = blr_expansion[0]
     # BLR is either an OBJECT, PREFIX, or BUCKET; the latter two represent
     # directories.
-    return (StorageUrlFromString(blr.url_string),
-            blr.ref_type != BucketListingRefType.OBJECT)
+    return (StorageUrlFromString(blr.url_string), not blr.IsObject())
 
   storage_url = StorageUrlFromString(url_str)
 
@@ -1201,7 +1199,7 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
                                          project_id=project_id).IterAll(
                                              bucket_listing_fields=['name'])
   for blr in blr_expansion:
-    if blr.ref_type == BucketListingRefType.PREFIX:
+    if blr.IsPrefix():
       return (storage_url, True)
 
   return (storage_url, False)

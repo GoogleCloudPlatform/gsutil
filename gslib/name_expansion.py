@@ -29,8 +29,7 @@ import multiprocessing
 import os
 import sys
 
-from gslib.bucket_listing_ref import BucketListingRef
-from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.bucket_listing_ref import BucketListingObject
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 import gslib.wildcard_iterator
@@ -77,7 +76,6 @@ class NameExpansionResult(object):
     self.src_url_expands_to_multi = src_url_expands_to_multi
     self.names_container = names_container
     self.blr_url_string = blr.GetUrlString()
-    self.blr_type = blr.ref_type
     self.have_existing_dst_container = have_existing_dst_container
 
   def __repr__(self):
@@ -220,8 +218,7 @@ class _NameExpansionIterator(object):
                                  'with streaming ("-") URLs.')
         yield NameExpansionResult(url_str, self.url_strs.has_plurality,
                                   self.url_strs.has_plurality, False,
-                                  BucketListingRef(url_str,
-                                                   BucketListingRefType.OBJECT),
+                                  BucketListingObject(url_str),
                                   self.have_existing_dst_container)
         continue
 
@@ -296,7 +293,7 @@ class _NameExpansionIterator(object):
       for (names_container, blr) in post_step3_iter:
         src_names_container = src_names_bucket or names_container
 
-        if blr.ref_type == BucketListingRefType.OBJECT:
+        if blr.IsObject():
           yield NameExpansionResult(
               url_str, is_multi_src_request, src_url_expands_to_multi,
               src_names_container, blr, self.have_existing_dst_container)
@@ -521,15 +518,14 @@ class _OmitNonRecursiveIterator(object):
 
   def __iter__(self):
     for (names_container, blr) in self.tuple_iter:
-      if (not self.recursion_requested and
-          blr.ref_type != BucketListingRefType.OBJECT):
+      if not self.recursion_requested and not blr.IsObject():
         # At this point we either have a bucket or a prefix,
         # so if recursion is not requested, we're going to omit it.
         expanded_url = StorageUrlFromString(blr.GetUrlString())
         if expanded_url.IsFileUrl():
           desc = 'directory'
         else:
-          desc = blr.ref_type
+          desc = blr.TypeName()
         if self.cmd_supports_recursion:
           self.logger.info(
               'Omitting %s "%s". (Did you mean to do %s -R?)',
@@ -569,7 +565,7 @@ class _ImplicitBucketSubdirIterator(object):
 
   def __iter__(self):
     for blr in self.blr_iter:
-      if blr.ref_type == BucketListingRefType.PREFIX:
+      if blr.IsPrefix():
         # This is a bucket subdirectory, list objects according to the wildcard.
         # Strip a '/' from the prefix url to handle objects ending in /.
         prefix_url = StorageUrlFromString(
@@ -585,7 +581,7 @@ class _ImplicitBucketSubdirIterator(object):
           # Prefix that contains no objects, for example in the $folder$ case
           # or an empty filesystem directory.
           yield (False, blr)
-      elif blr.ref_type == BucketListingRefType.OBJECT:
+      elif blr.IsObject():
         yield (False, blr)
       else:
         raise CommandException(

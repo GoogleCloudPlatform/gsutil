@@ -348,10 +348,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['dstobj'])
     self.RunCommand('cp', [suri(src_bucket_uri, 'obj'),
                            '%s*' % dst_bucket_uri.uri])
-    actual = list(self._test_wildcard_iterator(
+    actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '*')).IterAll(expand_top_level_buckets=True))
-    self.assertEqual(1, len(actual))
-    self.assertEqual('dstobj', actual[0].root_object.name)
+    expected = set([suri(dst_bucket_uri, 'dstobj')])
+    self.assertEqual(expected, actual)
 
   def testCopyingObjsAndFilesToDir(self):
     """Tests copying objects and files to a directory."""

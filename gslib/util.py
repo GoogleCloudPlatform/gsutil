@@ -41,7 +41,6 @@ from oauth2client.client import HAS_CRYPTO
 from retry_decorator import retry_decorator
 
 import gslib
-from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
@@ -979,7 +978,7 @@ def IsCloudSubdirPlaceholder(url, blr=None):
   url_str = url.GetUrlString()
   if url_str.endswith('_$folder$'):
     return True
-  if blr and blr.ref_type == BucketListingRefType.OBJECT:
+  if blr and blr.IsObject():
     size = blr.root_object.size
   else:
     size = 0

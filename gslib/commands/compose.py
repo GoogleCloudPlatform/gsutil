@@ -15,8 +15,7 @@
 
 from __future__ import absolute_import
 
-from gslib.bucket_listing_ref import BucketListingRef
-from gslib.bucket_listing_ref import BucketListingRefType
+from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -119,8 +118,7 @@ class ComposeCommand(Command):
       if ContainsWildcard(src_uri_str):
         src_uri_iter = self.WildcardIterator(src_uri_str).IterObjects()
       else:
-        src_uri_iter = [BucketListingRef(src_uri_str,
-                                         BucketListingRefType.OBJECT)]
+        src_uri_iter = [BucketListingObject(src_uri_str)]
       for blr in src_uri_iter:
         src_uri = StorageUrlFromString(blr.GetUrlString())
         self.CheckProvider(src_uri)

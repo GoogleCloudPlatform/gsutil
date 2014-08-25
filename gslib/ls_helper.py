@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import fnmatch
 
-from gslib.bucket_listing_ref import BucketListingRefType
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.util import UTF8
@@ -170,11 +169,11 @@ class LsHelper(object):
       for blr in top_level_iterator:
         if self._MatchesExcludedPattern(blr):
           continue
-        if blr.ref_type == BucketListingRefType.OBJECT:
+        if blr.IsObject():
           nd = 0
           no, nb = self._print_object_func(blr)
           print_newline = True
-        elif blr.ref_type == BucketListingRefType.PREFIX:
+        elif blr.IsPrefix():
           if print_newline:
             self._print_newline_func()
           else:
@@ -216,10 +215,10 @@ class LsHelper(object):
       if self._MatchesExcludedPattern(blr):
         continue
 
-      if blr.ref_type == BucketListingRefType.OBJECT:
+      if blr.IsObject():
         nd = 0
         no, nb = self._print_object_func(blr)
-      elif blr.ref_type == BucketListingRefType.PREFIX:
+      elif blr.IsPrefix():
         if self.should_recurse:
           if print_initial_newline:
             self._print_newline_func()

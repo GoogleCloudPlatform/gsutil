@@ -16,15 +16,8 @@
 from __future__ import absolute_import
 
 
-class BucketListingRefType(object):
-  """Enum class for describing BucketListingRefs."""
-  BUCKET = 'bucket'  # Cloud bucket
-  OBJECT = 'object'  # Cloud object or filesystem file
-  PREFIX = 'prefix'  # Cloud bucket subdir or filesystem directory
-
-
 class BucketListingRef(object):
-  """A reference to one fully expanded iterator result.
+  """Base class for a reference to one fully expanded iterator result.
 
   This allows polymorphic iteration over wildcard-iterated URLs.  The
   reference contains a fully expanded URL string containing no wildcards and
@@ -41,41 +34,75 @@ class BucketListingRef(object):
   For filesystem URLs, root_object is not populated.
   """
 
-  def __init__(self, url_string, ref_type, root_object=None):
-    """Instantiates a BucketListingRef from the URL string and object metadata.
-
-    Args:
-      url_string: String describing the referenced object.
-      ref_type: BucketListingRefType for the underlying object.
-      root_object: Underlying object metadata, if available.
-
-    Raises:
-      BucketListingRefException: If reference type is invalid.
-    """
-    if ref_type not in (BucketListingRefType.BUCKET,
-                        BucketListingRefType.OBJECT,
-                        BucketListingRefType.PREFIX):
-      raise BucketListingRefException('Invalid ref_type %s' % ref_type)
-    self.url_string = url_string
-    self.ref_type = ref_type
-    self.root_object = root_object
+  class _BucketListingRefType(object):
+    """Enum class for describing BucketListingRefs."""
+    BUCKET = 'bucket'  # Cloud bucket
+    OBJECT = 'object'  # Cloud object or filesystem file
+    PREFIX = 'prefix'  # Cloud bucket subdir or filesystem directory
 
   def GetUrlString(self):
     return self.url_string
 
+  def IsBucket(self):
+    return self._ref_type == self._BucketListingRefType.BUCKET
+
+  def IsObject(self):
+    return self._ref_type == self._BucketListingRefType.OBJECT
+
+  def IsPrefix(self):
+    return self._ref_type == self._BucketListingRefType.PREFIX
+
+  def TypeName(self):
+    return self._ref_type
+
   def __str__(self):
     return self.url_string
 
 
-class BucketListingRefException(StandardError):
-  """Exception raised for invalid BucketListingRef requests."""
+class BucketListingBucket(BucketListingRef):
+  """BucketListingRef subclass for buckets."""
 
-  def __init__(self, reason):
-    StandardError.__init__(self)
-    self.reason = reason
+  def __init__(self, url_string, root_object=None):
+    """Creates a BucketListingRef of type bucket.
 
-  def __repr__(self):
-    return 'BucketListingRefException: %s' % self.reason
+    Args:
+      url_string: String describing the referenced object.
+      root_object: Underlying object metadata, if available.
+    """
+    super(BucketListingBucket, self).__init__()
+    self._ref_type = self._BucketListingRefType.BUCKET
+    self.url_string = url_string
+    self.root_object = root_object
 
-  def __str__(self):
-    return 'BucketListingRefException: %s' % self.reason
+
+class BucketListingPrefix(BucketListingRef):
+  """BucketListingRef subclass for prefixes."""
+
+  def __init__(self, url_string, root_object=None):
+    """Creates a BucketListingRef of type prefix.
+
+    Args:
+      url_string: String describing the referenced object.
+      root_object: Underlying object metadata, if available.
+    """
+    super(BucketListingPrefix, self).__init__()
+    self._ref_type = self._BucketListingRefType.PREFIX
+    self.url_string = url_string
+    self.root_object = root_object
+
+
+class BucketListingObject(BucketListingRef):
+  """BucketListingRef subclass for objects."""
+
+  def __init__(self, url_string, root_object=None):
+    """Creates a BucketListingRef of type object.
+
+    Args:
+      url_string: String describing the referenced object.
+      root_object: Underlying object metadata, if available.
+    """
+    super(BucketListingObject, self).__init__()
+    self._ref_type = self._BucketListingRefType.OBJECT
+    self.url_string = url_string
+    self.root_object = root_object
+
