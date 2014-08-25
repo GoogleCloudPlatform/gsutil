@@ -554,11 +554,11 @@ class Command(HelpProvider):
           # wildcards (e.g., gs://bucket/*), to prevent the operation from
           # being applied to the buckets themselves.
           url.object_name = '*'
-          multi_threaded_url_args.append(url.GetUrlString())
+          multi_threaded_url_args.append(url.url_string)
         else:
           # Convert to a NameExpansionResult so we can re-use the threaded
           # function for the single-threaded implementation.  RefType is unused.
-          for blr in self.WildcardIterator(url.GetUrlString()).IterBuckets(
+          for blr in self.WildcardIterator(url.url_string).IterBuckets(
               bucket_fields=['id']):
             name_expansion_for_url = NameExpansionResult(url_args[i], False,
                                                          False, False, blr)
@@ -609,7 +609,7 @@ class Command(HelpProvider):
         orig_prefer_api = gsutil_api.prefer_api
         gsutil_api.prefer_api = ApiSelector.XML
         gsutil_api.XmlPassThroughSetAcl(
-            self.acl_arg, url_string, canned=self.canned,
+            self.acl_arg, url, canned=self.canned,
             def_obj_acl=self.def_acl, provider=url.scheme)
         gsutil_api.prefer_api = orig_prefer_api
       except ServiceException as e:
@@ -724,7 +724,7 @@ class Command(HelpProvider):
       # Need to use XML passthrough.
       try:
         acl = self.gsutil_api.XmlPassThroughGetAcl(
-            blr.GetUrlString(), def_obj_acl=self.def_acl, provider=url.scheme)
+            url, def_obj_acl=self.def_acl, provider=url.scheme)
         print acl.to_xml()
       except AccessDeniedException, _:
         self._WarnServiceAccounts()
@@ -823,8 +823,8 @@ class Command(HelpProvider):
       raise CommandException(
           '%s matched more than one URL, which is not\n'
           'allowed by the %s command' % (arg, self.command_name))
-    blr = list(plurality_checkable_iterator)
-    return StorageUrlFromString(blr[0].GetUrlString()), blr[0].root_object
+    blr = list(plurality_checkable_iterator)[0]
+    return StorageUrlFromString(blr.url_string), blr.root_object
 
   def GetBucketUrlIterFromArg(self, arg, bucket_fields=None):
     """Gets a single bucket URL based on the command arguments.

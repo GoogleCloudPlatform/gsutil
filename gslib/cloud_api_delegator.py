@@ -271,11 +271,11 @@ class CloudApiDelegator(CloudApi):
   def StopChannel(self, channel_id, resource_id, provider=None):
     return self._GetApi(provider).StopChannel(channel_id, resource_id)
 
-  def XmlPassThroughGetAcl(self, uri_string, def_obj_acl=False, provider=None):
+  def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
 
     Args:
-      uri_string: String describing bucket or object to get the ACL for.
+      storage_url: StorageUrl object.
       def_obj_acl: If true, get the default object ACL on a bucket.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
@@ -285,18 +285,18 @@ class CloudApiDelegator(CloudApi):
       ServiceException for errors interacting with cloud storage providers.
 
     Returns:
-      ACL XML for the resource specified by uri_string.
+      ACL XML for the resource specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetAcl(uri_string,
+    return self._GetApi(provider).XmlPassThroughGetAcl(storage_url,
                                                        def_obj_acl=def_obj_acl)
 
-  def XmlPassThroughSetAcl(self, acl_text, uri_string, canned=True,
+  def XmlPassThroughSetAcl(self, acl_text, storage_url, canned=True,
                            def_obj_acl=False, provider=None):
     """XML compatibility function for setting ACLs.
 
     Args:
       acl_text: XML ACL or canned ACL string.
-      uri_string: String describing bucket or object to set the ACL on.
+      storage_url: StorageUrl object.
       canned: If true, acl_text is treated as a canned ACL string.
       def_obj_acl: If true, set the default object ACL on a bucket.
       provider: Cloud storage provider to connect to.  If not present,
@@ -310,13 +310,13 @@ class CloudApiDelegator(CloudApi):
       None.
     """
     self._GetApi(provider).XmlPassThroughSetAcl(
-        acl_text, uri_string, canned=canned, def_obj_acl=def_obj_acl)
+        acl_text, storage_url, canned=canned, def_obj_acl=def_obj_acl)
 
-  def XmlPassThroughGetCors(self, uri_string, provider=None):
+  def XmlPassThroughGetCors(self, storage_url, provider=None):
     """XML compatibility function for getting CORS configuration on a bucket.
 
     Args:
-      uri_string: String describing bucket to retrieve CORS configuration for.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -325,16 +325,16 @@ class CloudApiDelegator(CloudApi):
       ServiceException for errors interacting with cloud storage providers.
 
     Returns:
-      CORS configuration XML for the bucket specified by uri_string.
+      CORS configuration XML for the bucket specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetCors(uri_string)
+    return self._GetApi(provider).XmlPassThroughGetCors(storage_url)
 
-  def XmlPassThroughSetCors(self, cors_text, uri_string, provider=None):
+  def XmlPassThroughSetCors(self, cors_text, storage_url, provider=None):
     """XML compatibility function for setting CORS configuration on a bucket.
 
     Args:
       cors_text: Raw CORS XML string.
-      uri_string: String describing bucket to set the CORS configuration on.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -345,15 +345,13 @@ class CloudApiDelegator(CloudApi):
     Returns:
       None.
     """
-    self._GetApi(provider).XmlPassThroughSetCors(cors_text, uri_string)
+    self._GetApi(provider).XmlPassThroughSetCors(cors_text, storage_url)
 
-  def XmlPassThroughGetLifecycle(self, uri_string,
-                                 provider=None):
+  def XmlPassThroughGetLifecycle(self, storage_url, provider=None):
     """XML compatibility function for getting lifecycle config on a bucket.
 
     Args:
-      uri_string: String describing bucket to retrieve lifecycle
-                  configuration for.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -362,18 +360,17 @@ class CloudApiDelegator(CloudApi):
       ServiceException for errors interacting with cloud storage providers.
 
     Returns:
-      Lifecycle configuration XML for the bucket specified by uri_string.
+      Lifecycle configuration XML for the bucket specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetLifecycle(uri_string)
+    return self._GetApi(provider).XmlPassThroughGetLifecycle(storage_url)
 
-  def XmlPassThroughSetLifecycle(self, lifecycle_text, uri_string,
+  def XmlPassThroughSetLifecycle(self, lifecycle_text, storage_url,
                                  provider=None):
     """XML compatibility function for setting CORS configuration on a bucket.
 
     Args:
       lifecycle_text: Raw lifecycle configuration XML string.
-      uri_string: String describing bucket to set the lifecycle configuration
-                  on.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -385,14 +382,13 @@ class CloudApiDelegator(CloudApi):
       None.
     """
     self._GetApi(provider).XmlPassThroughSetLifecycle(lifecycle_text,
-                                                      uri_string)
+                                                      storage_url)
 
-  def XmlPassThroughGetLogging(self, uri_string, provider=None):
+  def XmlPassThroughGetLogging(self, storage_url, provider=None):
     """XML compatibility function for getting logging configuration on a bucket.
 
     Args:
-      uri_string: String describing bucket to retrieve logging
-                  configuration for.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -401,16 +397,15 @@ class CloudApiDelegator(CloudApi):
       ServiceException for errors interacting with cloud storage providers.
 
     Returns:
-      Logging configuration XML for the bucket specified by uri_string.
+      Logging configuration XML for the bucket specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetLogging(uri_string)
+    return self._GetApi(provider).XmlPassThroughGetLogging(storage_url)
 
-  def XmlPassThroughGetWebsite(self, uri_string, provider=None):
+  def XmlPassThroughGetWebsite(self, storage_url, provider=None):
     """XML compatibility function for getting website configuration on a bucket.
 
     Args:
-      uri_string: String describing bucket to retrieve website
-                  configuration for.
+      storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
 
@@ -419,7 +414,7 @@ class CloudApiDelegator(CloudApi):
       ServiceException for errors interacting with cloud storage providers.
 
     Returns:
-      Website configuration XML for the bucket specified by uri_string.
+      Website configuration XML for the bucket specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetWebsite(uri_string)
+    return self._GetApi(provider).XmlPassThroughGetWebsite(storage_url)
 

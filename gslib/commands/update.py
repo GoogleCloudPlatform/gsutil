@@ -306,7 +306,7 @@ class UpdateCommand(Command):
         if i > 0:
           raise CommandException(
               'Invalid update URI. Must name a single .tar.gz file.')
-        storage_url = StorageUrlFromString(result.GetUrlString())
+        storage_url = StorageUrlFromString(result.url_string)
         if storage_url.IsFileUrl() and not storage_url.IsDirectory():
           if not force_update:
             raise CommandException(

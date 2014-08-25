@@ -120,7 +120,7 @@ class ComposeCommand(Command):
       else:
         src_uri_iter = [BucketListingObject(src_uri_str)]
       for blr in src_uri_iter:
-        src_uri = StorageUrlFromString(blr.GetUrlString())
+        src_uri = StorageUrlFromString(blr.url_string)
         self.CheckProvider(src_uri)
 
         if src_uri.bucket_name != target_uri.bucket_name:

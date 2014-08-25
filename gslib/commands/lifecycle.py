@@ -142,9 +142,8 @@ class LifecycleCommand(Command):
         self.logger.info('Setting lifecycle configuration on %s...',
                          blr.url_string)
         if url.scheme == 's3':
-          self.gsutil_api.XmlPassThroughSetLifecycle(lifecycle_txt,
-                                                     url.GetUrlString(),
-                                                     provider=url.scheme)
+          self.gsutil_api.XmlPassThroughSetLifecycle(
+              lifecycle_txt, url, provider=url.scheme)
         else:
           bucket_metadata = apitools_messages.Bucket(lifecycle=lifecycle)
           self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
@@ -160,8 +159,7 @@ class LifecycleCommand(Command):
 
     if bucket_url.scheme == 's3':
       sys.stdout.write(self.gsutil_api.XmlPassThroughGetLifecycle(
-          bucket_url.GetUrlString(),
-          provider=bucket_url.scheme))
+          bucket_url, provider=bucket_url.scheme))
     else:
       if bucket_metadata.lifecycle and bucket_metadata.lifecycle.rule:
         sys.stdout.write(LifecycleTranslation.JsonLifecycleFromMessage(

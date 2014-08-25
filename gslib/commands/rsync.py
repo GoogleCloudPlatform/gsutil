@@ -373,10 +373,10 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
     # from GCS to a local directory it will result in a directory/file
     # conflict (e.g., trying to download an object called "mydata/" where the
     # local directory "mydata" exists).
-    url = StorageUrlFromString(blr.GetUrlString())
+    url = StorageUrlFromString(blr.url_string)
     if IsCloudSubdirPlaceholder(url, blr=blr):
       cls.logger.info('Skipping cloud sub-directory placeholder object %s',
-                      url.GetUrlString())
+                      url.url_string)
       continue
     i += 1
     if i % _PROGRESS_REPORT_LISTING_COUNT == 0:
@@ -408,7 +408,7 @@ def _BuildTmpOutputLine(blr, url):
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
   return '%s %d %s %s\n' % (
-      urllib.quote_plus(url.GetUrlString().encode(UTF8)), size, crc32c, md5)
+      urllib.quote_plus(url.url_string.encode(UTF8)), size, crc32c, md5)
 
 
 # pylint: disable=bare-except
@@ -488,9 +488,9 @@ class _DiffIterator(object):
     # Build sorted lists of src and dst URLs in parallel. To do this, pass args
     # to _ListUrlRootFunc as tuple (url_str, out_file_name, desc).
     args_iter = iter([
-        (self.base_src_url.GetUrlString(), self.sorted_list_src_file_name,
+        (self.base_src_url.url_string, self.sorted_list_src_file_name,
          'source'),
-        (self.base_dst_url.GetUrlString(), self.sorted_list_dst_file_name,
+        (self.base_dst_url.url_string, self.sorted_list_dst_file_name,
          'destination')
     ])
     command_obj.Apply(_ListUrlRootFunc, args_iter, _RootListingExceptionHandler,
@@ -614,8 +614,8 @@ class _DiffIterator(object):
     # Strip trailing slashes, if any, so we compute tail length against
     # consistent position regardless of whether trailing slashes were included
     # or not in URL.
-    base_src_url_len = len(self.base_src_url.GetUrlString().rstrip('/\\'))
-    base_dst_url_len = len(self.base_dst_url.GetUrlString().rstrip('/\\'))
+    base_src_url_len = len(self.base_src_url.url_string.rstrip('/\\'))
+    base_dst_url_len = len(self.base_dst_url.url_string.rstrip('/\\'))
     src_url_str = dst_url_str = None
     # Invariant: After each yield, the URLs in src_url_str, dst_url_str,
     # self.sorted_src_urls_it, and self.sorted_dst_urls_it are not yet
@@ -632,7 +632,7 @@ class _DiffIterator(object):
         dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
             self.base_src_url, StorageUrlFromString(src_url_str), True, True,
             True, self.base_dst_url, False,
-            self.recursion_requested).GetUrlString()
+            self.recursion_requested).url_string
       if self.sorted_dst_urls_it.IsEmpty():
         # We've reached end of dst URLs, so copy src to dst.
         yield _DiffToApply(

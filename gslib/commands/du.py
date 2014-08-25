@@ -146,7 +146,7 @@ class DuCommand(Command):
       Exception: if calling bug encountered.
     """
     obj = bucket_listing_ref.root_object
-    url_str = bucket_listing_ref.GetUrlString()
+    url_str = bucket_listing_ref.url_string
     if (obj.metadata and S3_DELETE_MARKER_GUID in
         obj.metadata.additionalProperties):
       size_string = '0'

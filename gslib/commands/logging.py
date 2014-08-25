@@ -149,8 +149,7 @@ class LoggingCommand(Command):
 
     if bucket_url.scheme == 's3':
       sys.stdout.write(self.gsutil_api.XmlPassThroughGetLogging(
-          bucket_url.GetUrlString(),
-          provider=bucket_url.scheme))
+          bucket_url, provider=bucket_url.scheme))
     else:
       if (bucket_metadata.logging and bucket_metadata.logging.logBucket and
           bucket_metadata.logging.logObjectPrefix):

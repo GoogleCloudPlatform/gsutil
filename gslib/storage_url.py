@@ -56,43 +56,52 @@ class StorageUrl(object):
   def IsStream(self):
     raise NotImplementedError('IsStream not overridden')
 
-  def GetUrlString(self):
-    raise NotImplementedError('GetUrlString not overridden')
+  def CreatePrefixUrl(self, wildcard_suffix=None):
+    """Returns a prefix of this URL that can be used for iterating.
 
-  def GetVersionlessUrlStringStripOneSlash(self):
-    """Returns a URL string with one slash right-stripped, if present.
-
-    This helps avoid infinite looping when prefixes
-    are iterated, but preserves other slashes so that objects with '/'
-    in the name are handled properly.  The typical pattern for enumerating
-    a bucket or subdir is to add '/*' to the end of the search string.
-
-    For example, when recursively listing a bucket with the following contents:
-    gs://bucket// <-- object named slash
-    gs://bucket//one-dir-deep
-
-    A top-level expansion with '/' as a delimiter will result in the following
-    URL strings:
-    'gs://bucket//' : OBJECT
-    'gs://bucket//' : PREFIX
-    'gs and 'temp' and the prefixes '/' and 'temp/'.  If we right-strip all
-    slashes from the prefix entry and add '/*', we will get 'gs://bucket/*'
-    which will produce identical results (and infinitely recurse).
-
-    Example return values:
-      'gs://bucket/subdir//' becomes 'gs://bucket/subdir/'
-      'gs://bucket/subdir///' becomes 'gs://bucket/subdir//'
-      'gs://bucket/' becomes 'gs://bucket'
-      'gs://bucket/subdir/' where subdir/ is actually an object becomes
-           'gs://bucket/subdir', but this is enumerated as a
-           BucketListingObject, so we will not recurse on it as a subdir
-           during listing.
+    Args:
+      wildcard_suffix: If supplied, this wildcard suffix will be appended to the
+                       prefix with a trailing slash before being returned.
 
     Returns:
-      URL string with one slash right-stripped, if present.
+      A prefix of this URL that can be used for iterating.
+
+    If this URL contains a trailing slash, it will be stripped to create the
+    prefix. This helps avoid infinite looping when prefixes are iterated, but
+    preserves other slashes so that objects with '/' in the name are handled
+    properly.
+
+    For example, when recursively listing a bucket with the following contents:
+      gs://bucket// <-- object named slash
+      gs://bucket//one-dir-deep
+    a top-level expansion with '/' as a delimiter will result in the following
+    URL strings:
+      'gs://bucket//' : OBJECT
+      'gs://bucket//' : PREFIX
+    If we right-strip all slashes from the prefix entry and add a wildcard
+    suffix, we will get 'gs://bucket/*' which will produce identical results
+    (and infinitely recurse).
+
+    Example return values:
+      ('gs://bucket/subdir/', '*') becomes 'gs://bucket/subdir/*'
+      ('gs://bucket/', '*') becomes 'gs://bucket/*'
+      ('gs://bucket/', None) becomes 'gs://bucket'
+      ('gs://bucket/subdir//', '*') becomes 'gs://bucket/subdir//*'
+      ('gs://bucket/subdir///', '**') becomes 'gs://bucket/subdir///**'
+      ('gs://bucket/subdir/', '*') where 'subdir/' is an object becomes
+           'gs://bucket/subdir/*', but iterating on this will return 'subdir/'
+           as a BucketListingObject, so we will not recurse on it as a subdir
+           during listing.
     """
-    raise NotImplementedError(
-        'GetVersionlessUrlStringStripOneSlash not overridden')
+    raise NotImplementedError('GetPrefixWithWildcard not overridden')
+
+  @property
+  def url_string(self):
+    raise NotImplementedError('url_string not overridden')
+
+  @property
+  def versionless_url_string(self):
+    raise NotImplementedError('versionless_url_string not overridden')
 
 
 class _FileUrl(StorageUrl):
@@ -119,7 +128,7 @@ class _FileUrl(StorageUrl):
     self.delim = os.sep
 
   def Clone(self):
-    return _FileUrl(self.GetUrlString())
+    return _FileUrl(self.url_string)
 
   def IsFileUrl(self):
     return True
@@ -133,17 +142,19 @@ class _FileUrl(StorageUrl):
   def IsDirectory(self):
     return not self.IsStream() and os.path.isdir(self.object_name)
 
-  def GetUrlString(self):
+  def CreatePrefixUrl(self, wildcard_suffix=None):
+    return self.url_string
+
+  @property
+  def url_string(self):
     return '%s://%s' % (self.scheme, self.object_name)
 
-  def GetVersionlessUrlString(self):
-    return self.GetUrlString()
-
-  def GetVersionlessUrlStringStripOneSlash(self):
-    return self.GetUrlString()
+  @property
+  def versionless_url_string(self):
+    return self.url_string
 
   def __str__(self):
-    return self.GetUrlString()
+    return self.url_string
 
 
 class _CloudUrl(StorageUrl):
@@ -195,7 +206,7 @@ class _CloudUrl(StorageUrl):
             'CloudUrl: URL string %s did not match URL regex' % url_string)
 
   def Clone(self):
-    return _CloudUrl(self.GetUrlString())
+    return _CloudUrl(self.url_string)
 
   def IsFileUrl(self):
     return False
@@ -218,28 +229,33 @@ class _CloudUrl(StorageUrl):
   def IsProvider(self):
     return bool(self.scheme and not self.bucket_name)
 
-  def GetBucketUrlString(self):
+  def CreatePrefixUrl(self, wildcard_suffix=None):
+    prefix = StripOneSlash(self.versionless_url_string)
+    if wildcard_suffix:
+      prefix = '%s/%s' % (prefix, wildcard_suffix)
+    return prefix
+
+  @property
+  def bucket_url_string(self):
     return '%s://%s/' % (self.scheme, self.bucket_name)
 
-  def GetUrlString(self):
-    url_str = self.GetVersionlessUrlString()
+  @property
+  def url_string(self):
+    url_str = self.versionless_url_string
     if self.HasGeneration():
       url_str += '#%s' % self.generation
     return url_str
 
-  def GetVersionlessUrlString(self):
+  @property
+  def versionless_url_string(self):
     if self.IsProvider():
       return '%s://' % self.scheme
     elif self.IsBucket():
-      return self.GetBucketUrlString()
-    else:
-      return '%s://%s/%s' % (self.scheme, self.bucket_name, self.object_name)
-
-  def GetVersionlessUrlStringStripOneSlash(self):
-    return StripOneSlash(self.GetVersionlessUrlString())
+      return self.bucket_url_string
+    return '%s://%s/%s' % (self.scheme, self.bucket_name, self.object_name)
 
   def __str__(self):
-    return self.GetUrlString()
+    return self.url_string
 
 
 def StorageUrlFromString(url_str):
@@ -259,15 +275,13 @@ def StorageUrlFromString(url_str):
   if scheme == 'file':
     is_stream = (path == '-')
     return _FileUrl(url_str, is_stream=is_stream)
-  else:
-    return _CloudUrl(url_str)
+  return _CloudUrl(url_str)
 
 
 def StripOneSlash(url_str):
   if url_str and url_str.endswith('/'):
     return url_str[:-1]
-  else:
-    return url_str
+  return url_str
 
 
 def ContainsWildcard(url_string):

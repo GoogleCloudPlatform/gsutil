@@ -162,8 +162,7 @@ class WebCommand(Command):
 
     if bucket_url.scheme == 's3':
       sys.stdout.write(self.gsutil_api.XmlPassThroughGetWebsite(
-          bucket_url.GetUrlString(),
-          provider=bucket_url.scheme))
+          bucket_url, provider=bucket_url.scheme))
     else:
       if bucket_metadata.website and (bucket_metadata.website.mainPageSuffix or
                                       bucket_metadata.website.notFoundPage):

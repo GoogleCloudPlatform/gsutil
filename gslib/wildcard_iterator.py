@@ -52,7 +52,7 @@ class WildcardIterator(object):
   # and make one return the other.
   def __repr__(self):
     """Returns string representation of WildcardIterator."""
-    return 'WildcardIterator(%s)' % self.wildcard_url.GetUrlString()
+    return 'WildcardIterator(%s)' % self.wildcard_url.url_string
 
 
 class CloudWildcardIterator(WildcardIterator):
@@ -154,7 +154,7 @@ class CloudWildcardIterator(WildcardIterator):
         # By default, assume a non-wildcarded URL is an object, not a prefix.
         # This prevents unnecessary listings (which are slower, more expensive,
         # and also subject to eventual consistency).
-        if (not ContainsWildcard(self.wildcard_url.GetUrlString()) and
+        if (not ContainsWildcard(self.wildcard_url.url_string) and
             self.wildcard_url.IsObject() and not self.all_versions):
           try:
             get_object = self.gsutil_api.GetObjectMetadata(
@@ -164,7 +164,7 @@ class CloudWildcardIterator(WildcardIterator):
                 provider=self.wildcard_url.scheme,
                 fields=get_fields)
             yield self._GetObjectRef(
-                self.wildcard_url.GetBucketUrlString(), get_object,
+                self.wildcard_url.bucket_url_string, get_object,
                 with_version=(self.all_versions or single_version_request))
             return
           except (NotFoundException, AccessDeniedException):
@@ -326,12 +326,12 @@ class CloudWildcardIterator(WildcardIterator):
         not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we just want the name of a non-wildcarded bucket URL,
       # don't make an RPC.
-      yield BucketListingBucket(self.wildcard_url.GetBucketUrlString())
+      yield BucketListingBucket(self.wildcard_url.bucket_url_string)
     elif(self.wildcard_url.IsBucket() and
          not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we have a non-wildcarded bucket URL, get just that bucket.
       yield BucketListingBucket(
-          self.wildcard_url.GetBucketUrlString(),
+          self.wildcard_url.bucket_url_string,
           root_object=self.gsutil_api.GetBucket(
               self.wildcard_url.bucket_name, provider=self.wildcard_url.scheme,
               fields=bucket_fields))
@@ -521,9 +521,9 @@ class FileWildcardIterator(WildcardIterator):
     for filepath in filepaths:
       expanded_url = StorageUrlFromString(filepath)
       if os.path.isdir(filepath):
-        yield BucketListingPrefix(expanded_url.GetUrlString())
+        yield BucketListingPrefix(expanded_url.url_string)
       else:
-        yield BucketListingObject(expanded_url.GetUrlString())
+        yield BucketListingObject(expanded_url.url_string)
 
   def _IterDir(self, directory, wildcard):
     """An iterator over the specified dir and wildcard."""

@@ -75,7 +75,7 @@ class NameExpansionResult(object):
     self.is_multi_src_request = is_multi_src_request
     self.src_url_expands_to_multi = src_url_expands_to_multi
     self.names_container = names_container
-    self.blr_url_string = blr.GetUrlString()
+    self.blr_url_string = blr.url_string
     self.have_existing_dst_container = have_existing_dst_container
 
   def __repr__(self):
@@ -304,15 +304,14 @@ class _NameExpansionIterator(object):
           #   filtered in step 3 otherwise.
           # - This is a prefix or bucket subdirectory because only
           #   non-recursive iterations product bucket references.
-          expanded_url = StorageUrlFromString(blr.GetUrlString())
+          expanded_url = StorageUrlFromString(blr.url_string)
           if expanded_url.IsFileUrl():
             # Convert dir to implicit recursive wildcard.
             url_to_iterate = '%s%s%s' % (blr, os.sep, subdir_exp_wildcard)
           else:
             # Convert subdir to implicit recursive wildcard.
-            stripped_url = expanded_url.GetVersionlessUrlStringStripOneSlash()
-            url_to_iterate = '%s/%s' % (stripped_url,
-                                        subdir_exp_wildcard)
+            url_to_iterate = expanded_url.CreatePrefixUrl(
+                wildcard_suffix=subdir_exp_wildcard)
 
           wc_iter = PluralityCheckableIterator(
               self.WildcardIterator(url_to_iterate).IterObjects(
@@ -521,17 +520,17 @@ class _OmitNonRecursiveIterator(object):
       if not self.recursion_requested and not blr.IsObject():
         # At this point we either have a bucket or a prefix,
         # so if recursion is not requested, we're going to omit it.
-        expanded_url = StorageUrlFromString(blr.GetUrlString())
+        expanded_url = StorageUrlFromString(blr.url_string)
         if expanded_url.IsFileUrl():
           desc = 'directory'
         else:
-          desc = blr.TypeName()
+          desc = blr.type_name
         if self.cmd_supports_recursion:
           self.logger.info(
               'Omitting %s "%s". (Did you mean to do %s -R?)',
-              desc, blr.GetUrlString(), self.command_name)
+              desc, blr.url_string, self.command_name)
         else:
-          self.logger.info('Omitting %s "%s".', desc, blr.GetUrlString())
+          self.logger.info('Omitting %s "%s".', desc, blr.url_string)
       else:
         yield (names_container, blr)
 
@@ -567,13 +566,11 @@ class _ImplicitBucketSubdirIterator(object):
     for blr in self.blr_iter:
       if blr.IsPrefix():
         # This is a bucket subdirectory, list objects according to the wildcard.
-        # Strip a '/' from the prefix url to handle objects ending in /.
-        prefix_url = StorageUrlFromString(
-            blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
+        prefix_url = StorageUrlFromString(blr.url_string).CreatePrefixUrl(
+            wildcard_suffix=self.subdir_exp_wildcard)
         implicit_subdir_iterator = PluralityCheckableIterator(
             self.name_exp_instance.WildcardIterator(
-                '%s/%s' % (prefix_url, self.subdir_exp_wildcard)).IterAll(
-                    bucket_listing_fields=['name']))
+                prefix_url).IterAll(bucket_listing_fields=['name']))
         if not implicit_subdir_iterator.IsEmpty():
           for exp_blr in implicit_subdir_iterator:
             yield (True, exp_blr)

@@ -1080,10 +1080,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     return uri.uri.rpartition('/')[-1]
 
   def testFileContainingColon(self):
-    uri_str = 'abc:def'
-    uri = StorageUrlFromString(uri_str)
-    self.assertEqual('file', uri.scheme)
-    self.assertEqual('file://%s' % uri_str, uri.GetUrlString())
+    url_str = 'abc:def'
+    url = StorageUrlFromString(url_str)
+    self.assertEqual('file', url.scheme)
+    self.assertEqual('file://%s' % url_str, url.url_string)
 
 
 # TODO: These should all be moved to their own test_*.py testing files.

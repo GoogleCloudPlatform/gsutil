@@ -40,8 +40,13 @@ class BucketListingRef(object):
     OBJECT = 'object'  # Cloud object or filesystem file
     PREFIX = 'prefix'  # Cloud bucket subdir or filesystem directory
 
-  def GetUrlString(self):
-    return self.url_string
+  @property
+  def url_string(self):
+    return self._url_string
+
+  @property
+  def type_name(self):
+    return self._ref_type
 
   def IsBucket(self):
     return self._ref_type == self._BucketListingRefType.BUCKET
@@ -52,11 +57,8 @@ class BucketListingRef(object):
   def IsPrefix(self):
     return self._ref_type == self._BucketListingRefType.PREFIX
 
-  def TypeName(self):
-    return self._ref_type
-
   def __str__(self):
-    return self.url_string
+    return self._url_string
 
 
 class BucketListingBucket(BucketListingRef):
@@ -71,7 +73,7 @@ class BucketListingBucket(BucketListingRef):
     """
     super(BucketListingBucket, self).__init__()
     self._ref_type = self._BucketListingRefType.BUCKET
-    self.url_string = url_string
+    self._url_string = url_string
     self.root_object = root_object
 
 
@@ -87,7 +89,7 @@ class BucketListingPrefix(BucketListingRef):
     """
     super(BucketListingPrefix, self).__init__()
     self._ref_type = self._BucketListingRefType.PREFIX
-    self.url_string = url_string
+    self._url_string = url_string
     self.root_object = root_object
 
 
@@ -103,6 +105,6 @@ class BucketListingObject(BucketListingRef):
     """
     super(BucketListingObject, self).__init__()
     self._ref_type = self._BucketListingRefType.OBJECT
-    self.url_string = url_string
+    self._url_string = url_string
     self.root_object = root_object
 

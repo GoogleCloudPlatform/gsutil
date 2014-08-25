@@ -592,7 +592,7 @@ def ConstructDstUrl(src_url, exp_src_url,
     # of exp_src_url to exp_dst_url.
     src_final_comp = exp_src_url.object_name.rpartition(src_url.delim)[-1]
     return StorageUrlFromString('%s%s%s' % (
-        exp_dst_url.GetUrlString().rstrip(exp_dst_url.delim),
+        exp_dst_url.url_string.rstrip(exp_dst_url.delim),
         exp_dst_url.delim, src_final_comp))
 
   # Else we're copying multiple sources to a directory, bucket, or a bucket
@@ -609,8 +609,8 @@ def ConstructDstUrl(src_url, exp_src_url,
   # as gs://bucket.
   if ((have_multiple_srcs or src_url_names_container or
        (exp_dst_url.IsFileUrl() and exp_dst_url.IsDirectory()))
-      and not exp_dst_url.GetUrlString().endswith(exp_dst_url.delim)):
-    exp_dst_url = StorageUrlFromString('%s%s' % (exp_dst_url.GetUrlString(),
+      and not exp_dst_url.url_string.endswith(exp_dst_url.delim)):
+    exp_dst_url = StorageUrlFromString('%s%s' % (exp_dst_url.url_string,
                                                  exp_dst_url.delim))
 
   # Making naming behavior match how things work with local Linux cp and mv
@@ -660,7 +660,7 @@ def ConstructDstUrl(src_url, exp_src_url,
     # Note: mv.py code disallows wildcard specification of source URL.
     recursive_move_to_new_subdir = True
     exp_src_url_tail = (
-        exp_src_url.GetUrlString()[len(src_url.GetUrlString()):])
+        exp_src_url.url_string[len(src_url.url_string):])
     dst_key_name = '%s/%s' % (exp_dst_url.object_name.rstrip('/'),
                               exp_src_url_tail.strip('/'))
 
@@ -672,7 +672,7 @@ def ConstructDstUrl(src_url, exp_src_url,
     # exp_src_url=gs://bucket/src_subdir/obj, dst_key_name should be
     # src_subdir/obj.
     src_url_path_sans_final_dir = GetPathBeforeFinalDir(src_url)
-    dst_key_name = exp_src_url.GetVersionlessUrlString()[
+    dst_key_name = exp_src_url.versionless_url_string[
         len(src_url_path_sans_final_dir):].lstrip(src_url.delim)
     # Handle case where dst_url is a non-existent subdir.
     if not have_existing_dest_subdir:
@@ -903,11 +903,11 @@ def CheckForDirFileConflict(exp_src_url, dst_url):
   if os.path.isfile(final_dir):
     raise CommandException('Cannot retrieve %s because a file exists '
                            'where a directory needs to be created (%s).' %
-                           (exp_src_url.GetUrlString(), final_dir))
+                           (exp_src_url.url_string, final_dir))
   if os.path.isdir(dst_path):
     raise CommandException('Cannot retrieve %s because a directory exists '
                            '(%s) where the file needs to be created.' %
-                           (exp_src_url.GetUrlString(), dst_path))
+                           (exp_src_url.url_string, dst_path))
 
 
 def _PartitionFile(fp, file_size, src_url, content_type, canned_acl,
@@ -999,7 +999,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
     fields populated.
   """
   start_time = time.time()
-  dst_bucket_url = StorageUrlFromString(dst_url.GetBucketUrlString())
+  dst_bucket_url = StorageUrlFromString(dst_url.bucket_url_string)
   api_selector = gsutil_api.GetApiSelector(provider=dst_url.scheme)
   # Determine which components, if any, have already been successfully
   # uploaded.
@@ -1219,7 +1219,7 @@ def FixWindowsNaming(src_url, dst_url):
   """
   if (src_url.IsFileUrl() and src_url.delim == '\\'
       and dst_url.IsCloudUrl()):
-    trans_url_str = re.sub(r'\\', '/', dst_url.GetUrlString())
+    trans_url_str = re.sub(r'\\', '/', dst_url.url_string)
     dst_url = StorageUrlFromString(trans_url_str)
   return dst_url
 
@@ -1249,7 +1249,7 @@ def SrcDstSame(src_url, dst_url):
     new_dst_path = os.path.normpath(dst_url.object_name)
     return new_src_path == new_dst_path
   else:
-    return (src_url.GetUrlString() == dst_url.GetUrlString() and
+    return (src_url.url_string == dst_url.url_string and
             src_url.generation == dst_url.generation)
 
 
@@ -1295,7 +1295,7 @@ def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
   if src_url.IsFileUrl() and src_url.IsStream():
     logger.info('Copying from <STDIN>%s...', content_type_msg)
   else:
-    logger.info('Copying %s%s...', src_url.GetUrlString(), content_type_msg)
+    logger.info('Copying %s%s...', src_url.url_string, content_type_msg)
 
 
 # pylint: disable=undefined-variable
@@ -1434,7 +1434,7 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
     populated.
   """
   progress_callback = FileProgressCallbackHandler(
-      ConstructAnnounceText('Uploading', dst_url.GetUrlString()), logger).call
+      ConstructAnnounceText('Uploading', dst_url.url_string), logger).call
   start_time = time.time()
 
   if src_url.IsStream():
@@ -1505,12 +1505,12 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
   tracker_data = _GetUploadTrackerData(tracker_file_name, logger)
   if tracker_data:
     logger.info(
-        'Resuming upload for %s', src_url.GetUrlString())
+        'Resuming upload for %s', src_url.url_string)
 
   retryable = True
 
   progress_callback = FileProgressCallbackHandler(
-      ConstructAnnounceText('Uploading', dst_url.GetUrlString()), logger).call
+      ConstructAnnounceText('Uploading', dst_url.url_string), logger).call
   if global_copy_helper_opts.halt_at_byte:
     progress_callback = _HaltingCopyCallbackHandler(
         True, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
@@ -1801,7 +1801,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
           else:
             download_start_point = existing_file_size
             serialization_dict['progress'] = download_start_point
-            logger.info('Resuming download for %s', src_url.GetUrlString())
+            logger.info('Resuming download for %s', src_url.url_string)
           # Catch up our digester with the hash data.
           if existing_file_size > TEN_MB:
             for alg_name in digesters:
@@ -1826,7 +1826,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       serialization_data = json.dumps(serialization_dict)
 
     progress_callback = FileProgressCallbackHandler(
-        ConstructAnnounceText('Downloading', dst_url.GetUrlString()),
+        ConstructAnnounceText('Downloading', dst_url.url_string),
         logger).call
     if global_copy_helper_opts.halt_at_byte:
       progress_callback = _HaltingCopyCallbackHandler(
@@ -2095,7 +2095,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
         preconditions=preconditions, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS, size=src_obj_metadata.size,
         progress_callback=FileProgressCallbackHandler(
-            ConstructAnnounceText('Uploading', dst_url.GetUrlString()),
+            ConstructAnnounceText('Uploading', dst_url.url_string),
             logger).call,
         tracker_callback=_DummyTrackerCallback)
   end_time = time.time()
@@ -2201,7 +2201,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     except NotFoundException:
       raise CommandException(
           'NotFoundException: Could not retrieve source object %s.' %
-          src_url.GetUrlString())
+          src_url.url_string)
     src_obj_size = src_obj_metadata.size
     dst_obj_metadata.contentType = src_obj_metadata.contentType
     if global_copy_helper_opts.preserve_acl:
@@ -2226,7 +2226,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
 
   if global_copy_helper_opts.use_manifest:
     # Set the source size in the manifest.
-    manifest.Set(src_url.GetUrlString(), 'size', src_obj_size)
+    manifest.Set(src_url.url_string, 'size', src_obj_size)
 
   # On Windows, stdin is opened as text mode instead of binary which causes
   # problems when piping a binary file, so this switches it to binary mode.
@@ -2459,7 +2459,7 @@ def GetPathBeforeFinalDir(url):
   """
   sep = url.delim
   if url.IsFileUrl():
-    past_scheme = url.GetUrlString()[len('file://'):]
+    past_scheme = url.url_string[len('file://'):]
     if past_scheme.find(sep) == -1:
       return 'file://'
     else:
@@ -2467,7 +2467,7 @@ def GetPathBeforeFinalDir(url):
   if url.IsBucket():
     return '%s://' % url.scheme
   # Else it names a bucket subdir.
-  return url.GetUrlString().rstrip(sep).rpartition(sep)[0]
+  return url.url_string.rstrip(sep).rpartition(sep)[0]
 
 
 def _HashFilename(filename):

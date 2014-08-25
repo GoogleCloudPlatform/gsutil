@@ -586,7 +586,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   Raises:
     Exception: if calling bug encountered.
   """
-  url_str = bucket_listing_ref.GetUrlString()
+  url_str = bucket_listing_ref.url_string
   storage_url = StorageUrlFromString(url_str)
   obj = bucket_listing_ref.root_object
 
@@ -975,7 +975,7 @@ def IsCloudSubdirPlaceholder(url, blr=None):
   """
   if not url.IsCloudUrl():
     return False
-  url_str = url.GetUrlString()
+  url_str = url.url_string
   if url_str.endswith('_$folder$'):
     return True
   if blr and blr.IsObject():

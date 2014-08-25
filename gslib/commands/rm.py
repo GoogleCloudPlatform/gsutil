@@ -177,7 +177,7 @@ class RmCommand(Command):
           for blr in self.WildcardIterator(url_str).IterBuckets(
               bucket_fields=bucket_fields):
             bucket_urls_to_delete.append(
-                StorageUrlFromString(blr.GetUrlString()))
+                StorageUrlFromString(blr.url_string))
             bucket_strings_to_delete.append(url_str)
 
     # Used to track if any files failed to be removed.
@@ -251,7 +251,7 @@ class RmCommand(Command):
           if not e.reason.startswith('No URLs matched:'):
             raise
         if not had_previous_failures:
-          ResetFailureCount()          
+          ResetFailureCount()
 
     # Now that all data has been deleted, delete any bucket URLs.
     for url in bucket_urls_to_delete:

@@ -36,10 +36,10 @@ def PrintDirHeader(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type PREFIX.
   """
-  print '%s:' % bucket_listing_ref.GetUrlString().encode(UTF8)
+  print '%s:' % bucket_listing_ref.url_string.encode(UTF8)
 
 
-def PrintBucketHeader(_):
+def PrintBucketHeader(bucket_listing_ref):  # pylint: disable=unused-argument
   """Default function for printing headers for buckets.
 
   Header is printed prior to listing the contents of the bucket.
@@ -56,7 +56,7 @@ def PrintDir(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
   """
-  print bucket_listing_ref.GetUrlString().encode(UTF8)
+  print bucket_listing_ref.url_string.encode(UTF8)
 
 
 # pylint: disable=unused-argument
@@ -79,7 +79,7 @@ def PrintObject(bucket_listing_ref):
   Returns:
     (num_objects, num_bytes).
   """
-  print bucket_listing_ref.GetUrlString().encode(UTF8)
+  print bucket_listing_ref.url_string.encode(UTF8)
   return (1, 0)
 
 
@@ -136,7 +136,7 @@ class LsHelper(object):
     self.exclude_patterns = exclude_patterns
     self.bucket_listing_fields = fields
 
-  def ExpandUrlAndPrint(self, url, print_trailing_newline=False):
+  def ExpandUrlAndPrint(self, url):
     """Iterates over the given URL and calls print functions.
 
     Args:
@@ -154,14 +154,14 @@ class LsHelper(object):
       # IsBucket() implies a top-level listing.
       if url.IsBucket():
         self._print_bucket_header_func(url)
-      return self._RecurseExpandUrlAndPrint(url.GetUrlString(),
+      return self._RecurseExpandUrlAndPrint(url.url_string,
                                             print_initial_newline=False)
     else:
       # User provided a prefix or object URL, but it's impossible to tell
       # which until we do a listing and see what matches.
-      top_level_iteration = url.GetVersionlessUrlStringStripOneSlash()
       top_level_iterator = PluralityCheckableIterator(self._iterator_func(
-          '%s' % top_level_iteration, all_versions=self.all_versions).IterAll(
+          url.CreatePrefixUrl(wildcard_suffix=None),
+          all_versions=self.all_versions).IterAll(
               expand_top_level_buckets=True,
               bucket_listing_fields=self.bucket_listing_fields))
       plurality = top_level_iterator.HasPlurality()
@@ -180,8 +180,8 @@ class LsHelper(object):
             print_newline = True
           if plurality:
             self._print_dir_header_func(blr)
-          expansion_url_str = '%s/*' % StorageUrlFromString(
-              blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
+          expansion_url_str = StorageUrlFromString(
+              blr.url_string).CreatePrefixUrl(wildcard_suffix='*')
           nd, no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
           self._print_dir_summary_func(nb, blr)
         else:
@@ -225,8 +225,8 @@ class LsHelper(object):
           else:
             print_initial_newline = True
           self._print_dir_header_func(blr)
-          expansion_url_str = '%s/*' % StorageUrlFromString(
-              blr.GetUrlString()).GetVersionlessUrlStringStripOneSlash()
+          expansion_url_str = StorageUrlFromString(
+              blr.url_string).CreatePrefixUrl(wildcard_suffix='*')
 
           nd, no, nb = self._RecurseExpandUrlAndPrint(expansion_url_str)
           self._print_dir_summary_func(nb, blr)
@@ -253,7 +253,7 @@ class LsHelper(object):
       True if reference matches a pattern and should be excluded.
     """
     if self.exclude_patterns:
-      tomatch = blr.GetUrlString()
+      tomatch = blr.url_string
       for pattern in self.exclude_patterns:
         if fnmatch.fnmatch(tomatch, pattern):
           return True

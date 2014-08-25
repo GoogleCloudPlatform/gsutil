@@ -642,11 +642,11 @@ class CpCommand(Command):
     # directory "mydata" exists).
     if IsCloudSubdirPlaceholder(exp_src_url):
       self.logger.info('Skipping cloud sub-directory placeholder object %s',
-                       exp_src_url.GetUrlString())
+                       exp_src_url.url_string)
       return
 
     if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(
-        exp_src_url.GetUrlString()):
+        exp_src_url.url_string):
       return
 
     if copy_helper_opts.perform_mv:
@@ -680,19 +680,19 @@ class CpCommand(Command):
     if copy_helper.SrcDstSame(exp_src_url, dst_url):
       raise CommandException('%s: "%s" and "%s" are the same file - '
                              'abort.' % (cmd_name,
-                                         exp_src_url.GetUrlString(),
-                                         dst_url.GetUrlString()))
+                                         exp_src_url.url_string,
+                                         dst_url.url_string))
 
     if dst_url.IsCloudUrl() and dst_url.HasGeneration():
       raise CommandException('%s: a version-specific URL\n(%s)\ncannot be '
                              'the destination for gsutil cp - abort.'
-                             % (cmd_name, dst_url.GetUrlString()))
+                             % (cmd_name, dst_url.url_string))
 
     elapsed_time = bytes_transferred = 0
     try:
       if copy_helper_opts.use_manifest:
         self.manifest.Initialize(
-            exp_src_url.GetUrlString(), dst_url.GetUrlString())
+            exp_src_url.url_string, dst_url.url_string)
       (elapsed_time, bytes_transferred, result_url, md5) = (
           copy_helper.PerformCopy(
               self.logger, exp_src_url, dst_url, gsutil_api,
@@ -701,38 +701,38 @@ class CpCommand(Command):
               gzip_exts=self.gzip_exts, test_method=self.test_method))
       if copy_helper_opts.use_manifest:
         if md5:
-          self.manifest.Set(exp_src_url.GetUrlString(), 'md5', md5)
+          self.manifest.Set(exp_src_url.url_string, 'md5', md5)
         self.manifest.SetResult(
-            exp_src_url.GetUrlString(), bytes_transferred, 'OK')
+            exp_src_url.url_string, bytes_transferred, 'OK')
       if copy_helper_opts.print_ver:
         # Some cases don't return a version-specific URL (e.g., if destination
         # is a file).
-        self.logger.info('Created: %s' % result_url.GetUrlString())
+        self.logger.info('Created: %s' % result_url.url_string)
     except ItemExistsError:
-      message = 'Skipping existing item: %s' % dst_url.GetUrlString()
+      message = 'Skipping existing item: %s' % dst_url.url_string
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
-        self.manifest.SetResult(exp_src_url.GetUrlString(), 0, 'skip', message)
+        self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
     except Exception, e:
       if (copy_helper_opts.no_clobber and
           copy_helper.IsNoClobberServerException(e)):
-        message = 'Rejected (noclobber): %s' % dst_url.GetUrlString()
+        message = 'Rejected (noclobber): %s' % dst_url.url_string
         self.logger.info(message)
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
-              exp_src_url.GetUrlString(), 0, 'skip', message)
+              exp_src_url.url_string, 0, 'skip', message)
       elif self.continue_on_error:
-        message = 'Error copying %s: %s' % (src_url.GetUrlString(), str(e))
+        message = 'Error copying %s: %s' % (src_url.url_string, str(e))
         self.op_failure_count += 1
         self.logger.error(message)
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
-              exp_src_url.GetUrlString(), 0, 'error',
+              exp_src_url.url_string, 0, 'error',
               RemoveCRLFFromString(message))
       else:
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
-              exp_src_url.GetUrlString(), 0, 'error', str(e))
+              exp_src_url.url_string, 0, 'error', str(e))
         raise
 
     # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
@@ -959,8 +959,8 @@ class CpCommand(Command):
         raise
       except NotFoundException, e:
         raise CommandException('Destination bucket %s does not exist.' %
-                               exp_dst_url.GetUrlString())
+                               exp_dst_url.url_string)
       except Exception, e:
         raise CommandException('Error retrieving destination bucket %s: %s' %
-                               (exp_dst_url.GetUrlString(), e.message))
+                               (exp_dst_url.url_string, e.message))
       return bucket

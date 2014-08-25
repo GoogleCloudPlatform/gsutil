@@ -1424,11 +1424,11 @@ class BotoTranslation(CloudApi):
     return None
 
   # For function docstrings, see CloudApiDelegator class.
-  def XmlPassThroughGetAcl(self, uri_string, def_obj_acl=False):
+  def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       if def_obj_acl:
@@ -1438,12 +1438,12 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def XmlPassThroughSetAcl(self, acl_text, uri_string, canned=True,
+  def XmlPassThroughSetAcl(self, acl_text, storage_url, canned=True,
                            def_obj_acl=False):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       if canned:
@@ -1465,7 +1465,7 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def XmlPassThroughSetCors(self, cors_text, uri_string):
+  def XmlPassThroughSetCors(self, cors_text, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     # Parse XML document and convert into Cors object.
     cors_obj = Cors()
@@ -1479,17 +1479,17 @@ class BotoTranslation(CloudApi):
 
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.set_cors(cors_obj, False)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def XmlPassThroughGetCors(self, uri_string):
+  def XmlPassThroughGetCors(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     uri = boto.storage_uri(
-        uri_string, suppress_consec_slashes=False,
+        storage_url.url_string, suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         debug=self.debug)
     try:
@@ -1501,11 +1501,11 @@ class BotoTranslation(CloudApi):
     # Pretty-print the XML to make it more easily human editable.
     return parsed_xml.toprettyxml(indent='    ')
 
-  def XmlPassThroughGetLifecycle(self, uri_string):
+  def XmlPassThroughGetLifecycle(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       lifecycle = uri.get_lifecycle_config(False)
@@ -1516,7 +1516,7 @@ class BotoTranslation(CloudApi):
     # Pretty-print the XML to make it more easily human editable.
     return parsed_xml.toprettyxml(indent='    ')
 
-  def XmlPassThroughSetLifecycle(self, lifecycle_text, uri_string):
+  def XmlPassThroughSetLifecycle(self, lifecycle_text, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     # Parse XML document and convert into lifecycle object.
     lifecycle_obj = LifecycleConfig()
@@ -1530,18 +1530,18 @@ class BotoTranslation(CloudApi):
 
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.configure_lifecycle(lifecycle_obj, False)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def XmlPassThroughGetLogging(self, uri_string):
+  def XmlPassThroughGetLogging(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       logging_config_xml = UnaryDictToXml(uri.get_logging_config())
@@ -1550,11 +1550,11 @@ class BotoTranslation(CloudApi):
 
     return XmlParseString(logging_config_xml).toprettyxml()
 
-  def XmlPassThroughGetWebsite(self, uri_string):
+  def XmlPassThroughGetWebsite(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          uri_string, suppress_consec_slashes=False,
+          storage_url.url_string, suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       web_config_xml = UnaryDictToXml(uri.get_website_config())

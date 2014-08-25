@@ -227,13 +227,13 @@ class TestCpFuncs(GsUtilUnitTestCase):
     for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
       self.assertTrue(arg in components_to_upload)
     self.assertEqual(1, len(uploaded_components))
-    self.assertEqual(args_uploaded_correctly.dst_url.GetUrlString(),
-                     uploaded_components[0].GetUrlString())
+    self.assertEqual(args_uploaded_correctly.dst_url.url_string,
+                     uploaded_components[0].url_string)
     self.assertEqual(1, len(existing_objects_to_delete))
     no_longer_used_url = StorageUrlFromString('%s://%s/%s' % (
         self.default_provider, bucket_name, fpath_no_longer_used))
-    self.assertEqual(no_longer_used_url.GetUrlString(),
-                     existing_objects_to_delete[0].GetUrlString())
+    self.assertEqual(no_longer_used_url.url_string,
+                     existing_objects_to_delete[0].url_string)
 
   def test_FilterExistingComponentsVersioned(self):
     """Tests upload with versionined parallel components."""
@@ -322,8 +322,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                  bucket_url, mock_api))
 
     self.assertEqual([args_wrong_contents], components_to_upload)
-    self.assertEqual(args_uploaded_correctly.dst_url.GetUrlString(),
-                     uploaded_components[0].GetUrlString())
+    self.assertEqual(args_uploaded_correctly.dst_url.url_string,
+                     uploaded_components[0].url_string)
     expected_to_delete = [(args_wrong_contents.dst_url.object_name,
                            args_wrong_contents.dst_url.generation),
                           (args_duplicate.dst_url.object_name,

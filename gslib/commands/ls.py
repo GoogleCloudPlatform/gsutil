@@ -250,14 +250,14 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      print bucket_blr.GetUrlString()
+      print bucket_blr.url_string
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
     bucket = bucket_blr.root_object
     location_constraint = bucket.location
     storage_class = bucket.storageClass
-    fields = {'bucket': bucket_blr.GetUrlString(),
+    fields = {'bucket': bucket_blr.url_string,
               'storage_class': storage_class,
               'location_constraint': location_constraint,
               'acl': AclTranslation.JsonFromMessage(bucket.acl),
@@ -272,7 +272,7 @@ class LsCommand(Command):
 
     # For field values that are multiline, add indenting to make it look
     # prettier.
-    for key in fields.keys():
+    for key in fields:
       previous_value = fields[key]
       if (not isinstance(previous_value, basestring) or
           '\n' not in previous_value):
@@ -293,7 +293,7 @@ class LsCommand(Command):
           '\tLifecycle configuration:\t{lifecycle_config}\n'
           '\tACL:\t\t\t\t{acl}\n'
           '\tDefault ACL:\t\t\t{default_acl}'.format(**fields))
-    bucket_url_str = bucket_blr.GetUrlString()
+    bucket_url_str = bucket_blr.url_string
     if StorageUrlFromString(bucket_url_str).scheme == 's3':
       print('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
@@ -303,7 +303,7 @@ class LsCommand(Command):
   def _PrintLongListing(self, bucket_listing_ref):
     """Prints an object with ListingStyle.LONG."""
     obj = bucket_listing_ref.root_object
-    url_str = bucket_listing_ref.GetUrlString()
+    url_str = bucket_listing_ref.url_string
     if (obj.metadata and S3_DELETE_MARKER_GUID in
         obj.metadata.additionalProperties):
       size_string = '0'
@@ -375,7 +375,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        print '%s:' % blr.GetUrlString().encode(UTF8)
+        print '%s:' % blr.url_string.encode(UTF8)
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -407,7 +407,7 @@ class LsCommand(Command):
             # listings with fields=='id'. Ensure the bucket exists by calling
             # GetBucket.
             self.gsutil_api.GetBucket(
-                StorageUrlFromString(blr.GetUrlString()).bucket_name,
+                StorageUrlFromString(blr.url_string).bucket_name,
                 fields=['id'], provider=storage_url.scheme)
           self._PrintBucketInfo(blr, listing_style)
           total_buckets += 1
@@ -417,7 +417,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          print '%-33s%s' % ('', blr.GetUrlString().encode(UTF8))
+          print '%-33s%s' % ('', blr.url_string.encode(UTF8))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.

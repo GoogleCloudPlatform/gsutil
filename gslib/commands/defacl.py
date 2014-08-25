@@ -196,7 +196,7 @@ class DefAclCommand(Command):
         if not url.IsBucket():
           raise CommandException(
               'The defacl ch command can only be applied to buckets.')
-        bucket_urls.add(url.GetUrlString())
+        bucket_urls.add(url.url_string)
 
     for url_string in bucket_urls:
       self.ApplyAclChanges(url_string)

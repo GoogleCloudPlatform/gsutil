@@ -125,7 +125,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       if blr.IsPrefix():
         prefixes.add(blr.root_object)
       else:
-        uri_strs.add(blr.GetUrlString())
+        uri_strs.add(blr.url_string)
     exp_obj_uri_strs = set([suri(self.test_bucket0_uri, x)
                             for x in self.immed_child_obj_names])
     self.assertEqual(exp_obj_uri_strs, uri_strs)
@@ -141,7 +141,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       if blr.IsPrefix():
         actual_prefixes.add(blr.root_object)
       else:
-        actual_uri_strs.add(blr.GetUrlString())
+        actual_uri_strs.add(blr.url_string)
     expected_uri_strs = set()
     expected_prefixes = set(['nested1/'])
     self.assertEqual(expected_prefixes, actual_prefixes)
@@ -156,7 +156,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       if blr.IsPrefix():
         actual_prefixes.add(blr.root_object)
       else:
-        actual_uri_strs.add(blr.GetUrlString())
+        actual_uri_strs.add(blr.url_string)
     expected_uri_strs = set([
         self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz1').uri,
         self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz2').uri])
