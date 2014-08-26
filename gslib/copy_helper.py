@@ -543,10 +543,9 @@ def _ShouldTreatDstUrlAsSingleton(have_multiple_srcs,
             dst_url.IsObject())
 
 
-def ConstructDstUrl(src_url, exp_src_url,
-                    src_url_names_container, src_url_expands_to_multi,
-                    have_multiple_srcs, exp_dst_url,
-                    have_existing_dest_subdir, recursion_requested):
+def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
+                    have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+                    recursion_requested):
   """Constructs the destination URL for a given exp_src_url/exp_dst_url pair.
 
   Uses context-dependent naming rules that mimic Linux cp and mv behavior.
@@ -557,7 +556,6 @@ def ConstructDstUrl(src_url, exp_src_url,
     src_url_names_container: True if src_url names a container (including the
         case of a wildcard-named bucket subdir (like gs://bucket/abc,
         where gs://bucket/abc/* matched some objects).
-    src_url_expands_to_multi: True if src_url expanded to multiple URLs.
     have_multiple_srcs: True if this is a multi-source request. This can be
         true if src_url wildcard-expanded to multiple URLs or if there were
         multiple source URLs in the request.
@@ -650,7 +648,7 @@ def ConstructDstUrl(src_url, exp_src_url,
 
   recursive_move_to_new_subdir = False
   if (global_copy_helper_opts.perform_mv and recursion_requested
-      and src_url_expands_to_multi and not have_existing_dest_subdir):
+      and src_url_names_container and not have_existing_dest_subdir):
     # Case 1. Handle naming rules for bucket subdir mv. Here we want to
     # line up the src_url against its expansion, to find the base to build
     # the new name. For example, running the command:

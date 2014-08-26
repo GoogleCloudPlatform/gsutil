@@ -250,7 +250,7 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      print bucket_blr.url_string
+      print bucket_blr
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
@@ -293,8 +293,7 @@ class LsCommand(Command):
           '\tLifecycle configuration:\t{lifecycle_config}\n'
           '\tACL:\t\t\t\t{acl}\n'
           '\tDefault ACL:\t\t\t{default_acl}'.format(**fields))
-    bucket_url_str = bucket_blr.url_string
-    if StorageUrlFromString(bucket_url_str).scheme == 's3':
+    if bucket_blr.storage_url.scheme == 's3':
       print('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
             'individual configuration commands such as gsutil acl get '
@@ -407,7 +406,7 @@ class LsCommand(Command):
             # listings with fields=='id'. Ensure the bucket exists by calling
             # GetBucket.
             self.gsutil_api.GetBucket(
-                StorageUrlFromString(blr.url_string).bucket_name,
+                blr.storage_url.bucket_name,
                 fields=['id'], provider=storage_url.scheme)
           self._PrintBucketInfo(blr, listing_style)
           total_buckets += 1

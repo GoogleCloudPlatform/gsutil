@@ -102,7 +102,7 @@ class RbCommand(Command):
         else:
           raise
       for blr in blrs:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         self.logger.info('Removing %s...', url)
         try:
           self.gsutil_api.DeleteBucket(url.bucket_name, provider=url.scheme)

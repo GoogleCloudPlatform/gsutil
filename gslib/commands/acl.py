@@ -358,8 +358,7 @@ class AclCommand(Command):
     else:
       gsutil_api = self.gsutil_api
 
-    url_string = name_expansion_result.GetExpandedUrlStr()
-    url = StorageUrlFromString(url_string)
+    url = name_expansion_result.expanded_storage_url
 
     if url.IsBucket():
       bucket = gsutil_api.GetBucket(url.bucket_name, provider=url.scheme,
@@ -374,15 +373,14 @@ class AclCommand(Command):
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.' % url_string)
+                          'OWNER-role access to this resource.' % url)
       return
 
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(url_string, current_acl,
-                                           'acl', self.logger)
+      modification_count += change.Execute(url, current_acl, 'acl', self.logger)
     if modification_count == 0:
-      self.logger.info('No changes to {0}'.format(url_string))
+      self.logger.info('No changes to {0}'.format(url))
       return
 
     try:
@@ -405,7 +403,7 @@ class AclCommand(Command):
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
 
-    self.logger.info('Updated ACL on {0}'.format(url_string))
+    self.logger.info('Updated ACL on {0}'.format(url))
 
   def RunCommand(self):
     """Command entry point for the acl command."""

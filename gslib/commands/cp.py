@@ -34,7 +34,6 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import ContainsWildcard
-from gslib.storage_url import StorageUrlFromString
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
@@ -518,7 +517,7 @@ OPTIONS_TEXT = """
                    browser will know to uncompress the data based on the
                    Content-Encoding header, and to render it as HTML based on
                    the Content-Type header.
-                 
+
                  Note that if you download an object with Content-Encoding:gzip
                  gsutil will decompress the content before writing the local
                  file.
@@ -606,23 +605,16 @@ class CpCommand(Command):
   def CopyFunc(self, name_expansion_result, thread_state=None):
     """Worker function for performing the actual copy (and rm, for mv)."""
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
-    exp_dst_url = self.exp_dst_url
-    have_existing_dst_container = self.have_existing_dst_container
 
     copy_helper_opts = copy_helper.GetCopyHelperOpts()
     if copy_helper_opts.perform_mv:
       cmd_name = 'mv'
     else:
       cmd_name = self.command_name
-    src_url_str = name_expansion_result.GetSrcUrlStr()
-    src_url = StorageUrlFromString(src_url_str)
-    exp_src_url_str = name_expansion_result.GetExpandedUrlStr()
-    exp_src_url = StorageUrlFromString(exp_src_url_str)
-    src_url_names_container = name_expansion_result.NamesContainer()
-    src_url_expands_to_multi = name_expansion_result.NamesContainer()
-    have_multiple_srcs = name_expansion_result.IsMultiSrcRequest()
-    have_existing_dest_subdir = (
-        name_expansion_result.HaveExistingDstContainer())
+    src_url = name_expansion_result.source_storage_url
+    exp_src_url = name_expansion_result.expanded_storage_url
+    src_url_names_container = name_expansion_result.names_container
+    have_multiple_srcs = name_expansion_result.is_multi_source_request
 
     if src_url.IsCloudUrl() and src_url.IsProvider():
       raise CommandException(
@@ -630,7 +622,7 @@ class CpCommand(Command):
           (cmd_name, src_url))
     if have_multiple_srcs:
       copy_helper.InsistDstUrlNamesContainer(
-          exp_dst_url, have_existing_dst_container, cmd_name)
+          self.exp_dst_url, self.have_existing_dst_container, cmd_name)
 
     # Various GUI tools (like the GCS web console) create placeholder objects
     # ending with '/' when the user creates an empty directory. Normally these
@@ -642,7 +634,7 @@ class CpCommand(Command):
     # directory "mydata" exists).
     if IsCloudSubdirPlaceholder(exp_src_url):
       self.logger.info('Skipping cloud sub-directory placeholder object %s',
-                       exp_src_url.url_string)
+                       exp_src_url)
       return
 
     if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(
@@ -650,7 +642,7 @@ class CpCommand(Command):
       return
 
     if copy_helper_opts.perform_mv:
-      if name_expansion_result.NamesContainer():
+      if name_expansion_result.names_container:
         # Use recursion_requested when performing name expansion for the
         # directory mv case so we can determine if any of the source URLs are
         # directories (and then use cp -R and rm -R to perform the move, to
@@ -661,32 +653,30 @@ class CpCommand(Command):
         # would make the name transformation too complex and would also be
         # dangerous (e.g., someone could accidentally move many objects to the
         # wrong name, or accidentally overwrite many objects).
-        if ContainsWildcard(src_url_str):
+        if ContainsWildcard(src_url.url_string):
           raise CommandException('The mv command disallows naming source '
                                  'directories using wildcards')
 
-    if (exp_dst_url.IsFileUrl()
-        and not os.path.exists(exp_dst_url.object_name)
+    if (self.exp_dst_url.IsFileUrl()
+        and not os.path.exists(self.exp_dst_url.object_name)
         and have_multiple_srcs):
-      os.makedirs(exp_dst_url.object_name)
+      os.makedirs(self.exp_dst_url.object_name)
 
     dst_url = copy_helper.ConstructDstUrl(
-        src_url, exp_src_url, src_url_names_container, src_url_expands_to_multi,
-        have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+        src_url, exp_src_url, src_url_names_container, have_multiple_srcs,
+        self.exp_dst_url, self.have_existing_dst_container,
         self.recursion_requested)
     dst_url = copy_helper.FixWindowsNaming(src_url, dst_url)
 
     copy_helper.CheckForDirFileConflict(exp_src_url, dst_url)
     if copy_helper.SrcDstSame(exp_src_url, dst_url):
       raise CommandException('%s: "%s" and "%s" are the same file - '
-                             'abort.' % (cmd_name,
-                                         exp_src_url.url_string,
-                                         dst_url.url_string))
+                             'abort.' % (cmd_name, exp_src_url, dst_url))
 
     if dst_url.IsCloudUrl() and dst_url.HasGeneration():
       raise CommandException('%s: a version-specific URL\n(%s)\ncannot be '
                              'the destination for gsutil cp - abort.'
-                             % (cmd_name, dst_url.url_string))
+                             % (cmd_name, dst_url))
 
     elapsed_time = bytes_transferred = 0
     try:
@@ -707,22 +697,22 @@ class CpCommand(Command):
       if copy_helper_opts.print_ver:
         # Some cases don't return a version-specific URL (e.g., if destination
         # is a file).
-        self.logger.info('Created: %s' % result_url.url_string)
+        self.logger.info('Created: %s' % result_url)
     except ItemExistsError:
-      message = 'Skipping existing item: %s' % dst_url.url_string
+      message = 'Skipping existing item: %s' % dst_url
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
     except Exception, e:
       if (copy_helper_opts.no_clobber and
           copy_helper.IsNoClobberServerException(e)):
-        message = 'Rejected (noclobber): %s' % dst_url.url_string
+        message = 'Rejected (noclobber): %s' % dst_url
         self.logger.info(message)
         if copy_helper_opts.use_manifest:
           self.manifest.SetResult(
               exp_src_url.url_string, 0, 'skip', message)
       elif self.continue_on_error:
-        message = 'Error copying %s: %s' % (src_url.url_string, str(e))
+        message = 'Error copying %s: %s' % (src_url, str(e))
         self.op_failure_count += 1
         self.logger.error(message)
         if copy_helper_opts.use_manifest:
@@ -770,7 +760,7 @@ class CpCommand(Command):
         raise CommandException('Wrong number of arguments for "cp" command.')
       url_strs = self.args[:-1]
 
-    (exp_dst_url, have_existing_dst_container) = (
+    (self.exp_dst_url, self.have_existing_dst_container) = (
         copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api,
                                          self.debug, self.project_id))
 
@@ -781,7 +771,7 @@ class CpCommand(Command):
     # un-versioned destination object.
     all_versions = False
     try:
-      bucket = self._GetBucketWithVersioningConfig(exp_dst_url)
+      bucket = self._GetBucketWithVersioningConfig(self.exp_dst_url)
       if bucket and bucket.versioning and bucket.versioning.enabled:
         all_versions = True
     except AccessDeniedException:
@@ -800,11 +790,8 @@ class CpCommand(Command):
         self.command_name, self.debug,
         self.logger, self.gsutil_api, url_strs,
         self.recursion_requested or copy_helper_opts.perform_mv,
-        have_existing_dst_container=have_existing_dst_container,
         project_id=self.project_id, all_versions=all_versions,
         continue_on_error=self.continue_on_error or self.parallel_operations)
-    self.have_existing_dst_container = have_existing_dst_container
-    self.exp_dst_url = exp_dst_url
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -959,8 +946,8 @@ class CpCommand(Command):
         raise
       except NotFoundException, e:
         raise CommandException('Destination bucket %s does not exist.' %
-                               exp_dst_url.url_string)
+                               exp_dst_url)
       except Exception, e:
         raise CommandException('Error retrieving destination bucket %s: %s' %
-                               (exp_dst_url.url_string, e.message))
+                               (exp_dst_url, e.message))
       return bucket

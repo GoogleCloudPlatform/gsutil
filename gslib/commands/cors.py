@@ -148,9 +148,9 @@ class CorsCommand(Command):
     for url_str in url_args:
       bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
       for blr in bucket_iter:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         some_matched = True
-        self.logger.info('Setting CORS on %s...', blr.url_string)
+        self.logger.info('Setting CORS on %s...', blr)
         if url.scheme == 's3':
           self.gsutil_api.XmlPassThroughSetCors(
               cors_txt, url, provider=url.scheme)

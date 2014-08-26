@@ -154,7 +154,7 @@ class HashCommand(Command):
 
       for file_ref in self.WildcardIterator(url_str).IterObjects():
         matched_one = True
-        file_name = StorageUrlFromString(file_ref.url_string).object_name
+        file_name = file_ref.storage_url.object_name
         file_size = os.path.getsize(file_name)
         callback_processor = ProgressCallbackWithBackoff(
             file_size, FileProgressCallbackHandler(

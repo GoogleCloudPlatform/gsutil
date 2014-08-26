@@ -185,9 +185,9 @@ class LoggingCommand(Command):
     for url_str in self.args:
       bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
       for blr in bucket_iter:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         some_matched = True
-        self.logger.info('Enabling logging on %s...', blr.url_string)
+        self.logger.info('Enabling logging on %s...', blr)
         logging = apitools_messages.Bucket.LoggingValue(
             logBucket=target_bucket_url.bucket_name,
             logObjectPrefix=target_prefix or url.bucket_name)
@@ -206,9 +206,9 @@ class LoggingCommand(Command):
     for url_str in self.args:
       bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
       for blr in bucket_iter:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         some_matched = True
-        self.logger.info('Disabling logging on %s...', blr.url_string)
+        self.logger.info('Disabling logging on %s...', blr)
         logging = apitools_messages.Bucket.LoggingValue()
 
         bucket_metadata = apitools_messages.Bucket(logging=logging)

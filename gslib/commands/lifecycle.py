@@ -21,7 +21,6 @@ from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
-from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import LifecycleTranslation
 from gslib.util import NO_MAX
@@ -137,10 +136,9 @@ class LifecycleCommand(Command):
       bucket_iter = self.GetBucketUrlIterFromArg(url_str,
                                                  bucket_fields=['lifecycle'])
       for blr in bucket_iter:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         some_matched = True
-        self.logger.info('Setting lifecycle configuration on %s...',
-                         blr.url_string)
+        self.logger.info('Setting lifecycle configuration on %s...', blr)
         if url.scheme == 's3':
           self.gsutil_api.XmlPassThroughSetLifecycle(
               lifecycle_txt, url, provider=url.scheme)

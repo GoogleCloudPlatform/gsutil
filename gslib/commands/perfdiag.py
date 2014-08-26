@@ -462,7 +462,7 @@ class PerfDiagCommand(Command):
       self.logger.info('\nRunning latency iteration %d...', i+1)
       for fpath in self.latency_files:
         basename = os.path.basename(fpath)
-        url = StorageUrlFromString(str(self.bucket_url))
+        url = self.bucket_url.Clone()
         url.object_name = basename
         file_size = self.file_sizes[fpath]
         readable_file_size = MakeHumanReadable(file_size)
@@ -527,7 +527,7 @@ class PerfDiagCommand(Command):
                                        'threads': self.threads}
 
     # Copy the TCP warmup file.
-    warmup_url = StorageUrlFromString(str(self.bucket_url))
+    warmup_url = self.bucket_url.Clone()
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
 
@@ -540,7 +540,7 @@ class PerfDiagCommand(Command):
     self._RunOperation(_Upload1)
 
     # Copy the file to remote location before reading.
-    thru_url = StorageUrlFromString(str(self.bucket_url))
+    thru_url = self.bucket_url.Clone()
     thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
     thru_target.md5Hash = self.file_md5s[self.thru_local_file]
@@ -610,11 +610,11 @@ class PerfDiagCommand(Command):
                                         'processes': self.processes,
                                         'threads': self.threads}
 
-    warmup_url = StorageUrlFromString(str(self.bucket_url))
+    warmup_url = self.bucket_url.Clone()
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
 
-    thru_url = StorageUrlFromString(str(self.bucket_url))
+    thru_url = self.bucket_url.Clone()
     thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
     thru_tuples = []
@@ -1341,8 +1341,8 @@ class PerfDiagCommand(Command):
       raise CommandException('Wrong number of arguments for "perfdiag" '
                              'command.')
 
-    self.provider = StorageUrlFromString(self.args[0]).scheme
     self.bucket_url = StorageUrlFromString(self.args[0])
+    self.provider = self.bucket_url.scheme
     if not (self.bucket_url.IsCloudUrl() and self.bucket_url.IsBucket()):
       raise CommandException('The perfdiag command requires a URL that '
                              'specifies a bucket.\n"%s" is not '

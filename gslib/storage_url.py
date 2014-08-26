@@ -103,6 +103,12 @@ class StorageUrl(object):
   def versionless_url_string(self):
     raise NotImplementedError('versionless_url_string not overridden')
 
+  def __eq__(self, other):
+    return self.url_string == other.url_string
+
+  def __hash__(self):
+    return hash(self.url_string)
+
 
 class _FileUrl(StorageUrl):
   """File URL class providing parsing and convenience methods.

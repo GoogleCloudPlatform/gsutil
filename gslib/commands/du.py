@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import sys
 
 from gslib.boto_translation import S3_DELETE_MARKER_GUID
+from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -248,16 +249,13 @@ class DuCommand(Command):
                          top_level_storage_url.bucket_name)).IterBuckets(
                              bucket_fields=['id'])
       else:
-        # This is actually a string, not a blr, but we are just using the
-        # string in the below function.
-        top_level_iter = [url_arg]
+        top_level_iter = [BucketListingObject(top_level_storage_url)]
 
-      for blr_or_str in top_level_iter:
-        url_string = str(blr_or_str)
-        storage_url = StorageUrlFromString(url_string)
+      for blr in top_level_iter:
+        storage_url = blr.storage_url
         if storage_url.IsBucket() and self.summary_only:
           storage_url = StorageUrlFromString(
-              '%s://%s/**' % (storage_url.scheme, storage_url.bucket_name))
+              storage_url.CreatePrefixUrl(wildcard_suffix='**'))
         _, exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
         if (storage_url.IsObject() and exp_objs == 0 and
             ContainsWildcard(url_arg) and not self.exclude_patterns):
@@ -265,7 +263,7 @@ class DuCommand(Command):
         total_bytes += exp_bytes
 
         if self.summary_only:
-          self._PrintSummaryLine(exp_bytes, url_string.rstrip('/'))
+          self._PrintSummaryLine(exp_bytes, blr.url_string.rstrip('/'))
 
     if self.produce_total:
       self._PrintSummaryLine(total_bytes, 'total')

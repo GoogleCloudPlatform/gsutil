@@ -22,7 +22,6 @@ from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
-from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import encoding as encoding
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
@@ -195,10 +194,9 @@ class WebCommand(Command):
     for url_str in url_args:
       bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
       for blr in bucket_iter:
-        url = StorageUrlFromString(blr.url_string)
+        url = blr.storage_url
         some_matched = True
-        self.logger.info('Setting website configuration on %s...',
-                         blr.url_string)
+        self.logger.info('Setting website configuration on %s...', blr)
         bucket_metadata = apitools_messages.Bucket(website=website)
         self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                     provider=url.scheme, fields=['id'])

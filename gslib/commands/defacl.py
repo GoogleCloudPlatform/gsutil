@@ -192,19 +192,17 @@ class DefAclCommand(Command):
     bucket_urls = set()
     for url_arg in self.args:
       for result in self.WildcardIterator(url_arg):
-        url = StorageUrlFromString(result.url_string)
-        if not url.IsBucket():
+        if not result.storage_url.IsBucket():
           raise CommandException(
               'The defacl ch command can only be applied to buckets.')
-        bucket_urls.add(url.url_string)
+        bucket_urls.add(result.storage_url)
 
-    for url_string in bucket_urls:
-      self.ApplyAclChanges(url_string)
+    for storage_url in bucket_urls:
+      self.ApplyAclChanges(storage_url)
 
   @Retry(ServiceException, tries=3, timeout_secs=1)
-  def ApplyAclChanges(self, url_string):
+  def ApplyAclChanges(self, url):
     """Applies the changes in self.changes to the provided URL."""
-    url = StorageUrlFromString(url_string)
     bucket = self.gsutil_api.GetBucket(
         url.bucket_name, provider=url.scheme,
         fields=['defaultObjectAcl', 'metageneration'])
@@ -212,15 +210,15 @@ class DefAclCommand(Command):
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.' % url_string)
+                          'OWNER-role access to this resource.' % url)
       return
 
     modification_count = 0
     for change in self.changes:
       modification_count += change.Execute(
-          url_string, current_acl, 'defacl', self.logger)
+          url, current_acl, 'defacl', self.logger)
     if modification_count == 0:
-      self.logger.info('No changes to {0}'.format(url_string))
+      self.logger.info('No changes to {0}'.format(url))
       return
 
     try:
@@ -233,7 +231,7 @@ class DefAclCommand(Command):
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
 
-    self.logger.info('Updated default ACL on {0}'.format(url_string))
+    self.logger.info('Updated default ACL on {0}'.format(url))
 
   def RunCommand(self):
     """Command entry point for the defacl command."""

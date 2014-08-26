@@ -27,7 +27,6 @@ import gslib
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.storage_url import StorageUrlFromString
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.util import CompareVersions
 from gslib.util import GetBotoConfigFileList
@@ -306,7 +305,7 @@ class UpdateCommand(Command):
         if i > 0:
           raise CommandException(
               'Invalid update URI. Must name a single .tar.gz file.')
-        storage_url = StorageUrlFromString(result.url_string)
+        storage_url = result.storage_url
         if storage_url.IsFileUrl() and not storage_url.IsDirectory():
           if not force_update:
             raise CommandException(

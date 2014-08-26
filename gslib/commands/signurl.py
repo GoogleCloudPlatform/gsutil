@@ -250,13 +250,10 @@ class UrlSignCommand(Command):
     ret = []
 
     for url_str in in_urls:
-      url = StorageUrlFromString(url_str)
-
       if ContainsWildcard(url_str):
-        ret.extend([StorageUrlFromString(blr.url_string)
-                    for blr in self.WildcardIterator(url_str)])
+        ret.extend([blr.storage_url for blr in self.WildcardIterator(url_str)])
       else:
-        ret.append(url)
+        ret.append(StorageUrlFromString(url_str))
 
     return ret
 

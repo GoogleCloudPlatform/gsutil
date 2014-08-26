@@ -64,47 +64,50 @@ class BucketListingRef(object):
 class BucketListingBucket(BucketListingRef):
   """BucketListingRef subclass for buckets."""
 
-  def __init__(self, url_string, root_object=None):
+  def __init__(self, storage_url, root_object=None):
     """Creates a BucketListingRef of type bucket.
 
     Args:
-      url_string: String describing the referenced object.
+      storage_url: StorageUrl containing a bucket.
       root_object: Underlying object metadata, if available.
     """
     super(BucketListingBucket, self).__init__()
     self._ref_type = self._BucketListingRefType.BUCKET
-    self._url_string = url_string
+    self._url_string = storage_url.url_string
+    self.storage_url = storage_url
     self.root_object = root_object
 
 
 class BucketListingPrefix(BucketListingRef):
   """BucketListingRef subclass for prefixes."""
 
-  def __init__(self, url_string, root_object=None):
+  def __init__(self, storage_url, root_object=None):
     """Creates a BucketListingRef of type prefix.
 
     Args:
-      url_string: String describing the referenced object.
+      storage_url: StorageUrl containing a prefix.
       root_object: Underlying object metadata, if available.
     """
     super(BucketListingPrefix, self).__init__()
     self._ref_type = self._BucketListingRefType.PREFIX
-    self._url_string = url_string
+    self._url_string = storage_url.url_string
+    self.storage_url = storage_url
     self.root_object = root_object
 
 
 class BucketListingObject(BucketListingRef):
   """BucketListingRef subclass for objects."""
 
-  def __init__(self, url_string, root_object=None):
+  def __init__(self, storage_url, root_object=None):
     """Creates a BucketListingRef of type object.
 
     Args:
-      url_string: String describing the referenced object.
+      storage_url: StorageUrl containing an object.
       root_object: Underlying object metadata, if available.
     """
     super(BucketListingObject, self).__init__()
     self._ref_type = self._BucketListingRefType.OBJECT
-    self._url_string = url_string
+    self._url_string = storage_url.url_string
+    self.storage_url = storage_url
     self.root_object = root_object
 

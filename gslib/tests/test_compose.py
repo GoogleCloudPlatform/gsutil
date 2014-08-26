@@ -67,7 +67,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['compose', 'gs://b/o1', 'gs://b/o2', 'gs://b/o3#1234'],
         expected_status=1, return_stderr=True)
-    expected_msg = ('CommandException: A version-specific URI (%s) '
+    expected_msg = ('CommandException: A version-specific URL (%s) '
                     'cannot be the destination for gsutil compose - abort.'
                     % 'gs://b/o3#1234')
     self.assertIn(expected_msg, stderr)
@@ -117,14 +117,14 @@ class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
   def test_compose_non_gcs_target(self):
     stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
                             expected_status=1, return_stderr=True)
-    expected_msg = ('CommandException: "compose" called on URI with '
+    expected_msg = ('CommandException: "compose" called on URL with '
                     'unsupported provider (%s).\n' % 's3://b/o3')
     self.assertIn(expected_msg, stderr)
 
   def test_compose_non_gcs_component(self):
     stderr = self.RunGsUtil(['compose', 'gs://b/o1', 's3://b/o2', 'gs://b/o3'],
                             expected_status=1, return_stderr=True)
-    expected_msg = ('CommandException: "compose" called on URI with '
+    expected_msg = ('CommandException: "compose" called on URL with '
                     'unsupported provider (%s).\n' % 's3://b/o2')
     self.assertIn(expected_msg, stderr)
 

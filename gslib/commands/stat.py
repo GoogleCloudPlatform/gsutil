@@ -114,7 +114,7 @@ class StatCommand(Command):
           single_obj = self.gsutil_api.GetObjectMetadata(
               url.bucket_name, url.object_name, generation=url.generation,
               provider=url.scheme, fields=stat_fields)
-          blr_iter = [BucketListingObject(url_str, root_object=single_obj)]
+          blr_iter = [BucketListingObject(url, root_object=single_obj)]
         for blr in blr_iter:
           if blr.IsObject():
             arg_matches += 1

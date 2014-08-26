@@ -176,8 +176,7 @@ class RmCommand(Command):
         if url.IsBucket() or url.IsProvider():
           for blr in self.WildcardIterator(url_str).IterBuckets(
               bucket_fields=bucket_fields):
-            bucket_urls_to_delete.append(
-                StorageUrlFromString(blr.url_string))
+            bucket_urls_to_delete.append(blr.storage_url)
             bucket_strings_to_delete.append(url_str)
 
     # Used to track if any files failed to be removed.
@@ -268,10 +267,8 @@ class RmCommand(Command):
   def RemoveFunc(self, name_expansion_result, thread_state=None):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    exp_src_url = StorageUrlFromString(
-        name_expansion_result.GetExpandedUrlStr())
-    self.logger.info('Removing %s...',
-                     name_expansion_result.GetExpandedUrlStr())
+    exp_src_url = name_expansion_result.expanded_storage_url
+    self.logger.info('Removing %s...', exp_src_url)
     gsutil_api.DeleteObject(
         exp_src_url.bucket_name, exp_src_url.object_name,
         generation=exp_src_url.generation, provider=exp_src_url.scheme)

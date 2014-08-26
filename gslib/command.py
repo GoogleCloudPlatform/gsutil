@@ -106,7 +106,7 @@ def CreateGsutilLogger(command_name):
 def _UrlArgChecker(command_instance, url):
   if not command_instance.exclude_symlinks:
     return True
-  exp_src_url = StorageUrlFromString(url.GetExpandedUrlStr())
+  exp_src_url = url.expanded_storage_url
   if exp_src_url.IsFileUrl() and os.path.islink(exp_src_url.object_name):
     command_instance.logger.info('Skipping symbolic link %s...', exp_src_url)
     return False
@@ -530,13 +530,13 @@ class Command(HelpProvider):
   # Shared helper functions that depend on base class state. #
   ############################################################
 
-  def ApplyAclFunc(self, acl_func, acl_excep_handler, url_args):
+  def ApplyAclFunc(self, acl_func, acl_excep_handler, url_strs):
     """Sets the standard or default object ACL depending on self.command_name.
 
     Args:
       acl_func: ACL function to be passed to Apply.
       acl_excep_handler: ACL exception handler to be passed to Apply.
-      url_args: URLs on which to set ACL.
+      url_strs: URL strings on which to set ACL.
 
     Raises:
       CommandException if an ACL could not be set.
@@ -546,8 +546,8 @@ class Command(HelpProvider):
     # our threading machinery currently assumes it's working with objects
     # (name_expansion_iterator), and normally we wouldn't expect users to need
     # to set ACLs on huge numbers of buckets at once anyway.
-    for i in range(len(url_args)):
-      url = StorageUrlFromString(url_args[i])
+    for url_str in url_strs:
+      url = StorageUrlFromString(url_str)
       if url.IsCloudUrl() and url.IsBucket():
         if self.recursion_requested:
           # If user specified -R option, convert any bucket args to bucket
@@ -560,11 +560,11 @@ class Command(HelpProvider):
           # function for the single-threaded implementation.  RefType is unused.
           for blr in self.WildcardIterator(url.url_string).IterBuckets(
               bucket_fields=['id']):
-            name_expansion_for_url = NameExpansionResult(url_args[i], False,
-                                                         False, False, blr)
+            name_expansion_for_url = NameExpansionResult(
+                url, False, False, blr.storage_url)
             acl_func(self, name_expansion_for_url)
       else:
-        multi_threaded_url_args.append(url_args[i])
+        multi_threaded_url_args.append(url_str)
 
     if len(multi_threaded_url_args) >= 1:
       name_expansion_iterator = NameExpansionIterator(
@@ -595,10 +595,9 @@ class Command(HelpProvider):
       gsutil_api = thread_state
     else:
       gsutil_api = self.gsutil_api
-    url_string = name_expansion_result.GetExpandedUrlStr()
     op_string = 'default object ACL' if self.def_acl else 'ACL'
-    url = StorageUrlFromString(url_string)
-    self.logger.info('Setting %s on %s...', op_string, url_string)
+    url = name_expansion_result.expanded_storage_url
+    self.logger.info('Setting %s on %s...', op_string, url)
     if ((gsutil_api.GetApiSelector(url.scheme) == ApiSelector.XML
          and url.scheme != 'gs') or self.canned):
       # If we are using canned ACLs or interacting with a non-google ACL

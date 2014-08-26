@@ -373,23 +373,21 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
     # from GCS to a local directory it will result in a directory/file
     # conflict (e.g., trying to download an object called "mydata/" where the
     # local directory "mydata" exists).
-    url = StorageUrlFromString(blr.url_string)
+    url = blr.storage_url
     if IsCloudSubdirPlaceholder(url, blr=blr):
-      cls.logger.info('Skipping cloud sub-directory placeholder object %s',
-                      url.url_string)
+      cls.logger.info('Skipping cloud sub-directory placeholder object %s', url)
       continue
     i += 1
     if i % _PROGRESS_REPORT_LISTING_COUNT == 0:
       cls.logger.info('At %s listing %d...', desc, i)
-    yield _BuildTmpOutputLine(blr, url)
+    yield _BuildTmpOutputLine(blr)
 
 
-def _BuildTmpOutputLine(blr, url):
+def _BuildTmpOutputLine(blr):
   """Builds line to output to temp file for given BucketListingRef.
 
   Args:
     blr: The BucketListingRef.
-    url: The StorageUrl for above blr.
 
   Returns:
     The output line, formatted as quote_plus(URL)<sp>size<sp>crc32c<sp>md5
@@ -399,6 +397,7 @@ def _BuildTmpOutputLine(blr, url):
   """
   crc32c = _NA
   md5 = _NA
+  url = blr.storage_url
   if url.IsFileUrl():
     size = os.path.getsize(url.object_name)
   elif url.IsCloudUrl():
@@ -631,8 +630,7 @@ class _DiffIterator(object):
         src_url_str_to_check = src_url_str[base_src_url_len:].replace('\\', '/')
         dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
             self.base_src_url, StorageUrlFromString(src_url_str), True, True,
-            True, self.base_dst_url, False,
-            self.recursion_requested).url_string
+            self.base_dst_url, False, self.recursion_requested).url_string
       if self.sorted_dst_urls_it.IsEmpty():
         # We've reached end of dst URLs, so copy src to dst.
         yield _DiffToApply(

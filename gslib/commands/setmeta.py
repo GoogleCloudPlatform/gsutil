@@ -202,8 +202,7 @@ class SetMetaCommand(Command):
     """
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    exp_src_url = StorageUrlFromString(
-        name_expansion_result.GetExpandedUrlStr())
+    exp_src_url = name_expansion_result.expanded_storage_url
     self.logger.info('Setting metadata on %s...', exp_src_url)
 
     fields = ['generation', 'metadata', 'metageneration']
