@@ -378,7 +378,8 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
       proxy_host=boto.config.get('Boto', 'proxy', None),
       proxy_port=boto.config.getint('Boto', 'proxy_port', 0),
       proxy_user=boto.config.get('Boto', 'proxy_user', None),
-      proxy_pass=boto.config.get('Boto', 'proxy_pass', None))
+      proxy_pass=boto.config.get('Boto', 'proxy_pass', None),
+      proxy_rdns=boto.config.get('Boto', 'proxy_rdns', False))
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.
   kwargs['ca_certs'] = GetCertsFile()

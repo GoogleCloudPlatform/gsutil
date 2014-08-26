@@ -168,6 +168,7 @@ _DETAILED_HELP_TEXT = ("""
       proxy_port
       proxy_user
       proxy_pass
+      proxy_rdns
       http_socket_timeout
       https_validate_certificates
       debug
@@ -625,15 +626,22 @@ class ConfigCommand(Command):
             'If you would like to fix this yourself, consider running:\n'
             '"sudo chmod 400 </path/to/key>" for improved security.')
 
-  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(self, varname, prompt):
+  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(self, varname, prompt,
+                                                       convert_to_bool=False):
     """Prompts for one proxy config line, saves to boto.config if not empty.
 
     Args:
       varname: The config variable name.
       prompt: The prompt to output to the user.
+      convert_to_bool: Whether to convert "y/n" to True/False.
     """
     value = raw_input(prompt)
     if value:
+      if convert_to_bool:
+        if value == 'y' or value == 'Y':
+          value = 'True'
+        else:
+          value = 'False'
       boto.config.set('Boto', varname, value)
 
   def _PromptForProxyConfig(self):
@@ -647,6 +655,10 @@ class ConfigCommand(Command):
         'proxy_user', 'What is your proxy user (leave blank if not used)? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_pass', 'What is your proxy pass (leave blank if not used)? ')
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy_rdns', 'Should DNS lookups be resolved by your proxy? (Y if '
+                      'your site disallows client DNS lookups)? ',
+        convert_to_bool=True)
 
   def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
     """Writes proxy name/value pair or comment line to config file.
@@ -677,7 +689,8 @@ class ConfigCommand(Command):
     config_file.write(
         '# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n'
         '# If you need a user/password with this proxy, edit and uncomment\n'
-        '# those lines as well.\n')
+        '# those lines as well. If your organization also disallows DNS\n'
+        '# lookups by client machines set proxy_rdns = True\n')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy', config.get_value('Boto', 'proxy', None),
         'proxy host')
@@ -690,6 +703,10 @@ class ConfigCommand(Command):
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_pass', config.get_value('Boto', 'proxy_pass', None),
         'proxy password')
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy_rdns',
+        config.get_value('Boto', 'proxy_rdns', False),
+        'let proxy server perform DNS lookups')
 
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
