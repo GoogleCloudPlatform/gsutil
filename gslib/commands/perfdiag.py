@@ -913,6 +913,11 @@ class PerfDiagCommand(Command):
 
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
+
+    if boto.config.get('Boto', 'proxy_rdns', False):
+      self.logger.info("DNS lookups are disallowed in this environment, so "
+                       "some information is not included in this perfdiag run")
+
     # Get the local IP address from socket lib.
     try:
       sysinfo['ip_address'] = socket.gethostbyname(socket.gethostname())
@@ -933,7 +938,7 @@ class PerfDiagCommand(Command):
       nslookup_cname_output = self._Exec(cmd, return_output=True)
       m = re.search(r' = (?P<googserv>[^.]+)\.', nslookup_cname_output)
       sysinfo['googserv_route'] = m.group('googserv') if m else None
-    except OSError:
+    except (CommandException, OSError):
       sysinfo['googserv_route'] = ''
 
     # Look up IP addresses for Google Server.
@@ -958,7 +963,7 @@ class PerfDiagCommand(Command):
       nslookup_txt_output = self._Exec(cmd, return_output=True)
       m = re.search(r'text\s+=\s+"(?P<dnsip>[\.\d]+)"', nslookup_txt_output)
       sysinfo['dns_o-o_ip'] = m.group('dnsip') if m else None
-    except OSError:
+    except (CommandException, OSError):
       sysinfo['dns_o-o_ip'] = ''
 
     # Try and find the number of CPUs in the system if available.
