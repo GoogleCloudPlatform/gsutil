@@ -20,7 +20,6 @@ from __future__ import absolute_import
 import base64
 import binascii
 import datetime
-import logging
 import os
 import pkgutil
 import random
@@ -35,7 +34,6 @@ from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
-from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -75,19 +73,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(fpath, 'r') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'bar')
-
-  def test_object_and_prefix_same_name(self):
-    # TODO: Make this a unit test when unit_testcase supports returning
-    # stderr.
-    bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='foo')
-    self.CreateObject(bucket_uri=bucket_uri,
-                      object_name='foo/bar', contents='bar')
-    fpath = self.CreateTempFile()
-    self.RunGsUtil(['cp', suri(object_uri), fpath], return_stderr=True)
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'foo')
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents='foo')
@@ -1007,16 +992,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-m', 'cp', wildcard_uri, suri(bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, num_test_files)
 
-  def test_cp_upload_respects_no_hashes(self):
-    # TODO: Make this a unit test when unit_testcase supports returning
-    # stderr.
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents='abcd')
-    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
-                              return_stderr=True)
-    self.assertIn('Found no hashes to validate object upload', stderr)
-
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_break(self):
     """Tests that an upload can be resumed after a connection break."""
@@ -1406,16 +1381,36 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     object_uri.get_key().etag = '12345'  # Not an MD5
     dst_dir = self.CreateTempDir()
 
-    log_handler = MockLoggingHandler()
-    logging.getLogger('cp').addHandler(log_handler)
-
-    self.RunCommand('cp', [suri(object_uri), dst_dir])
+    log_handler = self.RunCommand(
+        'cp', [suri(object_uri), dst_dir], return_log_handler=True)
     warning_messages = log_handler.messages['warning']
     self.assertEquals(2, len(warning_messages))
     self.assertRegexpMatches(
         warning_messages[0],
         r'Non-MD5 etag \(12345\) present for key .*, '
         r'data integrity checks are not possible')
-    self.assertRegexpMatches(warning_messages[1], 'Integrity cannot be assured')
+    self.assertIn('Integrity cannot be assured', warning_messages[1])
 
+  def test_object_and_prefix_same_name(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo/bar', contents='bar')
+    fpath = self.CreateTempFile()
+    # MockKey doesn't support hash_algs, so the MD5 will not match.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunCommand('cp', [suri(object_uri), fpath])
+    with open(fpath, 'r') as f:
+      self.assertEqual(f.read(), 'foo')
 
+  def test_cp_upload_respects_no_hashes(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='abcd')
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      log_handler = self.RunCommand('cp', [fpath, suri(bucket_uri)],
+                                    return_log_handler=True)
+    warning_messages = log_handler.messages['warning']
+    self.assertEquals(1, len(warning_messages))
+    self.assertIn('Found no hashes to validate object upload',
+                  warning_messages[0])

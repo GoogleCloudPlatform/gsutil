@@ -37,11 +37,6 @@ class TestCommandRunnerUnitTests(
     testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil update check in command_runner module."""
 
-  # TODO: Many tests in this file increment the version number, and output
-  # a message to stderr claiming this version is available.  When mixed with
-  # some failures in the tests, this can be misleading, particularly when
-  # a new version number is under development but not yet released.
-
   def setUp(self):
     """Sets up the command runner mock objects."""
     super(TestCommandRunnerUnitTests, self).setUp()

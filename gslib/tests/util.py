@@ -37,9 +37,6 @@ RUN_INTEGRATION_TESTS = True
 RUN_UNIT_TESTS = True
 RUN_S3_TESTS = False
 
-# Whether the tests are running verbose or not.
-VERBOSE_OUTPUT = False
-
 PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG = '/tmp/.boto.parallel_upload_test_config'
 
 

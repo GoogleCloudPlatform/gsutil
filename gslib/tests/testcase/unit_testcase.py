@@ -27,6 +27,7 @@ from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command_runner import CommandRunner
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
+from gslib.tests.mock_logging_handler import MockLoggingHandler
 from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
@@ -74,9 +75,60 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
   def setUp(self):
     super(GsUtilUnitTestCase, self).setUp()
     self.bucket_uris = []
+    self.stdout_save = sys.stdout
+    self.stderr_save = sys.stderr
+    fd, self.stdout_file = tempfile.mkstemp()
+    sys.stdout = os.fdopen(fd, 'w+')
+    fd, self.stderr_file = tempfile.mkstemp()
+    sys.stderr = os.fdopen(fd, 'w+')
+    self.accumulated_stdout = []
+    self.accumulated_stderr = []
+
+    self.root_logger = logging.getLogger()
+    self.is_debugging = self.root_logger.isEnabledFor(logging.DEBUG)
+    self.log_handlers_save = self.root_logger.handlers
+    fd, self.log_handler_file = tempfile.mkstemp()
+    self.log_handler_stream = os.fdopen(fd, 'w+')
+    self.temp_log_handler = logging.StreamHandler(self.log_handler_stream)
+    self.root_logger.handlers = [self.temp_log_handler]
+
+  def tearDown(self):
+    super(GsUtilUnitTestCase, self).tearDown()
+
+    self.root_logger.handlers = self.log_handlers_save
+    self.temp_log_handler.flush()
+    self.log_handler_stream.seek(0)
+    log_output = self.log_handler_stream.read()
+    self.log_handler_stream.close()
+    os.unlink(self.log_handler_file)
+
+    sys.stdout.seek(0)
+    sys.stderr.seek(0)
+    stdout = sys.stdout.read()
+    stderr = sys.stderr.read()
+    stdout += ''.join(self.accumulated_stdout)
+    stderr += ''.join(self.accumulated_stderr)
+    sys.stdout = self.stdout_save
+    sys.stderr = self.stderr_save
+    os.unlink(self.stdout_file)
+    os.unlink(self.stderr_file)
+
+    if self.is_debugging and stdout:
+      sys.stderr.write('==== stdout %s ====\n' % self.id())
+      sys.stderr.write(stdout)
+      sys.stderr.write('==== end stdout ====\n')
+    if self.is_debugging and stderr:
+      sys.stderr.write('==== stderr %s ====\n' % self.id())
+      sys.stderr.write(stderr)
+      sys.stderr.write('==== end stderr ====\n')
+    if self.is_debugging and log_output:
+      sys.stderr.write('==== log output %s ====\n' % self.id())
+      sys.stderr.write(log_output)
+      sys.stderr.write('==== end log output ====\n')
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
-                 test_method=None, return_stdout=False, cwd=None):
+                 test_method=None, return_stdout=False, return_stderr=False,
+                 return_log_handler=False, cwd=None):
     """Method for calling gslib.command_runner.CommandRunner.
 
     Passes parallel_operations=False for all tests, optionally saving/returning
@@ -93,39 +145,52 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
                    command and test type.
-      return_stdout: If true will save and return stdout produced by command.
+      return_stdout: If True, will save and return stdout produced by command.
+      return_stderr: If True, will save and return stderr produced by command.
+      return_log_handler: If True, will return a MockLoggingHandler instance
+           that was attached to the command's logger while running.
       cwd: The working directory that should be switched to before running the
            command. The working directory will be reset back to its original
            value after running the command. If not specified, the working
            directory is left unchanged.
 
     Returns:
-      stdout produced by the command, if requested.
+      One or a tuple of requested return values, depending on whether
+      return_stdout, return_stderr, and/or return_log_handler were specified.
     """
-    if util.VERBOSE_OUTPUT:
-      sys.stderr.write('\nRunning test of %s %s\n' %
-                       (command_name, ' '.join(args)))
-    if return_stdout:
-      # Redirect stdout temporarily, to save output to a file.
-      fh, outfile = tempfile.mkstemp()
-      os.close(fh)
-    elif not util.VERBOSE_OUTPUT:
-      outfile = os.devnull
-    else:
-      outfile = None
+    args = args or []
 
-    stdout_sav = sys.stdout
-    output = None
+    command_line = ' '.join([command_name] + args)
+    if self.is_debugging:
+      self.stderr_save.write('\nRunCommand of %s\n' % command_line)
+
+    # Save and truncate stdout and stderr for the lifetime of RunCommand. This
+    # way, we can return just the stdout and stderr that was output during the
+    # RunNamedCommand call below.
+    sys.stdout.seek(0)
+    sys.stderr.seek(0)
+    stdout = sys.stdout.read()
+    stderr = sys.stderr.read()
+    if stdout:
+      self.accumulated_stdout.append(stdout)
+    if stderr:
+      self.accumulated_stderr.append(stderr)
+    sys.stdout.seek(0)
+    sys.stderr.seek(0)
+    sys.stdout.truncate()
+    sys.stderr.truncate()
+
     cwd_sav = None
     try:
       cwd_sav = os.getcwd()
     except OSError:
       # This can happen if the current working directory no longer exists.
       pass
+
+    mock_log_handler = MockLoggingHandler()
+    logging.getLogger(command_name).addHandler(mock_log_handler)
+
     try:
-      if outfile:
-        fp = open(outfile, 'w')
-        sys.stdout = fp
       if cwd:
         os.chdir(cwd)
       self.command_runner.RunNamedCommand(
@@ -134,16 +199,50 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     finally:
       if cwd and cwd_sav:
         os.chdir(cwd_sav)
-      if outfile:
-        fp.close()
-        sys.stdout = stdout_sav
-        with open(outfile, 'r') as f:
-          output = f.read()
-        if return_stdout:
-          os.unlink(outfile)
 
-    if output is not None and return_stdout:
-      return output
+      sys.stdout.seek(0)
+      stdout = sys.stdout.read()
+      sys.stderr.seek(0)
+      stderr = sys.stderr.read()
+      logging.getLogger(command_name).removeHandler(mock_log_handler)
+
+      log_output = '\n'.join(
+          '%s:\n  ' % level + '\n  '.join(records)
+          for level, records in mock_log_handler.messages.iteritems()
+          if records)
+      if self.is_debugging and log_output:
+        self.stderr_save.write(
+            '==== logging RunCommand %s %s ====\n' % (self.id(), command_line))
+        self.stderr_save.write(log_output)
+        self.stderr_save.write('\n==== end logging ====\n')
+      if self.is_debugging and stdout:
+        self.stderr_save.write(
+            '==== stdout RunCommand %s %s ====\n' % (self.id(), command_line))
+        self.stderr_save.write(stdout)
+        self.stderr_save.write('==== end stdout ====\n')
+      if self.is_debugging and stderr:
+        self.stderr_save.write(
+            '==== stderr RunCommand %s %s ====\n' % (self.id(), command_line))
+        self.stderr_save.write(stderr)
+        self.stderr_save.write('==== end stderr ====\n')
+
+      # Reset stdout and stderr files, so that we won't print them out again
+      # in tearDown if debugging is enabled.
+      sys.stdout.seek(0)
+      sys.stderr.seek(0)
+      sys.stdout.truncate()
+      sys.stderr.truncate()
+
+    to_return = []
+    if return_stdout:
+      to_return.append(stdout)
+    if return_stderr:
+      to_return.append(stderr)
+    if return_log_handler:
+      to_return.append(mock_log_handler)
+    if len(to_return) == 1:
+      return to_return[0]
+    return tuple(to_return)
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):
