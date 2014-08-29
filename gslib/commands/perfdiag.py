@@ -373,7 +373,7 @@ class PerfDiagCommand(Command):
       except OSError:
         pass
 
-    if LAT in self.diag_tests or WTHRU in self.diag_tests:
+    if self.LAT in self.diag_tests or self.WTHRU in self.diag_tests:
       cleanup_files = [self.thru_local_file, self.tcp_warmup_file]
       for f in cleanup_files:
 
@@ -1407,13 +1407,13 @@ class PerfDiagCommand(Command):
       self.results['json_format'] = 'perfdiag'
       self.results['metadata'] = self.metadata_keys
 
-      if LAT in self.diag_tests:
+      if self.LAT in self.diag_tests:
         self._RunLatencyTests()
-      if RTHRU in self.diag_tests:
+      if self.RTHRU in self.diag_tests:
         self._RunReadThruTests()
-      if WTHRU in self.diag_tests:
+      if self.WTHRU in self.diag_tests:
         self._RunWriteThruTests()
-      if LIST in self.diag_tests:
+      if self.LIST in self.diag_tests:
         self._RunListTests()
 
       # Collect netstat info and disk counters after tests.
