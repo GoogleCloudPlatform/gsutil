@@ -111,7 +111,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Create a signed url for uploading a plain text file via HTTP PUT:
 
-    gsutil signurl <private-key-file> -m PUT -d 1h gs://<bucket>/<object>
+    gsutil signurl <private-key-file> -m PUT -d 1h -c text/plain gs://<bucket>/<obj>
 
   To construct a signed URL that allows anyone in possession of
   the URL to PUT to the specified bucket for one day, creating
