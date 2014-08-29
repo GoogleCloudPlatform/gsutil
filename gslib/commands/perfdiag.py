@@ -243,10 +243,16 @@ class PerfDiagCommand(Command):
       1048576,  # 1MB
   )
 
+  # Test names.
+  RTHRU = 'rthru'
+  WTHRU = 'wthru'
+  LAT = 'lat'
+  LIST = 'list'
+
   # List of all diagnostic tests.
-  ALL_DIAG_TESTS = ('rthru', 'wthru', 'lat', 'list')
+  ALL_DIAG_TESTS = (RTHRU, WTHRU, LAT, LIST)
   # List of diagnostic tests to run by default.
-  DEFAULT_DIAG_TESTS = ('rthru', 'wthru', 'lat')
+  DEFAULT_DIAG_TESTS = (RTHRU, WTHRU, LAT)
 
   # Google Cloud Storage API endpoint host.
   GOOGLE_API_HOST = boto.gs.connection.GSConnection.DefaultHost
@@ -367,18 +373,19 @@ class PerfDiagCommand(Command):
       except OSError:
         pass
 
-    cleanup_files = [self.thru_local_file, self.tcp_warmup_file]
-    for f in cleanup_files:
+    if LAT in self.diag_tests or WTHRU in self.diag_tests:
+      cleanup_files = [self.thru_local_file, self.tcp_warmup_file]
+      for f in cleanup_files:
 
-      def _Delete():
-        try:
-          self.gsutil_api.DeleteObject(self.bucket_url.bucket_name,
-                                       os.path.basename(f),
-                                       provider=self.provider)
-        except NotFoundException:
-          pass
+        def _Delete():
+          try:
+            self.gsutil_api.DeleteObject(self.bucket_url.bucket_name,
+                                         os.path.basename(f),
+                                         provider=self.provider)
+          except NotFoundException:
+            pass
 
-      self._RunOperation(_Delete)
+        self._RunOperation(_Delete)
 
   @contextlib.contextmanager
   def _Time(self, key, bucket):
@@ -1400,13 +1407,13 @@ class PerfDiagCommand(Command):
       self.results['json_format'] = 'perfdiag'
       self.results['metadata'] = self.metadata_keys
 
-      if 'lat' in self.diag_tests:
+      if LAT in self.diag_tests:
         self._RunLatencyTests()
-      if 'rthru' in self.diag_tests:
+      if RTHRU in self.diag_tests:
         self._RunReadThruTests()
-      if 'wthru' in self.diag_tests:
+      if WTHRU in self.diag_tests:
         self._RunWriteThruTests()
-      if 'list' in self.diag_tests:
+      if LIST in self.diag_tests:
         self._RunListTests()
 
       # Collect netstat info and disk counters after tests.
