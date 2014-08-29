@@ -25,8 +25,22 @@ from __future__ import absolute_import
 import os
 import pkgutil
 import sys
+import tempfile
 
 import gslib.exception
+
+coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
+if coverage_outfile:
+  try:
+    import coverage  # pylint: disable=g-import-not-at-top
+    coverage_controller = coverage.coverage(
+        data_file=coverage_outfile, data_suffix=True, auto_data=True,
+        source=['gslib'], omit=['gslib/third_party/*', 'gslib/tests/*',
+                                tempfile.gettempdir() + '*'])
+    coverage_controller.start()
+  except ImportError:
+    pass
+
 
 # Directory containing the gslib module.
 GSLIB_DIR = os.path.dirname(os.path.realpath(__file__))
