@@ -921,6 +921,9 @@ class PerfDiagCommand(Command):
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
 
+    # Find out whether requests are being routed through a proxy.
+    sysinfo['using_proxy'] = bool(boto.config.get('Boto', 'proxy', None))
+
     if boto.config.get('Boto', 'proxy_rdns', False):
       self.logger.info("DNS lookups are disallowed in this environment, so "
                        "some information is not included in this perfdiag run")
@@ -953,6 +956,7 @@ class PerfDiagCommand(Command):
       (hostname, _, ipaddrlist) = socket.gethostbyname_ex(self.GOOGLE_API_HOST)
       sysinfo['googserv_ips'] = ipaddrlist
     except socket_errors:
+      ipaddrlist = []
       sysinfo['googserv_ips'] = []
 
     # Reverse lookup the hostnames for the Google Server IPs.
@@ -1231,6 +1235,9 @@ class PerfDiagCommand(Command):
 
       if 'boto_https_enabled' in info:
         print 'Boto HTTPS Enabled: \n  %s' % info['boto_https_enabled']
+
+      if 'using_proxy' in info:
+        print 'Requests routed through proxy: \n  %s' % info['using_proxy']
 
     if 'request_errors' in self.results and 'total_requests' in self.results:
       print
