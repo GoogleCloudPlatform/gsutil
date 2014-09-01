@@ -377,6 +377,9 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
     if IsCloudSubdirPlaceholder(url, blr=blr):
       cls.logger.info('Skipping cloud sub-directory placeholder object %s', url)
       continue
+    if (cls.exclude_symlinks and url.IsFileUrl()
+        and os.path.islink(url.object_name)):
+      continue
     i += 1
     if i % _PROGRESS_REPORT_LISTING_COUNT == 0:
       cls.logger.info('At %s listing %d...', desc, i)
