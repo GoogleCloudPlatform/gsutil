@@ -2491,7 +2491,7 @@ def _HashFilename(filename):
   else:
     filename = unicode(filename, UTF8).encode(UTF8)
   m = hashlib.sha1(filename)
-  return 'TRACKER_' + m.hexdigest() + '.' + filename[-16:]
+  return 'TRACKER_' + m.hexdigest() + '.' + base64.b64encode(filename[-16:])
 
 
 def _DivideAndCeil(dividend, divisor):
