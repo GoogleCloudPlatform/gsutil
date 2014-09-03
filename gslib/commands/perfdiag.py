@@ -164,8 +164,9 @@ _DETAILED_HELP_TEXT = ("""
 <B>NOTE</B>
   The perfdiag command collects system information. It collects your IP address,
   executes DNS queries to Google servers and collects the results, and collects
-  network statistics information from the output of netstat -s. None of this
-  information will be sent to Google unless you choose to send it.
+  network statistics information from the output of netstat -s. It will also
+  attempt to connect to your proxy server if you have one configured. None of
+  this information will be sent to Google unless you choose to send it.
 """)
 
 
@@ -254,8 +255,11 @@ class PerfDiagCommand(Command):
   # List of diagnostic tests to run by default.
   DEFAULT_DIAG_TESTS = (RTHRU, WTHRU, LAT)
 
-  # Google Cloud Storage API endpoint host.
-  GOOGLE_API_HOST = boto.gs.connection.GSConnection.DefaultHost
+  # Google Cloud Storage XML API endpoint host.
+  XML_API_HOST = boto.config.get(
+      'Credentials', 'gs_host', boto.gs.connection.GSConnection.DefaultHost)
+  # Google Cloud Storage XML API endpoint port.
+  XML_API_PORT = boto.config.get('Credentials', 'gs_port', 80)
 
   # Maximum number of times to retry requests on 5xx errors.
   MAX_SERVER_ERROR_RETRIES = 5
@@ -921,12 +925,14 @@ class PerfDiagCommand(Command):
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
 
-    # Find out whether requests are being routed through a proxy.
-    sysinfo['using_proxy'] = bool(boto.config.get('Boto', 'proxy', None))
+    # Look up proxy info.
+    proxy_host = boto.config.get('Boto', 'proxy', None)
+    proxy_port = boto.config.getint('Boto', 'proxy_port', 0)
+    sysinfo['using_proxy'] = bool(proxy_host)
 
     if boto.config.get('Boto', 'proxy_rdns', False):
-      self.logger.info("DNS lookups are disallowed in this environment, so "
-                       "some information is not included in this perfdiag run")
+      self.logger.info('DNS lookups are disallowed in this environment, so '
+                       'some information is not included in this perfdiag run.')
 
     # Get the local IP address from socket lib.
     try:
@@ -943,7 +949,7 @@ class PerfDiagCommand(Command):
 
     # Execute a CNAME lookup on Google DNS to find what Google server
     # it's routing to.
-    cmd = ['nslookup', '-type=CNAME', self.GOOGLE_API_HOST]
+    cmd = ['nslookup', '-type=CNAME', self.XML_API_HOST]
     try:
       nslookup_cname_output = self._Exec(cmd, return_output=True)
       m = re.search(r' = (?P<googserv>[^.]+)\.', nslookup_cname_output)
@@ -951,9 +957,20 @@ class PerfDiagCommand(Command):
     except (CommandException, OSError):
       sysinfo['googserv_route'] = ''
 
+    # Try to determine the latency of a DNS lookup for the Google hostname
+    # endpoint. Note: we don't piggyback on gethostbyname_ex below because
+    # the _ex version requires an extra RTT.
+    try:
+      t0 = time.time()
+      socket.gethostbyname(self.XML_API_HOST)
+      t1 = time.time()
+      sysinfo['google_host_dns_latency'] = t1 - t0
+    except socket_errors:
+      pass
+
     # Look up IP addresses for Google Server.
     try:
-      (hostname, _, ipaddrlist) = socket.gethostbyname_ex(self.GOOGLE_API_HOST)
+      (hostname, _, ipaddrlist) = socket.gethostbyname_ex(self.XML_API_HOST)
       sysinfo['googserv_ips'] = ipaddrlist
     except socket_errors:
       ipaddrlist = []
@@ -976,6 +993,40 @@ class PerfDiagCommand(Command):
       sysinfo['dns_o-o_ip'] = m.group('dnsip') if m else None
     except (CommandException, OSError):
       sysinfo['dns_o-o_ip'] = ''
+
+    # Try to determine the latency of connecting to the Google hostname
+    # endpoint.
+    sysinfo['google_host_connect_latencies'] = {}
+    for googserv_ip in ipaddrlist:
+      try:
+        sock = socket.socket()
+        t0 = time.time()
+        sock.connect((googserv_ip, self.XML_API_PORT))
+        t1 = time.time()
+        sysinfo['google_host_connect_latencies'][googserv_ip] = t1 - t0
+      except socket_errors:
+        pass
+
+    # If using a proxy, try to determine the latency of a DNS lookup to resolve
+    # the proxy hostname and the latency of connecting to the proxy.
+    if proxy_host:
+      proxy_ip = None
+      try:
+        t0 = time.time()
+        proxy_ip = socket.gethostbyname(proxy_host)
+        t1 = time.time()
+        sysinfo['proxy_dns_latency'] = t1 - t0
+      except socket_errors:
+        pass
+
+      try:
+        sock = socket.socket()
+        t0 = time.time()
+        sock.connect((proxy_ip or proxy_host, proxy_port))
+        t1 = time.time()
+        sysinfo['proxy_host_connect_latency'] = t1 - t0
+      except socket_errors:
+        pass
 
     # Try and find the number of CPUs in the system if available.
     try:
@@ -1238,6 +1289,23 @@ class PerfDiagCommand(Command):
 
       if 'using_proxy' in info:
         print 'Requests routed through proxy: \n  %s' % info['using_proxy']
+
+      if 'google_host_dns_latency' in info:
+        print ('Latency of the DNS lookup for Google Storage server (ms): '
+               '\n  %.1f' % (info['google_host_dns_latency'] * 1000.0))
+
+      if 'google_host_connect_latencies' in info:
+        print 'Latencies connecting to Google Storage server IPs (ms):'
+        for ip, latency in info['google_host_connect_latencies'].iteritems():
+          print '  %s = %.1f' % (ip, latency * 1000.0)
+
+      if 'proxy_dns_latency' in info:
+        print ('Latency of the DNS lookup for the configured proxy (ms): '
+               '\n  %.1f' % (info['proxy_dns_latency'] * 1000.0))
+
+      if 'proxy_host_connect_latency' in info:
+        print ('Latency connecting to the configured proxy (ms): \n  %.1f' %
+               (info['proxy_host_connect_latency'] * 1000.0))
 
     if 'request_errors' in self.results and 'total_requests' in self.results:
       print
