@@ -1,3 +1,30 @@
+Release 4.6 (release date: 2014-09-03)
+=======================================
+
+Bug Fixes
+---------
+- Fixed a TypeError bug that occurred in perfdiag write throughput tests.
+- Fixed an rsync bug that caused invalid symlinks to abort the transfer
+  even when -e option was specified.
+- Fixed a perfdiag assumption that ipaddrlist was populated.
+
+Other Changes
+-------------
+- Added the proxy_rdns configuration variable for clients that
+  do DNS lookups via a proxy.
+- Added the state_dir configuration variable for choosing the location of
+  gsutil's internal state files, including resumable transfer tracker files.
+  resumable_tracker_dir configuration variable is now deprecated.
+- Added DNS, connection latency, and proxy use information to perfdiag
+  command.
+- perfdiag command will not perform DNS lookups if they are disabled in
+  boto config.
+- perfdiag command will now only attempt to delete uploaded objects when
+  running write tests.
+- Added code coverage support to test command.
+- rsync -d now succeeds on a 404 for a to-be-deleted object (for example, when
+  the object was already deleted by an external process).
+
 Release 4.5 (release date: 2014-08-14)
 =======================================
 
