@@ -277,6 +277,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
                       contents='subdir/obj5')
 
+    # Need to make sure the bucket listing is caught-up, otherwise the
+    # first rsync may not see obj2 and overwrite it.
+    self.AssertNObjectsInBucket(bucket_uri, 3)
+
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -647,6 +651,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
+      """Ensure listings match the commented expectations."""
       self.RunGsUtil(['rsync', '-d', '-e', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))

@@ -278,6 +278,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
                                 object_name=object_name)
+    self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)],
                             return_stdout=True)
     self.assertIn(object_name_bytes, stdout)
@@ -335,6 +336,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     """Tests listing an object with a trailing slash."""
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.
@@ -344,6 +346,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     """Tests listing an object with two trailing slashes."""
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.

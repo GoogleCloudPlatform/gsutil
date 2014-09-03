@@ -29,6 +29,7 @@ from boto import config
 import crcmod
 
 from gslib import copy_helper
+from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.copy_helper import CreateCopyHelperOpts
@@ -696,9 +697,14 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       if dst_url.IsFileUrl():
         os.unlink(dst_url.object_name)
       else:
-        gsutil_api.DeleteObject(
-            dst_url.bucket_name, dst_url.object_name,
-            generation=dst_url.generation, provider=dst_url.scheme)
+        try:
+          gsutil_api.DeleteObject(
+              dst_url.bucket_name, dst_url.object_name,
+              generation=dst_url.generation, provider=dst_url.scheme)
+        except NotFoundException:
+          # If the object happened to be deleted by an external process, this
+          # is fine because it moves us closer to the desired state.
+          pass
   elif diff_to_apply.diff_action == _DiffAction.COPY:
     src_url_str = diff_to_apply.src_url_str
     src_url = StorageUrlFromString(src_url_str)
