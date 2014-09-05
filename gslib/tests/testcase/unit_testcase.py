@@ -108,6 +108,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     stderr = sys.stderr.read()
     stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
+    sys.stdout.close()
+    sys.stderr.close()
     sys.stdout = self.stdout_save
     sys.stderr = self.stderr_save
     os.unlink(self.stdout_file)
