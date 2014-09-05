@@ -240,6 +240,7 @@ class DefAclCommand(Command):
         self.args, self.command_spec.supported_sub_args)
     self.CheckArguments()
     self.def_acl = True
+    self.continue_on_error = False
     if action_subcommand == 'get':
       func = self._GetDefAcl
     elif action_subcommand == 'set':
