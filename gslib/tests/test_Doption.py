@@ -18,11 +18,12 @@ from __future__ import absolute_import
 
 import gslib
 from gslib.cs_api_map import ApiSelector
-from gslib.tests.util import SetBotoConfigForTest
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import ONE_KB
+
 
 @SkipForS3('-D output is implementation-specific.')
 class TestDOption(testcase.GsUtilIntegrationTestCase):
@@ -34,10 +35,10 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     for file_contents in ('a1b2c3d4', 'a1b2c3d4\n'):
       fpath = self.CreateTempFile(contents=file_contents)
       bucket_uri = self.CreateBucket()
-      with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
-                                str(ONE_KB))]):
-        stdout, stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
-            return_stdout=True, return_stderr=True)
+      with SetBotoConfigForTest(
+          [('GSUtil', 'resumable_threshold', str(ONE_KB))]):
+        stderr = self.RunGsUtil(
+            ['-D', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
         print 'command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)])
         if self.test_api == ApiSelector.JSON:
           self.assertIn('media body', stderr)
@@ -50,8 +51,8 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents='a1b2c3d4')
     bucket_uri = self.CreateBucket()
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '4')]):
-      stdout, stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
-          return_stdout=True, return_stderr=True)
+      stderr = self.RunGsUtil(
+          ['-D', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
       self.assertNotIn('a1b2c3d4', stderr)
       self.assertIn('Comparing local vs cloud md5-checksum for', stderr)
       self.assertIn('total_bytes_transferred: 8', stderr)
@@ -60,9 +61,8 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     """Tests cat command with debug option."""
     key_uri = self.CreateObject(contents='0123456789')
     with SetBotoConfigForTest([('Boto', 'proxy_pass', 'secret')]):
-        (stdout, stderr) = self.RunGsUtil(['-D', 'cat', suri(key_uri)],
-                                          return_stdout=True,
-                                          return_stderr=True)
+      (stdout, stderr) = self.RunGsUtil(
+          ['-D', 'cat', suri(key_uri)], return_stdout=True, return_stderr=True)
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('config:', stderr)

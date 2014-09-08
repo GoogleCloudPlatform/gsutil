@@ -30,8 +30,7 @@ class TestHash(testcase.GsUtilUnitTestCase):
   _TEST_FILE_HEX_MD5 = 'f447b20a7fcbf53a5d5be013ea0b15af'
 
   def testHashContents(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
-                                   open_wb=True)
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
     stdout = self.RunCommand('hash', args=[tmp_file], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
     self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_B64_CRC, stdout)
@@ -52,8 +51,7 @@ class TestHash(testcase.GsUtilUnitTestCase):
       self.assertEquals('"hash" command requires a file URL', e.reason)
 
   def testHashHexFormat(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
-                                   open_wb=True)
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
     stdout = self.RunCommand('hash', args=['-h', tmp_file], return_stdout=True)
     self.assertIn('Hashes [hex]', stdout)
     self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_HEX_CRC, stdout)
@@ -69,8 +67,7 @@ class TestHash(testcase.GsUtilUnitTestCase):
     self.assertEquals(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS,
-                                   open_wb=True)
+    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
     stdout_crc = self.RunCommand('hash', args=['-c', tmp_file],
                                  return_stdout=True)
     stdout_md5 = self.RunCommand('hash', args=['-m', tmp_file],
