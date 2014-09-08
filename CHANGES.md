@@ -1,4 +1,4 @@
-Release 4.6 (release date: 2014-09-03)
+Release 4.6 (release date: 2014-09-08)
 =======================================
 
 Bug Fixes
@@ -7,6 +7,9 @@ Bug Fixes
 - Fixed an rsync bug that caused invalid symlinks to abort the transfer
   even when -e option was specified.
 - Fixed a perfdiag assumption that ipaddrlist was populated.
+- Fixed an AttributeError when setting an invalid canned ACL with defacl set.
+- Fixed a bug where non-resumable uploads would include payload in debug output
+  when for running in debug mode (-D).
 
 Other Changes
 -------------
