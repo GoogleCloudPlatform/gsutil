@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -360,9 +361,9 @@ class TestCommand(Command):
         raise CommandException('-m test is not supported on Windows.')
       elif (tests.util.RUN_S3_TESTS and
             max_parallel_tests > DEFAULT_S3_TEST_PARALLEL_PROCESSES):
-        self.logger.warn('Reducing parallel tests to %d due to S3 '
-                         'maximum bucket limitations.' %
-                         DEFAULT_S3_TEST_PARALLEL_PROCESSES)
+        self.logger.warn(
+            'Reducing parallel tests to %d due to S3 maximum bucket '
+            'limitations.', DEFAULT_S3_TEST_PARALLEL_PROCESSES)
         max_parallel_tests = DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
     test_names = sorted(GetTestNames())

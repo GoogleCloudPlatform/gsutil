@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -210,7 +211,7 @@ class DefAclCommand(Command):
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.' % url)
+                          'OWNER-role access to this resource.', url)
       return
 
     modification_count = 0
@@ -218,7 +219,7 @@ class DefAclCommand(Command):
       modification_count += change.Execute(
           url, current_acl, 'defacl', self.logger)
     if modification_count == 0:
-      self.logger.info('No changes to {0}'.format(url))
+      self.logger.info('No changes to %s', url)
       return
 
     try:
@@ -231,7 +232,7 @@ class DefAclCommand(Command):
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
 
-    self.logger.info('Updated default ACL on {0}'.format(url))
+    self.logger.info('Updated default ACL on %s', url)
 
   def RunCommand(self):
     """Command entry point for the defacl command."""

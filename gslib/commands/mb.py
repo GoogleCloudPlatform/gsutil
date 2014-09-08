@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,7 +70,7 @@ _DETAILED_HELP_TEXT = ("""
   location (US). Otherwise, you can specify one of the available locations:
 
   - ASIA (Asia)
-  - ASIA-EAST1 (Eastern Asia-Pacific) 
+  - ASIA-EAST1 (Eastern Asia-Pacific)
   - EU (European Union)
   - US (United States)
   - US-EAST1 (Eastern United States) [1]_

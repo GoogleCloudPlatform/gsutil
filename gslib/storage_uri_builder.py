@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,4 +55,3 @@ class StorageUriBuilder(object):
         uri_str, 'file', debug=self.debug, validate=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         suppress_consec_slashes=False)
-      

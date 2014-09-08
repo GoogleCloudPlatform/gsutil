@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +58,7 @@ _DETAILED_HELP_TEXT = ("""
   use_magicfile is more robust and configurable, but is not available on
   Windows.
 
-  If you specify a Content-Type header with -h when uploading content (like the 
+  If you specify a Content-Type header with -h when uploading content (like the
   example gsutil command given in the previous section), it overrides the
   Content-Type that would have been set based on filename extension or content.
   This can be useful if the Content-Type detection algorithm doesn't work as
@@ -188,11 +189,12 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'metadata',
-      help_name_aliases = ['cache-control', 'caching', 'content type',
-                           'mime type', 'mime', 'type'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'Working With Object Metadata',
-      help_text = _DETAILED_HELP_TEXT,
-      subcommand_help_text = {},
+      help_name='metadata',
+      help_name_aliases=[
+          'cache-control', 'caching', 'content type', 'mime type', 'mime',
+          'type'],
+      help_type='additional_help',
+      help_one_line_summary='Working With Object Metadata',
+      help_text=_DETAILED_HELP_TEXT,
+      subcommand_help_text={},
   )

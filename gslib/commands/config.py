@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +99,7 @@ _DETAILED_HELP_TEXT = ("""
   accessible from the machine where you run gsutil. Make sure to set its
   protection so only the users you want to be able to authenticate have
   access.
-  
+
   Note that your service account will NOT be considered an Owner for the
   purposes of API access (see "gsutil help creds" for more information about
   this). See https://developers.google.com/accounts/docs/OAuth2ServiceAccount
@@ -156,7 +157,7 @@ _DETAILED_HELP_TEXT = ("""
       gs_access_key_id
       gs_host
       gs_json_host
-      gs_json_port 
+      gs_json_port
       gs_oauth2_refresh_token
       gs_port
       gs_secret_access_key
@@ -656,8 +657,9 @@ class ConfigCommand(Command):
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_pass', 'What is your proxy pass (leave blank if not used)? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_rdns', 'Should DNS lookups be resolved by your proxy? (Y if '
-                      'your site disallows client DNS lookups)? ',
+        'proxy_rdns',
+        'Should DNS lookups be resolved by your proxy? (Y if your site '
+        'disallows client DNS lookups)? ',
         convert_to_bool=True)
 
   def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):

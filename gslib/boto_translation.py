@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -556,7 +557,7 @@ class BotoTranslation(CloudApi):
         return
       except retryable_exceptions, e:
         if debug >= 1:
-          self.logger.info('Caught exception (%s)' % e.__repr__())
+          self.logger.info('Caught exception (%s)', repr(e))
         if isinstance(e, IOError) and e.errno == errno.EPIPE:
           # Broken pipe error causes httplib to immediately
           # close the socket (http://bugs.python.org/issue5542),
@@ -574,7 +575,7 @@ class BotoTranslation(CloudApi):
         else:
           if debug >= 1:
             self.logger.info('Caught ResumableDownloadException (%s) - will '
-                             'retry' % e.message)
+                             'retry', e.message)
 
       # At this point we had a re-tryable failure; see if made progress.
       if GetFileSize(fp) > had_file_bytes_before_attempt:
@@ -602,9 +603,10 @@ class BotoTranslation(CloudApi):
       sleep_time_secs = min(random.random() * (2 ** progress_less_iterations),
                             GetMaxRetryDelay())
       if debug >= 1:
-        self.logger.info('Got retryable failure (%d progress-less in a row).\n'
-                         'Sleeping %d seconds before re-trying' %
-                         (progress_less_iterations, sleep_time_secs))
+        self.logger.info(
+            'Got retryable failure (%d progress-less in a row).\nSleeping %d '
+            'seconds before re-trying', progress_less_iterations,
+            sleep_time_secs)
       time.sleep(sleep_time_secs)
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
@@ -1199,8 +1201,9 @@ class BotoTranslation(CloudApi):
         # S3 etags are MD5s for non-multi-part objects, but multi-part objects
         # (which include all objects >= 5GB) have a custom checksum
         # implementation that is not currently supported by gsutil.
-        self.logger.warn('Non-MD5 etag (%s) present for key %s, data '
-                         'integrity checks are not possible.' % (key.etag, key))
+        self.logger.warn(
+            'Non-MD5 etag (%s) present for key %s, data integrity checks are '
+            'not possible.', key.etag, key)
 
     # Serialize the boto key in the media link if it is requested.  This
     # way we can later access the key without adding an HTTP call.

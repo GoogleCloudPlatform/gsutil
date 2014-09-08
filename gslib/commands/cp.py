@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Copyright 2011, Nexenta Systems Inc.
 #
@@ -316,14 +317,14 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
      if [ "$status" -ne "0" ] ; then
        << Code that handles failures >>
      fi
-  
+
   Or, for copying a directory, use this instead:
 
      gsutil cp -c -L cp.log -R ./dir gs://bucket
      if [ "$status" -ne "0" ] ; then
        << Code that handles failures >>
      fi
-  
+
   One important caveat is that files uploaded in this fashion are still subject
   to the maximum number of components limit. For example, if you upload a large
   file that gets split into %d components, and try to compose it with another
@@ -547,7 +548,7 @@ def _CopyExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
   cls.op_failure_count += 1
-  cls.logger.debug('\n\nEncountered exception while copying:\n%s\n' %
+  cls.logger.debug('\n\nEncountered exception while copying:\n%s\n',
                    traceback.format_exc())
 
 
@@ -697,7 +698,7 @@ class CpCommand(Command):
       if copy_helper_opts.print_ver:
         # Some cases don't return a version-specific URL (e.g., if destination
         # is a file).
-        self.logger.info('Created: %s' % result_url)
+        self.logger.info('Created: %s', result_url)
     except ItemExistsError:
       message = 'Skipping existing item: %s' % dst_url
       self.logger.info(message)

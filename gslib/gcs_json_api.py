@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -243,9 +244,10 @@ class GcsJsonApi(CloudApi):
       # If we didn't actually try to authenticate because there were multiple
       # types of configured credentials, don't emit this warning.
       if failed_cred_type:
-        logger.warn(('Your "%s" credentials are invalid. For more help, see '
-                     '"gsutil help creds", or re-run the gsutil config command '
-                     '(see "gsutil help config").') % failed_cred_type)
+        logger.warn(
+            'Your "%s" credentials are invalid. For more help, see '
+            '"gsutil help creds", or re-run the gsutil config command (see '
+            '"gsutil help config").', failed_cred_type)
 
       # If there's any set of configured credentials, we'll fail if they're
       # invalid, rather than silently falling back to anonymous config (as
@@ -602,8 +604,8 @@ class GcsJsonApi(CloudApi):
               'Transfer failed after %d retries. Final exception: %s' %
               self.num_retries, str(e))
         time.sleep(CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
-        self.logger.info('Retrying download from byte %s after exception.' %
-                         start_byte)
+        self.logger.info(
+            'Retrying download from byte %s after exception.', start_byte)
         apitools_http_wrapper.RebuildHttpConnections(
             apitools_download.bytes_http)
 
@@ -834,8 +836,8 @@ class GcsJsonApi(CloudApi):
                   (self.num_retries, e))
             time.sleep(
                 CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
-          self.logger.info('Retrying upload from byte %s after exception.'
-                           % start_byte)
+          self.logger.info(
+              'Retrying upload from byte %s after exception.', start_byte)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:

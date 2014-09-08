@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -295,9 +296,9 @@ class UrlSignCommand(Command):
            not self._CheckClientCanRead(ks.get_privatekey(),
                                         client_id,
                                         gcs_path)):
-        self.logger.warn('{0} does not have permissions '
-                         'on {1}, using this link will likely result '
-                         'in a 403 error until at least READ permissions '
-                         'are granted'.format(client_id, url))
+        self.logger.warn(
+            '%s does not have permissions on %s, using this link will likely '
+            'result in a 403 error until at least READ permissions are granted',
+            client_id, url)
 
     return 0

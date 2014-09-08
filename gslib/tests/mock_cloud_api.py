@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -157,4 +158,3 @@ class MockCloudApi(object):
       raise CreateObjectNotFoundException(404, self.provider, bucket_name,
                                           object_name)
     raise CreateBucketNotFoundException(404, self.provider, bucket_name)
-      

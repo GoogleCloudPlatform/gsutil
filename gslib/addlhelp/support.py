@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,11 +78,12 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'support',
-      help_name_aliases = ['techsupport', 'tech support', 'technical support',
-                           'billing', 'faq', 'questions'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'Google Cloud Storage Support',
-      help_text = _DETAILED_HELP_TEXT,
-      subcommand_help_text = {},
+      help_name='support',
+      help_name_aliases=[
+          'techsupport', 'tech support', 'technical support', 'billing', 'faq',
+          'questions'],
+      help_type='additional_help',
+      help_one_line_summary='Google Cloud Storage Support',
+      help_text=_DETAILED_HELP_TEXT,
+      subcommand_help_text={},
   )

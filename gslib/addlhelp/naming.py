@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -174,10 +175,10 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name = 'naming',
-      help_name_aliases = ['domain', 'limits', 'name', 'names'],
-      help_type = 'additional_help',
-      help_one_line_summary = 'Object and Bucket Naming',
-      help_text = _DETAILED_HELP_TEXT,
-      subcommand_help_text = {},
+      help_name='naming',
+      help_name_aliases=['domain', 'limits', 'name', 'names'],
+      help_type='additional_help',
+      help_one_line_summary='Object and Bucket Naming',
+      help_text=_DETAILED_HELP_TEXT,
+      subcommand_help_text={},
   )

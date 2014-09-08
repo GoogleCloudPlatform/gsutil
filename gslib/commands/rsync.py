@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,7 +177,7 @@ _DETAILED_HELP_TEXT = ("""
 
   If the output contains:
 
-    compiled crcmod: False 
+    compiled crcmod: False
 
   you are running a Python library for computing CRC32C, which is much slower
   than using the compiled code. For information on getting a compiled CRC32C
@@ -562,8 +563,8 @@ class _DiffIterator(object):
     if (StorageUrlFromString(url_str).IsCloudUrl()
         and crc32c == _NA and md5 == _NA):
       self.logger.warn(
-          'Found no hashes to validate %s. '
-          'Integrity cannot be assured without hashes.' % url_str)
+          'Found no hashes to validate %s. Integrity cannot be assured without '
+          'hashes.', url_str)
       return True
     return False
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -245,7 +246,7 @@ _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 
 def _ApplyExceptionHandler(cls, exception):
-  cls.logger.error('Encountered a problem: {0}'.format(exception))
+  cls.logger.error('Encountered a problem: %s', exception)
   cls.everything_set_okay = False
 
 
@@ -373,14 +374,14 @@ class AclCommand(Command):
     if not current_acl:
       self._WarnServiceAccounts()
       self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.' % url)
+                          'OWNER-role access to this resource.', url)
       return
 
     modification_count = 0
     for change in self.changes:
       modification_count += change.Execute(url, current_acl, 'acl', self.logger)
     if modification_count == 0:
-      self.logger.info('No changes to {0}'.format(url))
+      self.logger.info('No changes to %s', url)
       return
 
     try:
@@ -403,7 +404,7 @@ class AclCommand(Command):
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
 
-    self.logger.info('Updated ACL on {0}'.format(url))
+    self.logger.info('Updated ACL on %s', url)
 
   def RunCommand(self):
     """Command entry point for the acl command."""

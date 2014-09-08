@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -479,9 +480,8 @@ class PerfDiagCommand(Command):
         readable_file_size = MakeHumanReadable(file_size)
 
         self.logger.info(
-            "\nFile of size %(size)s located on disk at '%(fpath)s' being "
-            "diagnosed in the cloud at '%(url)s'."
-            % {'size': readable_file_size, 'fpath': fpath, 'url': url})
+            "\nFile of size %s located on disk at '%s' being diagnosed in the "
+            "cloud at '%s'.", readable_file_size, fpath, url)
 
         upload_target = StorageUrlToUploadObjectMetadata(url)
 

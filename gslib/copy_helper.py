@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Copyright 2011, Nexenta Systems Inc.
 #
@@ -14,7 +15,6 @@
 # limitations under the License.
 """Helper functions for copy functionality."""
 
-# Get the system logging module, not our local logging module.
 from __future__ import absolute_import
 
 import base64
@@ -191,7 +191,7 @@ def _ParallelUploadCopyExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
   cls.op_failure_count += 1
-  cls.logger.debug('\n\nEncountered exception while copying:\n%s\n' %
+  cls.logger.debug('\n\nEncountered exception while copying:\n%s\n',
                    traceback.format_exc())
 
 
@@ -377,7 +377,7 @@ def _GetUploadTrackerData(tracker_file_name, logger):
     # is attempted on an object), but warn user for other errors.
     if e.errno != errno.ENOENT:
       logger.warn('Couldn\'t read upload tracker file (%s): %s. Restarting '
-                  'upload from scratch.' % (tracker_file_name, e.strerror))
+                  'upload from scratch.', tracker_file_name, e.strerror)
   finally:
     if tracker_file:
       tracker_file.close()
@@ -780,8 +780,8 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
 
     download_b64_digest = download_hashes[alg]
     logger.debug(
-        'Comparing source vs destination %s-checksum for %s. (%s/%s)' % (
-            alg, dst_url, download_b64_digest, upload_b64_digest))
+        'Comparing source vs destination %s-checksum for %s. (%s/%s)', alg,
+        dst_url, download_b64_digest, upload_b64_digest)
     if download_b64_digest != upload_b64_digest:
       raise CommandException(
           '%s signature for source object (%s) doesn\'t match '
@@ -793,8 +793,8 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
     # than 5GB from S3 (for which the etag is not an MD5).
     logger.warn(
         'WARNING: Found no hashes to validate object downloaded from %s and '
-        'uploaded to %s. Integrity cannot be assured without hashes.' %
-        (src_url, dst_url))
+        'uploaded to %s. Integrity cannot be assured without hashes.',
+        src_url, dst_url)
 
 
 def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
@@ -827,8 +827,8 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
     local_b64_digest = local_hashes[alg]
     cloud_b64_digest = cloud_hashes[alg]
     logger.debug(
-        'Comparing local vs cloud %s-checksum for %s. (%s/%s)' % (
-            alg, file_name, local_b64_digest, cloud_b64_digest))
+        'Comparing local vs cloud %s-checksum for %s. (%s/%s)', alg, file_name,
+        local_b64_digest, cloud_b64_digest)
     if local_b64_digest != cloud_b64_digest:
 
       raise CommandException(
@@ -842,13 +842,13 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
     if is_upload:
       logger.warn(
           'WARNING: Found no hashes to validate object uploaded to %s. '
-          'Integrity cannot be assured without hashes.' % obj_url)
+          'Integrity cannot be assured without hashes.', obj_url)
     else:
     # One known way this can currently happen is when downloading objects larger
     # than 5GB from S3 (for which the etag is not an MD5).
       logger.warn(
           'WARNING: Found no hashes to validate object downloaded to %s. '
-          'Integrity cannot be assured without hashes.' % file_name)
+          'Integrity cannot be assured without hashes.', file_name)
 
 
 def IsNoClobberServerException(e):
@@ -947,7 +947,7 @@ def _PartitionFile(fp, file_size, src_url, content_type, canned_acl,
     # we don't run into problems with name length. Using a deterministic
     # naming scheme for the temporary components allows users to take
     # advantage of resumable uploads for each component.
-    encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode('utf-8')
+    encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode(UTF8)
     content_md5 = md5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
@@ -1663,9 +1663,9 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       # Windows sometimes complains the temp file is locked when you try to
       # delete it.
       except Exception:  # pylint: disable=broad-except
-        logger.warning('Could not delete %s. This can occur in Windows '
-                       'because the temporary file is still locked.' %
-                       upload_url.object_name)
+        logger.warning(
+            'Could not delete %s. This can occur in Windows because the '
+            'temporary file is still locked.', upload_url.object_name)
     # In the gzip case, this is the gzip stream.  _CompressFileForUpload will
     # have already closed the original source stream.
     upload_stream.close()
@@ -1738,7 +1738,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     # filename for resumable downloads.
     download_file_name = _GetDownloadZipFileName(file_name)
     logger.info(
-        'Downloading to temp gzip filename %s' % download_file_name)
+        'Downloading to temp gzip filename %s', download_file_name)
     need_to_unzip = True
   else:
     download_file_name = file_name
@@ -1793,8 +1793,9 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                src_obj_metadata.size))
         else:
           if existing_file_size == src_obj_metadata.size:
-            logger.info('Download already complete for file %s, skipping '
-                        'download but will run integrity checks.')
+            logger.info(
+                'Download already complete for file %s, skipping download but '
+                'will run integrity checks.', download_file_name)
             download_complete = True
           else:
             download_start_point = existing_file_size
@@ -1804,7 +1805,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
           if existing_file_size > TEN_MB:
             for alg_name in digesters:
               logger.info(
-                  'Catching up %s for %s' % (alg_name, download_file_name))
+                  'Catching up %s for %s', alg_name, download_file_name)
           with open(download_file_name, 'rb') as hash_fp:
             while True:
               data = hash_fp.read(DEFAULT_FILE_BUFFER_SIZE)
@@ -1855,8 +1856,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     if test_method:
       test_method(fp)
   except ResumableDownloadException as e:
-    logger.warning('Caught ResumableDownloadException (%s) for file %s.' %
-                   (e.reason, file_name))
+    logger.warning('Caught ResumableDownloadException (%s) for file %s.',
+                   e.reason, file_name)
     raise
   finally:
     if fp:

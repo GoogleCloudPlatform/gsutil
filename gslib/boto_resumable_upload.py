@@ -1,5 +1,5 @@
-# pylint: disable=g-bad-file-header
-# Copyright 2010 Google Inc.
+# -*- coding: utf-8 -*-
+# Copyright 2010 Google Inc. All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -465,8 +465,8 @@ class BotoResumableUpload(object):
       raise
     else:
       if debug >= 1:
-        self.logger.debug('Caught ResumableUploadException (%s) - will retry' %
-                          e.message)
+        self.logger.debug(
+            'Caught ResumableUploadException (%s) - will retry', e.message)
 
   def TrackProgressLessIterations(self, service_had_bytes_before_attempt,
                                   debug=0):

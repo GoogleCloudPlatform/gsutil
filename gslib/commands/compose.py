@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,8 +152,7 @@ class ComposeCommand(Command):
     preconditions = PreconditionsFromHeaders(self.headers or {})
 
     self.logger.info(
-        'Composing %s from %d component objects.' %
-        (target_url, len(components)))
+        'Composing %s from %d component objects.', target_url, len(components))
     self.gsutil_api.ComposeObject(components, dst_obj_metadata,
                                   preconditions=preconditions,
                                   provider=target_url.scheme)
