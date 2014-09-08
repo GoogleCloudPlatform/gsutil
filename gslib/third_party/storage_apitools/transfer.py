@@ -577,6 +577,7 @@ class Upload(_Transfer):
     """Configure http_request as a simple request for this upload."""
     http_request.headers['content-type'] = self.mime_type
     http_request.body = self.stream.read()
+    http_request.loggable_body = '<media body>'
 
   def __ConfigureMultipartRequest(self, http_request):
     """Configure http_request as a multipart request for this upload."""
@@ -607,6 +608,11 @@ class Upload(_Transfer):
     multipart_boundary = msg_root.get_boundary()
     http_request.headers['content-type'] = (
         'multipart/related; boundary=%r' % multipart_boundary)
+
+    body_components = http_request.body.split(multipart_boundary)
+    headers, _, _ = body_components[-2].partition('\n\n')
+    body_components[-2] = '\n\n'.join([headers, '<media body>\n\n--'])
+    http_request.loggable_body = multipart_boundary.join(body_components)
 
   def __ConfigureResumableRequest(self, http_request):
     http_request.headers['X-Upload-Content-Type'] = self.mime_type

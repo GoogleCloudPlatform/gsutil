@@ -21,11 +21,39 @@ from gslib.tests.util import SetBotoConfigForTest
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
-
+from gslib.util import ONE_KB
 
 @SkipForS3('-D output is implementation-specific.')
-class TestCat(testcase.GsUtilIntegrationTestCase):
+class TestDOption(testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil -D option."""
+
+  def test_minus_D_multipart_upload(self):
+    """Tests that debug option does not output upload media body."""
+    # We want to ensure it works with and without a trailing newline.
+    for file_contents in ('a1b2c3d4', 'a1b2c3d4\n'):
+      fpath = self.CreateTempFile(contents=file_contents)
+      bucket_uri = self.CreateBucket()
+      with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
+                                str(ONE_KB))]):
+        stdout, stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
+            return_stdout=True, return_stderr=True)
+        print 'command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)])
+        if self.test_api == ApiSelector.JSON:
+          self.assertIn('media body', stderr)
+        self.assertNotIn('a1b2c3d4', stderr)
+        self.assertIn('Comparing local vs cloud md5-checksum for', stderr)
+        self.assertIn('total_bytes_transferred: %d' % len(file_contents),
+                      stderr)
+
+  def test_minus_D_resumable_upload(self):
+    fpath = self.CreateTempFile(contents='a1b2c3d4')
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '4')]):
+      stdout, stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
+          return_stdout=True, return_stderr=True)
+      self.assertNotIn('a1b2c3d4', stderr)
+      self.assertIn('Comparing local vs cloud md5-checksum for', stderr)
+      self.assertIn('total_bytes_transferred: 8', stderr)
 
   def test_minus_D_cat(self):
     """Tests cat command with debug option."""

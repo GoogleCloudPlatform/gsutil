@@ -347,7 +347,8 @@ class BaseApiClient(object):
       if http_request.body:
         # TODO: Make this safe to print in the case of
         # non-printable body characters.
-        logging.info('Body:\n%s', http_request.body)
+        logging.info('Body:\n%s',
+                     http_request.loggable_body or http_request.body)
       else:
         logging.info('Body: (none)')
     return http_request

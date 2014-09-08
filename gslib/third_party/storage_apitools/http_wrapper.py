@@ -18,6 +18,7 @@ currently httplib2.
 """
 
 import collections
+import contextlib
 import httplib
 import logging
 import socket
@@ -55,6 +56,41 @@ ExceptionRetryArgs = collections.namedtuple('ExceptionRetryArgs',
                                              'num_retries'])
 
 
+@contextlib.contextmanager
+def _Httplib2Debuglevel(http_request, level, http=None):
+  """Temporarily change the value of httplib2.debuglevel if needed.
+
+  If http_request has a `loggable_body` distinct from `body`, then we
+  need to prevent httplib2 from logging the full body. This sets
+  httplib2.debuglevel for the duration of the `with` block; however,
+  that alone won't change the value of existing HTTP connections. If
+  an httplib2.Http object is provided, we'll also change the level on
+  any cached connections attached to it.
+  """
+  if http_request.loggable_body is None:
+    yield
+    return
+  old_level = httplib2.debuglevel
+  http_levels = {}
+  httplib2.debuglevel = level
+  if http is not None:
+    for connection_key, connection in http.connections.iteritems():
+      # httplib2 stores two kinds of values in this dict, connection
+      # classes and instances. Since the connection types are all
+      # old-style classes, we can't easily distinguish by connection
+      # type -- so instead we use the key pattern.
+      if ':' not in connection_key:
+        continue
+      http_levels[connection_key] = connection.debuglevel
+      connection.set_debuglevel(level)
+  yield
+  httplib2.debuglevel = old_level
+  if http is not None:
+    for connection_key, old_level in http_levels:
+      if connection_key in http.connections:
+        http.connections[connection_key].set_debuglevel(old_level)
+
+
 class Request(object):
   """Class encapsulating the data for an HTTP request."""
 
@@ -63,7 +99,19 @@ class Request(object):
     self.http_method = http_method
     self.headers = headers or {}
     self.__body = None
+    self.__loggable_body = None
     self.body = body
+
+  @property
+  def loggable_body(self):
+    return self.__loggable_body
+
+  @loggable_body.setter
+  def loggable_body(self, value):
+    if self.body is None:
+      raise exceptions.RequestError(
+          'Cannot set loggable body on request with no body')
+    self.__loggable_body = value
 
   @property
   def body(self):
@@ -76,6 +124,9 @@ class Request(object):
       self.headers['content-length'] = str(len(self.__body))
     else:
       self.headers.pop('content-length', None)
+    # This line ensures we don't try to print large requests.
+    if not isinstance(value, basestring):
+      self.loggable_body = '<media body>'
 
 
 # Note: currently the order of fields here is important, since we want
@@ -266,10 +317,13 @@ def _MakeRequestNoRetry(http, http_request, redirections=5,
     if url_scheme and url_scheme in http.connections:
       connection_type = http.connections[url_scheme]
 
-  info, content = http.request(
-      str(http_request.url), method=str(http_request.http_method),
-      body=http_request.body, headers=http_request.headers,
-      redirections=redirections, connection_type=connection_type)
+  # Custom printing only at debuglevel 4
+  new_debuglevel = 4 if httplib2.debuglevel == 4 else 0
+  with _Httplib2Debuglevel(http_request, new_debuglevel, http=http):
+    info, content = http.request(
+        str(http_request.url), method=str(http_request.http_method),
+        body=http_request.body, headers=http_request.headers,
+        redirections=redirections, connection_type=connection_type)
 
   if info is None:
     raise exceptions.RequestError()

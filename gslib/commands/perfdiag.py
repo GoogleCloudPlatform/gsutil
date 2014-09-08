@@ -542,8 +542,6 @@ class PerfDiagCommand(Command):
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
 
-    # TODO: gsutil-beta: Need to disable dumping payloads at debuglevel==2
-    # for JSON API, because it dumps the entire warmup file.
     def _Upload1():
       self.gsutil_api.UploadObject(
           cStringIO.StringIO(self.file_contents[self.tcp_warmup_file]),

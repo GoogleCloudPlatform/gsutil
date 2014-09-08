@@ -109,28 +109,23 @@ class UploadCallbackConnectionClassFactory(object):
         else:
           full_buffer = data
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
-        old_debug = self.debuglevel
-        try:
-          self.set_debuglevel(0)
-          while partial_buffer:
-            httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
-            send_length = len(partial_buffer)
-            if self.callback_processor:
-              # This is the only place where gsutil has control over making a
-              # callback, but here we can't differentiate the metadata bytes
-              # (such as headers and OAuth2 refreshes) sent during an upload
-              # from the actual upload bytes, so we will actually report
-              # slightly more bytes than desired to the callback handler.
-              #
-              # One considered/rejected alternative is to move the callbacks
-              # into the HashingFileUploadWrapper which only processes reads on
-              # the bytes. This has the disadvantages of being removed from
-              # where we actually send the bytes and unnecessarily
-              # multi-purposing that class.
-              self.callback_processor.Progress(send_length)
-            partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
-        finally:
-          self.set_debuglevel(old_debug)
+        while partial_buffer:
+          httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
+          send_length = len(partial_buffer)
+          if self.callback_processor:
+            # This is the only place where gsutil has control over making a
+            # callback, but here we can't differentiate the metadata bytes
+            # (such as headers and OAuth2 refreshes) sent during an upload
+            # from the actual upload bytes, so we will actually report
+            # slightly more bytes than desired to the callback handler.
+            #
+            # One considered/rejected alternative is to move the callbacks
+            # into the HashingFileUploadWrapper which only processes reads on
+            # the bytes. This has the disadvantages of being removed from
+            # where we actually send the bytes and unnecessarily
+            # multi-purposing that class.
+            self.callback_processor.Progress(send_length)
+          partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
 
     return UploadCallbackConnection
 
@@ -239,23 +234,14 @@ class DownloadCallbackConnectionClassFactory(object):
               self.callback_processor.Progress(
                   self.outer_bytes_downloaded_container.bytes_transferred)
 
-          old_debug = self.debuglevel
-          # If we fail partway through this function, we'll retry the entire
-          # read and therefore we need to restart our hash digesters from the
-          # last successful read. Therefore, make a copy of the digester's
-          # current hash object and commit it once we've read all the bytes.
-          try:
-            self.set_debuglevel(0)
-            data = orig_read_func(amt)
-            read_length = len(data)
-            if self.callback_processor:
-              self.callback_processor.Progress(read_length)
-            if self.outer_digesters:
-              for alg in self.outer_digesters:
-                self.outer_digesters[alg].update(data)
-            return data
-          finally:
-            self.set_debuglevel(old_debug)
+          data = orig_read_func(amt)
+          read_length = len(data)
+          if self.callback_processor:
+            self.callback_processor.Progress(read_length)
+          if self.outer_digesters:
+            for alg in self.outer_digesters:
+              self.outer_digesters[alg].update(data)
+          return data
         orig_response.read = read
 
         return orig_response
