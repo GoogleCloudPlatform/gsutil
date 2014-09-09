@@ -91,6 +91,11 @@ class TestCommandRunnerUnitTests(
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()
 
+  def _IsPackageOrCloudSDKInstall(self):
+    # Update should not trigger for package installs or Cloud SDK installs.
+    return (gslib.IS_PACKAGE_INSTALL or
+            os.environ.get('CLOUDSDK_WRAPPER') == '1')
+
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
@@ -121,9 +126,9 @@ class TestCommandRunnerUnitTests(
       os.remove(self.timestamp_file)
     self.assertFalse(os.path.exists(self.timestamp_file))
     self.version_mod_time = 0
-    expect = not gslib.IS_PACKAGE_INSTALL
+    expected = not self._IsPackageOrCloudSDKInstall()
     self.assertEqual(
-        expect,
+        expected,
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
@@ -149,10 +154,9 @@ class TestCommandRunnerUnitTests(
         ('GSUtil', 'software_update_check_period', '1')]):
       with open(self.timestamp_file, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
-      # Update will not trigger for package installs.
-      expect = not gslib.IS_PACKAGE_INSTALL
+      expected = not self._IsPackageOrCloudSDKInstall()
       self.assertEqual(
-          expect,
+          expected,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
@@ -185,10 +189,9 @@ class TestCommandRunnerUnitTests(
       with open(self.timestamp_file, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 
-      # With regular loglevel, should return True except for package installs.
-      expect = not gslib.IS_PACKAGE_INSTALL
+      expected = not self._IsPackageOrCloudSDKInstall()
       self.assertEqual(
-          expect,
+          expected,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
       prev_loglevel = logging.getLogger().getEffectiveLevel()

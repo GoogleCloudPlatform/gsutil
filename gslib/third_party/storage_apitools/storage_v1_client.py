@@ -13,8 +13,10 @@
 # limitations under the License.
 """Generated client library for storage version v1."""
 
-import gslib
+import os
 import sys
+
+import gslib
 from gslib.third_party.storage_apitools import base_api
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
 
@@ -30,6 +32,10 @@ class StorageV1(base_api.BaseApiClient):
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
+  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    _USER_AGENT += ' Cloud SDK Command Line Tool'
+    if os.environ.get('CLOUDSDK_VERSION'):
+      _USER_AGENT += ' %s' % os.environ.get('CLOUDSDK_VERSION')
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'
 

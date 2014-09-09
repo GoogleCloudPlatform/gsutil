@@ -229,12 +229,15 @@ class CommandRunner(object):
     # - user specified gs_host (which could be a non-production different
     #   service instance, in which case credentials won't work for checking
     #   gsutil tarball).
+    # - user is using a Cloud SDK install (which should only be updated via
+    #   gcloud components update)
     logger = logging.getLogger()
     gs_host = boto.config.get('Credentials', 'gs_host', None)
     if (not IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logger.isEnabledFor(logging.INFO)
-        or gs_host):
+        or gs_host
+        or os.environ.get('CLOUDSDK_WRAPPER') == '1'):
       return False
 
     software_update_check_period = boto.config.getint(

@@ -47,6 +47,11 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                        'Test requires https certificate validation enabled.')
   def test_update(self):
     """Tests that the update command works or raises proper exceptions."""
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      stderr = self.RunGsUtil(['update'], stdin='n',
+                              return_stderr=True, expected_status=1)
+      self.assertIn('update command is disabled for Cloud SDK', stderr)
+      return
 
     if gslib.IS_PACKAGE_INSTALL:
       # The update command is not present when installed via package manager.

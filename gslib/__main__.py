@@ -41,6 +41,10 @@ import gslib
 # TODO: gsutil-beta: Cloud SDK scans for this string and performs
 # substitution; ensure this works with both apitools and boto.
 boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
+if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  boto.UserAgent += ' Cloud SDK Command Line Tool'
+  if os.environ.get('CLOUDSDK_VERSION'):
+    boto.UserAgent += ' %s' % os.environ.get('CLOUDSDK_VERSION')
 
 # pylint: disable=g-bad-import-order
 # pylint: disable=g-import-not-at-top
@@ -68,6 +72,10 @@ GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # actually publicly known; security depends entirely on the secrecy of refresh
 # tokens, which effectively become bearer tokens.
 GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
+if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  # Cloud SDK installs have a separate client ID / secret.
+  GSUTIL_CLIENT_ID = '32555940559.apps.googleusercontent.com'
+  GSUTIL_CLIENT_NOTSOSECRET = 'ZmssLNjJy2998hD4CTg2ejr2'
 
 CONFIG_KEYS_TO_REDACT = ['proxy', 'proxy_port', 'proxy_user', 'proxy_pass']
 
