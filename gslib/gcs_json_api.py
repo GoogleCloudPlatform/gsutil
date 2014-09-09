@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import httplib
 import json
+import os
 import socket
 import ssl
 import time
@@ -244,10 +245,15 @@ class GcsJsonApi(CloudApi):
       # If we didn't actually try to authenticate because there were multiple
       # types of configured credentials, don't emit this warning.
       if failed_cred_type:
-        logger.warn(
-            'Your "%s" credentials are invalid. For more help, see '
-            '"gsutil help creds", or re-run the gsutil config command (see '
-            '"gsutil help config").', failed_cred_type)
+        if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+          logger.warn(
+              'Your "%s" credentials are invalid. Please run\n'
+              '  $ gcloud auth login', failed_cred_type)
+        else:
+          logger.warn(
+              'Your "%s" credentials are invalid. For more help, see '
+              '"gsutil help creds", or re-run the gsutil config command (see '
+              '"gsutil help config").', failed_cred_type)
 
       # If there's any set of configured credentials, we'll fail if they're
       # invalid, rather than silently falling back to anonymous config (as

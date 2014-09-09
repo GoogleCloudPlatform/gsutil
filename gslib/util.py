@@ -283,12 +283,21 @@ def ConfigureNoOpAuthIfNeeded():
   if not HasConfiguredCredentials():
     if (config.has_option('Credentials', 'gs_service_client_id')
         and not HAS_CRYPTO):
-      raise CommandException('\n'.join(textwrap.wrap(
-          'Your gsutil is configured with an OAuth2 service account, but you '
-          'do not have PyOpenSSL or PyCrypto 2.6 or later installed.  Service '
-          'account authentication requires one of these libraries; please '
-          'install either of them to proceed, or configure a different type '
-          'of credentials with "gsutil config".')))
+      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+        raise CommandException('\n'.join(textwrap.wrap(
+            'Your gsutil is configured with an OAuth2 service account, but '
+            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+            'Service account authentication requires one of these libraries; '
+            'please reactivate your service account via the gcloud auth '
+            'command and ensure any gcloud packages necessary for '
+            'service accounts are present.')))
+      else:
+        raise CommandException('\n'.join(textwrap.wrap(
+            'Your gsutil is configured with an OAuth2 service account, but '
+            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+            'Service account authentication requires one of these libraries; '
+            'please install either of them to proceed, or configure a '
+            'different type of credentials with "gsutil config".')))
     else:
       # With no boto config file the user can still access publicly readable
       # buckets and objects.

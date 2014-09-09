@@ -425,12 +425,20 @@ def _CheckAndHandleCredentialException(e, args):
     # when there are no configured credentials. This allows tests to
     # simulate a second user without permissions, without actually requiring
     # two separate configured users.
-    _OutputAndExit('\n'.join(textwrap.wrap(
-        'You are attempting to access protected data with no configured '
-        'credentials. Please visit '
-        'https://cloud.google.com/console#/project and sign up for an '
-        'account, and then run the "gsutil config" command to configure '
-        'gsutil to use these credentials.')))
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      _OutputAndExit('\n'.join(textwrap.wrap(
+          'You are attempting to access protected data with no configured '
+          'credentials. Please visit '
+          'https://cloud.google.com/console#/project and sign up for an '
+          'account, and then run the "gcloud auth login" command to '
+          'configure gsutil to use these credentials.')))
+    else:
+      _OutputAndExit('\n'.join(textwrap.wrap(
+          'You are attempting to access protected data with no configured '
+          'credentials. Please visit '
+          'https://cloud.google.com/console#/project and sign up for an '
+          'account, and then run the "gsutil config" command to configure '
+          'gsutil to use these credentials.')))
   elif (e.reason and
         (e.reason == 'AccountProblem' or e.reason == 'Account disabled.' or
          'account for the specified project has been disabled' in e.reason)
