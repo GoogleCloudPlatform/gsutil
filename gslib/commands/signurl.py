@@ -37,6 +37,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetNewHttp
 from gslib.util import NO_MAX
+from gslib.util import UTF8
 
 try:
   # Check for openssl.
@@ -280,7 +281,10 @@ class UrlSignCommand(Command):
       if url.IsBucket():
         gcs_path = url.bucket_name
       else:
-        gcs_path = '{0}/{1}'.format(url.bucket_name, url.object_name)
+        # Need to url encode the object name as Google Cloud Storage does when
+        # computing the string to sign when checking the signature.
+        gcs_path = '{0}/{1}'.format(url.bucket_name,
+                                    urllib.quote(url.object_name.encode(UTF8)))
 
       final_url = _GenSignedUrl(ks.get_privatekey(), client_id,
                                 method, '', content_type, expiration,
@@ -288,10 +292,10 @@ class UrlSignCommand(Command):
 
       expiration_dt = datetime.fromtimestamp(expiration)
 
-      print '{0}\t{1}\t{2}\t{3}'.format(url, method,
+      print '{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
                                         (expiration_dt
                                          .strftime('%Y-%m-%d %H:%M:%S')),
-                                        final_url)
+                                        final_url.encode(UTF8))
       if  (method != 'PUT' and
            not self._CheckClientCanRead(ks.get_privatekey(),
                                         client_id,
