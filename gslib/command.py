@@ -59,6 +59,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.util import GetConfigFilePath
+from gslib.util import GsutilStreamHandler
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
@@ -95,7 +96,7 @@ def CreateGsutilLogger(command_name):
   log = logging.getLogger(command_name)
   log.propagate = False
   log.setLevel(logging.root.level)
-  log_handler = logging.StreamHandler()
+  log_handler = GsutilStreamHandler()
   log_handler.setFormatter(logging.Formatter('%(message)s'))
   # Commands that call other commands (like mv) would cause log handlers to be
   # added more than once, so avoid adding if one is already present.

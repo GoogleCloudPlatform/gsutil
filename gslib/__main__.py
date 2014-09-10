@@ -60,6 +60,7 @@ from gslib.util import CreateLock
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
+from gslib.util import GsutilStreamHandler
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
@@ -149,7 +150,7 @@ def _ConfigureLogging(level=logging.INFO):
   log_format = '%(levelname)s %(asctime)s %(filename)s] %(message)s'
   date_format = '%m%d %H:%M:%S.%f'
   formatter = GsutilFormatter(fmt=log_format, datefmt=date_format)
-  handler = logging.StreamHandler()
+  handler = GsutilStreamHandler()
   handler.setFormatter(formatter)
   root_logger = logging.getLogger()
   root_logger.addHandler(handler)

@@ -32,6 +32,7 @@ from gslib.tests.mock_logging_handler import MockLoggingHandler
 from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
+from gslib.util import GsutilStreamHandler
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -90,7 +91,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.log_handlers_save = self.root_logger.handlers
     fd, self.log_handler_file = tempfile.mkstemp()
     self.log_handler_stream = os.fdopen(fd, 'w+')
-    self.temp_log_handler = logging.StreamHandler(self.log_handler_stream)
+    self.temp_log_handler = GsutilStreamHandler(self.log_handler_stream)
     self.root_logger.handlers = [self.temp_log_handler]
 
   def tearDown(self):
@@ -98,6 +99,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     self.root_logger.handlers = self.log_handlers_save
     self.temp_log_handler.flush()
+    self.temp_log_handler.close()
     self.log_handler_stream.seek(0)
     log_output = self.log_handler_stream.read()
     self.log_handler_stream.close()
@@ -208,6 +210,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       sys.stderr.seek(0)
       stderr = sys.stderr.read()
       logging.getLogger(command_name).removeHandler(mock_log_handler)
+      mock_log_handler.close()
 
       log_output = '\n'.join(
           '%s:\n  ' % level + '\n  '.join(records)
