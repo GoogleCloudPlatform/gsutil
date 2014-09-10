@@ -1225,7 +1225,7 @@ class PerfDiagCommand(Command):
           localtime = calendar.timegm(timetuple)
           localdt = datetime.datetime.fromtimestamp(localtime)
           print 'Measurement time: \n %s' % localdt.strftime(
-              '%Y-%m-%d %I-%M-%S %p %Z')
+              '%Y-%m-%d %I:%M:%S %p %Z')
 
       print 'Google Server: \n  %s' % info['googserv_route']
       print ('Google Server IP Addresses: \n  %s' %
