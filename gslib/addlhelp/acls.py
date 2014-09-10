@@ -86,9 +86,9 @@ _DETAILED_HELP_TEXT = ("""
     bucket or object.
 
   public-read
-    Gives the requester OWNER permission and gives all users READ
-    permission. When you apply this to an object, anyone on the Internet can
-    read the object without authenticating.
+    Gives all users (whether logged in or anonymous) READ permission. When
+    you apply this to an object, anyone on the Internet can read the object
+    without authenticating.
 
     NOTE: By default, publicly readable objects are served with a Cache-Control
     header allowing such objects to be cached for 3600 seconds. If you need to
@@ -97,8 +97,10 @@ _DETAILED_HELP_TEXT = ("""
     such objects. For help doing this, see 'gsutil help setmeta'.
 
   public-read-write
-    Gives the requester OWNER permission and gives all users READ and
-    WRITE permission. This ACL applies only to buckets.
+    Gives all users READ and WRITE permission. This ACL applies only to buckets.
+    NOTE: Setting a bucket to public-read-write will allow anyone on the
+    Internet to upload anything to your bucket. You will be responsible for this
+    content.
 
   authenticated-read
     Gives the requester OWNER permission and gives all authenticated
