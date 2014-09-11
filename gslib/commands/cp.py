@@ -634,8 +634,10 @@ class CpCommand(Command):
     # (e.g., trying to download an object called "mydata/" where the local
     # directory "mydata" exists).
     if IsCloudSubdirPlaceholder(exp_src_url):
-      self.logger.info('Skipping cloud sub-directory placeholder object %s',
-                       exp_src_url)
+      self.logger.info('Skipping cloud sub-directory placeholder object (%s) '
+                      'because such objects aren\'t needed in (and would '
+                      'interfere with) directories in the local file system',
+                      exp_src_url)
       return
 
     if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(

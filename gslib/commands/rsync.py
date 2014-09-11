@@ -377,7 +377,10 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
     # local directory "mydata" exists).
     url = blr.storage_url
     if IsCloudSubdirPlaceholder(url, blr=blr):
-      cls.logger.info('Skipping cloud sub-directory placeholder object %s', url)
+      cls.logger.info('Skipping cloud sub-directory placeholder object (%s) '
+                      'because such objects aren\'t needed in (and would '
+                      'interfere with) directories in the local file system',
+                      url)
       continue
     if (cls.exclude_symlinks and url.IsFileUrl()
         and os.path.islink(url.object_name)):
