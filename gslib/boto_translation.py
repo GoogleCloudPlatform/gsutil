@@ -55,6 +55,7 @@ from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
+from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.exception import CommandException
@@ -1397,6 +1398,11 @@ class BotoTranslation(CloudApi):
       elif e.status == 409 and e.code and 'BucketNotEmpty' in e.code:
         return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                  status=e.status, body=e.body)
+      elif e.status == 410:
+        # 410 errors should always cause us to start over - either the UploadID
+        # has expired or there was a server-side problem that requires starting
+        # the upload over from scratch.
+        return ResumableUploadStartOverException(e.message)
       elif e.status == 412:
         return PreconditionException(e.code, status=e.status, body=e.body)
     if isinstance(e, boto.exception.StorageCreateError):
@@ -1413,10 +1419,11 @@ class BotoTranslation(CloudApi):
       return InvalidUrlError(e.message)
 
     if isinstance(e, boto.exception.ResumableUploadException):
-      if (e.disposition == boto.exception.ResumableTransferDisposition.ABORT or
-          (e.disposition ==
-           boto.exception.ResumableTransferDisposition.START_OVER)):
+      if e.disposition == boto.exception.ResumableTransferDisposition.ABORT:
         return ResumableUploadAbortException(e.message)
+      elif (e.disposition ==
+            boto.exception.ResumableTransferDisposition.START_OVER):
+        return ResumableUploadStartOverException(e.message)
       else:
         return ResumableUploadException(e.message)
 
@@ -1467,6 +1474,7 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
+  # pylint: disable=catching-non-exception
   def XmlPassThroughSetCors(self, cors_text, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     # Parse XML document and convert into Cors object.

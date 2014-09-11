@@ -39,6 +39,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
+from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
@@ -76,6 +77,28 @@ class _HaltingCopyCallbackHandler(object):
         raise ResumableUploadException('Artifically halting upload.')
       else:
         raise ResumableDownloadException('Artifically halting download.')
+
+class _ResumableUploadStartOverCopyCallbackHandler(object):
+  """Test callback handler that raises start-over exception during upload."""
+
+  def __init__(self, startover_at_byte):
+    self._startover_at_byte = startover_at_byte
+    self.started_over_once = False
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_transferred, total_size):
+    """Forcibly exits if the transfer has passed the halting point."""
+    if (total_bytes_transferred >= self._startover_at_byte
+        and not self.started_over_once):
+      sys.stderr.write(
+          'Forcing ResumableUploadStartOverException after byte %s. '
+          '%s/%s transferred.\r\n' % (
+              self._startover_at_byte,
+              MakeHumanReadable(total_bytes_transferred),
+              MakeHumanReadable(total_size)))
+      self.started_over_once = True
+      raise ResumableUploadStartOverException(
+          'Artifically forcing start-over.')
 
 
 class _ResumableUploadRetryHandler(object):
@@ -1507,6 +1530,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
+
+  @SkipForS3('No resumable upload support for S3.')
+  def test_cp_resumable_upload_410_error(self):
+    """Tests that resumable upload works with 410 errors."""
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='a' * 2 * ONE_KB)
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_ResumableUploadStartOverCopyCallbackHandler(5)))
+
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               fpath, suri(bucket_uri)], return_stderr=True)
+      self.assertIn('Forcing ResumableUploadStartOverException', stderr)
+      self.assertIn('Restarting upload from scratch', stderr)
 
   def test_cp_minus_c(self):
     bucket_uri = self.CreateBucket()

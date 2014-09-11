@@ -566,11 +566,15 @@ class RetryableServiceException(ServiceException):
 
 
 class ResumableDownloadException(RetryableServiceException):
-  """Exception raised for resumable downloads that can be retried later."""
+  """Exception raised for res. downloads that can be retried later."""
 
 
 class ResumableUploadException(RetryableServiceException):
-  """Exception raised for resumable uploads that can be retried later."""
+  """Exception raised for res. uploads that can be retried w/ same upload ID."""
+
+
+class ResumableUploadStartOverException(RetryableServiceException):
+  """Exception raised for res. uploads that can be retried w/ new upload ID."""
 
 
 class ResumableUploadAbortException(ServiceException):

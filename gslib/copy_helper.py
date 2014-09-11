@@ -53,6 +53,7 @@ from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
+from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
@@ -87,6 +88,8 @@ from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
 from gslib.util import GetJsonResumableChunkSize
+from gslib.util import GetMaxRetryDelay
+from gslib.util import GetNumRetries
 from gslib.util import GetStreamFromFileUrl
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
@@ -356,7 +359,7 @@ def _SelectDownloadStrategy(src_obj_metadata, dst_url):
 
 
 def _GetUploadTrackerData(tracker_file_name, logger):
-  """Checks for an upload tracker file and creates one if it does not exist.
+  """Reads tracker data from an upload tracker file if it exists.
 
   Args:
     tracker_file_name: Tracker file name for this upload.
@@ -375,8 +378,9 @@ def _GetUploadTrackerData(tracker_file_name, logger):
     tracker_data = tracker_file.read()
     return tracker_data
   except IOError as e:
-    # Ignore non-existent file (happens first time a upload
-    # is attempted on an object), but warn user for other errors.
+    # Ignore non-existent file (happens first time a upload is attempted on an
+    # object, or when re-starting an upload after a
+    # ResumableUploadStartOverException), but warn user for other errors.
     if e.errno != errno.ENOENT:
       logger.warn('Couldn\'t read upload tracker file (%s): %s. Restarting '
                   'upload from scratch.', tracker_file_name, e.strerror)
@@ -1501,22 +1505,48 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       progress_callback = pickle.loads(test_fp.read()).call
 
   start_time = time.time()
-  try:
-    uploaded_object = gsutil_api.UploadObjectResumable(
-        src_obj_filestream, object_metadata=dst_obj_metadata,
-        canned_acl=global_copy_helper_opts.canned_acl,
-        preconditions=preconditions, provider=dst_url.scheme,
-        size=src_obj_size, serialization_data=tracker_data,
-        fields=UPLOAD_RETURN_FIELDS,
-        tracker_callback=_UploadTrackerCallback,
-        progress_callback=progress_callback)
-    retryable = False
-  except ResumableUploadAbortException:
-    retryable = False
-    raise
-  finally:
-    if not retryable:
-      _DeleteTrackerFile(tracker_file_name)
+  num_startover_attempts = 0
+  # This loop causes us to retry when the resumable upload failed in a way that
+  # requires starting over with a new upload ID. Retries within a single upload
+  # ID within the current process are handled in
+  # gsutil_api.UploadObjectResumable, and retries within a single upload ID
+  # spanning processes happens if an exception occurs not caught below (which
+  # will leave the tracker file in place, and cause the upload ID to be reused
+  # the next time the user runs gsutil and attempts the same upload).
+  while retryable:
+    try:
+      uploaded_object = gsutil_api.UploadObjectResumable(
+          src_obj_filestream, object_metadata=dst_obj_metadata,
+          canned_acl=global_copy_helper_opts.canned_acl,
+          preconditions=preconditions, provider=dst_url.scheme,
+          size=src_obj_size, serialization_data=tracker_data,
+          fields=UPLOAD_RETURN_FIELDS,
+          tracker_callback=_UploadTrackerCallback,
+          progress_callback=progress_callback)
+      retryable = False
+    except ResumableUploadStartOverException, e:
+      # This can happen, for example, if the server sends a 410 response code.
+      # In that case the current resumable upload ID can't be reused, so delete
+      # the tracker file and try again up to max retries.
+      logger.info('Restarting upload from scratch after exception %s', e)
+      num_startover_attempts += 1
+      retryable = (num_startover_attempts < GetNumRetries())
+      if retryable:
+        _DeleteTrackerFile(tracker_file_name)
+        tracker_data = None
+        src_obj_filestream.seek(0)
+        logger.info('\n'.join(textwrap.wrap(
+            'Resumable upload of %s failed with a response code indicating we '
+            'need to start over with a new resumable upload ID. Backing off '
+            'and retrying.' % src_url.url_string)))
+        time.sleep(min(random.random() * (2 ** num_startover_attempts),
+                       GetMaxRetryDelay()))
+    except ResumableUploadAbortException:
+      retryable = False
+      raise
+    finally:
+      if not retryable:
+        _DeleteTrackerFile(tracker_file_name)
 
   end_time = time.time()
   elapsed_time = end_time - start_time
