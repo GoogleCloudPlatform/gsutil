@@ -30,6 +30,7 @@ from apiclient import mimeparse
 from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import http_wrapper
 from gslib.third_party.storage_apitools import stream_slice
+from gslib.third_party.storage_apitools import util
 
 __all__ = [
     'Download',
@@ -45,12 +46,17 @@ class _Transfer(object):
   """Generic bits common to Uploads and Downloads."""
 
   def __init__(self, stream, close_stream=False, chunksize=None,
-               auto_transfer=True, total_size=None, http=None):
+               auto_transfer=True, total_size=None, http=None,
+               num_retries=5):
     self.__bytes_http = None
     self.__close_stream = close_stream
     self.__http = http
     self.__stream = stream
     self.__url = None
+
+    self.__num_retries = 5
+    # Let the @property do validation
+    self.num_retries = num_retries
 
     self.retry_func = http_wrapper.HandleExceptionsAndRebuildHttpConnections
     self.auto_transfer = auto_transfer
@@ -74,6 +80,18 @@ class _Transfer(object):
   @bytes_http.setter
   def bytes_http(self, value):
     self.__bytes_http = value
+
+  @property
+  def num_retries(self):
+    return self.__num_retries
+
+  @num_retries.setter
+  def num_retries(self, value):
+    util.Typecheck(value, (int, long))
+    if value < 0:
+      raise exceptions.InvalidDataError(
+          'Cannot have negative value for num_retries')
+    self.__num_retries = value
 
   @property
   def stream(self):
@@ -177,7 +195,7 @@ class Download(_Transfer):
                **kwds)
 
   @classmethod
-  def FromData(cls, stream, json_data, http=None, auto_transfer=None):
+  def FromData(cls, stream, json_data, http=None, auto_transfer=None, **kwds):
     """Create a new Download object from a stream and serialized data."""
     info = json.loads(json_data)
     missing_keys = cls._REQUIRED_SERIALIZATION_KEYS - set(info.keys())
@@ -185,7 +203,7 @@ class Download(_Transfer):
       raise exceptions.InvalidDataError(
           'Invalid serialization data, missing keys: %s' % (
               ', '.join(missing_keys)))
-    download = cls.FromStream(stream)
+    download = cls.FromStream(stream, **kwds)
     if auto_transfer is not None:
       download.auto_transfer = auto_transfer
     else:
@@ -305,7 +323,8 @@ class Download(_Transfer):
     if additional_headers is not None:
       request.headers.update(additional_headers)
     return http_wrapper.MakeRequest(
-        self.bytes_http, request, retry_func=self.retry_func)
+        self.bytes_http, request, retry_func=self.retry_func,
+        retries=self.num_retries)
 
   def __ProcessResponse(self, response):
     """Process this response (by updating self and writing to self.stream)."""
@@ -402,10 +421,11 @@ class Upload(_Transfer):
       'auto_transfer', 'mime_type', 'total_size', 'url'))
 
   def __init__(self, stream, mime_type, total_size=None, http=None,
-               close_stream=False, chunksize=None, auto_transfer=True):
+               close_stream=False, chunksize=None, auto_transfer=True,
+               **kwds):
     super(Upload, self).__init__(
         stream, close_stream=close_stream, chunksize=chunksize,
-        auto_transfer=auto_transfer, http=http)
+        auto_transfer=auto_transfer, http=http, **kwds)
     self.__complete = False
     self.__final_response = None
     self.__mime_type = mime_type
@@ -420,7 +440,7 @@ class Upload(_Transfer):
     return self.__progress
 
   @classmethod
-  def FromFile(cls, filename, mime_type=None, auto_transfer=True):
+  def FromFile(cls, filename, mime_type=None, auto_transfer=True, **kwds):
     """Create a new Upload object from a filename."""
     path = os.path.expanduser(filename)
     if not os.path.exists(path):
@@ -432,19 +452,20 @@ class Upload(_Transfer):
             'Could not guess mime type for %s' % path)
     size = os.stat(path).st_size
     return cls(open(path, 'rb'), mime_type, total_size=size, close_stream=True,
-               auto_transfer=auto_transfer)
+               auto_transfer=auto_transfer, **kwds)
 
   @classmethod
-  def FromStream(cls, stream, mime_type, total_size=None, auto_transfer=True):
+  def FromStream(cls, stream, mime_type, total_size=None, auto_transfer=True,
+                 **kwds):
     """Create a new Upload object from a stream."""
     if mime_type is None:
       raise exceptions.InvalidUserInputError(
           'No mime_type specified for stream')
     return cls(stream, mime_type, total_size=total_size, close_stream=False,
-               auto_transfer=auto_transfer)
+               auto_transfer=auto_transfer, **kwds)
 
   @classmethod
-  def FromData(cls, stream, json_data, http, auto_transfer=None):
+  def FromData(cls, stream, json_data, http, auto_transfer=None, **kwds):
     """Create a new Upload of stream from serialized json_data using http."""
     info = json.loads(json_data)
     missing_keys = cls._REQUIRED_SERIALIZATION_KEYS - set(info.keys())
@@ -452,8 +473,11 @@ class Upload(_Transfer):
       raise exceptions.InvalidDataError(
           'Invalid serialization data, missing keys: %s' % (
               ', '.join(missing_keys)))
+    if 'total_size' in kwds:
+      raise exceptions.InvalidUserInputError(
+          'Cannot override total_size on serialized Upload')
     upload = cls.FromStream(stream, info['mime_type'],
-                            total_size=info.get('total_size'))
+                            total_size=info.get('total_size'), **kwds)
     if isinstance(stream, io.IOBase) and not stream.seekable():
       raise exceptions.InvalidUserInputError(
           'Cannot restart resumable upload on non-seekable stream')
@@ -631,7 +655,7 @@ class Upload(_Transfer):
     refresh_request = http_wrapper.Request(
         url=self.url, http_method='PUT', headers={'Content-Range': 'bytes */*'})
     refresh_response = http_wrapper.MakeRequest(
-        self.http, refresh_request, redirections=0)
+        self.http, refresh_request, redirections=0, retries=self.num_retries)
     range_header = self._GetRangeHeaderFromResponse(refresh_response)
     if refresh_response.status_code in (httplib.OK, httplib.CREATED):
       self.__complete = True
@@ -668,7 +692,8 @@ class Upload(_Transfer):
     if client is not None:
       http_request.url = client.FinalizeTransferUrl(http_request.url)
     self.EnsureUninitialized()
-    http_response = http_wrapper.MakeRequest(http, http_request)
+    http_response = http_wrapper.MakeRequest(http, http_request,
+                                             retries=self.num_retries)
     if http_response.status_code != httplib.OK:
       raise exceptions.HttpError.FromResponse(http_response)
 
@@ -764,7 +789,8 @@ class Upload(_Transfer):
       request.headers.update(additional_headers)
 
     response = http_wrapper.MakeRequest(
-        self.bytes_http, request, retry_func=self.retry_func)
+        self.bytes_http, request, retry_func=self.retry_func,
+        retries=self.num_retries)
     if response.status_code not in (httplib.OK, httplib.CREATED,
                                     http_wrapper.RESUME_INCOMPLETE):
       # We want to reset our state to wherever the server left us

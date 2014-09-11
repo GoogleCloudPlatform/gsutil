@@ -204,6 +204,7 @@ class GcsJsonApi(CloudApi):
         url=self.url_base, http=self.http, log_request=log_request,
         log_response=log_response, credentials=self.credentials,
         version=self.api_version)
+    self.api_client.num_retries = self.num_retries
 
     if no_op_credentials:
       # This API key is not secret and is used to identify gsutil during
@@ -556,10 +557,12 @@ class GcsJsonApi(CloudApi):
 
     if serialization_data:
       apitools_download = apitools_transfer.Download.FromData(
-          download_stream, serialization_data, self.api_client.http)
+          download_stream, serialization_data, self.api_client.http,
+          num_retries=self.num_retries)
     else:
       apitools_download = apitools_transfer.Download.FromStream(
-          download_stream, auto_transfer=False, total_size=object_size)
+          download_stream, auto_transfer=False, total_size=object_size,
+          num_retries=self.num_retries)
 
     apitools_download.bytes_http = authorized_download_http
     apitools_request = apitools_messages.StorageObjectsGetRequest(
@@ -746,7 +749,8 @@ class GcsJsonApi(CloudApi):
 
       if apitools_strategy == 'simple':  # One-shot upload.
         apitools_upload = apitools_transfer.Upload(
-            upload_stream, content_type, total_size=size, auto_transfer=True)
+            upload_stream, content_type, total_size=size, auto_transfer=True,
+            num_retries=self.num_retries)
         apitools_upload.strategy = apitools_strategy
         apitools_upload.bytes_http = authorized_upload_http
 
@@ -772,14 +776,16 @@ class GcsJsonApi(CloudApi):
       if serialization_data:
         # Resuming an existing upload.
         apitools_upload = apitools_transfer.Upload.FromData(
-            upload_stream, serialization_data, self.api_client.http)
+            upload_stream, serialization_data, self.api_client.http,
+            num_retries=self.num_retries)
         apitools_upload.chunksize = _ResumableChunkSize()
         apitools_upload.bytes_http = authorized_upload_http
       else:
         # New resumable upload.
         apitools_upload = apitools_transfer.Upload(
             upload_stream, content_type, total_size=size,
-            chunksize=_ResumableChunkSize(), auto_transfer=False)
+            chunksize=_ResumableChunkSize(), auto_transfer=False,
+            num_retries=self.num_retries)
         apitools_upload.strategy = apitools_strategy
         apitools_upload.bytes_http = authorized_upload_http
         self.api_client.objects.Insert(
