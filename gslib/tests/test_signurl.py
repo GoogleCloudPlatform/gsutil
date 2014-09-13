@@ -73,6 +73,37 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Expires=', stdout)
     self.assertIn('\tPUT\t', stdout)
 
+  def testSignUrlWithURLEncodeRequiredChars(self):
+    objs = ['gs://example.org/test 1', 'gs://example.org/test/test 2',
+            'gs://example.org/Аудиоарi хив']
+    expected_partial_urls = [
+        ('https://storage.googleapis.com/example.org/test%201?GoogleAccessId=te'
+         'st@developer.gserviceaccount.com'),
+        ('https://storage.googleapis.com/example.org/test/test%202?GoogleAccess'
+         'Id=test@developer.gserviceaccount.com'),
+        ('https://storage.googleapis.com/example.org/%D0%90%D1%83%D0%B4%D0%B8%D'
+         '0%BE%D0%B0%D1%80i%20%D1%85%D0%B8%D0%B2?GoogleAccessId=test@developer.'
+         'gserviceaccount.com')
+        ]
+
+    self.assertEquals(len(objs), len(expected_partial_urls))
+
+    cmd_args = ['signurl', '-p', 'notasecret', self._GetKsFile()]
+    cmd_args.extend(objs)
+
+    stdout = self.RunGsUtil(cmd_args, return_stdout=True)
+
+    lines = stdout.split('\n')
+    # Header, signed urls, trailing newline.
+    self.assertEquals(len(lines), len(objs) + 2)
+
+    # Strip the header line to make the indices line up.
+    lines = lines[1:]
+
+    for obj, line, partial_url in zip(objs, lines, expected_partial_urls):
+      self.assertIn(obj, line)
+      self.assertIn(partial_url, line)
+
   def testSignUrlWithWildcard(self):
     objs = ['test1', 'test2', 'test3']
     bucket = self.CreateBucket()
