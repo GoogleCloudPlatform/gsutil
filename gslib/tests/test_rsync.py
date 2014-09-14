@@ -71,9 +71,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         result.append(os.path.join(dirpath, f))
     return '\n'.join(result).replace('\\', '/')
 
-  def _FlatListBucket(self, bucket_uri):
-    """Perform a flat listing over bucket_uri."""
-    return self.RunGsUtil(['ls', suri(bucket_uri, '**')], return_stdout=True)
+  def _FlatListBucket(self, bucket_url_string):
+    """Perform a flat listing over bucket_url_string."""
+    return self.RunGsUtil(['ls', suri(bucket_url_string, '**')],
+                          return_stdout=True)
 
   def test_invalid_args(self):
     """Tests various invalid argument cases."""
@@ -804,4 +805,35 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Check that re-running the same rsync command causes no more changes.
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
         ['rsync', '-d', '-p', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))
+
+  def test_rsync_to_nonexistent_bucket_subdir(self):
+    """Tests that rsync to non-existent bucket subdir works."""
+    # Create dir with some objects and empty bucket.
+    tmpdir = self.CreateTempDir()
+    subdir = os.path.join(tmpdir, 'subdir')
+    os.mkdir(subdir)
+    bucket_url = self.CreateBucket()
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents='subdir/obj3')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Tests rsync works as expected."""
+      self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_url, 'subdir')])
+      listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
+      listing2 = _TailSet(
+          suri(bucket_url, 'subdir'),
+          self._FlatListBucket(bucket_url.clone_replace_name('subdir')))
+      # Dir should have un-altered content.
+      self.assertEquals(listing1, set(['/obj1', '/obj2', '/subdir/obj3']))
+      # Bucket subdir should have content like dir.
+      self.assertEquals(listing2, set(['/obj1', '/obj2', '/subdir/obj3']))
+    _Check1()
+
+    # Check that re-running the same rsync command causes no more changes.
+    self.assertEquals(NO_CHANGES, self.RunGsUtil(
+        ['rsync', '-r', tmpdir, suri(bucket_url, 'subdir')],
         return_stderr=True))

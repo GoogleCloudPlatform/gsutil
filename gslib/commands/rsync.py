@@ -763,11 +763,13 @@ class RsyncCommand(Command):
   )
   total_bytes_transferred = 0
 
-  def _InsistContainer(self, url_str):
+  def _InsistContainer(self, url_str, treat_nonexistent_object_as_subdir):
     """Sanity checks that URL names an existing container.
 
     Args:
       url_str: URL string to check.
+      treat_nonexistent_object_as_subdir: indicates if should treat a
+                                          non-existent object as a subdir.
 
     Returns:
       URL for checked string.
@@ -777,7 +779,8 @@ class RsyncCommand(Command):
     """
     (url, have_existing_container) = (
         copy_helper.ExpandUrlToSingleBlr(url_str, self.gsutil_api, self.debug,
-                                         self.project_id))
+                                         self.project_id,
+                                         treat_nonexistent_object_as_subdir))
     if not have_existing_container:
       raise CommandException(
           'arg (%s) does not name a directory, bucket, or bucket subdir.'
@@ -790,8 +793,8 @@ class RsyncCommand(Command):
     if self.compute_checksums and not UsingCrcmodExtension(crcmod):
       self.logger.warn(SLOW_CRCMOD_WARNING)
 
-    src_url = self._InsistContainer(self.args[0])
-    dst_url = self._InsistContainer(self.args[1])
+    src_url = self._InsistContainer(self.args[0], False)
+    dst_url = self._InsistContainer(self.args[1], True)
 
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0

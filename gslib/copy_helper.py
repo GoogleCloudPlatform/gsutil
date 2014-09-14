@@ -1133,7 +1133,8 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
           and file_size >= parallel_composite_upload_threshold)
 
 
-def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
+def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
+                         treat_nonexistent_object_as_subdir=False):
   """Expands wildcard if present in url_str.
 
   Args:
@@ -1141,6 +1142,8 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
     gsutil_api: gsutil Cloud API instance to use.
     debug: debug level to use (for iterators).
     project_id: project ID to use (for iterators).
+    treat_nonexistent_object_as_subdir: indicates if should treat a non-existent
+                                        object as a subdir.
 
   Returns:
       (exp_url, have_existing_dst_container)
@@ -1168,7 +1171,7 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
 
   storage_url = StorageUrlFromString(url_str)
 
-  # Handle non-wildcarded url:
+  # Handle non-wildcarded URL.
   if storage_url.IsFileUrl():
     return (storage_url, storage_url.IsDirectory())
 
@@ -1184,7 +1187,7 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
   if IsCloudSubdirPlaceholder(storage_url):
     return (storage_url, True)
 
-  # Check for the special case where we have a folder marker object
+  # Check for the special case where we have a folder marker object.
   folder_expansion = CreateWildcardIterator(
       url_str + '_$folder$', gsutil_api, debug=debug,
       project_id=project_id).IterAll(
@@ -1196,11 +1199,14 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id):
                                          debug=debug,
                                          project_id=project_id).IterAll(
                                              bucket_listing_fields=['name'])
+  expansion_empty = True
   for blr in blr_expansion:
+    expansion_empty = False
     if blr.IsPrefix():
       return (storage_url, True)
 
-  return (storage_url, False)
+  return (storage_url,
+          expansion_empty and treat_nonexistent_object_as_subdir)
 
 
 def FixWindowsNaming(src_url, dst_url):
