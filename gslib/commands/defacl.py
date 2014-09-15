@@ -64,10 +64,9 @@ _SET_DESCRIPTION = """
 
   Setting a default object ACL on a bucket provides a convenient way
   to ensure newly uploaded objects have a specific ACL, and avoids the
-  need to back after the fact and set ACLs on a large number of objects
-  for which you forgot to set the ACL at object upload time (which can
-  happen if you don't set a default object ACL on a bucket, and get the
-  default project-private ACL).
+  need to set ACLs on a large number of objects for which you forgot to 
+  set the ACL at object upload time (which can happen if you don't set a
+  default object ACL on a bucket, and get the default project-private ACL).
 """
 
 _GET_DESCRIPTION = """
