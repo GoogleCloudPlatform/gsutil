@@ -41,7 +41,7 @@ from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.util import IS_WINDOWS
-from gslib.util import TWO_MB
+from gslib.util import EIGHT_MB
 
 
 _DETAILED_HELP_TEXT = ("""
@@ -344,8 +344,8 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 [GSUtil]
 
 # 'resumable_threshold' specifies the smallest file size [bytes] for which
-# resumable Google Cloud Storage transfers are attempted. The default is 2097152
-# (2 MiB).
+# resumable Google Cloud Storage transfers are attempted. The default is 8388608
+# (8 MiB).
 #resumable_threshold = %(resumable_threshold)d
 
 # 'rsync_buffer_lines' specifies the number of lines of bucket or directory
@@ -470,7 +470,7 @@ content_language = en
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
        'hash_always': CHECK_HASH_ALWAYS,
        'hash_never': CHECK_HASH_NEVER,
-       'resumable_threshold': TWO_MB,
+       'resumable_threshold': EIGHT_MB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
        'parallel_composite_upload_threshold': (

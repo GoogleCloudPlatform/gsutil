@@ -61,6 +61,7 @@ except ImportError, e:
 
 ONE_KB = 1024
 TWO_MB = 2 * 1024 * 1024
+EIGHT_MB = 8 * 1024 * 1024
 TEN_MB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
 _DEFAULT_LINES = 25
@@ -572,7 +573,7 @@ BOTO_IS_SECURE = _BotoIsSecure()
 
 
 def ResumableThreshold():
-  return config.getint('GSUtil', 'resumable_threshold', TWO_MB)
+  return config.getint('GSUtil', 'resumable_threshold', EIGHT_MB)
 
 
 def AddAcceptEncoding(headers):
