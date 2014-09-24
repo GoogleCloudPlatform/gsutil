@@ -192,9 +192,11 @@ _DETAILED_HELP_TEXT = ("""
 <B>OPTIONS</B>
   -l          Prints long listing (owner, length).
 
-  -L          Prints even more detail than -l. This is a separate option because
-              it makes additional service requests (so, takes longer and adds
-              requests costs).
+  -L          Prints even more detail than -l.  Note: If you use this option
+              with the (non-default) XML API it will generate an additional
+              request per object being listed, which makes the -L option run
+              much more slowly (and cost more) using the XML API than the
+              default JSON API.
 
   -b          Prints info about the bucket when used with a bucket URL.
 
