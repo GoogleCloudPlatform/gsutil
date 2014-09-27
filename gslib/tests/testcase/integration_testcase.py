@@ -17,9 +17,11 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+import locale
 import logging
 import subprocess
 import sys
+import tempfile
 
 import boto
 from boto.exception import StorageResponseError
@@ -307,6 +309,31 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       return toreturn[0]
     elif toreturn:
       return tuple(toreturn)
+
+  def RunGsUtilTabCompletion(self, cmd, expected_results=None):
+    """Runs the gsutil command in tab completion mode.
+
+    Args:
+      cmd: The command to run, as a list, e.g. ['cp', 'foo', 'bar']
+      expected_results: The expected tab completion results for the given input.
+    """
+    cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
+    cmd_str = ' '.join(cmd)
+    with tempfile.NamedTemporaryFile(delete=False) as tab_complete_result_file:
+      # argcomplete returns results via the '8' file descriptor so we redirect
+      # to a file so we can capture them.
+      cmd_str_with_result_redirect = '%s 8>%s' % (
+          cmd_str, tab_complete_result_file.name)
+      env = {
+          '_ARGCOMPLETE': '1',
+          'COMP_LINE': cmd_str,
+          'COMP_POINT': str(len(cmd_str)),
+      }
+      subprocess.call(cmd_str_with_result_redirect, env=env, shell=True)
+      results_string = tab_complete_result_file.read().decode(
+          locale.getpreferredencoding())
+    results = results_string.split('\013')
+    self.assertEqual(results, expected_results)
 
   @contextmanager
   def SetAnonymousBotoCreds(self):

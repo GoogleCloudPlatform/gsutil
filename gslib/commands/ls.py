@@ -21,6 +21,7 @@ import re
 from gslib.boto_translation import S3_DELETE_MARKER_GUID
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
+from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.ls_helper import LsHelper
@@ -230,6 +231,9 @@ class LsCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments=[
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

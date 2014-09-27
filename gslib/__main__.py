@@ -324,6 +324,9 @@ def main():
             'Unsetting http_proxy environment variable within gsutil run.\n')
       del os.environ['http_proxy']
 
+    if os.environ.get('_ARGCOMPLETE', '0') == '1':
+      return _PerformTabCompletion(command_runner)
+
     return _RunNamedCommandAndHandleExceptions(
         command_runner, command_name, args=args[1:], headers=headers,
         debug_level=debug, parallel_operations=parallel_operations)
@@ -551,6 +554,23 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
           % GetConfigFilePath())
     _HandleUnknownFailure(e)
 
+
+def _PerformTabCompletion(command_runner):
+  """Performs gsutil-specific tab completion for the shell."""
+  # argparse and argcomplete are bundled with the Google Cloud SDK.
+  # When gsutil is invoked from the Google Cloud SDK, both should be available.
+  try:
+    import argcomplete
+    import argparse
+  except ImportError as e:
+    _OutputAndExit('A library required for performing tab completion was'
+                   ' not found.\nCause: %s' % e)
+  parser = argparse.ArgumentParser(add_help=False)
+  subparsers = parser.add_subparsers()
+  command_runner.ConfigureCommandArgumentParsers(subparsers)
+  argcomplete.autocomplete(parser, exit_method=sys.exit)
+
+  return 0
 
 if __name__ == '__main__':
   sys.exit(main())

@@ -27,15 +27,22 @@ import time
 import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
+from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command import Command
+from gslib.command import CreateGsutilLogger
 from gslib.command import GetFailureCount
 from gslib.command import OLD_ALIAS_MAP
 from gslib.command import ShutDownGsutil
 import gslib.commands
+from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiClassMapFactory
+from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
+from gslib.tab_complete import CloudObjectCompleter
+from gslib.tab_complete import CloudOrLocalObjectCompleter
+from gslib.tab_complete import CompleterType
 from gslib.util import CompareVersions
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
@@ -120,6 +127,41 @@ class CommandRunner(object):
       for command_name_aliases in command.command_spec.command_name_aliases:
         command_map[command_name_aliases] = command
     return command_map
+
+  def ConfigureCommandArgumentParsers(self, subparsers):
+    """Configures argparse arguments and argcomplete completers for commands."""
+
+    # This should match the support map for the "ls" command.
+    support_map = {
+        'gs': [ApiSelector.XML, ApiSelector.JSON],
+        's3': [ApiSelector.XML]
+    }
+    default_map = {
+        'gs': ApiSelector.JSON,
+        's3': ApiSelector.XML
+    }
+    gsutil_api_map = GsutilApiMapFactory.GetApiMap(
+        self.gsutil_api_class_map_factory, support_map, default_map)
+
+    logger = CreateGsutilLogger('tab_complete')
+    gsutil_api = CloudApiDelegator(
+        self.bucket_storage_uri_class, gsutil_api_map,
+        logger, debug=0)
+
+    for command in set(self.command_map.values()):
+      parser = subparsers.add_parser(
+          command.command_spec.command_name, add_help=False)
+      for command_argument in command.command_spec.argparse_arguments:
+        action = parser.add_argument(
+            *command_argument.args, **command_argument.kwargs)
+        if command_argument.completer:
+          if command_argument.completer == CompleterType.CLOUD_OR_LOCAL_OBJECT:
+            action.completer = CloudOrLocalObjectCompleter(gsutil_api)
+          elif command_argument.completer == CompleterType.CLOUD_OBJECT:
+            action.completer = CloudObjectCompleter(gsutil_api)
+          else:
+            raise RuntimeError(
+                'Unknown completer "%s"' % command_argument.completer)
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None,

@@ -284,6 +284,7 @@ CommandSpec = namedtuple('CommandSpec', [
     'gs_default_api',
     # Private arguments (for internal testing)
     'supported_private_args',
+    'argparse_arguments',
 ])
 
 
@@ -308,7 +309,8 @@ class Command(HelpProvider):
                         max_args=NO_MAX, supported_sub_args='',
                         file_url_ok=False, provider_url_ok=False,
                         urls_start_arg=0, gs_api_support=None,
-                        gs_default_api=None, supported_private_args=None):
+                        gs_default_api=None, supported_private_args=None,
+                        argparse_arguments=None):
     """Creates an instance of CommandSpec, with defaults."""
     return CommandSpec(
         command_name=command_name,
@@ -321,7 +323,8 @@ class Command(HelpProvider):
         urls_start_arg=urls_start_arg,
         gs_api_support=gs_api_support or [ApiSelector.XML],
         gs_default_api=gs_default_api or ApiSelector.XML,
-        supported_private_args=supported_private_args)
+        supported_private_args=supported_private_args,
+        argparse_arguments=argparse_arguments or [])
 
   # Define a convenience property for command name, since it's used many places.
   def _GetDefaultCommandName(self):
