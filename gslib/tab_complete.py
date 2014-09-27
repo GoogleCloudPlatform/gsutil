@@ -14,8 +14,11 @@
 # limitations under the License.
 """Shell tab completion."""
 
+import itertools
 from storage_url import StorageUrlFromString
 from wildcard_iterator import CreateWildcardIterator
+
+_TAB_COMPLETE_MAX_RESULTS = 500
 
 
 class CompleterType(object):
@@ -30,8 +33,9 @@ class CloudObjectCompleter(object):
     self.gsutil_api = gsutil_api
 
   def __call__(self, prefix, **kwargs):
-    return [str(c) for c in CreateWildcardIterator(
-        prefix + '*', self.gsutil_api).IterAll(bucket_listing_fields=['name'])]
+    it = CreateWildcardIterator(
+        prefix + '*', self.gsutil_api).IterAll(bucket_listing_fields=['name'])
+    return [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
 
 
 class CloudOrLocalObjectCompleter(object):
