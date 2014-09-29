@@ -162,7 +162,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       Listing split across lines.
     """
     # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+    @Retry(AssertionError, tries=5, timeout_secs=1)
     def _Check1():
       command = ['ls', '-a'] if versioned else ['ls']
       b_uri = [suri(bucket_uri) + '/**'] if num_objects else [suri(bucket_uri)]

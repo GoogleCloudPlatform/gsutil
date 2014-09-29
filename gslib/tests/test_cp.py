@@ -36,6 +36,7 @@ from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
@@ -305,13 +306,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
     k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
-    g1 = k2_uri.generation or k2_uri.version_id
+    g1 = urigen(k2_uri)
     self.RunGsUtil(['cp', suri(k1_uri), suri(k2_uri)])
     k2_uri = bucket_uri.clone_replace_name(k2_uri.object_name)
     k2_uri = bucket_uri.clone_replace_key(k2_uri.get_key())
-    g2 = k2_uri.generation or k2_uri.version_id
+    g2 = urigen(k2_uri)
     k2_uri.set_contents_from_string('data3')
-    g3 = k2_uri.generation or k2_uri.version_id
+    g3 = urigen(k2_uri)
 
     fpath = self.CreateTempFile()
     # Check to make sure current version is data3.

@@ -89,6 +89,20 @@ def _NormalizeURI(uri):
   return unparsed
 
 
+def GenerationFromURI(uri):
+  """Returns a the generation for a StorageUri.
+
+  Args:
+    uri: boto.storage_uri.StorageURI object to get the URI from.
+
+  Returns:
+    Generation string for the URI.
+  """
+  if not (uri.generation or uri.version_id):
+    if uri.scheme == 's3': return 'null'
+  return uri.generation or uri.version_id
+
+
 def ObjectToURI(obj, *suffixes):
   """Returns the storage URI string for a given StorageUri or file object.
 
