@@ -261,6 +261,10 @@ def HasConfiguredCredentials():
       config.has_option('Credentials', 'gs_service_client_id') and
       config.has_option('Credentials', 'gs_service_key_file'))
 
+  if (has_goog_creds or has_amzn_creds or has_oauth_creds or
+      has_service_account_creds):
+    return True
+
   valid_auth_handler = None
   try:
     valid_auth_handler = boto.auth.get_auth_handler(
@@ -275,8 +279,7 @@ def HasConfiguredCredentials():
   except NoAuthHandlerFound:
     pass
 
-  return (has_goog_creds or has_amzn_creds or has_oauth_creds
-          or has_service_account_creds or valid_auth_handler)
+  return valid_auth_handler
 
 
 def ConfigureNoOpAuthIfNeeded():

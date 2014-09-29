@@ -26,7 +26,6 @@ import unittest
 import urlparse
 
 import boto
-from boto.provider import Provider
 import gslib.tests as gslib_tests
 
 if not hasattr(unittest.TestCase, 'assertIsNone'):
@@ -42,10 +41,8 @@ PARALLEL_COMPOSITE_UPLOAD_TEST_CONFIG = '/tmp/.boto.parallel_upload_test_config'
 
 
 def _HasS3Credentials():
-  provider = Provider('aws')
-  if not provider.access_key or not provider.secret_key:
-    return False
-  return True
+  return (boto.config.get('Credentials', 'aws_access_key_id', None) and
+          boto.config.get('Credentials', 'aws_secret_access_key', None))
 
 HAS_S3_CREDS = _HasS3Credentials()
 
