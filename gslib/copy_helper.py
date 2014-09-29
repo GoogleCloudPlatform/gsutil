@@ -1189,8 +1189,8 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
 
   # Check for the special case where we have a folder marker object.
   folder_expansion = CreateWildcardIterator(
-      url_str + '_$folder$', gsutil_api, debug=debug,
-      project_id=project_id).IterAll(
+      storage_url.versionless_url_string + '_$folder$', gsutil_api,
+      debug=debug, project_id=project_id).IterAll(
           bucket_listing_fields=['name'])
   for blr in folder_expansion:
     return (storage_url, True)
