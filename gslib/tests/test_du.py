@@ -37,6 +37,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
         bucket_uri=bucket_uri, object_name='sub1/sub2/five', contents='5five'))
     obj_uris.append(self.CreateObject(
         bucket_uri=bucket_uri, object_name='sub1/sub2/four', contents='four'))
+    self.AssertNObjectsInBucket(bucket_uri, 4)
     return bucket_uri, obj_uris
 
   def test_object(self):
