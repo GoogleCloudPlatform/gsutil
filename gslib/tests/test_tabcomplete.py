@@ -16,12 +16,22 @@
 
 from __future__ import absolute_import
 
+from unittest.case import skipUnless
+
 from gslib.command import CreateGsutilLogger
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 
+argcomplete = None
+try:
+  # pylint: disable=g-import-not-at-top
+  import argcomplete
+except ImportError:
+  pass
+
 
 @SkipForS3('Tab completion only supported for GS.')
+@skipUnless(argcomplete, 'Tab completion requires argcomplete')
 class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   """Integration tests for tab completion."""
 

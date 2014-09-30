@@ -14,7 +14,6 @@
 # limitations under the License.
 """Shell tab completion."""
 
-from argcomplete.completers import FilesCompleter
 from storage_url import StorageUrlFromString
 from wildcard_iterator import CreateWildcardIterator
 
@@ -44,6 +43,11 @@ class CloudOrLocalObjectCompleter(object):
 
   def __init__(self, gsutil_api):
     self.cloud_object_completer = CloudObjectCompleter(gsutil_api)
+
+    # This is only safe to import if argcomplete is present in the install
+    # (which happens for Cloud SDK installs), so import on usage, not on load.
+    # pylint: disable=g-import-not-at-top
+    from argcomplete.completers import FilesCompleter
     self.local_object_completer = FilesCompleter()
 
   def __call__(self, prefix, **kwargs):
