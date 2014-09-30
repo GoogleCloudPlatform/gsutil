@@ -20,7 +20,6 @@ from unittest.case import skipUnless
 
 from gslib.command import CreateGsutilLogger
 import gslib.tests.testcase as testcase
-from gslib.tests.testcase.integration_testcase import SkipForS3
 
 argcomplete = None
 try:
@@ -30,7 +29,6 @@ except ImportError:
   pass
 
 
-@SkipForS3('Tab completion only supported for GS.')
 @skipUnless(argcomplete, 'Tab completion requires argcomplete')
 class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   """Integration tests for tab completion."""
@@ -46,7 +44,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     bucket_name = bucket_base_name + '-suffix'
     self.CreateBucket(bucket_name)
 
-    request = 'gs://%s' % bucket_base_name
+    request = '%s://%s' % (self.default_provider, bucket_base_name)
     expected_result = '//%s/' % bucket_name
 
     self.RunGsUtilTabCompletion(['ls', request],
@@ -59,7 +57,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     object_name = object_base_name + '/subobj'
     object_uri = self.CreateObject(object_name=object_name, contents='data')
 
-    request = 'gs://%s/' % object_uri.bucket_name
+    request = '%s://%s/' % (self.default_provider, object_uri.bucket_name)
     expected_result = '//%s/%s/' % (object_uri.bucket_name, object_base_name)
 
     self.RunGsUtilTabCompletion(['ls', request],
@@ -74,7 +72,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     bucket2_name = bucket_base_name + '-suffix2'
     self.CreateBucket(bucket2_name)
 
-    request = 'gs://%s' % bucket_base_name
+    request = '%s://%s' % (self.default_provider, bucket_base_name)
     expected_result1 = '//%s/' % bucket1_name
     expected_result2 = '//%s/' % bucket2_name
 
@@ -88,7 +86,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     object_name = object_base_name + '-suffix'
     object_uri = self.CreateObject(object_name=object_name, contents='data')
 
-    request = 'gs://%s/%s' % (object_uri.bucket_name, object_base_name)
+    request = '%s://%s/%s' % (
+        self.default_provider, object_uri.bucket_name, object_base_name)
     expected_result = '//%s/%s ' % (object_uri.bucket_name, object_name)
 
     self.RunGsUtilTabCompletion(['ls', request],
@@ -107,7 +106,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(
         bucket_uri=bucket_uri, object_name=object2_name, contents='data')
 
-    request = 'gs://%s/%s' % (bucket_uri.bucket_name, object_base_name)
+    request = '%s://%s/%s' % (
+        self.default_provider, bucket_uri.bucket_name, object_base_name)
     expected_result1 = '//%s/%s' % (bucket_uri.bucket_name, object1_name)
     expected_result2 = '//%s/%s' % (bucket_uri.bucket_name, object2_name)
 
