@@ -26,6 +26,7 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.translation_helper import AclTranslation
+from gslib.util import Retry
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
@@ -457,18 +458,24 @@ class TestAcl(TestAclBase):
                                return_stdout=True)
     self.assertNotRegexpMatches(json_text, test_regex)
 
-    self.RunGsUtil(
-        self._ch_acl_prefix +
-        ['-R', '-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)[:-3]])
-    json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
-                               return_stdout=True)
-    self.assertRegexpMatches(json_text, test_regex)
+    @Retry(AssertionError, tries=5, timeout_secs=1)
+    def _AddAcl():
+      self.RunGsUtil(
+          self._ch_acl_prefix +
+          ['-R', '-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)[:-3]])
+      json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                 return_stdout=True)
+      self.assertRegexpMatches(json_text, test_regex)
+    _AddAcl()
 
-    self.RunGsUtil(self._ch_acl_prefix +
-                   ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
-    json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
-                               return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    @Retry(AssertionError, tries=5, timeout_secs=1)
+    def _DeleteAcl():
+      self.RunGsUtil(self._ch_acl_prefix +
+                     ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
+      json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
+                                 return_stdout=True)
+      self.assertNotRegexpMatches(json_text, test_regex)
+    _DeleteAcl()
 
   def testMultiVersionSupport(self):
     """Tests changing ACLs on multiple object versions."""
