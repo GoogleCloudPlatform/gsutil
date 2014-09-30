@@ -234,33 +234,33 @@ def HandleExceptionsAndRebuildHttpConnections(retry_args):
 
   # Transport failures
   if isinstance(retry_args.exc, httplib.BadStatusLine):
-    logging.error('Caught BadStatusLine from httplib, retrying: %s',
+    logging.debug('Caught BadStatusLine from httplib, retrying: %s',
                   retry_args.exc)
   elif isinstance(retry_args.exc, socket.error):
-    logging.error('Caught socket error, retrying: %s', retry_args.exc)
+    logging.debug('Caught socket error, retrying: %s', retry_args.exc)
   elif isinstance(retry_args.exc, socket.gaierror):
-    logging.error('Caught socket address error, retrying: %s', retry_args.exc)
+    logging.debug('Caught socket address error, retrying: %s', retry_args.exc)
   elif isinstance(retry_args.exc, httplib2.ServerNotFoundError):
-    logging.error('Caught server not found error, retrying: %s', retry_args.exc)
+    logging.debug('Caught server not found error, retrying: %s', retry_args.exc)
   elif isinstance(retry_args.exc, ValueError):
     # oauth2_client tries to JSON-decode the response, which can result
     # in a ValueError if the response was invalid. Until that is fixed in
     # oauth2_client, need to handle it here.
-    logging.error('Response content was invalid (%s), retrying',
+    logging.debug('Response content was invalid (%s), retrying',
                   retry_args.exc)
   elif isinstance(retry_args.exc, exceptions.RequestError):
-    logging.error('Request returned no response, retrying')
+    logging.debug('Request returned no response, retrying')
   # API-level failures
   elif isinstance(retry_args.exc, exceptions.BadStatusCodeError):
-    logging.error('Response returned status %s, retrying',
+    logging.debug('Response returned status %s, retrying',
                   retry_args.exc.status_code)
   elif isinstance(retry_args.exc, exceptions.RetryAfterError):
-    logging.error('Response returned a retry-after header, retrying')
+    logging.debug('Response returned a retry-after header, retrying')
     retry_after = retry_args.exc.retry_after
   else:
     raise
   RebuildHttpConnections(retry_args.http)
-  logging.error('Retrying request to url %s after exception %s',
+  logging.debug('Retrying request to url %s after exception %s',
                 retry_args.http_request.url, retry_args.exc)
   time.sleep(retry_after or util.CalculateWaitForRetry(retry_args.num_retries))
 
