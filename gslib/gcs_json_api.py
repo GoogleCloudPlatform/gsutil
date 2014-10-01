@@ -76,8 +76,8 @@ from gslib.util import GetNumRetries
 
 DEFAULT_GCS_JSON_VERSION = 'v1'
 
-NUM_BUCKETS_PER_LIST_PAGE = 100
-NUM_OBJECTS_PER_LIST_PAGE = 500
+NUM_BUCKETS_PER_LIST_PAGE = 1000
+NUM_OBJECTS_PER_LIST_PAGE = 1000
 
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be
