@@ -33,6 +33,10 @@ class CloudObjectCompleter(object):
     self.gsutil_api = gsutil_api
 
   def __call__(self, prefix, **kwargs):
+    if not prefix:
+      prefix = 'gs://'
+    elif not StorageUrlFromString(prefix).IsCloudUrl():
+      return []
     it = CreateWildcardIterator(
         prefix + '*', self.gsutil_api).IterAll(bucket_listing_fields=['name'])
     return [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
