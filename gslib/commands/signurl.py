@@ -28,13 +28,14 @@ import re
 import time
 import urllib
 
-import httplib2
-
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools.exceptions import HttpError
+from gslib.third_party.storage_apitools.http_wrapper import MakeRequest
+from gslib.third_party.storage_apitools.http_wrapper import Request
 from gslib.util import GetNewHttp
 from gslib.util import NO_MAX
 from gslib.util import UTF8
@@ -231,22 +232,24 @@ class UrlSignCommand(Command):
 
     return method, expiration, content_type, passwd
 
-  def _CheckClientCanRead(self, key, client_id, gcs_path):
+  def _ProbeObjectAccessWithClient(self, key, client_id, gcs_path):
     """Performs a head request against a signed url to check for read access."""
 
-    signed_url = _GenSignedUrl(key, client_id,
-                               'HEAD', '', '',
-                               int(time.time()) + 10,
-                               gcs_path)
-    h = GetNewHttp()
-    try:
-      response, _ = h.request(signed_url, 'HEAD')
+    signed_url = _GenSignedUrl(key, client_id, 'HEAD', '', '',
+                               int(time.time()) + 10, gcs_path)
 
-      return response.status == 200
-    except httplib2.HttpLib2Error as e:
-      raise CommandException('Unexpected error while querying'
-                             'object readability ({0})'
-                             .format(e.message))
+    try:
+      h = GetNewHttp()
+      req = Request(signed_url, 'HEAD')
+      response = MakeRequest(h, req)
+
+      if response.status_code not in [200, 403, 404]:
+        raise HttpError(response)
+
+      return response.status_code
+    except HttpError as e:
+      raise CommandException('Unexpected response code while querying'
+                             'object readability ({0})'.format(e.message))
 
   def _EnumerateStorageUrls(self, in_urls):
     ret = []
@@ -296,10 +299,22 @@ class UrlSignCommand(Command):
                                         (expiration_dt
                                          .strftime('%Y-%m-%d %H:%M:%S')),
                                         final_url.encode(UTF8))
-      if  (method != 'PUT' and
-           not self._CheckClientCanRead(ks.get_privatekey(),
-                                        client_id,
-                                        gcs_path)):
+
+      response_code = self._ProbeObjectAccessWithClient(ks.get_privatekey(),
+                                                        client_id, gcs_path)
+
+      if response_code == 404 and method != 'PUT':
+        if url.IsBucket():
+          msg = ('Bucket {0} does not exist. Please create a bucket with '
+                 'that name before a creating signed URL to access it.'
+                 .format(url))
+        else:
+          msg = ('Object {0} does not exist. Please create/upload an object '
+                 'with that name before a creating signed URL to access it.'
+                 .format(url))
+
+        raise CommandException(msg)
+      elif response_code == 403:
         self.logger.warn(
             '%s does not have permissions on %s, using this link will likely '
             'result in a 403 error until at least READ permissions are granted',
