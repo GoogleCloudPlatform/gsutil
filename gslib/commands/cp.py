@@ -269,9 +269,10 @@ STREAMING_TRANSFERS_TEXT = """
 
     long_running_computation | gsutil cp - gs://my_bucket/obj
 
-  Streaming transfers do not support resumable uploads/downloads.
-  (The Google resumable transfer protocol has a way to support streaming
-  transfers, but gsutil doesn't currently implement support for this.)
+  Note that streaming transfers do not support resumable uploads/downloads, so
+  if you have a large amount of data to upload (say, more than 100MB) it is
+  recommended to write the data to a local file and then copy that file to the
+  cloud rather than streaming it (and similarly for large downloads).
 """
 
 PARALLEL_COMPOSITE_UPLOADS_TEXT = """
