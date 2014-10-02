@@ -102,7 +102,8 @@ class CommandRunner(object):
   """Runs gsutil commands and does some top-level argument handling."""
 
   def __init__(self, bucket_storage_uri_class=BucketStorageUri,
-               gsutil_api_class_map_factory=GsutilApiClassMapFactory):
+               gsutil_api_class_map_factory=GsutilApiClassMapFactory,
+               command_map=None):
     """Instantiates a CommandRunner.
 
     Args:
@@ -110,10 +111,15 @@ class CommandRunner(object):
                                 Settable for testing/mocking.
       gsutil_api_class_map_factory: Creates map of cloud storage interfaces.
                                     Settable for testing/mocking.
+      command_map: Map of command names to their implementations for
+                   testing/mocking. If not set, the map is built dynamically.
     """
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
-    self.command_map = self._LoadCommandMap()
+    if command_map:
+      self.command_map = command_map
+    else:
+      self.command_map = self._LoadCommandMap()
 
   def _LoadCommandMap(self):
     """Returns dict mapping each command_name to implementing class."""
@@ -129,8 +135,38 @@ class CommandRunner(object):
         command_map[command_name_aliases] = command
     return command_map
 
+  def _ConfigureCommandArgumentParserArguments(
+      self, parser, arguments, gsutil_api):
+    """Configures an argument parser with the given arguments.
+
+    Args:
+      parser: argparse parser object.
+      arguments: array of CommandArgument objects.
+      gsutil_api: gsutil Cloud API instance to use.
+    Raises:
+      RuntimeError: if argument is configured with unsupported completer
+    """
+    for command_argument in arguments:
+      action = parser.add_argument(
+          *command_argument.args, **command_argument.kwargs)
+      if command_argument.completer:
+        if command_argument.completer == CompleterType.CLOUD_OR_LOCAL_OBJECT:
+          action.completer = CloudOrLocalObjectCompleter(gsutil_api)
+        elif command_argument.completer == CompleterType.LOCAL_OBJECT:
+          action.completer = LocalObjectCompleter()
+        elif command_argument.completer == CompleterType.CLOUD_OBJECT:
+          action.completer = CloudObjectCompleter(gsutil_api)
+        else:
+          raise RuntimeError(
+              'Unknown completer "%s"' % command_argument.completer)
+
   def ConfigureCommandArgumentParsers(self, subparsers):
-    """Configures argparse arguments and argcomplete completers for commands."""
+    """Configures argparse arguments and argcomplete completers for commands.
+
+    Args:
+      subparsers: argparse object that can be used to add parsers for
+                  subcommands (called just 'commands' in gsutil)
+    """
 
     # This should match the support map for the "ls" command.
     support_map = {
@@ -150,21 +186,19 @@ class CommandRunner(object):
         logger, debug=0)
 
     for command in set(self.command_map.values()):
-      parser = subparsers.add_parser(
+      command_parser = subparsers.add_parser(
           command.command_spec.command_name, add_help=False)
-      for command_argument in command.command_spec.argparse_arguments:
-        action = parser.add_argument(
-            *command_argument.args, **command_argument.kwargs)
-        if command_argument.completer:
-          if command_argument.completer == CompleterType.CLOUD_OR_LOCAL_OBJECT:
-            action.completer = CloudOrLocalObjectCompleter(gsutil_api)
-          elif command_argument.completer == CompleterType.LOCAL_OBJECT:
-            action.completer = LocalObjectCompleter()
-          elif command_argument.completer == CompleterType.CLOUD_OBJECT:
-            action.completer = CloudObjectCompleter(gsutil_api)
-          else:
-            raise RuntimeError(
-                'Unknown completer "%s"' % command_argument.completer)
+      if isinstance(command.command_spec.argparse_arguments, dict):
+        subcommand_parsers = command_parser.add_subparsers()
+        subcommand_argument_dict = command.command_spec.argparse_arguments
+        for subcommand, arguments in subcommand_argument_dict.iteritems():
+          subcommand_parser = subcommand_parsers.add_parser(
+              subcommand, add_help=False)
+          self._ConfigureCommandArgumentParserArguments(
+              subcommand_parser, arguments, gsutil_api)
+      else:
+        self._ConfigureCommandArgumentParserArguments(
+            command_parser, command.command_spec.argparse_arguments, gsutil_api)
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       parallel_operations=False, test_method=None,

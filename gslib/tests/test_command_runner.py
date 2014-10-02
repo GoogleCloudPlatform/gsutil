@@ -22,8 +22,14 @@ import time
 
 import gslib
 from gslib import command_runner
+from gslib.command import Command
+from gslib.command_argument import CommandArgument
+from gslib.command_runner import CommandRunner
 from gslib.command_runner import HandleArgCoding
 from gslib.exception import CommandException
+from gslib.tab_complete import CloudObjectCompleter
+from gslib.tab_complete import CloudOrLocalObjectCompleter
+from gslib.tab_complete import LocalObjectCompleter
 import gslib.tests.testcase as testcase
 import gslib.tests.util as util
 from gslib.tests.util import SetBotoConfigFileForTest
@@ -31,6 +37,35 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import SECONDS_PER_DAY
+
+
+class FakeArgparseArgument(object):
+  """Fake for argparse parser argument."""
+  pass
+
+
+class FakeArgparseParser(object):
+  """Fake for argparse parser."""
+
+  def __init__(self):
+    self.arguments = []
+
+  def add_argument(self, *unused_args, **unused_kwargs):
+    argument = FakeArgparseArgument()
+    self.arguments.append(argument)
+    return argument
+
+
+class FakeArgparseSubparsers(object):
+  """Container for nested parsers."""
+
+  def __init__(self):
+    self.parsers = []
+
+  def add_parser(self, unused_name, **unused_kwargs):
+    parser = FakeArgparseParser()
+    self.parsers.append(parser)
+    return parser
 
 
 class TestCommandRunnerUnitTests(
@@ -203,6 +238,73 @@ class TestCommandRunnerUnitTests(
             self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
       finally:
         logging.getLogger().setLevel(prev_loglevel)
+
+  def test_command_argument_parser_setup_invalid_completer(self):
+
+    class FakeCommandWithInvalidCompleter(Command):
+      """Command with an invalid completer on an argument."""
+      command_spec = Command.CreateCommandSpec(
+          'fake',
+          argparse_arguments=[
+              CommandArgument('arg', completer='BAD')
+          ]
+      )
+
+      def __init__(self):
+        pass
+
+    command_map = {
+        FakeCommandWithInvalidCompleter.command_spec.command_name:
+            FakeCommandWithInvalidCompleter()
+    }
+
+    runner = CommandRunner(
+        bucket_storage_uri_class=self.mock_bucket_storage_uri,
+        gsutil_api_class_map_factory=self.mock_gsutil_api_class_map_factory,
+        command_map=command_map)
+
+    subparsers = FakeArgparseSubparsers()
+    try:
+      runner.ConfigureCommandArgumentParsers(subparsers)
+    except RuntimeError as e:
+      self.assertIn('Unknown completer', e.message)
+
+  def test_command_argument_parser_setup_completers(self):
+
+    class FakeCommandWithCompleters(Command):
+      """Command with various completer types."""
+      command_spec = Command.CreateCommandSpec(
+          'fake',
+          argparse_arguments=[
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
+              CommandArgument.MakeZeroOrMoreFileURLsArgument(),
+              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
+          ]
+      )
+
+      def __init__(self):
+        pass
+
+    command_map = {
+        FakeCommandWithCompleters.command_spec.command_name:
+            FakeCommandWithCompleters()
+    }
+
+    runner = CommandRunner(
+        bucket_storage_uri_class=self.mock_bucket_storage_uri,
+        gsutil_api_class_map_factory=self.mock_gsutil_api_class_map_factory,
+        command_map=command_map)
+
+    subparsers = FakeArgparseSubparsers()
+    runner.ConfigureCommandArgumentParsers(subparsers)
+
+    self.assertEqual(1, len(subparsers.parsers))
+    parser = subparsers.parsers[0]
+    self.assertEqual(3, len(parser.arguments))
+    self.assertEqual(CloudObjectCompleter, type(parser.arguments[0].completer))
+    self.assertEqual(LocalObjectCompleter, type(parser.arguments[1].completer))
+    self.assertEqual(
+        CloudOrLocalObjectCompleter, type(parser.arguments[2].completer))
 
   # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):
