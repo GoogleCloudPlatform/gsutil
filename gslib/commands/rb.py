@@ -29,7 +29,7 @@ _DETAILED_HELP_TEXT = ("""
   gsutil [-f] rb url...
 
 <B>DESCRIPTION</B>
-  The rb command deletes new bucket. Buckets must be empty before you can delete
+  The rb command deletes a bucket. Buckets must be empty before you can delete
   them.
 
   Be certain you want to delete a bucket before you do so, as once it is
