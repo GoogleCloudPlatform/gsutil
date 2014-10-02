@@ -47,4 +47,32 @@ class CommandArgument(object):
     return CommandArgument(
         'file', nargs='*', completer=CompleterType.CLOUD_OBJECT)
 
+  @staticmethod
+  def MakeNCloudURLsArgument(n):
+    """Constructs an argument that takes N Cloud URLs as parameters."""
+    return CommandArgument(
+        'file', nargs=n, completer=CompleterType.CLOUD_OBJECT)
 
+  @staticmethod
+  def MakeZeroOrMoreCloudOrFileURLsArgument():
+    """Constructs an argument that takes 0 or more Cloud or File URLs."""
+    return CommandArgument(
+        'file', nargs='*', completer=CompleterType.CLOUD_OR_LOCAL_OBJECT)
+
+  @staticmethod
+  def MakeNCloudOrFileURLsArgument(n):
+    """Constructs an argument that takes N Cloud or File URLs as parameters."""
+    return CommandArgument(
+        'file', nargs=n, completer=CompleterType.CLOUD_OR_LOCAL_OBJECT)
+
+  @staticmethod
+  def MakeZeroOrMoreFileURLsArgument():
+    """Constructs an argument that takes 0 or more File URLs as parameters."""
+    return CommandArgument(
+        'file', nargs='*', completer=CompleterType.LOCAL_OBJECT)
+
+  @staticmethod
+  def MakeNFileURLsArgument(n):
+    """Constructs an argument that takes N File URLs as parameters."""
+    return CommandArgument(
+        'file', nargs=n, completer=CompleterType.LOCAL_OBJECT)

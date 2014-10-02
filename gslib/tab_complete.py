@@ -24,6 +24,21 @@ _TAB_COMPLETE_MAX_RESULTS = 500
 class CompleterType(object):
   CLOUD_OBJECT = 'cloud_object'
   CLOUD_OR_LOCAL_OBJECT = 'cloud_or_local_object'
+  LOCAL_OBJECT = 'local_object'
+
+
+class LocalObjectCompleter(object):
+  """Completer object for local files."""
+
+  def __init__(self):
+    # This is only safe to import if argcomplete is present in the install
+    # (which happens for Cloud SDK installs), so import on usage, not on load.
+    # pylint: disable=g-import-not-at-top
+    from argcomplete.completers import FilesCompleter
+    self.files_completer = FilesCompleter()
+
+  def __call__(self, prefix, **kwargs):
+    return self.files_completer(prefix, **kwargs)
 
 
 class CloudObjectCompleter(object):
@@ -51,12 +66,7 @@ class CloudOrLocalObjectCompleter(object):
 
   def __init__(self, gsutil_api):
     self.cloud_object_completer = CloudObjectCompleter(gsutil_api)
-
-    # This is only safe to import if argcomplete is present in the install
-    # (which happens for Cloud SDK installs), so import on usage, not on load.
-    # pylint: disable=g-import-not-at-top
-    from argcomplete.completers import FilesCompleter
-    self.local_object_completer = FilesCompleter()
+    self.local_object_completer = LocalObjectCompleter()
 
   def __call__(self, prefix, **kwargs):
     url = StorageUrlFromString(prefix)

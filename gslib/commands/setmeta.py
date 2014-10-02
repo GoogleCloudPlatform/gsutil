@@ -20,6 +20,7 @@ from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.command import Command
+from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
@@ -130,6 +131,9 @@ class SetMetaCommand(Command):
       urls_start_arg=1,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments=[
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

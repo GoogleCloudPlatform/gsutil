@@ -45,6 +45,7 @@ from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import GetDownloadSerializationDict
 from gslib.command import Command
 from gslib.command import DummyArgChecker
+from gslib.command_argument import CommandArgument
 from gslib.commands import config
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -224,6 +225,9 @@ class PerfDiagCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments=[
+          CommandArgument.MakeNCloudURLsArgument(1)
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

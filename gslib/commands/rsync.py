@@ -33,6 +33,7 @@ from gslib import copy_helper
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
+from gslib.command_argument import CommandArgument
 from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -751,6 +752,9 @@ class RsyncCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments=[
+          CommandArgument.MakeNCloudOrFileURLsArgument(2)
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

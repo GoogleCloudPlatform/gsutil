@@ -26,6 +26,7 @@ from gslib.cat_helper import CatHelper
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
+from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.copy_helper import ItemExistsError
@@ -592,6 +593,9 @@ class CpCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       supported_private_args=['haltatbyte='],
+      argparse_arguments=[
+          CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

@@ -43,6 +43,7 @@ from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import CloudObjectCompleter
 from gslib.tab_complete import CloudOrLocalObjectCompleter
 from gslib.tab_complete import CompleterType
+from gslib.tab_complete import LocalObjectCompleter
 from gslib.util import CompareVersions
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
@@ -157,6 +158,8 @@ class CommandRunner(object):
         if command_argument.completer:
           if command_argument.completer == CompleterType.CLOUD_OR_LOCAL_OBJECT:
             action.completer = CloudOrLocalObjectCompleter(gsutil_api)
+          elif command_argument.completer == CompleterType.LOCAL_OBJECT:
+            action.completer = LocalObjectCompleter()
           elif command_argument.completer == CompleterType.CLOUD_OBJECT:
             action.completer = CloudObjectCompleter(gsutil_api)
           else:

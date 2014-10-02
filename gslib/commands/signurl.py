@@ -29,6 +29,7 @@ import time
 import urllib
 
 from gslib.command import Command
+from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
@@ -192,6 +193,10 @@ class UrlSignCommand(Command):
       urls_start_arg=1,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments=[
+          CommandArgument.MakeNFileURLsArgument(1),
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+      ]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
