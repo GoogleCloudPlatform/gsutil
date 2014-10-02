@@ -40,8 +40,8 @@ from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
-from gslib.util import IS_WINDOWS
 from gslib.util import EIGHT_MB
+from gslib.util import IS_WINDOWS
 
 
 _DETAILED_HELP_TEXT = ("""
@@ -192,6 +192,7 @@ _DETAILED_HELP_TEXT = ("""
       rsync_buffer_lines
       software_update_check_period
       state_dir
+      tab_completion_timing
       use_magicfile
 
     [OAuth2]

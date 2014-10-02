@@ -214,6 +214,10 @@ def GetCredentialStoreFilename():
   return os.path.join(GetGsutilStateDir(), 'credcache')
 
 
+def GetTabCompletionLogFilename():
+  return os.path.join(GetGsutilStateDir(), 'tab-completion-logs')
+
+
 def CreateTrackerDirIfNeeded():
   """Looks up or creates the gsutil tracker file directory.
 

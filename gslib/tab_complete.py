@@ -15,10 +15,16 @@
 """Shell tab completion."""
 
 import itertools
-from storage_url import StorageUrlFromString
-from wildcard_iterator import CreateWildcardIterator
+import time
 
-_TAB_COMPLETE_MAX_RESULTS = 500
+import boto
+
+from gslib.storage_url import StorageUrlFromString
+from gslib.util import GetTabCompletionLogFilename
+from gslib.wildcard_iterator import CreateWildcardIterator
+
+
+_TAB_COMPLETE_MAX_RESULTS = 1000
 
 
 class CompleterType(object):
@@ -42,7 +48,7 @@ class LocalObjectCompleter(object):
 
 
 class CloudObjectCompleter(object):
-  """Completer object for Cloud URIs."""
+  """Completer object for Cloud URLs."""
 
   def __init__(self, gsutil_api):
     self.gsutil_api = gsutil_api
@@ -52,15 +58,25 @@ class CloudObjectCompleter(object):
       prefix = 'gs://'
     elif not StorageUrlFromString(prefix).IsCloudUrl():
       return []
+    start_time = time.time()
     it = CreateWildcardIterator(
         prefix + '*', self.gsutil_api).IterAll(bucket_listing_fields=['name'])
-    return [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+    results = [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+    end_time = time.time()
+    if boto.config.getbool('GSUtil', 'tab_completion_timing', False):
+      num_results = len(results)
+      elapsed_seconds = end_time - start_time
+      with open(GetTabCompletionLogFilename(), 'ab') as fp:
+        fp.write('%s results in %.2fs, %.2f results/second for prefix: %s\n' %
+                 (num_results, elapsed_seconds, num_results / elapsed_seconds,
+                  prefix))
+    return results
 
 
 class CloudOrLocalObjectCompleter(object):
-  """Completer object for Cloud URIs or local files.
+  """Completer object for Cloud URLs or local files.
 
-  Invokes the Cloud object completer if the input looks like a Cloud URI and
+  Invokes the Cloud object completer if the input looks like a Cloud URL and
   falls back to local file completer otherwise.
   """
 
