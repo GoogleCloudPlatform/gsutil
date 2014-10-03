@@ -1962,7 +1962,7 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     else:
       _DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
-      os.unlink(file_name)
+      os.unlink(download_file_name)
       raise
 
   if server_gzip and not need_to_unzip:
