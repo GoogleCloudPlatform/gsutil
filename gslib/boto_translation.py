@@ -934,9 +934,9 @@ class BotoTranslation(CloudApi):
   def _AddPreconditionsToHeaders(self, preconditions, headers):
     """Adds preconditions (if any) to headers."""
     if preconditions and self.provider == 'gs':
-      if preconditions.gen_match:
+      if preconditions.gen_match is not None:
         headers['x-goog-if-generation-match'] = preconditions.gen_match
-      if preconditions.meta_gen_match:
+      if preconditions.meta_gen_match is not None:
         headers['x-goog-if-metageneration-match'] = preconditions.meta_gen_match
 
   def _AddApiVersionToHeaders(self, headers):

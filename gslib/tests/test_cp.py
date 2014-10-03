@@ -391,6 +391,27 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @PerformsFileToObjectUpload
   @SkipForS3('Preconditions not supported for S3.')
+  def test_cp_generation_zero_match(self):
+    """Tests that cp handles an object-not-exists precondition header."""
+    bucket_uri = self.CreateBucket()
+    fpath1 = self.CreateTempFile(contents='data1')
+    # Match 0 means only write the object if it doesn't already exist.
+    gen_match_header = 'x-goog-if-generation-match:0'
+
+    # First copy should succeed.
+    # TODO: This can fail (rarely) if the server returns a 5xx but actually
+    # commits the bytes. If we add restarts on small uploads, handle this
+    # case.
+    self.RunGsUtil(['-h', gen_match_header, 'cp', fpath1, suri(bucket_uri)])
+
+    # Second copy should fail with a precondition error.
+    stderr = self.RunGsUtil(['-h', gen_match_header, 'cp', fpath1,
+                             suri(bucket_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('PreconditionException', stderr)
+
+  @PerformsFileToObjectUpload
+  @SkipForS3('Preconditions not supported for S3.')
   def test_cp_v_generation_match(self):
     """Tests that cp -v option handles the if-generation-match header."""
     bucket_uri = self.CreateVersionedBucket()
