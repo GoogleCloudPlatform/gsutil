@@ -116,15 +116,15 @@ _DETAILED_HELP_TEXT = ("""
     click on the project you're using, click "APIs & auth", and click
     "Credentials".
 
-    To create a service account, visit the Google Cloud Console and then:
+    To create a service account, visit the Google Developers Console and then:
 
-       - Click the APIs tab on the left
+       - Click "APIs & auth" in the left sidebar.
 
-       - Click "APIs & auth"
+       - Click "Credentials".
 
-       - Click the red "Create New Client ID" button
+       - Click "Create New Client ID".
 
-       - Create a "Service Account" type
+       - Select "Service Account" as your application type.
 
        - Save the private key and password provided.
 
