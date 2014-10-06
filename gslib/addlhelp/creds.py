@@ -118,7 +118,7 @@ _DETAILED_HELP_TEXT = ("""
 
     To create a service account, visit the Google Developers Console and then:
 
-       - Click "APIs & auth" tab in the left sidebar.
+       - Click "APIs & auth" in the left sidebar.
 
        - Click "Credentials".
 
