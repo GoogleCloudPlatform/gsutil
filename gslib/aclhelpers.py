@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import re
 
 from gslib.exception import CommandException
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 
 class ChangeType(object):
@@ -202,6 +203,9 @@ class AclChange(object):
     # Entries will share the same class, so just return the first one.
     for acl_entry in current_acl:
       return acl_entry.__class__
+    # It's possible that a default object ACL is empty, so if we have
+    # an empty list, assume it is an object ACL.
+    return apitools_messages.ObjectAccessControl().__class__
 
   def Execute(self, storage_url, current_acl, command_name, logger):
     """Executes the described change on an ACL.

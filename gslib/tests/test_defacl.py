@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import os
 import re
 import gslib.tests.testcase as case
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -66,6 +67,21 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
                              suri(bucket)],
                             return_stderr=True, expected_status=1)
     self.assertIn('WRITER cannot be set as a default object ACL', stderr)
+
+  def testChangeDefaultAclPrivate(self):
+    bucket = self.CreateBucket()
+    test_regex = self._MakeScopeRegex(
+        'READER', 'group', self.GROUP_TEST_ADDRESS)
+    self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
+    json_text = self.RunGsUtil(self._defacl_get_prefix +
+                               [suri(bucket)], return_stdout=True)
+    self.assertEqual(json_text, '[]%s' % os.linesep)
+
+    self.RunGsUtil(self._defacl_ch_prefix +
+                   ['-g', self.GROUP_TEST_ADDRESS+':READ', suri(bucket)])
+    json_text2 = self.RunGsUtil(self._defacl_get_prefix +
+                                [suri(bucket)], return_stdout=True)
+    self.assertRegexpMatches(json_text2, test_regex)
 
   def testChangeMultipleBuckets(self):
     """Tests defacl ch on multiple buckets."""

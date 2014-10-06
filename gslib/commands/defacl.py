@@ -207,12 +207,12 @@ class DefAclCommand(Command):
     bucket = self.gsutil_api.GetBucket(
         url.bucket_name, provider=url.scheme,
         fields=['defaultObjectAcl', 'metageneration'])
+
+    # Default object ACLs can be blank if the ACL was set to private, or
+    # if the user doesn't have permission. We warn about this with defacl get,
+    # so just try the modification here and if the user doesn't have
+    # permission they'll get an AccessDeniedException.
     current_acl = bucket.defaultObjectAcl
-    if not current_acl:
-      self._WarnServiceAccounts()
-      self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.', url)
-      return
 
     modification_count = 0
     for change in self.changes:
@@ -231,6 +231,10 @@ class DefAclCommand(Command):
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
+    except AccessDeniedException:
+      self._WarnServiceAccounts()
+      raise CommandException('Failed to set acl for %s. Please ensure you have '
+                             'OWNER-role access to this resource.' % url)
 
     self.logger.info('Updated default ACL on %s', url)
 
