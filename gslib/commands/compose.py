@@ -29,9 +29,13 @@ from gslib.translation_helper import PreconditionsFromHeaders
 MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32
 
+_SYNOPSIS = """
+  gsutil compose gs://bucket/obj1 gs://bucket/obj2 ... gs://bucket/composite
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil compose gs://bucket/obj1 gs://bucket/obj2 ... gs://bucket/composite
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -72,6 +76,7 @@ class ComposeCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'compose',
       command_name_aliases=['concat'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=MAX_COMPOSE_ARITY + 1,
       supported_sub_args='',

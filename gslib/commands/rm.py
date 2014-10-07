@@ -31,9 +31,13 @@ from gslib.util import NO_MAX
 from gslib.util import Retry
 
 
+_SYNOPSIS = """
+  gsutil rm [-f] [-R] url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil rm [-f] [-R] url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -134,6 +138,7 @@ class RmCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'rm',
       command_name_aliases=['del', 'delete', 'remove'],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='afrR',

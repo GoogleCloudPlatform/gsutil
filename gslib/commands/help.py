@@ -32,9 +32,13 @@ from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
 from gslib.util import IsRunningInteractively
 
+_SYNOPSIS = """
+  gsutil help [command or topic]
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil help [command or topic]
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -79,6 +83,7 @@ class HelpCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'help',
       command_name_aliases=['?', 'man'],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=2,
       supported_sub_args='',

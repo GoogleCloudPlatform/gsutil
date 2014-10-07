@@ -24,10 +24,15 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 
-_DETAILED_HELP_TEXT = ("""
-<B>SYNOPSIS</B>
+
+_SYNOPSIS = """
   gsutil mv [-p] src_url dst_url
   gsutil mv [-p] url... dst_url
+"""
+
+_DETAILED_HELP_TEXT = ("""
+<B>SYNOPSIS</B>
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -93,6 +98,7 @@ class MvCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'mv',
       command_name_aliases=['move', 'ren', 'rename'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       # Flags for mv are passed through to cp.

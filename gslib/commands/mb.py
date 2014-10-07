@@ -28,9 +28,13 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.util import NO_MAX
 
 
+_SYNOPSIS = """
+  gsutil mb [-c class] [-l location] [-p proj_id] uri...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil mb [-c class] [-l location] [-p proj_id] uri...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -110,6 +114,7 @@ class MbCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'mb',
       command_name_aliases=['makebucket', 'createbucket', 'md', 'mkdir'],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='c:l:p:',

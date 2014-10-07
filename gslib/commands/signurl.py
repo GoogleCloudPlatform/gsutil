@@ -52,9 +52,14 @@ except ImportError:
   sign = None
   HAVE_OPENSSL = False
 
+
+_SYNOPSIS = """
+  gsutil signurl pkcs12-file url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil signurl pkcs12-file url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -185,6 +190,7 @@ class UrlSignCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'signurl',
       command_name_aliases=['signedurl', 'queryauth'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='m:d:c:p:',

@@ -96,6 +96,7 @@ class LifecycleCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'lifecycle',
       command_name_aliases=['lifecycleconfig'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='',

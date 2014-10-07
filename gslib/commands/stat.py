@@ -32,9 +32,13 @@ from gslib.util import NO_MAX
 from gslib.util import PrintFullInfoAboutObject
 
 
+_SYNOPSIS = """
+  gsutil stat url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil stat url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -76,6 +80,7 @@ class StatCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'stat',
       command_name_aliases=[],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='',

@@ -40,9 +40,13 @@ from gslib.util import UTF8
 # 2013-07-03 20:32:53.048000+00:00
 JSON_TIMESTAMP_RE = re.compile(r'([^\s]*)\s([^\.\+]*).*')
 
+_SYNOPSIS = """
+  gsutil ls [-a] [-b] [-l] [-L] [-R] [-p proj_id] url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil ls [-a] [-b] [-l] [-L] [-R] [-p proj_id] url...
+""" + _SYNOPSIS + """
 
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
@@ -223,6 +227,7 @@ class LsCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'ls',
       command_name_aliases=['dir', 'list'],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
       supported_sub_args='aeblLhp:rR',

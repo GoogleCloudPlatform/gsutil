@@ -115,6 +115,7 @@ class DefAclCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'defacl',
       command_name_aliases=['setdefacl', 'getdefacl', 'chdefacl'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='fg:u:d:',
@@ -138,7 +139,7 @@ class DefAclCommand(Command):
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
     if self.args[0].lower() == 'set':
       return 2
     elif self.command_alias_used == 'getdefacl':

@@ -26,9 +26,13 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.util import NO_MAX
 
+_SYNOPSIS = """
+  gsutil cat [-h] url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil cat [-h] url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -77,7 +81,8 @@ class CatCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'cat',
       command_name_aliases=[],
-      min_args=0,
+      usage_synopsis=_SYNOPSIS,
+      min_args=1,
       max_args=NO_MAX,
       supported_sub_args='hr:',
       file_url_ok=False,

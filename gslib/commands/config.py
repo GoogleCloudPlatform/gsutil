@@ -44,9 +44,13 @@ from gslib.util import EIGHT_MB
 from gslib.util import IS_WINDOWS
 
 
+_SYNOPSIS = """
+  gsutil [-D] config [-a] [-b] [-e] [-f] [-o <file>] [-r] [-s <scope>] [-w]
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil [-D] config [-a] [-b] [-e] [-f] [-o <file>] [-r] [-s <scope>] [-w]
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -537,6 +541,7 @@ class ConfigCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'config',
       command_name_aliases=['cfg', 'conf', 'configure'],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=0,
       supported_sub_args='habefwrs:o:',

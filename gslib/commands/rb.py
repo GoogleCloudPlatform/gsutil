@@ -25,9 +25,14 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 
 
+_SYNOPSIS = """
+  gsutil [-f] rb url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil [-f] rb url...
+""" + _SYNOPSIS + """
+
 
 <B>DESCRIPTION</B>
   The rb command deletes a bucket. Buckets must be empty before you can delete
@@ -54,6 +59,7 @@ class RbCommand(Command):
       'rb',
       command_name_aliases=[
           'deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='f',

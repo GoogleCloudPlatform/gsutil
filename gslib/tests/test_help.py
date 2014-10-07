@@ -26,8 +26,8 @@ from __future__ import absolute_import
 import gslib.tests.testcase as testcase
 
 
-class HelpTest(testcase.GsUtilUnitTestCase):
-  """Help command test suite."""
+class HelpUnitTests(testcase.GsUtilUnitTestCase):
+  """Help command unit test suite."""
 
   def test_help_noargs(self):
     stdout = self.RunCommand('help', return_stdout=True)
@@ -62,3 +62,11 @@ class HelpTest(testcase.GsUtilUnitTestCase):
   def test_command_args_with_help(self):
     stdout = self.RunCommand('cp', ['foo', 'bar', '--help'], return_stdout=True)
     self.assertIn('cp - Copy files and objects', stdout)
+
+
+class HelpIntegrationTests(testcase.GsUtilIntegrationTestCase):
+  """Help command integration test suite."""
+
+  def test_help_wrong_num_args(self):
+    stderr = self.RunGsUtil(['cp'], return_stderr=True, expected_status=1)
+    self.assertIn('Usage:', stderr)

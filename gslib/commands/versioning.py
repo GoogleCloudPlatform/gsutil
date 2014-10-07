@@ -68,6 +68,7 @@ class VersioningCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'versioning',
       command_name_aliases=['setversioning', 'getversioning'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='',
@@ -90,7 +91,7 @@ class VersioningCommand(Command):
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
     if self.args[0].lower() == 'set':
       return 2
     else:
@@ -104,7 +105,7 @@ class VersioningCommand(Command):
                              % (self.command_name))
     url_args = self.args[1:]
     if not url_args:
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
 
     # Iterate over URLs, expanding wildcards and set the versioning
     # configuration on each.

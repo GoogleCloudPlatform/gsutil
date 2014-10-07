@@ -124,6 +124,7 @@ class LoggingCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'logging',
       command_name_aliases=['disablelogging', 'enablelogging', 'getlogging'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='b:o:',
@@ -133,8 +134,8 @@ class LoggingCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
-        CommandArgument('mode', choices=['on', 'off']),
-        CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          CommandArgument('mode', choices=['on', 'off']),
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
       ]
   )
   # Help specification. See help_provider.py for documentation.
@@ -233,7 +234,7 @@ class LoggingCommand(Command):
     elif action_subcommand == 'set':
       state_subcommand = self.args.pop(0)
       if not self.args:
-        self._RaiseWrongNumberOfArgumentsException()
+        self.RaiseWrongNumberOfArgumentsException()
       if state_subcommand == 'on':
         func = self._Enable
       elif state_subcommand == 'off':

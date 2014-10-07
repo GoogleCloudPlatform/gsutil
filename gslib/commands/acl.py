@@ -262,6 +262,7 @@ class AclCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'acl',
       command_name_aliases=['getacl', 'setacl', 'chacl'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='afRrg:u:d:',
@@ -297,7 +298,7 @@ class AclCommand(Command):
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
     if (self.args[0].lower() == 'set') or (self.command_alias_used == 'setacl'):
       return 1
     else:

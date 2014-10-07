@@ -50,9 +50,13 @@ from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 
+_SYNOPSIS = """
+  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-R] src_url dst_url
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-R] src_url dst_url
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -744,6 +748,7 @@ class RsyncCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'rsync',
       command_name_aliases=[],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
       supported_sub_args='cCdenprR',

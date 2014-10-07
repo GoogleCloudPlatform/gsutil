@@ -95,6 +95,7 @@ class CorsCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'cors',
       command_name_aliases=['getcors', 'setcors'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='',
@@ -117,7 +118,7 @@ class CorsCommand(Command):
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
     if self.args[0].lower() == 'set':
       return 2
     else:

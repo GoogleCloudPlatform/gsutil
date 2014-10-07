@@ -264,6 +264,8 @@ def InitializeMultiprocessingVariables():
 CommandSpec = namedtuple('CommandSpec', [
     # Name of command.
     'command_name',
+    # Usage synopsis.
+    'usage_synopsis',
     # List of command name aliases.
     'command_name_aliases',
     # Min number of args required by this command.
@@ -305,7 +307,8 @@ class Command(HelpProvider):
   sequential_caller_id = -1
 
   @staticmethod
-  def CreateCommandSpec(command_name, command_name_aliases=None, min_args=0,
+  def CreateCommandSpec(command_name, usage_synopsis=None,
+                        command_name_aliases=None, min_args=0,
                         max_args=NO_MAX, supported_sub_args='',
                         file_url_ok=False, provider_url_ok=False,
                         urls_start_arg=0, gs_api_support=None,
@@ -314,6 +317,7 @@ class Command(HelpProvider):
     """Creates an instance of CommandSpec, with defaults."""
     return CommandSpec(
         command_name=command_name,
+        usage_synopsis=usage_synopsis,
         command_name_aliases=command_name_aliases or [],
         min_args=min_args,
         max_args=max_args,
@@ -426,7 +430,7 @@ class Command(HelpProvider):
 
     if (len(self.args) < self.command_spec.min_args
         or len(self.args) > self.command_spec.max_args):
-      self._RaiseWrongNumberOfArgumentsException()
+      self.RaiseWrongNumberOfArgumentsException()
 
     if self.command_name not in self._commands_with_subcommands_and_subopts:
       self.CheckArguments()
@@ -467,14 +471,16 @@ class Command(HelpProvider):
 
     self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
 
-  def _RaiseWrongNumberOfArgumentsException(self):
+  def RaiseWrongNumberOfArgumentsException(self):
     """Raises exception for wrong number of arguments supplied to command."""
-    if len(self.args) > self.command_spec.max_args:
-      message = ('The %s command accepts at most %d arguments.' %
-                 (self.command_name, self.command_spec.max_args))
-    elif len(self.args) < self.command_spec.min_args:
+    if len(self.args) < self.command_spec.min_args:
       message = ('The %s command requires at least %d arguments.' %
                  (self.command_name, self.command_spec.min_args))
+    else:
+      message = ('The %s command accepts at most %d arguments.' %
+                 (self.command_name, self.command_spec.max_args))
+    message += ' Usage:\n%s\nFor additional help run:\n  gsutil help %s' % (
+        self.command_spec.usage_synopsis, self.command_name)
     raise CommandException(message)
 
   def CheckArguments(self):

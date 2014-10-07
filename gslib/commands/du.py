@@ -31,9 +31,13 @@ from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import UTF8
 
+_SYNOPSIS = """
+  gsutil du url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil du url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -111,6 +115,7 @@ class DuCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'du',
       command_name_aliases=[],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
       supported_sub_args='0ace:hsX:',

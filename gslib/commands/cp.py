@@ -43,12 +43,13 @@ from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import RemoveCRLFFromString
 
-SYNOPSIS_TEXT = """
-<B>SYNOPSIS</B>
+_SYNOPSIS = """
   gsutil cp [OPTION]... src_url dst_url
   gsutil cp [OPTION]... src_url... dst_url
   gsutil cp [OPTION]... -I dst_url
 """
+
+SYNOPSIS_TEXT = '<B>SYNOPSIS</B>\n' + _SYNOPSIS
 
 DESCRIPTION_TEXT = """
 <B>DESCRIPTION</B>
@@ -583,6 +584,7 @@ class CpCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'cp',
       command_name_aliases=['copy'],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       # -t is deprecated but leave intact for now to avoid breakage.
@@ -640,9 +642,9 @@ class CpCommand(Command):
     # directory "mydata" exists).
     if IsCloudSubdirPlaceholder(exp_src_url):
       self.logger.info('Skipping cloud sub-directory placeholder object (%s) '
-                      'because such objects aren\'t needed in (and would '
-                      'interfere with) directories in the local file system',
-                      exp_src_url)
+                       'because such objects aren\'t needed in (and would '
+                       'interfere with) directories in the local file system',
+                       exp_src_url)
       return
 
     if copy_helper_opts.use_manifest and self.manifest.WasSuccessful(

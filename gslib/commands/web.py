@@ -135,6 +135,7 @@ class WebCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'web',
       command_name_aliases=['setwebcfg', 'getwebcfg'],
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='m:e:',

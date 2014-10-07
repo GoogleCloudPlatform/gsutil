@@ -33,9 +33,14 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
 
+_SYNOPSIS = """
+  gsutil [-c] [-h] [-m] hash filename...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil [-c] [-h] [-m] hash filename...
+""" + _SYNOPSIS + """
+
 
 <B>DESCRIPTION</B>
   The hash command calculates hashes on a local file that can be used to compare
@@ -65,6 +70,7 @@ class HashCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'hash',
       command_name_aliases=[],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='chm',

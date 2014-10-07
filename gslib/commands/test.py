@@ -58,9 +58,13 @@ DEFAULT_TEST_PARALLEL_PROCESSES = 15
 DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
 
 
+_SYNOPSIS = """
+  gsutil test [-l] [-u] [-f] [command command...]
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil test [-l] [-u] [-f] [command command...]
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -305,6 +309,7 @@ class TestCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'test',
       command_name_aliases=[],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
       supported_sub_args='uflp:sc',

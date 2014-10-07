@@ -146,6 +146,7 @@ class NotificationCommand(Command):
       'notification',
       command_name_aliases=[
           'notify', 'notifyconfig', 'notifications', 'notif'],
+      usage_synopsis=_SYNOPSIS,
       min_args=3,
       max_args=NO_MAX,
       supported_sub_args='i:t:',

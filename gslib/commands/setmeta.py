@@ -32,9 +32,13 @@ from gslib.util import NO_MAX
 from gslib.util import Retry
 
 
+_SYNOPSIS = """
+  gsutil setmeta [-n] -h [header:value|header] ... url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-    gsutil setmeta [-n] -h [header:value|header] ... url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -123,6 +127,7 @@ class SetMetaCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'setmeta',
       command_name_aliases=['setheader'],
+      usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='h:nrR',

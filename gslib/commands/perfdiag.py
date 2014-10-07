@@ -61,10 +61,16 @@ from gslib.util import MakeHumanReadable
 from gslib.util import Percentile
 from gslib.util import ResumableThreshold
 
+
+_SYNOPSIS = """
+  gsutil perfdiag [-i in.json]
+  gsutil perfdiag [-o out.json] [-n iterations] [-c processes]
+      [-k threads] [-s size] [-t tests] url...
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil perfdiag [-i in.json] [-o out.json] [-n iterations] [-c processes]
-  [-k threads] [-s size] [-t tests] url...
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -217,6 +223,7 @@ class PerfDiagCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'perfdiag',
       command_name_aliases=['diag', 'diagnostic', 'perf', 'performance'],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=1,
       supported_sub_args='n:c:k:s:t:m:i:o:',
@@ -1425,10 +1432,8 @@ class PerfDiagCommand(Command):
             raise CommandException("Could not decode input file (-i): '%s'." %
                                    a)
           return
-
     if not self.args:
-      raise CommandException('Wrong number of arguments for "perfdiag" '
-                             'command.')
+      self.RaiseWrongNumberOfArgumentsException()
 
     self.bucket_url = StorageUrlFromString(self.args[0])
     self.provider = self.bucket_url.scheme

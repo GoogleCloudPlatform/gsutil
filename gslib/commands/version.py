@@ -30,9 +30,14 @@ from gslib.util import GetConfigFilePath
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import UsingCrcmodExtension
 
+
+_SYNOPSIS = """
+  gsutil version
+"""
+
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
-  gsutil version
+""" + _SYNOPSIS + """
 
 
 <B>DESCRIPTION</B>
@@ -53,6 +58,7 @@ class VersionCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'version',
       command_name_aliases=['ver'],
+      usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=0,
       supported_sub_args='l',
