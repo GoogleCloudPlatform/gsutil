@@ -20,16 +20,10 @@ from unittest.case import skipUnless
 
 from gslib.command import CreateGsutilLogger
 import gslib.tests.testcase as testcase
-
-argcomplete = None
-try:
-  # pylint: disable=g-import-not-at-top
-  import argcomplete
-except ImportError:
-  pass
+from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 
 
-@skipUnless(argcomplete, 'Tab completion requires argcomplete')
+@skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
 class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   """Integration tests for tab completion."""
 

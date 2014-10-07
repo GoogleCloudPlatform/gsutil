@@ -59,6 +59,18 @@ def _UsingJSONApi():
 USING_JSON_API = _UsingJSONApi()
 
 
+def _ArgcompleteAvailable():
+  argcomplete = None
+  try:
+    # pylint: disable=g-import-not-at-top
+    import argcomplete
+  except ImportError:
+    pass
+  return argcomplete is not None
+
+ARGCOMPLETE_AVAILABLE = _ArgcompleteAvailable()
+
+
 def _NormalizeURI(uri):
   """Normalizes the path component of a URI.
 
