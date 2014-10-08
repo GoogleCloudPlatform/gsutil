@@ -26,6 +26,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
+from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import Retry
@@ -189,6 +190,8 @@ class RmCommand(Command):
             bucket_urls_to_delete.append(blr.storage_url)
             bucket_strings_to_delete.append(url_str)
 
+    self.preconditions = PreconditionsFromHeaders(self.headers or {})
+
     # Used to track if any files failed to be removed.
     self.everything_removed_okay = True
 
@@ -281,5 +284,6 @@ class RmCommand(Command):
     self.logger.info('Removing %s...', exp_src_url)
     gsutil_api.DeleteObject(
         exp_src_url.bucket_name, exp_src_url.object_name,
-        generation=exp_src_url.generation, provider=exp_src_url.scheme)
+        preconditions=self.preconditions, generation=exp_src_url.generation,
+        provider=exp_src_url.scheme)
 

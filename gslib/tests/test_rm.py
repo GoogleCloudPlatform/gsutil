@@ -415,3 +415,13 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self._RunRemoveCommandAndCheck(['-m', 'rm', '-r', suri(bucket_uri)],
                                    objects_to_remove=objects_to_remove,
                                    buckets_to_remove=[suri(bucket_uri)])
+
+  @SkipForS3('GCS versioning headers not supported by S3')
+  def test_rm_failing_precondition(self):
+    """Test for '-h x-goog-if-generation-match:value rm' of an object."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri, contents='foo')
+    stderr = self.RunGsUtil(['-h', 'x-goog-if-generation-match:12345', 'rm',
+                             suri(object_uri)], return_stderr=True,
+                             expected_status=1)
+    self.assertIn('PreconditionException: 412 Precondition Failed', stderr)
