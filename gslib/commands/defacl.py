@@ -26,6 +26,7 @@ from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import SetAclExceptionHandler
 from gslib.command import SetAclFuncWrapper
+from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
@@ -124,6 +125,19 @@ class DefAclCommand(Command):
       urls_start_arg=1,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments={
+          # TODO: Support completion of canned ACLs.
+          'set': [
+              CommandArgument.MakeNFileURLsArgument(1),
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          ],
+          'get': [
+              CommandArgument.MakeNCloudURLsArgument(1)
+          ],
+          'ch': [
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          ],
+      }
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

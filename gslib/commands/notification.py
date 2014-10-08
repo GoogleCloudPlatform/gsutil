@@ -22,6 +22,7 @@ import uuid
 from gslib.cloud_api import AccessDeniedException
 from gslib.command import Command
 from gslib.command import NO_MAX
+from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
@@ -155,6 +156,15 @@ class NotificationCommand(Command):
       urls_start_arg=1,
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
+      argparse_arguments={
+          'watchbucket': [
+              # TODO: Use a "no-op" completer to avoid fall back to file
+              # completer.
+              CommandArgument('app_url'),
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          ],
+          'stopchannel': []
+      }
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

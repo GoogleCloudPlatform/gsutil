@@ -319,6 +319,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """
     cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
     cmd_str = ' '.join(cmd)
+    results_string = None
     with tempfile.NamedTemporaryFile(delete=False) as tab_complete_result_file:
       # argcomplete returns results via the '8' file descriptor so we redirect
       # to a file so we can capture them.
@@ -332,7 +333,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       subprocess.call(cmd_str_with_result_redirect, env=env, shell=True)
       results_string = tab_complete_result_file.read().decode(
           locale.getpreferredencoding())
-    results = results_string.split('\013')
+    if results_string:
+      results = results_string.split('\013')
+    else:
+      results = []
     self.assertEqual(results, expected_results)
 
   @contextmanager

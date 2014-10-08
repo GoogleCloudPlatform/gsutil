@@ -108,3 +108,24 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtilTabCompletion(['ls', request], expected_results=[
         expected_result1, expected_result2])
 
+  def test_subcommands(self):
+    """Tests tab completion for commands with subcommands."""
+
+    bucket_base_name = self.MakeTempName('bucket')
+    bucket_name = bucket_base_name + '-suffix'
+    self.CreateBucket(bucket_name)
+
+    request = '%s://%s' % (self.default_provider, bucket_base_name)
+    expected_result = '//%s/' % bucket_name
+
+    # Should invoke Cloud URL completer.
+    self.RunGsUtilTabCompletion(['cors', 'get', request],
+                                expected_results=[expected_result])
+
+    # Should invoke File URL completer which shouldn't match anything.
+    self.RunGsUtilTabCompletion(['cors', 'set', request],
+                                expected_results=[])
+
+    # Should invoke Cloud URL completer.
+    self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', request],
+                                expected_results=[expected_result])
