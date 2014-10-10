@@ -31,6 +31,7 @@ class CompleterType(object):
   CLOUD_OBJECT = 'cloud_object'
   CLOUD_OR_LOCAL_OBJECT = 'cloud_or_local_object'
   LOCAL_OBJECT = 'local_object'
+  NO_OP = 'no_op'
 
 
 class LocalObjectCompleter(object):
@@ -91,3 +92,34 @@ class CloudOrLocalObjectCompleter(object):
     else:
       completer = self.cloud_object_completer
     return completer(prefix, **kwargs)
+
+
+class NoOpCompleter(object):
+  """Completer that always returns 0 results."""
+
+  def __call__(self, unused_prefix, **unused_kwargs):
+    return []
+
+
+def MakeCompleter(completer_type, gsutil_api):
+  """Create a completer instance of the given type.
+
+  Args:
+    completer_type: The type of completer to create.
+    gsutil_api: gsutil Cloud API instance to use.
+  Returns:
+    A completer instance.
+  Raises:
+    RuntimeError: if completer type is not supported.
+  """
+  if completer_type == CompleterType.CLOUD_OR_LOCAL_OBJECT:
+    return CloudOrLocalObjectCompleter(gsutil_api)
+  elif completer_type == CompleterType.LOCAL_OBJECT:
+    return LocalObjectCompleter()
+  elif completer_type == CompleterType.CLOUD_OBJECT:
+    return CloudObjectCompleter(gsutil_api)
+  elif completer_type == CompleterType.NO_OP:
+    return NoOpCompleter()
+  else:
+    raise RuntimeError(
+        'Unknown completer "%s"' % completer_type)

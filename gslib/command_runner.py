@@ -40,10 +40,7 @@ from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
-from gslib.tab_complete import CloudObjectCompleter
-from gslib.tab_complete import CloudOrLocalObjectCompleter
-from gslib.tab_complete import CompleterType
-from gslib.tab_complete import LocalObjectCompleter
+from gslib.tab_complete import MakeCompleter
 from gslib.util import CompareVersions
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
@@ -150,15 +147,7 @@ class CommandRunner(object):
       action = parser.add_argument(
           *command_argument.args, **command_argument.kwargs)
       if command_argument.completer:
-        if command_argument.completer == CompleterType.CLOUD_OR_LOCAL_OBJECT:
-          action.completer = CloudOrLocalObjectCompleter(gsutil_api)
-        elif command_argument.completer == CompleterType.LOCAL_OBJECT:
-          action.completer = LocalObjectCompleter()
-        elif command_argument.completer == CompleterType.CLOUD_OBJECT:
-          action.completer = CloudObjectCompleter(gsutil_api)
-        else:
-          raise RuntimeError(
-              'Unknown completer "%s"' % command_argument.completer)
+        action.completer = MakeCompleter(command_argument.completer, gsutil_api)
 
   def ConfigureCommandArgumentParsers(self, subparsers):
     """Configures argparse arguments and argcomplete completers for commands.

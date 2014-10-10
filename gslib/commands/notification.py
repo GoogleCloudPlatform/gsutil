@@ -158,9 +158,7 @@ class NotificationCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'watchbucket': [
-              # TODO: Use a "no-op" completer to avoid fall back to file
-              # completer.
-              CommandArgument('app_url'),
+              CommandArgument.MakeFreeTextArgument(),
               CommandArgument.MakeZeroOrMoreCloudURLsArgument()
           ],
           'stopchannel': []

@@ -31,6 +31,7 @@ from gslib.exception import CommandException
 from gslib.tab_complete import CloudObjectCompleter
 from gslib.tab_complete import CloudOrLocalObjectCompleter
 from gslib.tab_complete import LocalObjectCompleter
+from gslib.tab_complete import NoOpCompleter
 import gslib.tests.testcase as testcase
 import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
@@ -281,7 +282,8 @@ class TestCommandRunnerUnitTests(
           argparse_arguments=[
               CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
               CommandArgument.MakeZeroOrMoreFileURLsArgument(),
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
+              CommandArgument.MakeFreeTextArgument()
           ]
       )
 
@@ -303,11 +305,13 @@ class TestCommandRunnerUnitTests(
 
     self.assertEqual(1, len(subparsers.parsers))
     parser = subparsers.parsers[0]
-    self.assertEqual(3, len(parser.arguments))
+    self.assertEqual(4, len(parser.arguments))
     self.assertEqual(CloudObjectCompleter, type(parser.arguments[0].completer))
     self.assertEqual(LocalObjectCompleter, type(parser.arguments[1].completer))
     self.assertEqual(
         CloudOrLocalObjectCompleter, type(parser.arguments[2].completer))
+    self.assertEqual(
+        NoOpCompleter, type(parser.arguments[3].completer))
 
   # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):

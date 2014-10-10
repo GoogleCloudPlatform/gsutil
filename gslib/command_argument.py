@@ -76,3 +76,8 @@ class CommandArgument(object):
     """Constructs an argument that takes N File URLs as parameters."""
     return CommandArgument(
         'file', nargs=n, completer=CompleterType.LOCAL_OBJECT)
+
+  @staticmethod
+  def MakeFreeTextArgument():
+    """Constructs an argument that takes arbitrary text."""
+    return CommandArgument('text', completer=CompleterType.NO_OP)
