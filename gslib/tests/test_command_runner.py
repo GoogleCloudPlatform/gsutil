@@ -71,6 +71,55 @@ class FakeArgparseSubparsers(object):
     return parser
 
 
+class FakeCommandWithInvalidCompleter(Command):
+  """Command with an invalid completer on an argument."""
+
+  command_spec = Command.CreateCommandSpec(
+      'fake1',
+      argparse_arguments=[
+          CommandArgument('arg', completer='BAD')
+      ]
+  )
+
+  help_spec = Command.HelpSpec(
+      help_name='fake1',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='fake command for tests',
+      help_text='fake command for tests',
+      subcommand_help_text={}
+  )
+
+  def __init__(self):
+    pass
+
+
+class FakeCommandWithCompleters(Command):
+  """Command with various completer types."""
+
+  command_spec = Command.CreateCommandSpec(
+      'fake2',
+      argparse_arguments=[
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
+          CommandArgument.MakeZeroOrMoreFileURLsArgument(),
+          CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
+          CommandArgument.MakeFreeTextArgument()
+      ]
+  )
+
+  help_spec = Command.HelpSpec(
+      help_name='fake2',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='fake command for tests',
+      help_text='fake command for tests',
+      subcommand_help_text={}
+  )
+
+  def __init__(self):
+    pass
+
+
 class TestCommandRunnerUnitTests(
     testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil update check in command_runner module."""
@@ -244,18 +293,6 @@ class TestCommandRunnerUnitTests(
 
   def test_command_argument_parser_setup_invalid_completer(self):
 
-    class FakeCommandWithInvalidCompleter(Command):
-      """Command with an invalid completer on an argument."""
-      command_spec = Command.CreateCommandSpec(
-          'fake',
-          argparse_arguments=[
-              CommandArgument('arg', completer='BAD')
-          ]
-      )
-
-      def __init__(self):
-        pass
-
     command_map = {
         FakeCommandWithInvalidCompleter.command_spec.command_name:
             FakeCommandWithInvalidCompleter()
@@ -274,21 +311,6 @@ class TestCommandRunnerUnitTests(
 
   @skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
   def test_command_argument_parser_setup_completers(self):
-
-    class FakeCommandWithCompleters(Command):
-      """Command with various completer types."""
-      command_spec = Command.CreateCommandSpec(
-          'fake',
-          argparse_arguments=[
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
-              CommandArgument.MakeZeroOrMoreFileURLsArgument(),
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
-              CommandArgument.MakeFreeTextArgument()
-          ]
-      )
-
-      def __init__(self):
-        pass
 
     command_map = {
         FakeCommandWithCompleters.command_spec.command_name:
