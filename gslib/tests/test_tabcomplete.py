@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import os
 from unittest.case import skipUnless
 
 from gslib.command import CreateGsutilLogger
@@ -115,17 +116,23 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     bucket_name = bucket_base_name + '-suffix'
     self.CreateBucket(bucket_name)
 
-    request = '%s://%s' % (self.default_provider, bucket_base_name)
-    expected_result = '//%s/' % bucket_name
+    bucket_request = '%s://%s' % (self.default_provider, bucket_base_name)
+    expected_bucket_result = '//%s/' % bucket_name
+
+    local_file = 'a_local_file'
+    local_dir = self.CreateTempDir(test_files=[local_file])
+
+    local_file_request = '%s%s' % (local_dir, os.sep)
+    expected_local_file_result = '%s ' % os.path.join(local_dir, local_file)
 
     # Should invoke Cloud URL completer.
-    self.RunGsUtilTabCompletion(['cors', 'get', request],
-                                expected_results=[expected_result])
+    self.RunGsUtilTabCompletion(['cors', 'get', bucket_request],
+                                expected_results=[expected_bucket_result])
 
-    # Should invoke File URL completer which shouldn't match anything.
-    self.RunGsUtilTabCompletion(['cors', 'set', request],
-                                expected_results=[])
+    # Should invoke File URL completer which should match the local file.
+    self.RunGsUtilTabCompletion(['cors', 'set', local_file_request],
+                                expected_results=[expected_local_file_result])
 
     # Should invoke Cloud URL completer.
-    self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', request],
-                                expected_results=[expected_result])
+    self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', bucket_request],
+                                expected_results=[expected_bucket_result])
