@@ -19,7 +19,7 @@ import time
 
 import boto
 
-from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import IsFileUrlString
 from gslib.util import GetTabCompletionLogFilename
 from gslib.wildcard_iterator import CreateWildcardIterator
 
@@ -57,7 +57,7 @@ class CloudObjectCompleter(object):
   def __call__(self, prefix, **kwargs):
     if not prefix:
       prefix = 'gs://'
-    elif not StorageUrlFromString(prefix).IsCloudUrl():
+    elif IsFileUrlString(prefix):
       return []
     start_time = time.time()
     it = CreateWildcardIterator(
@@ -86,8 +86,7 @@ class CloudOrLocalObjectCompleter(object):
     self.local_object_completer = LocalObjectCompleter()
 
   def __call__(self, prefix, **kwargs):
-    url = StorageUrlFromString(prefix)
-    if url.IsFileUrl():
+    if IsFileUrlString(prefix):
       completer = self.local_object_completer
     else:
       completer = self.cloud_object_completer

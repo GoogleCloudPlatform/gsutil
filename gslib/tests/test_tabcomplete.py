@@ -136,3 +136,20 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     # Should invoke Cloud URL completer.
     self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', bucket_request],
                                 expected_results=[expected_bucket_result])
+
+  def test_invalid_partial_bucket_name(self):
+    """Tests tab completion with a partial URL that by itself is not valid.
+
+    The bucket name in a Cloud URL cannot end in a dash, but a partial URL
+    during tab completion may end in a dash and completion should still work.
+    """
+
+    bucket_base_name = self.MakeTempName('bucket')
+    bucket_name = bucket_base_name + '-s'
+    self.CreateBucket(bucket_name)
+
+    request = '%s://%s-' % (self.default_provider, bucket_base_name)
+    expected_result = '//%s/' % bucket_name
+
+    self.RunGsUtilTabCompletion(['ls', request],
+                                expected_results=[expected_result])

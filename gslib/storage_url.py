@@ -265,21 +265,42 @@ class _CloudUrl(StorageUrl):
     return self.url_string
 
 
-def StorageUrlFromString(url_str):
-  """Static factory function for creating a StorageUrl from a string."""
+def _GetSchemeFromUrlString(url_str):
+  """Returns scheme component of a URL string."""
 
   end_scheme_idx = url_str.find('://')
   if end_scheme_idx == -1:
     # File is the default scheme.
-    scheme = 'file'
-    path = url_str
+    return 'file'
   else:
-    scheme = url_str[0:end_scheme_idx].lower()
-    path = url_str[end_scheme_idx + 3:]
+    return url_str[0:end_scheme_idx].lower()
+
+
+def _GetPathFromUrlString(url_str):
+  """Returns path component of a URL string."""
+
+  end_scheme_idx = url_str.find('://')
+  if end_scheme_idx == -1:
+    return url_str
+  else:
+    return url_str[end_scheme_idx + 3:]
+
+
+def IsFileUrlString(url_str):
+  """Returns whether a string is a file URL."""
+
+  return _GetSchemeFromUrlString(url_str) == 'file'
+
+
+def StorageUrlFromString(url_str):
+  """Static factory function for creating a StorageUrl from a string."""
+
+  scheme = _GetSchemeFromUrlString(url_str)
 
   if scheme not in ('file', 's3', 'gs'):
     raise InvalidUrlError('Unrecognized scheme "%s"' % scheme)
   if scheme == 'file':
+    path = _GetPathFromUrlString(url_str)
     is_stream = (path == '-')
     return _FileUrl(url_str, is_stream=is_stream)
   return _CloudUrl(url_str)
