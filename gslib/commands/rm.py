@@ -94,6 +94,16 @@ _DETAILED_HELP_TEXT = ("""
   versioning on your bucket(s). See 'gsutil help versions' for details.
 
 
+<B>DATA RESTORATION FROM ACCIDENTAL DELETION OR OVERWRITES</B>
+Google Cloud Storage does not provide support for restoring data that were lost
+or overwritten due to customer errors. If you have concerns that your
+application software (or your users) may at some point erroneously delete or
+overwrite data, you can protect yourself from that risk by enabling Object
+Versioning (see "gsutil help versioning"). Doing so increases storage costs,
+which can be partially mitigated by configuring Lifecycle Management to delete
+older object versions (see "gsutil help lifecycle").
+
+
 <B>OPTIONS</B>
   -f          Continues silently (without printing error messages) despite
               errors when removing multiple objects. If some of the objects
