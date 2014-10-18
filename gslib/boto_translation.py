@@ -751,8 +751,7 @@ class BotoTranslation(CloudApi):
       self._SetObjectAcl(object_metadata, dst_uri)
       return self._BotoKeyToObject(dst_uri.get_key(), fields=fields)
     except boto.exception.InvalidUriError as e:
-      check_for_str = 'Attempt to get key for "%s" failed.' % dst_uri.uri
-      if check_for_str in e.message:
+      if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message.encode(UTF8)):
         raise CommandException('\n'.join(textwrap.wrap(
             'Uploaded object (%s) was deleted or overwritten immediately '
             'after it was uploaded. This can happen if you attempt to upload '
