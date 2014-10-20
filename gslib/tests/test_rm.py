@@ -423,5 +423,6 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri, contents='foo')
     stderr = self.RunGsUtil(['-h', 'x-goog-if-generation-match:12345', 'rm',
                              suri(object_uri)], return_stderr=True,
-                             expected_status=1)
-    self.assertIn('PreconditionException: 412 Precondition Failed', stderr)
+                            expected_status=1)
+    self.assertRegexpMatches(
+        stderr, r'PreconditionException: 412 Precondition\s*Failed')
