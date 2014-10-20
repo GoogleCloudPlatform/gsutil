@@ -214,7 +214,7 @@ class UrlSignCommand(Command):
       subcommand_help_text={},
   )
 
-  def _ParseSubOpts(self):
+  def _ParseAndCheckSubOpts(self):
     # Default argument values
     delta = None
     method = 'GET'
@@ -233,6 +233,8 @@ class UrlSignCommand(Command):
         content_type = v
       elif o == '-p':
         passwd = v
+      else:
+        self.RaiseInvalidArgumentException()
 
     if delta is None:
       delta = timedelta(hours=1)
@@ -280,7 +282,7 @@ class UrlSignCommand(Command):
           'The signurl command requires the pyopenssl library (try pip '
           'install pyopenssl or easy_install pyopenssl)')
 
-    method, expiration, content_type, passwd = self._ParseSubOpts()
+    method, expiration, content_type, passwd = self._ParseAndCheckSubOpts()
     storage_urls = self._EnumerateStorageUrls(self.args[1:])
 
     if not passwd:

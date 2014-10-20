@@ -218,9 +218,7 @@ class WebCommand(Command):
   def RunCommand(self):
     """Command entry point for the web command."""
     action_subcommand = self.args.pop(0)
-    self.sub_opts, self.args = getopt.getopt(
-        self.args, self.command_spec.supported_sub_args)
-    self.CheckArguments()
+    self.ParseSubOpts(check_args=True)
     if action_subcommand == 'get':
       func = self._GetWeb
     elif action_subcommand == 'set':

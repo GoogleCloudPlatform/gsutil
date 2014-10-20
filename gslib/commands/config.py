@@ -961,6 +961,8 @@ class ConfigCommand(Command):
         scopes.append(opt_arg)
       elif opt == '-w':
         scopes.append(SCOPE_READ_WRITE)
+      else:
+        self.RaiseInvalidArgumentException()
 
     if has_e:
       if has_a:

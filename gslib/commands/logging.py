@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 
-import getopt
 import sys
 
 from gslib.command import Command
@@ -248,12 +247,6 @@ class LoggingCommand(Command):
       raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
                               'See "gsutil help logging".') %
                              (action_subcommand, self.command_name))
-    try:
-      self.sub_opts, self.args = getopt.getopt(
-          self.args, self.command_spec.supported_sub_args)
-      self.CheckArguments()
-    except getopt.GetoptError, e:
-      raise CommandException('%s for "%s" command.' % (e.msg,
-                                                       self.command_name))
+    self.ParseSubOpts(check_args=True)
     func()
     return 0

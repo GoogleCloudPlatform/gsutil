@@ -16,8 +16,6 @@
 
 from __future__ import absolute_import
 
-import getopt
-
 from gslib import aclhelpers
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
@@ -315,6 +313,8 @@ class AclCommand(Command):
           self.continue_on_error = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        else:
+          self.RaiseInvalidArgumentException()
     try:
       self.SetAclCommandHelper(SetAclFuncWrapper, SetAclExceptionHandler)
     except AccessDeniedException, unused_e:
@@ -333,16 +333,18 @@ class AclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-f':
           self.continue_on_error = True
-        if o == '-g':
+        elif o == '-g':
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
-        if o == '-u':
+        elif o == '-u':
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))
-        if o == '-d':
+        elif o == '-d':
           self.changes.append(aclhelpers.AclDel(a))
-        if o == '-r' or o == '-R':
+        elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        else:
+          self.RaiseInvalidArgumentException()
 
     if not self.changes:
       raise CommandException(
@@ -424,9 +426,7 @@ class AclCommand(Command):
   def RunCommand(self):
     """Command entry point for the acl command."""
     action_subcommand = self.args.pop(0)
-    self.sub_opts, self.args = getopt.getopt(
-        self.args, self.command_spec.supported_sub_args)
-    self.CheckArguments()
+    self.ParseSubOpts(check_args=True)
     self.def_acl = False
     if action_subcommand == 'get':
       self.GetAndPrintAcl(self.args[0])

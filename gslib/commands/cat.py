@@ -128,6 +128,8 @@ class CatCommand(Command):
             end_byte = long(range_match.group('end'))
           if range_match.group('endslice'):
             start_byte = long(range_match.group('endslice'))
+        else:
+          self.RaiseInvalidArgumentException()
 
     return CatHelper(self).CatUrlStrings(self.args,
                                          show_header=show_header,

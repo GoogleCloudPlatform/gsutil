@@ -27,7 +27,6 @@ import codecs
 from collections import namedtuple
 import copy
 import getopt
-from getopt import GetoptError
 import logging
 import multiprocessing
 import os
@@ -415,14 +414,9 @@ class Command(HelpProvider):
                              'command_spec definition.' % self.command_name)
 
     # Parse and validate args.
-    args = self._TranslateDeprecatedAliases(args)
-    try:
-      (self.sub_opts, self.args) = getopt.getopt(
-          args, self.command_spec.supported_sub_args,
-          self.command_spec.supported_private_args or [])
-    except GetoptError, e:
-      raise CommandException('%s for "%s" command.' % (e.msg,
-                                                       self.command_name))
+    self.args = self._TranslateDeprecatedAliases(args)
+    self.ParseSubOpts()
+
     # Named tuple public functions start with _
     # pylint: disable=protected-access
     self.command_spec = self.command_spec._replace(
@@ -482,6 +476,33 @@ class Command(HelpProvider):
     message += ' Usage:\n%s\nFor additional help run:\n  gsutil help %s' % (
         self.command_spec.usage_synopsis, self.command_name)
     raise CommandException(message)
+
+  def RaiseInvalidArgumentException(self):
+    """Raises exception for specifying an invalid argument to command."""
+    message = ('Incorrect option(s) specified. Usage:\n%s\n'
+               'For additional help run:\n  gsutil help %s' % (
+                   self.command_spec.usage_synopsis, self.command_name))
+    raise CommandException(message)
+
+  def ParseSubOpts(self, check_args=False):
+    """Parses sub-opt args.
+
+    Args:
+      check_args: True to have CheckArguments() called after parsing.
+
+    Populates:
+      (self.sub_opts, self.args) from parsing.
+
+    Raises: RaiseInvalidArgumentException if invalid args specified.
+    """
+    try:
+      self.sub_opts, self.args = getopt.getopt(
+          self.args, self.command_spec.supported_sub_args,
+          self.command_spec.supported_private_args or [])
+    except getopt.GetoptError:
+      self.RaiseInvalidArgumentException()
+    if check_args:
+      self.CheckArguments()
 
   def CheckArguments(self):
     """Checks that command line arguments match the command_spec.

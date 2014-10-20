@@ -16,8 +16,6 @@
 
 from __future__ import absolute_import
 
-import getopt
-
 from gslib import aclhelpers
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
@@ -255,9 +253,7 @@ class DefAclCommand(Command):
   def RunCommand(self):
     """Command entry point for the defacl command."""
     action_subcommand = self.args.pop(0)
-    self.sub_opts, self.args = getopt.getopt(
-        self.args, self.command_spec.supported_sub_args)
-    self.CheckArguments()
+    self.ParseSubOpts(check_args=True)
     self.def_acl = True
     self.continue_on_error = False
     if action_subcommand == 'get':

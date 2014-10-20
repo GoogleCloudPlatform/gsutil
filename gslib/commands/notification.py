@@ -242,8 +242,7 @@ class NotificationCommand(Command):
           self.args, self.command_spec.supported_sub_args)
       return func()
     except getopt.GetoptError, e:
-      raise CommandException('%s for "%s" command.' % (e.msg,
-                                                       self.command_name))
+      self.RaiseInvalidArgumentException()
 
   def RunCommand(self):
     """Command entry point for the notification command."""
