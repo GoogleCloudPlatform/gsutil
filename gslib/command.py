@@ -468,8 +468,9 @@ class Command(HelpProvider):
   def RaiseWrongNumberOfArgumentsException(self):
     """Raises exception for wrong number of arguments supplied to command."""
     if len(self.args) < self.command_spec.min_args:
-      message = ('The %s command requires at least %d arguments.' %
-                 (self.command_name, self.command_spec.min_args))
+      tail_str = 's' if self.command_spec.min_args > 1 else ''
+      message = ('The %s command requires at least %d argument%s.' %
+                 (self.command_name, self.command_spec.min_args, tail_str))
     else:
       message = ('The %s command accepts at most %d arguments.' %
                  (self.command_name, self.command_spec.max_args))
