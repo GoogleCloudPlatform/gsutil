@@ -12,7 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Implements a simple mock gsutil Cloud API for unit testing."""
+"""Implements a simple mock gsutil Cloud API for unit testing.
+
+gsutil 4 was primarily unit-tested using boto/gsutil 3's mock storage_uri class,
+since it was possible that changing out the underlying mocks would have had
+subtly different behavior and increased the risk of breaking back-compat.
+
+Most unit and integration tests in gsutil 4 still set up the test objects with
+storage_uris and boto, and the unit tests interact with test objects via
+storage uris and boto.
+
+This testing approach ties our tests heavily to boto; extending the
+boto mocks is difficult because it requires checking into boto. This also
+makes the unit test coverage boto-specific in several cases.
+
+MockCloudApi was initially written to cover some parallel composite upload
+cases that the boto mocks couldn't handle. It is not yet a full implementation.
+Eventually, we can move to full a mock Cloud API implementation. However, we
+need to ensure we don't lose boto coverage from mock storage_uri.
+"""
+
 
 from gslib.cloud_api import ServiceException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
