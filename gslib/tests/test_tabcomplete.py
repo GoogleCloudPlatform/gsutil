@@ -45,6 +45,31 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtilTabCompletion(['ls', request],
                                 expected_results=[expected_result])
 
+  def test_bucket_only_single_bucket(self):
+    """Tests bucket-only tab completion matching a single bucket."""
+
+    bucket_base_name = self.MakeTempName('bucket')
+    bucket_name = bucket_base_name + '-s'
+    self.CreateBucket(bucket_name)
+
+    request = '%s://%s' % (self.default_provider, bucket_base_name)
+    expected_result = '//%s ' % bucket_name
+
+    self.RunGsUtilTabCompletion(['rb', request],
+                                expected_results=[expected_result])
+
+  def test_bucket_only_no_objects(self):
+    """Tests that bucket-only tab completion doesn't match objects."""
+
+    object_base_name = self.MakeTempName('obj')
+    object_name = object_base_name + '-suffix'
+    object_uri = self.CreateObject(object_name=object_name, contents='data')
+
+    request = '%s://%s/%s' % (
+        self.default_provider, object_uri.bucket_name, object_base_name)
+
+    self.RunGsUtilTabCompletion(['rb', request], expected_results=[])
+
   def test_single_subdirectory(self):
     """Tests tab completion matching a single subdirectory."""
 
@@ -117,7 +142,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     self.CreateBucket(bucket_name)
 
     bucket_request = '%s://%s' % (self.default_provider, bucket_base_name)
-    expected_bucket_result = '//%s/' % bucket_name
+    expected_bucket_result = '//%s ' % bucket_name
 
     local_file = 'a_local_file'
     local_dir = self.CreateTempDir(test_files=[local_file])
@@ -125,7 +150,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     local_file_request = '%s%s' % (local_dir, os.sep)
     expected_local_file_result = '%s ' % os.path.join(local_dir, local_file)
 
-    # Should invoke Cloud URL completer.
+    # Should invoke Cloud bucket URL completer.
     self.RunGsUtilTabCompletion(['cors', 'get', bucket_request],
                                 expected_results=[expected_bucket_result])
 
@@ -133,7 +158,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtilTabCompletion(['cors', 'set', local_file_request],
                                 expected_results=[expected_local_file_result])
 
-    # Should invoke Cloud URL completer.
+    # Should invoke Cloud bucket URL completer.
     self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', bucket_request],
                                 expected_results=[expected_bucket_result])
 

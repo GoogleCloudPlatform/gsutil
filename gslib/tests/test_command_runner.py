@@ -103,7 +103,8 @@ class FakeCommandWithCompleters(Command):
           CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
           CommandArgument.MakeZeroOrMoreFileURLsArgument(),
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
-          CommandArgument.MakeFreeTextArgument()
+          CommandArgument.MakeFreeTextArgument(),
+          CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
       ]
   )
 
@@ -327,13 +328,14 @@ class TestCommandRunnerUnitTests(
 
     self.assertEqual(1, len(subparsers.parsers))
     parser = subparsers.parsers[0]
-    self.assertEqual(4, len(parser.arguments))
+    self.assertEqual(5, len(parser.arguments))
     self.assertEqual(CloudObjectCompleter, type(parser.arguments[0].completer))
     self.assertEqual(LocalObjectCompleter, type(parser.arguments[1].completer))
     self.assertEqual(
         CloudOrLocalObjectCompleter, type(parser.arguments[2].completer))
     self.assertEqual(
         NoOpCompleter, type(parser.arguments[3].completer))
+    self.assertEqual(CloudObjectCompleter, type(parser.arguments[4].completer))
 
   # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):

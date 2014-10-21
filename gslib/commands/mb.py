@@ -124,7 +124,7 @@ class MbCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
       ]
   )
   # Help specification. See help_provider.py for documentation.

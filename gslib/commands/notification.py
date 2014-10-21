@@ -159,7 +159,7 @@ class NotificationCommand(Command):
       argparse_arguments={
           'watchbucket': [
               CommandArgument.MakeFreeTextArgument(),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'stopchannel': []
       }

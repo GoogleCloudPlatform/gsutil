@@ -48,6 +48,18 @@ class CommandArgument(object):
         'file', nargs='*', completer=CompleterType.CLOUD_OBJECT)
 
   @staticmethod
+  def MakeZeroOrMoreCloudBucketURLsArgument():
+    """Constructs an argument that takes 0+ Cloud bucket URLs as parameters."""
+    return CommandArgument(
+        'file', nargs='*', completer=CompleterType.CLOUD_BUCKET)
+
+  @staticmethod
+  def MakeNCloudBucketURLsArgument(n):
+    """Constructs an argument that takes N Cloud bucket URLs as parameters."""
+    return CommandArgument(
+        'file', nargs=n, completer=CompleterType.CLOUD_BUCKET)
+
+  @staticmethod
   def MakeNCloudURLsArgument(n):
     """Constructs an argument that takes N Cloud URLs as parameters."""
     return CommandArgument(

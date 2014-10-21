@@ -233,7 +233,7 @@ class PerfDiagCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
-          CommandArgument.MakeNCloudURLsArgument(1)
+          CommandArgument.MakeNCloudBucketURLsArgument(1)
       ]
   )
   # Help specification. See help_provider.py for documentation.

@@ -147,10 +147,10 @@ class WebCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
+              CommandArgument.MakeNCloudBucketURLsArgument(1)
           ]
       }
   )

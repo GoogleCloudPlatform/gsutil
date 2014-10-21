@@ -134,7 +134,7 @@ class LoggingCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument('mode', choices=['on', 'off']),
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+          CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
       ]
   )
   # Help specification. See help_provider.py for documentation.

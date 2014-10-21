@@ -109,10 +109,10 @@ class LifecycleCommand(Command):
       argparse_arguments={
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
+              CommandArgument.MakeNCloudBucketURLsArgument(1)
           ]
       }
   )

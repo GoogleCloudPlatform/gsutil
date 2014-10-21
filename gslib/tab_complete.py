@@ -20,6 +20,8 @@ import time
 import boto
 
 from gslib.storage_url import IsFileUrlString
+from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import StripOneSlash
 from gslib.util import GetTabCompletionLogFilename
 from gslib.wildcard_iterator import CreateWildcardIterator
 
@@ -28,6 +30,7 @@ _TAB_COMPLETE_MAX_RESULTS = 1000
 
 
 class CompleterType(object):
+  CLOUD_BUCKET = 'cloud_bucket'
   CLOUD_OBJECT = 'cloud_object'
   CLOUD_OR_LOCAL_OBJECT = 'cloud_or_local_object'
   LOCAL_OBJECT = 'local_object'
@@ -51,17 +54,30 @@ class LocalObjectCompleter(object):
 class CloudObjectCompleter(object):
   """Completer object for Cloud URLs."""
 
-  def __init__(self, gsutil_api):
-    self.gsutil_api = gsutil_api
+  def __init__(self, gsutil_api, bucket_only=False):
+    """Instantiates completer for Cloud URLs.
+
+    Args:
+      gsutil_api: gsutil Cloud API instance to use.
+      bucket_only: Whether the completer should only match buckets.
+    """
+    self._gsutil_api = gsutil_api
+    self._bucket_only = bucket_only
 
   def __call__(self, prefix, **kwargs):
     if not prefix:
       prefix = 'gs://'
     elif IsFileUrlString(prefix):
       return []
+
+    request = prefix + '*'
+    url = StorageUrlFromString(request)
+    if self._bucket_only and not url.IsBucket():
+      return []
+
     start_time = time.time()
     it = CreateWildcardIterator(
-        prefix + '*', self.gsutil_api).IterAll(bucket_listing_fields=['name'])
+        request, self._gsutil_api).IterAll(bucket_listing_fields=['name'])
     results = [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
     end_time = time.time()
     if boto.config.getbool('GSUtil', 'tab_completion_timing', False):
@@ -71,6 +87,10 @@ class CloudObjectCompleter(object):
         fp.write('%s results in %.2fs, %.2f results/second for prefix: %s\n' %
                  (num_results, elapsed_seconds, num_results / elapsed_seconds,
                   prefix))
+
+    if self._bucket_only and len(results) == 1:
+      return [StripOneSlash(results[0])]
+
     return results
 
 
@@ -115,6 +135,8 @@ def MakeCompleter(completer_type, gsutil_api):
     return CloudOrLocalObjectCompleter(gsutil_api)
   elif completer_type == CompleterType.LOCAL_OBJECT:
     return LocalObjectCompleter()
+  elif completer_type == CompleterType.CLOUD_BUCKET:
+    return CloudObjectCompleter(gsutil_api, bucket_only=True)
   elif completer_type == CompleterType.CLOUD_OBJECT:
     return CloudObjectCompleter(gsutil_api)
   elif completer_type == CompleterType.NO_OP:

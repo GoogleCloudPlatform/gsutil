@@ -81,10 +81,10 @@ class VersioningCommand(Command):
       argparse_arguments={
           'set': [
               CommandArgument('mode', choices=['on', 'off']),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ]
       }
   )

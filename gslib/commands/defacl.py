@@ -127,13 +127,13 @@ class DefAclCommand(Command):
           # TODO: Support completion of canned ACLs.
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
+              CommandArgument.MakeNCloudBucketURLsArgument(1)
           ],
           'ch': [
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
       }
   )
