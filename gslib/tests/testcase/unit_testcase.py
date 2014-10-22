@@ -251,6 +251,24 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     return tuple(to_return)
 
   @classmethod
+  def MakeGsUtilApi(cls, debug=0):
+    gsutil_api_map = {
+        ApiMapConstants.API_MAP: (
+            cls.mock_gsutil_api_class_map_factory.GetClassMap()),
+        ApiMapConstants.SUPPORT_MAP: {
+            'gs': [ApiSelector.XML, ApiSelector.JSON],
+            's3': [ApiSelector.XML]
+        },
+        ApiMapConstants.DEFAULT_MAP: {
+            'gs': ApiSelector.JSON,
+            's3': ApiSelector.XML
+        }
+    }
+
+    return CloudApiDelegator(
+        cls.mock_bucket_storage_uri, gsutil_api_map, cls.logger, debug=debug)
+
+  @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):
     """Convenience method for instantiating a test instance of WildcardIterator.
 
@@ -274,24 +292,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     if hasattr(uri_or_str, 'uri'):
       uri_string = uri_or_str.uri
 
-    cls.gsutil_api_map = {
-        ApiMapConstants.API_MAP: (
-            cls.mock_gsutil_api_class_map_factory.GetClassMap()),
-        ApiMapConstants.SUPPORT_MAP: {
-            'gs': [ApiSelector.XML, ApiSelector.JSON],
-            's3': [ApiSelector.XML]
-        },
-        ApiMapConstants.DEFAULT_MAP: {
-            'gs': ApiSelector.JSON,
-            's3': ApiSelector.XML
-        }
-    }
-
-    cls.gsutil_api = CloudApiDelegator(
-        cls.mock_bucket_storage_uri, cls.gsutil_api_map, cls.logger,
-        debug=debug)
-
-    return wildcard_iterator.CreateWildcardIterator(uri_string, cls.gsutil_api)
+    return wildcard_iterator.CreateWildcardIterator(
+        uri_string, cls.MakeGsUtilApi())
 
   @staticmethod
   def _test_storage_uri(uri_str, default_scheme='file', debug=0,

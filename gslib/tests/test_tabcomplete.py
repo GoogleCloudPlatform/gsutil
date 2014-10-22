@@ -17,11 +17,17 @@
 from __future__ import absolute_import
 
 import os
+import time
 from unittest.case import skipUnless
 
 from gslib.command import CreateGsutilLogger
+from gslib.tab_complete import CloudObjectCompleter
+from gslib.tab_complete import TAB_COMPLETE_CACHE_TTL
+from gslib.tab_complete import TabCompletionCache
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.util import GetTabCompletionCacheFilename
 
 
 @skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
@@ -178,3 +184,52 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtilTabCompletion(['ls', request],
                                 expected_results=[expected_result])
+
+
+@skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
+class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
+  """Unit tests for tab completion."""
+
+  def test_cached_results(self):
+    """Tests tab completion results returned from cache."""
+
+    state_dir = self.CreateTempDir()
+    with SetBotoConfigForTest([('GSUtil', 'state_dir', state_dir)]):
+      cache_file = GetTabCompletionCacheFilename()
+
+      request = 'gs://prefix'
+      cached_results = ['gs://prefix1', 'gs://prefix2']
+
+      cache = TabCompletionCache(request, cached_results, time.time())
+      cache.WriteToFile(cache_file)
+
+      completer = CloudObjectCompleter(self.MakeGsUtilApi())
+      results = completer(request)
+
+      self.assertEqual(cached_results, results)
+
+  def test_expired_cached_results(self):
+    """Tests tab completion results not returned from cache when too old."""
+
+    state_dir = self.CreateTempDir()
+    with SetBotoConfigForTest([('GSUtil', 'state_dir', state_dir)]):
+      cache_file = GetTabCompletionCacheFilename()
+
+      bucket_base_name = self.MakeTempName('bucket')
+      bucket_name = bucket_base_name + '-suffix'
+      self.CreateBucket(bucket_name)
+
+      request = '%s://%s' % (self.default_provider, bucket_base_name)
+      expected_result = '%s://%s/' % (self.default_provider, bucket_name)
+
+      cached_results = ['//%s1' % bucket_name, '//%s2' % bucket_name]
+
+      cache = TabCompletionCache(
+          request, cached_results, time.time() - TAB_COMPLETE_CACHE_TTL)
+      cache.WriteToFile(cache_file)
+
+      completer = CloudObjectCompleter(self.MakeGsUtilApi())
+      results = completer(request)
+
+      self.assertEqual([expected_result], results)
+

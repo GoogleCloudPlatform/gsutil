@@ -15,6 +15,7 @@
 """Shell tab completion."""
 
 import itertools
+import json
 import threading
 import time
 
@@ -23,9 +24,11 @@ import boto
 from gslib.storage_url import IsFileUrlString
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
+from gslib.util import GetTabCompletionCacheFilename
 from gslib.util import GetTabCompletionLogFilename
 from gslib.wildcard_iterator import CreateWildcardIterator
 
+TAB_COMPLETE_CACHE_TTL = 15
 
 _TAB_COMPLETE_MAX_RESULTS = 1000
 
@@ -57,27 +60,94 @@ class LocalObjectCompleter(object):
     return self.files_completer(prefix, **kwargs)
 
 
+class TabCompletionCache(object):
+  """Cache for tab completion results."""
+
+  def __init__(self, prefix, results, timestamp):
+    self.prefix = prefix
+    self.results = results
+    self.timestamp = timestamp
+
+  @staticmethod
+  def LoadFromFile(filename):
+    """Instantiates the cache from a file.
+
+    Args:
+      filename: The file to load.
+    Returns:
+      TabCompletionCache instance with loaded data or an empty cache
+          if the file cannot be loaded
+    """
+    try:
+      with open(filename, 'r') as fp:
+        cache_dict = json.loads(fp.read())
+        prefix = cache_dict['prefix']
+        results = cache_dict['results']
+        timestamp = cache_dict['timestamp']
+    except Exception:  # pylint: disable=broad-except
+      # Guarding against incompatible format changes in the cache file.
+      # Erring on the side of not breaking tab-completion in case of cache
+      # issues.
+      prefix = None
+      results = []
+      timestamp = None
+
+    return TabCompletionCache(prefix, results, timestamp)
+
+  def GetCachedResults(self, prefix):
+    """Returns the cached results for prefix or None if not in cache."""
+    current_time = time.time()
+    if (prefix == self.prefix
+        and current_time - self.timestamp < TAB_COMPLETE_CACHE_TTL):
+      return self.results
+
+  def UpdateCache(self, prefix, results):
+    """Updates the in-memory cache with the results for the given prefix."""
+    self.prefix = prefix
+    self.results = results
+    self.timestamp = time.time()
+
+  def WriteToFile(self, filename):
+    """Writes out the cache to the given file."""
+    json_str = json.dumps({
+        'prefix': self.prefix,
+        'results': self.results,
+        'timestamp': self.timestamp,
+    })
+
+    try:
+      with open(filename, 'w') as fp:
+        fp.write(json_str)
+    except IOError:
+      pass
+
+
 class CloudListingRequestThread(threading.Thread):
   """Thread that performs a listing request for the given URL string."""
 
-  def __init__(self, url_str, gsutil_api):
+  def __init__(self, wildcard_url_str, gsutil_api):
     """Instantiates Cloud listing request thread.
 
     Args:
-      url_str: The URL to list.
+      wildcard_url_str: The URL to list.
       gsutil_api: gsutil Cloud API instance to use.
     """
     super(CloudListingRequestThread, self).__init__()
     self.daemon = True
-    self._url_str = url_str
+    self._wildcard_url_str = wildcard_url_str
     self._gsutil_api = gsutil_api
     self.results = None
 
   def run(self):
-    it = CreateWildcardIterator(self._url_str, self._gsutil_api).IterAll(
-        bucket_listing_fields=['name'])
+    it = CreateWildcardIterator(
+        self._wildcard_url_str, self._gsutil_api).IterAll(
+            bucket_listing_fields=['name'])
     self.results = [
         str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+
+
+class TimeoutError(Exception):
+  pass
 
 
 class CloudObjectCompleter(object):
@@ -93,12 +163,32 @@ class CloudObjectCompleter(object):
     self._gsutil_api = gsutil_api
     self._bucket_only = bucket_only
 
-  @staticmethod
-  def _WriteTimingLog(message):
-    """Write an entry to the tab completion timing log, if it's enabled."""
-    if boto.config.getbool('GSUtil', 'tab_completion_time_logs', False):
-      with open(GetTabCompletionLogFilename(), 'ab') as fp:
-        fp.write(message)
+  def _PerformCloudListing(self, wildcard_url, timeout):
+    """Perform a remote listing request for the given wildcard URL.
+
+    Args:
+      wildcard_url: The wildcard URL to list.
+      timeout: Time limit for the request.
+    Returns:
+      Cloud resources matching the given wildcard URL.
+    Raises:
+      TimeoutError: If the listing does not finish within the timeout.
+    """
+    request_thread = CloudListingRequestThread(wildcard_url, self._gsutil_api)
+    request_thread.start()
+    request_thread.join(timeout)
+
+    if request_thread.is_alive():
+      # This is only safe to import if argcomplete is present in the install
+      # (which happens for Cloud SDK installs), so import on usage, not on load.
+      # pylint: disable=g-import-not-at-top
+      import argcomplete
+      argcomplete.warn(_TIMEOUT_WARNING % timeout)
+      raise TimeoutError()
+
+    results = request_thread.results
+
+    return results
 
   def __call__(self, prefix, **kwargs):
     if not prefix:
@@ -106,8 +196,8 @@ class CloudObjectCompleter(object):
     elif IsFileUrlString(prefix):
       return []
 
-    request = prefix + '*'
-    url = StorageUrlFromString(request)
+    wildcard_url = prefix + '*'
+    url = StorageUrlFromString(wildcard_url)
     if self._bucket_only and not url.IsBucket():
       return []
 
@@ -116,30 +206,34 @@ class CloudObjectCompleter(object):
       return []
 
     start_time = time.time()
-    request_thread = CloudListingRequestThread(request, self._gsutil_api)
-    request_thread.start()
-    request_thread.join(timeout)
 
-    if request_thread.is_alive():
-      self._WriteTimingLog(
-          'Timeout (%ss) for prefix: %s\n' % (timeout, prefix))
-      # This is only safe to import if argcomplete is present in the install
-      # (which happens for Cloud SDK installs), so import on usage, not on load.
-      # pylint: disable=g-import-not-at-top
-      import argcomplete
-      argcomplete.warn(_TIMEOUT_WARNING % timeout)
-      return []
+    cache = TabCompletionCache.LoadFromFile(GetTabCompletionCacheFilename())
+    cached_results = cache.GetCachedResults(prefix)
 
-    results = request_thread.results
+    timing_log_entry_type = ''
+    if cached_results is not None:
+      results = cached_results
+      cache.UpdateCache(prefix, results)
+      timing_log_entry_type = ' (from cache)'
+    else:
+      try:
+        results = self._PerformCloudListing(wildcard_url, timeout)
+        if self._bucket_only and len(results) == 1:
+          results = [StripOneSlash(results[0])]
+        cache.UpdateCache(prefix, results)
+      except TimeoutError:
+        timing_log_entry_type = ' (request timeout)'
+        results = []
+
+    cache.WriteToFile(GetTabCompletionCacheFilename())
+
     end_time = time.time()
     num_results = len(results)
     elapsed_seconds = end_time - start_time
-    self._WriteTimingLog(
-        '%s results in %.2fs, %.2f results/second for prefix: %s\n' %
-        (num_results, elapsed_seconds, num_results / elapsed_seconds, prefix))
-
-    if self._bucket_only and len(results) == 1:
-      return [StripOneSlash(results[0])]
+    _WriteTimingLog(
+        '%s results%s in %.2fs, %.2f results/second for prefix: %s\n' %
+        (num_results, timing_log_entry_type, elapsed_seconds,
+         num_results / elapsed_seconds, prefix))
 
     return results
 
@@ -194,3 +288,11 @@ def MakeCompleter(completer_type, gsutil_api):
   else:
     raise RuntimeError(
         'Unknown completer "%s"' % completer_type)
+
+
+def _WriteTimingLog(message):
+  """Write an entry to the tab completion timing log, if it's enabled."""
+  if boto.config.getbool('GSUtil', 'tab_completion_time_logs', False):
+    with open(GetTabCompletionLogFilename(), 'ab') as fp:
+      fp.write(message)
+

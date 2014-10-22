@@ -175,13 +175,13 @@ def UsingCrcmodExtension(crcmod):
           getattr(crcmod.crcmod, '_usingExtension', None))
 
 
-def CreateDirIfNeeded(dir_path):
+def CreateDirIfNeeded(dir_path, mode=0777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
     try:
       # Unfortunately, even though we catch and ignore EEXIST, this call will
       # output a (needless) error message (no way to avoid that in Python).
-      os.makedirs(dir_path)
+      os.makedirs(dir_path, mode)
     # Ignore 'already exists' in case user tried to start up several
     # resumable uploads concurrently from a machine where no tracker dir had
     # yet been created.
@@ -216,6 +216,13 @@ def GetCredentialStoreFilename():
 
 def GetTabCompletionLogFilename():
   return os.path.join(GetGsutilStateDir(), 'tab-completion-logs')
+
+
+def GetTabCompletionCacheFilename():
+  tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
+  # Limit read permissions on the directory to owner for privacy.
+  CreateDirIfNeeded(tab_completion_dir, mode=0700)
+  return os.path.join(tab_completion_dir, 'cache')
 
 
 def CreateTrackerDirIfNeeded():
