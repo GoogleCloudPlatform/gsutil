@@ -15,6 +15,7 @@
 """Shell tab completion."""
 
 import itertools
+import threading
 import time
 
 import boto
@@ -27,6 +28,11 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _TAB_COMPLETE_MAX_RESULTS = 1000
+
+_TIMEOUT_WARNING = """
+Tab completion aborted (took >%ss), you may complete the command manually.
+The timeout can be adjusted in the gsutil configuration file.
+""".rstrip()
 
 
 class CompleterType(object):
@@ -51,6 +57,29 @@ class LocalObjectCompleter(object):
     return self.files_completer(prefix, **kwargs)
 
 
+class CloudListingRequestThread(threading.Thread):
+  """Thread that performs a listing request for the given URL string."""
+
+  def __init__(self, url_str, gsutil_api):
+    """Instantiates Cloud listing request thread.
+
+    Args:
+      url_str: The URL to list.
+      gsutil_api: gsutil Cloud API instance to use.
+    """
+    super(CloudListingRequestThread, self).__init__()
+    self.daemon = True
+    self._url_str = url_str
+    self._gsutil_api = gsutil_api
+    self.results = None
+
+  def run(self):
+    it = CreateWildcardIterator(self._url_str, self._gsutil_api).IterAll(
+        bucket_listing_fields=['name'])
+    self.results = [
+        str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+
+
 class CloudObjectCompleter(object):
   """Completer object for Cloud URLs."""
 
@@ -64,6 +93,13 @@ class CloudObjectCompleter(object):
     self._gsutil_api = gsutil_api
     self._bucket_only = bucket_only
 
+  @staticmethod
+  def _WriteTimingLog(message):
+    """Write an entry to the tab completion timing log, if it's enabled."""
+    if boto.config.getbool('GSUtil', 'tab_completion_time_logs', False):
+      with open(GetTabCompletionLogFilename(), 'ab') as fp:
+        fp.write(message)
+
   def __call__(self, prefix, **kwargs):
     if not prefix:
       prefix = 'gs://'
@@ -75,18 +111,32 @@ class CloudObjectCompleter(object):
     if self._bucket_only and not url.IsBucket():
       return []
 
+    timeout = boto.config.getint('GSUtil', 'tab_completion_timeout', 5)
+    if timeout == 0:
+      return []
+
     start_time = time.time()
-    it = CreateWildcardIterator(
-        request, self._gsutil_api).IterAll(bucket_listing_fields=['name'])
-    results = [str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+    request_thread = CloudListingRequestThread(request, self._gsutil_api)
+    request_thread.start()
+    request_thread.join(timeout)
+
+    if request_thread.is_alive():
+      self._WriteTimingLog(
+          'Timeout (%ss) for prefix: %s\n' % (timeout, prefix))
+      # This is only safe to import if argcomplete is present in the install
+      # (which happens for Cloud SDK installs), so import on usage, not on load.
+      # pylint: disable=g-import-not-at-top
+      import argcomplete
+      argcomplete.warn(_TIMEOUT_WARNING % timeout)
+      return []
+
+    results = request_thread.results
     end_time = time.time()
-    if boto.config.getbool('GSUtil', 'tab_completion_timing', False):
-      num_results = len(results)
-      elapsed_seconds = end_time - start_time
-      with open(GetTabCompletionLogFilename(), 'ab') as fp:
-        fp.write('%s results in %.2fs, %.2f results/second for prefix: %s\n' %
-                 (num_results, elapsed_seconds, num_results / elapsed_seconds,
-                  prefix))
+    num_results = len(results)
+    elapsed_seconds = end_time - start_time
+    self._WriteTimingLog(
+        '%s results in %.2fs, %.2f results/second for prefix: %s\n' %
+        (num_results, elapsed_seconds, num_results / elapsed_seconds, prefix))
 
     if self._bucket_only and len(results) == 1:
       return [StripOneSlash(results[0])]

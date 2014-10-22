@@ -196,7 +196,8 @@ _DETAILED_HELP_TEXT = ("""
       rsync_buffer_lines
       software_update_check_period
       state_dir
-      tab_completion_timing
+      tab_completion_time_logs
+      tab_completion_timeout
       use_magicfile
 
     [OAuth2]
@@ -384,6 +385,13 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # between such checks. The default is 30. Setting the value to 0 disables
 # periodic software update checks.
 #software_update_check_period = 30
+
+# 'tab_completion_timeout' controls the timeout (in seconds) for tab
+# completions that involve remote requests (such as bucket or object names).
+# If tab completion does not succeed within this timeout, no tab completion
+# suggestions will be returned.
+# A value of 0 will disable completions that involve remote requests.
+#tab_completion_timeout = 5
 
 # 'parallel_process_count' and 'parallel_thread_count' specify the number
 # of OS processes and Python threads, respectively, to use when executing
