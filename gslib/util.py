@@ -425,6 +425,18 @@ def GetMaxRetryDelay():
   return config.getint('Boto', 'max_retry_delay', 60)
 
 
+# Resumable downloads and uploads make one HTTP call per chunk (and must be
+# in multiples of 256KB). Overridable for testing.
+def GetJsonResumableChunkSize():
+  chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
+                             1024*1024*100L)
+  if chunk_size == 0:
+    chunk_size = 1024*256L
+  elif chunk_size % 1024*256L != 0:
+    chunk_size += (1024*256L - (chunk_size % (1024*256L)))
+  return chunk_size
+
+
 def _RoundToNearestExponent(num):
   i = 0
   while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):

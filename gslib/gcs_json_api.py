@@ -66,6 +66,7 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
+from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
@@ -78,18 +79,6 @@ DEFAULT_GCS_JSON_VERSION = 'v1'
 
 NUM_BUCKETS_PER_LIST_PAGE = 1000
 NUM_OBJECTS_PER_LIST_PAGE = 1000
-
-
-# Resumable downloads and uploads make one HTTP call per chunk (and must be
-# in multiples of 256KB). Overridable for testing.
-def _ResumableChunkSize():
-  chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
-                             1024*1024*100L)
-  if chunk_size == 0:
-    chunk_size = 1024*256L
-  elif chunk_size % 1024*256L != 0:
-    chunk_size += (1024*256L - (chunk_size % 1024*256L))
-  return chunk_size
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
                                     apitools_exceptions.TransferError,
@@ -778,13 +767,13 @@ class GcsJsonApi(CloudApi):
         apitools_upload = apitools_transfer.Upload.FromData(
             upload_stream, serialization_data, self.api_client.http,
             num_retries=self.num_retries)
-        apitools_upload.chunksize = _ResumableChunkSize()
+        apitools_upload.chunksize = GetJsonResumableChunkSize()
         apitools_upload.bytes_http = authorized_upload_http
       else:
         # New resumable upload.
         apitools_upload = apitools_transfer.Upload(
             upload_stream, content_type, total_size=size,
-            chunksize=_ResumableChunkSize(), auto_transfer=False,
+            chunksize=GetJsonResumableChunkSize(), auto_transfer=False,
             num_retries=self.num_retries)
         apitools_upload.strategy = apitools_strategy
         apitools_upload.bytes_http = authorized_upload_http

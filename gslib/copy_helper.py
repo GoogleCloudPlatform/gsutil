@@ -69,6 +69,7 @@ from gslib.hashing_helper import HashingFileUploadWrapper
 from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithBackoff
+from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
@@ -84,6 +85,7 @@ from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
+from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetStreamFromFileUrl
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
@@ -1637,6 +1639,13 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   parallel_composite_upload = _ShouldDoParallelCompositeUpload(
       logger, allow_splitting, upload_url, dst_url, src_obj_size,
       canned_acl=global_copy_helper_opts.canned_acl)
+
+  if (src_url.IsStream() and
+      gsutil_api.GetApiSelector(provider=dst_url.scheme) == ApiSelector.JSON):
+    orig_stream = upload_stream
+    # Add limited seekable properties to the stream via buffering.
+    upload_stream = ResumableStreamingJsonUploadWrapper(
+        orig_stream, GetJsonResumableChunkSize())
 
   if not parallel_composite_upload and len(hash_algs):
     # Parallel composite uploads calculate hashes per-component in subsequent

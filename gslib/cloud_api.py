@@ -344,7 +344,7 @@ class CloudApi(object):
     Returns:
       Object object for newly created destination object.
     """
-    raise NotImplementedError('UploadObject must be overloaded')
+    raise NotImplementedError('UploadObjectStreaming must be overloaded')
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None,
