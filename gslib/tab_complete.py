@@ -63,10 +63,11 @@ class LocalObjectCompleter(object):
 class TabCompletionCache(object):
   """Cache for tab completion results."""
 
-  def __init__(self, prefix, results, timestamp):
+  def __init__(self, prefix, results, timestamp, partial_results):
     self.prefix = prefix
     self.results = results
     self.timestamp = timestamp
+    self.partial_results = partial_results
 
   @staticmethod
   def LoadFromFile(filename):
@@ -84,27 +85,45 @@ class TabCompletionCache(object):
         prefix = cache_dict['prefix']
         results = cache_dict['results']
         timestamp = cache_dict['timestamp']
+        partial_results = cache_dict['partial-results']
     except Exception:  # pylint: disable=broad-except
       # Guarding against incompatible format changes in the cache file.
       # Erring on the side of not breaking tab-completion in case of cache
       # issues.
       prefix = None
       results = []
-      timestamp = None
+      timestamp = 0
+      partial_results = False
 
-    return TabCompletionCache(prefix, results, timestamp)
+    return TabCompletionCache(prefix, results, timestamp, partial_results)
 
   def GetCachedResults(self, prefix):
     """Returns the cached results for prefix or None if not in cache."""
     current_time = time.time()
-    if (prefix == self.prefix
-        and current_time - self.timestamp < TAB_COMPLETE_CACHE_TTL):
-      return self.results
+    if current_time - self.timestamp >= TAB_COMPLETE_CACHE_TTL:
+      return None
 
-  def UpdateCache(self, prefix, results):
+    results = None
+
+    if prefix == self.prefix:
+      results = self.results
+    elif (not self.partial_results and prefix.startswith(self.prefix)
+          and prefix.count('/') == self.prefix.count('/')):
+      results = [x for x in self.results if x.startswith(prefix)]
+
+    if results is not None:
+      # Update cache timestamp to make sure the cache entry does not expire if
+      # the user is performing multiple completions in a single
+      # bucket/subdirectory since we can answer these requests from the cache.
+      # e.g. gs://prefix<tab> -> gs://prefix-mid<tab> -> gs://prefix-mid-suffix
+      self.timestamp = time.time()
+      return results
+
+  def UpdateCache(self, prefix, results, partial_results):
     """Updates the in-memory cache with the results for the given prefix."""
     self.prefix = prefix
     self.results = results
+    self.partial_results = partial_results
     self.timestamp = time.time()
 
   def WriteToFile(self, filename):
@@ -112,6 +131,7 @@ class TabCompletionCache(object):
     json_str = json.dumps({
         'prefix': self.prefix,
         'results': self.results,
+        'partial-results': self.partial_results,
         'timestamp': self.timestamp,
     })
 
@@ -213,14 +233,14 @@ class CloudObjectCompleter(object):
     timing_log_entry_type = ''
     if cached_results is not None:
       results = cached_results
-      cache.UpdateCache(prefix, results)
       timing_log_entry_type = ' (from cache)'
     else:
       try:
         results = self._PerformCloudListing(wildcard_url, timeout)
         if self._bucket_only and len(results) == 1:
           results = [StripOneSlash(results[0])]
-        cache.UpdateCache(prefix, results)
+        partial_results = (len(results) == _TAB_COMPLETE_MAX_RESULTS)
+        cache.UpdateCache(prefix, results, partial_results)
       except TimeoutError:
         timing_log_entry_type = ' (request timeout)'
         results = []
