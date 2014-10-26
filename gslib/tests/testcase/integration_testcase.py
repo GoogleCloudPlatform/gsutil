@@ -43,8 +43,11 @@ LOGGER = logging.getLogger('integration-test')
 
 # Contents of boto config file that will tell gsutil not to override the real
 # error message with a warning about anonymous access if no credentials are
-# provided in the config file.
+# provided in the config file. Also, because we retry 401s, reduce the number
+# of retries so we don't go through a long exponential backoff in tests.
 BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING = """
+[Boto]
+num_retries = 2
 [Tests]
 bypass_anonymous_access_warning = True
 """
