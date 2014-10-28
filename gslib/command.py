@@ -1115,7 +1115,7 @@ class Command(HelpProvider):
     """Outputs a sugestion to the user to use gsutil -m."""
     if not (boto.config.getint('GSUtil', 'parallel_process_count', 0) == 1 and
             boto.config.getint('GSUtil', 'parallel_thread_count', 0) == 1):
-      self.logger.warn('\n' + textwrap.fill(
+      self.logger.info('\n' + textwrap.fill(
           '==> NOTE: You are performing a sequence of gsutil operations that '
           'may run significantly faster if you instead use gsutil -m %s ...\n'
           'Please see the -m section under "gsutil help options" for further '
