@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 import os
 import time
-from unittest.case import skipUnless
 
 from gslib.command import CreateGsutilLogger
 from gslib.tab_complete import CloudObjectCompleter
@@ -27,10 +26,12 @@ from gslib.tab_complete import TabCompletionCache
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.util import GetTabCompletionCacheFilename
 
 
-@skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
+@unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
+                     'Tab completion requires argcomplete')
 class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   """Integration tests for tab completion."""
 
@@ -194,7 +195,8 @@ def _WriteTabCompletionCache(prefix, results, timestamp=None,
   cache.WriteToFile(GetTabCompletionCacheFilename())
 
 
-@skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
+@unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
+                     'Tab completion requires argcomplete')
 class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for tab completion."""
 

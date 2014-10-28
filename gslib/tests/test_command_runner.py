@@ -19,7 +19,6 @@ from __future__ import absolute_import
 import logging
 import os
 import time
-from unittest.case import skipUnless
 
 import gslib
 from gslib import command_runner
@@ -310,7 +309,8 @@ class TestCommandRunnerUnitTests(
     except RuntimeError as e:
       self.assertIn('Unknown completer', e.message)
 
-  @skipUnless(ARGCOMPLETE_AVAILABLE, 'Tab completion requires argcomplete')
+  @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
+                       'Tab completion requires argcomplete')
   def test_command_argument_parser_setup_completers(self):
 
     command_map = {
