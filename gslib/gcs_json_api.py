@@ -621,7 +621,7 @@ class GcsJsonApi(CloudApi):
                                          generation=generation)
 
     # Disable apitools' default print callbacks.
-    def _NoopCallback(unused_response, unused_download_object):
+    def _NoOpCallback(unused_response, unused_download_object):
       pass
 
     # TODO: If we have a resumable download with accept-encoding:gzip
@@ -644,7 +644,7 @@ class GcsJsonApi(CloudApi):
                                  start=start_byte, end=end_byte)
     else:
       apitools_download.StreamInChunks(
-          callback=_NoopCallback, finish_callback=_NoopCallback,
+          callback=_NoOpCallback, finish_callback=_NoOpCallback,
           additional_headers=additional_headers)
     return apitools_download.encoding
 
@@ -681,14 +681,25 @@ class GcsJsonApi(CloudApi):
   def _UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                     size=None, preconditions=None, provider=None, fields=None,
                     serialization_data=None, tracker_callback=None,
-                    progress_callback=None, apitools_strategy='simple'):
-    """Upload implementation, apitools_strategy plus gsutil Cloud API args."""
+                    progress_callback=None,
+                    apitools_strategy=apitools_transfer.SIMPLE_UPLOAD,
+                    total_size=0):
+    # pylint: disable=g-doc-args
+    """Upload implementation. Cloud API arguments, plus two more.
+
+    Additional args:
+      apitools_strategy: SIMPLE_UPLOAD or RESUMABLE_UPLOAD.
+      total_size: Total size of the upload; None if it is unknown (streaming).
+
+    Returns:
+      Uploaded object metadata.
+    """
+    # pylint: enable=g-doc-args
     ValidateDstObjectMetadata(object_metadata)
     assert not canned_acl, 'Canned ACLs not supported by JSON API.'
 
     bytes_uploaded_container = BytesTransferredContainer()
 
-    total_size = 0
     if progress_callback and size:
       total_size = size
       progress_callback(0, size)
@@ -701,10 +712,6 @@ class GcsJsonApi(CloudApi):
     upload_http_class = callback_class_factory.GetConnectionClass()
     upload_http.connections = {'http': upload_http_class,
                                'https': upload_http_class}
-
-    # Disable apitools' default print callbacks.
-    def _NoopCallback(unused_response, unused_upload_object):
-      pass
 
     authorized_upload_http = self.credentials.authorize(upload_http)
     WrapUploadHttpRequest(authorized_upload_http)
@@ -736,7 +743,8 @@ class GcsJsonApi(CloudApi):
         if fields:
           global_params.fields = ','.join(set(fields))
 
-      if apitools_strategy == 'simple':  # One-shot upload.
+      if apitools_strategy == apitools_transfer.SIMPLE_UPLOAD:
+        # One-shot upload.
         apitools_upload = apitools_transfer.Upload(
             upload_stream, content_type, total_size=size, auto_transfer=True,
             num_retries=self.num_retries)
@@ -752,7 +760,7 @@ class GcsJsonApi(CloudApi):
             upload_stream, authorized_upload_http, content_type, size,
             serialization_data, apitools_strategy, apitools_request,
             global_params, bytes_uploaded_container, tracker_callback,
-            _NoopCallback, additional_headers)
+            additional_headers, progress_callback)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name)
@@ -760,7 +768,8 @@ class GcsJsonApi(CloudApi):
   def _PerformResumableUpload(
       self, upload_stream, authorized_upload_http, content_type, size,
       serialization_data, apitools_strategy, apitools_request, global_params,
-      bytes_uploaded_container, tracker_callback, noop_callback, addl_headers):
+      bytes_uploaded_container, tracker_callback, addl_headers,
+      progress_callback):
     try:
       if serialization_data:
         # Resuming an existing upload.
@@ -785,6 +794,10 @@ class GcsJsonApi(CloudApi):
       apitools_upload.retry_func = (
           apitools_http_wrapper.RethrowExceptionHandler)
 
+      # Disable apitools' default print callbacks.
+      def _NoOpCallback(unused_response, unused_upload_object):
+        pass
+
       # If we're resuming an upload, apitools has at this point received
       # from the server how many bytes it already has. Update our
       # callback class with this information.
@@ -800,10 +813,18 @@ class GcsJsonApi(CloudApi):
           # causing the hash to be recalculated. Make HashingFileUploadWrapper
           # save a digest according to json_resumable_chunk_size.
           http_response = apitools_upload.StreamInChunks(
-              callback=noop_callback, finish_callback=noop_callback,
+              callback=_NoOpCallback, finish_callback=_NoOpCallback,
               additional_headers=addl_headers)
-          return self.api_client.objects.ProcessHttpResponse(
+          processed_response = self.api_client.objects.ProcessHttpResponse(
               self.api_client.objects.GetMethodConfig('Insert'), http_response)
+          if size is None and progress_callback:
+            # Make final progress callback; total size should now be known.
+            # This works around the fact the send function counts header bytes.
+            # However, this will make the progress appear to go slightly
+            # backwards at the end.
+            progress_callback(apitools_upload.total_size,
+                              apitools_upload.total_size)
+          return processed_response
         except HTTP_TRANSFER_EXCEPTIONS, e:
           apitools_http_wrapper.RebuildHttpConnections(
               apitools_upload.bytes_http)
@@ -854,7 +875,7 @@ class GcsJsonApi(CloudApi):
         upload_stream, object_metadata, canned_acl=canned_acl,
         size=size, preconditions=preconditions,
         progress_callback=progress_callback, fields=fields,
-        apitools_strategy='simple')
+        apitools_strategy=apitools_transfer.SIMPLE_UPLOAD)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, preconditions=None,
@@ -862,10 +883,13 @@ class GcsJsonApi(CloudApi):
                             fields=None):
     """See CloudApi class for function doc strings."""
     # Streaming indicated by not passing a size.
+    # Resumable capabilities are present up to the resumable chunk size using
+    # a buffered stream.
     return self._UploadObject(
         upload_stream, object_metadata, canned_acl=canned_acl,
         preconditions=preconditions, progress_callback=progress_callback,
-        fields=fields, apitools_strategy='simple')
+        fields=fields, apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD,
+        total_size=None)
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
@@ -877,7 +901,7 @@ class GcsJsonApi(CloudApi):
         preconditions=preconditions, fields=fields, size=size,
         serialization_data=serialization_data,
         tracker_callback=tracker_callback, progress_callback=progress_callback,
-        apitools_strategy='resumable')
+        apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD)
 
   def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
                  src_generation=None, canned_acl=None, preconditions=None,

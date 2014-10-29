@@ -594,7 +594,7 @@ class CpCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      supported_private_args=['haltatbyte='],
+      supported_private_args=['testcallbackfile='],
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
       ]
@@ -878,8 +878,7 @@ class CpCommand(Command):
     # Files matching these extensions should be gzipped before uploading.
     self.gzip_exts = []
 
-    # Test hook for stopping transfers.
-    halt_at_byte = None
+    test_callback_file = None
 
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -895,8 +894,10 @@ class CpCommand(Command):
           daisy_chain = True
         elif o == '-e':
           self.exclude_symlinks = True
-        elif o == '--haltatbyte':
-          halt_at_byte = long(a)
+        elif o == '--testcallbackfile':
+          # File path of a pickled class that implements ProgressCallback.call.
+          # Used for testing transfer interruptions and resumes.
+          test_callback_file = a
         elif o == '-I':
           read_args_from_stdin = True
         elif o == '-L':
@@ -930,7 +931,7 @@ class CpCommand(Command):
         use_manifest=use_manifest,
         preserve_acl=preserve_acl,
         canned_acl=canned_acl,
-        halt_at_byte=halt_at_byte)
+        test_callback_file=test_callback_file)
 
   def _GetBucketWithVersioningConfig(self, exp_dst_url):
     """Gets versioning config for a bucket and ensures that it exists.

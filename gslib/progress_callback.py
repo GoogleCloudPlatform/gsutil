@@ -42,7 +42,8 @@ class ProgressCallbackWithBackoff(object):
     """Initializes the callback with backoff.
 
     Args:
-      total_size: Total bytes to process.
+      total_size: Total bytes to process. If this is None, size is not known
+          at the outset.
       callback_func: Func of (int: processed_so_far, int: total_bytes)
           used to make callbacks.
       start_bytes_per_callback: Lower bound of bytes per callback.
@@ -62,14 +63,19 @@ class ProgressCallbackWithBackoff(object):
   def Progress(self, bytes_processed):
     """Tracks byte processing progress, making a callback if necessary."""
     self._bytes_processed_since_callback += bytes_processed
-    # TODO: We check if >= total_size and truncate because JSON uploads count
-    # metadata during their send progress.
     if (self._bytes_processed_since_callback > self._bytes_per_callback or
         (self._total_bytes_processed + self._bytes_processed_since_callback >=
-         self._total_size)):
+         self._total_size and self._total_size is not None)):
       self._total_bytes_processed += self._bytes_processed_since_callback
-      self._callback_func(min(self._total_bytes_processed, self._total_size),
-                          self._total_size)
+      # TODO: We check if >= total_size and truncate because JSON uploads count
+      # headers+metadata during their send progress. If the size is unknown,
+      # we can't do this and the progress message will make it appear that we
+      # send more than the original stream.
+      if self._total_size is not None:
+        bytes_sent = min(self._total_bytes_processed, self._total_size)
+      else:
+        bytes_sent = self._total_bytes_processed
+      self._callback_func(bytes_sent, self._total_size)
       self._bytes_processed_since_callback = 0
       self._callbacks_made += 1
 

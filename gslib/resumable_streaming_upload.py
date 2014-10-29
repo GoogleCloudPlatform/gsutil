@@ -131,19 +131,20 @@ class ResumableStreamingJsonUploadWrapper(object):
         buffered_data.append(new_data)
         data = b''.join(buffered_data)
       data_len = len(new_data)
-      self._position += data_len
-      self._buffer.append(new_data)
-      self._buffer_end += data_len
-      oldest_data = None
-      while self._buffer_end - self._buffer_start > self._max_buffer_size:
-        oldest_data = self._buffer.popleft()
-        self._buffer_start += len(oldest_data)
-      if oldest_data:
-        refill_amount = self._max_buffer_size - (self._buffer_end -
-                                                 self._buffer_start)
-        if refill_amount:
-          self._buffer.append(oldest_data[-refill_amount:])
-          self._buffer_start -= refill_amount
+      if data_len:
+        self._position += data_len
+        self._buffer.append(new_data)
+        self._buffer_end += data_len
+        oldest_data = None
+        while self._buffer_end - self._buffer_start > self._max_buffer_size:
+          oldest_data = self._buffer.popleft()
+          self._buffer_start += len(oldest_data)
+        if oldest_data:
+          refill_amount = self._max_buffer_size - (self._buffer_end -
+                                                   self._buffer_start)
+          if refill_amount:
+            self._buffer.append(oldest_data[-refill_amount:])
+            self._buffer_start -= refill_amount
     else:
       data = b''.join(buffered_data) if buffered_data else None
 
@@ -167,15 +168,28 @@ class ResumableStreamingJsonUploadWrapper(object):
     Raises:
       CommandException if an unsupported seek mode or position is used.
     """
-    if whence != os.SEEK_SET:
+    if whence == os.SEEK_SET:
+      if offset < self._buffer_start or offset > self._buffer_end:
+        raise CommandException('Unable to resume upload because of limited '
+                               'buffering available for streaming uploads. '
+                               'Offset %s was requested, but only data from '
+                               '%s to %s is buffered.' %
+                               (offset, self._buffer_start, self._buffer_end))
+      # Move to a position within the buffer.
+      self._position = offset
+    elif whence == os.SEEK_END:
+      if offset > self._max_buffer_size:
+        raise CommandException('Invalid SEEK_END offset %s on streaming '
+                               'upload. Only %s can be buffered.' %
+                               (offset, self._max_buffer_size))
+      # Read to the end and rely on buffering to handle the offset.
+      while self.read(self._max_buffer_size):
+        pass
+      # Now we're at the end.
+      self._position -= offset
+    else:
       raise CommandException('Invalid seek mode on streaming upload. '
                              '(mode %s, offset %s)' % (whence, offset))
-    elif offset < self._buffer_start or offset > self._buffer_end:
-      raise CommandException('Invalid seek offset %s on streaming upload. '
-                             'Only data from %s to %s is buffered.' %
-                             (offset, self._buffer_start, self._buffer_end))
-    else:
-      self._position = offset
 
   def close(self):  # pylint: disable=invalid-name
     return self._orig_fp.close()

@@ -309,9 +309,6 @@ class HashingFileUploadWrapper(object):
     self._digesters_previous_mark = self._digesters_current_mark
     for alg in self._digesters:
       self._digesters_previous[alg] = self._digesters[alg].copy()
-      if len(data) >= MIN_SIZE_COMPUTE_LOGGING:
-        self._logger.info('Catching up %s for %s...', alg,
-                          self._src_url.url_string)
       self._digesters[alg].update(data)
     self._digesters_current_mark += len(data)
     return data

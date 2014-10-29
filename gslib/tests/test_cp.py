@@ -19,15 +19,20 @@ from __future__ import absolute_import
 import base64
 import binascii
 import datetime
+import httplib
 import os
+import pickle
 import pkgutil
 import random
 import re
 import string
+import sys
 
 import boto
 from boto import storage_uri
 
+from gslib.cloud_api import ResumableDownloadException
+from gslib.cloud_api import ResumableUploadException
 from gslib.copy_helper import GetTrackerFilePath
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
@@ -42,11 +47,56 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import IS_WINDOWS
+from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KB
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UTF8
+
+
+# Custom test callbacks must be pickleable, and therefore at global scope.
+class _HaltingCopyCallbackHandler(object):
+  """Test callback handler for intentionally stopping a resumable transfer."""
+
+  def __init__(self, is_upload, halt_at_byte):
+    self._is_upload = is_upload
+    self._halt_at_byte = halt_at_byte
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_transferred, total_size):
+    """Forcibly exits if the transfer has passed the halting point."""
+    if total_bytes_transferred >= self._halt_at_byte:
+      sys.stderr.write(
+          'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
+              self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+              MakeHumanReadable(total_size)))
+      if self._is_upload:
+        raise ResumableUploadException('Artifically halting upload.')
+      else:
+        raise ResumableDownloadException('Artifically halting download.')
+
+
+class _ResumableUploadRetryHandler(object):
+  """Test callback handler for causing retries during a resumable transfer."""
+
+  def __init__(self, retry_at_byte, exception_to_raise, exc_args,
+               num_retries=1):
+    self._retry_at_byte = retry_at_byte
+    self._exception_to_raise = exception_to_raise
+    self._exception_args = exc_args
+    self._num_retries = num_retries
+
+    self._retries_made = 0
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_transferred, unused_total_size):
+    """Cause a single retry at the retry point."""
+    if (total_bytes_transferred >= self._retry_at_byte
+        and self._retries_made < self._num_retries):
+      self._retries_made += 1
+      raise self._exception_to_raise(*self._exception_args)
 
 
 class TestCp(testcase.GsUtilIntegrationTestCase):
@@ -1021,14 +1071,67 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents='a' * self.halt_size)
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(True, 5)))
+
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', fpath,
-                               suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               return_stderr=True)
       self.assertIn('Resuming upload', stderr)
+
+  @SkipForS3('No resumable upload support for S3.')
+  def test_cp_resumable_upload_retry(self):
+    """Tests that a resumable upload completes with one retry."""
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='a' * self.halt_size)
+    # TODO: Raising an httplib or socket error blocks bucket teardown
+    # in JSON for 60-120s on a multiprocessing lock acquire. Figure out why;
+    # until then, raise an apitools retryable exception.
+    if self.test_api == ApiSelector.XML:
+      test_callback_file = self.CreateTempFile(
+          contents=pickle.dumps(_ResumableUploadRetryHandler(
+              5, httplib.BadStatusLine, ('unused',))))
+    else:
+      test_callback_file = self.CreateTempFile(
+          contents=pickle.dumps(_ResumableUploadRetryHandler(
+              5, apitools_exceptions.BadStatusCodeError,
+              ('unused', 'unused', 'unused'))))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['-D', 'cp', '--testcallbackfile',
+                               test_callback_file, fpath, suri(bucket_uri)],
+                              return_stderr=1)
+      if self.test_api == ApiSelector.XML:
+        self.assertIn('Got retryable failure', stderr)
+      else:
+        self.assertIn('Retrying', stderr)
+
+  @SkipForS3('No resumable upload support for S3.')
+  def test_cp_resumable_streaming_upload_retry(self):
+    """Tests that a streaming resumable upload completes with one retry."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('XML does not support resumable streaming uploads.')
+    bucket_uri = self.CreateBucket()
+
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_ResumableUploadRetryHandler(
+            5, apitools_exceptions.BadStatusCodeError,
+            ('unused', 'unused', 'unused'))))
+    # Need to reduce the JSON chunk size since streaming uploads buffer a
+    # full chunk.
+    boto_configs_for_test = [('GSUtil', 'json_resumable_chunk_size',
+                              str(256 * ONE_KB)),
+                             ('Boto', 'num_retries', '2')]
+    with SetBotoConfigForTest(boto_configs_for_test):
+      stderr = self.RunGsUtil(
+          ['-D', 'cp', '--testcallbackfile', test_callback_file, '-',
+           suri(bucket_uri, 'foo')],
+          stdin='a' * 512 * ONE_KB, return_stderr=1)
+      self.assertIn('Retrying', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload(self):
@@ -1050,9 +1153,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       tracker_filename = GetTrackerFilePath(
           StorageUrlFromString(suri(bucket_uri, 'foo')),
           TrackerFileType.UPLOAD, self.test_api)
+      test_callback_file = self.CreateTempFile(
+          contents=pickle.dumps(_HaltingCopyCallbackHandler(True, 5)))
       try:
-        stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', fpath,
-                                 suri(bucket_uri, 'foo')],
+        stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                                 fpath, suri(bucket_uri, 'foo')],
                                 expected_status=1, return_stderr=True)
         self.assertIn('Artifically halting upload', stderr)
         self.assertTrue(os.path.exists(tracker_filename),
@@ -1071,10 +1176,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
                                 contents='a' * self.halt_size)
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(True, 5)))
+
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', fpath,
-                               suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
@@ -1095,14 +1203,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
                                 contents='a' * ONE_KB * 512)
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(True,
+                                                          int(ONE_KB) * 384)))
     resumable_threshold_for_test = (
         'GSUtil', 'resumable_threshold', str(ONE_KB))
     resumable_chunk_size_for_test = (
         'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
     with SetBotoConfigForTest([resumable_threshold_for_test,
                                resumable_chunk_size_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', str(ONE_KB * 384), fpath,
-                               suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
@@ -1121,14 +1232,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
                                 contents='a' * ONE_KB * 512)
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(True,
+                                                          int(ONE_KB) * 384)))
     resumable_threshold_for_test = (
         'GSUtil', 'resumable_threshold', str(ONE_KB))
     resumable_chunk_size_for_test = (
         'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
     with SetBotoConfigForTest([resumable_threshold_for_test,
                                resumable_chunk_size_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', str(ONE_KB * 384), fpath,
-                               suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
@@ -1171,10 +1285,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='a' * self.halt_size)
     fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', suri(object_uri),
-                               fpath], expected_status=1, return_stderr=True)
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), fpath],
+                              expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
       tracker_filename = GetTrackerFilePath(
           StorageUrlFromString(fpath), TrackerFileType.DOWNLOAD, self.test_api)
@@ -1192,11 +1310,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='a' * self.halt_size)
     fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
       # This will create a tracker file with an ETag.
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', suri(object_uri),
-                               fpath], expected_status=1, return_stderr=True)
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), fpath],
+                              expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
       # Create a new object with different contents - it should have a
       # different ETag since the content has changed.
@@ -1212,10 +1333,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='a' * self.halt_size)
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', suri(object_uri),
-                               fpath],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), fpath],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
       with open(fpath, 'w') as larger_file:
@@ -1361,10 +1484,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             'would be invalid. Please increase the compressed '
                             'object size in the test.')
     fpath2 = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', '--haltatbyte', '5', suri(object_uri),
-                               suri(fpath2)],
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath2)],
                               return_stderr=True, expected_status=1)
       self.assertIn('Artifically halting download.', stderr)
       tracker_filename = GetTrackerFilePath(

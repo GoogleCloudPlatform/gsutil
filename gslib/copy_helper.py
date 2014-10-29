@@ -29,6 +29,7 @@ import json
 import logging
 import mimetypes
 import os
+import pickle
 import random
 import re
 import shutil
@@ -90,7 +91,6 @@ from gslib.util import GetStreamFromFileUrl
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MB
@@ -252,14 +252,14 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
     'use_manifest',
     'preserve_acl',
     'canned_acl',
-    'halt_at_byte'])
+    'test_callback_file'])
 
 
 # pylint: disable=global-variable-undefined
 def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
                          read_args_from_stdin=False, print_ver=False,
                          use_manifest=False, preserve_acl=False,
-                         canned_acl=None, halt_at_byte=None):
+                         canned_acl=None, test_callback_file=None):
   """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
@@ -273,7 +273,7 @@ def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
       use_manifest=use_manifest,
       preserve_acl=preserve_acl,
       canned_acl=canned_acl,
-      halt_at_byte=halt_at_byte)
+      test_callback_file=test_callback_file)
   return global_copy_helper_opts
 
 
@@ -1259,30 +1259,6 @@ def SrcDstSame(src_url, dst_url):
             src_url.generation == dst_url.generation)
 
 
-class _HaltingCopyCallbackHandler(object):
-  """Test callback handler for intentionally stopping a resumable transfer."""
-
-  def __init__(self, is_upload, display_url, halt_at_byte, logger):
-    self.is_upload = is_upload
-    self.display_url = display_url
-    self.halt_at_byte = halt_at_byte
-    self.logger = logger
-
-  # pylint: disable=invalid-name
-  def call(self, total_bytes_transferred, total_size):
-    """Forcibly exits if the transfer has passed the halting point."""
-    if total_bytes_transferred >= self.halt_at_byte:
-      if self.logger.isEnabledFor(logging.INFO):
-        sys.stderr.write(
-            'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
-                self.halt_at_byte, MakeHumanReadable(total_bytes_transferred),
-                MakeHumanReadable(total_size)))
-      if self.is_upload:
-        raise ResumableUploadException('Artifically halting upload.')
-      else:
-        raise ResumableDownloadException('Artifically halting download.')
-
-
 def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
   """Logs copy operation, including Content-Type if appropriate.
 
@@ -1441,6 +1417,9 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
   """
   progress_callback = FileProgressCallbackHandler(
       ConstructAnnounceText('Uploading', dst_url.url_string), logger).call
+  if global_copy_helper_opts.test_callback_file:
+    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+      progress_callback = pickle.loads(test_fp.read()).call
   start_time = time.time()
 
   if src_url.IsStream():
@@ -1517,9 +1496,9 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
 
   progress_callback = FileProgressCallbackHandler(
       ConstructAnnounceText('Uploading', dst_url.url_string), logger).call
-  if global_copy_helper_opts.halt_at_byte:
-    progress_callback = _HaltingCopyCallbackHandler(
-        True, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
+  if global_copy_helper_opts.test_callback_file:
+    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+      progress_callback = pickle.loads(test_fp.read()).call
 
   start_time = time.time()
   try:
@@ -1842,9 +1821,9 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     progress_callback = FileProgressCallbackHandler(
         ConstructAnnounceText('Downloading', dst_url.url_string),
         logger).call
-    if global_copy_helper_opts.halt_at_byte:
-      progress_callback = _HaltingCopyCallbackHandler(
-          False, dst_url, global_copy_helper_opts.halt_at_byte, logger).call
+    if global_copy_helper_opts.test_callback_file:
+      with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+        progress_callback = pickle.loads(test_fp.read()).call
 
     start_time = time.time()
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
@@ -2103,6 +2082,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
     # TODO: Support process-break resumes. This will resume across connection
     # breaks and server errors, but the tracker callback is a no-op so this
     # won't resume across gsutil runs.
+    # TODO: Test retries via test_callback_file.
     uploaded_object = gsutil_api.UploadObjectResumable(
         upload_fp, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,

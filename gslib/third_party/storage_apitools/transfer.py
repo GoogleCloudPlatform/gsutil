@@ -27,6 +27,7 @@ import threading
 
 from apiclient import mimeparse
 
+from gslib.third_party.storage_apitools import buffered_stream
 from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import http_wrapper
 from gslib.third_party.storage_apitools import stream_slice
@@ -38,8 +39,8 @@ __all__ = [
 ]
 
 _RESUMABLE_UPLOAD_THRESHOLD = 5 << 20
-_SIMPLE_UPLOAD = 'simple'
-_RESUMABLE_UPLOAD = 'resumable'
+SIMPLE_UPLOAD = 'simple'
+RESUMABLE_UPLOAD = 'resumable'
 
 
 class _Transfer(object):
@@ -485,7 +486,7 @@ class Upload(_Transfer):
       upload.auto_transfer = auto_transfer
     else:
       upload.auto_transfer = info['auto_transfer']
-    upload.strategy = _RESUMABLE_UPLOAD
+    upload.strategy = RESUMABLE_UPLOAD
     upload._Initialize(http, info['url'])  # pylint: disable=protected-access
     upload.RefreshResumableUploadState()
     upload.EnsureInitialized()
@@ -496,7 +497,7 @@ class Upload(_Transfer):
   @property
   def serialization_data(self):
     self.EnsureInitialized()
-    if self.strategy != _RESUMABLE_UPLOAD:
+    if self.strategy != RESUMABLE_UPLOAD:
       raise exceptions.InvalidDataError(
           'Serialization only supported for resumable uploads')
     return {
@@ -527,7 +528,7 @@ class Upload(_Transfer):
 
   @strategy.setter
   def strategy(self, value):
-    if value not in (_SIMPLE_UPLOAD, _RESUMABLE_UPLOAD):
+    if value not in (SIMPLE_UPLOAD, RESUMABLE_UPLOAD):
       raise exceptions.UserError((
           'Invalid value "%s" for upload strategy, must be one of '
           '"simple" or "resumable".') % value)
@@ -559,14 +560,14 @@ class Upload(_Transfer):
     """
     if self.strategy is not None:
       return
-    strategy = _SIMPLE_UPLOAD
+    strategy = SIMPLE_UPLOAD
     if (self.total_size is not None and
         self.total_size > _RESUMABLE_UPLOAD_THRESHOLD):
-      strategy = _RESUMABLE_UPLOAD
+      strategy = RESUMABLE_UPLOAD
     if http_request.body and not upload_config.simple_multipart:
-      strategy = _RESUMABLE_UPLOAD
+      strategy = RESUMABLE_UPLOAD
     if not upload_config.simple_path:
-      strategy = _RESUMABLE_UPLOAD
+      strategy = RESUMABLE_UPLOAD
     self.strategy = strategy
 
   def ConfigureRequest(self, upload_config, http_request, url_builder):
@@ -584,7 +585,7 @@ class Upload(_Transfer):
               self.mime_type, upload_config.accept))
 
     self.__SetDefaultUploadStrategy(upload_config, http_request)
-    if self.strategy == _SIMPLE_UPLOAD:
+    if self.strategy == SIMPLE_UPLOAD:
       url_builder.relative_path = upload_config.simple_path
       if http_request.body:
         url_builder.query_params['uploadType'] = 'multipart'
@@ -649,7 +650,7 @@ class Upload(_Transfer):
     Returns:
       Response if the upload is complete.
     """
-    if self.strategy != _RESUMABLE_UPLOAD:
+    if self.strategy != RESUMABLE_UPLOAD:
       return
     self.EnsureInitialized()
     refresh_request = http_wrapper.Request(
@@ -683,11 +684,8 @@ class Upload(_Transfer):
           'No upload strategy set; did you call ConfigureRequest?')
     if http is None and client is None:
       raise exceptions.UserError('Must provide client or http.')
-    if self.strategy != _RESUMABLE_UPLOAD:
+    if self.strategy != RESUMABLE_UPLOAD:
       return
-    if self.total_size is None:
-      raise exceptions.InvalidUserInputError(
-          'Cannot stream upload without total size')
     http = http or client.http
     if client is not None:
       http_request.url = client.FinalizeTransferUrl(http_request.url)
@@ -735,12 +733,9 @@ class Upload(_Transfer):
   def StreamInChunks(self, callback=None, finish_callback=None,
                      additional_headers=None):
     """Send this (resumable) upload in chunks."""
-    if self.strategy != _RESUMABLE_UPLOAD:
+    if self.strategy != RESUMABLE_UPLOAD:
       raise exceptions.InvalidUserInputError(
           'Cannot stream non-resumable upload')
-    if self.total_size is None:
-      raise exceptions.InvalidUserInputError(
-          'Cannot stream upload without total size')
     callback = callback or self._ArgPrinter
     finish_callback = finish_callback or self._CompletePrinter
     # final_response is set if we resumed an already-completed upload.
@@ -776,15 +771,33 @@ class Upload(_Transfer):
   def __SendChunk(self, start, additional_headers=None):
     """Send the specified chunk."""
     self.EnsureInitialized()
-    end = min(start + self.chunksize, self.total_size)
-    body_stream = stream_slice.StreamSlice(self.stream, end - start)
+    if self.total_size is None:
+      # For the streaming resumable case, we need to detect when we're at the
+      # end of the stream.
+      body_stream = buffered_stream.BufferedStream(
+          self.stream, start, self.chunksize)
+      end = body_stream.stream_end_position
+      if body_stream.stream_exhausted:
+        self.__total_size = end
+    else:
+      end = min(start + self.chunksize, self.total_size)
+      body_stream = stream_slice.StreamSlice(self.stream, end - start)
     # TODO: Think about clearer errors on "no data in stream".
 
     request = http_wrapper.Request(url=self.url, http_method='PUT',
                                    body=body_stream)
     request.headers['Content-Type'] = self.mime_type
-    request.headers['Content-Range'] = 'bytes %s-%s/%s' % (
-        start, end - 1, self.total_size)
+    if self.total_size is None:
+      # Streaming resumable upload case, unknown total size.
+      range_string = 'bytes %s-%s/*' % (start, end - 1)
+    elif end == start:
+      # End of an upload with 0 bytes left to send; just finalize.
+      range_string = 'bytes */%s' % self.total_size
+    else:
+      # Normal resumable upload case with known sizes.
+      range_string = 'bytes %s-%s/%s' % (start, end - 1, self.total_size)
+
+    request.headers['Content-Range'] = range_string
     if additional_headers:
       request.headers.update(additional_headers)
 

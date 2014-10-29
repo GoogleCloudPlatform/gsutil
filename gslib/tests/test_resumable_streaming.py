@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from hashlib import md5
+import os
 import pkgutil
 
 from gslib.exception import CommandException
@@ -77,11 +78,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
                           self._temp_test_file_len - 1,
                           self._temp_test_file_len,
                           self._temp_test_file_len + 1):
-        expect_exception = False
-        if buffer_size < self._temp_test_file_len:
-          # Can't seek to 0 if the buffer is too small, so we expect an
-          # exception.
-          expect_exception = True
+        # Can't seek to 0 if the buffer is too small, so we expect an
+        # exception.
+        expect_exception = buffer_size < self._temp_test_file_len
         with open(tmp_file, 'rb') as stream:
           wrapper = ResumableStreamingJsonUploadWrapper(
               stream, buffer_size, test_small_buffer=True)
@@ -212,3 +211,30 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
       self.fail('Did not get expected CommandException')
     except CommandException, e:
       self.assertIn('Buffer size must be >= JSON resumable upload', str(e))
+
+  def testSeekEnd(self):
+    tmp_file = self._GetTestFile()
+    for buffer_size in (TRANSFER_BUFFER_SIZE - 1,
+                        TRANSFER_BUFFER_SIZE,
+                        TRANSFER_BUFFER_SIZE + 1):
+      for seek_back in (TRANSFER_BUFFER_SIZE - 1,
+                        TRANSFER_BUFFER_SIZE,
+                        TRANSFER_BUFFER_SIZE + 1):
+        expect_exception = seek_back > buffer_size
+        with open(tmp_file, 'rb') as stream:
+          wrapper = ResumableStreamingJsonUploadWrapper(
+              stream, buffer_size, test_small_buffer=True)
+          # Read to the end.
+          while wrapper.read(TRANSFER_BUFFER_SIZE):
+            pass
+          try:
+            wrapper.seek(seek_back, whence=os.SEEK_END)
+            if expect_exception:
+              self.fail('Did not get expected CommandException for '
+                        'seek_back size %s, buffer size %s' %
+                        (seek_back, buffer_size))
+          except CommandException, e:
+            if not expect_exception:
+              self.fail('Got unexpected CommandException "%s" for '
+                        'seek_back size %s, buffer size %s' %
+                        (str(e), seek_back, buffer_size))
