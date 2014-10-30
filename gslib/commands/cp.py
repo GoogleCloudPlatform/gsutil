@@ -271,10 +271,14 @@ STREAMING_TRANSFERS_TEXT = """
 
     long_running_computation | gsutil cp - gs://my_bucket/obj
 
-  Note that streaming transfers do not support resumable uploads/downloads, so
-  if you have a large amount of data to upload (say, more than 100MB) it is
-  recommended to write the data to a local file and then copy that file to the
-  cloud rather than streaming it (and similarly for large downloads).
+  Streaming uploads using the JSON API (see "gsutil help apis") are buffered in
+  memory and can retry in the event of network flakiness or service errors.
+
+  Streaming transfers (other than uploads using the JSON API) do not support
+  resumable uploads/downloads. If you have a large amount of data to upload
+  (say, more than 100MB) it is recommended to write the data to a local file and
+  then copy that file to the cloud rather than streaming it (and similarly for
+  large downloads).
 """
 
 PARALLEL_COMPOSITE_UPLOADS_TEXT = """
