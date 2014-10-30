@@ -334,6 +334,10 @@ class AclCommand(Command):
         if o == '-f':
           self.continue_on_error = True
         elif o == '-g':
+          if 'gserviceaccount.com' in a:
+            raise CommandException(
+                'Service accounts are considered users, not groups; please use '
+                '"gsutil acl ch -u" instead of "gsutil acl ch -g"')
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
         elif o == '-u':
