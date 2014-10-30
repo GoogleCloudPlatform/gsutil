@@ -75,7 +75,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
     json_text = self.RunGsUtil(self._defacl_get_prefix +
                                [suri(bucket)], return_stdout=True)
-    self.assertEqual(json_text, '[]%s' % os.linesep)
+    self.assertRegexpMatches(json_text, r'\[\]\s*')
 
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS+':READ', suri(bucket)])
