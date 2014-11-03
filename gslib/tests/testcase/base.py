@@ -25,6 +25,7 @@ import tempfile
 import boto
 import gslib.tests.util as util
 from gslib.tests.util import unittest
+from gslib.util import UTF8
 
 MAX_BUCKET_LENGTH = 63
 
@@ -59,6 +60,11 @@ class GsUtilTestCase(unittest.TestCase):
   def assertNumLines(self, text, numlines):
     self.assertEqual(text.count('\n'), numlines)
 
+  def GetTestMethodName(self):
+    if isinstance(self._testMethodName, unicode):
+      return self._testMethodName.encode(UTF8)
+    return self._testMethodName
+
   def MakeRandomTestString(self):
     """Creates a random string of hex characters 8 characters long."""
     return '%08x' % random.randrange(256**4)
@@ -73,7 +79,7 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The temporary name.
     """
-    name = '%sgsutil-test-%s-%s' % (prefix, self._testMethodName, kind)
+    name = '%sgsutil-test-%s-%s' % (prefix, self.GetTestMethodName(), kind)
     name = name[:MAX_BUCKET_LENGTH-9]
     name = '%s-%s' % (name, self.MakeRandomTestString())
     return name

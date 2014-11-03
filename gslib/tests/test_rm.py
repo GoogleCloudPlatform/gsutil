@@ -316,7 +316,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
   def test_recursive_bucket_rm_with_wildcarding(self):
     """Tests removing all objects and buckets matching a bucket wildcard."""
-    buri_base = 'gsutil-test-%s' % self._testMethodName
+    buri_base = 'gsutil-test-%s' % self.GetTestMethodName()
     buri_base = buri_base[:MAX_BUCKET_LENGTH-20]
     buri_base = '%s-%s' % (buri_base, self.MakeRandomTestString())
     buri1 = self.CreateBucket(bucket_name='%s-tbuck1' % buri_base)
