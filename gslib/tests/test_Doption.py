@@ -22,7 +22,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
-from gslib.util import ONE_KB
+from gslib.util import ONE_KIB
 
 
 @SkipForS3('-D output is implementation-specific.')
@@ -36,7 +36,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       fpath = self.CreateTempFile(contents=file_contents)
       bucket_uri = self.CreateBucket()
       with SetBotoConfigForTest(
-          [('GSUtil', 'resumable_threshold', str(ONE_KB))]):
+          [('GSUtil', 'resumable_threshold', str(ONE_KIB))]):
         stderr = self.RunGsUtil(
             ['-D', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
         print 'command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)])

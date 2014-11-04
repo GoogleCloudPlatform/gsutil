@@ -85,7 +85,7 @@ class DaisyChainWrapper(object):
     self.buffer = deque()
 
     self.bytes_buffered = 0
-    self.max_buffer_size = 1024 * 1024  # 1 MB
+    self.max_buffer_size = 1024 * 1024  # 1 MiB
 
     # We save one buffer's worth of data as a special case for boto,
     # which seeks back one buffer and rereads to compute hashes. This is

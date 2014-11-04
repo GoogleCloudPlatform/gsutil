@@ -33,13 +33,13 @@ from boto import storage_uri
 
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
+from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.copy_helper import GetTrackerFilePath
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
-from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
@@ -51,7 +51,7 @@ from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
-from gslib.util import ONE_KB
+from gslib.util import ONE_KIB
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UTF8
@@ -77,6 +77,7 @@ class _HaltingCopyCallbackHandler(object):
         raise ResumableUploadException('Artifically halting upload.')
       else:
         raise ResumableDownloadException('Artifically halting download.')
+
 
 class _ResumableUploadStartOverCopyCallbackHandler(object):
   """Test callback handler that raises start-over exception during upload."""
@@ -546,7 +547,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self._run_cp_minus_v_test('-v', fpath1, k2_uri.uri)
 
     # Case 2: Upload file to object using resumable upload.
-    size_threshold = ONE_KB
+    size_threshold = ONE_KIB
     boto_config_for_test = ('GSUtil', 'resumable_threshold',
                             str(size_threshold))
     with SetBotoConfigForTest([boto_config_for_test]):
@@ -638,8 +639,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
     self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
     with SetBotoConfigForTest([
-        ('GSUtil', 'resumable_threshold', str(ONE_KB)),
-        ('GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))]):
+        ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
+        ('GSUtil', 'json_resumable_chunk_size', str(ONE_KIB * 256))]):
       # Ensure copy also works across json upload chunk boundaries.
       self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
 
@@ -649,7 +650,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Ensure daisy chain cp works with a wide of file sizes."""
     bucket_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
-    exponent_cap = 22  # Up to 2MB in size.
+    exponent_cap = 22  # Up to 2 MiB in size.
     for i in range(exponent_cap):
       one_byte_smaller = 2**i - 1
       normal = 2**i
@@ -735,7 +736,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                   return_stdout=True)
     self.assertEqual(public_read_acl, new_acl_json)
 
-    resumable_size = ONE_KB
+    resumable_size = ONE_KIB
     boto_config_for_test = ('GSUtil', 'resumable_threshold',
                             str(resumable_size))
     with SetBotoConfigForTest([boto_config_for_test]):
@@ -1093,7 +1094,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests that an upload can be resumed after a connection break."""
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents='a' * self.halt_size)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(True, 5)))
 
@@ -1123,7 +1124,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           contents=pickle.dumps(_ResumableUploadRetryHandler(
               5, apitools_exceptions.BadStatusCodeError,
               ('unused', 'unused', 'unused'))))
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['-D', 'cp', '--testcallbackfile',
                                test_callback_file, fpath, suri(bucket_uri)],
@@ -1147,13 +1148,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Need to reduce the JSON chunk size since streaming uploads buffer a
     # full chunk.
     boto_configs_for_test = [('GSUtil', 'json_resumable_chunk_size',
-                              str(256 * ONE_KB)),
+                              str(256 * ONE_KIB)),
                              ('Boto', 'num_retries', '2')]
     with SetBotoConfigForTest(boto_configs_for_test):
       stderr = self.RunGsUtil(
           ['-D', 'cp', '--testcallbackfile', test_callback_file, '-',
            suri(bucket_uri, 'foo')],
-          stdin='a' * 512 * ONE_KB, return_stderr=1)
+          stdin='a' * 512 * ONE_KIB, return_stderr=1)
       self.assertIn('Retrying', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
@@ -1161,7 +1162,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests that a basic resumable upload completes successfully."""
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents='a' * self.halt_size)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       self.RunGsUtil(['cp', fpath, suri(bucket_uri)])
 
@@ -1171,7 +1172,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='foo',
                                 contents='a' * self.halt_size)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       tracker_filename = GetTrackerFilePath(
           StorageUrlFromString(suri(bucket_uri, 'foo')),
@@ -1202,7 +1203,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(True, 5)))
 
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                fpath, suri(bucket_uri)],
@@ -1225,14 +1226,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                contents='a' * ONE_KB * 512)
+                                contents='a' * ONE_KIB * 512)
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(True,
-                                                          int(ONE_KB) * 384)))
+                                                          int(ONE_KIB) * 384)))
     resumable_threshold_for_test = (
-        'GSUtil', 'resumable_threshold', str(ONE_KB))
+        'GSUtil', 'resumable_threshold', str(ONE_KIB))
     resumable_chunk_size_for_test = (
-        'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
+        'GSUtil', 'json_resumable_chunk_size', str(ONE_KIB * 256))
     with SetBotoConfigForTest([resumable_threshold_for_test,
                                resumable_chunk_size_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
@@ -1240,7 +1241,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                  contents='b' * ONE_KB * 512)
+                                  contents='b' * ONE_KIB * 512)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('doesn\'t match cloud-supplied digest', stderr)
@@ -1254,14 +1255,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                contents='a' * ONE_KB * 512)
+                                contents='a' * ONE_KIB * 512)
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(True,
-                                                          int(ONE_KB) * 384)))
+                                                          int(ONE_KIB) * 384)))
     resumable_threshold_for_test = (
-        'GSUtil', 'resumable_threshold', str(ONE_KB))
+        'GSUtil', 'resumable_threshold', str(ONE_KIB))
     resumable_chunk_size_for_test = (
-        'GSUtil', 'json_resumable_chunk_size', str(ONE_KB * 256))
+        'GSUtil', 'json_resumable_chunk_size', str(ONE_KIB * 256))
     with SetBotoConfigForTest([resumable_threshold_for_test,
                                resumable_chunk_size_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
@@ -1269,7 +1270,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-                                  contents='a' * ONE_KB)
+                                  contents='a' * ONE_KIB)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1, return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
@@ -1287,8 +1288,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         StorageUrlFromString(suri(bucket_uri, 'foo')),
         TrackerFileType.UPLOAD, self.test_api)
     tracker_dir = os.path.dirname(tracker_filename)
-    fpath = self.CreateTempFile(file_name='foo', contents='a' * ONE_KB)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    fpath = self.CreateTempFile(file_name='foo', contents='a' * ONE_KIB)
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     save_mod = os.stat(tracker_dir).st_mode
 
     try:
@@ -1311,7 +1312,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
 
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                suri(object_uri), fpath],
@@ -1335,7 +1336,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       # This will create a tracker file with an ETag.
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
@@ -1358,7 +1359,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents='a' * self.halt_size)
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                suri(object_uri), fpath],
@@ -1383,9 +1384,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
-    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents='abcd' * ONE_KB)
+    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents='abcd' * ONE_KIB)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='efgh' * ONE_KB)
+                                   contents='efgh' * ONE_KIB)
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     etag_match = re.search(r'\s*ETag:\s*(.*)', stdout)
     self.assertIsNotNone(etag_match, 'Could not get object ETag')
@@ -1398,7 +1399,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     try:
       with open(tracker_filename, 'w') as tracker_fp:
         tracker_fp.write(etag)
-      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 return_stderr=True, expected_status=1)
@@ -1415,7 +1416,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests download no-ops when tracker file matches existing file."""
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
-    matching_contents = 'abcd' * ONE_KB
+    matching_contents = 'abcd' * ONE_KIB
     fpath = self.CreateTempFile(tmpdir=tmp_dir, contents=matching_contents)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents=matching_contents)
@@ -1430,7 +1431,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(tracker_filename, 'w') as tracker_fp:
       tracker_fp.write(etag)
     try:
-      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 return_stderr=True)
@@ -1445,9 +1446,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests that download overwrites when tracker file etag does not match."""
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
-    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents='abcd' * ONE_KB)
+    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents='abcd' * ONE_KIB)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='efgh' * ONE_KB)
+                                   contents='efgh' * ONE_KIB)
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     etag_match = re.search(r'\s*ETag:\s*(.*)', stdout)
     self.assertIsNotNone(etag_match, 'Could not get object ETag')
@@ -1460,7 +1461,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(tracker_filename, 'w') as tracker_fp:
       tracker_fp.write(etag)
     try:
-      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 return_stderr=True)
@@ -1468,7 +1469,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         # Ensure the file was overwritten.
         with open(fpath, 'r') as in_fp:
           contents = in_fp.read()
-          self.assertEqual(contents, 'efgh' * ONE_KB,
+          self.assertEqual(contents, 'efgh' * ONE_KIB,
                            'File not overwritten when it should have been '
                            'due to a non-matching tracker file.')
         self.assertFalse(os.path.isfile(tracker_filename))
@@ -1485,7 +1486,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject()
     random.seed(0)
     contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(ONE_KB * 128)])
+                    for _ in xrange(ONE_KIB * 128)])
     random.seed()  # Reset the seed for any other tests.
     fpath1 = self.CreateTempFile(file_name='unzipped.txt', contents=contents)
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath1), suri(object_uri)])
@@ -1510,7 +1511,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
 
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                suri(object_uri), suri(fpath2)],
@@ -1535,8 +1536,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_cp_resumable_upload_410_error(self):
     """Tests that resumable upload works with 410 errors."""
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents='a' * 2 * ONE_KB)
-    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KB))
+    fpath = self.CreateTempFile(contents='a' * 2 * ONE_KIB)
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_ResumableUploadStartOverCopyCallbackHandler(5)))
 

@@ -96,7 +96,7 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ResumableThreshold
-from gslib.util import TEN_MB
+from gslib.util import TEN_MIB
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
@@ -736,7 +736,7 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
   """
   hash_dict = {}
   if 'md5' in algs:
-    if src_obj_metadata.size and src_obj_metadata.size > TEN_MB:
+    if src_obj_metadata.size and src_obj_metadata.size > TEN_MIB:
       logger.info(
           'Computing MD5 for %s...', file_name)
     hash_dict['md5'] = md5()
@@ -796,7 +796,7 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
     checked_one = True
   if not checked_one:
     # One known way this can currently happen is when downloading objects larger
-    # than 5GB from S3 (for which the etag is not an MD5).
+    # than 5 GiB from S3 (for which the etag is not an MD5).
     logger.warn(
         'WARNING: Found no hashes to validate object downloaded from %s and '
         'uploaded to %s. Integrity cannot be assured without hashes.',
@@ -851,7 +851,7 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
           'Integrity cannot be assured without hashes.', obj_url)
     else:
     # One known way this can currently happen is when downloading objects larger
-    # than 5GB from S3 (for which the etag is not an MD5).
+    # than 5 GB from S3 (for which the etag is not an MD5).
       logger.warn(
           'WARNING: Found no hashes to validate object downloaded to %s. '
           'Integrity cannot be assured without hashes.', file_name)
@@ -1826,7 +1826,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
             serialization_dict['progress'] = download_start_point
             logger.info('Resuming download for %s', src_url.url_string)
           # Catch up our digester with the hash data.
-          if existing_file_size > TEN_MB:
+          if existing_file_size > TEN_MIB:
             for alg_name in digesters:
               logger.info(
                   'Catching up %s for %s', alg_name, download_file_name)
@@ -1993,7 +1993,7 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
   if need_to_unzip or server_gzip:
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
-    if bytes_transferred > TEN_MB:
+    if bytes_transferred > TEN_MIB:
       logger.info(
           'Uncompressing downloaded tmp file to %s...', file_name)
 

@@ -65,8 +65,8 @@ _DETAILED_HELP_TEXT = ("""
               exclude any object that ends in ".o". Can be specified multiple
               times.
 
-  -h          Prints object sizes in human-readable format (e.g., 1KB, 234MB,
-              2GB, etc.)
+  -h          Prints object sizes in human-readable format (e.g., 1 KiB,
+              234 MiB, 2GiB, etc.)
 
   -s          Display only a summary total for each argument.
 

@@ -116,7 +116,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', '-h', suri(obj_uri)], return_stdout=True)
-      self.assertEqual(stdout, '%-10s  %s\n' % ('2 KB', suri(obj_uri)))
+      self.assertEqual(stdout, '%-10s  %s\n' % ('2 KiB', suri(obj_uri)))
     _Check()
 
   def test_summary(self):

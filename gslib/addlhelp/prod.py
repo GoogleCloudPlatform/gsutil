@@ -21,7 +21,7 @@ from gslib.help_provider import HelpProvider
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   If you use gsutil in large production tasks (such as uploading or
-  downloading many GBs of data each night), there are a number of things
+  downloading many GiBs of data each night), there are a number of things
   you can do to help ensure success. Specifically, this section discusses
   how to script large production tasks around gsutil's resumable transfer
   mechanism.
@@ -32,7 +32,7 @@ _DETAILED_HELP_TEXT = ("""
   and how your script needs to be implemented around this mechanism to work
   reliably. gsutil uses resumable transfer support when you attempt to upload
   or download a file larger than a configurable threshold (by default, this
-  threshold is 2 MB). When a transfer fails partway through (e.g., because of
+  threshold is 2 MiB). When a transfer fails partway through (e.g., because of
   an intermittent network problem), gsutil uses a truncated randomized binary
   exponential backoff-and-retry strategy that by default will retry transfers up
   to 6 times over a 63 second period of time (see "gsutil help retries" for

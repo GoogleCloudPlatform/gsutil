@@ -83,7 +83,7 @@ from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNumRetries
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
-from gslib.util import TWO_MB
+from gslib.util import TWO_MIB
 from gslib.util import UnaryDictToXml
 from gslib.util import UTF8
 from gslib.util import XML_PROGRESS_CALLBACKS
@@ -420,7 +420,7 @@ class BotoTranslation(CloudApi):
     if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
       try:
         if total_size:
-          num_progress_callbacks = max(int(total_size) / TWO_MB,
+          num_progress_callbacks = max(int(total_size) / TWO_MIB,
                                        XML_PROGRESS_CALLBACKS)
         else:
           num_progress_callbacks = XML_PROGRESS_CALLBACKS
@@ -1199,7 +1199,7 @@ class BotoTranslation(CloudApi):
             binascii.unhexlify(self._GetMD5FromETag(key.etag))).rstrip('\n')
       elif self.provider == 's3':
         # S3 etags are MD5s for non-multi-part objects, but multi-part objects
-        # (which include all objects >= 5GB) have a custom checksum
+        # (which include all objects >= 5 GB) have a custom checksum
         # implementation that is not currently supported by gsutil.
         self.logger.warn(
             'Non-MD5 etag (%s) present for key %s, data integrity checks are '

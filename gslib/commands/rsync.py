@@ -44,7 +44,7 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import TEN_MB
+from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
@@ -304,23 +304,23 @@ def _ComputeNeededFileChecksums(logger, src_url_str, src_size, src_crc32c,
   dst_url = StorageUrlFromString(dst_url_str)
   if src_url.IsFileUrl():
     if dst_crc32c != _NA or dst_url.IsFileUrl():
-      if src_size > TEN_MB:
+      if src_size > TEN_MIB:
         logger.info('Computing MD5 for %s...', src_url_str)
       with open(src_url.object_name, 'rb') as fp:
         src_crc32c = CalculateB64EncodedCrc32cFromContents(fp)
     elif dst_md5 != _NA or dst_url.IsFileUrl():
-      if dst_size > TEN_MB:
+      if dst_size > TEN_MIB:
         logger.info('Computing MD5 for %s...', dst_url_str)
       with open(src_url.object_name, 'rb') as fp:
         src_md5 = CalculateB64EncodedMd5FromContents(fp)
   if dst_url.IsFileUrl():
     if src_crc32c != _NA:
-      if src_size > TEN_MB:
+      if src_size > TEN_MIB:
         logger.info('Computing CRC32C for %s...', src_url_str)
       with open(dst_url.object_name, 'rb') as fp:
         dst_crc32c = CalculateB64EncodedCrc32cFromContents(fp)
     elif src_md5 != _NA:
-      if dst_size > TEN_MB:
+      if dst_size > TEN_MIB:
         logger.info('Computing CRC32C for %s...', dst_url_str)
       with open(dst_url.object_name, 'rb') as fp:
         dst_md5 = CalculateB64EncodedMd5FromContents(fp)
@@ -567,7 +567,7 @@ class _DiffIterator(object):
       True if issued warning.
     """
     # One known way this can currently happen is when rsync'ing objects larger
-    # than 5GB from S3 (for which the etag is not an MD5).
+    # than 5 GB from S3 (for which the etag is not an MD5).
     if (StorageUrlFromString(url_str).IsCloudUrl()
         and crc32c == _NA and md5 == _NA):
       self.logger.warn(

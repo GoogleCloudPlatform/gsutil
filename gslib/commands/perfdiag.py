@@ -113,7 +113,9 @@ _DETAILED_HELP_TEXT = ("""
 
   -s          Sets the size (in bytes) of the test file used to perform read
               and write throughput tests. The default is 1 MiB. This can also
-              be specified using byte suffixes. Examples: 1M, 500KB, etc.
+              be specified using byte suffixes such as 500K or 1M. Note: these
+              values are interpreted as multiples of 1024 (K=1024, M=1024*1024,
+              etc.)
 
   -t          Sets the list of diagnostic tests to perform. The default is to
               run all diagnostic tests. Must be a comma-separated list
@@ -251,9 +253,9 @@ class PerfDiagCommand(Command):
   # parameter.
   test_file_sizes = (
       0,  # 0 bytes
-      1024,  # 1 KB
-      102400,  # 100 KB
-      1048576,  # 1MB
+      1024,  # 1 KiB
+      102400,  # 100 KiB
+      1048576,  # 1 MiB
   )
 
   # Test names.
@@ -279,12 +281,12 @@ class PerfDiagCommand(Command):
   # the socket breaking.
   MAX_TOTAL_RETRIES = 10
 
-  # The default buffer size in boto's Key object is set to 8KB. This becomes a
+  # The default buffer size in boto's Key object is set to 8 KiB. This becomes a
   # bottleneck at high throughput rates, so we increase it.
   KEY_BUFFER_SIZE = 16384
 
   # The maximum number of bytes to generate pseudo-randomly before beginning
-  # to repeat bytes. This number was chosen as the next prime larger than 5 MB.
+  # to repeat bytes. This number was chosen as the next prime larger than 5 MiB.
   MAX_UNIQUE_RANDOM_BYTES = 5242883
 
   # Maximum amount of time, in seconds, we will wait for object listings to
@@ -367,7 +369,7 @@ class PerfDiagCommand(Command):
       self.latency_files.append(fpath)
 
     # Creating a file for warming up the TCP connection.
-    self.tcp_warmup_file = _MakeFile(5 * 1024 * 1024)  # 5 Megabytes.
+    self.tcp_warmup_file = _MakeFile(5 * 1024 * 1024)  # 5 Mebibytes.
     # Remote file to use for TCP warmup.
     self.tcp_warmup_remote_file = (str(self.bucket_url) +
                                    os.path.basename(self.tcp_warmup_file))
@@ -1401,9 +1403,9 @@ class PerfDiagCommand(Command):
             self.thru_filesize = HumanReadableToBytes(a)
           except ValueError:
             raise CommandException('Invalid -s parameter.')
-          if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GB.
+          if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GiB.
             raise CommandException(
-                'Maximum throughput file size parameter (-s) is 20GB.')
+                'Maximum throughput file size parameter (-s) is 20 GiB.')
         if o == '-t':
           self.diag_tests = []
           for test_name in a.strip().split(','):

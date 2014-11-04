@@ -248,7 +248,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     def _Check4():
       stdout = self.RunGsUtil(['ls', '-lh', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertIn('2 KB', stdout)
+      self.assertIn('2 KiB', stdout)
     _Check4()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -256,7 +256,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     def _Check5():
       stdout = self.RunGsUtil(['ls', '-alh', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertIn('2 KB', stdout)
+      self.assertIn('2 KiB', stdout)
     _Check5()
 
   @unittest.skipIf(IS_WINDOWS,

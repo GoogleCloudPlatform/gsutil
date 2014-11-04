@@ -40,7 +40,7 @@ from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
-from gslib.util import EIGHT_MB
+from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
 
 
@@ -366,7 +366,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # if you're already at the upper limit), increasing rsync_buffer_lines will
 # cause gsutil to use fewer file handles, but at the cost of more memory. With
 # rsync_buffer_lines set to 32000 and assuming a typical URL is 100 bytes
-# long, gsutil will require approximately 10MB of memory while building
+# long, gsutil will require approximately 10 MiB of memory while building
 # the synchronization state, and will require approximately 60 open file
 # descriptors to build the synchronization state over all 1M source and 1M
 # destination URLs. Memory and file descriptors are only consumed while
@@ -423,7 +423,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # components if ceil(file_size / parallel_composite_upload_component_size) is
 # less than MAX_COMPONENT_COUNT.
 # Values can be provided either in bytes or as human-readable values
-# (e.g., "150M" to represent 150 megabytes)
+# (e.g., "150M" to represent 150 mebibytes)
 #
 # Note: At present parallel composite uploads are disabled by default, because
 # using composite objects requires a compiled crcmod (see "gsutil help crcmod"),
@@ -483,7 +483,7 @@ content_language = en
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
        'hash_always': CHECK_HASH_ALWAYS,
        'hash_never': CHECK_HASH_NEVER,
-       'resumable_threshold': EIGHT_MB,
+       'resumable_threshold': EIGHT_MIB,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
        'parallel_composite_upload_threshold': (

@@ -59,10 +59,10 @@ try:
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
-ONE_KB = 1024
-TWO_MB = 2 * 1024 * 1024
-EIGHT_MB = 8 * 1024 * 1024
-TEN_MB = 10 * 1024 * 1024
+ONE_KIB = 1024
+TWO_MIB = 2 * 1024 * 1024
+EIGHT_MIB = 8 * 1024 * 1024
+TEN_MIB = 10 * 1024 * 1024
 DEFAULT_FILE_BUFFER_SIZE = 8192
 _DEFAULT_LINES = 25
 
@@ -71,13 +71,13 @@ _DEFAULT_LINES = 25
 # timeout.
 SSL_TIMEOUT = 60
 
-# Start with a progress callback every 64KB during uploads/downloads (JSON API).
-# Callback implementation should back off until it hits the maximum size
+# Start with a progress callback every 64 KiB during uploads/downloads (JSON
+# API). Callback implementation should back off until it hits the maximum size
 # so that callbacks do not create huge amounts of log output.
 START_CALLBACK_PER_BYTES = 1024*64
 MAX_CALLBACK_PER_BYTES = 1024*1024*100
 
-# Upload/download files in 8KB chunks over the HTTP connection.
+# Upload/download files in 8 KiB chunks over the HTTP connection.
 TRANSFER_BUFFER_SIZE = 1024*8
 
 # Default number of progress callbacks during transfer (XML API).
@@ -86,7 +86,7 @@ XML_PROGRESS_CALLBACKS = 10
 # For files >= this size, output a message indicating that we're running an
 # operation on the file (like hashing or gzipping) so it does not appear to the
 # user that the command is hanging.
-MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MB
+MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MiB
 
 NO_MAX = sys.maxint
 
@@ -99,12 +99,12 @@ RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 # Binary exponentiation strings.
 _EXP_STRINGS = [
     (0, 'B', 'bit'),
-    (10, 'KB', 'Kbit', 'K'),
-    (20, 'MB', 'Mbit', 'M'),
-    (30, 'GB', 'Gbit', 'G'),
-    (40, 'TB', 'Tbit', 'T'),
-    (50, 'PB', 'Pbit', 'P'),
-    (60, 'EB', 'Ebit', 'E'),
+    (10, 'KiB', 'Kibit', 'K'),
+    (20, 'MiB', 'Mibit', 'M'),
+    (30, 'GiB', 'Gibit', 'G'),
+    (40, 'TiB', 'Tibit', 'T'),
+    (50, 'PiB', 'Pibit', 'P'),
+    (60, 'EiB', 'Eibit', 'E'),
 ]
 
 configured_certs_file = None
@@ -426,7 +426,7 @@ def GetMaxRetryDelay():
 
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be
-# in multiples of 256KB). Overridable for testing.
+# in multiples of 256KiB). Overridable for testing.
 def GetJsonResumableChunkSize():
   chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
                              1024*1024*100L)
@@ -451,7 +451,7 @@ def MakeHumanReadable(num):
     num: The number, in bytes.
 
   Returns:
-    A string form of the number using size abbreviations (KB, MB, etc.).
+    A string form of the number using size abbreviations (KiB, MiB, etc.).
   """
   i, rounded_val = _RoundToNearestExponent(num)
   return '%g %s' % (rounded_val, _EXP_STRINGS[i][1])
@@ -474,7 +474,7 @@ def HumanReadableToBytes(human_string):
   """Tries to convert a human-readable string to a number of bytes.
 
   Args:
-    human_string: A string supplied by user, e.g. '1M', '3 GB'.
+    human_string: A string supplied by user, e.g. '1M', '3 GiB'.
   Returns:
     An integer containing the number of bytes.
   Raises:
@@ -599,7 +599,7 @@ BOTO_IS_SECURE = _BotoIsSecure()
 
 
 def ResumableThreshold():
-  return config.getint('GSUtil', 'resumable_threshold', EIGHT_MB)
+  return config.getint('GSUtil', 'resumable_threshold', EIGHT_MIB)
 
 
 def AddAcceptEncoding(headers):

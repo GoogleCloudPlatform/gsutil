@@ -122,7 +122,7 @@ _DETAILED_HELP_TEXT = ("""
 
        2276224  2012-03-02T19:25:17Z  gs://bucket/obj1
        3914624  2012-03-02T19:30:27Z  gs://bucket/obj2
-    TOTAL: 2 objects, 6190848 bytes (5.9 MB)
+    TOTAL: 2 objects, 6190848 bytes (5.9 MiB)
 
   Note that the total listed in parentheses above is in mebibytes (or gibibytes,
   tebibytes, etc.), which corresponds to the unit of billing measurement for
@@ -156,7 +156,7 @@ _DETAILED_HELP_TEXT = ("""
         "role": "OWNER"
       }
     ]
-    TOTAL: 1 objects, 2276224 bytes (2.17 MB)
+    TOTAL: 1 objects, 2276224 bytes (2.17 MiB)
 
   See also "gsutil help acl" for getting a more readable version of the ACL.
 
@@ -206,7 +206,7 @@ _DETAILED_HELP_TEXT = ("""
   -b          Prints info about the bucket when used with a bucket URL.
 
   -h          When used with -l, prints object sizes in human readable format
-              (e.g., 1KB, 234MB, 2GB, etc.)
+              (e.g., 1 KiB, 234 MiB, 2 GiB, etc.)
 
   -p proj_id  Specifies the project ID to use for listing buckets.
 
