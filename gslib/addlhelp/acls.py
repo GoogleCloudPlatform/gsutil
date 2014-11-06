@@ -96,11 +96,25 @@ _DETAILED_HELP_TEXT = ("""
     Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
     such objects. For help doing this, see 'gsutil help setmeta'.
 
+    NOTE: Setting a bucket ACL to public-read will remove all OWNER and WRITE
+    permissions from everyone except the project owner group. Setting an object
+    ACL to public-read will remove all OWNER and WRITE permissions from
+    everyone except the object owner. For this reason, we recommend using
+    the "acl ch" command to make these changes; see "gsutil help acl ch" for
+    details.
+
   public-read-write
     Gives all users READ and WRITE permission. This ACL applies only to buckets.
     NOTE: Setting a bucket to public-read-write will allow anyone on the
     Internet to upload anything to your bucket. You will be responsible for this
     content.
+
+    NOTE: Setting a bucket ACL to public-read-write will remove all OWNER
+    permissions from everyone except the project owner group. Setting an object
+    ACL to public-read-write will remove all OWNER permissions from
+    everyone except the object owner. For this reason, we recommend using
+    the "acl ch" command to make these changes; see "gsutil help acl ch" for
+    details.
 
   authenticated-read
     Gives the requester OWNER permission and gives all authenticated

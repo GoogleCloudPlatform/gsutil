@@ -66,17 +66,11 @@ _SET_DESCRIPTION = """
 
     gsutil acl set private gs://bucket
 
-  or:
-
-    gsutil acl set public-read gs://bucket/object
+  If you want to make an object or bucket publicly readable or writable, it is
+  recommended to use "acl ch", to avoid accidentally removing OWNER permissions.
+  See "gsutil acl help ch" for details.
 
   See "gsutil help acls" for a list of all canned ACLs.
-
-  NOTE: By default, publicly readable objects are served with a Cache-Control
-  header allowing such objects to be cached for 3600 seconds. If you need to
-  ensure that updates become visible immediately, you should set a
-  Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
-  such objects. For help doing this, see 'gsutil help setmeta'.
 
   If you want to define more fine-grained control over your data, you can
   retrieve an ACL using the "acl get" command, save the output to a file, edit
@@ -135,7 +129,22 @@ _CH_DESCRIPTION = """
 
 <B>CH EXAMPLES</B>
   Examples for "ch" sub-command:
+  
+  Grant anyone on the internet READ access to the object example-object:
+  
+    gsutil acl ch -u AllUsers:R gs://example-bucket/example-object
 
+  NOTE: By default, publicly readable objects are served with a Cache-Control
+  header allowing such objects to be cached for 3600 seconds. If you need to
+  ensure that updates become visible immediately, you should set a
+  Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
+  such objects. For help doing this, see "gsutil help setmeta".
+
+  Grant anyone on the internet WRITE access to the bucket example-bucket
+  (WARNING: this is not recommended as you will be responsible for the content):
+
+    gsutil acl ch -u AllUsers:W gs://example-bucket
+    
   Grant the user john.doe@example.com WRITE access to the bucket
   example-bucket:
 
