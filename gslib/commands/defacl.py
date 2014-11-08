@@ -124,9 +124,8 @@ class DefAclCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          # TODO: Support completion of canned ACLs.
           'set': [
-              CommandArgument.MakeNFileURLsArgument(1),
+              CommandArgument.MakeFileURLOrCannedACLArgument(),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [

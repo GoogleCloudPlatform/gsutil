@@ -27,6 +27,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.tests.util import WorkingDirectory
 from gslib.util import GetTabCompletionCacheFilename
 
 
@@ -185,6 +186,31 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtilTabCompletion(['ls', request],
                                 expected_results=[expected_result])
+
+  def test_acl_argument(self):
+    """Tests tab completion for ACL arguments."""
+
+    local_file = 'a_local_file'
+    local_dir = self.CreateTempDir(test_files=[local_file])
+
+    local_file_request = '%s%s' % (local_dir, os.sep)
+    expected_local_file_result = '%s ' % os.path.join(local_dir, local_file)
+
+    # Should invoke File URL completer which should match the local file.
+    self.RunGsUtilTabCompletion(['acl', 'set', local_file_request],
+                                expected_results=[expected_local_file_result])
+
+    # Should match canned ACL name.
+    self.RunGsUtilTabCompletion(['acl', 'set', 'priv'],
+                                expected_results=['private '])
+
+    local_file = 'priv_file'
+    local_dir = self.CreateTempDir(test_files=[local_file])
+    with WorkingDirectory(local_dir):
+      # Should match both a file and a canned ACL since argument takes
+      # either one.
+      self.RunGsUtilTabCompletion(['acl', 'set', 'priv'],
+                                  expected_results=[local_file, 'private'])
 
 
 def _WriteTabCompletionCache(prefix, results, timestamp=None,

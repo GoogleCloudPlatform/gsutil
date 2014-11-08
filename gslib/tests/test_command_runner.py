@@ -30,6 +30,7 @@ from gslib.exception import CommandException
 from gslib.tab_complete import CloudObjectCompleter
 from gslib.tab_complete import CloudOrLocalObjectCompleter
 from gslib.tab_complete import LocalObjectCompleter
+from gslib.tab_complete import LocalObjectOrCannedACLCompleter
 from gslib.tab_complete import NoOpCompleter
 import gslib.tests.testcase as testcase
 import gslib.tests.util as util
@@ -104,6 +105,7 @@ class FakeCommandWithCompleters(Command):
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
           CommandArgument.MakeFreeTextArgument(),
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          CommandArgument.MakeFileURLOrCannedACLArgument(),
       ]
   )
 
@@ -328,7 +330,7 @@ class TestCommandRunnerUnitTests(
 
     self.assertEqual(1, len(subparsers.parsers))
     parser = subparsers.parsers[0]
-    self.assertEqual(5, len(parser.arguments))
+    self.assertEqual(6, len(parser.arguments))
     self.assertEqual(CloudObjectCompleter, type(parser.arguments[0].completer))
     self.assertEqual(LocalObjectCompleter, type(parser.arguments[1].completer))
     self.assertEqual(
@@ -336,6 +338,8 @@ class TestCommandRunnerUnitTests(
     self.assertEqual(
         NoOpCompleter, type(parser.arguments[3].completer))
     self.assertEqual(CloudObjectCompleter, type(parser.arguments[4].completer))
+    self.assertEqual(
+        LocalObjectOrCannedACLCompleter, type(parser.arguments[5].completer))
 
   # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):

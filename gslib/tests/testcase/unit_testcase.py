@@ -32,6 +32,7 @@ from gslib.tests.mock_logging_handler import MockLoggingHandler
 from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
+from gslib.tests.util import WorkingDirectory
 from gslib.util import GsutilStreamHandler
 
 
@@ -185,26 +186,16 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     sys.stdout.truncate()
     sys.stderr.truncate()
 
-    cwd_sav = None
-    try:
-      cwd_sav = os.getcwd()
-    except OSError:
-      # This can happen if the current working directory no longer exists.
-      pass
-
     mock_log_handler = MockLoggingHandler()
     logging.getLogger(command_name).addHandler(mock_log_handler)
 
     try:
-      if cwd:
-        os.chdir(cwd)
-      self.command_runner.RunNamedCommand(
-          command_name, args=args, headers=headers, debug=debug,
-          parallel_operations=False, test_method=test_method, do_shutdown=False)
+      with WorkingDirectory(cwd):
+        self.command_runner.RunNamedCommand(
+            command_name, args=args, headers=headers, debug=debug,
+            parallel_operations=False, test_method=test_method,
+            do_shutdown=False)
     finally:
-      if cwd and cwd_sav:
-        os.chdir(cwd_sav)
-
       sys.stdout.seek(0)
       stdout = sys.stdout.read()
       sys.stderr.seek(0)

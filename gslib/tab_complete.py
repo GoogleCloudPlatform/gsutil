@@ -21,6 +21,7 @@ import time
 
 import boto
 
+from boto.gs.acl import CannedACLStrings
 from gslib.storage_url import IsFileUrlString
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
@@ -43,6 +44,7 @@ class CompleterType(object):
   CLOUD_OBJECT = 'cloud_object'
   CLOUD_OR_LOCAL_OBJECT = 'cloud_or_local_object'
   LOCAL_OBJECT = 'local_object'
+  LOCAL_OBJECT_OR_CANNED_ACL = 'local_object_or_canned_acl'
   NO_OP = 'no_op'
 
 
@@ -58,6 +60,21 @@ class LocalObjectCompleter(object):
 
   def __call__(self, prefix, **kwargs):
     return self.files_completer(prefix, **kwargs)
+
+
+class LocalObjectOrCannedACLCompleter(object):
+  """Completer object for local files and canned ACLs.
+
+  Currently, only Google Cloud Storage canned ACL names are supported.
+  """
+
+  def __init__(self):
+    self.local_object_completer = LocalObjectCompleter()
+
+  def __call__(self, prefix, **kwargs):
+    local_objects = self.local_object_completer(prefix, **kwargs)
+    canned_acls = [acl for acl in CannedACLStrings if acl.startswith(prefix)]
+    return local_objects + canned_acls
 
 
 class TabCompletionCache(object):
@@ -299,6 +316,8 @@ def MakeCompleter(completer_type, gsutil_api):
     return CloudOrLocalObjectCompleter(gsutil_api)
   elif completer_type == CompleterType.LOCAL_OBJECT:
     return LocalObjectCompleter()
+  elif completer_type == CompleterType.LOCAL_OBJECT_OR_CANNED_ACL:
+    return LocalObjectOrCannedACLCompleter()
   elif completer_type == CompleterType.CLOUD_BUCKET:
     return CloudObjectCompleter(gsutil_api, bucket_only=True)
   elif completer_type == CompleterType.CLOUD_OBJECT:

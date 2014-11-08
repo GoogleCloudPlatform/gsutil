@@ -90,6 +90,12 @@ class CommandArgument(object):
         'file', nargs=n, completer=CompleterType.LOCAL_OBJECT)
 
   @staticmethod
+  def MakeFileURLOrCannedACLArgument():
+    """Constructs an argument that takes a File URL or a canned ACL."""
+    return CommandArgument(
+        'file', nargs=1, completer=CompleterType.LOCAL_OBJECT_OR_CANNED_ACL)
+
+  @staticmethod
   def MakeFreeTextArgument():
     """Constructs an argument that takes arbitrary text."""
     return CommandArgument('text', completer=CompleterType.NO_OP)

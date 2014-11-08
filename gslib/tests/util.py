@@ -315,3 +315,31 @@ def GetTestNames():
     if m:
       names.append(m.group('name'))
   return names
+
+
+@contextmanager
+def WorkingDirectory(new_working_directory):
+  """Changes the working directory for the duration of a 'with' call.
+
+  Args:
+    new_working_directory: The directory to switch to before executing wrapped
+      code. A None value indicates that no switching is necessary.
+
+  Yields:
+    Once after working directory has been changed.
+  """
+  prev_working_directory = None
+  try:
+    prev_working_directory = os.getcwd()
+  except OSError:
+    # This can happen if the current working directory no longer exists.
+    pass
+
+  if new_working_directory:
+    os.chdir(new_working_directory)
+
+  try:
+    yield
+  finally:
+    if new_working_directory and prev_working_directory:
+      os.chdir(prev_working_directory)
