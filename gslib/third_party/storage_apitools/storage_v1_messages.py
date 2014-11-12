@@ -20,7 +20,7 @@ from gslib.third_party.protorpc import message_types
 from gslib.third_party.protorpc import messages
 
 from gslib.third_party.storage_apitools import encoding
-
+from gslib.third_party.storage_apitools import extra_types
 
 package = 'storage'
 
@@ -143,7 +143,7 @@ class Bucket(messages.Message):
         """
 
         age = messages.IntegerField(1, variant=messages.Variant.INT32)
-        createdBefore = message_types.DateTimeField(2)
+        createdBefore = extra_types.DateField(2)
         isLive = messages.BooleanField(3)
         numNewerVersions = messages.IntegerField(4, variant=messages.Variant.INT32)
 

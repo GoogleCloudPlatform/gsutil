@@ -47,6 +47,11 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
       '{"rule": [{"action": {"type": "Delete"}, "condition": {"age": 365}}]}\n')
   lifecycle_json_obj = json.loads(lifecycle_doc)
 
+  lifecycle_created_before_doc = (
+      '{"rule": [{"action": {"type": "Delete"}, "condition": '
+      '{"createdBefore": "2014-10-01"}}]}\n')
+  lifecycle_created_before_json_obj = json.loads(lifecycle_created_before_doc)
+
   no_lifecycle_config = 'has no lifecycle configuration.'
 
   def test_lifecycle_translation(self):
@@ -81,6 +86,14 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
                             return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
+
+  def test_created_before_lifecycle(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=self.lifecycle_created_before_doc)
+    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertEqual(json.loads(stdout), self.lifecycle_created_before_json_obj)
 
   def test_bad_lifecycle(self):
     bucket_uri = self.CreateBucket()

@@ -18,6 +18,7 @@ from protorpc.
 """
 
 import collections
+import datetime
 import json
 import numbers
 
@@ -30,6 +31,7 @@ from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import util
 
 __all__ = [
+    'DateField',
     'DateTimeMessage',
     'JsonArray',
     'JsonObject',
@@ -42,6 +44,27 @@ __all__ = [
 # pylint:disable=invalid-name
 DateTimeMessage = message_types.DateTimeMessage
 # pylint:enable=invalid-name
+
+
+class DateField(messages.Field):
+  """Field definition for Date values."""
+
+  # We insert our own metaclass here to avoid letting ProtoRPC
+  # register this as the default field type for strings.
+  #  * since ProtoRPC does this via metaclasses, we don't have any
+  #    choice but to use one ourselves
+  #  * since a subclass's metaclass must inherit from its superclass's
+  #    metaclass, we're forced to have this hard-to-read inheritance.
+  #
+  # pylint: disable=invalid-name
+  class __metaclass__(messages.Field.__metaclass__):
+
+    def __init__(cls, name, bases, dct):  # pylint: disable=no-self-argument
+      super(messages.Field.__metaclass__, cls).__init__(name, bases, dct)
+
+  VARIANTS = frozenset([messages.Variant.STRING])
+  DEFAULT_VARIANT = messages.Variant.STRING
+  type = datetime.date
 
 
 def _ValidateJsonValue(json_value):
@@ -244,3 +267,18 @@ def _DecodeInt64Field(unused_field, value):
 encoding.RegisterFieldTypeCodec(_EncodeInt64Field, _DecodeInt64Field)(
     messages.IntegerField)
 
+
+def _EncodeDateField(field, value):
+  """Encoder for datetime.date objects."""
+  if field.repeated:
+    result = [d.isoformat() for d in value]
+  else:
+    result = value.isoformat()
+  return encoding.CodecResult(value=result, complete=True)
+
+
+def _DecodeDateField(unused_field, value):
+  date = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+  return encoding.CodecResult(value=date, complete=True)
+
+encoding.RegisterFieldTypeCodec(_EncodeDateField, _DecodeDateField)(DateField)

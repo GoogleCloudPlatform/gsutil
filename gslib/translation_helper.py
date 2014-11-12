@@ -476,8 +476,7 @@ class LifecycleTranslation(object):
   @classmethod
   def TranslateBotoLifecycleTimestamp(cls, lifecycle_datetime):
     """Parses the timestamp from the boto lifecycle into a datetime object."""
-    fmt = '%Y-%m-%d'
-    return datetime.datetime.strptime(lifecycle_datetime, fmt)
+    return datetime.datetime.strptime(lifecycle_datetime, '%Y-%m-%d').date()
 
 
 class CorsTranslation(object):
