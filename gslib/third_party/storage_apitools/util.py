@@ -98,3 +98,34 @@ def CalculateWaitForRetry(retry_attempt, max_wait=60):
   wait_time = 2 ** retry_attempt
   max_jitter = (2 ** retry_attempt) / 2
   return min(wait_time + random.randrange(-max_jitter, max_jitter), max_wait)
+
+
+def AcceptableMimeType(accept_patterns, mime_type):
+  """Return True iff mime_type is acceptable for one of accept_patterns.
+
+  Note that this function assumes that all patterns in accept_patterns
+  will be simple types of the form "type/subtype", where one or both
+  of these can be "*". We do not support parameters (i.e. "; q=") in
+  patterns.
+
+  Args:
+    accept_patterns: list of acceptable MIME types.
+    mime_type: the mime type we would like to match.
+
+  Returns:
+    Whether or not mime_type matches (at least) one of these patterns.
+  """
+  unsupported_patterns = [p for p in accept_patterns if ';' in p]
+  if unsupported_patterns:
+    raise exceptions.GeneratedClientError(
+        'MIME patterns with parameter unsupported: "%s"' % ', '.join(
+            unsupported_patterns))
+  def MimeTypeMatches(pattern, mime_type):
+    """Return True iff mime_type is acceptable for pattern."""
+    # Some systems use a single '*' instead of '*/*'.
+    if pattern == '*':
+      pattern = '*/*'
+    return all(accept in ('*', provided) for accept, provided
+               in zip(pattern.split('/'), mime_type.split('/')))
+
+  return any(MimeTypeMatches(pattern, mime_type) for pattern in accept_patterns)

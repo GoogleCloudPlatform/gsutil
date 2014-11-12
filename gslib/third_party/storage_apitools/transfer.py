@@ -25,8 +25,6 @@ import os
 import StringIO
 import threading
 
-from apiclient import mimeparse
-
 from gslib.third_party.storage_apitools import buffered_stream
 from gslib.third_party.storage_apitools import exceptions
 from gslib.third_party.storage_apitools import http_wrapper
@@ -579,7 +577,7 @@ class Upload(_Transfer):
           'Upload too big: %s larger than max size %s' % (
               self.total_size, upload_config.max_size))
     # Validate mime type
-    if not mimeparse.best_match(upload_config.accept, self.mime_type):
+    if not util.AcceptableMimeType(upload_config.accept, self.mime_type):
       raise exceptions.InvalidUserInputError(
           'MIME type %s does not match any accepted MIME ranges %s' % (
               self.mime_type, upload_config.accept))
