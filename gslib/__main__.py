@@ -301,9 +301,9 @@ def main():
       _ConfigureLogging(level=logging.WARNING)
     else:
       _ConfigureLogging(level=logging.INFO)
-      # apiclient and oauth2client use info logging in places that would better
-      # correspond to gsutil's debug logging (e.g., when refreshing access
-      # tokens).
+      # oauth2client uses info logging in places that would better
+      # correspond to gsutil's debug logging (e.g., when refreshing
+      # access tokens).
       oauth2client.client.logger.setLevel(logging.WARNING)
 
     if not CERTIFICATE_VALIDATION_ENABLED:

@@ -38,11 +38,12 @@ requires = [
     'boto==2.30.0',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.8',
-    'google-api-python-client>=1.1',
     'httplib2>=0.8',
+    'oauth2client>=1.4.1',
     'pyOpenSSL>=0.13',
     'python-gflags>=2.0',
     'retry_decorator>=1.0.0',
+    'six>=1.8.0',
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',

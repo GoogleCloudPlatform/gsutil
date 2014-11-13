@@ -4,9 +4,6 @@
 [submodule "third_party/httplib2"]
 	path = third_party/httplib2
 	url = git://github.com/jcgregorio/httplib2.git
-[submodule "third_party/google-api-python-client"]
-	path = third_party/google-api-python-client
-	url = git://github.com/gsutil-mirrors/google-api-python-client.git
 [submodule "third_party/python-gflags"]
 	path = third_party/python-gflags
 	url = git://github.com/gsutil-mirrors/python-gflags.git
@@ -25,3 +22,9 @@
 [submodule "third_party/gcs-oauth2-boto-plugin"]
 	path = third_party/gcs-oauth2-boto-plugin
 	url = https://github.com/GoogleCloudPlatform/gcs-oauth2-boto-plugin.git
+[submodule "third_party/oauth2client"]
+	path = third_party/oauth2client
+	url = https://github.com/google/oauth2client.git
+[submodule "third_party/six"]
+	path = third_party/six
+	url = https://github.com/gsutil-mirrors/six.git

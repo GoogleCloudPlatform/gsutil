@@ -35,7 +35,6 @@ import subprocess
 import tempfile
 import time
 
-from apiclient import errors as apiclient_errors
 import boto
 import boto.gs.connection
 
@@ -456,14 +455,9 @@ class PerfDiagCommand(Command):
         if total_retried > self.MAX_TOTAL_RETRIES:
           self.logger.info('Reached maximum total retries. Not retrying.')
           break
-        if (isinstance(e, apiclient_errors.HttpError) or
-            isinstance(e, ServiceException)):
-          if isinstance(e, apiclient_errors.HttpError):
-            status = e.resp.status
-          else:
-            status = e.status
-          if status >= 500:
-            self.error_responses_by_code[status] += 1
+        if isinstance(e, ServiceException):
+          if e.status >= 500:
+            self.error_responses_by_code[e.status] += 1
             self.total_requests += 1
             self.request_errors += 1
             server_error_retried += 1
