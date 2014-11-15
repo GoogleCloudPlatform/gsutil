@@ -1,3 +1,54 @@
+Release 4.7 (release date: 2014-11-17)
+=======================================
+New Features
+------------
+- Tab completion now works on gs:// URLs (for Cloud SDK installs only).
+  To install via Cloud SDK, see https://cloud.google.com/sdk/#Quick_Start
+- Streaming uploads (with source URL "-") using the JSON API now buffer
+  in-memory up to 100MB, allowing large streams to be retried in the event
+  of network flakiness or service errors.
+- Resumable uploads that receive a fatal service error (typically a 410)
+  are now automatically retried from the beginning.
+
+Bug Fixes
+---------
+- Fixed an apitools bug that impacted upload performance and caused
+  "Retrying from byte __ after exception" to print after every 100MiB.
+- Fixed _$folder$ placeholder object detection on versioned buckets.
+- Removed an unnecessary credential check on load which increased
+  startup time by over one second in some cases.
+- SignURL now properly retries when checking if the signed object is
+  readable.
+- Files with both Content-Encoding and Content-Type gzip are now properly
+  removed when hash validation fails (only one of the two should be set).
+- The x-goog-if-generation-match:0 header now works properly with the XML API.
+- Fixed a bug that caused "defacl ch" on a bucket with a private ACL to fail.
+- The rm command now properly supports precondition headers.
+- Fixed a bug that caused large streaming uploads to fail with the message
+  "Failure: length too large" when using the JSON API.
+- Fixed a bug that caused JSON lifecycle configurations with createdBefore
+  conditions to fail with a DecodeError.
+
+Other Changes
+-------------
+- Byte counts now display accurate abbreviations of binary sizing. For example,
+  messages previously labeled MB are now properly labeled MiB to indicate
+  2**20 bytes. Only the labeling changed - the actual sizes were always binary.
+- Improved Cloud SDK integration, including improved error messages
+  and instructions.
+- The num_retries .boto configuration value now applies to all requests
+  (previously it was ignored for JSON API requests).
+- rsync now works with non-existent destination subdirectories.
+- Raised the default resumable upload threshold from 2MB to 8MB to
+  improve performance.
+- Benign retry messages now print only when debug mode is enabled via the
+  top-level -d flag.
+- The top-level -q flag now suppresses suggestions to use the -m flag.
+- Command synopsis is now output when the wrong number of arguments are
+  provided.
+- Removed dependency on google-api-python-client module, added dependencies on
+  oauth2client and six modules.
+
 Release 4.6 (release date: 2014-09-08)
 =======================================
 
