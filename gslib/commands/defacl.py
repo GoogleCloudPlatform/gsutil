@@ -152,12 +152,11 @@ class DefAclCommand(Command):
   def _CalculateUrlsStartArg(self):
     if not self.args:
       self.RaiseWrongNumberOfArgumentsException()
-    if self.args[0].lower() == 'set':
-      return 2
-    elif self.command_alias_used == 'getdefacl':
-      return 0
-    else:
+    if (self.args[0].lower() == 'set' or
+        self.command_alias_used == 'setdefacl'):
       return 1
+    else:
+      return 0
 
   def _SetDefAcl(self):
     if not StorageUrlFromString(self.args[-1]).IsBucket():
