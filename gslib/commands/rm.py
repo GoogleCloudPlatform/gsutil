@@ -30,10 +30,12 @@ from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import Retry
+from gslib.util import StdinIterator
 
 
 _SYNOPSIS = """
   gsutil rm [-f] [-R] url...
+  gsutil rm [-f] [-R] -I
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -82,6 +84,14 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil -m rm -R gs://my_bucket/subdir
 
+  You can pass a list of URLs (one per line) to remove on stdin instead of as
+  command line arguments by using the -I option. This allows you to use gsutil
+  in a pipeline to remove objects identified by a program, such as:
+
+    some_program | gsutil -m rm -I
+
+  The contents of stdin can name cloud URLs and wildcards of cloud URLs.
+
   Note that gsutil rm will refuse to remove files from the local
   file system. For example this will fail:
 
@@ -110,6 +120,10 @@ older object versions (see "gsutil help lifecycle").
               could not be removed, gsutil's exit status will be non-zero even
               if this flag is set. This option is implicitly set when running
               "gsutil -m rm ...".
+
+  -I          Causes gsutil to read the list of objects to remove from stdin.
+              This allows you to run a program that generates the list of
+              objects to remove.
 
   -R, -r      Causes bucket or bucket subdirectory contents (all objects and
               subdirectories that it contains) to be removed recursively. If
@@ -150,9 +164,9 @@ class RmCommand(Command):
       'rm',
       command_name_aliases=['del', 'delete', 'remove'],
       usage_synopsis=_SYNOPSIS,
-      min_args=1,
+      min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='afrR',
+      supported_sub_args='afIrR',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -177,6 +191,7 @@ class RmCommand(Command):
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
     self.continue_on_error = False
+    self.read_args_from_stdin = False
     self.all_versions = False
     if self.sub_opts:
       for o, unused_a in self.sub_opts:
@@ -184,15 +199,27 @@ class RmCommand(Command):
           self.all_versions = True
         elif o == '-f':
           self.continue_on_error = True
+        elif o == '-I':
+          self.read_args_from_stdin = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
           self.all_versions = True
+
+    if self.read_args_from_stdin:
+      if self.args:
+        raise CommandException('No arguments allowed with the -I flag.')
+      url_strs = StdinIterator()
+    else:
+      if not self.args:
+        raise CommandException('The rm command (without -I) expects at '
+                               'least one URL.')
+      url_strs = self.args
 
     bucket_urls_to_delete = []
     bucket_strings_to_delete = []
     if self.recursion_requested:
       bucket_fields = ['id']
-      for url_str in self.args:
+      for url_str in url_strs:
         url = StorageUrlFromString(url_str)
         if url.IsBucket() or url.IsProvider():
           for blr in self.WildcardIterator(url_str).IterBuckets(
@@ -209,7 +236,7 @@ class RmCommand(Command):
       # Expand wildcards, dirs, buckets, and bucket subdirs in URLs.
       name_expansion_iterator = NameExpansionIterator(
           self.command_name, self.debug, self.logger, self.gsutil_api,
-          self.args, self.recursion_requested, project_id=self.project_id,
+          url_strs, self.recursion_requested, project_id=self.project_id,
           all_versions=self.all_versions,
           continue_on_error=self.continue_on_error or self.parallel_operations)
 
@@ -251,7 +278,7 @@ class RmCommand(Command):
     if self.recursion_requested:
       had_previous_failures = GetFailureCount() > 0
       folder_object_wildcards = []
-      for url_str in self.args:
+      for url_str in url_strs:
         url = StorageUrlFromString(url_str)
         if url.IsObject():
           folder_object_wildcards.append('%s**_$folder$' % url_str)

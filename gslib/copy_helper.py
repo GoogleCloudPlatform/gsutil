@@ -35,7 +35,6 @@ import re
 import shutil
 import stat
 import subprocess
-import sys
 import tempfile
 import textwrap
 import time
@@ -1232,13 +1231,6 @@ def FixWindowsNaming(src_url, dst_url):
     trans_url_str = re.sub(r'\\', '/', dst_url.url_string)
     dst_url = StorageUrlFromString(trans_url_str)
   return dst_url
-
-
-def StdinIterator():
-  """A generator function that returns lines from stdin."""
-  for line in sys.stdin:
-    # Strip CRLF.
-    yield line.rstrip()
 
 
 def SrcDstSame(src_url, dst_url):

@@ -1069,3 +1069,10 @@ class GsutilStreamHandler(logging.StreamHandler):
       logging.StreamHandler.flush(self)
     except ValueError:
       pass
+
+
+def StdinIterator():
+  """A generator function that returns lines from stdin."""
+  for line in sys.stdin:
+    # Strip CRLF.
+    yield line.rstrip()

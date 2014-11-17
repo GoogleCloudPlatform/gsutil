@@ -30,7 +30,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rm command."""
 
   def _RunRemoveCommandAndCheck(self, command_and_args, objects_to_remove=None,
-                                buckets_to_remove=None):
+                                buckets_to_remove=None, stdin=None):
     """Tests a remove command in the presence of eventual listing consistency.
 
     Eventual listing consistency means that a remove command may not see all
@@ -50,6 +50,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
           generation) that should be removed by the command, if any.
       buckets_to_remove: List of bucket URL strings that should be removed by
          the command, if any.
+      stdin: String of data to pipe to the process as standard input (for
+         testing -I option).
     """
     cumulative_stderr_lines = set()
     bucket_strings = []
@@ -64,7 +66,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     def _RunRmCommandAndCheck():
       """Runs the command with retries, updating+checking cumulative output."""
       stderr = self.RunGsUtil(command_and_args, return_stderr=True,
-                              expected_status=None)
+                              expected_status=None, stdin=stdin)
       update_lines = True
       # Retry 404's and 409's due to eventual listing consistency, but don't add
       # the output to the set.
@@ -426,3 +428,32 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertRegexpMatches(
         stderr, r'PreconditionException: 412 Precondition\s*Failed')
+
+  def test_stdin_args(self):
+    """Tests rm with the -I option."""
+    buri1 = self.CreateVersionedBucket()
+    ouri1 = self.CreateObject(bucket_uri=buri1,
+                              object_name='foo',
+                              contents='foocontents')
+    ouri2 = self.CreateObject(bucket_uri=buri1,
+                              object_name='bar',
+                              contents='barcontents')
+    ouri3 = self.CreateObject(bucket_uri=buri1,
+                              object_name='baz',
+                              contents='bazcontents')
+    buri2 = self.CreateVersionedBucket()
+    ouri4 = self.CreateObject(bucket_uri=buri2,
+                              object_name='moo',
+                              contents='moocontents')
+    self.AssertNObjectsInBucket(buri1, 3, versioned=True)
+    self.AssertNObjectsInBucket(buri2, 1, versioned=True)
+
+    objects_to_remove = ['%s#%s' % (suri(ouri1), urigen(ouri1)),
+                         '%s#%s' % (suri(ouri3), urigen(ouri3)),
+                         '%s#%s' % (suri(ouri4), urigen(ouri4))]
+    stdin = '\n'.join(objects_to_remove)
+    self._RunRemoveCommandAndCheck(['rm', '-I'],
+                                   objects_to_remove=objects_to_remove,
+                                   stdin=stdin)
+    self.AssertNObjectsInBucket(buri1, 1, versioned=True)
+    self.AssertNObjectsInBucket(buri2, 0, versioned=True)
