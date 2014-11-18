@@ -105,7 +105,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DATA RESTORATION FROM ACCIDENTAL DELETION OR OVERWRITES</B>
-Google Cloud Storage does not provide support for restoring data that were lost
+Google Cloud Storage does not provide support for restoring data lost
 or overwritten due to customer errors. If you have concerns that your
 application software (or your users) may at some point erroneously delete or
 overwrite data, you can protect yourself from that risk by enabling Object

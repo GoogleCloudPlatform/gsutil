@@ -68,7 +68,7 @@ _DETAILED_HELP_TEXT = ("""
   instead. This is primarily used for distributing pre-release versions of
   the code to a small group of early test users.
 
-  Note: gustil periodically checks whether a more recent software update is
+  Note: gsutil periodically checks whether a more recent software update is
   available. By default this check is performed every 30 days; you can change
   (or disable) this check by editing the software_update_check_period variable
   in the .boto config file. Note also that gsutil will only check for software
