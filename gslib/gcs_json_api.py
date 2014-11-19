@@ -66,6 +66,7 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
+from gslib.util import GetGceCredentialCacheFilename
 from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
@@ -275,7 +276,8 @@ class GcsJsonApi(CloudApi):
   def _GetGceCreds(self):
     if self._HasGceCreds():
       try:
-        return credentials_lib.GceAssertionCredentials()
+        return credentials_lib.GceAssertionCredentials(
+            cache_filename=GetGceCredentialCacheFilename())
       except apitools_exceptions.ResourceUnavailableError, e:
         if 'service account' in str(e) and 'does not exist' in str(e):
           return None

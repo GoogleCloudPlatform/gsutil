@@ -21,6 +21,7 @@ import urllib2
 import httplib2
 import oauth2client.client
 import oauth2client.gce
+import oauth2client.locked_file
 import oauth2client.multistore_file
 
 from gslib.third_party.storage_apitools import exceptions
@@ -83,6 +84,19 @@ def ServiceAccountCredentials(service_account_name, private_key, scopes):
       service_account_name, private_key, scopes)
 
 
+def _EnsureFileExists(filename):
+  """Touches a file; returns False on error, True on success."""
+  if not os.path.exists(filename):
+    old_umask = os.umask(0o177)
+    try:
+      open(filename, 'a+b').close()
+    except OSError:
+      return False
+    finally:
+      os.umask(old_umask)
+  return True
+
+
 # TODO: We override to add some utility code, and to
 # update the old refresh implementation. Either push this code into
 # oauth2client or drop oauth2client.
@@ -98,14 +112,96 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
       service_account_name: The service account to retrieve the scopes from.
       **kwds: Additional keyword args.
     """
+    # If there is a connectivity issue with the metadata server,
+    # detection calls may fail even if we've already successfully identified
+    # these scopes in the same execution. However, the available scopes don't
+    # change once an instance is created, so there is no reason to perform
+    # more then one query.
+    # TODO: Refactor this into oauth2client.
+    self.__service_account_name = service_account_name
+    cache_filename = None
+    cached_scopes = None
+    if 'cache_filename' in kwds:
+      cache_filename = kwds['cache_filename']
+      cached_scopes = self._CheckCacheFileForMatch(cache_filename, scopes)
+
+    scopes = cached_scopes or self._ScopesFromMetadataServer(scopes)
+
+    if cache_filename and not cached_scopes:
+      self._WriteCacheFile(cache_filename, scopes)
+
+    super(GceAssertionCredentials, self).__init__(scopes, **kwds)
+
+  @classmethod
+  def Get(cls, *args, **kwds):
+    try:
+      return cls(*args, **kwds)
+    except exceptions.Error:
+      return None
+
+  def _CheckCacheFileForMatch(self, cache_filename, scopes):
+    """Checks the cache file to see if it matches the given credentials.
+
+    Args:
+      cache_filename: Cache filename to check.
+      scopes: Scopes for the desired credentials.
+
+    Returns:
+      List of scopes (if cache matches) or None.
+    """
+    creds = {  # Credentials metadata dict.
+        'scopes': sorted(list(scopes)) if scopes else None,
+        'svc_acct_name': self.__service_account_name}
+    if _EnsureFileExists(cache_filename):
+      locked_file = oauth2client.locked_file.LockedFile(
+          cache_filename, 'r+b', 'rb')
+      try:
+        locked_file.open_and_lock()
+        cached_creds_str = locked_file.file_handle().read()
+        if cached_creds_str:
+          # Cached credentials metadata dict.
+          cached_creds = json.loads(cached_creds_str)
+          if (creds['svc_acct_name'] == cached_creds['svc_acct_name'] and
+              (creds['scopes'] is None or
+               creds['scopes'] == cached_creds['scopes'])):
+            scopes = cached_creds['scopes']
+      finally:
+        locked_file.unlock_and_close()
+    return scopes
+
+  def _WriteCacheFile(self, cache_filename, scopes):
+    """Writes the credential metadata to the cache file.
+
+    This does not save the credentials themselves (CredentialStore class
+    optionally handles that after this class is initialized).
+
+    Args:
+      cache_filename: Cache filename to check.
+      scopes: Scopes for the desired credentials.
+    """
+    if _EnsureFileExists(cache_filename):
+      locked_file = oauth2client.locked_file.LockedFile(
+          cache_filename, 'r+b', 'rb')
+      try:
+        locked_file.open_and_lock()
+        if locked_file.is_locked():
+          creds = {  # Credentials metadata dict.
+              'scopes': sorted(list(scopes)),
+              'svc_acct_name': self.__service_account_name}
+          locked_file.file_handle().write(json.dumps(creds, encoding='ascii'))
+          # If it's not locked, the locking process will write the same
+          # data to the file, so just continue.
+      finally:
+        locked_file.unlock_and_close()
+
+  def _ScopesFromMetadataServer(self, scopes):
     if not util.DetectGce():
       raise exceptions.ResourceUnavailableError(
           'GCE credentials requested outside a GCE instance')
-    if not self.GetServiceAccount(service_account_name):
+    if not self.GetServiceAccount(self.__service_account_name):
       raise exceptions.ResourceUnavailableError(
           'GCE credentials requested but service account %s does not exist.' %
-          service_account_name)
-    self.__service_account_name = service_account_name
+          self.__service_account_name)
     if scopes:
       scope_ls = util.NormalizeScopes(scopes)
       instance_scopes = self.GetInstanceScopes()
@@ -115,14 +211,7 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
                 sorted(list(scope_ls - instance_scopes)),))
     else:
       scopes = self.GetInstanceScopes()
-    super(GceAssertionCredentials, self).__init__(scopes, **kwds)
-
-  @classmethod
-  def Get(cls, *args, **kwds):
-    try:
-      return cls(*args, **kwds)
-    except exceptions.Error:
-      return None
+    return scopes
 
   def GetServiceAccount(self, account):
     account_uri = (

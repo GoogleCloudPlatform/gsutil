@@ -211,7 +211,11 @@ def GetGsutilStateDir():
 
 
 def GetCredentialStoreFilename():
-  return os.path.join(GetGsutilStateDir(), 'credcache')
+  return os.path.join(GetGsutilStateDir(), 'credstore')
+
+
+def GetGceCredentialCacheFilename():
+  return os.path.join(GetGsutilStateDir(), 'gcecredcache')
 
 
 def GetTabCompletionLogFilename():
