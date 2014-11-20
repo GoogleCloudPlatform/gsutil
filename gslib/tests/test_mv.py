@@ -16,8 +16,12 @@
 
 from __future__ import absolute_import
 
+import os
+
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.util import Retry
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):
@@ -68,5 +72,21 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mv', dir_to_move, suri(bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, 2)
 
+  @PerformsFileToObjectUpload
+  def test_stdin_args(self):
+    """Tests mv with the -I option."""
+    tmpdir = self.CreateTempDir()
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
+    fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['mv', '-I', suri(bucket_uri)],
+                   stdin='\n'.join((fpath1, fpath2)))
 
-
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
+      self.assertIn(os.path.basename(fpath1), stdout)
+      self.assertIn(os.path.basename(fpath2), stdout)
+      self.assertNumLines(stdout, 2)
+    _Check1()

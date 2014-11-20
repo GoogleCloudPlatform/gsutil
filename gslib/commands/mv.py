@@ -27,7 +27,8 @@ from gslib.util import NO_MAX
 
 _SYNOPSIS = """
   gsutil mv [-p] src_url dst_url
-  gsutil mv [-p] url... dst_url
+  gsutil mv [-p] src_url... dst_url
+  gsutil mv [-p] -I dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -99,7 +100,7 @@ class MvCommand(Command):
       'mv',
       command_name_aliases=['move', 'ren', 'rename'],
       usage_synopsis=_SYNOPSIS,
-      min_args=2,
+      min_args=1,
       max_args=NO_MAX,
       # Flags for mv are passed through to cp.
       supported_sub_args=CP_SUB_ARGS,
