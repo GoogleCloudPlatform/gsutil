@@ -2297,38 +2297,28 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
 
   _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata)
 
-  if global_copy_helper_opts.canned_acl:
-    # No canned ACL support in JSON, force XML API to be used for
-    # upload/copy operations.
-    orig_prefer_api = gsutil_api.prefer_api
-    gsutil_api.prefer_api = ApiSelector.XML
-
-  try:
-    if src_url.IsCloudUrl():
-      if dst_url.IsFileUrl():
-        return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
-                                     gsutil_api, logger,
-                                     test_method=test_method)
-      elif copy_in_the_cloud:
-        return _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
-                                       dst_obj_metadata, preconditions,
-                                       gsutil_api)
-      else:
-        return _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
-                                           dst_url, dst_obj_metadata,
-                                           preconditions, gsutil_api, logger)
-    else:  # src_url.IsFileUrl()
-      if dst_url.IsCloudUrl():
-        return _UploadFileToObject(
-            src_url, src_obj_filestream, src_obj_size, dst_url,
-            dst_obj_metadata, preconditions, gsutil_api, logger, command_obj,
-            copy_exception_handler, gzip_exts=gzip_exts,
-            allow_splitting=allow_splitting)
-      else:  # dst_url.IsFileUrl()
-        return _CopyFileToFile(src_url, dst_url)
-  finally:
-    if global_copy_helper_opts.canned_acl:
-      gsutil_api.prefer_api = orig_prefer_api
+  if src_url.IsCloudUrl():
+    if dst_url.IsFileUrl():
+      return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
+                                   gsutil_api, logger,
+                                   test_method=test_method)
+    elif copy_in_the_cloud:
+      return _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
+                                     dst_obj_metadata, preconditions,
+                                     gsutil_api)
+    else:
+      return _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
+                                         dst_url, dst_obj_metadata,
+                                         preconditions, gsutil_api, logger)
+  else:  # src_url.IsFileUrl()
+    if dst_url.IsCloudUrl():
+      return _UploadFileToObject(
+          src_url, src_obj_filestream, src_obj_size, dst_url,
+          dst_obj_metadata, preconditions, gsutil_api, logger, command_obj,
+          copy_exception_handler, gzip_exts=gzip_exts,
+          allow_splitting=allow_splitting)
+    else:  # dst_url.IsFileUrl()
+      return _CopyFileToFile(src_url, dst_url)
 
 
 class Manifest(object):

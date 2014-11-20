@@ -173,10 +173,11 @@ class CloudApiDelegator(CloudApi):
     return self._GetApi(provider).ListBuckets(project_id=project_id,
                                               fields=fields)
 
-  def PatchBucket(self, bucket_name, metadata, preconditions=None,
-                  provider=None, fields=None):
+  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
+                  preconditions=None, provider=None, fields=None):
     return self._GetApi(provider).PatchBucket(
-        bucket_name, metadata, preconditions=preconditions, fields=fields)
+        bucket_name, metadata, canned_acl=canned_acl,
+        preconditions=preconditions, fields=fields)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
@@ -199,11 +200,11 @@ class CloudApiDelegator(CloudApi):
         bucket_name, object_name, generation=generation, fields=fields)
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          generation=None, preconditions=None, provider=None,
-                          fields=None):
+                          canned_acl=None, generation=None, preconditions=None,
+                          provider=None, fields=None):
     return self._GetApi(provider).PatchObjectMetadata(
-        bucket_name, object_name, metadata, generation=generation,
-        preconditions=preconditions, fields=fields)
+        bucket_name, object_name, metadata, canned_acl=canned_acl,
+        generation=generation, preconditions=preconditions, fields=fields)
 
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream, provider=None,

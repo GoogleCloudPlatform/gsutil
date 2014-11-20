@@ -632,50 +632,93 @@ class Command(HelpProvider):
     url = name_expansion_result.expanded_storage_url
     self.logger.info('Setting %s on %s...', op_string, url)
     if ((gsutil_api.GetApiSelector(url.scheme) == ApiSelector.XML
-         and url.scheme != 'gs') or self.canned):
-      # If we are using canned ACLs or interacting with a non-google ACL
-      # model, we need to use the XML passthrough.  acl_arg should either
-      # be a canned ACL or an XML ACL.
-      try:
-        # No canned ACL support in JSON, force XML API to be used.
-        orig_prefer_api = gsutil_api.prefer_api
-        gsutil_api.prefer_api = ApiSelector.XML
-        gsutil_api.XmlPassThroughSetAcl(
-            self.acl_arg, url, canned=self.canned,
-            def_obj_acl=self.def_acl, provider=url.scheme)
-        gsutil_api.prefer_api = orig_prefer_api
-      except ServiceException as e:
-        if self.continue_on_error:
-          self.everything_set_okay = False
-          self.logger.error(e)
+         and url.scheme != 'gs') or (self.def_acl and self.canned)):
+      # Canned default object ACLs are not supported by the JSON API.
+      # If we are called with a non-google ACL model, we need to use the XML
+      # passthrough.  acl_arg should either be a canned ACL or an XML ACL.
+      self._SetAclXmlPassthrough(url, gsutil_api)
+    else:
+      # Normal Cloud API path.  acl_arg is a JSON ACL or a canned ACL.
+      self._SetAclGsutilApi(url, gsutil_api)
+
+  def _SetAclXmlPassthrough(self, url, gsutil_api):
+    """Sets the ACL for the URL provided using the XML passthrough functions.
+
+    This function assumes that self.def_acl, self.canned,
+    and self.continue_on_error are initialized, and that self.acl_arg is
+    either an XML string or a canned ACL string.
+
+    Args:
+      url: CloudURL to set the ACL on.
+      gsutil_api: gsutil Cloud API to use for the ACL set. Must support XML
+          passthrough functions.
+    """
+    try:
+      orig_prefer_api = gsutil_api.prefer_api
+      gsutil_api.prefer_api = ApiSelector.XML
+      gsutil_api.XmlPassThroughSetAcl(
+          self.acl_arg, url, canned=self.canned,
+          def_obj_acl=self.def_acl, provider=url.scheme)
+    except ServiceException as e:
+      if self.continue_on_error:
+        self.everything_set_okay = False
+        self.logger.error(e)
+      else:
+        raise
+    finally:
+      gsutil_api.prefer_api = orig_prefer_api
+
+  def _SetAclGsutilApi(self, url, gsutil_api):
+    """Sets the ACL for the URL provided using the gsutil Cloud API.
+
+    This function assumes that self.def_acl, self.canned,
+    and self.continue_on_error are initialized, and that self.acl_arg is
+    either a JSON string or a canned ACL string.
+
+    Args:
+      url: CloudURL to set the ACL on.
+      gsutil_api: gsutil Cloud API to use for the ACL set.
+    """
+    try:
+      if url.IsBucket():
+        if self.def_acl:
+          def_obj_acl = AclTranslation.JsonToMessage(
+              self.acl_arg, apitools_messages.ObjectAccessControl)
+          bucket_metadata = apitools_messages.Bucket(
+              defaultObjectAcl=def_obj_acl)
+          gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
+                                 provider=url.scheme, fields=['id'])
         else:
-          raise
-    else:  # Normal Cloud API path.  ACL is a JSON ACL.
-      try:
-        if url.IsBucket():
-          if self.def_acl:
-            def_obj_acl = AclTranslation.JsonToMessage(
-                self.acl_arg, apitools_messages.ObjectAccessControl)
-            bucket_metadata = apitools_messages.Bucket(
-                defaultObjectAcl=def_obj_acl)
-            gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                                   provider=url.scheme, fields=['id'])
+          if self.canned:
+            gsutil_api.PatchBucket(
+                url.bucket_name, apitools_messages.Bucket(),
+                canned_acl=self.acl_arg, provider=url.scheme, fields=['id'])
           else:
             bucket_acl = AclTranslation.JsonToMessage(
                 self.acl_arg, apitools_messages.BucketAccessControl)
             bucket_metadata = apitools_messages.Bucket(acl=bucket_acl)
             gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                    provider=url.scheme, fields=['id'])
-        else:  # url.IsObject()
+      else:  # url.IsObject()
+        if self.canned:
+          gsutil_api.PatchObjectMetadata(
+              url.bucket_name, url.object_name, apitools_messages.Object(),
+              provider=url.scheme, generation=url.generation,
+              canned_acl=self.acl_arg)
+        else:
           object_acl = AclTranslation.JsonToMessage(
               self.acl_arg, apitools_messages.ObjectAccessControl)
           object_metadata = apitools_messages.Object(acl=object_acl)
           gsutil_api.PatchObjectMetadata(url.bucket_name, url.object_name,
                                          object_metadata, provider=url.scheme,
                                          generation=url.generation)
-      except ArgumentException, e:
-        raise
-      except ServiceException, e:
+    except ArgumentException, e:
+      raise
+    except ServiceException, e:
+      if self.continue_on_error:
+        self.everything_set_okay = False
+        self.logger.error(e)
+      else:
         raise
 
   def SetAclCommandHelper(self, acl_func, acl_excep_handler):

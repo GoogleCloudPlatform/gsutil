@@ -188,8 +188,8 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
-  def PatchBucket(self, bucket_name, metadata, preconditions=None,
-                  provider=None, fields=None):
+  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
+                  preconditions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     bucket_uri = self._StorageUriForBucket(bucket_name)
@@ -200,6 +200,11 @@ class BotoTranslation(CloudApi):
       if metadata.acl:
         boto_acl = AclTranslation.BotoAclFromMessage(metadata.acl)
         bucket_uri.set_xml_acl(boto_acl.to_xml(), headers=headers)
+      if canned_acl:
+        canned_acls = bucket_uri.canned_acls()
+        if canned_acl not in canned_acls:
+          raise CommandException('Invalid canned ACL "%s".' % canned_acl)
+        bucket_uri.set_acl(canned_acl, bucket_uri.object_name)
       if metadata.cors:
         if metadata.cors == REMOVE_CORS_CONFIG:
           metadata.cors = []
@@ -611,8 +616,8 @@ class BotoTranslation(CloudApi):
       time.sleep(sleep_time_secs)
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          generation=None, preconditions=None, provider=None,
-                          fields=None):
+                          canned_acl=None, generation=None, preconditions=None,
+                          provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     object_uri = self._StorageUriForObject(bucket_name, object_name,
@@ -651,6 +656,12 @@ class BotoTranslation(CloudApi):
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                          object_name=object_name,
                                          generation=generation)
+    if canned_acl:
+      canned_acls = object_uri.canned_acls()
+      if canned_acl not in canned_acls:
+        raise CommandException('Invalid canned ACL "%s".' % canned_acl)
+      object_uri.set_acl(canned_acl, object_uri.object_name)
+
     return self.GetObjectMetadata(bucket_name, object_name,
                                   generation=generation, fields=fields)
 

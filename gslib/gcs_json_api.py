@@ -305,8 +305,8 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
-  def PatchBucket(self, bucket_name, metadata, preconditions=None,
-                  provider=None, fields=None):
+  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
+                  preconditions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsPatchRequest
                   .ProjectionValueValuesEnum.full)
@@ -329,10 +329,20 @@ class GcsJsonApi(CloudApi):
       bucket_metadata.cors = []
       apitools_include_fields.append('cors')
 
+    predefined_acl = None
+    if canned_acl:
+      # Must null out existing ACLs to apply a canned ACL.
+      apitools_include_fields.append('acl')
+      predefined_acl = (
+          apitools_messages.StorageBucketsPatchRequest.
+          PredefinedAclValueValuesEnum(
+              self._BucketCannedAclToPredefinedAcl(canned_acl)))
+
     apitools_request = apitools_messages.StorageBucketsPatchRequest(
         bucket=bucket_name, bucketResource=bucket_metadata,
         projection=projection,
-        ifMetagenerationMatch=preconditions.meta_gen_match)
+        ifMetagenerationMatch=preconditions.meta_gen_match,
+        predefinedAcl=predefined_acl)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       global_params.fields = ','.join(set(fields))
@@ -651,8 +661,8 @@ class GcsJsonApi(CloudApi):
     return apitools_download.encoding
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          generation=None, preconditions=None, provider=None,
-                          fields=None):
+                          canned_acl=None, generation=None, preconditions=None,
+                          provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageObjectsPatchRequest
                   .ProjectionValueValuesEnum.full)
@@ -663,18 +673,30 @@ class GcsJsonApi(CloudApi):
     if generation:
       generation = long(generation)
 
+    predefined_acl = None
+    apitools_include_fields = []
+    if canned_acl:
+      # Must null out existing ACLs to apply a canned ACL.
+      apitools_include_fields.append('acl')
+      predefined_acl = (
+          apitools_messages.StorageObjectsPatchRequest.
+          PredefinedAclValueValuesEnum(
+              self._ObjectCannedAclToPredefinedAcl(canned_acl)))
+
     apitools_request = apitools_messages.StorageObjectsPatchRequest(
         bucket=bucket_name, object=object_name, objectResource=metadata,
         generation=generation, projection=projection,
         ifGenerationMatch=preconditions.gen_match,
-        ifMetagenerationMatch=preconditions.meta_gen_match)
+        ifMetagenerationMatch=preconditions.meta_gen_match,
+        predefinedAcl=predefined_acl)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       global_params.fields = ','.join(set(fields))
 
     try:
-      return self.api_client.objects.Patch(apitools_request,
-                                           global_params=global_params)
+      with self.api_client.IncludeFields(apitools_include_fields):
+        return self.api_client.objects.Patch(apitools_request,
+                                             global_params=global_params)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
@@ -698,7 +720,12 @@ class GcsJsonApi(CloudApi):
     """
     # pylint: enable=g-doc-args
     ValidateDstObjectMetadata(object_metadata)
-    assert not canned_acl, 'Canned ACLs not supported by JSON API.'
+    predefined_acl = None
+    if canned_acl:
+      predefined_acl = (
+          apitools_messages.StorageObjectsInsertRequest.
+          PredefinedAclValueValuesEnum(
+              self._ObjectCannedAclToPredefinedAcl(canned_acl)))
 
     bytes_uploaded_container = BytesTransferredContainer()
 
@@ -739,8 +766,8 @@ class GcsJsonApi(CloudApi):
         apitools_request = apitools_messages.StorageObjectsInsertRequest(
             bucket=object_metadata.bucket, object=object_metadata,
             ifGenerationMatch=preconditions.gen_match,
-            ifMetagenerationMatch=preconditions.meta_gen_match)
-
+            ifMetagenerationMatch=preconditions.meta_gen_match,
+            predefinedAcl=predefined_acl)
         global_params = apitools_messages.StandardQueryParameters()
         if fields:
           global_params.fields = ','.join(set(fields))
@@ -910,7 +937,12 @@ class GcsJsonApi(CloudApi):
                  provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     ValidateDstObjectMetadata(dst_obj_metadata)
-    assert not canned_acl, 'Canned ACLs not supported by JSON API.'
+    predefined_acl = None
+    if canned_acl:
+      predefined_acl = (
+          apitools_messages.StorageObjectsCopyRequest.
+          DestinationPredefinedAclValueValuesEnum(
+              self._ObjectCannedAclToPredefinedAcl(canned_acl)))
 
     if src_generation:
       src_generation = long(src_generation)
@@ -931,7 +963,8 @@ class GcsJsonApi(CloudApi):
         projection=projection, object=dst_obj_metadata,
         sourceGeneration=src_generation,
         ifGenerationMatch=preconditions.gen_match,
-        ifMetagenerationMatch=preconditions.meta_gen_match)
+        ifMetagenerationMatch=preconditions.meta_gen_match,
+        destinationPredefinedAcl=predefined_acl)
     try:
       return self.api_client.objects.Copy(apitools_request,
                                           global_params=global_params)
@@ -1023,6 +1056,55 @@ class GcsJsonApi(CloudApi):
       self.api_client.channels.Stop(channel)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
+
+  def _BucketCannedAclToPredefinedAcl(self, canned_acl_string):
+    """Translates the input string to a bucket PredefinedAcl string.
+
+    Args:
+      canned_acl_string: Canned ACL string.
+
+    Returns:
+      String that can be used as a query parameter with the JSON API. This
+      corresponds to a flavor of *PredefinedAclValueValuesEnum and can be
+      used as input to apitools requests that affect bucket access controls.
+    """
+    # XML : JSON
+    translation_dict = {
+        None: None,
+        'authenticated-read': 'authenticatedRead',
+        'private': 'private',
+        'project-private': 'projectPrivate',
+        'public-read': 'publicRead',
+        'public-read-write': 'publicReadWrite'
+    }
+    if canned_acl_string in translation_dict:
+      return translation_dict[canned_acl_string]
+    raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
+
+  def _ObjectCannedAclToPredefinedAcl(self, canned_acl_string):
+    """Translates the input string to an object PredefinedAcl string.
+
+    Args:
+      canned_acl_string: Canned ACL string.
+
+    Returns:
+      String that can be used as a query parameter with the JSON API. This
+      corresponds to a flavor of *PredefinedAclValueValuesEnum and can be
+      used as input to apitools requests that affect object access controls.
+    """
+    # XML : JSON
+    translation_dict = {
+        None: None,
+        'authenticated-read': 'authenticatedRead',
+        'bucket-owner-read': 'bucketOwnerRead',
+        'bucket-owner-full-control': 'bucketOwnerFullControl',
+        'private': 'private',
+        'project-private': 'projectPrivate',
+        'public-read': 'publicRead'
+    }
+    if canned_acl_string in translation_dict:
+      return translation_dict[canned_acl_string]
+    raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
 
   def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
                                   generation=None):
