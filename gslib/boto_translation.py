@@ -189,7 +189,8 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e)
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  preconditions=None, provider=None, fields=None):
+                  canned_def_acl=None, preconditions=None, provider=None,
+                  fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     bucket_uri = self._StorageUriForBucket(bucket_name)
@@ -205,6 +206,11 @@ class BotoTranslation(CloudApi):
         if canned_acl not in canned_acls:
           raise CommandException('Invalid canned ACL "%s".' % canned_acl)
         bucket_uri.set_acl(canned_acl, bucket_uri.object_name)
+      if canned_def_acl:
+        canned_acls = bucket_uri.canned_acls()
+        if canned_def_acl not in canned_acls:
+          raise CommandException('Invalid canned ACL "%s".' % canned_def_acl)
+        bucket_uri.set_def_acl(canned_def_acl, bucket_uri.object_name)
       if metadata.cors:
         if metadata.cors == REMOVE_CORS_CONFIG:
           metadata.cors = []

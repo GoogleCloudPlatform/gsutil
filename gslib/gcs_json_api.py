@@ -307,7 +307,8 @@ class GcsJsonApi(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  preconditions=None, provider=None, fields=None):
+                  canned_def_acl=None, preconditions=None, provider=None,
+                  fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsPatchRequest
                   .ProjectionValueValuesEnum.full)
@@ -339,11 +340,21 @@ class GcsJsonApi(CloudApi):
           PredefinedAclValueValuesEnum(
               self._BucketCannedAclToPredefinedAcl(canned_acl)))
 
+    predefined_def_acl = None
+    if canned_def_acl:
+      # Must null out existing default object ACLs to apply a canned ACL.
+      apitools_include_fields.append('defaultObjectAcl')
+      predefined_def_acl = (
+          apitools_messages.StorageBucketsPatchRequest.
+          PredefinedDefaultObjectAclValueValuesEnum(
+              self._ObjectCannedAclToPredefinedAcl(canned_def_acl)))
+
     apitools_request = apitools_messages.StorageBucketsPatchRequest(
         bucket=bucket_name, bucketResource=bucket_metadata,
         projection=projection,
         ifMetagenerationMatch=preconditions.meta_gen_match,
-        predefinedAcl=predefined_acl)
+        predefinedAcl=predefined_acl,
+        predefinedDefaultObjectAcl=predefined_def_acl)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       global_params.fields = ','.join(set(fields))

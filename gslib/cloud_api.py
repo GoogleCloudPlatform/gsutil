@@ -88,13 +88,15 @@ class CloudApi(object):
     raise NotImplementedError('ListBuckets must be overloaded')
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  preconditions=None, provider=None, fields=None):
+                  canned_def_acl=None, preconditions=None, provider=None,
+                  fields=None):
     """Updates bucket metadata for the bucket with patch semantics.
 
     Args:
       bucket_name: Name of bucket to update.
       metadata: Bucket object defining metadata to be updated.
       canned_acl: Canned ACL to apply to the bucket.
+      canned_def_acl: Canned default object ACL to apply to the bucket.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.

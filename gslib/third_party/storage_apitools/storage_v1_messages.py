@@ -752,6 +752,7 @@ class StorageBucketsInsertRequest(messages.Message):
   Fields:
     bucket: A Bucket resource to be passed as the request body.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
     project: A valid API project identifier.
     projection: Set of properties to return. Defaults to noAcl, unless the
       bucket resource specifies acl or defaultObjectAcl properties, when it
@@ -778,6 +779,29 @@ class StorageBucketsInsertRequest(messages.Message):
     publicRead = 3
     publicReadWrite = 4
 
+  class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of default object access controls to this bucket.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to noAcl, unless the bucket
     resource specifies acl or defaultObjectAcl properties, when it defaults to
@@ -792,8 +816,9 @@ class StorageBucketsInsertRequest(messages.Message):
 
   bucket = messages.MessageField('Bucket', 1)
   predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 2)
-  project = messages.StringField(3, required=True)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 4)
+  predefinedDefaultObjectAcl = messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 3)
+  project = messages.StringField(4, required=True)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 5)
 
 
 class StorageBucketsListRequest(messages.Message):
@@ -843,6 +868,7 @@ class StorageBucketsPatchRequest(messages.Message):
       conditional on whether the bucket's current metageneration does not
       match the given value.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
 
@@ -866,6 +892,29 @@ class StorageBucketsPatchRequest(messages.Message):
     publicRead = 3
     publicReadWrite = 4
 
+  class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of default object access controls to this bucket.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
 
@@ -881,7 +930,8 @@ class StorageBucketsPatchRequest(messages.Message):
   ifMetagenerationMatch = messages.IntegerField(3)
   ifMetagenerationNotMatch = messages.IntegerField(4)
   predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 5)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 6)
+  predefinedDefaultObjectAcl = messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 6)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 7)
 
 
 class StorageBucketsUpdateRequest(messages.Message):
@@ -901,6 +951,7 @@ class StorageBucketsUpdateRequest(messages.Message):
       conditional on whether the bucket's current metageneration does not
       match the given value.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
 
@@ -924,6 +975,29 @@ class StorageBucketsUpdateRequest(messages.Message):
     publicRead = 3
     publicReadWrite = 4
 
+  class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of default object access controls to this bucket.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
   class ProjectionValueValuesEnum(messages.Enum):
     """Set of properties to return. Defaults to full.
 
@@ -939,7 +1013,8 @@ class StorageBucketsUpdateRequest(messages.Message):
   ifMetagenerationMatch = messages.IntegerField(3)
   ifMetagenerationNotMatch = messages.IntegerField(4)
   predefinedAcl = messages.EnumField('PredefinedAclValueValuesEnum', 5)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 6)
+  predefinedDefaultObjectAcl = messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 6)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 7)
 
 
 class StorageChannelsStopResponse(messages.Message):

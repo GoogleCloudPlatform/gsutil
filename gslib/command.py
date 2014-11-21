@@ -631,14 +631,13 @@ class Command(HelpProvider):
     op_string = 'default object ACL' if self.def_acl else 'ACL'
     url = name_expansion_result.expanded_storage_url
     self.logger.info('Setting %s on %s...', op_string, url)
-    if ((gsutil_api.GetApiSelector(url.scheme) == ApiSelector.XML
-         and url.scheme != 'gs') or (self.def_acl and self.canned)):
-      # Canned default object ACLs are not supported by the JSON API.
+    if (gsutil_api.GetApiSelector(url.scheme) == ApiSelector.XML
+        and url.scheme != 'gs'):
       # If we are called with a non-google ACL model, we need to use the XML
-      # passthrough.  acl_arg should either be a canned ACL or an XML ACL.
+      # passthrough. acl_arg should either be a canned ACL or an XML ACL.
       self._SetAclXmlPassthrough(url, gsutil_api)
     else:
-      # Normal Cloud API path.  acl_arg is a JSON ACL or a canned ACL.
+      # Normal Cloud API path. acl_arg is a JSON ACL or a canned ACL.
       self._SetAclGsutilApi(url, gsutil_api)
 
   def _SetAclXmlPassthrough(self, url, gsutil_api):
@@ -682,12 +681,17 @@ class Command(HelpProvider):
     try:
       if url.IsBucket():
         if self.def_acl:
-          def_obj_acl = AclTranslation.JsonToMessage(
-              self.acl_arg, apitools_messages.ObjectAccessControl)
-          bucket_metadata = apitools_messages.Bucket(
-              defaultObjectAcl=def_obj_acl)
-          gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                                 provider=url.scheme, fields=['id'])
+          if self.canned:
+            gsutil_api.PatchBucket(
+                url.bucket_name, apitools_messages.Bucket(),
+                canned_def_acl=self.acl_arg, provider=url.scheme, fields=['id'])
+          else:
+            def_obj_acl = AclTranslation.JsonToMessage(
+                self.acl_arg, apitools_messages.ObjectAccessControl)
+            bucket_metadata = apitools_messages.Bucket(
+                defaultObjectAcl=def_obj_acl)
+            gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
+                                   provider=url.scheme, fields=['id'])
         else:
           if self.canned:
             gsutil_api.PatchBucket(

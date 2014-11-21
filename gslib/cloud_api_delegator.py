@@ -174,10 +174,12 @@ class CloudApiDelegator(CloudApi):
                                               fields=fields)
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  preconditions=None, provider=None, fields=None):
+                  canned_def_acl=None, preconditions=None, provider=None,
+                  fields=None):
     return self._GetApi(provider).PatchBucket(
         bucket_name, metadata, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields)
+        canned_def_acl=canned_def_acl, preconditions=preconditions,
+        fields=fields)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
