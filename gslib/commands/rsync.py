@@ -346,7 +346,19 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   # We sort while iterating over url_str, allowing parallelism of batched
   # sorting with collecting the listing.
   out_file = io.open(out_file_name, mode='w', encoding=UTF8)
-  _BatchSort(_FieldedListingIterator(cls, gsutil_api, url_str, desc), out_file)
+  try:
+    _BatchSort(_FieldedListingIterator(cls, gsutil_api, url_str, desc),
+               out_file)
+  except Exception as e:  # pylint: disable=broad-except
+    # Abandon rsync if an exception percolates up to this layer - retryable
+    # exceptions are handled in the lower layers, so we got a non-retryable
+    # exception (like 404 bucket not found) and proceeding would either be
+    # futile or could result in data loss - for example:
+    #     gsutil rsync -d gs://non-existent-bucket ./localdir
+    # would delete files from localdir.
+    cls.logger.error(
+        'Caught non-retryable exception while listing %s: %s' % (url_str, e))
+    cls.non_retryable_listing_failures = 1
   out_file.close()
 
 
@@ -505,10 +517,17 @@ class _DiffIterator(object):
         (self.base_dst_url.url_string, self.sorted_list_dst_file_name,
          'destination')
     ])
+
+    # Contains error message from non-retryable listing failure.
+    command_obj.non_retryable_listing_failures = 0
+    shared_attrs = ['non_retryable_listing_failures']
     command_obj.Apply(_ListUrlRootFunc, args_iter, _RootListingExceptionHandler,
-                      arg_checker=DummyArgChecker,
+                      shared_attrs, arg_checker=DummyArgChecker,
                       parallel_operations_override=True,
                       fail_on_error=True)
+
+    if command_obj.non_retryable_listing_failures:
+      raise CommandException('Caught non-retryable exception - aborting rsync')
 
     self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'r')
     self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'r')

@@ -837,3 +837,31 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertEquals(NO_CHANGES, self.RunGsUtil(
         ['rsync', '-r', tmpdir, suri(bucket_url, 'subdir')],
         return_stderr=True))
+
+  def test_rsync_from_nonexistent_bucket(self):
+    """Tests that rsync from a non-existent bucket subdir fails gracefully."""
+    tmpdir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
+    bucket_url_str = '%s://%s' % (
+        self.default_provider, self.nonexistent_bucket_name) 
+    stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('Caught non-retryable exception', stderr)
+    listing = _TailSet(tmpdir, self._FlatListDir(tmpdir))
+    # Dir should have un-altered content.
+    self.assertEquals(listing, set(['/obj1', '/obj2']))
+
+  def test_rsync_to_nonexistent_bucket(self):
+    """Tests that rsync from a non-existent bucket subdir fails gracefully."""
+    tmpdir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
+    bucket_url_str = '%s://%s' % (
+        self.default_provider, self.nonexistent_bucket_name) 
+    stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('Caught non-retryable exception', stderr)
+    listing = _TailSet(tmpdir, self._FlatListDir(tmpdir))
+    # Dir should have un-altered content.
+    self.assertEquals(listing, set(['/obj1', '/obj2']))

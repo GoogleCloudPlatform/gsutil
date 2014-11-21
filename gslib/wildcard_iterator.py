@@ -444,7 +444,7 @@ class CloudWildcardIterator(WildcardIterator):
     Yields:
       BucketListingRef, or empty iterator if no matches.
     """
-    for blr in self. __iter__(
+    for blr in self.__iter__(
         bucket_listing_fields=bucket_listing_fields,
         expand_top_level_buckets=expand_top_level_buckets):
       yield blr
@@ -459,8 +459,8 @@ class CloudWildcardIterator(WildcardIterator):
     Yields:
       BucketListingRefs of type OBJECT or empty iterator if no matches.
     """
-    for blr in self. __iter__(bucket_listing_fields=bucket_listing_fields,
-                              expand_top_level_buckets=True):
+    for blr in self.__iter__(bucket_listing_fields=bucket_listing_fields,
+                             expand_top_level_buckets=True):
       if blr.IsObject():
         yield blr
 
