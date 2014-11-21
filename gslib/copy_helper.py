@@ -2233,8 +2233,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   else:
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
-    except:
-      raise CommandException('"%s" does not exist.' % src_url)
+    except Exception, e:  # pylint: disable=broad-except
+      raise CommandException('Error opening file "%s": %s.' % (src_url,
+                                                               e.message))
     if src_url.IsStream():
       src_obj_size = None
     else:
