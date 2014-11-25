@@ -63,7 +63,7 @@ _SET_DESCRIPTION = """
   Next, you need to grant cloud-storage-analytics@google.com write access to
   the log bucket, using this command:
 
-    acl ch -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
+    gsutil acl ch -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
 
   Note that log data may contain sensitive information, so you should make
   sure to set an appropriate default bucket ACL to protect that data. (See
