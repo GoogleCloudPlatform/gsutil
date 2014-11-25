@@ -35,7 +35,7 @@ from gslib.util import Retry
 from gslib.util import UrlsAreForSingleProvider
 
 _SET_SYNOPSIS = """
-  gsutil acl set [-f] [-R] [-a] file-or-canned_acl_name url...
+  gsutil acl set [-f] [-r] [-a] file-or-canned_acl_name url...
 """
 
 _GET_SYNOPSIS = """
@@ -43,7 +43,7 @@ _GET_SYNOPSIS = """
 """
 
 _CH_SYNOPSIS = """
-  gsutil acl ch [-R] -u|-g|-d <grant>... url...
+  gsutil acl ch [-r] -u|-g|-d <grant>... url...
 
   where each <grant> is one of the following forms:
 
@@ -158,7 +158,7 @@ _CH_DESCRIPTION = """
   Grant the user with the specified canonical ID READ access to all objects
   in example-bucket that begin with folder/:
 
-    gsutil acl ch -R \\
+    gsutil acl ch -r \\
       -u 84fac329bceSAMPLE777d5d22b8SAMPLE785ac2SAMPLE2dfcf7c4adf34da46:R \\
       gs://example-bucket/folder/
 
@@ -182,13 +182,13 @@ _CH_DESCRIPTION = """
   following command adds OWNER for admin@example.org using
   multi-threading:
 
-    gsutil -m acl ch -R -u admin@example.org:O gs://example-bucket
+    gsutil -m acl ch -r -u admin@example.org:O gs://example-bucket
 
   Grant READ access to everyone from my-domain.org and to all authenticated
   users, and grant OWNER to admin@mydomain.org, for the buckets
   my-bucket and my-other-bucket, with multi-threading enabled:
 
-    gsutil -m acl ch -R -g my-domain.org:R -g AllAuth:R \\
+    gsutil -m acl ch -r -g my-domain.org:R -g AllAuth:R \\
       -u admin@mydomain.org:O gs://my-bucket/ gs://my-other-bucket
 
 <B>CH ROLES</B>

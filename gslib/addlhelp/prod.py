@@ -90,7 +90,7 @@ _DETAILED_HELP_TEXT = ("""
      files to the cloud. You can do this in parallel batches by using a command
      like:
 
-       gsutil -m cp -R to_upload/subdir_$i gs://bucket/subdir_$i
+       gsutil -m cp -r to_upload/subdir_$i gs://bucket/subdir_$i
 
      where i is a shell loop variable. Make sure to check the shell $status
      variable is 0 after each gsutil cp command, to detect if some of the copies

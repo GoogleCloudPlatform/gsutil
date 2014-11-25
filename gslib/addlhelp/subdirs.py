@@ -22,7 +22,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   This section provides details about how subdirectories work in gsutil.
   Most users probably don't need to know these details, and can simply use
-  the commands (like cp -R) that work with subdirectories. We provide this
+  the commands (like cp -r) that work with subdirectories. We provide this
   additional documentation to help users understand how gsutil handles
   subdirectories differently than most GUI / web-based tools (e.g., why
   those other tools create "dir_$folder$" objects), and also to explain cost and
@@ -60,7 +60,7 @@ _DETAILED_HELP_TEXT = ("""
      treats the destination URI as a directory. For example, if you run
      the command:
 
-       gsutil cp -R dir gs://bucket/abc
+       gsutil cp -r dir gs://bucket/abc
 
      gsutil will create objects like gs://bucket/abc/dir/file1, etc. (assuming
      file1 is a file under the source dir).

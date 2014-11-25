@@ -623,9 +623,9 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
   # 1. For the "mv" command that specifies a non-existent destination subdir,
   #    renaming should occur at the level of the src subdir, vs appending that
   #    subdir beneath the dst subdir like is done for copying. For example:
-  #      gsutil rm -R gs://bucket
-  #      gsutil cp -R dir1 gs://bucket
-  #      gsutil cp -R dir2 gs://bucket/subdir1
+  #      gsutil rm -r gs://bucket
+  #      gsutil cp -r dir1 gs://bucket
+  #      gsutil cp -r dir2 gs://bucket/subdir1
   #      gsutil mv gs://bucket/subdir1 gs://bucket/subdir2
   #    would (if using cp naming behavior) end up with paths like:
   #      gs://bucket/subdir2/subdir1/dir2/.svn/all-wcprops
@@ -640,7 +640,7 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
   #    working with subdirs: The resulting object names depend on whether the
   #    destination subdirectory exists. For example, if gs://bucket/subdir
   #    exists, the command:
-  #      gsutil cp -R dir1/dir2 gs://bucket/subdir
+  #      gsutil cp -r dir1/dir2 gs://bucket/subdir
   #    should create objects named like gs://bucket/subdir/dir2/a/b/c. In
   #    contrast, if gs://bucket/subdir does not exist, this same command
   #    should create objects named like gs://bucket/subdir/a/b/c.

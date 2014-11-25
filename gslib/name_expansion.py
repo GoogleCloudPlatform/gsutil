@@ -91,12 +91,12 @@ class _NameExpansionIterator(object):
       logger: logging.Logger object.
       gsutil_api: Cloud storage interface.  Settable for testing/mocking.
       url_strs: PluralityCheckableIterator of URL strings needing expansion.
-      recursion_requested: True if -R specified on command-line.  If so,
+      recursion_requested: True if -r specified on command-line.  If so,
           listings will be flattened so mapped-to results contain objects
           spanning subdirectories.
       all_versions: Bool indicating whether to iterate over all object versions.
       cmd_supports_recursion: Bool indicating whether this command supports a
-          '-R' flag. Useful for printing helpful error messages.
+          '-r' flag. Useful for printing helpful error messages.
       project_id: Project id to use for bucket retrieval.
       continue_on_error: If true, yield no-match exceptions encountered during
                          iteration instead of raising them.
@@ -313,11 +313,11 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
     logger: logging.Logger object.
     gsutil_api: Cloud storage interface.  Settable for testing/mocking.
     url_strs: Iterable URL strings needing expansion.
-    recursion_requested: True if -R specified on command-line.  If so,
+    recursion_requested: True if -r specified on command-line.  If so,
         listings will be flattened so mapped-to results contain objects
         spanning subdirectories.
     all_versions: Bool indicating whether to iterate over all object versions.
-    cmd_supports_recursion: Bool indicating whether this command supports a '-R'
+    cmd_supports_recursion: Bool indicating whether this command supports a '-r'
         flag. Useful for printing helpful error messages.
     project_id: Project id to use for the current command.
     continue_on_error: If true, yield no-match exceptions encountered during
@@ -472,7 +472,7 @@ class _OmitNonRecursiveIterator(object):
           desc = blr.type_name
         if self.cmd_supports_recursion:
           self.logger.info(
-              'Omitting %s "%s". (Did you mean to do %s -R?)',
+              'Omitting %s "%s". (Did you mean to do %s -r?)',
               desc, blr.url_string, self.command_name)
         else:
           self.logger.info('Omitting %s "%s".', desc, blr.url_string)

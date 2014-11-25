@@ -65,15 +65,15 @@ DESCRIPTION_TEXT = """
 
     gsutil cp gs://my_bucket/*.txt .
 
-  If you want to copy an entire directory tree you need to use the -R option:
+  If you want to copy an entire directory tree you need to use the -r option:
 
-    gsutil cp -R dir gs://my_bucket
+    gsutil cp -r dir gs://my_bucket
 
   If you have a large number of files to upload you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
   copy:
 
-    gsutil -m cp -R dir gs://my_bucket
+    gsutil -m cp -r dir gs://my_bucket
 
   You can pass a list of URLs (one per line) to copy on stdin instead of as
   command line arguments by using the -I option. This allows you to use gsutil
@@ -102,7 +102,7 @@ NAME_CONSTRUCTION_TEXT = """
   that mirror the source directory structure starting at the point of
   recursive processing. For example, the command:
 
-    gsutil cp -R dir1/dir2 gs://my_bucket
+    gsutil cp -r dir1/dir2 gs://my_bucket
 
   will create objects named like gs://my_bucket/dir2/a/b/c, assuming
   dir1/dir2 contains the file a/b/c.
@@ -126,7 +126,7 @@ NAME_CONSTRUCTION_TEXT = """
   names depend on whether the destination subdirectory exists. For example,
   if gs://my_bucket/subdir exists as a subdirectory, the command:
 
-    gsutil cp -R dir1/dir2 gs://my_bucket/subdir
+    gsutil cp -r dir1/dir2 gs://my_bucket/subdir
 
   will create objects named like gs://my_bucket/subdir/dir2/a/b/c. In contrast,
   if gs://my_bucket/subdir does not exist, this same gsutil cp command will
@@ -147,14 +147,14 @@ SUBDIRECTORIES_TEXT = """
   You can use gsutil to copy to and from subdirectories by using a command
   like:
 
-    gsutil cp -R dir gs://my_bucket/data
+    gsutil cp -r dir gs://my_bucket/data
 
   This will cause dir and all of its files and nested subdirectories to be
   copied under the specified destination, resulting in objects with names like
   gs://my_bucket/data/dir/a/b/c. Similarly you can download from bucket
   subdirectories by using a command like:
 
-    gsutil cp -R gs://my_bucket/data dir
+    gsutil cp -r gs://my_bucket/data dir
 
   This will cause everything nested under gs://my_bucket/data to be downloaded
   into dir, resulting in files with names like dir/data/a/b/c.
@@ -173,9 +173,9 @@ SUBDIRECTORIES_TEXT = """
   you could perform concurrent downloads across 3 machines by running these
   commands on each machine, respectively:
 
-    gsutil -m cp -R gs://my_bucket/data/result_set_[0-3]* dir
-    gsutil -m cp -R gs://my_bucket/data/result_set_[4-6]* dir
-    gsutil -m cp -R gs://my_bucket/data/result_set_[7-9]* dir
+    gsutil -m cp -r gs://my_bucket/data/result_set_[0-3]* dir
+    gsutil -m cp -r gs://my_bucket/data/result_set_[4-6]* dir
+    gsutil -m cp -r gs://my_bucket/data/result_set_[7-9]* dir
 
   Note that dir could be a local directory on each machine, or it could
   be a directory mounted off of a shared file server; whether the latter
@@ -328,7 +328,7 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 
   Or, for copying a directory, use this instead:
 
-     gsutil cp -c -L cp.log -R ./dir gs://bucket
+     gsutil cp -c -L cp.log -r ./dir gs://bucket
      if [ "$status" -ne "0" ] ; then
        << Code that handles failures >>
      fi
@@ -444,7 +444,7 @@ OPTIONS_TEXT = """
                  build a script that copies a large number of objects reliably,
                  using a bash script like the following:
 
-                   until gsutil cp -c -L cp.log -R ./dir gs://bucket; do
+                   until gsutil cp -c -L cp.log -r ./dir gs://bucket; do
                      sleep 1
                    done
 
@@ -486,7 +486,7 @@ OPTIONS_TEXT = """
   -R, -r         Causes directories, buckets, and bucket subdirectories to be
                  copied recursively. If you neglect to use this option for
                  an upload, gsutil will copy any files it finds and skip any
-                 directories. Similarly, neglecting to specify -R for a download
+                 directories. Similarly, neglecting to specify -r for a download
                  will cause gsutil to copy any objects at the current bucket
                  directory level, and skip any subdirectories.
 
@@ -660,7 +660,7 @@ class CpCommand(Command):
       if name_expansion_result.names_container:
         # Use recursion_requested when performing name expansion for the
         # directory mv case so we can determine if any of the source URLs are
-        # directories (and then use cp -R and rm -R to perform the move, to
+        # directories (and then use cp -r and rm -r to perform the move, to
         # match the behavior of Linux mv (which when moving a directory moves
         # all the contained files).
         self.recursion_requested = True

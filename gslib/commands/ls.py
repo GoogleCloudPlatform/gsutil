@@ -41,7 +41,7 @@ from gslib.util import UTF8
 JSON_TIMESTAMP_RE = re.compile(r'([^\s]*)\s([^\.\+]*).*')
 
 _SYNOPSIS = """
-  gsutil ls [-a] [-b] [-l] [-L] [-R] [-p proj_id] url...
+  gsutil ls [-a] [-b] [-l] [-L] [-r] [-p proj_id] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -94,9 +94,9 @@ _DETAILED_HELP_TEXT = ("""
 <B>DIRECTORY BY DIRECTORY, FLAT, and RECURSIVE LISTINGS</B>
   Listing a bucket or subdirectory (as illustrated near the end of the previous
   section) only shows the objects and names of subdirectories it contains. You
-  can list all objects in a bucket by using the -R option. For example:
+  can list all objects in a bucket by using the -r option. For example:
 
-    gsutil ls -R gs://bucket
+    gsutil ls -r gs://bucket
 
   will list the top-level objects and buckets, then the objects and
   buckets under gs://bucket/images1, then those under gs://bucket/images2, etc.
@@ -104,11 +104,11 @@ _DETAILED_HELP_TEXT = ("""
   If you want to see all objects in the bucket in one "flat" listing use the
   recursive ("**") wildcard, like:
 
-    gsutil ls -R gs://bucket/**
+    gsutil ls -r gs://bucket/**
 
   or, for a flat listing of a subdirectory:
 
-    gsutil ls -R gs://bucket/dir/**
+    gsutil ls -r gs://bucket/dir/**
 
 
 <B>LISTING OBJECT DETAILS</B>

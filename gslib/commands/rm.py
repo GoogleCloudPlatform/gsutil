@@ -34,8 +34,8 @@ from gslib.util import StdinIterator
 
 
 _SYNOPSIS = """
-  gsutil rm [-f] [-R] url...
-  gsutil rm [-f] [-R] -I
+  gsutil rm [-f] [-r] url...
+  gsutil rm [-f] [-r] -I
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -57,21 +57,21 @@ _DETAILED_HELP_TEXT = ("""
   will remove all objects under gs://bucket/subdir or any of its
   subdirectories.
 
-  You can also use the -R option to specify recursive object deletion. Thus, for
+  You can also use the -r option to specify recursive object deletion. Thus, for
   example, either of the following two commands will remove gs://bucket/subdir
   and all objects and subdirectories under it:
 
     gsutil rm gs://bucket/subdir**
-    gsutil rm -R gs://bucket/subdir
+    gsutil rm -r gs://bucket/subdir
 
-  The -R option will also delete all object versions in the subdirectory for
+  The -r option will also delete all object versions in the subdirectory for
   versioning-enabled buckets, whereas the ** command will only delete the live
   version of each object in the subdirectory.
 
-  Running gsutil rm -R on a bucket will delete all versions of all objects in
+  Running gsutil rm -r on a bucket will delete all versions of all objects in
   the bucket, and then delete the bucket:
 
-    gsutil rm -R gs://bucket
+    gsutil rm -r gs://bucket
 
   If you want to delete all objects in the bucket, but not the bucket itself,
   this command will work:
@@ -82,7 +82,7 @@ _DETAILED_HELP_TEXT = ("""
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
   removes:
 
-    gsutil -m rm -R gs://my_bucket/subdir
+    gsutil -m rm -r gs://my_bucket/subdir
 
   You can pass a list of URLs (one per line) to remove on stdin instead of as
   command line arguments by using the -I option. This allows you to use gsutil
