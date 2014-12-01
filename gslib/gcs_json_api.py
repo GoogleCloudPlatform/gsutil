@@ -40,6 +40,7 @@ from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
+from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.cred_types import CredTypes
@@ -1150,6 +1151,9 @@ class GcsJsonApi(CloudApi):
       elif e.status_code >= 500:
         return ResumableUploadException(
             message or 'Server Error', status=e.status_code)
+      elif e.status_code == 410:
+        return ResumableUploadStartOverException(
+            message or 'Bad Request', status=e.status_code)
       elif e.status_code >= 400:
         return ResumableUploadAbortException(
             message or 'Bad Request', status=e.status_code)

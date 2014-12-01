@@ -14,6 +14,13 @@
 # limitations under the License.
 """Unit tests for parallel upload functions in copy_helper."""
 
+from util import GSMockBucketStorageUri
+
+from gslib.cloud_api import ResumableUploadAbortException
+from gslib.cloud_api import ResumableUploadException
+from gslib.cloud_api import ResumableUploadStartOverException
+from gslib.cloud_api import ServiceException
+from gslib.command import CreateGsutilLogger
 from gslib.copy_helper import _AppendComponentTrackerToParallelUploadTrackerFile
 from gslib.copy_helper import _CreateParallelUploadTrackerFile
 from gslib.copy_helper import _GetPartitionInfo
@@ -22,10 +29,12 @@ from gslib.copy_helper import _ParseParallelUploadTrackerFile
 from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import ObjectFromTracker
 from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
+from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
 
@@ -333,3 +342,32 @@ class TestCpFuncs(GsUtilUnitTestCase):
       self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
     self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
 
+  # pylint: disable=protected-access
+  def test_TranslateApitoolsResumableUploadException(self):
+    """Tests that _TranslateApitoolsResumableUploadException works correctly."""
+    gsutil_api = GcsJsonApi(
+        GSMockBucketStorageUri,
+        CreateGsutilLogger('copy_test'))
+
+    gsutil_api.http.disable_ssl_certificate_validation = True
+    exc = apitools_exceptions.HttpError({'status': 503}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ServiceException))
+
+    gsutil_api.http.disable_ssl_certificate_validation = False
+    exc = apitools_exceptions.HttpError({'status': 503}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadException))
+
+    exc = apitools_exceptions.HttpError({'status': 410}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc,
+                               ResumableUploadStartOverException))
+
+    exc = apitools_exceptions.HttpError({'status': 401}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
+
+    exc = apitools_exceptions.TransferError('Aborting transfer')
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
