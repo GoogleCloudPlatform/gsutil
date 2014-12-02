@@ -844,7 +844,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
     bucket_url_str = '%s://%s' % (
-        self.default_provider, self.nonexistent_bucket_name) 
+        self.default_provider, self.nonexistent_bucket_name)
     stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
                             expected_status=1, return_stderr=True)
     self.assertIn('Caught non-retryable exception', stderr)
@@ -858,10 +858,52 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
     bucket_url_str = '%s://%s' % (
-        self.default_provider, self.nonexistent_bucket_name) 
+        self.default_provider, self.nonexistent_bucket_name)
     stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
                             expected_status=1, return_stderr=True)
     self.assertIn('Caught non-retryable exception', stderr)
     listing = _TailSet(tmpdir, self._FlatListDir(tmpdir))
     # Dir should have un-altered content.
     self.assertEquals(listing, set(['/obj1', '/obj2']))
+
+  def test_bucket_to_bucket_minus_d_with_overwrite_and_punc_chars(self):
+    """Tests that punc chars in filenames don't confuse sort order."""
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    # Create 2 objects in each bucket, with one overwritten with a name that's
+    # less than the next name in destination bucket when encoded, but not when
+    # compared without encoding.
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='e/obj1',
+                      contents='obj1')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='e-1/obj2',
+                      contents='obj2')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='e/obj1',
+                      contents='OBJ1')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='e-1/obj2',
+                      contents='obj2')
+    # Need to make sure the bucket listings are caught-up, otherwise the
+    # rsync may not see all objects and fail to synchronize correctly.
+    self.AssertNObjectsInBucket(bucket1_uri, 2)
+    self.AssertNObjectsInBucket(bucket2_uri, 2)
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Tests rsync works as expected."""
+      self.RunGsUtil(['rsync', '-rd', suri(bucket1_uri), suri(bucket2_uri)])
+      listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
+      listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
+      # First bucket should have un-altered content.
+      self.assertEquals(listing1, set(['/e/obj1', '/e-1/obj2']))
+      self.assertEquals(listing2, set(['/e/obj1', '/e-1/obj2']))
+      # Assert correct contents.
+      self.assertEquals('obj1', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, 'e/obj1')], return_stdout=True))
+      self.assertEquals('obj2', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, 'e-1/obj2')], return_stdout=True))
+    _Check1()
+
+    # Check that re-running the same rsync command causes no more changes.
+    self.assertEquals(NO_CHANGES, self.RunGsUtil(
+        ['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)],
+        return_stderr=True))

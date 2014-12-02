@@ -114,6 +114,17 @@ _DETAILED_HELP_TEXT = ("""
   workstation.
 
 
+<B>IMPACT OF BUCKET LISTING EVENTUAL CONSISTENCY</B>
+  The rsync command operates by listing the source and destination URLs, and
+  then performing copy and remove operations according to the differences
+  between these listings. Because bucket listing is eventually (not strongly)
+  consistent, if you upload new objets or delete objects from a bucket and then
+  immediately run gsutil rsync with that bucket as the source or destination,
+  it's possible the rsync command will not see the recent updates and thus
+  synchronize incorrectly. You can rerun the rsync operation again later to
+  correct the incorrect synchronization.
+
+
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
   At the end of every upload or download, the gsutil rsync command validates
   that the checksum of the source file/object matches the checksum of the
@@ -415,7 +426,7 @@ def _BuildTmpOutputLine(blr):
     blr: The BucketListingRef.
 
   Returns:
-    The output line, formatted as quote_plus(URL)<sp>size<sp>crc32c<sp>md5
+    The output line, formatted as _EncodeUrl(URL)<sp>size<sp>crc32c<sp>md5
     where crc32c will only be present for GCS URLs, and md5 will only be
     present for cloud URLs that aren't composite objects. A missing field is
     populated with '-'.
@@ -431,8 +442,33 @@ def _BuildTmpOutputLine(blr):
     md5 = blr.root_object.md5Hash or _NA
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
-  return '%s %d %s %s\n' % (
-      urllib.quote_plus(url.url_string.encode(UTF8)), size, crc32c, md5)
+  return '%s %d %s %s\n' % (_EncodeUrl(url.url_string), size, crc32c, md5)
+
+
+def _EncodeUrl(url_string):
+  """Encodes url_str with quote plus encoding and UTF8 character encoding.
+
+  We use this for all URL encodings.
+
+  Args:
+    url_string: String URL to encode.
+
+  Returns:
+    encoded URL.
+  """
+  return urllib.quote_plus(url_string.encode(UTF8))
+
+
+def _DecodeUrl(enc_url_string):
+  """Inverts encoding from EncodeUrl.
+
+  Args:
+    enc_url_string: String URL to decode.
+
+  Returns:
+    decoded URL.
+  """
+  return urllib.unquote_plus(enc_url_string).decode(UTF8)
 
 
 # pylint: disable=bare-except
@@ -571,8 +607,7 @@ class _DiffIterator(object):
       Parsed tuple: (url, size, crc32c, md5)
     """
     (encoded_url, size, crc32c, md5) = line.split()
-    return (urllib.unquote_plus(encoded_url).decode(UTF8),
-            int(size), crc32c, md5.strip())
+    return (_DecodeUrl(encoded_url), int(size), crc32c, md5.strip())
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
     """Warns if given url_str is a cloud URL and is missing both crc32c and md5.
@@ -659,7 +694,8 @@ class _DiffIterator(object):
             self.sorted_src_urls_it.next())
         # Skip past base URL and normalize slashes so we can compare across
         # clouds/file systems (including Windows).
-        src_url_str_to_check = src_url_str[base_src_url_len:].replace('\\', '/')
+        src_url_str_to_check = _EncodeUrl(
+            src_url_str[base_src_url_len:].replace('\\', '/'))
         dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
             self.base_src_url, StorageUrlFromString(src_url_str), True, True,
             self.base_dst_url, False, self.recursion_requested).url_string
@@ -674,7 +710,8 @@ class _DiffIterator(object):
             self._ParseTmpFileLine(self.sorted_dst_urls_it.next()))
         # Skip past base URL and normalize slashes so we can compare acros
         # clouds/file systems (including Windows).
-        dst_url_str_to_check = dst_url_str[base_dst_url_len:].replace('\\', '/')
+        dst_url_str_to_check = _EncodeUrl(
+            dst_url_str[base_dst_url_len:].replace('\\', '/'))
 
       if src_url_str_to_check < dst_url_str_to_check:
         # There's no dst object corresponding to src object, so copy src to dst.
@@ -694,11 +731,11 @@ class _DiffIterator(object):
             src_url_str, src_size, src_crc32c, src_md5,
             dst_url_str, dst_size, dst_crc32c, dst_md5):
           # Continue iterating without yielding a _DiffToApply.
-          src_url_str = None
-          dst_url_str = None
+          pass
         else:
           yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY)
-          dst_url_str = None
+        src_url_str = None
+        dst_url_str = None
 
     # If -d option specified any files/objects left in dst iteration should be
     # removed.
