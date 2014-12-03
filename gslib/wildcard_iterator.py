@@ -568,7 +568,13 @@ class FileWildcardIterator(WildcardIterator):
           raise CommandException('\n'.join(textwrap.wrap(
               'Invalid Unicode path encountered (%s). gsutil cannot proceed '
               'with such files present. Please remove or rename this file and '
-              'try again.' % repr(os.path.join(dirpath, f)))))
+              'try again. NOTE: the path printed above replaces the '
+              'problematic characters with a hex-encoded printable '
+              'representation. Also, on Linux and MacOS you can install and '
+              'use the convmv tool (http://linux.die.net/man/1/convmv) to '
+              'convert the file to a gsutil-compatible encoding (such as '
+              'latin1, if that\'s appropriate for your file).' %
+              repr(os.path.join(dirpath, f)))))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
