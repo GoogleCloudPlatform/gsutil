@@ -13,6 +13,7 @@
 # limitations under the License.
 """Common credentials classes and constructors."""
 
+import datetime
 import json
 import os
 import urllib2
@@ -245,8 +246,21 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
   def _refresh(self, do_request):  # pylint: disable=g-bad-name
     """Refresh self.access_token.
 
+    This function replaces AppAssertionCredentials._refresh, which does not use
+    the credential store and is therefore poorly suited for multi-threaded
+    scenarios.
+
     Args:
       do_request: A function matching httplib2.Http.request's signature.
+    """
+    # pylint: disable=protected-access
+    oauth2client.client.OAuth2Credentials._refresh(self, do_request)
+    # pylint: enable=protected-access
+
+  def _do_refresh_request(self, unused_http_request):
+    """Refresh self.access_token by querying the metadata server.
+
+    If self.store is initialized, store acquired credentials there.
     """
     token_uri = (
         'http://metadata.google.internal/computeMetadata/v1/instance/'
@@ -256,6 +270,9 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     try:
       content = urllib2.urlopen(request).read()
     except urllib2.URLError as e:
+      self.invalid = True
+      if self.store:
+        self.store.locked_put(self)
       raise exceptions.CommunicationError(
           'Could not reach metadata service: %s' % e.reason)
     try:
@@ -265,6 +282,27 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
           'Invalid credentials response: uri %s' % token_uri)
 
     self.access_token = credential_info['access_token']
+    if 'expires_in' in credential_info:
+      self.token_expiry = (
+          datetime.timedelta(seconds=int(credential_info['expires_in'])) +
+          datetime.datetime.utcnow())
+    else:
+      self.token_expiry = None
+    self.invalid = False
+    if self.store:
+      self.store.locked_put(self)
+
+  @classmethod
+  def from_json(cls, json_data):
+    data = json.loads(json_data)
+    credentials = GceAssertionCredentials(scopes=[data['scope']])
+    if 'access_token' in data:
+      credentials.access_token = data['access_token']
+    if 'token_expiry' in data:
+      credentials.token_expiry = data['token_expiry']
+    if 'invalid' in data:
+      credentials.invalid = data['invalid']
+    return credentials
 
 
 # TODO: Currently, we can't even *load*
