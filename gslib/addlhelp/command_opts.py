@@ -122,8 +122,6 @@ _DETAILED_HELP_TEXT = ("""
               etc. Errors are still reported. This option can be useful for
               running gsutil from a cron job that logs its output to a file, for
               which the only information desired in the log is failures.
-
-  -s          Tells gsutil to use a simulated storage provider (for testing).
 """)
 
 
