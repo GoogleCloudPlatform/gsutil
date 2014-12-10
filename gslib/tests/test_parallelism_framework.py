@@ -32,9 +32,16 @@ from gslib.command import Command
 from gslib.command import CreateGsutilLogger
 from gslib.command import DummyArgChecker
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import MultiprocessingIsAvailable
+
+
+# Amount of time for an individual test to run before timing out. We need a
+# reasonably high value since if many tests are running in parallel, an
+# individual test may take a while to complete.
+_TEST_TIMEOUT_SECONDS = 120
 
 
 def Timeout(func):
@@ -43,7 +50,7 @@ def Timeout(func):
   def Wrapper(*args, **kwargs):
     if not IS_WINDOWS:
       signal.signal(signal.SIGALRM, _HandleAlarm)
-      signal.alarm(5)
+      signal.alarm(_TEST_TIMEOUT_SECONDS)
     try:
       func(*args, **kwargs)
     finally:
@@ -97,6 +104,14 @@ def _ReApplyWithReplicatedArguments(cls, args, thread_state=None):
 
   The first two elements of args should be the process and thread counts,
   respectively, to be used for the recursive calls.
+
+  Args:
+    cls: The Command class to call Apply on.
+    args: Arguments to pass to Apply.
+    thread_state: Unused, required by function signature.
+
+  Returns:
+    Number of values returned by the two calls to Apply.
   """
   new_args = [args] * 7
   process_count = _AdjustProcessCountIfWindows(args[0])
@@ -123,6 +138,14 @@ def _PerformNRecursiveCalls(cls, args, thread_state=None):
   The first two elements of args should be the process and thread counts,
   respectively, to be used for the recursive calls, while N is the third element
   (the number of recursive calls to make).
+
+  Args:
+    cls: The Command class to call Apply on.
+    args: Arguments to pass to Apply.
+    thread_state: Unused, required by function signature.
+
+  Returns:
+    Number of values returned by the call to Apply.
   """
   process_count = _AdjustProcessCountIfWindows(args[0])
   thread_count = args[1]
@@ -223,16 +246,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                               shared_attrs=shared_attrs,
                               fail_on_error=fail_on_error)
 
+  @RequiresIsolation
   def testBasicApplySingleProcessSingleThread(self):
     self._TestBasicApply(1, 1)
 
+  @RequiresIsolation
   def testBasicApplySingleProcessMultiThread(self):
     self._TestBasicApply(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testBasicApplyMultiProcessSingleThread(self):
     self._TestBasicApply(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testBasicApplyMultiProcessMultiThread(self):
     self._TestBasicApply(10, 10)
@@ -244,16 +271,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     results = self._RunApply(_ReturnOneValue, args, process_count, thread_count)
     self.assertEqual(len(args), len(results))
 
+  @RequiresIsolation
   def testIteratorFailureSingleProcessSingleThread(self):
     self._TestIteratorFailure(1, 1)
 
+  @RequiresIsolation
   def testIteratorFailureSingleProcessMultiThread(self):
     self._TestIteratorFailure(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testIteratorFailureMultiProcessSingleThread(self):
     self._TestIteratorFailure(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testIteratorFailureMultiProcessMultiThread(self):
     self._TestIteratorFailure(10, 10)
@@ -290,16 +321,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     results = self._RunApply(_ReturnOneValue, args, process_count, thread_count)
     self.assertEqual(0, len(results))
 
+  @RequiresIsolation
   def testTestSharedAttrsWorkSingleProcessSingleThread(self):
     self._TestSharedAttrsWork(1, 1)
 
+  @RequiresIsolation
   def testTestSharedAttrsWorkSingleProcessMultiThread(self):
     self._TestSharedAttrsWork(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testTestSharedAttrsWorkMultiProcessSingleThread(self):
     self._TestSharedAttrsWork(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testTestSharedAttrsWorkMultiProcessMultiThread(self):
     self._TestSharedAttrsWork(10, 10)
@@ -325,16 +360,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                    command_inst=command_inst, shared_attrs=['failure_count'])
     self.assertEqual(3, command_inst.failure_count)
 
+  @RequiresIsolation
   def testThreadsSurviveExceptionsInFuncSingleProcessSingleThread(self):
     self._TestThreadsSurviveExceptionsInFunc(1, 1)
 
+  @RequiresIsolation
   def testThreadsSurviveExceptionsInFuncSingleProcessMultiThread(self):
     self._TestThreadsSurviveExceptionsInFunc(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testThreadsSurviveExceptionsInFuncMultiProcessSingleThread(self):
     self._TestThreadsSurviveExceptionsInFunc(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testThreadsSurviveExceptionsInFuncMultiProcessMultiThread(self):
     self._TestThreadsSurviveExceptionsInFunc(10, 10)
@@ -348,16 +387,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                    thr_exc_handler=_FailingExceptionHandler)
     self.assertEqual(len(args), command_inst.failure_count)
 
+  @RequiresIsolation
   def testThreadsSurviveExceptionsInHandlerSingleProcessSingleThread(self):
     self._TestThreadsSurviveExceptionsInHandler(1, 1)
 
+  @RequiresIsolation
   def testThreadsSurviveExceptionsInHandlerSingleProcessMultiThread(self):
     self._TestThreadsSurviveExceptionsInHandler(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testThreadsSurviveExceptionsInHandlerMultiProcessSingleThread(self):
     self._TestThreadsSurviveExceptionsInHandler(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testThreadsSurviveExceptionsInHandlerMultiProcessMultiThread(self):
     self._TestThreadsSurviveExceptionsInHandler(10, 10)
@@ -371,6 +414,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                    thr_exc_handler=_FailingExceptionHandler)
     self.assertEqual(len(args), command_inst.failure_count)
 
+  @RequiresIsolation
   @Timeout
   def testFailOnErrorFlag(self):
     """Tests that fail_on_error produces the correct exception on failure."""
@@ -415,16 +459,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       self.assertEqual(1, len(results))
     _ExpectCustomException(_RunFailingIteratorMultiplePositions)
 
+  @RequiresIsolation
   def testRecursiveDepthThreeDifferentFunctionsSingleProcessSingleThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(1, 1)
 
+  @RequiresIsolation
   def testRecursiveDepthThreeDifferentFunctionsSingleProcessMultiThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testRecursiveDepthThreeDifferentFunctionsMultiProcessSingleThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testRecursiveDepthThreeDifferentFunctionsMultiProcessMultiThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(10, 10)
@@ -443,21 +491,25 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     """
     base_args = [3, 1, 4, 1, 5]
     args = [[process_count, thread_count, count] for count in base_args]
-    
+
     results = self._RunApply(_ReApplyWithReplicatedArguments, args,
                              process_count, thread_count)
     self.assertEqual(7 * (sum(base_args) + len(base_args)), sum(results))
 
+  @RequiresIsolation
   def testExceptionInProducerRaisesAndTerminatesSingleProcessSingleThread(self):
     self._TestExceptionInProducerRaisesAndTerminates(1, 1)
 
+  @RequiresIsolation
   def testExceptionInProducerRaisesAndTerminatesSingleProcessMultiThread(self):
     self._TestExceptionInProducerRaisesAndTerminates(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testExceptionInProducerRaisesAndTerminatesMultiProcessSingleThread(self):
     self._TestExceptionInProducerRaisesAndTerminates(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testExceptionInProducerRaisesAndTerminatesMultiProcessMultiThread(self):
     self._TestExceptionInProducerRaisesAndTerminates(10, 10)
@@ -472,16 +524,20 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     except TypeError:
       pass
 
+  @RequiresIsolation
   def testSkippedArgumentsSingleThreadSingleProcess(self):
     self._TestSkippedArguments(1, 1)
 
+  @RequiresIsolation
   def testSkippedArgumentsMultiThreadSingleProcess(self):
     self._TestSkippedArguments(1, 10)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testSkippedArgumentsSingleThreadMultiProcess(self):
     self._TestSkippedArguments(10, 1)
 
+  @RequiresIsolation
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testSkippedArgumentsMultiThreadMultiProcess(self):
     self._TestSkippedArguments(10, 10)

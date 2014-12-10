@@ -31,11 +31,21 @@ MAX_BUCKET_LENGTH = 63
 
 
 def NotParallelizable(func):
+  """Wrapper function for cases that are not parallelizable."""
   @wraps(func)
   def ParallelAnnotatedFunc(*args, **kwargs):
     return func(*args, **kwargs)
   ParallelAnnotatedFunc.is_parallelizable = False
   return ParallelAnnotatedFunc
+
+
+def RequiresIsolation(func):
+  """Wrapper function for cases that require running in a separate process."""
+  @wraps(func)
+  def RequiresIsolationFunc(*args, **kwargs):
+    return func(*args, **kwargs)
+  RequiresIsolationFunc.requires_isolation = True
+  return RequiresIsolationFunc
 
 
 class GsUtilTestCase(unittest.TestCase):

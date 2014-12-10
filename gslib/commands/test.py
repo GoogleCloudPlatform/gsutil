@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from collections import namedtuple
 import logging
 import os
 import subprocess
@@ -54,8 +55,9 @@ except ImportError:
   coverage = None
 
 
-DEFAULT_TEST_PARALLEL_PROCESSES = 15
-DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
+_DEFAULT_TEST_PARALLEL_PROCESSES = 15
+_DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
+_SEQUENTIAL_ISOLATION_FLAG = 'sequential_only'
 
 
 _SYNOPSIS = """
@@ -83,19 +85,16 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil test -u
 
-  To run integration tests in parallel (CPU-intensive but much faster):
+  Tests run in parallel regardless of whether the top-level -m flag is
+  present. To limit the number of tests run in parallel to 10 at a time:
 
-    gsutil -m test
+    gsutil test -p 10
 
-  To limit the number of tests run in parallel to 10 at a time:
+  To force tests to run sequentially:
 
-    gsutil -m test -p 10
+    gsutil test -p 1    
 
-  To see additional details for test failures:
-
-    gsutil -d test
-
-  To have the tests stop running immediately when an error occurs:
+  To have sequentially-run tests stop running immediately when an error occurs:
 
     gsutil test -f
 
@@ -132,7 +131,7 @@ _DETAILED_HELP_TEXT = ("""
 
   To output test coverage:
 
-    gsutil -m test -c -p 500
+    gsutil test -c -p 500
     coverage html
 
   This will output an HTML report to a directory named 'htmlcov'.
@@ -141,7 +140,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>OPTIONS</B>
   -c          Output coverage information.
 
-  -f          Exit on first test failure.
+  -f          Exit on first sequential test failure.
 
   -l          List available tests.
 
@@ -150,7 +149,11 @@ _DETAILED_HELP_TEXT = ("""
   -s          Run tests against S3 instead of GS.
 
   -u          Only run unit tests.
-""" % DEFAULT_TEST_PARALLEL_PROCESSES)
+""" % _DEFAULT_TEST_PARALLEL_PROCESSES)
+
+
+TestProcessData = namedtuple('TestProcessData',
+                             'name return_code stdout stderr')
 
 
 def MakeCustomTestResultClass(total_tests):
@@ -211,14 +214,17 @@ def SplitParallelizableTestSuite(test_suite):
     test_suite: A python unittest test suite.
 
   Returns:
-    3-part tuple of lists of test names:
+    4-part tuple of lists of test names:
     (tests that must be run sequentially,
-     integration tests that can run in parallel,
-     unit tests that can be run in parallel)
+     tests that must be isolated in a separate process but can be run either
+         sequentially or in parallel,
+     unit tests that can be run in parallel,
+     integration tests that can run in parallel)
   """
   # pylint: disable=import-not-at-top
   # Need to import this after test globals are set so that skip functions work.
   from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+  isolated_tests = []
   sequential_tests = []
   parallelizable_integration_tests = []
   parallelizable_unit_tests = []
@@ -236,7 +242,11 @@ def SplitParallelizableTestSuite(test_suite):
 
   for test_case in cases_to_evaluate:
     test_method = getattr(test_case, test_case._testMethodName, None)
-    if not getattr(test_method, 'is_parallelizable', True):
+    if getattr(test_method, 'requires_isolation', False):
+      # Test must be isolated to a separate process, even it if is being
+      # run sequentially.
+      isolated_tests.append(TestCaseToName(test_case))
+    elif not getattr(test_method, 'is_parallelizable', True):
       sequential_tests.append(TestCaseToName(test_case))
     elif isinstance(test_case, GsUtilUnitTestCase):
       parallelizable_unit_tests.append(TestCaseToName(test_case))
@@ -244,8 +254,9 @@ def SplitParallelizableTestSuite(test_suite):
       parallelizable_integration_tests.append(TestCaseToName(test_case))
 
   return (sorted(sequential_tests),
-          sorted(parallelizable_integration_tests),
-          sorted(parallelizable_unit_tests))
+          sorted(isolated_tests),
+          sorted(parallelizable_unit_tests),
+          sorted(parallelizable_integration_tests))
 
 
 def CountFalseInList(input_list):
@@ -287,6 +298,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
       env['GSUTIL_COVERAGE_OUTPUT_FILE'] = root_coverage_file
     process_list.append(subprocess.Popen(
         executable_prefix + [gslib.GSUTIL_PATH] + ['test'] + s3_argument +
+        ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
         [parallel_tests[test_index][len('gslib.tests.test_'):]],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env))
     test_index += 1
@@ -316,6 +328,7 @@ class TestCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
+      supported_private_args=[_SEQUENTIAL_ISOLATION_FLAG]
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
@@ -327,6 +340,108 @@ class TestCommand(Command):
       subcommand_help_text={},
   )
 
+  def RunParallelTests(self, parallel_integration_tests,
+                       max_parallel_tests, coverage_filename):
+    """Executes the parallel/isolated portion of the test suite.
+
+    Args:
+      parallel_integration_tests: List of tests to execute.
+      max_parallel_tests: Maximum number of parallel tests to run at once.
+      coverage_filename: If not None, filename for coverage output.
+
+    Returns:
+      (int number of test failures, float elapsed time)
+    """
+    process_list = []
+    process_done = []
+    process_results = []  # Tuples of (name, return code, stdout, stderr)
+    num_parallel_failures = 0
+    # Number of logging cycles we ran with no progress.
+    progress_less_logging_cycles = 0
+    completed_as_of_last_log = 0
+    num_parallel_tests = len(parallel_integration_tests)
+    parallel_start_time = last_log_time = time.time()
+    test_index = CreateTestProcesses(
+        parallel_integration_tests, 0, process_list, process_done,
+        max_parallel_tests, root_coverage_file=coverage_filename)
+    while len(process_results) < num_parallel_tests:
+      for proc_num in xrange(len(process_list)):
+        if process_done[proc_num] or process_list[proc_num].poll() is None:
+          continue
+        process_done[proc_num] = True
+        stdout, stderr = process_list[proc_num].communicate()
+        # TODO: Differentiate test failures from errors.
+        if process_list[proc_num].returncode != 0:
+          num_parallel_failures += 1
+        process_results.append(TestProcessData(
+            name=parallel_integration_tests[proc_num],
+            return_code=process_list[proc_num].returncode,
+            stdout=stdout, stderr=stderr))
+      if len(process_list) < num_parallel_tests:
+        test_index = CreateTestProcesses(
+            parallel_integration_tests, test_index, process_list,
+            process_done, max_parallel_tests,
+            root_coverage_file=coverage_filename)
+      if len(process_results) < num_parallel_tests:
+        if time.time() - last_log_time > 5:
+          print '%d/%d finished - %d failures' % (
+              len(process_results), num_parallel_tests, num_parallel_failures)
+          if len(process_results) == completed_as_of_last_log:
+            progress_less_logging_cycles += 1
+          else:
+            completed_as_of_last_log = len(process_results)
+            # A process completed, so we made progress.
+            progress_less_logging_cycles = 0
+          if progress_less_logging_cycles > 4:
+            # Ran 5 or more logging cycles with no progress, let the user
+            # know which tests are running slowly or hanging.
+            still_running = []
+            for proc_num in xrange(len(process_list)):
+              if not process_done[proc_num]:
+                still_running.append(parallel_integration_tests[proc_num])
+            print 'Still running: %s' % still_running
+            # TODO: Terminate still-running processes if they
+            # hang for a long time.
+          last_log_time = time.time()
+        time.sleep(1)
+    process_run_finish_time = time.time()
+    if num_parallel_failures:
+      for result in process_results:
+        if result.return_code != 0:
+          new_stderr = result.stderr.split('\n')
+          print 'Results for failed test %s:' % result.name
+          for line in new_stderr:
+            print line
+
+    return (num_parallel_failures,
+            (process_run_finish_time - parallel_start_time))
+
+  def PrintTestResults(self, num_sequential_tests, sequential_success,
+                       sequential_time_elapsed,
+                       num_parallel_tests, num_parallel_failures,
+                       parallel_time_elapsed):
+    """Prints test results for parallel and sequential tests."""
+    # TODO: Properly track test skips.
+    print 'Parallel tests complete. Success: %s Fail: %s' % (
+        num_parallel_tests - num_parallel_failures, num_parallel_failures)
+    print (
+        'Ran %d tests in %.3fs (%d sequential in %.3fs, %d parallel in %.3fs)'
+        % (num_parallel_tests + num_sequential_tests,
+           float(sequential_time_elapsed + parallel_time_elapsed),
+           num_sequential_tests,
+           float(sequential_time_elapsed),
+           num_parallel_tests,
+           float(parallel_time_elapsed)))
+    print
+
+    if not num_parallel_failures and sequential_success:
+      print 'OK'
+    else:
+      if num_parallel_failures:
+        print 'FAILED (parallel tests)'
+      if not sequential_success:
+        print 'FAILED (sequential tests)'
+
   def RunCommand(self):
     """Command entry point for the test command."""
     if not unittest:
@@ -335,8 +450,9 @@ class TestCommand(Command):
 
     failfast = False
     list_tests = False
-    max_parallel_tests = DEFAULT_TEST_PARALLEL_PROCESSES
+    max_parallel_tests = _DEFAULT_TEST_PARALLEL_PROCESSES
     perform_coverage = False
+    sequential_only = False
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-c':
@@ -345,6 +461,10 @@ class TestCommand(Command):
           failfast = True
         elif o == '-l':
           list_tests = True
+        elif o == ('--' + _SEQUENTIAL_ISOLATION_FLAG):
+          # Called to isolate a single test in a separate process.
+          # Don't try to isolate it again (would lead to an infinite loop).
+          sequential_only = True
         elif o == '-p':
           max_parallel_tests = long(a)
         elif o == '-s':
@@ -361,15 +481,16 @@ class TestCommand(Command):
           'Coverage has been requested but the coverage module was not found. '
           'You can install it with "pip install coverage".')
 
-    if self.parallel_operations:
-      if IS_WINDOWS:
-        raise CommandException('-m test is not supported on Windows.')
-      elif (tests.util.RUN_S3_TESTS and
-            max_parallel_tests > DEFAULT_S3_TEST_PARALLEL_PROCESSES):
-        self.logger.warn(
-            'Reducing parallel tests to %d due to S3 maximum bucket '
-            'limitations.', DEFAULT_S3_TEST_PARALLEL_PROCESSES)
-        max_parallel_tests = DEFAULT_S3_TEST_PARALLEL_PROCESSES
+    if IS_WINDOWS:
+      self.logger.warn(
+          'Not running tests in parallel due to Windows limitations.')
+      max_parallel_tests = 1
+    elif (tests.util.RUN_S3_TESTS and
+          max_parallel_tests > _DEFAULT_S3_TEST_PARALLEL_PROCESSES):
+      self.logger.warn(
+          'Reducing parallel tests to %d due to S3 maximum bucket '
+          'limitations.', _DEFAULT_S3_TEST_PARALLEL_PROCESSES)
+      max_parallel_tests = _DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:
@@ -423,111 +544,31 @@ class TestCommand(Command):
       coverage_controller.start()
 
     num_parallel_failures = 0
-    if self.parallel_operations:
-      sequential_tests, parallel_integration_tests, parallel_unit_tests = (
-          SplitParallelizableTestSuite(suite))
+    sequential_success = False
 
-      sequential_start_time = time.time()
-      # TODO: For now, run unit tests sequentially because they are fast.
-      # We could potentially shave off several seconds of execution time
-      # by executing them in parallel with the integration tests.
-      # Note that parallelism_framework unit tests cannot be run in a
-      # subprocess.
-      print 'Running %d tests sequentially.' % (len(sequential_tests) +
-                                                len(parallel_unit_tests))
-      sequential_tests_to_run = sequential_tests + parallel_unit_tests
-      suite = loader.loadTestsFromNames(
-          sorted([test_name for test_name in sequential_tests_to_run]))
-      num_sequential_tests = suite.countTestCases()
-      resultclass = MakeCustomTestResultClass(num_sequential_tests)
-      runner = unittest.TextTestRunner(verbosity=verbosity,
-                                       resultclass=resultclass,
-                                       failfast=failfast)
-      ret = runner.run(suite)
+    (sequential_tests, isolated_tests,
+     parallel_unit_tests, parallel_integration_tests) = (
+         SplitParallelizableTestSuite(suite))
 
-      num_parallel_tests = len(parallel_integration_tests)
-      max_processes = min(max_parallel_tests, num_parallel_tests)
+    # Since parallel integration tests are run in a separate process, they
+    # won't get the override to tests.util, so skip them here.
+    if not tests.util.RUN_INTEGRATION_TESTS:
+      parallel_integration_tests = []
 
-      print ('\n'.join(textwrap.wrap(
-          'Running %d integration tests in parallel mode (%d processes)! '
-          'Please be patient while your CPU is incinerated. '
-          'If your machine becomes unresponsive, consider reducing '
-          'the amount of parallel test processes by running '
-          '\'gsutil -m test -p <num_processes>\'.' %
-          (num_parallel_tests, max_processes))))
-      process_list = []
-      process_done = []
-      process_results = []  # Tuples of (name, return code, stdout, stderr)
-      hang_detection_counter = 0
-      completed_as_of_last_log = 0
-      parallel_start_time = last_log_time = time.time()
-      test_index = CreateTestProcesses(
-          parallel_integration_tests, 0, process_list, process_done,
-          max_parallel_tests,
-          coverage_controller.data.filename if perform_coverage else None)
-      while len(process_results) < num_parallel_tests:
-        for proc_num in xrange(len(process_list)):
-          if process_done[proc_num] or process_list[proc_num].poll() is None:
-            continue
-          process_done[proc_num] = True
-          stdout, stderr = process_list[proc_num].communicate()
-          # TODO: Differentiate test failures from errors.
-          if process_list[proc_num].returncode != 0:
-            num_parallel_failures += 1
-          process_results.append((parallel_integration_tests[proc_num],
-                                  process_list[proc_num].returncode,
-                                  stdout, stderr))
-        if len(process_list) < num_parallel_tests:
-          test_index = CreateTestProcesses(
-              parallel_integration_tests, test_index, process_list,
-              process_done, max_parallel_tests,
-              coverage_controller.data.filename if perform_coverage else None)
-        if len(process_results) < num_parallel_tests:
-          if time.time() - last_log_time > 5:
-            print '%d/%d finished - %d failures' % (
-                len(process_results), num_parallel_tests, num_parallel_failures)
-            if len(process_results) == completed_as_of_last_log:
-              hang_detection_counter += 1
-            else:
-              completed_as_of_last_log = len(process_results)
-              hang_detection_counter = 0
-            if hang_detection_counter > 4:
-              still_running = []
-              for proc_num in xrange(len(process_list)):
-                if not process_done[proc_num]:
-                  still_running.append(parallel_integration_tests[proc_num])
-              print 'Still running: %s' % still_running
-            last_log_time = time.time()
-          time.sleep(1)
-      process_run_finish_time = time.time()
-      if num_parallel_failures:
-        for result in process_results:
-          if result[1] != 0:
-            new_stderr = result[3].split('\n')
-            print 'Results for failed test %s:' % result[0]
-            for line in new_stderr:
-              print line
+    logging.debug('Sequential tests to run: %s', sequential_tests)
+    logging.debug('Isolated tests to run: %s', isolated_tests)
+    logging.debug('Parallel unit tests to run: %s', parallel_unit_tests)
+    logging.debug('Parallel integration tests to run: %s',
+                  parallel_integration_tests)
 
-      # TODO: Properly track test skips.
-      print 'Parallel tests complete. Success: %s Fail: %s' % (
-          num_parallel_tests - num_parallel_failures, num_parallel_failures)
-      print (
-          'Ran %d tests in %.3fs (%d sequential in %.3fs, %d parallel in %.3fs)'
-          % (num_parallel_tests + num_sequential_tests,
-             float(process_run_finish_time - sequential_start_time),
-             num_sequential_tests,
-             float(parallel_start_time - sequential_start_time),
-             num_parallel_tests,
-             float(process_run_finish_time - parallel_start_time)))
-      print
-      if not num_parallel_failures and ret.wasSuccessful():
-        print 'OK'
-      else:
-        if num_parallel_failures:
-          print 'FAILED (parallel tests)'
-        if not ret.wasSuccessful():
-          print 'FAILED (sequential tests)'
-    else:
+    # If we're running an already-isolated test (spawned in isolation by a
+    # previous test process), or we have no parallel tests to run,
+    # just run sequentially. For now, unit tests are always run sequentially.
+    run_tests_sequentially = (sequential_only or
+                              (len(parallel_integration_tests) <= 1
+                               and not isolated_tests))
+
+    if run_tests_sequentially:
       total_tests = suite.countTestCases()
       resultclass = MakeCustomTestResultClass(total_tests)
 
@@ -535,6 +576,67 @@ class TestCommand(Command):
                                        resultclass=resultclass,
                                        failfast=failfast)
       ret = runner.run(suite)
+      sequential_success = ret.wasSuccessful()
+    else:
+      if max_parallel_tests == 1:
+        # We can't take advantage of parallelism, though we may have tests that
+        # need isolation.
+        sequential_tests += parallel_integration_tests
+        parallel_integration_tests = []
+
+      sequential_start_time = time.time()
+      # TODO: For now, run unit tests sequentially because they are fast.
+      # We could potentially shave off several seconds of execution time
+      # by executing them in parallel with the integration tests.
+      if len(sequential_tests) + len(parallel_unit_tests):
+        print 'Running %d tests sequentially.' % (len(sequential_tests) +
+                                                  len(parallel_unit_tests))
+        sequential_tests_to_run = sequential_tests + parallel_unit_tests
+        suite = loader.loadTestsFromNames(
+            sorted([test_name for test_name in sequential_tests_to_run]))
+        num_sequential_tests = suite.countTestCases()
+        resultclass = MakeCustomTestResultClass(num_sequential_tests)
+        runner = unittest.TextTestRunner(verbosity=verbosity,
+                                         resultclass=resultclass,
+                                         failfast=failfast)
+
+        ret = runner.run(suite)
+        sequential_success = ret.wasSuccessful()
+      else:
+        num_sequential_tests = 0
+        sequential_success = True
+      sequential_time_elapsed = time.time() - sequential_start_time
+
+      # At this point, all tests get their own process so just treat the
+      # isolated tests as parallel tests.
+      parallel_integration_tests += isolated_tests
+      num_parallel_tests = len(parallel_integration_tests)
+
+      if not num_parallel_tests:
+        pass
+      else:
+        num_processes = min(max_parallel_tests, num_parallel_tests)
+        if num_parallel_tests > 1 and max_parallel_tests > 1:
+          message = 'Running %d tests in parallel mode (%d processes).'
+          if num_processes > _DEFAULT_TEST_PARALLEL_PROCESSES:
+            message += (
+                ' Please be patient while your CPU is incinerated. '
+                'If your machine becomes unresponsive, consider reducing '
+                'the amount of parallel test processes by running '
+                '\'gsutil test -p <num_processes>\'.')
+          print ('\n'.join(textwrap.wrap(
+              message % (num_parallel_tests, num_processes))))
+        else:
+          print ('Running %d tests sequentially in isolated processes.' %
+                 num_parallel_tests)
+        (num_parallel_failures, parallel_time_elapsed) = self.RunParallelTests(
+            parallel_integration_tests, max_parallel_tests,
+            coverage_controller.data.filename if perform_coverage else None)
+        self.PrintTestResults(
+            num_sequential_tests, sequential_success,
+            sequential_time_elapsed,
+            num_parallel_tests, num_parallel_failures,
+            parallel_time_elapsed)
 
     if perform_coverage:
       coverage_controller.stop()
@@ -543,7 +645,7 @@ class TestCommand(Command):
       print ('Coverage information was saved to: %s' %
              coverage_controller.data.filename)
 
-    if ret.wasSuccessful() and not num_parallel_failures:
+    if sequential_success and not num_parallel_failures:
       ResetFailureCount()
       return 0
     return 1
