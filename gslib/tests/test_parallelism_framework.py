@@ -93,28 +93,43 @@ def _AdjustProcessCountIfWindows(process_count):
 
 
 def _ReApplyWithReplicatedArguments(cls, args, thread_state=None):
-  """Calls Apply with arguments repeated seven times."""
+  """Calls Apply with arguments repeated seven times.
+
+  The first two elements of args should be the process and thread counts,
+  respectively, to be used for the recursive calls.
+  """
   new_args = [args] * 7
-  process_count = _AdjustProcessCountIfWindows(2)
+  process_count = _AdjustProcessCountIfWindows(args[0])
+  thread_count = args[1]
   return_values = cls.Apply(_PerformNRecursiveCalls, new_args,
                             _ExceptionHandler, arg_checker=DummyArgChecker,
-                            process_count=process_count, thread_count=2,
+                            process_count=process_count,
+                            thread_count=thread_count,
                             should_return_results=True)
   ret = sum(return_values)
 
   return_values = cls.Apply(_ReturnOneValue, new_args,
                             _ExceptionHandler, arg_checker=DummyArgChecker,
-                            process_count=process_count, thread_count=2,
+                            process_count=process_count,
+                            thread_count=thread_count,
                             should_return_results=True)
 
   return len(return_values) + ret
 
 
 def _PerformNRecursiveCalls(cls, args, thread_state=None):
-  process_count = _AdjustProcessCountIfWindows(2)
-  return_values = cls.Apply(_ReturnOneValue, [()] * args, _ExceptionHandler,
+  """Calls Apply to perform N recursive calls.
+
+  The first two elements of args should be the process and thread counts,
+  respectively, to be used for the recursive calls, while N is the third element
+  (the number of recursive calls to make).
+  """
+  process_count = _AdjustProcessCountIfWindows(args[0])
+  thread_count = args[1]
+  return_values = cls.Apply(_ReturnOneValue, [()] * args[2], _ExceptionHandler,
                             arg_checker=DummyArgChecker,
-                            process_count=process_count, thread_count=2,
+                            process_count=process_count,
+                            thread_count=thread_count,
                             should_return_results=True)
   return len(return_values)
 
@@ -426,10 +441,12 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       process_count: Number of processes to use.
       thread_count: Number of threads to use.
     """
-    args = ([3, 1, 4, 1, 5])
+    base_args = [3, 1, 4, 1, 5]
+    args = [[process_count, thread_count, count] for count in base_args]
+    
     results = self._RunApply(_ReApplyWithReplicatedArguments, args,
                              process_count, thread_count)
-    self.assertEqual(7 * (sum(args) + len(args)), sum(results))
+    self.assertEqual(7 * (sum(base_args) + len(base_args)), sum(results))
 
   def testExceptionInProducerRaisesAndTerminatesSingleProcessSingleThread(self):
     self._TestExceptionInProducerRaisesAndTerminates(1, 1)

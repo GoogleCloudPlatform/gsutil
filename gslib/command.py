@@ -1386,15 +1386,10 @@ class Command(HelpProvider):
     assert thread_count * process_count > 1, (
         'Invalid state, calling command._ApplyThreads with only one thread '
         'and process.')
-    if thread_count > 1:
-      worker_pool = WorkerPool(
-          thread_count, self.logger,
-          bucket_storage_uri_class=self.bucket_storage_uri_class,
-          gsutil_api_map=self.gsutil_api_map, debug=self.debug)
-    elif process_count > 1:
-      worker_pool = SameThreadWorkerPool(
-          self, bucket_storage_uri_class=self.bucket_storage_uri_class,
-          gsutil_api_map=self.gsutil_api_map, debug=self.debug)
+    worker_pool = WorkerPool(
+        thread_count, self.logger,
+        bucket_storage_uri_class=self.bucket_storage_uri_class,
+        gsutil_api_map=self.gsutil_api_map, debug=self.debug)
 
     num_enqueued = 0
     while True:
@@ -1578,21 +1573,6 @@ class ProducerThread(threading.Thread):
       # so we need to check here as well.
       _NotifyIfDone(self.caller_id,
                     caller_id_finished_count.Get(self.caller_id))
-
-
-class SameThreadWorkerPool(object):
-  """Behaves like a WorkerPool, but used for the single-threaded case."""
-
-  def __init__(self, cls, bucket_storage_uri_class=None,
-               gsutil_api_map=None, debug=0):
-    self.cls = cls
-    self.worker_thread = WorkerThread(
-        None, cls.logger,
-        bucket_storage_uri_class=bucket_storage_uri_class,
-        gsutil_api_map=gsutil_api_map, debug=debug)
-
-  def AddTask(self, task):
-    self.worker_thread.PerformTask(task, self.cls)
 
 
 class WorkerPool(object):
