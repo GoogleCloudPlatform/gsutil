@@ -110,7 +110,7 @@ _DETAILED_HELP_TEXT = ("""
   `Google Compute Engine <https://cloud.google.com/products/compute-engine>`_
   account and running gsutil there. Since cross-provider gsutil data transfers
   flow through the machine where gsutil is running, doing this can make your
-  transfer run singificantly faster than running gsutil on your local
+  transfer run significantly faster than running gsutil on your local
   workstation.
 
 
