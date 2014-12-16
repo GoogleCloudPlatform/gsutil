@@ -72,6 +72,9 @@ _DETAILED_HELP_TEXT = ("""
     object names can make it difficult or impossible to perform various wildcard
     operations using gsutil (see 'gsutil help wildcards').
 
+  See also 'gsutil help encoding' about file/object name encoding requirements
+  and potential interoperability concerns.
+
 
 <B>DOMAIN NAMED BUCKETS</B>
   You can carve out parts of the Google Cloud Storage bucket name space
@@ -165,8 +168,6 @@ _DETAILED_HELP_TEXT = ("""
   inclusion of any other resource records if there is a CNAME resource record
   present. If you want to create a CNAME resource record for a domain, you must
   use the Meta tag verification method or the HTML file verification method.
-
-
 """)
 
 
