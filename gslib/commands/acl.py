@@ -375,6 +375,11 @@ class AclCommand(Command):
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
 
+  def _RaiseForAccessDenied(self, url):
+    self._WarnServiceAccounts()
+    raise CommandException('Failed to set acl for %s. Please ensure you have '
+                           'OWNER-role access to this resource.' % url)
+
   @Retry(ServiceException, tries=3, timeout_secs=1)
   def ApplyAclChanges(self, name_expansion_result, thread_state=None):
     """Applies the changes in self.changes to the provided URL.
@@ -401,10 +406,7 @@ class AclCommand(Command):
           fields=['acl', 'generation', 'metageneration'])
       current_acl = gcs_object.acl
     if not current_acl:
-      self._WarnServiceAccounts()
-      self.logger.warning('Failed to set acl for %s. Please ensure you have '
-                          'OWNER-role access to this resource.', url)
-      return
+      self._RaiseForAccessDenied(url)
 
     modification_count = 0
     for change in self.changes:
@@ -432,6 +434,8 @@ class AclCommand(Command):
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
+    except AccessDeniedException:
+      self._RaiseForAccessDenied(url)
 
     self.logger.info('Updated ACL on %s', url)
 
