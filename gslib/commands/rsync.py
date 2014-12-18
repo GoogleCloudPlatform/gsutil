@@ -51,7 +51,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] src_url dst_url
+  gsutil rsync [-C] [-d] [-e] [-N] [-n] [-p] [-r] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -158,11 +158,12 @@ _DETAILED_HELP_TEXT = ("""
 
   Checksums will not be available in two cases:
 
-  1. When synchronizing to or from a file system. By default, gsutil does not
-     checksum files, because of the slowdown caused when working with large
-     files. You can cause gsutil to checksum files by using the
-     gsutil rsync -c option, at the cost of increased local disk I/O and run
-     time when working with large files.
+  1. When synchronizing to or from a file system with the -N option. By default,
+     gsutil checksums objects as well as files. If you use the -N option the
+     rsync command will still consider object checksums (which are always
+     computed by GCS) but will turn off file checksumming. This option reduces
+     local disk I/O and run time when working with large files but can risk
+     missing some changed files (see -N option documentation).
 
   2. When comparing composite GCS objects with objects at a cloud provider that
      does not support CRC32C (which is the only checksum available for composite
@@ -210,11 +211,6 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>OPTIONS</B>
-  -c            Causes the rsync command to compute checksums for files if the
-                size of source and destination match, and then compare
-                checksums.  This option increases local disk I/O and run time
-                if either src_url or dst_url are on the local file system.
-
   -C            If an error occurs, continue to attempt to copy the remaining
                 files. If errors occurred, gsutil's exit status will be non-zero
                 even if this flag is set. This option is implicitly set when
@@ -228,6 +224,17 @@ _DETAILED_HELP_TEXT = ("""
 
   -e            Exclude symlinks. When specified, symbolic links will be
                 ignored.
+
+  -N            Causes the rsync command not to compute checksums for files.
+                This option reduces local disk I/O and run time if either
+                src_url or dst_url are on the local file system, but can cause
+                the rsync command to miss updating some files that should be
+                updated. With the -N option, if the source and destination have
+                the same length the rsync command assumes they have the same
+                content. This option should only be used in two use cases:
+                  1. Files are guaranteed to change size when they are modified.
+                  2. It is acceptable that a file is not synchronized when its
+                     contents change but its size remains the same.
 
   -n            Causes rsync to run in "dry run" mode, i.e., just outputting
                 what would be copied or deleted without actually doing any
@@ -528,7 +535,7 @@ class _DiffIterator(object):
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
     self.command_obj = command_obj
-    self.compute_checksums = command_obj.compute_checksums
+    self.compute_file_checksums = command_obj.compute_file_checksums
     self.delete_extras = command_obj.delete_extras
     self.recursion_requested = command_obj.recursion_requested
     self.logger = self.command_obj.logger
@@ -655,7 +662,7 @@ class _DiffIterator(object):
     # computing checksums would thrash the disk).
     if src_size != dst_size:
       return False
-    if self.compute_checksums:
+    if self.compute_file_checksums:
       (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
           self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
           dst_size, dst_crc32c, dst_md5)
@@ -807,7 +814,8 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='cCdenprR',
+      # TODO: Remove -c option 1 year after it was deprecated (Jan 2016).
+      supported_sub_args='cCdeNnprR',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -855,7 +863,7 @@ class RsyncCommand(Command):
   def RunCommand(self):
     """Command entry point for the rsync command."""
     self._ParseOpts()
-    if self.compute_checksums and not UsingCrcmodExtension(crcmod):
+    if self.compute_file_checksums and not UsingCrcmodExtension(crcmod):
       self.logger.warn(SLOW_CRCMOD_WARNING)
 
     src_url = self._InsistContainer(self.args[0], False)
@@ -895,7 +903,7 @@ class RsyncCommand(Command):
     self.continue_on_error = False
     self.delete_extras = False
     preserve_acl = False
-    self.compute_checksums = False
+    self.compute_file_checksums = True
     self.dryrun = False
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
@@ -903,16 +911,20 @@ class RsyncCommand(Command):
     if self.sub_opts:
       for o, _ in self.sub_opts:
         if o == '-c':
-          self.compute_checksums = True
+          # Ignore deprecated -c option. We now have file checksums on by
+          # default, and disable file checksumming with the -N option.
+          pass
         # Note: In gsutil cp command this is specified using -c but here we use
-        # -C so we can use -c for checksum arg (to be consistent with Unix rsync
-        # command options).
+        # -C because at one time gsutil had a (now deprecated) -c option for
+        # enabling file checksumming.
         elif o == '-C':
           self.continue_on_error = True
         elif o == '-d':
           self.delete_extras = True
         elif o == '-e':
           self.exclude_symlinks = True
+        elif o == '-N':
+          self.compute_file_checksums = False
         elif o == '-n':
           self.dryrun = True
         elif o == '-p':
