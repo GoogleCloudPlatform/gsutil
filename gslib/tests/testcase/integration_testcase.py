@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 import locale
 import logging
+import os
 import subprocess
 import sys
 import tempfile
@@ -328,11 +329,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       # to a file so we can capture them.
       cmd_str_with_result_redirect = '%s 8>%s' % (
           cmd_str, tab_complete_result_file.name)
-      env = {
-          '_ARGCOMPLETE': '1',
-          'COMP_LINE': cmd_str,
-          'COMP_POINT': str(len(cmd_str)),
-      }
+      env = os.environ.copy()
+      env['_ARGCOMPLETE'] = '1'
+      env['COMP_LINE'] = cmd_str
+      env['COMP_POINT'] = str(len(cmd_str))
       subprocess.call(cmd_str_with_result_redirect, env=env, shell=True)
       results_string = tab_complete_result_file.read().decode(
           locale.getpreferredencoding())
