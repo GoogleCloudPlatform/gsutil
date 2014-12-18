@@ -35,6 +35,7 @@ import gslib.tests.util as util
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigFileForTest
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -323,24 +324,34 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """
     cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
     cmd_str = ' '.join(cmd)
-    results_string = None
-    with tempfile.NamedTemporaryFile(delete=False) as tab_complete_result_file:
-      # argcomplete returns results via the '8' file descriptor so we redirect
-      # to a file so we can capture them.
-      cmd_str_with_result_redirect = '%s 8>%s' % (
-          cmd_str, tab_complete_result_file.name)
-      env = os.environ.copy()
-      env['_ARGCOMPLETE'] = '1'
-      env['COMP_LINE'] = cmd_str
-      env['COMP_POINT'] = str(len(cmd_str))
-      subprocess.call(cmd_str_with_result_redirect, env=env, shell=True)
-      results_string = tab_complete_result_file.read().decode(
-          locale.getpreferredencoding())
-    if results_string:
-      results = results_string.split('\013')
-    else:
-      results = []
-    self.assertEqual(results, expected_results)
+
+    @Retry(AssertionError, tries=5, timeout_secs=1)
+    def _RunTabCompletion():
+      """Runs the tab completion operation with retries."""
+      results_string = None
+      with tempfile.NamedTemporaryFile(
+          delete=False) as tab_complete_result_file:
+        # argcomplete returns results via the '8' file descriptor so we
+        # redirect to a file so we can capture them.
+        cmd_str_with_result_redirect = '%s 8>%s' % (
+            cmd_str, tab_complete_result_file.name)
+        env = os.environ.copy()
+        env['_ARGCOMPLETE'] = '1'
+        env['COMP_LINE'] = cmd_str
+        env['COMP_POINT'] = str(len(cmd_str))
+        subprocess.call(cmd_str_with_result_redirect, env=env, shell=True)
+        results_string = tab_complete_result_file.read().decode(
+            locale.getpreferredencoding())
+      if results_string:
+        results = results_string.split('\013')
+      else:
+        results = []
+      self.assertEqual(results, expected_results)
+
+    # When tests are run in parallel, tab completion could take a long time,
+    # so choose a long timeout value.
+    with SetBotoConfigForTest([('GSUtil', 'tab_completion_timeout', '120')]):
+      _RunTabCompletion()
 
   @contextmanager
   def SetAnonymousBotoCreds(self):
