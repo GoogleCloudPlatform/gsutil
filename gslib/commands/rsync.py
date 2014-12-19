@@ -911,8 +911,9 @@ class RsyncCommand(Command):
     if self.sub_opts:
       for o, _ in self.sub_opts:
         if o == '-c':
-          # Ignore deprecated -c option. We now have file checksums on by
-          # default, and disable file checksumming with the -N option.
+          self.logger.warning('Warning: the -c option is deprecated and will '
+                              'eventually be removed (checksumming is now on '
+                              'by default).')
           pass
         # Note: In gsutil cp command this is specified using -c but here we use
         # -C because at one time gsutil had a (now deprecated) -c option for
