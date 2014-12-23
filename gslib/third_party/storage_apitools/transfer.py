@@ -235,6 +235,9 @@ class Download(_Transfer):
 
   def ConfigureRequest(self, http_request, url_builder):
     url_builder.query_params['alt'] = 'media'
+    # TODO: We need to send range requests because by default httplib2
+    # stores entire reponses in memory. Override httplib2's download method
+    # (as gsutil does) so that this is not necessary.
     http_request.headers['Range'] = 'bytes=0-%d' % (self.chunksize - 1,)
 
   def __SetTotal(self, info):
@@ -695,7 +698,6 @@ class Upload(_Transfer):
 
     self.__server_chunk_granularity = http_response.info.get(
         'X-Goog-Upload-Chunk-Granularity')
-    self.__ValidateChunksize()
     url = http_response.info['location']
     if client is not None:
       url = client.FinalizeTransferUrl(url)
@@ -728,9 +730,9 @@ class Upload(_Transfer):
   def _CompletePrinter(*unused_args):
     print 'Upload complete'
 
-  def StreamInChunks(self, callback=None, finish_callback=None,
-                     additional_headers=None):
-    """Send this (resumable) upload in chunks."""
+  def __StreamMedia(self, callback=None, finish_callback=None,
+                    additional_headers=None, use_chunks=True):
+    """Helper function for StreamMedia / StreamInChunks."""
     if self.strategy != RESUMABLE_UPLOAD:
       raise exceptions.InvalidUserInputError(
           'Cannot stream non-resumable upload')
@@ -738,11 +740,13 @@ class Upload(_Transfer):
     finish_callback = finish_callback or self._CompletePrinter
     # final_response is set if we resumed an already-completed upload.
     response = self.__final_response
-    self.__ValidateChunksize(self.chunksize)
+    send_func = self.__SendChunk if use_chunks else self.__SendMediaBody
+    if use_chunks:
+      self.__ValidateChunksize(self.chunksize)
     self.EnsureInitialized()
     while not self.complete:
-      response = self.__SendChunk(self.stream.tell(),
-                                  additional_headers=additional_headers)
+      response = send_func(self.stream.tell(),
+                           additional_headers=additional_headers)
       if response.status_code in (httplib.OK, httplib.CREATED):
         self.__complete = True
         break
@@ -765,6 +769,74 @@ class Upload(_Transfer):
             (long(end_pos) - long(current_pos)))
     self._ExecuteCallback(finish_callback, response)
     return response
+
+  def StreamMedia(self, callback=None, finish_callback=None,
+                  additional_headers=None):
+    """Send this resumable upload in a single request.
+
+    Args:
+      callback: Progress callback function with inputs
+          (http_wrapper.Response, transfer.Upload)
+      finish_callback: Final callback function with inputs
+          (http_wrapper.Response, transfer.Upload)
+      additional_headers: Dict of headers to include with the upload
+          http_wrapper.Request.
+
+    Returns:
+      http_wrapper.Response of final response.
+    """
+    return self.__StreamMedia(
+        callback=callback, finish_callback=finish_callback,
+        additional_headers=additional_headers, use_chunks=False)
+
+  def StreamInChunks(self, callback=None, finish_callback=None,
+                     additional_headers=None):
+    """Send this (resumable) upload in chunks."""
+    return self.__StreamMedia(
+        callback=callback, finish_callback=finish_callback,
+        additional_headers=additional_headers)
+
+  def __SendMediaRequest(self, request, end):
+    """Helper function to make the request for SendMediaBody & SendChunk."""
+    response = http_wrapper.MakeRequest(
+        self.bytes_http, request, retry_func=self.retry_func,
+        retries=self.num_retries)
+    if response.status_code not in (httplib.OK, httplib.CREATED,
+                                    http_wrapper.RESUME_INCOMPLETE):
+      # We want to reset our state to wherever the server left us
+      # before this failed request, and then raise.
+      self.RefreshResumableUploadState()
+      raise exceptions.HttpError.FromResponse(response)
+    if response.status_code == http_wrapper.RESUME_INCOMPLETE:
+      last_byte = self.__GetLastByte(
+          self._GetRangeHeaderFromResponse(response))
+      if last_byte + 1 != end:
+        self.stream.seek(last_byte)
+    return response
+
+  def __SendMediaBody(self, start, additional_headers=None):
+    """Send the entire media stream in a single request."""
+    self.EnsureInitialized()
+    if self.total_size is None:
+      raise exceptions.TransferInvalidError(
+          'Total size must be known for SendMediaBody')
+    body_stream = stream_slice.StreamSlice(self.stream, self.total_size - start)
+
+    request = http_wrapper.Request(url=self.url, http_method='PUT',
+                                   body=body_stream)
+    request.headers['Content-Type'] = self.mime_type
+    if start == self.total_size:
+      # End of an upload with 0 bytes left to send; just finalize.
+      range_string = 'bytes */%s' % self.total_size
+    else:
+      range_string = 'bytes %s-%s/%s' % (start, self.total_size - 1,
+                                         self.total_size)
+
+    request.headers['Content-Range'] = range_string
+    if additional_headers:
+      request.headers.update(additional_headers)
+
+    return self.__SendMediaRequest(request, self.total_size)
 
   def __SendChunk(self, start, additional_headers=None):
     """Send the specified chunk."""
@@ -799,18 +871,5 @@ class Upload(_Transfer):
     if additional_headers:
       request.headers.update(additional_headers)
 
-    response = http_wrapper.MakeRequest(
-        self.bytes_http, request, retry_func=self.retry_func,
-        retries=self.num_retries)
-    if response.status_code not in (httplib.OK, httplib.CREATED,
-                                    http_wrapper.RESUME_INCOMPLETE):
-      # We want to reset our state to wherever the server left us
-      # before this failed request, and then raise.
-      self.RefreshResumableUploadState()
-      raise exceptions.HttpError.FromResponse(response)
-    if response.status_code == http_wrapper.RESUME_INCOMPLETE:
-      last_byte = self.__GetLastByte(
-          self._GetRangeHeaderFromResponse(response))
-      if last_byte + 1 != end:
-        self.stream.seek(last_byte)
-    return response
+    return self.__SendMediaRequest(request, end)
+

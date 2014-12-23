@@ -853,9 +853,20 @@ class GcsJsonApi(CloudApi):
           # TODO: On retry, this will seek to the bytes that the server has,
           # causing the hash to be recalculated. Make HashingFileUploadWrapper
           # save a digest according to json_resumable_chunk_size.
-          http_response = apitools_upload.StreamInChunks(
-              callback=_NoOpCallback, finish_callback=_NoOpCallback,
-              additional_headers=addl_headers)
+          if size:
+            # If size is known, we can send it all in one request and avoid
+            # making a round-trip per chunk.
+            http_response = apitools_upload.StreamMedia(
+                callback=_NoOpCallback, finish_callback=_NoOpCallback,
+                additional_headers=addl_headers)
+          else:
+            # Otherwise it's a streaming request and we need to ensure that we
+            # send the bytes in chunks so that we can guarantee that we never
+            # need to seek backwards more than our buffer (and also that the
+            # chunks are aligned to 256KB).
+            http_response = apitools_upload.StreamInChunks(
+                callback=_NoOpCallback, finish_callback=_NoOpCallback,
+                additional_headers=addl_headers)
           processed_response = self.api_client.objects.ProcessHttpResponse(
               self.api_client.objects.GetMethodConfig('Insert'), http_response)
           if size is None and progress_callback:
