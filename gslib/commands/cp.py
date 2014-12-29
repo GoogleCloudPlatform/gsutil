@@ -739,20 +739,16 @@ class CpCommand(Command):
           self.manifest.SetResult(
               exp_src_url.url_string, 0, 'error', str(e))
         raise
-
-    # TODO: If we ever use -n (noclobber) with -M (move) (not possible today
-    # since we call copy internally from move and don't specify the -n flag)
-    # we'll need to only remove the source when we have not skipped the
-    # destination.
-    if copy_helper_opts.perform_mv:
-      self.logger.info('Removing %s...', exp_src_url)
-      if exp_src_url.IsCloudUrl():
-        gsutil_api.DeleteObject(exp_src_url.bucket_name,
-                                exp_src_url.object_name,
-                                generation=exp_src_url.generation,
-                                provider=exp_src_url.scheme)
-      else:
-        os.unlink(exp_src_url.object_name)
+    else:
+      if copy_helper_opts.perform_mv:
+        self.logger.info('Removing %s...', exp_src_url)
+        if exp_src_url.IsCloudUrl():
+          gsutil_api.DeleteObject(exp_src_url.bucket_name,
+                                  exp_src_url.object_name,
+                                  generation=exp_src_url.generation,
+                                  provider=exp_src_url.scheme)
+        else:
+          os.unlink(exp_src_url.object_name)
 
     with self.stats_lock:
       self.total_elapsed_time += elapsed_time

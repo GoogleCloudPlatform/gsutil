@@ -90,3 +90,18 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
       self.assertIn(os.path.basename(fpath2), stdout)
       self.assertNumLines(stdout, 2)
     _Check1()
+
+  def test_mv_no_clobber(self):
+    """Tests mv with the -n option."""
+    fpath1 = self.CreateTempFile(contents='data1')
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
+    stderr = self.RunGsUtil(['mv', '-n', fpath1, suri(object_uri)],
+                            return_stderr=True)
+    # Copy should be skipped and source file should not be removed.
+    self.assertIn('Skipping existing item: %s' % suri(object_uri), stderr)
+    self.assertNotIn('Removing %s' % suri(fpath1), stderr)
+    # Object content should be unchanged.
+    contents = self.RunGsUtil(['cat', suri(object_uri)], return_stdout=True)
+    self.assertEqual(contents, 'data2')
+
