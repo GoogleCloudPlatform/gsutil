@@ -350,7 +350,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 [GSUtil]
 
 # 'resumable_threshold' specifies the smallest file size [bytes] for which
-# resumable Google Cloud Storage transfers are attempted. The default is 8388608
+# resumable Google Cloud Storage uploads are attempted. The default is 8388608
 # (8 MiB).
 #resumable_threshold = %(resumable_threshold)d
 

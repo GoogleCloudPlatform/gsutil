@@ -351,10 +351,10 @@ def _SelectDownloadStrategy(src_obj_metadata, dst_url):
     except OSError:
       pass
 
-  if src_obj_metadata.size >= ResumableThreshold() and not dst_is_special:
-    return CloudApi.DownloadStrategy.RESUMABLE
-  else:
+  if dst_is_special:
     return CloudApi.DownloadStrategy.ONE_SHOT
+  else:
+    return CloudApi.DownloadStrategy.RESUMABLE
 
 
 def _GetUploadTrackerData(tracker_file_name, logger):

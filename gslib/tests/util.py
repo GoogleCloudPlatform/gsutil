@@ -163,6 +163,7 @@ class GSMockConnection(mock_storage_service.MockConnection):
 
   def __init__(self, *args, **kwargs):
     kwargs['provider'] = 'gs'
+    self.debug = 0
     super(GSMockConnection, self).__init__(*args, **kwargs)
 
 mock_connection = GSMockConnection()

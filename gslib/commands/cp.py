@@ -244,12 +244,12 @@ RESUMABLE_TRANSFERS_TEXT = """
   temporary component objects in place during the upload process.)
 
   Similarly, gsutil automatically performs resumable downloads (using HTTP
-  standard Range GET operations) whenever you use the cp command to download an
-  object larger than 2 MiB. In this case the partially downloaded file will be
-  visible as soon as it starts being written. Thus, before you attempt to use
-  any files downloaded by gsutil you should make sure the download completed
-  successfully, by checking the exit status from the gsutil command. This can
-  be done in a bash script, for example, by doing:
+  standard Range GET operations) whenever you use the cp command, unless the
+  destination is a stream or null. In this case the partially downloaded file
+  will be visible as soon as it starts being written. Thus, before you attempt
+  to use any files downloaded by gsutil you should make sure the download
+  completed successfully, by checking the exit status from the gsutil command.
+  This can be done in a bash script, for example, by doing:
 
      gsutil cp gs://your-bucket/your-object ./local-file
      if [ "$status" -ne "0" ] ; then
