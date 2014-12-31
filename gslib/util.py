@@ -415,7 +415,11 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   kwargs['ca_certs'] = GetCertsFile()
   # Use a non-infinite SSL timeout to avoid hangs during network flakiness.
   kwargs['timeout'] = SSL_TIMEOUT
-  http = http_class(proxy_info=proxy_info, **kwargs)
+  # If boto's proxy settings cannot be used, let Http determine the proxy
+  # information on its own (see crbug.com/443523).
+  if proxy_info.isgood():
+    kwargs['proxy_info'] = proxy_info
+  http = http_class(**kwargs)
   http.disable_ssl_certificate_validation = (not config.getbool(
       'Boto', 'https_validate_certificates'))
   return http
