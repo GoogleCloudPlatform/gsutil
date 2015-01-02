@@ -129,6 +129,8 @@ class FileProgressCallbackHandler(object):
     """
     self._announce_text = announce_text
     self._logger = logger
+    # Ensures final newline is written once even if we get multiple callbacks.
+    self._last_byte_written = False
 
   # Function signature is in boto callback format, which cannot be changed.
   def call(self,  # pylint: disable=invalid-name
@@ -140,7 +142,7 @@ class FileProgressCallbackHandler(object):
       total_bytes_processed: Number of bytes processed so far.
       total_size: Total size of the ongoing operation.
     """
-    if not self._logger.isEnabledFor(logging.INFO):
+    if not self._logger.isEnabledFor(logging.INFO) or self._last_byte_written:
       return
 
     # Handle streaming case specially where we don't know the total size:
@@ -156,4 +158,5 @@ class FileProgressCallbackHandler(object):
         MakeHumanReadable(total_bytes_processed),
         total_size_string))
     if total_size and total_bytes_processed == total_size:
+      self._last_byte_written = True
       sys.stderr.write('\n')
