@@ -393,6 +393,26 @@ def GetCleanupFiles():
   return cleanup_files
 
 
+def ProxyInfoFromEnvironmentVar(proxy_env_var):
+  """Reads proxy info from the environment and converts to httplib2.ProxyInfo.
+
+  Args:
+    proxy_env_var: Environment variable string to read, such as http_proxy or
+       https_proxy.
+
+  Returns:
+    httplib2.ProxyInfo constructed from the environment string.
+  """
+  proxy_url = os.environ.get(proxy_env_var)
+  if not proxy_url or not proxy_env_var.lower().startswith('http'):
+    return httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0)
+  proxy_protocol = proxy_env_var.lower().split('_')[0]
+  if not proxy_url.lower().startswith('http'):
+    # proxy_info_from_url requires a protocol, which is always http or https.
+    proxy_url = proxy_protocol + '://' + proxy_url
+  return httplib2.proxy_info_from_url(proxy_url, method=proxy_protocol)
+
+
 def GetNewHttp(http_class=httplib2.Http, **kwargs):
   """Creates and returns a new httplib2.Http instance.
 
@@ -410,6 +430,16 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
       proxy_user=boto.config.get('Boto', 'proxy_user', None),
       proxy_pass=boto.config.get('Boto', 'proxy_pass', None),
       proxy_rdns=boto.config.get('Boto', 'proxy_rdns', False))
+
+  if not (proxy_info.proxy_host and proxy_info.proxy_port):
+    # Fall back to using the environment variable.
+    for proxy_env_var in ['http_proxy', 'https_proxy', 'HTTPS_PROXY']:
+      if proxy_env_var in os.environ and os.environ[proxy_env_var]:
+        proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
+        # Assume proxy_rnds is True if a proxy environment variable exists.
+        proxy_info.proxy_rdns = boto.config.get('Boto', 'proxy_rdns', True)
+        break
+
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.
   kwargs['ca_certs'] = GetCertsFile()

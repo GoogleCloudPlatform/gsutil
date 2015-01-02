@@ -221,7 +221,7 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     additional_headers = {'X-Google-Metadata-Request': 'True'}
     request = urllib2.Request(account_uri, headers=additional_headers)
     try:
-      response = urllib2.urlopen(request)
+      response = urllib2.build_opener(urllib2.ProxyHandler({})).open(request)
     except urllib2.URLError as e:
       raise exceptions.CommunicationError(
           'Could not reach metadata service: %s' % e.reason)
@@ -237,7 +237,7 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     additional_headers = {'X-Google-Metadata-Request': 'True'}
     request = urllib2.Request(scopes_uri, headers=additional_headers)
     try:
-      response = urllib2.urlopen(request)
+      response = urllib2.build_opener(urllib2.ProxyHandler({})).open(request)
     except urllib2.URLError as e:
       raise exceptions.CommunicationError(
           'Could not reach metadata service: %s' % e.reason)
@@ -268,7 +268,8 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     extra_headers = {'X-Google-Metadata-Request': 'True'}
     request = urllib2.Request(token_uri, headers=extra_headers)
     try:
-      content = urllib2.urlopen(request).read()
+      content = urllib2.build_opener(
+          urllib2.ProxyHandler({})).open(request).read()
     except urllib2.URLError as e:
       self.invalid = True
       if self.store:

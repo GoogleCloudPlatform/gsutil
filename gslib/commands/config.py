@@ -706,7 +706,12 @@ class ConfigCommand(Command):
         '# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n'
         '# If you need a user/password with this proxy, edit and uncomment\n'
         '# those lines as well. If your organization also disallows DNS\n'
-        '# lookups by client machines set proxy_rdns = True\n')
+        '# lookups by client machines set proxy_rdns = True\n'
+        '# If proxy_host and proxy_port are not specified in this file and\n'
+        '# one of the OS environment variables http_proxy, https_proxy, or\n'
+        '# HTTPS_PROXY is defined, gsutil will use the proxy server specified\n'
+        '# in these environment variables, in order of precedence according\n'
+        '# to how they are listed above.\n')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy', config.get_value('Boto', 'proxy', None),
         'proxy host')

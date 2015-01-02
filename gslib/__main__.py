@@ -65,6 +65,7 @@ from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
 from gslib.util import GsutilStreamHandler
+from gslib.util import ProxyInfoFromEnvironmentVar
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
@@ -316,13 +317,7 @@ def main():
     else:
       command_name = args[0]
 
-    # Unset http_proxy environment variable if it's set, because it confuses
-    # boto. (Proxies should instead be configured via the boto config file.)
-    if 'http_proxy' in os.environ:
-      if debug > 1:
-        sys.stderr.write(
-            'Unsetting http_proxy environment variable within gsutil run.\n')
-      del os.environ['http_proxy']
+    _CheckAndWarnForProxyDifferences()
 
     if os.environ.get('_ARGCOMPLETE', '0') == '1':
       return _PerformTabCompletion(command_runner)
@@ -332,6 +327,50 @@ def main():
         debug_level=debug, parallel_operations=parallel_operations)
   finally:
     _Cleanup()
+
+
+def _CheckAndWarnForProxyDifferences():
+  # If there are both boto config and environment variable config present for
+  # proxies, unset the environment variable and warn if it differs.
+  boto_port = boto.config.getint('Boto', 'proxy_port', 0)
+  if boto.config.get('Boto', 'proxy', None) or boto_port:
+    for proxy_env_var in ['http_proxy', 'https_proxy', 'HTTPS_PROXY']:
+      if proxy_env_var in os.environ and os.environ[proxy_env_var]:
+        differing_values = []
+        proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
+        if proxy_info.proxy_host != boto.config.get('Boto', 'proxy', None):
+          differing_values.append(
+              'Boto proxy host: "%s" differs from %s proxy host: "%s"' %
+              (boto.config.get('Boto', 'proxy', None), proxy_env_var,
+               proxy_info.proxy_host))
+        if (proxy_info.proxy_user !=
+            boto.config.get('Boto', 'proxy_user', None)):
+          differing_values.append(
+              'Boto proxy user: "%s" differs from %s proxy user: "%s"' %
+              (boto.config.get('Boto', 'proxy_user', None), proxy_env_var,
+               proxy_info.proxy_user))
+        if (proxy_info.proxy_pass !=
+            boto.config.get('Boto', 'proxy_pass', None)):
+          differing_values.append(
+              'Boto proxy password differs from %s proxy password' %
+              proxy_env_var)
+        # Only compare ports if at least one is present, since the
+        # boto logic for selecting default ports has not yet executed.
+        if ((proxy_info.proxy_port or boto_port) and
+            proxy_info.proxy_port != boto_port):
+          differing_values.append(
+              'Boto proxy port: "%s" differs from %s proxy port: "%s"' %
+              (boto_port, proxy_env_var, proxy_info.proxy_port))
+        if differing_values:
+          sys.stderr.write('\n'.join(textwrap.wrap(
+              'WARNING: Proxy configuration is present in both the %s '
+              'environment variable and boto configuration, but '
+              'configuration differs. boto configuration proxy values will '
+              'be used. Differences detected:' % proxy_env_var)))
+          sys.stderr.write('\n%s\n' % '\n'.join(differing_values))
+        # Regardless of whether the proxy configuration values matched,
+        # delete the environment variable so as not to confuse boto.
+        del os.environ[proxy_env_var]
 
 
 def _HandleUnknownFailure(e):

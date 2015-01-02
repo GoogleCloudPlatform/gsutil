@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import os
 import socket
 
 import gslib.tests.testcase as testcase
@@ -38,11 +39,18 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
       # TODO: gsutil-beta: Add host header support for JSON
       '-o', 'Boto:https_validate_certificates=False']
 
+  def _should_run_with_custom_endpoints(self):
+    # Host headers are only supported for XML, and not when
+    # using environment variables for proxies.
+    return self.test_api == 'XML' and not (os.environ.get('http_proxy') or
+                                           os.environ.get('https_proxy') or
+                                           os.environ.get('HTTPS_PROXY'))
+
   def test_latency(self):
     bucket_uri = self.CreateBucket()
     cmd = ['perfdiag', '-n', '1', '-t', 'lat', suri(bucket_uri)]
     self.RunGsUtil(cmd)
-    if self.test_api == 'XML':
+    if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
 
   def _run_basic_wthru_or_rthru(self, test_name, num_processes, num_threads):
@@ -51,7 +59,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
            '-s', '1024', '-c', str(num_processes),
            '-k', str(num_threads), '-t', test_name, suri(bucket_uri)]
     self.RunGsUtil(cmd)
-    if self.test_api == 'XML':
+    if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
 
   def test_write_throughput_single_process_single_thread(self):

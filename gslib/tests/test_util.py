@@ -23,8 +23,10 @@
 
 from __future__ import absolute_import
 
+import httplib2
 from gslib import util
 import gslib.tests.testcase as testcase
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.util import CompareVersions
 
 
@@ -145,3 +147,62 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     (g, m) = CompareVersions('3.10', '3.1')
     self.assertTrue(g)
     self.assertFalse(m)
+
+  def _AssertProxyInfosEqual(self, pi1, pi2):
+    self.assertEqual(pi1.proxy_type, pi2.proxy_type)
+    self.assertEqual(pi1.proxy_host, pi2.proxy_host)
+    self.assertEqual(pi1.proxy_port, pi2.proxy_port)
+    self.assertEqual(pi1.proxy_rdns, pi2.proxy_rdns)
+    self.assertEqual(pi1.proxy_user, pi2.proxy_user)
+    self.assertEqual(pi1.proxy_pass, pi2.proxy_pass)
+
+  def test_ProxyInfoFromEnvironmentVar(self):
+    """Tests ProxyInfoFromEnvironmentVar for various cases."""
+    valid_variables = ['http_proxy', 'https_proxy', 'HTTPS_PROXY']
+    # Clear any existing environment variables for the duration of the test.
+    clear_dict = {}
+    for key in valid_variables:
+      clear_dict[key] = None
+    with SetEnvironmentForTest(clear_dict):
+      for env_var in valid_variables:
+        for url_string in ['hostname', 'http://hostname', 'https://hostname']:
+          with SetEnvironmentForTest({env_var: url_string}):
+            self._AssertProxyInfosEqual(
+                util.ProxyInfoFromEnvironmentVar(env_var),
+                httplib2.ProxyInfo(
+                    httplib2.socks.PROXY_TYPE_HTTP, 'hostname',
+                    443 if env_var.lower().startswith('https') else 80))
+            # Shouldn't populate info for other variables
+            for other_env_var in valid_variables:
+              if other_env_var == env_var: continue
+              self._AssertProxyInfosEqual(
+                  util.ProxyInfoFromEnvironmentVar(other_env_var),
+                  httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
+        for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50',
+                           'https://1.2.3.4:50']:
+          with SetEnvironmentForTest({env_var: url_string}):
+            self._AssertProxyInfosEqual(
+                util.ProxyInfoFromEnvironmentVar(env_var),
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
+                                   50))
+        for url_string in ['foo:bar@1.2.3.4:50', 'http://foo:bar@1.2.3.4:50',
+                           'https://foo:bar@1.2.3.4:50']:
+          with SetEnvironmentForTest({env_var: url_string}):
+            self._AssertProxyInfosEqual(
+                util.ProxyInfoFromEnvironmentVar(env_var),
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                   '1.2.3.4', 50, proxy_user='foo',
+                                   proxy_pass='bar'))
+        for url_string in ['bar@1.2.3.4:50', 'http://bar@1.2.3.4:50',
+                           'https://bar@1.2.3.4:50']:
+          with SetEnvironmentForTest({env_var: url_string}):
+            self._AssertProxyInfosEqual(
+                util.ProxyInfoFromEnvironmentVar(env_var),
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
+                                   50, proxy_pass='bar'))
+      for env_var in ['proxy', 'noproxy', 'garbage']:
+        for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50']:
+          with SetEnvironmentForTest({env_var: url_string}):
+            self._AssertProxyInfosEqual(
+                util.ProxyInfoFromEnvironmentVar(env_var),
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))

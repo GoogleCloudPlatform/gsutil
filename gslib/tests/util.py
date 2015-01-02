@@ -287,6 +287,29 @@ def SetBotoConfigForTest(boto_config_list):
 
 
 @contextmanager
+def SetEnvironmentForTest(env_variable_dict):
+  """Sets OS environment variables for a single test."""
+
+  def _ApplyDictToEnvironment(dict_to_apply):
+    for k, v in dict_to_apply.iteritems():
+      old_values[k] = os.environ.get(k)
+      if v is not None:
+        os.environ[k] = v
+      elif k in os.environ:
+        del os.environ[k]
+
+  old_values = {}
+  for k in env_variable_dict:
+    old_values[k] = os.environ.get(k)
+
+  try:
+    _ApplyDictToEnvironment(env_variable_dict)
+    yield
+  finally:
+    _ApplyDictToEnvironment(old_values)
+
+
+@contextmanager
 def SetBotoConfigFileForTest(boto_config_path):
   """Sets a given file as the boto config file for a single test."""
   # Setup for entering "with" block.

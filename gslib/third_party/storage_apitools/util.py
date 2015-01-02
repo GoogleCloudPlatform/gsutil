@@ -52,7 +52,8 @@ def DetectGce():
     True iff we're running on a GCE instance.
   """
   try:
-    o = urllib2.urlopen('http://metadata.google.internal')
+    o = urllib2.build_opener(urllib2.ProxyHandler({})).open(
+        urllib2.Request('http://metadata.google.internal'))
   except urllib2.URLError:
     return False
   return o.getcode() == httplib.OK
