@@ -699,6 +699,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(acl_json, new_acl_json)
     _Check()
 
+  def test_daisy_chain_cp_download_failure(self):
+    """Tests cp with the -D option when the download thread dies."""
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri,
+                                contents='a' * self.halt_size)
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               '-D', suri(key_uri), suri(bucket2_uri)],
+                              expected_status=1, return_stderr=True)
+      # Should have two exception traces; one from the download thread and
+      # one from the upload thread.
+      self.assertEqual(stderr.count(
+          'ResumableDownloadException: Artifically halting download'), 2)
+
   def test_canned_acl_cp(self):
     """Tests copying with a canned ACL."""
     bucket1_uri = self.CreateBucket()

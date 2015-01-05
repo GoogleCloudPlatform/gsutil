@@ -2091,8 +2091,16 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
   if not global_copy_helper_opts.preserve_acl:
     dst_obj_metadata.acl = []
 
+  # Don't use callbacks for downloads on the daisy chain wrapper because
+  # upload callbacks will output progress, but respect test hooks if present.
+  progress_callback = None
+  if global_copy_helper_opts.test_callback_file:
+    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+      progress_callback = pickle.loads(test_fp.read()).call
+
   start_time = time.time()
-  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api)
+  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api,
+                                progress_callback=progress_callback)
   if src_obj_metadata.size == 0:
     # Resumable uploads of size 0 are not supported.
     uploaded_object = gsutil_api.UploadObject(

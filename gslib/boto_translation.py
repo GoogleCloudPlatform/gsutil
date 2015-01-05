@@ -428,31 +428,29 @@ class BotoTranslation(CloudApi):
     if serialization_data:
       total_size = json.loads(serialization_data)['total_size']
 
-    if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-      try:
-        if total_size:
-          num_progress_callbacks = max(int(total_size) / TWO_MIB,
-                                       XML_PROGRESS_CALLBACKS)
-        else:
-          num_progress_callbacks = XML_PROGRESS_CALLBACKS
+    if total_size:
+      num_progress_callbacks = max(int(total_size) / TWO_MIB,
+                                   XML_PROGRESS_CALLBACKS)
+    else:
+      num_progress_callbacks = XML_PROGRESS_CALLBACKS
+
+    try:
+      if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
         self._PerformResumableDownload(
             download_stream, key, headers=headers, callback=progress_callback,
             num_callbacks=num_progress_callbacks, hash_algs=hash_algs)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
-        self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                         object_name=object_name,
-                                         generation=generation)
-    elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
-      try:
-        self._PerformSimpleDownload(download_stream, key, headers=headers,
-                                    hash_algs=hash_algs)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
-        self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                         object_name=object_name,
-                                         generation=generation)
-    else:
-      raise ArgumentException('Unsupported DownloadStrategy: %s' %
-                              download_strategy)
+      elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
+        self._PerformSimpleDownload(
+            download_stream, key, progress_callback=progress_callback,
+            num_progress_callbacks=num_progress_callbacks, headers=headers,
+            hash_algs=hash_algs)
+      else:
+        raise ArgumentException('Unsupported DownloadStrategy: %s' %
+                                download_strategy)
+    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
+                                       object_name=object_name,
+                                       generation=generation)
 
     if self.provider == 's3':
       if digesters:
@@ -487,16 +485,19 @@ class BotoTranslation(CloudApi):
             # Use the on-the-fly hash.
             digesters[alg_name] = HashToDigester(key.local_hashes[alg_name])
 
-  def _PerformSimpleDownload(self, download_stream, key, headers=None,
-                             hash_algs=None):
+  def _PerformSimpleDownload(self, download_stream, key, progress_callback=None,
+                             num_progress_callbacks=XML_PROGRESS_CALLBACKS,
+                             headers=None, hash_algs=None):
     if not headers:
       headers = {}
       self._AddApiVersionToHeaders(headers)
     try:
-      key.get_contents_to_file(download_stream, headers=headers,
+      key.get_contents_to_file(download_stream, cb=progress_callback,
+                               num_cb=num_progress_callbacks, headers=headers,
                                hash_algs=hash_algs)
     except TypeError:  # s3 and mocks do not support hash_algs
-      key.get_contents_to_file(download_stream, headers=headers)
+      key.get_contents_to_file(download_stream, cb=progress_callback,
+                               num_cb=num_progress_callbacks, headers=headers)
 
   def _PerformResumableDownload(self, fp, key, headers=None, callback=None,
                                 num_callbacks=XML_PROGRESS_CALLBACKS,

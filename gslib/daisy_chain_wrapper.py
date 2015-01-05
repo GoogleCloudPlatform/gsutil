@@ -72,13 +72,16 @@ class DaisyChainWrapper(object):
   used.
   """
 
-  def __init__(self, src_url, src_obj_size, gsutil_api):
+  def __init__(self, src_url, src_obj_size, gsutil_api, progress_callback=None):
     """Initializes the daisy chain wrapper.
 
     Args:
       src_url: Source CloudUrl to copy from.
       src_obj_size: Size of source object.
       gsutil_api: gsutil Cloud API to use for the copy.
+      progress_callback: Optional callback function for progress notifications
+          for the download thread. Receives calls with arguments
+          (bytes_transferred, total_size).
     """
     # Current read position for the upload file pointer.
     self.position = 0
@@ -97,6 +100,9 @@ class DaisyChainWrapper(object):
     # Protects buffer, position, bytes_buffered, last_position, and last_data.
     self.lock = CreateLock()
 
+    # Protects download_exception.
+    self.download_exception_lock = CreateLock()
+
     self.src_obj_size = src_obj_size
     self.src_url = src_url
 
@@ -106,14 +112,18 @@ class DaisyChainWrapper(object):
     # with the upload.
     self.gsutil_api = gsutil_api
 
+    # If self.download_thread dies due to an exception, it is saved here so
+    # that it can also be raised in the upload thread.
+    self.download_exception = None
     self.download_thread = None
+    self.progress_callback = progress_callback
     self.stop_download = threading.Event()
-    self.StartDownloadThread()
+    self.StartDownloadThread(progress_callback=self.progress_callback)
 
-  def StartDownloadThread(self, start_byte=0):
+  def StartDownloadThread(self, start_byte=0, progress_callback=None):
     """Starts the download thread for the source object (from start_byte)."""
 
-    def PerformDownload(start_byte):
+    def PerformDownload(start_byte, progress_callback):
       """Downloads the source object in chunks.
 
       This function checks the stop_download event and exits early if it is set.
@@ -123,33 +133,44 @@ class DaisyChainWrapper(object):
 
       Args:
         start_byte: Byte from which to begin the download.
+        progress_callback: Optional callback function for progress
+            notifications. Receives calls with arguments
+            (bytes_transferred, total_size).
       """
       # TODO: Support resumable downloads. This would require the BufferWrapper
       # object to support seek() and tell() which requires coordination with
       # the upload.
-      while start_byte + DAISY_CHAIN_CHUNK_SIZE < self.src_obj_size:
+      try:
+        while start_byte + DAISY_CHAIN_CHUNK_SIZE < self.src_obj_size:
+          self.gsutil_api.GetObjectMedia(
+              self.src_url.bucket_name, self.src_url.object_name,
+              BufferWrapper(self), start_byte=start_byte,
+              end_byte=start_byte + DAISY_CHAIN_CHUNK_SIZE - 1,
+              generation=self.src_url.generation, object_size=self.src_obj_size,
+              download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+              provider=self.src_url.scheme, progress_callback=progress_callback)
+          if self.stop_download.is_set():
+            # Download thread needs to be restarted, so exit.
+            self.stop_download.clear()
+            return
+          start_byte += DAISY_CHAIN_CHUNK_SIZE
         self.gsutil_api.GetObjectMedia(
             self.src_url.bucket_name, self.src_url.object_name,
             BufferWrapper(self), start_byte=start_byte,
-            end_byte=start_byte + DAISY_CHAIN_CHUNK_SIZE - 1,
             generation=self.src_url.generation, object_size=self.src_obj_size,
             download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-            provider=self.src_url.scheme)
-        if self.stop_download.is_set():
-          # Download thread needs to be restarted, so exit.
-          self.stop_download.clear()
-          return
-        start_byte += DAISY_CHAIN_CHUNK_SIZE
-      self.gsutil_api.GetObjectMedia(
-          self.src_url.bucket_name, self.src_url.object_name,
-          BufferWrapper(self), start_byte=start_byte,
-          generation=self.src_url.generation, object_size=self.src_obj_size,
-          download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-          provider=self.src_url.scheme)
+            provider=self.src_url.scheme, progress_callback=progress_callback)
+      # We catch all exceptions here because we want to store them.
+      except Exception, e:  # pylint: disable=broad-except
+        # Save the exception so that it can be seen in the upload thread.
+        with self.download_exception_lock:
+          self.download_exception = e
+          raise
 
     # TODO: If we do gzip encoding transforms mid-transfer, this will fail.
-    self.download_thread = threading.Thread(target=PerformDownload,
-                                            args=(start_byte,))
+    self.download_thread = threading.Thread(
+        target=PerformDownload,
+        args=(start_byte, progress_callback))
     self.download_thread.start()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
@@ -162,10 +183,16 @@ class DaisyChainWrapper(object):
       raise BadRequestException(
           'Invalid HTTP read size %s during daisy chain operation, '
           'expected <= %s.' % (amt, TRANSFER_BUFFER_SIZE))
+
     while True:
       with self.lock:
         if self.buffer:
           break
+        with self.download_exception_lock:
+          if self.download_exception:
+            # Download thread died, so we will never recover. Raise the
+            # exception that killed it.
+            raise self.download_exception  # pylint: disable=raising-bad-type
       # Buffer was empty, yield thread priority so the download thread can fill.
       time.sleep(0)
     with self.lock:
@@ -234,7 +261,8 @@ class DaisyChainWrapper(object):
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
-        self.StartDownloadThread(start_byte=offset)
+        self.StartDownloadThread(start_byte=offset,
+                                 progress_callback=self.progress_callback)
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)
