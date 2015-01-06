@@ -21,6 +21,7 @@ import heapq
 import io
 from itertools import islice
 import os
+import re
 import tempfile
 import textwrap
 import traceback
@@ -51,7 +52,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] src_url dst_url
+  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-x] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -252,6 +253,23 @@ _DETAILED_HELP_TEXT = ("""
                 synchronized recursively. If you neglect to use this option
                 gsutil will make only the top-level directory in the source
                 and destination URLs match, skipping any sub-directories.
+
+  -x pattern    Causes files/objects matching pattern to be excluded, i.e., any
+                matching files/objects will not be copied or deleted. Note that
+                the pattern is a Python regular expression, not a wildcard (so,
+                matching any string ending in 'abc' would be specified using
+                '.*abc' rather than '*abc'). Note also that the exclude path is
+                always relative (similar to Unix rsync or tar exclude options).
+                For example, if you run the command:
+
+                  gsutil rsync -x 'data./.*\.txt' dir gs://my-bucket
+
+                it will skip the file dir/data1/a.txt.
+
+                You can use regex alternation to specify multiple exclusions,
+                for example:
+
+                  gsutil rsync -x '.*\.txt|.*\.jpg' dir gs://my-bucket
 """)
 
 
@@ -349,18 +367,19 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
 
   Args:
     cls: Command instance.
-    args_tuple: (url_str, out_file_name, desc), where url_str is URL string to
-                list; out_file_name is name of file to which sorted output
-                should be written; desc is 'source' or 'destination'.
+    args_tuple: (base_url_str, out_file_name, desc), where base_url_str is
+                top-level URL string to list; out_filename is name of file to
+                which sorted output should be written; desc is 'source' or
+                'destination'.
     thread_state: gsutil Cloud API instance to use.
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
-  (url_str, out_file_name, desc) = args_tuple
-  # We sort while iterating over url_str, allowing parallelism of batched
+  (base_url_str, out_filename, desc) = args_tuple
+  # We sort while iterating over base_url_str, allowing parallelism of batched
   # sorting with collecting the listing.
-  out_file = io.open(out_file_name, mode='w', encoding=UTF8)
+  out_file = io.open(out_filename, mode='w', encoding=UTF8)
   try:
-    _BatchSort(_FieldedListingIterator(cls, gsutil_api, url_str, desc),
+    _BatchSort(_FieldedListingIterator(cls, gsutil_api, base_url_str, desc),
                out_file)
   except Exception as e:  # pylint: disable=broad-except
     # Abandon rsync if an exception percolates up to this layer - retryable
@@ -370,27 +389,28 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     #     gsutil rsync -d gs://non-existent-bucket ./localdir
     # would delete files from localdir.
     cls.logger.error(
-        'Caught non-retryable exception while listing %s: %s' % (url_str, e))
+        'Caught non-retryable exception while listing %s: %s' %
+        (base_url_str, e))
     cls.non_retryable_listing_failures = 1
   out_file.close()
 
 
-def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
-  """Iterator over url_str outputting lines formatted per _BuildTmpOutputLine.
+def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
+  """Iterator over base_url_str formatting output per _BuildTmpOutputLine.
 
   Args:
     cls: Command instance.
     gsutil_api: gsutil Cloud API instance to use for bucket listing.
-    url_str: The URL string over which to iterate.
+    base_url_str: The top-level URL string over which to iterate.
     desc: 'source' or 'destination'.
 
   Yields:
     Output line formatted per _BuildTmpOutputLine.
   """
   if cls.recursion_requested:
-    wildcard = '%s/**' % url_str.rstrip('/\\')
+    wildcard = '%s/**' % base_url_str.rstrip('/\\')
   else:
-    wildcard = '%s/*' % url_str.rstrip('/\\')
+    wildcard = '%s/*' % base_url_str.rstrip('/\\')
   i = 0
   for blr in CreateWildcardIterator(
       wildcard, gsutil_api, debug=cls.debug,
@@ -415,6 +435,12 @@ def _FieldedListingIterator(cls, gsutil_api, url_str, desc):
     if (cls.exclude_symlinks and url.IsFileUrl()
         and os.path.islink(url.object_name)):
       continue
+    if cls.exclude_pattern:
+      str_to_check = url.url_string[len(base_url_str):]
+      if str_to_check.startswith(url.delim):
+        str_to_check = str_to_check[1:]
+      if cls.exclude_pattern.match(str_to_check):
+        continue
     i += 1
     if i % _PROGRESS_REPORT_LISTING_COUNT == 0:
       cls.logger.info('At %s listing %d...', desc, i)
@@ -548,7 +574,8 @@ class _DiffIterator(object):
     os.close(dst_fh)
 
     # Build sorted lists of src and dst URLs in parallel. To do this, pass args
-    # to _ListUrlRootFunc as tuple (url_str, out_file_name, desc).
+    # to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
+    # where base_url_str is the starting URL string for listing.
     args_iter = iter([
         (self.base_src_url.url_string, self.sorted_list_src_file_name,
          'source'),
@@ -809,7 +836,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='cCdenprR',
+      supported_sub_args='cCdenprRx:',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -899,11 +926,12 @@ class RsyncCommand(Command):
     preserve_acl = False
     self.compute_file_checksums = False
     self.dryrun = False
+    self.exclude_pattern = None
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
 
     if self.sub_opts:
-      for o, _ in self.sub_opts:
+      for o, a in self.sub_opts:
         if o == '-c':
           self.compute_file_checksums = True
         # Note: In gsutil cp command this is specified using -c but here we use
@@ -921,4 +949,9 @@ class RsyncCommand(Command):
           preserve_acl = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-x':
+          try:
+            self.exclude_pattern = re.compile(a)
+          except re.error:
+            raise CommandException('Invalid exclude filter (%s)' % a)
     return CreateCopyHelperOpts(preserve_acl=preserve_acl)
