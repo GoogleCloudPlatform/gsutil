@@ -31,8 +31,8 @@ _DETAILED_HELP_TEXT = ("""
 
   The most common place where users who have filenames that use some other
   encoding encounter a gsutil error is while uploading files using the recursive
-  (-R) option on the gsutil cp or rsync commands. When this happens you'll get
-  an error like this:
+  (-R) option on the gsutil cp , mv, or rsync commands. When this happens you'll
+  get an error like this:
 
       CommandException: Invalid Unicode path encountered
       ('dir1/dir2/file_name_with_\\xf6n_bad_chars').
