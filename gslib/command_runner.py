@@ -74,7 +74,16 @@ def HandleArgCoding(args):
   processing_header = False
   for i in range(len(args)):
     arg = args[i]
-    decoded = arg.decode(UTF8)
+    # Commands like mv can run this function twice; don't decode twice.
+    try:
+      decoded = arg if isinstance(arg, unicode) else arg.decode(UTF8)
+    except UnicodeDecodeError:
+      raise CommandException('\n'.join(textwrap.wrap(
+          'Invalid encoding for argument (%s). Arguments must be decodable as '
+          'Unicode. NOTE: the argument printed above replaces the problematic '
+          'characters with a hex-encoded printable representation. For more '
+          'details (including how to convert to a gsutil-compatible encoding) '
+          'see `gsutil help encoding`.' % repr(arg))))
     if processing_header:
       if arg.lower().startswith('x-goog-meta'):
         args[i] = decoded
