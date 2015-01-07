@@ -26,7 +26,7 @@ from gslib.util import NO_MAX
 
 
 _SYNOPSIS = """
-  gsutil [-f] rb url...
+  gsutil rb [-f] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
