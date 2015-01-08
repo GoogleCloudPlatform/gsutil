@@ -950,6 +950,8 @@ class RsyncCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-x':
+          if len(a) == 0:
+            raise CommandException('Invalid blank exclude filter')
           try:
             self.exclude_pattern = re.compile(a)
           except re.error:
