@@ -560,7 +560,7 @@ class ConfigCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='config',
-      help_name_aliases=['cfg', 'conf', 'configure', 'proxy', 'aws', 's3'],
+      help_name_aliases=['cfg', 'conf', 'configure', 'aws', 's3'],
       help_type='command_help',
       help_one_line_summary=(
           'Obtain credentials and create configuration file'),
