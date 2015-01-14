@@ -51,21 +51,19 @@ _SET_DESCRIPTION = """
   The "defacl set" command sets default object ACLs for the specified buckets.
   If you specify a default object ACL for a certain bucket, Google Cloud
   Storage applies the default object ACL to all new objects uploaded to that
-  bucket.
+  bucket, unless an ACL for that object is separately specified during upload.
 
   Similar to the "acl set" command, the file-or-canned_acl_name names either a
   canned ACL or the path to a file that contains ACL text. (See "gsutil
   help acl" for examples of editing and setting ACLs via the
   acl command.)
 
-  If you don't set a default object ACL on a bucket, the bucket's default
-  object ACL will be project-private.
-
-  Setting a default object ACL on a bucket provides a convenient way
-  to ensure newly uploaded objects have a specific ACL, and avoids the
-  need to set ACLs on a large number of objects for which you forgot to 
-  set the ACL at object upload time (which can happen if you don't set a
-  default object ACL on a bucket, and get the default project-private ACL).
+  Setting a default object ACL on a bucket provides a convenient way to ensure
+  newly uploaded objects have a specific ACL. If you don't set the bucket's
+  default object ACL, it will default to project-private. If you then upload
+  objects that need a different ACL, you will need to perform a separate ACL
+  update operation for each object. Depending on how many objects require
+  updates, this could be very time-consuming.
 """
 
 _GET_DESCRIPTION = """
