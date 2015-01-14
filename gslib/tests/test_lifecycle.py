@@ -20,10 +20,11 @@ import json
 import posixpath
 from xml.dom.minidom import parseString
 
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
-from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import unittest
 from gslib.translation_helper import LifecycleTranslation
 from gslib.util import Retry
 
@@ -139,12 +140,18 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
-  # Script lists buckets with wildcards while they are being deleted by other
-  # tests, which can cause an XML metadata get for the buckets' lifecycle
-  # configurations to fail on a just-deleted bucket.
-  @NotParallelizable
   def test_set_lifecycle_wildcard(self):
     """Tests setting lifecycle with a wildcarded bucket URI."""
+    if self.test_api == ApiSelector.XML:
+      # This test lists buckets with wildcards, but it is possible that another
+      # test being run in parallel (in the same project) deletes a bucket after
+      # it is listed in this test. This causes the subsequent XML metadata get
+      # for the lifecycle configuration to fail on that just-deleted bucket,
+      # even though that bucket is not used directly in this test.
+      return unittest.skip('XML wildcard behavior can cause test to flake '
+                           'if a bucket in the same project is deleted '
+                           'during execution.')
+
     random_prefix = self.MakeRandomTestString()
     bucket1_name = self.MakeTempName('bucket', prefix=random_prefix)
     bucket2_name = self.MakeTempName('bucket', prefix=random_prefix)
