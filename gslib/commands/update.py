@@ -28,6 +28,7 @@ import gslib
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.util import CompareVersions
 from gslib.util import GetBotoConfigFileList
@@ -372,7 +373,7 @@ class UpdateCommand(Command):
 
     # Ignore keyboard interrupts during the update to reduce the chance someone
     # hitting ^C leaves gsutil in a broken state.
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    RegisterSignalHandler(signal.SIGINT, signal.SIG_IGN)
 
     # gslib.GSUTIL_DIR lists the path where the code should end up (like
     # /usr/local/gsutil), which is one level down from the relative path in the
@@ -424,7 +425,7 @@ class UpdateCommand(Command):
     os.rename(gslib.GSUTIL_DIR, os.path.join(old_dir, 'old'))
     os.rename(os.path.join(new_dir, 'gsutil'), gslib.GSUTIL_DIR)
     self._CleanUpUpdateCommand(tf, dirs_to_remove)
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    RegisterSignalHandler(signal.SIGINT, signal.SIG_DFL)
     self.logger.info('Update complete.')
     return 0
 

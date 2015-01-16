@@ -54,6 +54,7 @@ from gslib.parallelism_framework_util import AtomicIncrementDict
 from gslib.parallelism_framework_util import BasicIncrementDict
 from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
@@ -865,9 +866,9 @@ class Command(HelpProvider):
           'command' % (url_str, self.command_name))
     return list(plurality_iter)[0]
 
-  def _HandleMultiProcessingControlC(self, unused_signal_num,
-                                     unused_cur_stack_frame):
-    """Called when user hits ^C during a multi-process/multi-thread request.
+  def _HandleMultiProcessingSigs(self, unused_signal_num,
+                                 unused_cur_stack_frame):
+    """Handles signals INT AND TERM during a multi-process/multi-thread request.
 
     Kills subprocesses.
 
@@ -1267,9 +1268,15 @@ class Command(HelpProvider):
     """
     is_main_thread = self.recursive_apply_level == 0
 
-    # Catch ^C under Linux/MacOs so we can do cleanup before exiting.
+    # Catch SIGINT and SIGTERM under Linux/MacOs so we can do cleanup before
+    # exiting.
     if not IS_WINDOWS and is_main_thread:
-      signal.signal(signal.SIGINT, self._HandleMultiProcessingControlC)
+      # Register as a final signal handler because this handler kills the
+      # main gsutil process (so it must run last).
+      RegisterSignalHandler(signal.SIGINT, self._HandleMultiProcessingSigs,
+                            is_final_handler=True)
+      RegisterSignalHandler(signal.SIGTERM, self._HandleMultiProcessingSigs,
+                            is_final_handler=True)
 
     if not task_queues:
       # The process we create will need to access the next recursive level

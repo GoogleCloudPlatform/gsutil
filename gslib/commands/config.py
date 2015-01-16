@@ -40,6 +40,7 @@ from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
+from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
 
@@ -1034,7 +1035,7 @@ class ConfigCommand(Command):
           % output_file_name)) + '\n')
 
     # Catch ^C so we can restore the backup.
-    signal.signal(signal.SIGINT, CleanupHandler)
+    RegisterSignalHandler(signal.SIGINT, _CleanupHandler)
     try:
       self._WriteBotoConfigFile(output_file, launch_browser=launch_browser,
                                 oauth2_scopes=scopes, cred_type=cred_type)
@@ -1070,5 +1071,5 @@ class ConfigCommand(Command):
     return 0
 
 
-def CleanupHandler(unused_signalnum, unused_handler):
+def _CleanupHandler(unused_signalnum, unused_handler):
   raise AbortException('User interrupted config command')

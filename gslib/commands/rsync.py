@@ -22,6 +22,7 @@ import io
 from itertools import islice
 import os
 import re
+import signal
 import tempfile
 import textwrap
 import traceback
@@ -42,6 +43,7 @@ from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
@@ -281,6 +283,33 @@ class _DiffAction(object):
 _NA = '-'
 _OUTPUT_BUFFER_SIZE = 64 * 1024
 _PROGRESS_REPORT_LISTING_COUNT = 10000
+
+
+# Tracks files we need to clean up at end or if interrupted.
+_tmp_files = []
+
+
+# pylint: disable=unused-argument
+def _HandleSignals(signal_num, cur_stack_frame):
+  """Called when rsync command is killed with SIGINT, SIGQUIT or SIGTERM."""
+  CleanUpTempFiles()
+
+
+# pylint: disable=bare-except
+def CleanUpTempFiles():
+  """Cleans up temp files.
+
+  This function allows the main (RunCommand) function to clean up at end of
+  operation, or if gsutil rsync is interrupted (e.g., via ^C). This is necessary
+  because tempfile.NamedTemporaryFile doesn't allow the created file to be
+  re-opened in read mode on Windows, so we have to use tempfile.mkstemp, which
+  doesn't automatically delete temp files.
+  """
+  try:
+    for fname in _tmp_files:
+      os.unlink(fname)
+  except:
+    pass
 
 
 class _DiffToApply(object):
@@ -566,8 +595,10 @@ class _DiffIterator(object):
 
     (src_fh, self.sorted_list_src_file_name) = tempfile.mkstemp(
         prefix='gsutil-rsync-src-')
+    _tmp_files.append(self.sorted_list_src_file_name)
     (dst_fh, self.sorted_list_dst_file_name) = tempfile.mkstemp(
         prefix='gsutil-rsync-dst-')
+    _tmp_files.append(self.sorted_list_dst_file_name)
     # Close the file handles; the file will be opened in write mode by
     # _ListUrlRootFunc.
     os.close(src_fh)
@@ -602,25 +633,6 @@ class _DiffIterator(object):
         iter(self.sorted_list_src_file))
     self.sorted_dst_urls_it = PluralityCheckableIterator(
         iter(self.sorted_list_dst_file))
-
-  # pylint: disable=bare-except
-  def CleanUpTempFiles(self):
-    """Cleans up temp files.
-
-    This function allows the main (RunCommand) function to clean up at end of
-    operation. This is necessary because tempfile.NamedTemporaryFile doesn't
-    allow the created file to be re-opened in read mode on Windows, so we have
-    to use tempfile.mkstemp, which doesn't automatically delete temp files (see
-    https://mail.python.org/pipermail/python-list/2005-December/336958.html).
-    """
-    try:
-      self.sorted_list_src_file.close()
-      self.sorted_list_dst_file.close()
-      for fname in (self.sorted_list_src_file_name,
-                    self.sorted_list_dst_file_name):
-        os.unlink(fname)
-    except:
-      pass
 
   def _ParseTmpFileLine(self, line):
     """Parses output from _BuildTmpOutputLine.
@@ -897,6 +909,9 @@ class RsyncCommand(Command):
     # parallel (-m) mode.
     shared_attrs = ['op_failure_count']
 
+    for signal_num in (signal.SIGINT, signal.SIGQUIT, signal.SIGTERM):
+      RegisterSignalHandler(signal_num, _HandleSignals)
+
     # Perform sync requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
@@ -907,7 +922,7 @@ class RsyncCommand(Command):
                  shared_attrs, arg_checker=_DiffToApplyArgChecker,
                  fail_on_error=True)
     finally:
-      diff_iterator.CleanUpTempFiles()
+      CleanUpTempFiles()
 
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''

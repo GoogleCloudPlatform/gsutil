@@ -66,6 +66,8 @@ from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
 from gslib.util import GsutilStreamHandler
 from gslib.util import ProxyInfoFromEnvironmentVar
+from gslib.sig_handling import InitializeSignalHandling
+from gslib.sig_handling import RegisterSignalHandler
 
 GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
 # Google OAuth2 clients always have a secret, even if the client is an installed
@@ -167,6 +169,7 @@ def _ConfigureLogging(level=logging.INFO):
 
 
 def main():
+  InitializeSignalHandling()
   # Any modules used in initializing multiprocessing variables must be
   # imported after importing gslib.__main__.
   # pylint: disable=redefined-outer-name,g-import-not-at-top
@@ -175,7 +178,9 @@ def main():
   import gslib.util
   from gslib.util import BOTO_IS_SECURE
   from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+  # pylint: disable=unused-variable
   from gcs_oauth2_boto_plugin import oauth2_client
+  # pylint: enable=unused-variable
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
     # These setup methods must be called, and, on Windows, they can only be
@@ -499,11 +504,12 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
   from gslib.util import IsRunningInteractively
   try:
     # Catch ^C so we can print a brief message instead of the normal Python
-    # stack trace.
-    signal.signal(signal.SIGINT, _HandleControlC)
+    # stack trace. Register as a final signal handler because this handler kills
+    # the main gsutil process (so it must run last).
+    RegisterSignalHandler(signal.SIGINT, _HandleControlC, is_final_handler=True)
     # Catch ^\ so we can force a breakpoint in a running gsutil.
     if not IS_WINDOWS:
-      signal.signal(signal.SIGQUIT, _HandleSigQuit)
+      RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
     return command_runner.RunNamedCommand(command_name, args, headers,
                                           debug_level, parallel_operations)
   except AttributeError as e:
