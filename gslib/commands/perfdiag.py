@@ -873,11 +873,17 @@ class PerfDiagCommand(Command):
     """Tries to parse out TCP packet information from netstat output.
 
     Returns:
-       A dictionary containing TCP information
+       A dictionary containing TCP information, or None if netstat is not
+       available.
     """
     # netstat return code is non-zero for -s on Linux, so don't raise on error.
-    netstat_output = self._Exec(['netstat', '-s'], return_output=True,
-                                raise_on_error=False)
+    try:
+      netstat_output = self._Exec(['netstat', '-s'], return_output=True,
+                                  raise_on_error=False)
+    except OSError:
+      self.logger.warning('netstat not found on your system; some measurement '
+                          'data will be missing')
+      return None
     netstat_output = netstat_output.strip().lower()
     found_tcp = False
     tcp_retransmit = None
@@ -1253,15 +1259,19 @@ class PerfDiagCommand(Command):
       except TypeError:
         pass
 
-      netstat_after = info['netstat_end']
-      netstat_before = info['netstat_start']
-      for tcp_type in ('sent', 'received', 'retransmit'):
-        try:
-          delta = (netstat_after['tcp_%s' % tcp_type] -
-                   netstat_before['tcp_%s' % tcp_type])
-          print 'TCP segments %s during test:\n  %d' % (tcp_type, delta)
-        except TypeError:
-          pass
+      if 'netstat_end' in info and 'netstat_start' in info:
+        netstat_after = info['netstat_end']
+        netstat_before = info['netstat_start']
+        for tcp_type in ('sent', 'received', 'retransmit'):
+          try:
+            delta = (netstat_after['tcp_%s' % tcp_type] -
+                     netstat_before['tcp_%s' % tcp_type])
+            print 'TCP segments %s during test:\n  %d' % (tcp_type, delta)
+          except TypeError:
+            pass
+      else:
+        print ('TCP segment counts not available because "netstat" was not '
+               'found during test runs')
 
       if 'disk_counters_end' in info and 'disk_counters_start' in info:
         print 'Disk Counter Deltas:\n',
@@ -1477,7 +1487,9 @@ class PerfDiagCommand(Command):
       # Collect generic system info.
       self._CollectSysInfo()
       # Collect netstat info and disk counters before tests (and again later).
-      self.results['sysinfo']['netstat_start'] = self._GetTcpStats()
+      netstat_output = self._GetTcpStats()
+      if netstat_output:
+        self.results['sysinfo']['netstat_start'] = netstat_output
       if IS_LINUX:
         self.results['sysinfo']['disk_counters_start'] = self._GetDiskCounters()
       # Record bucket URL.
@@ -1495,7 +1507,9 @@ class PerfDiagCommand(Command):
         self._RunListTests()
 
       # Collect netstat info and disk counters after tests.
-      self.results['sysinfo']['netstat_end'] = self._GetTcpStats()
+      netstat_output = self._GetTcpStats()
+      if netstat_output:
+        self.results['sysinfo']['netstat_end'] = netstat_output
       if IS_LINUX:
         self.results['sysinfo']['disk_counters_end'] = self._GetDiskCounters()
 
