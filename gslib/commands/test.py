@@ -370,6 +370,8 @@ class TestCommand(Command):
           continue
         process_done[proc_num] = True
         stdout, stderr = process_list[proc_num].communicate()
+        process_list[proc_num].stdout.close()
+        process_list[proc_num].stderr.close()
         # TODO: Differentiate test failures from errors.
         if process_list[proc_num].returncode != 0:
           num_parallel_failures += 1
@@ -481,11 +483,7 @@ class TestCommand(Command):
           'Coverage has been requested but the coverage module was not found. '
           'You can install it with "pip install coverage".')
 
-    if IS_WINDOWS:
-      self.logger.warn(
-          'Not running tests in parallel due to Windows limitations.')
-      max_parallel_tests = 1
-    elif (tests.util.RUN_S3_TESTS and
+    if (tests.util.RUN_S3_TESTS and
           max_parallel_tests > _DEFAULT_S3_TEST_PARALLEL_PROCESSES):
       self.logger.warn(
           'Reducing parallel tests to %d due to S3 maximum bucket '

@@ -114,6 +114,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                          cwd=gsutil_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
+    p.stdout.close()
+    p.stderr.close()
     self.assertEqual(p.returncode, 1)
     self.assertIn('update command only works with tar.gz', stderr)
 
@@ -122,6 +124,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
         prefix + ['gsutil', 'update', 'gs://pub/Jdjh38)(;.tar.gz'],
         cwd=gsutil_dst, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
+    p.stdout.close()
+    p.stderr.close()
     self.assertEqual(p.returncode, 1)
     self.assertIn('NotFoundException', stderr)
 
@@ -130,6 +134,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                          cwd=gsutil_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
+    p.stdout.close()
+    p.stderr.close()
     self.assertEqual(p.returncode, 1)
     self.assertIn('command does not support', stderr)
 
@@ -140,6 +146,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                          cwd=gsutil_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE)
     (_, stderr) = p.communicate()
+    p.stdout.close()
+    p.stderr.close()
     # Clean up before next test, and before assertions so failure doesn't leave
     # this file around.
     os.unlink(os.path.join(gsutil_dst, 'userdata.txt'))
@@ -154,6 +162,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                          cwd=tmpdir_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE)
     (_, stderr) = p.communicate(input='y\r\n')
+    p.stdout.close()
+    p.stderr.close()
     self.assertEqual(p.returncode, 0, msg=(
         'Non-zero return code (%d) from gsutil update. stderr = \n%s' %
         (p.returncode, stderr)))

@@ -1378,6 +1378,8 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
         p = subprocess.Popen(['file', '--mime-type', object_name],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = p.communicate()
+        p.stdout.close()
+        p.stderr.close()
         if p.returncode != 0 or error:
           raise CommandException(
               'Encountered error running "file --mime-type %s" '
