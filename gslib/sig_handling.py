@@ -25,11 +25,6 @@ _non_final_signal_handlers = {}
 # Maps from signal_num to the final signal handler (if any) that should be
 # called for that signal.
 _final_signal_handlers = {}
-if IS_WINDOWS:
-  # Windows doesn't have SIGQUIT.
-  _caught_signals = (signal.SIGINT, signal.SIGTERM)
-else:
-  _caught_signals = (signal.SIGINT, signal.SIGQUIT, signal.SIGTERM)
 
 
 def RegisterSignalHandler(signal_num, handler, is_final_handler=False):
@@ -56,11 +51,11 @@ def RegisterSignalHandler(signal_num, handler, is_final_handler=False):
                       is received.
   Raises:
     RuntimeError: if attempt is made to register a signal_num not in
-    _caught_signals.
+        GetCaughtSignals.
   """
-  if signal_num not in _caught_signals:
+  if signal_num not in GetCaughtSignals():
     raise RuntimeError('Attempt to register handler (%s) for signal %d, which '
-                       'is not in _caught_signals' % (handler, signal_num))
+                       'is not in GetCaughtSignals' % (handler, signal_num))
   if is_final_handler:
     _final_signal_handlers[signal_num] = handler
   else:
@@ -88,7 +83,17 @@ def InitializeSignalHandling():
 
   Sets up global signal handler for each signal we handle.
   """
-  for signal_num in _caught_signals:
+  for signal_num in GetCaughtSignals():
     _non_final_signal_handlers[signal_num] = []
     # Make main signal handler catch the signal.
     signal.signal(signal_num, _SignalHandler)
+
+
+def GetCaughtSignals():
+  """Returns terminating signals that can be caught on this OS platform."""
+  signals = [signal.SIGINT, signal.SIGTERM]
+  if not IS_WINDOWS:
+    # Windows doesn't have SIGQUIT.
+    signals.append(signal.SIGQUIT)
+  return signals
+

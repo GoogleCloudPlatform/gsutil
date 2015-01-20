@@ -22,7 +22,6 @@ import io
 from itertools import islice
 import os
 import re
-import signal
 import tempfile
 import textwrap
 import traceback
@@ -43,6 +42,7 @@ from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import GetCloudApiInstance
@@ -264,14 +264,14 @@ _DETAILED_HELP_TEXT = ("""
                 always relative (similar to Unix rsync or tar exclude options).
                 For example, if you run the command:
 
-                  gsutil rsync -x 'data./.*\.txt' dir gs://my-bucket
+                  gsutil rsync -x 'data./.*\\.txt' dir gs://my-bucket
 
                 it will skip the file dir/data1/a.txt.
 
                 You can use regex alternation to specify multiple exclusions,
                 for example:
 
-                  gsutil rsync -x '.*\.txt|.*\.jpg' dir gs://my-bucket
+                  gsutil rsync -x '.*\\.txt|.*\\.jpg' dir gs://my-bucket
 """)
 
 
@@ -295,7 +295,6 @@ def _HandleSignals(signal_num, cur_stack_frame):
   CleanUpTempFiles()
 
 
-# pylint: disable=bare-except
 def CleanUpTempFiles():
   """Cleans up temp files.
 
@@ -308,7 +307,7 @@ def CleanUpTempFiles():
   try:
     for fname in _tmp_files:
       os.unlink(fname)
-  except:
+  except:  # pylint: disable=bare-except
     pass
 
 
@@ -909,7 +908,7 @@ class RsyncCommand(Command):
     # parallel (-m) mode.
     shared_attrs = ['op_failure_count']
 
-    for signal_num in (signal.SIGINT, signal.SIGQUIT, signal.SIGTERM):
+    for signal_num in GetCaughtSignals():
       RegisterSignalHandler(signal_num, _HandleSignals)
 
     # Perform sync requests in parallel (-m) mode, if requested, using
@@ -965,7 +964,7 @@ class RsyncCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-x':
-          if len(a) == 0:
+          if not a:
             raise CommandException('Invalid blank exclude filter')
           try:
             self.exclude_pattern = re.compile(a)

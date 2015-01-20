@@ -66,6 +66,7 @@ from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
 from gslib.util import GsutilStreamHandler
 from gslib.util import ProxyInfoFromEnvironmentVar
+from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
 
@@ -115,11 +116,17 @@ debug = 0
 test_exception_traces = False
 
 
+# pylint: disable=unused-argument
+def _CleanupSignalHandler(signal_num, cur_stack_frame):
+  """Cleans up if process is killed with SIGINT, SIGQUIT or SIGTERM."""
+  _Cleanup()
+
+
 def _Cleanup():
   for fname in GetCleanupFiles():
     try:
-      os.remove(fname)
-    except OSError:
+      os.unlink(fname)
+    except:  # pylint: disable=bare-except
       pass
 
 
@@ -236,6 +243,9 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
+  gslib.util.certs_file_lock = CreateLock()
+  for signal_num in GetCaughtSignals():
+    RegisterSignalHandler(signal_num, _CleanupSignalHandler)
   GetCertsFile()
 
   try:
