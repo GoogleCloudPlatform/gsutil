@@ -158,7 +158,10 @@ class TestUtil(testcase.GsUtilUnitTestCase):
 
   def test_ProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""
-    valid_variables = ['http_proxy', 'https_proxy', 'HTTPS_PROXY']
+    valid_variables = ['http_proxy', 'https_proxy']
+    if not util.IS_WINDOWS:
+      # Dynamically set Windows environment variables are case-insensitive.
+      valid_variables.append('HTTPS_PROXY')
     # Clear any existing environment variables for the duration of the test.
     clear_dict = {}
     for key in valid_variables:
