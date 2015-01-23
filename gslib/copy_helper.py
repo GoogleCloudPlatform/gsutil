@@ -329,11 +329,10 @@ def GetTrackerFilePath(dst_url, tracker_file_type, api_selector, src_url=None):
   return tracker_file_path
 
 
-def _SelectDownloadStrategy(src_obj_metadata, dst_url):
-  """Get download strategy based on the source and dest objects.
+def _SelectDownloadStrategy(dst_url):
+  """Get download strategy based on the destination object.
 
   Args:
-    src_obj_metadata: Object describing the source object.
     dst_url: Destination StorageUrl.
 
   Returns:
@@ -430,9 +429,17 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
                            os.O_WRONLY | os.O_CREAT, 0600), 'w') as tf:
       tf.write('%s\n' % src_obj_metadata.etag)
     return False
-  except IOError as e:
-    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                           (tracker_file_name, e.strerror))
+  except (IOError, OSError) as e:
+    if src_obj_metadata.size < ResumableThreshold():
+      # Small downloads used to be written in one shot without writing a
+      # tracker file. For backwards compatibility, they must continue to
+      # function even if the tracker file/dir is not writable. Fall through
+      # so the download will be retriable/resumable; resumes across process
+      # breaks will not be supported.
+      pass
+    else:
+      raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
+                             (tracker_file_name, e.strerror))
   finally:
     if tracker_file:
       tracker_file.close()
@@ -1780,7 +1787,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   # Tracks whether the server used a gzip encoding.
   server_encoding = None
   download_complete = False
-  download_strategy = _SelectDownloadStrategy(src_obj_metadata, dst_url)
+  download_strategy = _SelectDownloadStrategy(dst_url)
   download_start_point = 0
   # This is used for resuming downloads, but also for passing the mediaLink
   # and size into the download for new downloads so that we can avoid

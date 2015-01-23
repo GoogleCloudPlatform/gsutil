@@ -49,6 +49,7 @@ from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
+from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
@@ -1314,6 +1315,36 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       os.chmod(tracker_dir, 0)
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+                                expected_status=1, return_stderr=True)
+        self.assertIn('Couldn\'t write tracker file', stderr)
+    finally:
+      os.chmod(tracker_dir, save_mod)
+      if os.path.exists(tracker_filename):
+        os.unlink(tracker_filename)
+
+  # This temporarily changes the tracker directory to unwritable which
+  # interferes with any parallel running tests that use the tracker directory.
+  @NotParallelizable
+  @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
+  def test_cp_unwritable_tracker_file_download(self):
+    """Tests downloads with an unwritable tracker file."""
+    object_uri = self.CreateObject(contents='foo' * ONE_KIB)
+    tracker_filename = GetTrackerFilePath(
+        StorageUrlFromString(suri(object_uri)),
+        TrackerFileType.DOWNLOAD, self.test_api)
+    tracker_dir = os.path.dirname(tracker_filename)
+    fpath = self.CreateTempFile()
+    save_mod = os.stat(tracker_dir).st_mode
+
+    try:
+      os.chmod(tracker_dir, 0)
+      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(EIGHT_MIB))
+      with SetBotoConfigForTest([boto_config_for_test]):
+        # Should succeed because we are below the threshold.
+        self.RunGsUtil(['cp', suri(object_uri), fpath])
+      boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
+      with SetBotoConfigForTest([boto_config_for_test]):
+        stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 expected_status=1, return_stderr=True)
         self.assertIn('Couldn\'t write tracker file', stderr)
     finally:
