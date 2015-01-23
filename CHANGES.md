@@ -1,3 +1,55 @@
+Release 4.8 (release date: 2015-01-23)
+=======================================
+New Features
+------------
+- gsutil now supports HTTP proxy configuration via the http_proxy,
+  https_proxy, or HTTPS_PROXY environment variables. This configuration
+  is used only if proxy configuration is not present in the .boto
+  configuration file.
+- gsutil rsync now supports regex-based source and destination URL
+  exclusion via the -x flag.
+- The rm command now supports arguments on stdin via the -I flag.
+
+Bug Fixes
+---------
+- Fixed a bug where perfdiag would fail if netstat was not available.
+- Fixed a bug where temporary ca_certs files were not being cleaned up.
+- Fixed a bug in rsync to unnecessarily remove or write objects, in some
+  cases leaving the destination in a non-synchronized state.
+  caused rsync to unnecessarily remove or rewrite objects.
+- Fixed a bug where rsync temporary listing files were not being
+  cleaned up when the rsync process was killed.
+- Fixed a bug where rsync would remove destination URLs if listing the
+  source encountered a non-retryable failure (for example, if the source
+  did not exist).
+- Fixed a bug where mv would fail for some Unicode filenames.
+- Fixed a bug where mv would remove the source URL after skipping the
+  destination URL.
+- Fixed a bug that caused daisy chain uploads to hang if the download thread
+  raised an exception.
+- Fixed a bug where acl ch would return a zero exit code even if it failed.
+- Fixed a bug that sometimes caused the progress display to render multiple
+  times at the end of an upload or download.
+
+Other Changes
+-------------
+- Resumable uploads of files using the JSON API now send their data in a
+  single request, making separate HTTP calls only when resuming is necessary.
+- The test command now runs tests in parallel by default, and test
+  parallelism on Windows is now supported.
+- All non-streaming downloads are now resumable (and retryable) by default,
+  regardless of size.
+- Canned ACLs and canned default object ACLs are now supported in the JSON
+  API (previously they would fall back to using the XML API).
+- Google Compute Engine service account credential tokens are now cached,
+  avoiding unnecessary refreshes.
+- Improved detection of the Google Compute Engine metadata server,
+  particularly when using the -m flag for multiprocessing.
+- Added new help sections about filename encoding and security/privacy
+  considerations.
+- Download progress is now displayed for small XML API downloads.
+
+
 Release 4.7 (release date: 2014-11-17)
 =======================================
 New Features
