@@ -50,9 +50,11 @@ _SYNOPSIS = """
   gsutil cp [OPTION]... -I dst_url
 """
 
-SYNOPSIS_TEXT = '<B>SYNOPSIS</B>\n' + _SYNOPSIS
+_SYNOPSIS_TEXT = """
+<B>SYNOPSIS</B>
+""" + _SYNOPSIS
 
-DESCRIPTION_TEXT = """
+_DESCRIPTION_TEXT = """
 <B>DESCRIPTION</B>
   The gsutil cp command allows you to copy data between your local file
   system and the cloud, copy data within the cloud, and copy data between
@@ -90,7 +92,7 @@ DESCRIPTION_TEXT = """
   and cloud URLs.
 """
 
-NAME_CONSTRUCTION_TEXT = """
+_NAME_CONSTRUCTION_TEXT = """
 <B>HOW NAMES ARE CONSTRUCTED</B>
   The gsutil cp command strives to name objects in a way consistent with how
   Linux cp works, which causes names to be constructed in varying ways depending
@@ -142,7 +144,7 @@ NAME_CONSTRUCTION_TEXT = """
   need to be able to download such objects using gsutil).
 """
 
-SUBDIRECTORIES_TEXT = """
+_SUBDIRECTORIES_TEXT = """
 <B>COPYING TO/FROM SUBDIRECTORIES; DISTRIBUTING TRANSFERS ACROSS MACHINES</B>
   You can use gsutil to copy to and from subdirectories by using a command
   like:
@@ -183,7 +185,7 @@ SUBDIRECTORIES_TEXT = """
   you experiment and find out what works best for you.
 """
 
-COPY_IN_CLOUD_TEXT = """
+_COPY_IN_CLOUD_TEXT = """
 <B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
   If both the source and destination URL are cloud URLs from the same
   provider, gsutil copies data "in the cloud" (i.e., without downloading
@@ -209,7 +211,7 @@ COPY_IN_CLOUD_TEXT = """
   will cause all versions of gs://bucket1/obj to be copied to gs://bucket2.
 """
 
-FAILURE_HANDLING_TEXT = """
+_FAILURE_HANDLING_TEXT = """
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
   At the end of every upload or download, the gsutil cp command validates that
   that the checksum of the source file/object matches the checksum of the
@@ -231,7 +233,7 @@ FAILURE_HANDLING_TEXT = """
   "gsutil help retries".
 """
 
-RESUMABLE_TRANSFERS_TEXT = """
+_RESUMABLE_TRANSFERS_TEXT = """
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically uses the Google Cloud Storage resumable upload feature
   whenever you use the cp command to upload an object that is larger than 2
@@ -265,7 +267,7 @@ RESUMABLE_TRANSFERS_TEXT = """
   in production.
 """
 
-STREAMING_TRANSFERS_TEXT = """
+_STREAMING_TRANSFERS_TEXT = """
 <B>STREAMING TRANSFERS</B>
   Use '-' in place of src_url or dst_url to perform a streaming
   transfer. For example:
@@ -282,7 +284,7 @@ STREAMING_TRANSFERS_TEXT = """
   for large downloads).
 """
 
-PARALLEL_COMPOSITE_UPLOADS_TEXT = """
+_PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
   gsutil can automatically use
   `object composition <https://developers.google.com/storage/docs/composite-objects>`_
@@ -350,7 +352,7 @@ PARALLEL_COMPOSITE_UPLOADS_TEXT = """
        MAX_COMPONENT_COUNT)
 
 
-CHANGING_TEMP_DIRECTORIES_TEXT = """
+_CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
   gsutil writes data to a temporary directory in several cases:
 
@@ -380,7 +382,7 @@ CHANGING_TEMP_DIRECTORIES_TEXT = """
   is not necessary after running the export command on Linux and MacOS.)
 """
 
-OPTIONS_TEXT = """
+_OPTIONS_TEXT = """
 <B>OPTIONS</B>
   -a canned_acl   Sets named canned_acl when uploaded objects created. See
                   'gsutil help acls' for further details.
@@ -532,17 +534,17 @@ OPTIONS_TEXT = """
                  file.
 """
 
-_DETAILED_HELP_TEXT = '\n\n'.join([SYNOPSIS_TEXT,
-                                   DESCRIPTION_TEXT,
-                                   NAME_CONSTRUCTION_TEXT,
-                                   SUBDIRECTORIES_TEXT,
-                                   COPY_IN_CLOUD_TEXT,
-                                   FAILURE_HANDLING_TEXT,
-                                   RESUMABLE_TRANSFERS_TEXT,
-                                   STREAMING_TRANSFERS_TEXT,
-                                   PARALLEL_COMPOSITE_UPLOADS_TEXT,
-                                   CHANGING_TEMP_DIRECTORIES_TEXT,
-                                   OPTIONS_TEXT])
+_DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
+                                   _DESCRIPTION_TEXT,
+                                   _NAME_CONSTRUCTION_TEXT,
+                                   _SUBDIRECTORIES_TEXT,
+                                   _COPY_IN_CLOUD_TEXT,
+                                   _FAILURE_HANDLING_TEXT,
+                                   _RESUMABLE_TRANSFERS_TEXT,
+                                   _STREAMING_TRANSFERS_TEXT,
+                                   _PARALLEL_COMPOSITE_UPLOADS_TEXT,
+                                   _CHANGING_TEMP_DIRECTORIES_TEXT,
+                                   _OPTIONS_TEXT])
 
 
 CP_SUB_ARGS = 'a:cDeIL:MNnprRtvz:'
