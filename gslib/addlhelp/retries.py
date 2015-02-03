@@ -32,7 +32,9 @@ _DETAILED_HELP_TEXT = ("""
     - Wait a random period between [0..1] seconds and retry;
     - If that fails, wait a random period between [0..2] seconds and retry;
     - If that fails, wait a random period between [0..4] seconds and retry;
-    - And so on, up to a configurable maximum number of retries (default = 6).
+    - And so on, up to a configurable maximum number of retries (default = 6),
+    with each retry period bounded by a configurable maximum period of time
+    (default = 60 seconds).
 
   Thus, by default, gsutil will retry 6 times over 1+2+4+8+16+32=63 seconds.
   You can adjust the number of retries and maximum delay of any individual retry
@@ -54,7 +56,7 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='retries',
-      help_name_aliases=['retry', 'backoff'],
+      help_name_aliases=['retry', 'backoff', 'reliability'],
       help_type='additional_help',
       help_one_line_summary='Retry Handling Strategy',
       help_text=_DETAILED_HELP_TEXT,

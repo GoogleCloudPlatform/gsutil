@@ -107,6 +107,17 @@ _DETAILED_HELP_TEXT = ("""
   respected by the XML API. The Google Cloud Storage JSON API respects only the
   no-cache and max-age Cache-Control parameters.
 
+  Note that if you upload an object with a public-read ACL and don't include a
+  Cache-Control header, it will be served with a Cache-Control header allowing
+  the object to be cached for 3600 seconds. This will not happen if the object
+  is uploaded with a non-public ACL and then changed to public. Moreover, if you
+  upload an object with a public-read ACL and later change the ACL not to be
+  public-read, the object will no longer be served with the default
+  Cache-Control header noted above (so will be served as not cacheable).
+  
+  For details about how to set the Cache-Control header see
+  "gsutil help setmeta".
+
 
 <B>CONTENT-ENCODING</B>
   You can specify a Content-Encoding to indicate that an object is compressed

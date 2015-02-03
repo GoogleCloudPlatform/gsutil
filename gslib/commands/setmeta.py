@@ -72,10 +72,11 @@ _DETAILED_HELP_TEXT = ("""
   these fields, use of custom metadata, and how to view currently set metadata.
 
   NOTE: By default, publicly readable objects are served with a Cache-Control
-  header allowing such objects to be cached for 3600 seconds. If you need to
-  ensure that updates become visible immediately, you should set a Cache-Control
-  header of "Cache-Control:private, max-age=0, no-transform" on such objects.
-  You can do this with the command:
+  header allowing such objects to be cached for 3600 seconds. For more details
+  about this default behavior see the CACHE-CONTROL section of
+  "gsutil help metadata". If you need to ensure that updates become visible
+  immediately, you should set a Cache-Control header of "Cache-Control:private,
+  max-age=0, no-transform" on such objects.  You can do this with the command:
 
     gsutil setmeta -h "Content-Type:text/html" \\
       -h "Cache-Control:private, max-age=0, no-transform" gs://bucket/*.html

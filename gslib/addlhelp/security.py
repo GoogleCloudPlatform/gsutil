@@ -32,9 +32,10 @@ _DETAILED_HELP_TEXT = ("""
   resumable upload identifiers, and such tokens must be protected from being
   eavesdropped and reused.
 
-  gsutil also supports the older HMAC style of authentication. While HMAC
-  authentication does not use bearer tokens (and thus is not subject to
-  eavesdropping/replay attacks), it's still important to encrypt data traffic.
+  gsutil also supports the older HMAC style of authentication via the XML API
+  (see "gsutil help apis").  While HMAC authentication does not use bearer
+  tokens (and thus is not subject to eavesdropping/replay attacks), it's still
+  important to encrypt data traffic.
 
   Prior to gsutil release 4.0 it was possible to use HTTP instead of HTTPS by
   setting the "is_secure" configuration parameter in the [Boto] section of the
