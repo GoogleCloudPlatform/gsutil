@@ -1536,6 +1536,9 @@ class PerfDiagCommand(Command):
 
       self._DisplayResults()
     finally:
+      # TODO: Install signal handlers so this is performed in response to a
+      # terminating signal; consider multi-threaded object deletes during
+      # cleanup so it happens quickly.
       self._TearDown()
 
     return 0
