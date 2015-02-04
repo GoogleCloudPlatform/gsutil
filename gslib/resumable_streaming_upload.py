@@ -71,7 +71,7 @@ class ResumableStreamingJsonUploadWrapper(object):
       bytes_remaining = self._max_buffer_size
     else:
       bytes_remaining = size
-    data = None
+    data = b''
     buffered_data = []
     if self._position < self._buffer_end:
       # There was a backwards seek, so read from the buffer first.
@@ -146,7 +146,7 @@ class ResumableStreamingJsonUploadWrapper(object):
             self._buffer.append(oldest_data[-refill_amount:])
             self._buffer_start -= refill_amount
     else:
-      data = b''.join(buffered_data) if buffered_data else None
+      data = b''.join(buffered_data) if buffered_data else b''
 
     return data
 
