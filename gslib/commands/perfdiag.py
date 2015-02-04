@@ -217,6 +217,9 @@ class DummyFile(object):
     pass
 
 
+# Many functions in perfdiag re-define a temporary function based on a
+# variable from a loop, resulting in a false positive from the linter.
+# pylint: disable=cell-var-from-loop
 class PerfDiagCommand(Command):
   """Implementation of gsutil perfdiag command."""
 
@@ -328,6 +331,8 @@ class PerfDiagCommand(Command):
     self.results = {}
     # List of test files in a temporary location on disk for latency ops.
     self.latency_files = []
+    # List of test objects to clean up in the test bucket.
+    self.test_object_names = set()
     # Maps each test file path to its size in bytes.
     self.file_sizes = {}
     # Maps each test file to its contents as a string.
@@ -375,9 +380,7 @@ class PerfDiagCommand(Command):
 
     # Local file on disk for write throughput tests.
     self.thru_local_file = _MakeFile(self.thru_filesize)
-    # Remote file to write/read from during throughput tests.
-    self.thru_remote_file = (str(self.bucket_url) +
-                             os.path.basename(self.thru_local_file))
+
     # Dummy file buffer to use for downloading that goes nowhere.
     self.discard_sink = DummyFile()
 
@@ -390,19 +393,17 @@ class PerfDiagCommand(Command):
       except OSError:
         pass
 
-    if self.LAT in self.diag_tests or self.WTHRU in self.diag_tests:
-      cleanup_files = [self.thru_local_file, self.tcp_warmup_file]
-      for f in cleanup_files:
+    for object_name in self.test_object_names:
 
-        def _Delete():
-          try:
-            self.gsutil_api.DeleteObject(self.bucket_url.bucket_name,
-                                         os.path.basename(f),
-                                         provider=self.provider)
-          except NotFoundException:
-            pass
+      def _Delete():
+        try:
+          self.gsutil_api.DeleteObject(self.bucket_url.bucket_name,
+                                       object_name,
+                                       provider=self.provider)
+        except NotFoundException:
+          pass
 
-        self._RunOperation(_Delete)
+      self._RunOperation(_Delete)
 
   @contextlib.contextmanager
   def _Time(self, key, bucket):
@@ -480,9 +481,8 @@ class PerfDiagCommand(Command):
     for i in range(self.num_iterations):
       self.logger.info('\nRunning latency iteration %d...', i+1)
       for fpath in self.latency_files:
-        basename = os.path.basename(fpath)
         url = self.bucket_url.Clone()
-        url.object_name = basename
+        url.object_name = os.path.basename(fpath)
         file_size = self.file_sizes[fpath]
         readable_file_size = MakeHumanReadable(file_size)
 
@@ -539,6 +539,10 @@ class PerfDiagCommand(Command):
 
   def _RunReadThruTests(self):
     """Runs read throughput tests."""
+    self.logger.info(
+        '\nRunning read throughput tests (%s iterations of size %s)' %
+        (self.num_iterations, MakeHumanReadable(self.thru_filesize)))
+
     self.results['read_throughput'] = {'file_size': self.thru_filesize,
                                        'num_times': self.num_iterations,
                                        'processes': self.processes,
@@ -548,6 +552,7 @@ class PerfDiagCommand(Command):
     warmup_url = self.bucket_url.Clone()
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
+    self.test_object_names.add(warmup_url.object_name)
 
     def _Upload1():
       self.gsutil_api.UploadObject(
@@ -560,6 +565,7 @@ class PerfDiagCommand(Command):
     thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
     thru_target.md5Hash = self.file_md5s[self.thru_local_file]
+    self.test_object_names.add(thru_url.object_name)
 
     # Get the mediaLink here so that we can pass it to download.
     def _Upload2():
@@ -621,6 +627,10 @@ class PerfDiagCommand(Command):
 
   def _RunWriteThruTests(self):
     """Runs write throughput tests."""
+    self.logger.info(
+        '\nRunning write throughput tests (%s iterations of size %s)' %
+        (self.num_iterations, MakeHumanReadable(self.thru_filesize)))
+
     self.results['write_throughput'] = {'file_size': self.thru_filesize,
                                         'num_copies': self.num_iterations,
                                         'processes': self.processes,
@@ -629,6 +639,7 @@ class PerfDiagCommand(Command):
     warmup_url = self.bucket_url.Clone()
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
     warmup_target = StorageUrlToUploadObjectMetadata(warmup_url)
+    self.test_object_names.add(warmup_url.object_name)
 
     thru_url = self.bucket_url.Clone()
     thru_url.object_name = os.path.basename(self.thru_local_file)
@@ -638,9 +649,11 @@ class PerfDiagCommand(Command):
       # Create a unique name for each uploaded object.  Otherwise,
       # the XML API would fail when trying to non-atomically get metadata
       # for the object that gets blown away by the overwrite.
-      thru_tuples.append(UploadObjectTuple(
-          thru_target.bucket, thru_target.name + str(i),
-          filepath=self.thru_local_file))
+      remote_object_name = thru_target.name + str(i)
+      self.test_object_names.add(remote_object_name)
+      thru_tuples.append(UploadObjectTuple(thru_target.bucket,
+                                           remote_object_name,
+                                           filepath=self.thru_local_file))
 
     if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
@@ -706,8 +719,9 @@ class PerfDiagCommand(Command):
     list_prefix = 'gsutil-perfdiag-list-'
     list_objects = []
     for _ in xrange(self.num_iterations):
-      list_objects.append(
-          u'%s%s' % (list_prefix, os.urandom(20).encode('hex')))
+      list_object_name = u'%s%s' % (list_prefix, os.urandom(20).encode('hex'))
+      self.test_object_names.add(list_object_name)
+      list_objects.append(list_object_name)
 
     # Add the objects to the bucket.
     self.logger.info(

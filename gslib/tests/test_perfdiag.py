@@ -52,6 +52,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(cmd)
     if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def _run_basic_wthru_or_rthru(self, test_name, num_processes, num_threads):
     bucket_uri = self.CreateBucket()
@@ -61,6 +62,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(cmd)
     if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def test_write_throughput_single_process_single_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 1, 1)
@@ -115,3 +117,4 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
         ['perfdiag', '-n', '1', '-t', 'list', suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Number of listing calls made:', stdout)
+    self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)

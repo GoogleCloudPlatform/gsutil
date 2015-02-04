@@ -94,7 +94,7 @@ class StorageUrl(object):
            as a BucketListingObject, so we will not recurse on it as a subdir
            during listing.
     """
-    raise NotImplementedError('GetPrefixWithWildcard not overridden')
+    raise NotImplementedError('CreatePrefixUrl not overridden')
 
   @property
   def url_string(self):
