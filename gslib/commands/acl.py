@@ -167,8 +167,9 @@ _CH_DESCRIPTION = """
 
     gsutil acl ch -u foo@developer.gserviceaccount.com:W gs://example-bucket
 
-  Grant all users from my-domain.org READ access to the bucket
-  gcs.my-domain.org:
+  Grant all users from the `Google Apps
+  <https://www.google.com/work/apps/business/>`_ domain my-domain.org READ
+  access to the bucket gcs.my-domain.org:
 
     gsutil acl ch -g my-domain.org:R gs://gcs.my-domain.org
 
