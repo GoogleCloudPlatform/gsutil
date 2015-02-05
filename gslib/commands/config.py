@@ -467,6 +467,8 @@ content_language = en
 # and are unable to install crcmod with the C-extension. CRC32c is the only
 # available integrity check for composite objects, and without the C-extension,
 # download performance can be significantly degraded by the digest computation.
+# This option is ignored for daisy-chain copies, which don't compute hashes but
+# instead (inexpensively) compare the cloud source and destination hashes.
 #check_hashes = if_fast_else_fail
 
 # The ability to specify an alternative JSON API version is primarily for cloud
