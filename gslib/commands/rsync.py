@@ -117,6 +117,48 @@ _DETAILED_HELP_TEXT = ("""
   workstation.
 
 
+<B>BE CAREFUL WHEN USING -d OPTION!</B>
+  The rsync -d option is very useful and commonly used, because it provides a
+  means of making the contents of a destination bucket or directory match those
+  of a source bucket or directory. However, please exercise caution when you
+  use this option: It's possible to delete large amounts of data accidentally
+  if, for example, you erroneously reverse source and destination. For example,
+  if you meant to synchronize a local directory from a bucket in the cloud but
+  instead run the command:
+
+    gsutil -m rsync -r -d ./your-dir gs://your-bucket
+
+  and your-dir is currently empty, you will quickly delete all of the objects in
+  gs://your-bucket.
+
+  You can also cause large amounts of data to be lost quickly by specifying a
+  subdirectory of the destination as the source of an rsync. For example, the
+  command:
+
+    gsutil -m rsync -r -d gs://your-bucket/data gs://your-bucket
+
+  would cause most or all of the objects in gs://your-bucket to be deleted
+  (some objects may survive if there are any with names that sort lower than
+  "data" under gs://your-bucket/data).
+
+  In addition to paying careful attention to the source and destination you
+  specify with the rsync command, there are two more safety measures your can
+  take when using gsutil rsync -d:
+
+    1. Try running the command with the rsync -n option first, to see what it
+       would do without actually performing the operations. For example, if
+       you run the command:
+
+         gsutil -m rsync -r -d -n gs://your-bucket/data gs://your-bucket
+       
+       it will be immediately evident that running that command without the -n
+       option would cause many objects to be deleted.
+
+    2. Enable object versioning in your bucket, which will allow you to restore
+       objects if you accidentally delete them. For more details see
+       "gsutil help versions".
+
+
 <B>IMPACT OF BUCKET LISTING EVENTUAL CONSISTENCY</B>
   The rsync command operates by listing the source and destination URLs, and
   then performing copy and remove operations according to the differences
@@ -229,7 +271,10 @@ _DETAILED_HELP_TEXT = ("""
                 file name) gsutil will print an error message and abort.
 
   -d            Delete extra files under dst_url not found under src_url. By
-                default extra files are not deleted.
+                default extra files are not deleted. Note: this option can
+                delete data quickly if you specify the wrong source/destination
+                combination. See the help section above,
+                "BE CAREFUL WHEN USING -d OPTION!".
 
   -e            Exclude symlinks. When specified, symbolic links will be
                 ignored.
