@@ -43,7 +43,7 @@ _GET_SYNOPSIS = """
 """
 
 _CH_SYNOPSIS = """
-  gsutil defacl ch -u|-g|-d <grant>... url...
+  gsutil defacl ch [-f] -u|-g|-d|-p <grant>... url...
 """
 
 _SET_DESCRIPTION = """
@@ -80,6 +80,17 @@ _CH_DESCRIPTION = """
   description.
 
 <B>CH EXAMPLES</B>
+  Grant anyone on the internet READ access by default to any object created
+  in the bucket example-bucket:
+
+    gsutil defacl ch -u AllUsers:R gs://example-bucket
+
+  NOTE: By default, publicly readable objects are served with a Cache-Control
+  header allowing such objects to be cached for 3600 seconds. If you need to
+  ensure that updates become visible immediately, you should set a
+  Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
+  such objects. For help doing this, see "gsutil help setmeta".
+
   Add the user john.doe@example.com to the default object ACL on bucket
   example-bucket with READ access:
 
@@ -89,6 +100,30 @@ _CH_DESCRIPTION = """
   example-bucket with OWNER access:
 
     gsutil defacl ch -g admins@example.com:O gs://example-bucket
+
+  Grant the owners of project example-project-123 WRITE access to the bucket
+  example-bucket:
+
+    gsutil acl ch -p owners-example-project-123 gs://example-bucket
+
+  NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
+  to a project's viewers/editors respectively.
+
+<B>CH OPTIONS</B>
+  The "ch" sub-command has the following options
+
+    -d          Remove all roles associated with the matching entity.
+
+    -f          Normally gsutil stops at the first error. The -f option causes
+                it to continue when it encounters errors. With this option the
+                gsutil exit status will be 0 even if some ACLs couldn't be
+                changed.
+
+    -g          Add or modify a group entity's role.
+
+    -p          Add or modify a project viewers/editors/owners role.
+
+    -u          Add or modify a user entity's role.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
@@ -115,7 +150,7 @@ class DefAclCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
-      supported_sub_args='fg:u:d:',
+      supported_sub_args='fg:u:d:p:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
@@ -184,6 +219,9 @@ class DefAclCommand(Command):
         if o == '-u':
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))
+        if o == '-p':
+          self.changes.append(
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.PROJECT))
         if o == '-d':
           self.changes.append(aclhelpers.AclDel(a))
 

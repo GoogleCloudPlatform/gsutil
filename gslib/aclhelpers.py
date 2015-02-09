@@ -25,6 +25,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 class ChangeType(object):
   USER = 'User'
   GROUP = 'Group'
+  PROJECT = 'Project'
 
 
 class AclChange(object):
@@ -33,7 +34,9 @@ class AclChange(object):
   id_scopes = ['UserById', 'GroupById']
   email_scopes = ['UserByEmail', 'GroupByEmail']
   domain_scopes = ['GroupByDomain']
-  scope_types = public_scopes + id_scopes + email_scopes + domain_scopes
+  project_scopes = ['Project']
+  scope_types = (public_scopes + id_scopes + email_scopes + domain_scopes
+                 + project_scopes)
 
   public_entity_all_users = 'allUsers'
   public_entity_all_auth_users = 'allAuthenticatedUsers'
@@ -43,6 +46,7 @@ class AclChange(object):
   group_entity_prefix = 'group-'
   user_entity_prefix = 'user-'
   domain_entity_prefix = 'domain-'
+  project_entity_prefix = 'project-'
 
   permission_shorthand_mapping = {
       'R': 'READER',
@@ -60,8 +64,8 @@ class AclChange(object):
     Args:
       acl_change_descriptor: An acl change as described in the "ch" section of
                              the "acl" command's help.
-      scope_type: Either ChangeType.USER or ChangeType.GROUP, specifying the
-                  extent of the scope.
+      scope_type: Either ChangeType.USER or ChangeType.GROUP or
+                  ChangeType.PROJECT, specifying the extent of the scope.
     """
     self.identifier = ''
 
@@ -83,6 +87,7 @@ class AclChange(object):
           'Email': r'^.+@.+\..+$',
           'Id': r'^[0-9A-Fa-f]{64}$',
           'Domain': r'^[^@]+\.[^@]+$',
+          'Project': r'(owners|editors|viewers)\-.+$',
           }
       for type_string, regex in re_map.items():
         if re.match(regex, text, re.IGNORECASE):
@@ -113,6 +118,9 @@ class AclChange(object):
       self.scope_type = 'AllAuthenticatedUsers'
     elif scope_class == 'AllUsers':
       self.scope_type = 'AllUsers'
+    elif scope_class == 'Project':
+      self.scope_type = 'Project'
+      self.identifier = scope_string
     else:
       # This is just a fallback, so we set it to something
       # and the validate step has something to go on.
@@ -165,6 +173,9 @@ class AclChange(object):
       elif (self.scope_type == 'GroupByDomain' and
             entry.domain and self.identifier == entry.domain):
         yield entry
+      elif (self.scope_type == 'Project' and
+            entry.domain and self.identifier == entry.project):
+        yield entry
       elif (self.scope_type == 'AllUsers' and
             entry.entity.lower() == self.public_entity_all_users.lower()):
         yield entry
@@ -180,6 +191,9 @@ class AclChange(object):
     elif self.scope_type == 'GroupById':
       entry = entry_class(entityId=self.identifier, role=self.perm,
                           entity=self.group_entity_prefix + self.identifier)
+    elif self.scope_type == 'Project':
+      entry = entry_class(entityId=self.identifier, role=self.perm,
+                          entity=self.project_entity_prefix + self.identifier)
     elif self.scope_type == 'UserByEmail':
       entry = entry_class(email=self.identifier, role=self.perm,
                           entity=self.user_entity_prefix + self.identifier)
@@ -283,6 +297,11 @@ class AclDel(object):
         yield entry
       elif entry.domain and self.identifier == entry.domain:
         yield entry
+      elif entry.projectTeam:
+        project_team = entry.projectTeam
+        acl_label = project_team.team + '-' + project_team.projectNumber
+        if acl_label == self.identifier:
+          yield entry
       elif entry.entity.lower() == 'allusers' and self.identifier == 'AllUsers':
         yield entry
       elif (entry.entity.lower() == 'allauthenticatedusers' and

@@ -678,6 +678,9 @@ class AclTranslation(object):
       return Entry(type=ALL_USERS, permission=permission)
     elif entity.lower() == ALL_AUTHENTICATED_USERS.lower():
       return Entry(type=ALL_AUTHENTICATED_USERS, permission=permission)
+    elif entity.startswith('project'):
+      raise CommandException('XML API does not support project scopes, '
+                             'cannot translate ACL.')
     elif 'email' in entry_json:
       if entity.startswith('user'):
         scope_type = USER_BY_EMAIL
@@ -697,10 +700,6 @@ class AclTranslation(object):
         scope_type = GROUP_BY_DOMAIN
       return Entry(type=scope_type, domain=entry_json['domain'],
                    permission=permission)
-    elif 'project' in entry_json:
-      if entity.startswith('project'):
-        raise CommandException('XML API does not support project scopes, '
-                               'cannot translate ACL.')
     raise CommandException('Failed to translate JSON ACL to XML.')
 
   @classmethod
