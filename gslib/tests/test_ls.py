@@ -214,6 +214,76 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         self.assertIn('etag=', stdout)
     _Check3()
 
+  def test_location(self):
+    """Tests listing a bucket with location constraint."""
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+
+    # No location info
+    stdout = self.RunGsUtil(['ls', '-lb', bucket_suri],
+                            return_stdout=True)
+    self.assertNotIn('Location constraint', stdout)
+
+    # Default location constraint is US
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Location constraint:\t\tUS', stdout)
+
+  def test_logging(self):
+    """Tests listing a bucket with logging config."""
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+
+    # No logging info
+    stdout = self.RunGsUtil(['ls', '-lb', bucket_suri],
+                            return_stdout=True)
+    self.assertNotIn('Logging configuration', stdout)
+
+    # Logging configuration is absent by default
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Logging configuration:\t\tNone', stdout)
+
+    # Enable and check
+    self.RunGsUtil(['logging', 'set', 'on', '-b', bucket_suri,
+                    bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Logging configuration:\t\tPresent', stdout)
+
+    # Disable and check
+    self.RunGsUtil(['logging', 'set', 'off', bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Logging configuration:\t\tNone', stdout)
+
+  def test_web(self):
+    """Tests listing a bucket with website config."""
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+
+    # No website configuration
+    stdout = self.RunGsUtil(['ls', '-lb', bucket_suri],
+                            return_stdout=True)
+    self.assertNotIn('Website configuration', stdout)
+
+    # Website configuration is absent by default
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Website configuration:\t\tNone', stdout)
+
+    # Initialize and check
+    self.RunGsUtil(['web', 'set', '-m', 'google.com', bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Website configuration:\t\tPresent', stdout)
+
+    # Clear and check
+    self.RunGsUtil(['web', 'set', bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Website configuration:\t\tNone', stdout)
+
   def test_list_sizes(self):
     """Tests various size listing options."""
     bucket_uri = self.CreateBucket()

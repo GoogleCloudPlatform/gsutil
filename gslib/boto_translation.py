@@ -1128,12 +1128,15 @@ class BotoTranslation(CloudApi):
           boto_logging = bucket_uri.get_logging_config()
           if boto_logging and 'Logging' in boto_logging:
             logging_config = boto_logging['Logging']
-            cloud_api_bucket.logging = apitools_messages.Bucket.LoggingValue()
-            if 'LogObjectPrefix' in logging_config:
-              cloud_api_bucket.logging.logObjectPrefix = (
-                  logging_config['LogObjectPrefix'])
-            if 'LogBucket' in logging_config:
-              cloud_api_bucket.logging.logBucket = logging_config['LogBucket']
+            log_object_prefix_present = 'LogObjectPrefix' in logging_config
+            log_bucket_present = 'LogBucket' in logging_config
+            if log_object_prefix_present or log_bucket_present:
+              cloud_api_bucket.logging = apitools_messages.Bucket.LoggingValue()
+              if log_object_prefix_present:
+                cloud_api_bucket.logging.logObjectPrefix = (
+                    logging_config['LogObjectPrefix'])
+              if log_bucket_present:
+                cloud_api_bucket.logging.logBucket = logging_config['LogBucket']
         except TRANSLATABLE_BOTO_EXCEPTIONS, e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'website' in fields:
@@ -1141,15 +1144,20 @@ class BotoTranslation(CloudApi):
           boto_website = bucket_uri.get_website_config()
           if boto_website and 'WebsiteConfiguration' in boto_website:
             website_config = boto_website['WebsiteConfiguration']
-            cloud_api_bucket.website = apitools_messages.Bucket.WebsiteValue()
-            if 'MainPageSuffix' in website_config:
-              cloud_api_bucket.website.mainPageSuffix = (
-                  website_config['MainPageSuffix'])
-            if 'NotFoundPage' in website_config:
-              cloud_api_bucket.website.notFoundPage = (
-                  website_config['NotFoundPage'])
+            main_page_suffix_present = 'MainPageSuffix' in website_config
+            not_found_page_present = 'NotFoundPage' in website_config
+            if main_page_suffix_present or not_found_page_present:
+              cloud_api_bucket.website = apitools_messages.Bucket.WebsiteValue()
+              if main_page_suffix_present:
+                cloud_api_bucket.website.mainPageSuffix = (
+                    website_config['MainPageSuffix'])
+              if not_found_page_present:
+                cloud_api_bucket.website.notFoundPage = (
+                    website_config['NotFoundPage'])
         except TRANSLATABLE_BOTO_EXCEPTIONS, e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
+      if not fields or 'location' in fields:
+        cloud_api_bucket.location = bucket_uri.get_location()
     if not fields or 'versioning' in fields:
       versioning = bucket_uri.get_versioning_config(headers=headers)
       if versioning:
