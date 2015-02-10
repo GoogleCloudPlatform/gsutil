@@ -418,6 +418,11 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
     True if the tracker file already exists (resume existing download),
     False if we created a new tracker file (new download).
   """
+  if src_obj_metadata.size < ResumableThreshold():
+    # Don't create a tracker file for a small downloads; cross-process resumes
+    # won't work, but restarting a small download is inexpensive.
+    return False
+
   assert src_obj_metadata.etag
   tracker_file_name = GetTrackerFilePath(
       dst_url, TrackerFileType.DOWNLOAD, api_selector)
@@ -447,16 +452,8 @@ def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
       tf.write('%s\n' % src_obj_metadata.etag)
     return False
   except (IOError, OSError) as e:
-    if src_obj_metadata.size < ResumableThreshold():
-      # Small downloads used to be written in one shot without writing a
-      # tracker file. For backwards compatibility, they must continue to
-      # function even if the tracker file/dir is not writable. Fall through
-      # so the download will be retriable/resumable; resumes across process
-      # breaks will not be supported.
-      pass
-    else:
-      raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                             (tracker_file_name, e.strerror))
+    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
+                           (tracker_file_name, e.strerror))
   finally:
     if tracker_file:
       tracker_file.close()
