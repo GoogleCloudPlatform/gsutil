@@ -1108,6 +1108,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-m', 'cp', wildcard_uri, suri(bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, num_test_files)
 
+  def test_cp_duplicate_source_args(self):
+    """Tests that cp -m works when a source argument is provided twice."""
+    object_contents = 'edge'
+    object_uri = self.CreateObject(object_name='foo', contents=object_contents)
+    tmp_dir = self.CreateTempDir()
+    self.RunGsUtil(['-m', 'cp', suri(object_uri), suri(object_uri), tmp_dir])
+    with open(os.path.join(tmp_dir, 'foo'), 'r') as in_fp:
+      contents = in_fp.read()
+      # Contents should be not duplicated.
+      self.assertEqual(contents, object_contents)
+
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_break(self):
     """Tests that an upload can be resumed after a connection break."""

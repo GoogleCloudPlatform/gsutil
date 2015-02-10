@@ -85,22 +85,11 @@ class AtomicIncrementDict(BasicIncrementDict):
       return super(AtomicIncrementDict, self).Update(key, inc, default_value)
 
 
-class ThreadAndProcessSafeDict(object):
-  """Wraps a multiprocessing.Manager's proxy objects for thread-safety.
+class ThreadSafeDict(object):
+  """Provides a thread-safe dictionary (protected by a lock)."""
 
-  The proxy objects returned by a manager are process-safe but not necessarily
-  thread-safe, so this class simply wraps their access with a lock for ease of
-  use. Since the objects are process-safe, we can use the more efficient
-  threading Lock.
-  """
-
-  def __init__(self, manager):
-    """Initializes the thread and process safe dict.
-
-    Args:
-      manager: Multiprocessing.manager object.
-    """
-    self.dict = manager.dict()
+  def __init__(self):
+    """Initializes the thread-safe dict."""
     self.lock = threading.Lock()
 
   def __getitem__(self, key):
@@ -115,3 +104,26 @@ class ThreadAndProcessSafeDict(object):
   def get(self, key, default_value=None):
     with self.lock:
       return self.dict.get(key, default_value)
+
+  def delete(self, key):
+    with self.lock:
+      del self.dict[key]
+
+
+class ThreadAndProcessSafeDict(ThreadSafeDict):
+  """Wraps a multiprocessing.Manager's proxy objects for thread-safety.
+
+  The proxy objects returned by a manager are process-safe but not necessarily
+  thread-safe, so this class simply wraps their access with a lock for ease of
+  use. Since the objects are process-safe, we can use the more efficient
+  threading Lock.
+  """
+
+  def __init__(self, manager):
+    """Initializes the thread and process safe dict.
+
+    Args:
+      manager: Multiprocessing.manager object.
+    """
+    super(ThreadAndProcessSafeDict, self).__init__()
+    self.dict = manager.dict()

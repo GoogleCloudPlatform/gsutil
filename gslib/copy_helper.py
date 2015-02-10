@@ -28,6 +28,7 @@ from hashlib import md5
 import json
 import logging
 import mimetypes
+import multiprocessing
 import os
 import pickle
 import random
@@ -67,6 +68,8 @@ from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
+from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
+from gslib.parallelism_framework_util import ThreadSafeDict
 from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithBackoff
@@ -94,6 +97,7 @@ from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
+from gslib.util import MultiprocessingIsAvailable
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
 from gslib.util import UTF8
@@ -118,6 +122,15 @@ if IS_WINDOWS:
 # Similarly can't pickle logger.
 # pylint: disable=global-at-module-level
 global global_copy_helper_opts, global_logger
+
+# In-memory map of local files that are currently opened for write. Used to
+# ensure that if we write to the same file twice (say, for example, because the
+# user specified two identical source URLs), the writes occur serially.
+global open_files_map
+open_files_map = (
+    ThreadAndProcessSafeDict(multiprocessing.Manager()) if
+    MultiprocessingIsAvailable()[0] else
+    ThreadSafeDict())
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
     u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
@@ -184,6 +197,10 @@ class TrackerFileType(object):
   UPLOAD = 'upload'
   DOWNLOAD = 'download'
   PARALLEL_UPLOAD = 'parallel_upload'
+
+
+class FileConcurrencySkipError(Exception):
+  """Raised when skipping a file due to a concurrent, duplicate copy."""
 
 
 def _RmExceptionHandler(cls, e):
@@ -1739,6 +1756,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   Raises:
     CommandException: if errors encountered.
   """
+  global open_files_map
   file_name = dst_url.object_name
   dir_name = os.path.dirname(file_name)
   if dir_name and not os.path.exists(dir_name):
@@ -1794,12 +1812,18 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   # making an extra HTTP call.
   serialization_data = None
   serialization_dict = GetDownloadSerializationDict(src_obj_metadata)
+  open_files = []
   try:
     if download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
       fp = open(download_file_name, 'wb')
     elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
       # If this is a resumable download, we need to open the file for append and
       # manage a tracker file.
+      if open_files_map.get(download_file_name, False):
+        # Ensure another process/thread is not already writing to this file.
+        raise FileConcurrencySkipError
+      open_files.append(download_file_name)
+      open_files_map[download_file_name] = True
       fp = open(download_file_name, 'ab')
 
       resuming = _ReadOrCreateDownloadTrackerFile(
@@ -1880,13 +1904,17 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     # download error detection.
     if test_method:
       test_method(fp)
+
   except ResumableDownloadException as e:
     logger.warning('Caught ResumableDownloadException (%s) for file %s.',
                    e.reason, file_name)
     raise
+
   finally:
     if fp:
       fp.close()
+    for file_name in open_files:
+      open_files_map.delete(file_name)
 
   # If we decompressed a content-encoding gzip file on the fly, this may not
   # be accurate, but it is the best we can do without going deep into the
@@ -2318,8 +2346,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   if src_url.IsCloudUrl():
     if dst_url.IsFileUrl():
       return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
-                                   gsutil_api, logger,
-                                   test_method=test_method)
+                                   gsutil_api, logger, test_method=test_method)
     elif copy_in_the_cloud:
       return _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
                                      dst_obj_metadata, preconditions,
