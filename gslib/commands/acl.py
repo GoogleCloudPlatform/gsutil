@@ -43,12 +43,13 @@ _GET_SYNOPSIS = """
 """
 
 _CH_SYNOPSIS = """
-  gsutil acl ch [-r] -u|-g|-d <grant>... url...
+  gsutil acl ch [-f] [-r] -u|-g|-d|-p <grant>... url...
 
   where each <grant> is one of the following forms:
 
     -u <id|email>:<perm>
     -g <id|email|domain|All|AllAuth>:<perm>
+    -p <viewers|editors|owners>-<project number>
     -d <id|email|domain|All|AllAuth>
 """
 
@@ -155,6 +156,14 @@ _CH_DESCRIPTION = """
 
     gsutil acl ch -g admins@example.com:O gs://example-bucket/*.jpg
 
+  Grant the owners of project example-project-123 WRITE access to the bucket
+  example-bucket:
+
+    gsutil acl ch -p owners-example-project-123 gs://example-bucket
+
+  NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
+  to a project's viewers/editors respectively.
+
   Grant the user with the specified canonical ID READ access to all objects
   in example-bucket that begin with folder/:
 
@@ -225,19 +234,21 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The "ch" sub-command has the following options
 
-    -R, -r      Performs acl ch request recursively, to all objects under the
-                specified URL.
-
-    -u          Add or modify a user entity's role.
-
-    -g          Add or modify a group entity's role.
-
     -d          Remove all roles associated with the matching entity.
 
     -f          Normally gsutil stops at the first error. The -f option causes
                 it to continue when it encounters errors. With this option the
                 gsutil exit status will be 0 even if some ACLs couldn't be
                 changed.
+
+    -g          Add or modify a group entity's role.
+
+    -p          Add or modify a project viewers/editors/owners role.
+
+    -R, -r      Performs acl ch request recursively, to all objects under the
+                specified URL.
+
+    -u          Add or modify a user entity's role.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
@@ -273,7 +284,7 @@ class AclCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
-      supported_sub_args='afRrg:u:d:',
+      supported_sub_args='afRrg:u:d:p:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
@@ -349,6 +360,9 @@ class AclCommand(Command):
                 '"gsutil acl ch -u" instead of "gsutil acl ch -g"')
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
+        elif o == '-p':
+          self.changes.append(
+              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.PROJECT))
         elif o == '-u':
           self.changes.append(
               aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))

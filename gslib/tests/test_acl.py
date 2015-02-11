@@ -20,6 +20,8 @@ import re
 
 from gslib import aclhelpers
 from gslib.command import CreateGsutilLogger
+from gslib.cs_api_map import ApiSelector
+from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
@@ -38,6 +40,9 @@ class TestAclBase(testcase.GsUtilIntegrationTestCase):
   _get_acl_prefix = ['acl', 'get']
   _set_defacl_prefix = ['defacl', 'set']
   _ch_acl_prefix = ['acl', 'ch']
+
+  _project_team = 'owners'
+  _project_test_acl = '%s-%s' % (_project_team, PopulateProjectId())
 
 
 @SkipForS3('Tests use GS ACL model.')
@@ -241,6 +246,13 @@ class TestAcl(TestAclBase):
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'GroupByDomain', self.DOMAIN_TEST)
 
+  def testAclChangeWithProjectOwners(self):
+    change = aclhelpers.AclChange(self._project_test_acl + ':READ',
+                                  scope_type=aclhelpers.ChangeType.PROJECT)
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
+    change.Execute(self.sample_url, acl, 'acl', self.logger)
+    self._AssertHas(acl, 'READER', 'Project', self._project_test_acl)
+
   def testAclChangeWithAllUsers(self):
     change = aclhelpers.AclChange('AllUsers:WRITE',
                                   scope_type=aclhelpers.ChangeType.GROUP)
@@ -268,6 +280,17 @@ class TestAcl(TestAclBase):
     remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
     remove.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHasNo(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
+
+  def testAclDelWithProjectOwners(self):
+    add = aclhelpers.AclChange(self._project_test_acl + ':READ',
+                               scope_type=aclhelpers.ChangeType.PROJECT)
+    acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
+    add.Execute(self.sample_url, acl, 'acl', self.logger)
+    self._AssertHas(acl, 'READER', 'Project', self._project_test_acl)
+
+    remove = aclhelpers.AclDel(self._project_test_acl)
+    remove.Execute(self.sample_url, acl, 'acl', self.logger)
+    self._AssertHasNo(acl, 'READ', 'Project', self._project_test_acl)
 
   def testAclDelWithGroup(self):
     add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
@@ -321,6 +344,9 @@ class TestAcl(TestAclBase):
             entry.domain and value == entry.domain and
             entry.role == perm):
         yield entry
+      elif (scope == 'Project' and entry.role == perm and
+            value == entry.entityId):
+        yield entry
       elif (scope in ['AllUsers', 'AllAuthenticatedUsers'] and
             entry.entity.lower() == scope.lower() and
             entry.role == perm):
@@ -329,6 +355,14 @@ class TestAcl(TestAclBase):
   def _MakeScopeRegex(self, role, entity_type, email_address):
     template_regex = (r'\{.*"entity":\s*"%s-%s".*"role":\s*"%s".*\}' %
                       (entity_type, email_address, role))
+    return re.compile(template_regex, flags=re.DOTALL)
+
+  def _MakeProjectScopeRegex(self, role, project_team):
+    template_regex = (r'\{.*"entity":\s*"project-%s-\d+",\s*"projectTeam":\s*'
+                      r'\{\s*"projectNumber":\s*"(\d+)",\s*"team":\s*"%s"\s*\},'
+                      r'\s*"role":\s*"%s".*\}') % (project_team, project_team,
+                                                   role)
+
     return re.compile(template_regex, flags=re.DOTALL)
 
   def testBucketAclChange(self):
@@ -355,9 +389,44 @@ class TestAcl(TestAclBase):
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.USER_TEST_ADDRESS, suri(self.sample_uri)])
+
     json_text3 = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
     self.assertNotRegexpMatches(json_text3, test_regex)
+
+  def testProjectAclChangesOnBucket(self):
+    """Tests project entity acl changes on a bucket."""
+
+    if self.test_api == ApiSelector.XML:
+      stderr = self.RunGsUtil(self._ch_acl_prefix +
+                              ['-p', self._project_test_acl +':w',
+                               suri(self.sample_uri)],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn(('CommandException: XML API does not support project'
+                     ' scopes, cannot translate ACL.'), stderr)
+    else:
+      test_regex = self._MakeProjectScopeRegex(
+          'WRITER', self._project_team)
+      self.RunGsUtil(self._ch_acl_prefix +
+                     ['-p', self._project_test_acl +':w',
+                      suri(self.sample_uri)])
+      json_text = self.RunGsUtil(
+          self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
+
+      self.assertRegexpMatches(json_text, test_regex)
+
+      # The api will accept string project ids, but stores the numeric project
+      # ids internally, this extracts the numeric id from the returned acls.
+      proj_num_id = test_regex.search(json_text).group(1)
+      acl_to_remove = '%s-%s' % (self._project_team, proj_num_id)
+
+      self.RunGsUtil(self._ch_acl_prefix +
+                     ['-d', acl_to_remove, suri(self.sample_uri)])
+
+      json_text2 = self.RunGsUtil(
+          self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
+      self.assertNotRegexpMatches(json_text2, test_regex)
 
   def testObjectAclChange(self):
     """Tests acl change on an object."""
