@@ -651,7 +651,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Ensure daisy chain cp works with a wide of file sizes."""
     bucket_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
-    exponent_cap = 22  # Up to 2 MiB in size.
+    exponent_cap = 28  # Up to 256 MiB in size.
     for i in range(exponent_cap):
       one_byte_smaller = 2**i - 1
       normal = 2**i

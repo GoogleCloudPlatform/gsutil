@@ -54,9 +54,10 @@ class BufferWrapper(object):
       # Buffer was full, yield thread priority so the upload can pull from it.
       time.sleep(0)
     data_len = len(data)
-    with self.daisy_chain_wrapper.lock:
-      self.daisy_chain_wrapper.buffer.append(data)
-      self.daisy_chain_wrapper.bytes_buffered += data_len
+    if len(data):
+      with self.daisy_chain_wrapper.lock:
+        self.daisy_chain_wrapper.buffer.append(data)
+        self.daisy_chain_wrapper.bytes_buffered += data_len
 
 
 class DaisyChainWrapper(object):
