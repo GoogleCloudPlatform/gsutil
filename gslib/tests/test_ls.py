@@ -214,6 +214,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         self.assertIn('etag=', stdout)
     _Check3()
 
+  @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_location(self):
     """Tests listing a bucket with location constraint."""
     bucket_uri = self.CreateBucket()
@@ -229,6 +230,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertIn('Location constraint:\t\tUS', stdout)
 
+  @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_logging(self):
     """Tests listing a bucket with logging config."""
     bucket_uri = self.CreateBucket()
@@ -257,6 +259,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertIn('Logging configuration:\t\tNone', stdout)
 
+  @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_web(self):
     """Tests listing a bucket with website config."""
     bucket_uri = self.CreateBucket()
