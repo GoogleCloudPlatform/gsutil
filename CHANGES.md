@@ -1,3 +1,26 @@
+Release 4.9 (release date: 2015-02-13)
+=======================================
+New Features
+------------
+- When using the JSON API, the ch acl/defacl subcommand now supports
+  project groups via the -p flag. For details, see "gsutil help acl ch".
+
+Bug Fixes
+---------
+- Fixed a bug that caused daisy-chain copies (including cross-provider
+  copies) for files large than 100MiB to fail.
+- Fixed a bug that caused streaming uploads than ran for longer than
+  an hour to fail with HTTP 400s.
+- Fixed a bug where perfdiag would not properly clean up its test files.
+- Fixed a bug where using ls with the XML API could mistakenly report bucket
+  configuration as present.
+
+Other Changes
+-------------
+- Updated documentation for metadata, retries, security, and subdirs.
+- Tracker files are no longer written for small downloads.
+
+
 Release 4.8 (release date: 2015-01-23)
 =======================================
 New Features
