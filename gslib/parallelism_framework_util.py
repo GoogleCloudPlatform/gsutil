@@ -91,6 +91,7 @@ class ThreadSafeDict(object):
   def __init__(self):
     """Initializes the thread-safe dict."""
     self.lock = threading.Lock()
+    self.dict = {}
 
   def __getitem__(self, key):
     with self.lock:

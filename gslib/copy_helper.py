@@ -128,9 +128,8 @@ global global_copy_helper_opts, global_logger
 # user specified two identical source URLs), the writes occur serially.
 global open_files_map
 open_files_map = (
-    ThreadAndProcessSafeDict(multiprocessing.Manager()) if
-    MultiprocessingIsAvailable()[0] else
-    ThreadSafeDict())
+    ThreadSafeDict() if (IS_WINDOWS or not MultiprocessingIsAvailable()[0])
+    else ThreadAndProcessSafeDict(multiprocessing.Manager()))
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
     u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
