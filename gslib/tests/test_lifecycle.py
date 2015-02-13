@@ -48,6 +48,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
       '{"rule": [{"action": {"type": "Delete"}, "condition": {"age": 365}}]}\n')
   lifecycle_json_obj = json.loads(lifecycle_doc)
 
+  lifecycle_doc_bucket_style = (
+      '{"lifecycle": {"rule": [{"action": {"type": "Delete"}, "condition": '
+      '{"age": 365}}]}}\n')
+
   lifecycle_created_before_doc = (
       '{"rule": [{"action": {"type": "Delete"}, "condition": '
       '{"createdBefore": "2014-10-01"}}]}\n')
@@ -83,6 +87,14 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
   def test_valid_lifecycle(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.lifecycle_doc)
+    self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
+    stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
+
+  def test_valid_lifecycle_bucket_style(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=self.lifecycle_doc_bucket_style)
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(['lifecycle', 'get', suri(bucket_uri)],
                             return_stdout=True)

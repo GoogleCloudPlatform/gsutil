@@ -467,6 +467,12 @@ class LifecycleTranslation(object):
     """Translates lifecycle JSON to an apitools message."""
     try:
       deserialized_lifecycle = json.loads(json_txt)
+      # If lifecycle JSON is the in the following format
+      # {'lifecycle': {'rule': ... then strip out the 'lifecycle' key
+      # and reduce it to the following format
+      # {'rule': ...
+      if 'lifecycle' in deserialized_lifecycle:
+        deserialized_lifecycle = deserialized_lifecycle['lifecycle']
       lifecycle = encoding.DictToMessage(
           deserialized_lifecycle, apitools_messages.Bucket.LifecycleValue)
       return lifecycle
