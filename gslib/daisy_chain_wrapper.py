@@ -29,7 +29,7 @@ from gslib.util import TRANSFER_BUFFER_SIZE
 # We do not buffer this many bytes in memory at a time - that is controlled by
 # DaisyChainWrapper.max_buffer_size. This is the upper bound of bytes that may
 # be unnecessarily downloaded if there is a break in the resumable upload.
-DAISY_CHAIN_CHUNK_SIZE = 1024*1024*100
+_DEFAULT_DOWNLOAD_CHUNK_SIZE = 1024*1024*100
 
 
 class BufferWrapper(object):
@@ -54,7 +54,7 @@ class BufferWrapper(object):
       # Buffer was full, yield thread priority so the upload can pull from it.
       time.sleep(0)
     data_len = len(data)
-    if len(data):
+    if data_len:
       with self.daisy_chain_wrapper.lock:
         self.daisy_chain_wrapper.buffer.append(data)
         self.daisy_chain_wrapper.bytes_buffered += data_len
@@ -73,7 +73,8 @@ class DaisyChainWrapper(object):
   used.
   """
 
-  def __init__(self, src_url, src_obj_size, gsutil_api, progress_callback=None):
+  def __init__(self, src_url, src_obj_size, gsutil_api, progress_callback=None,
+               download_chunk_size=_DEFAULT_DOWNLOAD_CHUNK_SIZE):
     """Initializes the daisy chain wrapper.
 
     Args:
@@ -83,13 +84,20 @@ class DaisyChainWrapper(object):
       progress_callback: Optional callback function for progress notifications
           for the download thread. Receives calls with arguments
           (bytes_transferred, total_size).
+      download_chunk_size: Integer number of bytes to download per
+          GetObjectMedia request. This is the upper bound of bytes that may be
+          unnecessarily downloaded if there is a break in the resumable upload.
+
     """
     # Current read position for the upload file pointer.
     self.position = 0
     self.buffer = deque()
 
     self.bytes_buffered = 0
+    # Maximum amount of bytes in memory at a time.
     self.max_buffer_size = 1024 * 1024  # 1 MiB
+
+    self._download_chunk_size = download_chunk_size
 
     # We save one buffer's worth of data as a special case for boto,
     # which seeks back one buffer and rereads to compute hashes. This is
@@ -142,11 +150,11 @@ class DaisyChainWrapper(object):
       # object to support seek() and tell() which requires coordination with
       # the upload.
       try:
-        while start_byte + DAISY_CHAIN_CHUNK_SIZE < self.src_obj_size:
+        while start_byte + self._download_chunk_size < self.src_obj_size:
           self.gsutil_api.GetObjectMedia(
               self.src_url.bucket_name, self.src_url.object_name,
               BufferWrapper(self), start_byte=start_byte,
-              end_byte=start_byte + DAISY_CHAIN_CHUNK_SIZE - 1,
+              end_byte=start_byte + self._download_chunk_size - 1,
               generation=self.src_url.generation, object_size=self.src_obj_size,
               download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
               provider=self.src_url.scheme, progress_callback=progress_callback)
@@ -154,7 +162,7 @@ class DaisyChainWrapper(object):
             # Download thread needs to be restarted, so exit.
             self.stop_download.clear()
             return
-          start_byte += DAISY_CHAIN_CHUNK_SIZE
+          start_byte += self._download_chunk_size
         self.gsutil_api.GetObjectMedia(
             self.src_url.bucket_name, self.src_url.object_name,
             BufferWrapper(self), start_byte=start_byte,
@@ -197,6 +205,8 @@ class DaisyChainWrapper(object):
       # Buffer was empty, yield thread priority so the download thread can fill.
       time.sleep(0)
     with self.lock:
+      # TODO: Need to handle the caller requesting less than a
+      # transfer_buffer_size worth of data.
       data = self.buffer.popleft()
       self.last_position = self.position
       self.last_data = data
@@ -217,7 +227,7 @@ class DaisyChainWrapper(object):
     restart_download = False
     if whence == os.SEEK_END:
       if offset:
-        raise BadRequestException(
+        raise IOError(
             'Invalid seek during daisy chain operation. Non-zero offset %s '
             'from os.SEEK_END is not supported' % offset)
       with self.lock:
