@@ -624,7 +624,7 @@ class GcsJsonApi(CloudApi):
         if retries > self.num_retries:
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
-              self.num_retries, str(e))
+              (self.num_retries, str(e)))
         time.sleep(CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
         self.logger.debug(
             'Retrying download from byte %s after exception.', start_byte)
