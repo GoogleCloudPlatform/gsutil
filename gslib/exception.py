@@ -68,6 +68,11 @@ class CommandException(StandardError):
     return 'CommandException: %s' % self.reason
 
 
+class HashMismatchException(Exception):
+  """Exception raised when data integrity validation fails."""
+  pass
+
+
 class InvalidUrlError(Exception):
   """Exception raised when URL is invalid."""
 

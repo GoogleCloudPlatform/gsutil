@@ -39,6 +39,7 @@ from gslib import copy_helper
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.exception import CommandException
+from gslib.exception import HashMismatchException
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -667,7 +668,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [suri(object_uri), dst_dir], test_method=func)
       self.fail('Did not get expected CommandException')
-    except CommandException:
+    except HashMismatchException:
       self.assertFalse(os.listdir(dst_dir))
       got_expected_exception = True
     except Exception, e:

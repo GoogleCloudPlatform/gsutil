@@ -61,6 +61,7 @@ from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
+from gslib.exception import HashMismatchException
 from gslib.file_part import FilePart
 from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
@@ -130,6 +131,11 @@ global open_files_map
 open_files_map = (
     ThreadSafeDict() if (IS_WINDOWS or not MultiprocessingIsAvailable()[0])
     else ThreadAndProcessSafeDict(multiprocessing.Manager()))
+
+# For debugging purposes; if True, files and objects that fail hash validation
+# will be saved with the below suffix appended.
+_RENAME_ON_HASH_MISMATCH = False
+_RENAME_ON_HASH_MISMATCH_SUFFIX = '_corrupt'
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
     u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
@@ -808,7 +814,7 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
         'Comparing source vs destination %s-checksum for %s. (%s/%s)', alg,
         dst_url, download_b64_digest, upload_b64_digest)
     if download_b64_digest != upload_b64_digest:
-      raise CommandException(
+      raise HashMismatchException(
           '%s signature for source object (%s) doesn\'t match '
           'destination object digest (%s). Object (%s) will be deleted.' % (
               alg, download_b64_digest, upload_b64_digest, dst_url))
@@ -856,7 +862,7 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
         local_b64_digest, cloud_b64_digest)
     if local_b64_digest != cloud_b64_digest:
 
-      raise CommandException(
+      raise HashMismatchException(
           '%s signature computed for local file (%s) doesn\'t match '
           'cloud-supplied digest (%s). %s (%s) will be deleted.' % (
               alg, local_b64_digest, cloud_b64_digest,
@@ -1713,12 +1719,16 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       digests = _CreateDigestsFromDigesters(digesters)
       _CheckHashes(logger, dst_url, uploaded_object, src_url.object_name,
                    digests, is_upload=True)
-    except CommandException, e:
+    except HashMismatchException:
+      if _RENAME_ON_HASH_MISMATCH:
+        dst_obj_metadata.name = (dst_url.object_name +
+                                 _RENAME_ON_HASH_MISMATCH_SUFFIX)
+        gsutil_api.CopyObject(dst_url.bucket_name, dst_url.object_name,
+                              dst_obj_metadata, provider=dst_url.scheme)
       # If the digest doesn't match, delete the object.
-      if 'doesn\'t match cloud-supplied digest' in str(e):
-        gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
-                                generation=uploaded_object.generation,
-                                provider=dst_url.scheme)
+      gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
+                              generation=uploaded_object.generation,
+                              provider=dst_url.scheme)
       raise
 
   result_url = dst_url.Clone()
@@ -1985,27 +1995,30 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
                  local_hashes)
     _DeleteTrackerFile(GetTrackerFilePath(
         dst_url, TrackerFileType.DOWNLOAD, api_selector))
-  except CommandException, e:
+  except HashMismatchException, e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
     # we calculate will match the gzipped bytes, not the original object. Thus,
     # we'll need to calculate and check it after unzipping.
-    if ('doesn\'t match cloud-supplied digest' in str(e) and
-        (server_gzip or api_selector == ApiSelector.XML)):
-      if server_gzip:
-        logger.debug(
-            'Hash did not match but server gzipped the content, will '
-            'recalculate.')
-      else:
-        logger.debug(
-            'Hash did not match but server may have gzipped the content, will '
-            'recalculate.')
-        # Save off the exception in case this isn't a gzipped file.
-        hash_invalid_exception = e
+    if server_gzip:
+      logger.debug(
+          'Hash did not match but server gzipped the content, will '
+          'recalculate.')
+      digest_verified = False
+    elif api_selector == ApiSelector.XML:
+      logger.debug(
+          'Hash did not match but server may have gzipped the content, will '
+          'recalculate.')
+      # Save off the exception in case this isn't a gzipped file.
+      hash_invalid_exception = e
       digest_verified = False
     else:
       _DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
-      os.unlink(download_file_name)
+      if _RENAME_ON_HASH_MISMATCH:
+        os.rename(download_file_name,
+                  download_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+      else:
+        os.unlink(download_file_name)
       raise
 
   if server_gzip and not need_to_unzip:
@@ -2052,10 +2065,14 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
       _DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
-    except CommandException, e:
+    except HashMismatchException:
       _DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
-      os.unlink(file_name)
+      if _RENAME_ON_HASH_MISMATCH:
+        os.rename(file_name,
+                  file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+      else:
+        os.unlink(file_name)
       raise
 
   if 'md5' in local_hashes:
@@ -2160,11 +2177,16 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
   try:
     _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
                       uploaded_object)
-  except CommandException, e:
-    if 'doesn\'t match cloud-supplied digest' in str(e):
-      gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
-                              generation=uploaded_object.generation,
-                              provider=dst_url.scheme)
+  except HashMismatchException:
+    if _RENAME_ON_HASH_MISMATCH:
+      dst_obj_metadata.name = (dst_url.object_name +
+                               _RENAME_ON_HASH_MISMATCH_SUFFIX)
+      gsutil_api.CopyObject(dst_url.bucket_name, dst_url.object_name,
+                            dst_obj_metadata, provider=dst_url.scheme)
+    # If the digest doesn't match, delete the object.
+    gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
+                            generation=uploaded_object.generation,
+                            provider=dst_url.scheme)
     raise
 
   result_url = dst_url.Clone()
