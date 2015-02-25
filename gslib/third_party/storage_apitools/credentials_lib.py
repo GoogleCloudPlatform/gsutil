@@ -300,8 +300,8 @@ class GceAssertionCredentials(oauth2client.gce.AppAssertionCredentials):
     if 'access_token' in data:
       credentials.access_token = data['access_token']
     if 'token_expiry' in data:
-      credentials.token_expiry = data['token_expiry'].strftime(
-          oauth2client.client.EXPIRY_FORMAT)
+      credentials.token_expiry = datetime.datetime.strptime(
+          data['token_expiry'], oauth2client.client.EXPIRY_FORMAT)
     if 'invalid' in data:
       credentials.invalid = data['invalid']
     return credentials
