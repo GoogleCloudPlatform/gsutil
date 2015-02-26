@@ -222,7 +222,10 @@ class GcsJsonApi(CloudApi):
         failed_cred_type = None
         raise CommandException(
             ('You have multiple types of configured credentials (%s), which is '
-             'not supported. For more help, see "gsutil help creds".')
+             'not supported. One common way this happens is if you run gsutil '
+             'config to create credentials and later run gcloud auth, and '
+             'create a second set of credentials. For more help, see '
+             '"gsutil help creds".')
             % configured_cred_types)
 
       failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
