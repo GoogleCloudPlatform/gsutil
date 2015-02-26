@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import copy
 import cStringIO
 import httplib
+import logging
 import socket
 import types
 import urlparse
@@ -397,6 +398,7 @@ class HttpWithDownloadStream(httplib2.Http):
       raise apitools_exceptions.InvalidUserInputError(
           'Cannot create HttpWithDownloadStream with no stream')
     self._stream = stream
+    self._logger = logging.getLogger()
     super(HttpWithDownloadStream, self).__init__(*args, **kwds)
 
   @property
@@ -475,15 +477,29 @@ class HttpWithDownloadStream(httplib2.Http):
           response = httplib2.Response(response)
         else:
           if response.status in (httplib.OK, httplib.PARTIAL_CONTENT):
+            content_length = None
+            if hasattr(response, 'msg'):
+              content_length = response.getheader('content-length')
             http_stream = response
-            # Start last_position and new_position at dummy values
-            last_position = -1
-            new_position = 0
-            while new_position != last_position:
-              last_position = new_position
+            bytes_read = 0
+            while True:
               new_data = http_stream.read(TRANSFER_BUFFER_SIZE)
-              self.stream.write(new_data)
-              new_position += len(new_data)
+              if new_data:
+                self.stream.write(new_data)
+                bytes_read += len(new_data)
+              else:
+                break
+
+            if (content_length is not None and
+                long(bytes_read) != long(content_length)):
+              # The input stream terminated before we were able to read the
+              # entire contents, possibly due to a network condition. Set
+              # content-length to indicate how many bytes we actually read.
+              self._logger.log(
+                  logging.DEBUG, 'Only got %s bytes out of content-length %s '
+                  'for request URI %s. Resetting content-length to match '
+                  'bytes read.', bytes_read, content_length, request_uri)
+              response.msg['content-length'] = str(bytes_read)
             response = httplib2.Response(response)
           else:
             # We fall back to the current httplib2 behavior if we're
