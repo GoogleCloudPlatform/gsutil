@@ -212,6 +212,33 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
     except CommandException, e:
       self.assertIn('Buffer size must be >= JSON resumable upload', str(e))
 
+  def testSeekPartialBuffer(self):
+    """Tests seeking back partially within the buffer."""
+    tmp_file = self._GetTestFile()
+    read_size = TRANSFER_BUFFER_SIZE
+    with open(tmp_file, 'rb') as stream:
+      wrapper = ResumableStreamingJsonUploadWrapper(
+          stream, TRANSFER_BUFFER_SIZE * 3, test_small_buffer=True)
+      position = 0
+      for _ in xrange(3):
+        data = wrapper.read(read_size)
+        self.assertEqual(
+            self._temp_test_file_contents[position:position + read_size],
+            data, 'Data from position %s to %s did not match file contents.' %
+            (position, position + read_size))
+        position += len(data)
+
+      data = wrapper.read(read_size / 2)
+      # Buffer contents should now be have contents from:
+      # read_size/2 through 7*read_size/2.
+      position = read_size / 2
+      wrapper.seek(position)
+      data = wrapper.read()
+      self.assertEqual(
+          self._temp_test_file_contents[-len(data):], data,
+          'Data from position %s to EOF did not match file contents.' %
+          position)
+
   def testSeekEnd(self):
     tmp_file = self._GetTestFile()
     for buffer_size in (TRANSFER_BUFFER_SIZE - 1,

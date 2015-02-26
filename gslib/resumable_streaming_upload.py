@@ -105,16 +105,17 @@ class ResumableStreamingJsonUploadWrapper(object):
         buffer_index += 1
         self._position += read_size
 
-    # At this point we're guaranteed that self._position == self._buffer_end,
-    # and can read from the wrapped stream if needed.
+    # At this point we're guaranteed that if there are any bytes left to read,
+    # then self._position == self._buffer_end, and we can read from the
+    # wrapped stream if needed.
     if read_all_bytes:
       # TODO: The user is requesting reading until the end of an
-      # arbitrary length stream, which is bad because they have basically
-      # thrown away memory requirements since we'll need to return data
-      # with no size limits. We could break this down into smaller reads and
+      # arbitrary length stream, which is bad we'll need to return data
+      # with no size limits; if the stream is sufficiently long, we could run
+      # out of memory. We could break this down into smaller reads and
       # buffer it as we go, but we're still left returning the data all at
       # once to the caller.  We could raise, but for now trust the caller to
-      # be sane.
+      # be sane and have enough memory to hold the remaining stream contents.
       new_data = self._orig_fp.read(size)
       data_len = len(new_data)
       if not buffered_data:
@@ -143,7 +144,7 @@ class ResumableStreamingJsonUploadWrapper(object):
           refill_amount = self._max_buffer_size - (self._buffer_end -
                                                    self._buffer_start)
           if refill_amount:
-            self._buffer.append(oldest_data[-refill_amount:])
+            self._buffer.appendleft(oldest_data[-refill_amount:])
             self._buffer_start -= refill_amount
     else:
       data = b''.join(buffered_data) if buffered_data else b''
