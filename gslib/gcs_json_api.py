@@ -65,6 +65,7 @@ from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
+from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
 from gslib.util import GetGceCredentialCacheFilename
@@ -224,9 +225,9 @@ class GcsJsonApi(CloudApi):
             ('You have multiple types of configured credentials (%s), which is '
              'not supported. One common way this happens is if you run gsutil '
              'config to create credentials and later run gcloud auth, and '
-             'create a second set of credentials. For more help, see '
-             '"gsutil help creds".')
-            % configured_cred_types)
+             'create a second set of credentials. Your boto config path is: '
+             '%s. For more help, see "gsutil help creds".')
+            % (configured_cred_types, GetBotoConfigFileList()))
 
       failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
       user_creds = self._GetOauth2UserAccountCreds()
