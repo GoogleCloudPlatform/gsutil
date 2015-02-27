@@ -16,7 +16,11 @@
 This class reads ahead to detect if we are at the end of the stream.
 """
 
+import logging
+import time
+
 from gslib.third_party.storage_apitools import exceptions
+from gslib.third_party.storage_apitools import util
 
 
 # TODO: Consider replacing this with a StringIO.
@@ -27,8 +31,31 @@ class BufferedStream(object):
     self.__stream = stream
     self.__start_pos = start
     self.__buffer_pos = 0
-    self.__buffered_data = self.__stream.read(size)
-    self.__stream_at_end = len(self.__buffered_data) < size
+    self.__stream_at_end = False
+    self.__buffered_data = b''
+    bytes_remaining = size
+    non_blocking_retry_attempt = 0
+    while bytes_remaining:
+      data = self.__stream.read(bytes_remaining)
+      if data is None:
+        # stream.read(...) return value of None indicates stream is in
+        # non-blocking mode and no bytes were available. Best we can do is
+        # keep trying.
+        # TODO: Use configurable values for retry logic.
+        non_blocking_retry_attempt += 1
+        if non_blocking_retry_attempt > 6:
+          logging.info('Non-blocking stream yielded no data for BufferedStream'
+                       'over %s attempts, retrying infinitely.',
+                       non_blocking_retry_attempt)
+        time.sleep(util.CalculateWaitForRetry(non_blocking_retry_attempt))
+        continue
+      elif not data and bytes_remaining > 0:
+        # stream.read(n) return value of b'' indicates EOF, unless we
+        # requested a zero-length read.
+        self.__stream_at_end = True
+        break
+      self.__buffered_data += data
+      bytes_remaining -= len(data)
     self.__end_pos = self.__start_pos + len(self.__buffered_data)
 
   def __str__(self):
