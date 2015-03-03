@@ -1,3 +1,23 @@
+Release 4.10 (release date: 2015-03-03)
+=======================================
+Bug Fixes
+---------
+- Fixed a bug that could cause undetected data corruption (preserving incorrect
+  data) if a streaming upload encountered a service error on non-8KiB-aligned
+  boundary.
+- Fixed a bug that caused downloads to be truncated if the connection broke,
+  resulting in a hash mismatch (and deletion of the corrupted file) for that
+  download.
+- Fixed a format string arguments error that occurred if a download exhausted
+  all retries.
+
+Other Changes
+-------------
+- The lifecycle command now accepts JSON input in the form of
+  "{ "lifecycle": { "rule" ..." in addition to "{ "rule": ...".
+- Improved access token expiry logic for GCE credentials.
+
+
 Release 4.9 (release date: 2015-02-13)
 =======================================
 New Features
