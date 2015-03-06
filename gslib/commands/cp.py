@@ -211,14 +211,61 @@ _COPY_IN_CLOUD_TEXT = """
   will cause all versions of gs://bucket1/obj to be copied to gs://bucket2.
 """
 
-_FAILURE_HANDLING_TEXT = """
-<B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
-  At the end of every upload or download, the gsutil cp command validates that
-  that the checksum of the source file/object matches the checksum of the
-  destination file/object. If the checksums do not match, gsutil will delete
-  the invalid copy and print a warning message. This very rarely happens, but
+_CHECKSUM_VALIDATION_TEXT = """
+<B>CHECKSUM VALIDATION</B>
+  At the end of every upload or download the gsutil cp command validates that
+  that the checksum it computes for the source file/object matches the checksum
+  the service computes. If the checksums do not match, gsutil will delete the
+  corrupted object and print a warning message. This very rarely happens, but
   if it does, please contact gs-team@google.com.
 
+  If you know the MD5 of a file before uploading you can specify it in the
+  Content-MD5 header, which will cause the cloud storage service to reject the
+  upload if the MD5 doesn't match the value computed by the service. For
+  example:
+
+    % gsutil hash obj
+    Hashing     obj:
+    Hashes [base64] for obj:
+            Hash (crc32c):          lIMoIw==
+            Hash (md5):             VgyllJgiiaRAbyUUIqDMmw==
+
+    % gsutil -h Content-MD5:VgyllJgiiaRAbyUUIqDMmw== cp obj gs://your-bucket/obj
+    Copying file://obj [Content-Type=text/plain]...
+    Uploading   gs://your-bucket/obj:                                182 b/182 B
+
+    If the checksum didn't match the service would instead reject the upload and
+    gsutil would print a message like:
+
+    BadRequestException: 400 Provided MD5 hash "VgyllJgiiaRAbyUUIqDMmw=="
+    doesn't match calculated MD5 hash "7gyllJgiiaRAbyUUIqDMmw==".
+
+  Even if you don't do this gsutil will delete the object if the computed
+  checksum mismatches, but specifying the Content-MD5 header has three
+  advantages:
+
+      1. It prevents the corrupted object from becoming visible at all, whereas
+      otherwise it would be visible for 1-3 seconds before gsutil deletes it.
+
+      2. It will definitively prevent the corrupted object from being left in
+      the cloud, whereas the gsutil approach of deleting after the upload
+      completes could fail if (for example) the gsutil process gets ^C'd
+      between upload and deletion request.
+
+      3. It supports a customer-to-service integrity check handoff. For example,
+      if you have a content production pipeline that generates data to be
+      uploaded to the cloud along with checksums of that data, specifying the
+      MD5 computed by your content pipeline when you run gsutil cp will ensure
+      that the checksums match all the way through the process (e.g., detecting
+      if data gets corrupted on your local disk between the time it was written
+      by your content pipeline and the time it was uploaded to GCS).
+
+  Note: The Content-MD5 header is ignored for composite objects, because such
+  objects only have a CRC32C checksum.
+"""
+
+_RETRY_HANDLING_TEXT = """
+<B>RETRY HANDLING</B>
   The cp command will retry when failures occur, but if enough failures happen
   during a particular copy or delete operation the command will skip that object
   and move on. At the end of the copy run if any failures were not successfully
@@ -296,7 +343,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   disk space is required for this operation.
 
   If the "parallel_composite_upload_threshold" config value is not 0 (which
-  disbles the feature), any file whose size exceeds the specified size will
+  disables the feature), any file whose size exceeds the specified size will
   trigger a parallel composite upload. Note that at present parallel composite
   uploads are disabled by default, because using composite objects requires a
   compiled crcmod (see "gsutil help crcmod"), and for operating systems that
@@ -387,7 +434,7 @@ _OPTIONS_TEXT = """
   -a canned_acl   Sets named canned_acl when uploaded objects created. See
                   'gsutil help acls' for further details.
 
-  -c             If an error occurrs, continue to attempt to copy the remaining
+  -c             If an error occurs, continue to attempt to copy the remaining
                  files. If any copies were unsuccessful, gsutil's exit status
                  will be non-zero even if this flag is set. This option is
                  implicitly set when running "gsutil -m cp...". Note: -c only
@@ -539,7 +586,8 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _NAME_CONSTRUCTION_TEXT,
                                    _SUBDIRECTORIES_TEXT,
                                    _COPY_IN_CLOUD_TEXT,
-                                   _FAILURE_HANDLING_TEXT,
+                                   _CHECKSUM_VALIDATION_TEXT,
+                                   _RETRY_HANDLING_TEXT,
                                    _RESUMABLE_TRANSFERS_TEXT,
                                    _STREAMING_TRANSFERS_TEXT,
                                    _PARALLEL_COMPOSITE_UPLOADS_TEXT,
