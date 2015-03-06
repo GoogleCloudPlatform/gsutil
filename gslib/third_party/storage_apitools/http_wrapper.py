@@ -119,9 +119,12 @@ class Request(object):
 
   @body.setter
   def body(self, value):
+    """Sets the request body; handles logging and length measurement."""
     self.__body = value
     if value is not None:
-      self.headers['content-length'] = str(len(self.__body))
+      # Avoid calling len() which cannot exceed 4GiB in 32-bit python.
+      body_length = getattr(self.__body, 'length', None) or len(self.__body)
+      self.headers['content-length'] = str(body_length)
     else:
       self.headers.pop('content-length', None)
     # This line ensures we don't try to print large requests.
