@@ -46,6 +46,7 @@ from boto.s3.deletemarker import DeleteMarker
 from boto.s3.lifecycle import Lifecycle as S3Lifecycle
 from boto.s3.prefix import Prefix
 
+import gslib.devshell_auth_plugin
 from gslib.boto_resumable_upload import BotoResumableUpload
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException

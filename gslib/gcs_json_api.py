@@ -34,6 +34,7 @@ import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
 import httplib2
+from oauth2client import devshell as devshell_creds
 from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
@@ -243,7 +244,9 @@ class GcsJsonApi(CloudApi):
       service_account_creds = self._GetOauth2ServiceAccountCreds()
       failed_cred_type = CredTypes.GCE
       gce_creds = self._GetGceCreds()
-      return user_creds or service_account_creds or gce_creds
+      failed_cred_type = CredTypes.DEVSHELL
+      devshell_creds = self._GetDevshellCreds()
+      return user_creds or service_account_creds or gce_creds or devshell_creds
     except:  # pylint: disable=bare-except
 
       # If we didn't actually try to authenticate because there were multiple
@@ -294,6 +297,14 @@ class GcsJsonApi(CloudApi):
         if 'service account' in str(e) and 'does not exist' in str(e):
           return None
         raise
+
+  def _GetDevshellCreds(self):
+    try:
+      return devshell_creds.DevshellCredentials()
+    except devshell_creds.NoDevshellServer:
+      return None
+    except:
+      raise
 
   def _GetNewDownloadHttp(self, download_stream):
     return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
