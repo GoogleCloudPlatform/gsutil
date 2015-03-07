@@ -389,7 +389,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A tuple containing the desired return values specified by the return_*
       arguments.
     """
-    cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
+    cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
+          ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
+          cmd)
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

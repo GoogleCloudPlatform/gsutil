@@ -29,6 +29,7 @@ import gslib
 from gslib.command import Command
 from gslib.command import ResetFailureCount
 from gslib.exception import CommandException
+from gslib.project_id import PopulateProjectId
 import gslib.tests as tests
 from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
@@ -297,7 +298,9 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     if root_coverage_file:
       env['GSUTIL_COVERAGE_OUTPUT_FILE'] = root_coverage_file
     process_list.append(subprocess.Popen(
-        executable_prefix + [gslib.GSUTIL_PATH] + ['test'] + s3_argument +
+        executable_prefix + [gslib.GSUTIL_PATH] +
+        ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
+        ['test'] + s3_argument +
         ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
         [parallel_tests[test_index][len('gslib.tests.test_'):]],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env))
