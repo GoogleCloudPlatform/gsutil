@@ -28,3 +28,9 @@
 [submodule "third_party/six"]
 	path = third_party/six
 	url = https://github.com/gsutil-mirrors/six.git
+[submodule "third_party/apitools"]
+	path = third_party/apitools
+	url = git://github.com/google/apitools.git
+[submodule "third_party/protorpc"]
+	path = third_party/protorpc
+	url = git://github.com/google/protorpc.git

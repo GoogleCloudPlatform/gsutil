@@ -16,8 +16,9 @@
 import os
 import sys
 
+from apitools.base.py import base_api
+
 import gslib
-from gslib.third_party.storage_apitools import base_api
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
 
 

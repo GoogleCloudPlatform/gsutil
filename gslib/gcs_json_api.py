@@ -23,6 +23,13 @@ import socket
 import ssl
 import time
 
+from apitools.base.py import credentials_lib
+from apitools.base.py import encoding
+from apitools.base.py import exceptions as apitools_exceptions
+from apitools.base.py import http_wrapper as apitools_http_wrapper
+from apitools.base.py import transfer as apitools_transfer
+from apitools.base.py.util import CalculateWaitForRetry
+
 import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
@@ -53,14 +60,8 @@ from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.project_id import PopulateProjectId
-from gslib.third_party.storage_apitools import credentials_lib as credentials_lib
-from gslib.third_party.storage_apitools import encoding as encoding
-from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
-from gslib.third_party.storage_apitools import http_wrapper as apitools_http_wrapper
 from gslib.third_party.storage_apitools import storage_v1_client as apitools_client
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.third_party.storage_apitools import transfer as apitools_transfer
-from gslib.third_party.storage_apitools.util import CalculateWaitForRetry
 from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
@@ -84,6 +85,7 @@ NUM_BUCKETS_PER_LIST_PAGE = 1000
 NUM_OBJECTS_PER_LIST_PAGE = 1000
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
+                                    apitools_exceptions.StreamExhausted,
                                     apitools_exceptions.TransferError,
                                     apitools_exceptions.TransferInvalidError)
 
@@ -1183,6 +1185,8 @@ class GcsJsonApi(CloudApi):
       elif e.status_code >= 400:
         return ResumableUploadAbortException(
             message or 'Bad Request', status=e.status_code)
+    if isinstance(e, apitools_exceptions.StreamExhausted):
+      return ResumableUploadAbortException(e.message)
     if (isinstance(e, apitools_exceptions.TransferError) and
         ('Aborting transfer' in e.message or
          'Not enough bytes in stream' in e.message or

@@ -59,9 +59,11 @@ warnings.filterwarnings('ignore', category=UserWarning,
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
     ('oauth2client', ''),  # Must be before boto.
+    ('apitools', ''),
     ('boto', ''),
     ('gcs-oauth2-boto-plugin', ''),
     ('httplib2', 'python2'),
+    ('protorpc', ''),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''),

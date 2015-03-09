@@ -59,7 +59,7 @@ from gslib.cloud_api import ServiceException
 from gslib.command_runner import CommandRunner
 import gslib.exception
 from gslib.exception import CommandException
-import gslib.third_party.storage_apitools.exceptions as apitools_exceptions
+import apitools.base.py.exceptions as apitools_exceptions
 from gslib.util import CreateLock
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile

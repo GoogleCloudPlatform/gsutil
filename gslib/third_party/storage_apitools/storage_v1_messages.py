@@ -16,11 +16,11 @@
 Lets you store and retrieve potentially-large, immutable data objects.
 """
 
-from gslib.third_party.protorpc import message_types
-from gslib.third_party.protorpc import messages
+from protorpc import message_types
+from protorpc import messages
 
-from gslib.third_party.storage_apitools import encoding
-from gslib.third_party.storage_apitools import extra_types
+from apitools.base.py import encoding
+from apitools.base.py import extra_types
 
 package = 'storage'
 
@@ -1715,5 +1715,3 @@ class StorageObjectsWatchAllRequest(messages.Message):
   prefix = messages.StringField(6)
   projection = messages.EnumField('ProjectionValueValuesEnum', 7)
   versions = messages.BooleanField(8)
-
-

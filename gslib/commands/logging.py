@@ -18,13 +18,14 @@ from __future__ import absolute_import
 
 import sys
 
+from apitools.base.py import encoding
+
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools import encoding as encoding
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider

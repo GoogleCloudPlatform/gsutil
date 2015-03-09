@@ -28,6 +28,7 @@ import re
 import string
 import sys
 
+from apitools.base.py import exceptions as apitools_exceptions
 import boto
 from boto import storage_uri
 
@@ -48,7 +49,6 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable

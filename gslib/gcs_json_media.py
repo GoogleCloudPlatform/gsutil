@@ -24,12 +24,12 @@ import socket
 import types
 import urlparse
 
+from apitools.base.py import exceptions as apitools_exceptions
 import httplib2
 from httplib2 import parse_uri
 
 from gslib.cloud_api import BadRequestException
 from gslib.progress_callback import ProgressCallbackWithBackoff
-from gslib.third_party.storage_apitools import exceptions as apitools_exceptions
 from gslib.util import SSL_TIMEOUT
 from gslib.util import TRANSFER_BUFFER_SIZE
 

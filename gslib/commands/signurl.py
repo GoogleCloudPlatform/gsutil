@@ -28,15 +28,16 @@ import re
 import time
 import urllib
 
+from apitools.base.py.exceptions import HttpError
+from apitools.base.py.http_wrapper import MakeRequest
+from apitools.base.py.http_wrapper import Request
+
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.third_party.storage_apitools.exceptions import HttpError
-from gslib.third_party.storage_apitools.http_wrapper import MakeRequest
-from gslib.third_party.storage_apitools.http_wrapper import Request
 from gslib.util import GetNewHttp
 from gslib.util import NO_MAX
 from gslib.util import UTF8
