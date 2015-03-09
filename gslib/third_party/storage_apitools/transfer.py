@@ -841,6 +841,7 @@ class Upload(_Transfer):
   def __SendChunk(self, start, additional_headers=None):
     """Send the specified chunk."""
     self.EnsureInitialized()
+    no_log_body = self.total_size is None
     if self.total_size is None:
       # For the streaming resumable case, we need to detect when we're at the
       # end of the stream.
@@ -849,6 +850,12 @@ class Upload(_Transfer):
       end = body_stream.stream_end_position
       if body_stream.stream_exhausted:
         self.__total_size = end
+      # TODO: Here, change body_stream from a stream to a string object,
+      # which means reading a chunk into memory.  This works around
+      # https://code.google.com/p/httplib2/issues/detail?id=176 which can
+      # cause httplib2 to skip bytes on 401's for file objects.
+      # Rework this solution to be more general.
+      body_stream = body_stream.read(self.chunksize)
     else:
       end = min(start + self.chunksize, self.total_size)
       body_stream = stream_slice.StreamSlice(self.stream, end - start)
@@ -857,6 +864,10 @@ class Upload(_Transfer):
     request = http_wrapper.Request(url=self.url, http_method='PUT',
                                    body=body_stream)
     request.headers['Content-Type'] = self.mime_type
+    if no_log_body:
+      # Disable logging of streaming body.
+      # TODO: Remove no_log_body and rework as part of a larger logs refactor.
+      request.loggable_body = '<media body>'
     if self.total_size is None:
       # Streaming resumable upload case, unknown total size.
       range_string = 'bytes %s-%s/*' % (start, end - 1)
