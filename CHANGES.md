@@ -1,3 +1,22 @@
+Release 4.11 (release date: 2015-03-10)
+=======================================
+New Features
+------------
+- Added Nearline storage class support to the mb command.
+
+Bug Fixes
+---------
+- Fixed a bug for streaming uploads that could occasionally cause a HTTP 410
+  from the service or a hash mismatch (and deletion of the corrutped file).
+- Fixed an OverflowError that occurred when uploading files > 4GiB on a 32-bit
+  operating system.
+
+Other Changes
+-------------
+- Added documentation around using the Content-MD5 header to extend integrity
+  checking to include checksums computed by a client-side content pipeline.
+
+
 Release 4.10 (release date: 2015-03-03)
 =======================================
 Bug Fixes
