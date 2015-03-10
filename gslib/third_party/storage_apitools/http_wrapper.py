@@ -254,7 +254,8 @@ def HandleExceptionsAndRebuildHttpConnections(retry_args):
   elif isinstance(retry_args.exc, exceptions.RequestError):
     logging.debug('Request returned no response, retrying')
   # API-level failures
-  elif isinstance(retry_args.exc, exceptions.BadStatusCodeError):
+  elif (isinstance(retry_args.exc, exceptions.BadStatusCodeError) and
+        retry_args.exc.status_code != httplib.UNAUTHORIZED):
     logging.debug('Response returned status %s, retrying',
                   retry_args.exc.status_code)
   elif isinstance(retry_args.exc, exceptions.RetryAfterError):
