@@ -34,7 +34,7 @@ class StreamSlice(object):
   def __nonzero__(self):
     # For 32-bit python2.x, len() cannot exceed a 32-bit number; avoid
     # accidental len() calls from httplib in the form of "if this_object:".
-    return self.__max_bytes
+    return bool(self.__max_bytes)
 
   @property
   def length(self):
