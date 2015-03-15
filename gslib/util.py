@@ -60,10 +60,11 @@ except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
 ONE_KIB = 1024
-TWO_MIB = 2 * 1024 * 1024
-EIGHT_MIB = 8 * 1024 * 1024
-TEN_MIB = 10 * 1024 * 1024
-DEFAULT_FILE_BUFFER_SIZE = 8192
+ONE_MIB = 1024 * 1024
+TWO_MIB = 2 * ONE_MIB
+EIGHT_MIB = 8 * ONE_MIB
+TEN_MIB = 10 * ONE_MIB
+DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 _DEFAULT_LINES = 25
 
 # By default, the timeout for SSL read errors is infinite. This could
@@ -228,22 +229,6 @@ def GetTabCompletionCacheFilename():
   # Limit read permissions on the directory to owner for privacy.
   CreateDirIfNeeded(tab_completion_dir, mode=0700)
   return os.path.join(tab_completion_dir, 'cache')
-
-
-def CreateTrackerDirIfNeeded():
-  """Looks up or creates the gsutil tracker file directory.
-
-  This is the configured directory where gsutil keeps its resumable transfer
-  tracker files. This function creates it if it doesn't already exist.
-
-  Returns:
-    The pathname to the tracker directory.
-  """
-  tracker_dir = config.get(
-      'GSUtil', 'resumable_tracker_dir',
-      os.path.join(GetGsutilStateDir(), 'tracker-files'))
-  CreateDirIfNeeded(tracker_dir)
-  return tracker_dir
 
 
 def PrintTrackerDirDeprecationWarningIfNeeded():

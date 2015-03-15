@@ -23,7 +23,6 @@ import csv
 import datetime
 import errno
 import gzip
-import hashlib
 from hashlib import md5
 import json
 import logging
@@ -78,6 +77,11 @@ from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.tracker_file import DeleteTrackerFile
+from gslib.tracker_file import GetTrackerFilePath
+from gslib.tracker_file import RaiseUnwritableTrackerFileException
+from gslib.tracker_file import ReadOrCreateDownloadTrackerFile
+from gslib.tracker_file import TrackerFileType
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
@@ -86,7 +90,6 @@ from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CreateLock
-from gslib.util import CreateTrackerDirIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
@@ -149,13 +152,9 @@ name. Note that there will be no problems with object name length since we
 hash the original name.
 """
 
-TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
-    'Couldn\'t write tracker file (%s): %s. This can happen if gsutil is '
-    'configured to save tracker files to an unwritable directory)')
-
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
-UPLOAD_RETURN_FIELDS = ['crc32c', 'generation', 'md5Hash', 'size']
+UPLOAD_RETURN_FIELDS = ['crc32c', 'etag', 'generation', 'md5Hash', 'size']
 
 # This tuple is used only to encapsulate the arguments needed for
 # command.Apply() in the parallel composite upload case.
@@ -181,11 +180,6 @@ PerformParallelUploadFileToObjectArgs = namedtuple(
 ObjectFromTracker = namedtuple('ObjectFromTracker',
                                'object_name generation')
 
-# The maximum length of a file name can vary wildly between different
-# operating systems, so we always ensure that tracker files are less
-# than 100 characters in order to avoid any such issues.
-MAX_TRACKER_FILE_NAME_LENGTH = 100
-
 # TODO: Refactor this file to be less cumbersome. In particular, some of the
 # different paths (e.g., uploading a file to an object vs. downloading an
 # object to a file) could be split into separate files.
@@ -196,12 +190,6 @@ GZIP_CHUNK_SIZE = 8192
 PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
 
 suggested_parallel_composites = False
-
-
-class TrackerFileType(object):
-  UPLOAD = 'upload'
-  DOWNLOAD = 'download'
-  PARALLEL_UPLOAD = 'parallel_upload'
 
 
 class FileConcurrencySkipError(Exception):
@@ -309,48 +297,6 @@ def GetCopyHelperOpts():
   return global_copy_helper_opts
 
 
-def GetTrackerFilePath(dst_url, tracker_file_type, api_selector, src_url=None):
-  """Gets the tracker file name described by the arguments.
-
-  Public for testing purposes.
-
-  Args:
-    dst_url: Destination URL for tracker file.
-    tracker_file_type: TrackerFileType for this operation.
-    api_selector: API to use for this operation.
-    src_url: Source URL for the source file name for parallel uploads.
-
-  Returns:
-    File path to tracker file.
-  """
-  resumable_tracker_dir = CreateTrackerDirIfNeeded()
-  if tracker_file_type == TrackerFileType.UPLOAD:
-    # Encode the dest bucket and object name into the tracker file name.
-    res_tracker_file_name = (
-        re.sub('[/\\\\]', '_', 'resumable_upload__%s__%s__%s.url' %
-               (dst_url.bucket_name, dst_url.object_name, api_selector)))
-  elif tracker_file_type == TrackerFileType.DOWNLOAD:
-    # Encode the fully-qualified dest file name into the tracker file name.
-    res_tracker_file_name = (
-        re.sub('[/\\\\]', '_', 'resumable_download__%s__%s.etag' %
-               (os.path.realpath(dst_url.object_name), api_selector)))
-  elif tracker_file_type == TrackerFileType.PARALLEL_UPLOAD:
-    # Encode the dest bucket and object names as well as the source file name
-    # into the tracker file name.
-    res_tracker_file_name = (
-        re.sub('[/\\\\]', '_', 'parallel_upload__%s__%s__%s__%s.url' %
-               (dst_url.bucket_name, dst_url.object_name,
-                src_url, api_selector)))
-
-  res_tracker_file_name = _HashFilename(res_tracker_file_name)
-  tracker_file_name = '%s_%s' % (str(tracker_file_type).lower(),
-                                 res_tracker_file_name)
-  tracker_file_path = '%s%s%s' % (resumable_tracker_dir, os.sep,
-                                  tracker_file_name)
-  assert len(tracker_file_name) < MAX_TRACKER_FILE_NAME_LENGTH
-  return tracker_file_path
-
-
 def _SelectDownloadStrategy(dst_url):
   """Get download strategy based on the destination object.
 
@@ -407,66 +353,6 @@ def _GetUploadTrackerData(tracker_file_name, logger):
   finally:
     if tracker_file:
       tracker_file.close()
-
-
-def _ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
-                                     api_selector):
-  """Checks for a download tracker file and creates one if it does not exist.
-
-  Args:
-    src_obj_metadata: Metadata for the source object.  Must include
-                      etag.
-    dst_url: Destination file StorageUrl.
-    api_selector: API mode to use (for tracker file naming).
-
-  Returns:
-    True if the tracker file already exists (resume existing download),
-    False if we created a new tracker file (new download).
-  """
-  if src_obj_metadata.size < ResumableThreshold():
-    # Don't create a tracker file for a small downloads; cross-process resumes
-    # won't work, but restarting a small download is inexpensive.
-    return False
-
-  assert src_obj_metadata.etag
-  tracker_file_name = GetTrackerFilePath(
-      dst_url, TrackerFileType.DOWNLOAD, api_selector)
-  tracker_file = None
-
-  # Check to see if we already have a matching tracker file.
-  try:
-    tracker_file = open(tracker_file_name, 'r')
-    etag_value = tracker_file.readline().rstrip('\n')
-    if etag_value == src_obj_metadata.etag:
-      return True
-  except IOError as e:
-    # Ignore non-existent file (happens first time a download
-    # is attempted on an object), but warn user for other errors.
-    if e.errno != errno.ENOENT:
-      print('Couldn\'t read URL tracker file (%s): %s. Restarting '
-            'download from scratch.' %
-            (tracker_file_name, e.strerror))
-  finally:
-    if tracker_file:
-      tracker_file.close()
-
-  # Otherwise, create a new tracker file and start from scratch.
-  try:
-    with os.fdopen(os.open(tracker_file_name,
-                           os.O_WRONLY | os.O_CREAT, 0600), 'w') as tf:
-      tf.write('%s\n' % src_obj_metadata.etag)
-    return False
-  except (IOError, OSError) as e:
-    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                           (tracker_file_name, e.strerror))
-  finally:
-    if tracker_file:
-      tracker_file.close()
-
-
-def _DeleteTrackerFile(tracker_file_name):
-  if tracker_file_name and os.path.exists(tracker_file_name):
-    os.unlink(tracker_file_name)
 
 
 def InsistDstUrlNamesContainer(exp_dst_url, have_existing_dst_container,
@@ -1303,18 +1189,20 @@ def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
 
 
 # pylint: disable=undefined-variable
-def _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
-                            dst_obj_metadata, preconditions, gsutil_api):
+def _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
+                            dst_obj_metadata, preconditions, gsutil_api,
+                            logger):
   """Performs copy-in-the cloud from specified src to dest object.
 
   Args:
     src_url: Source CloudUrl.
-    src_obj_size: Size of source object.
+    src_obj_metadata: Metadata for source object; must include etag and size.
     dst_url: Destination CloudUrl.
     dst_obj_metadata: Object-specific metadata that should be overidden during
                       the copy.
     preconditions: Preconditions to use for the copy.
     gsutil_api: gsutil Cloud API instance to use for the copy.
+    logger: logging.Logger for log message output.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url with generation,
@@ -1325,12 +1213,16 @@ def _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
   """
   start_time = time.time()
 
+  progress_callback = FileProgressCallbackHandler(
+      ConstructAnnounceText('Copying', dst_url.url_string), logger).call
+  if global_copy_helper_opts.test_callback_file:
+    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+      progress_callback = pickle.loads(test_fp.read()).call
   dst_obj = gsutil_api.CopyObject(
-      src_url.bucket_name, src_url.object_name,
-      src_generation=src_url.generation, dst_obj_metadata=dst_obj_metadata,
+      src_obj_metadata, dst_obj_metadata, src_generation=src_url.generation,
       canned_acl=global_copy_helper_opts.canned_acl,
-      preconditions=preconditions, provider=dst_url.scheme,
-      fields=UPLOAD_RETURN_FIELDS)
+      preconditions=preconditions, progress_callback=progress_callback,
+      provider=dst_url.scheme, fields=UPLOAD_RETURN_FIELDS)
 
   end_time = time.time()
 
@@ -1338,7 +1230,8 @@ def _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
   result_url.generation = GenerationFromUrlAndString(result_url,
                                                      dst_obj.generation)
 
-  return (end_time - start_time, src_obj_size, result_url, dst_obj.md5Hash)
+  return (end_time - start_time, src_obj_metadata.size, result_url,
+          dst_obj.md5Hash)
 
 
 def _CheckFreeSpace(path):
@@ -1503,8 +1396,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       tracker_file = open(tracker_file_name, 'w')
       tracker_file.write(str(serialization_data))
     except IOError as e:
-      raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                             (tracker_file_name, e.strerror))
+      RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
     finally:
       if tracker_file:
         tracker_file.close()
@@ -1552,7 +1444,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       num_startover_attempts += 1
       retryable = (num_startover_attempts < GetNumRetries())
       if retryable:
-        _DeleteTrackerFile(tracker_file_name)
+        DeleteTrackerFile(tracker_file_name)
         tracker_data = None
         src_obj_filestream.seek(0)
         logger.info('\n'.join(textwrap.wrap(
@@ -1566,7 +1458,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       raise
     finally:
       if not retryable:
-        _DeleteTrackerFile(tracker_file_name)
+        DeleteTrackerFile(tracker_file_name)
 
   end_time = time.time()
   elapsed_time = end_time - start_time
@@ -1721,9 +1613,13 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
                    digests, is_upload=True)
     except HashMismatchException:
       if _RENAME_ON_HASH_MISMATCH:
+        corrupted_obj_metadata = apitools_messages.Object(
+            name=dst_obj_metadata.name,
+            bucket=dst_obj_metadata.bucket,
+            etag=uploaded_object.etag)
         dst_obj_metadata.name = (dst_url.object_name +
                                  _RENAME_ON_HASH_MISMATCH_SUFFIX)
-        gsutil_api.CopyObject(dst_url.bucket_name, dst_url.object_name,
+        gsutil_api.CopyObject(corrupted_obj_metadata,
                               dst_obj_metadata, provider=dst_url.scheme)
       # If the digest doesn't match, delete the object.
       gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
@@ -1832,14 +1728,14 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       open_files_map[download_file_name] = True
       fp = open(download_file_name, 'ab')
 
-      resuming = _ReadOrCreateDownloadTrackerFile(
+      resuming = ReadOrCreateDownloadTrackerFile(
           src_obj_metadata, dst_url, api_selector)
       if resuming:
         # Find out how far along we are so we can request the appropriate
         # remaining range of the object.
         existing_file_size = GetFileSize(fp, position_to_eof=True)
         if existing_file_size > src_obj_metadata.size:
-          _DeleteTrackerFile(GetTrackerFilePath(
+          DeleteTrackerFile(GetTrackerFilePath(
               dst_url, TrackerFileType.DOWNLOAD, api_selector))
           raise CommandException(
               '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
@@ -1994,7 +1890,7 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
   try:
     _CheckHashes(logger, src_url, src_obj_metadata, download_file_name,
                  local_hashes)
-    _DeleteTrackerFile(GetTrackerFilePath(
+    DeleteTrackerFile(GetTrackerFilePath(
         dst_url, TrackerFileType.DOWNLOAD, api_selector))
   except HashMismatchException, e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
@@ -2013,7 +1909,7 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       hash_invalid_exception = e
       digest_verified = False
     else:
-      _DeleteTrackerFile(GetTrackerFilePath(
+      DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
       if _RENAME_ON_HASH_MISMATCH:
         os.rename(download_file_name,
@@ -2064,10 +1960,10 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       local_hashes = _CreateDigestsFromLocalFile(logger, hash_algs, file_name,
                                                  src_obj_metadata)
       _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
-      _DeleteTrackerFile(GetTrackerFilePath(
+      DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
     except HashMismatchException:
-      _DeleteTrackerFile(GetTrackerFilePath(
+      DeleteTrackerFile(GetTrackerFilePath(
           dst_url, TrackerFileType.DOWNLOAD, api_selector))
       if _RENAME_ON_HASH_MISMATCH:
         os.rename(file_name,
@@ -2152,6 +2048,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
   start_time = time.time()
   upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api,
                                 progress_callback=progress_callback)
+  uploaded_object = None
   if src_obj_metadata.size == 0:
     # Resumable uploads of size 0 are not supported.
     uploaded_object = gsutil_api.UploadObject(
@@ -2180,9 +2077,13 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
                       uploaded_object)
   except HashMismatchException:
     if _RENAME_ON_HASH_MISMATCH:
+      corrupted_obj_metadata = apitools_messages.Object(
+          name=dst_obj_metadata.name,
+          bucket=dst_obj_metadata.bucket,
+          etag=uploaded_object.etag)
       dst_obj_metadata.name = (dst_url.object_name +
                                _RENAME_ON_HASH_MISMATCH_SUFFIX)
-      gsutil_api.CopyObject(dst_url.bucket_name, dst_url.object_name,
+      gsutil_api.CopyObject(corrupted_obj_metadata,
                             dst_obj_metadata, provider=dst_url.scheme)
     # If the digest doesn't match, delete the object.
     gsutil_api.DeleteObject(dst_url.bucket_name, dst_url.object_name,
@@ -2354,6 +2255,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       # Preserve relevant metadata from the source object if it's not already
       # provided from the headers.
       CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
+      src_obj_metadata.name = src_url.object_name
+      src_obj_metadata.bucket = src_url.bucket_name
     else:
       _SetContentTypeFromFile(src_url, dst_obj_metadata)
   else:
@@ -2367,9 +2270,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                                    gsutil_api, logger, test_method=test_method)
     elif copy_in_the_cloud:
-      return _CopyObjToObjInTheCloud(src_url, src_obj_size, dst_url,
+      return _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
                                      dst_obj_metadata, preconditions,
-                                     gsutil_api)
+                                     gsutil_api, logger)
     else:
       return _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata,
                                          dst_url, dst_obj_metadata,
@@ -2540,32 +2443,6 @@ def GetPathBeforeFinalDir(url):
   return url.url_string.rstrip(sep).rpartition(sep)[0]
 
 
-def _HashFilename(filename):
-  """Apply a hash function (SHA1) to shorten the passed file name.
-
-  The spec for the hashed file name is as follows:
-
-      TRACKER_<hash>_<trailing>
-
-  where hash is a SHA1 hash on the original file name and trailing is
-  the last 16 chars from the original file name. Max file name lengths
-  vary by operating system so the goal of this function is to ensure
-  the hashed version takes fewer than 100 characters.
-
-  Args:
-    filename: file name to be hashed.
-
-  Returns:
-    shorter, hashed version of passed file name
-  """
-  if isinstance(filename, unicode):
-    filename = filename.encode(UTF8)
-  else:
-    filename = unicode(filename, UTF8).encode(UTF8)
-  m = hashlib.sha1(filename)
-  return 'TRACKER_' + m.hexdigest() + '.' + filename[-16:]
-
-
 def _DivideAndCeil(dividend, divisor):
   """Returns ceil(dividend / divisor).
 
@@ -2723,8 +2600,7 @@ def _CreateParallelUploadTrackerFile(tracker_file, random_prefix, components,
       with open(tracker_file, 'w') as f:
         f.writelines(lines)
   except IOError as e:
-    raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                           (tracker_file, e.strerror))
+    RaiseUnwritableTrackerFileException(tracker_file, e.strerror)
 
 
 def _GetParallelUploadTrackerFileLinesForComponents(components):

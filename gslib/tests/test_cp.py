@@ -20,6 +20,7 @@ import base64
 import binascii
 import datetime
 import httplib
+import logging
 import os
 import pickle
 import pkgutil
@@ -31,6 +32,7 @@ import sys
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
 from boto import storage_uri
+from boto.storage_uri import BucketStorageUri
 
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
@@ -38,6 +40,7 @@ from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.copy_helper import GetTrackerFilePath
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
+from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
@@ -49,10 +52,14 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import PerformsFileToObjectUpload
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.tracker_file import DeleteTrackerFile
+from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
+from gslib.util import ONE_MIB
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UTF8
@@ -101,6 +108,39 @@ class _ResumableUploadStartOverCopyCallbackHandler(object):
       self.started_over_once = True
       raise ResumableUploadStartOverException(
           'Artifically forcing start-over.')
+
+
+class _RewriteHaltException(Exception):
+  pass
+
+
+class _HaltingRewriteCallbackHandler(object):
+  """Test callback handler for intentionally stopping a rewrite operation."""
+
+  def __init__(self, halt_at_byte):
+    self._halt_at_byte = halt_at_byte
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_rewritten, unused_total_size):
+    """Forcibly exits if the operation has passed the halting point."""
+    if total_bytes_rewritten >= self._halt_at_byte:
+      raise _RewriteHaltException('Artificially halting rewrite')
+
+
+class _EnsureRewriteResumeCallbackHandler(object):
+  """Test callback handler for ensuring a rewrite operation resumed."""
+
+  def __init__(self, required_byte):
+    self._required_byte = required_byte
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_rewritten, unused_total_size):
+    """Forcibly exits if the operation has passed the halting point."""
+    if total_bytes_rewritten <= self._required_byte:
+      raise _RewriteHaltException(
+          'Rewrite did not resume; %s bytes written, but %s bytes should '
+          'have already been written.' % (total_bytes_rewritten,
+                                          self._required_byte))
 
 
 class _ResumableUploadRetryHandler(object):
@@ -163,7 +203,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
     stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
-    self.assertEqual(stderr.count('Copying'), 1)
+    # Rewrite API may output an additional 'Copying' progress notification.
+    self.assertGreaterEqual(stderr.count('Copying'), 1)
+    self.assertLessEqual(stderr.count('Copying'), 2)
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' %
@@ -1616,6 +1658,233 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri) + '/dir/'],
         expected_status=1)
     self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])
+
+  def test_rewrite_cp(self):
+    """Tests the JSON Rewrite API."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='bar')
+    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                            self.default_provider)
+    key = object_uri.get_key()
+    src_obj_metadata = apitools_messages.Object(
+        name=key.name, bucket=key.bucket.name, contentType=key.content_type)
+    dst_obj_metadata = apitools_messages.Object(
+        bucket=src_obj_metadata.bucket,
+        name=self.MakeTempName('object'),
+        contentType=src_obj_metadata.contentType)
+    gsutil_api.CopyObject(src_obj_metadata, dst_obj_metadata)
+    self.assertEqual(
+        gsutil_api.GetObjectMetadata(src_obj_metadata.bucket,
+                                     src_obj_metadata.name,
+                                     fields=['md5Hash']).md5Hash,
+        gsutil_api.GetObjectMetadata(dst_obj_metadata.bucket,
+                                     dst_obj_metadata.name,
+                                     fields=['md5Hash']).md5Hash,
+        'Error: Rewritten object\'s hash doesn\'t match source object.')
+
+  def test_rewrite_cp_resume(self):
+    """Tests the JSON Rewrite API, breaking and resuming via a tracker file."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    bucket_uri = self.CreateBucket()
+    # Second bucket needs to be a different storage class so the service
+    # actually rewrites the bytes.
+    bucket_uri2 = self.CreateBucket(
+        storage_class='DURABLE_REDUCED_AVAILABILITY')
+    # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
+    # need 2 response from the service: 1 success, 1 failure prior to
+    # completion.
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents=('12'*ONE_MIB) + 'bar',
+                                   prefer_json_api=True)
+    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                            self.default_provider)
+    key = object_uri.get_key()
+    src_obj_metadata = apitools_messages.Object(
+        name=key.name, bucket=key.bucket.name, contentType=key.content_type,
+        etag=key.etag.strip('"\''))
+    dst_obj_name = self.MakeTempName('object')
+    dst_obj_metadata = apitools_messages.Object(
+        bucket=bucket_uri2.bucket_name,
+        name=dst_obj_name,
+        contentType=src_obj_metadata.contentType)
+    tracker_file_name = GetRewriteTrackerFilePath(
+        src_obj_metadata.bucket, src_obj_metadata.name,
+        dst_obj_metadata.bucket, dst_obj_metadata.name, self.test_api)
+    try:
+      try:
+        gsutil_api.CopyObject(
+            src_obj_metadata, dst_obj_metadata,
+            progress_callback=_HaltingRewriteCallbackHandler(ONE_MIB*2).call,
+            max_bytes_per_call=ONE_MIB)
+        self.fail('Expected _RewriteHaltException.')
+      except _RewriteHaltException:
+        pass
+
+      # Tracker file should be left over.
+      self.assertTrue(os.path.exists(tracker_file_name))
+
+      # Now resume. Callback ensures we didn't start over.
+      gsutil_api.CopyObject(
+          src_obj_metadata, dst_obj_metadata,
+          progress_callback=_EnsureRewriteResumeCallbackHandler(ONE_MIB*2).call,
+          max_bytes_per_call=ONE_MIB)
+
+      # Copy completed; tracker file should be deleted.
+      self.assertFalse(os.path.exists(tracker_file_name))
+
+      self.assertEqual(
+          gsutil_api.GetObjectMetadata(src_obj_metadata.bucket,
+                                       src_obj_metadata.name,
+                                       fields=['md5Hash']).md5Hash,
+          gsutil_api.GetObjectMetadata(dst_obj_metadata.bucket,
+                                       dst_obj_metadata.name,
+                                       fields=['md5Hash']).md5Hash,
+          'Error: Rewritten object\'s hash doesn\'t match source object.')
+    finally:
+      # Clean up if something went wrong.
+      DeleteTrackerFile(tracker_file_name)
+
+  def test_rewrite_cp_resume_source_changed(self):
+    """Tests that Rewrite starts over when the source object has changed."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    bucket_uri = self.CreateBucket()
+    # Second bucket needs to be a different storage class so the service
+    # actually rewrites the bytes.
+    bucket_uri2 = self.CreateBucket(
+        storage_class='DURABLE_REDUCED_AVAILABILITY')
+    # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
+    # need 2 response from the service: 1 success, 1 failure prior to
+    # completion.
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents=('12'*ONE_MIB) + 'bar',
+                                   prefer_json_api=True)
+    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                            self.default_provider)
+    key = object_uri.get_key()
+    src_obj_metadata = apitools_messages.Object(
+        name=key.name, bucket=key.bucket.name, contentType=key.content_type,
+        etag=key.etag.strip('"\''))
+    dst_obj_name = self.MakeTempName('object')
+    dst_obj_metadata = apitools_messages.Object(
+        bucket=bucket_uri2.bucket_name,
+        name=dst_obj_name,
+        contentType=src_obj_metadata.contentType)
+    tracker_file_name = GetRewriteTrackerFilePath(
+        src_obj_metadata.bucket, src_obj_metadata.name,
+        dst_obj_metadata.bucket, dst_obj_metadata.name, self.test_api)
+    try:
+      try:
+        gsutil_api.CopyObject(
+            src_obj_metadata, dst_obj_metadata,
+            progress_callback=_HaltingRewriteCallbackHandler(ONE_MIB*2).call,
+            max_bytes_per_call=ONE_MIB)
+        self.fail('Expected _RewriteHaltException.')
+      except _RewriteHaltException:
+        pass
+      # Overwrite the original object.
+      object_uri2 = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                      contents='bar', prefer_json_api=True)
+      key2 = object_uri2.get_key()
+      src_obj_metadata2 = apitools_messages.Object(
+          name=key2.name, bucket=key2.bucket.name,
+          contentType=key2.content_type, etag=key2.etag.strip('"\''))
+
+      # Tracker file for original object should still exist.
+      self.assertTrue(os.path.exists(tracker_file_name))
+
+      # Copy the new object.
+      gsutil_api.CopyObject(src_obj_metadata2, dst_obj_metadata,
+                            max_bytes_per_call=ONE_MIB)
+
+      # Copy completed; original tracker file should be deleted.
+      self.assertFalse(os.path.exists(tracker_file_name))
+
+      self.assertEqual(
+          gsutil_api.GetObjectMetadata(src_obj_metadata2.bucket,
+                                       src_obj_metadata2.name,
+                                       fields=['md5Hash']).md5Hash,
+          gsutil_api.GetObjectMetadata(dst_obj_metadata.bucket,
+                                       dst_obj_metadata.name,
+                                       fields=['md5Hash']).md5Hash,
+          'Error: Rewritten object\'s hash doesn\'t match source object.')
+    finally:
+      # Clean up if something went wrong.
+      DeleteTrackerFile(tracker_file_name)
+
+  def test_rewrite_cp_resume_command_changed(self):
+    """Tests that Rewrite starts over when the arguments changed."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    bucket_uri = self.CreateBucket()
+    # Second bucket needs to be a different storage class so the service
+    # actually rewrites the bytes.
+    bucket_uri2 = self.CreateBucket(
+        storage_class='DURABLE_REDUCED_AVAILABILITY')
+    # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
+    # need 2 response from the service: 1 success, 1 failure prior to
+    # completion.
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents=('12'*ONE_MIB) + 'bar',
+                                   prefer_json_api=True)
+    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                            self.default_provider)
+    key = object_uri.get_key()
+    src_obj_metadata = apitools_messages.Object(
+        name=key.name, bucket=key.bucket.name, contentType=key.content_type,
+        etag=key.etag.strip('"\''))
+    dst_obj_name = self.MakeTempName('object')
+    dst_obj_metadata = apitools_messages.Object(
+        bucket=bucket_uri2.bucket_name,
+        name=dst_obj_name,
+        contentType=src_obj_metadata.contentType)
+    tracker_file_name = GetRewriteTrackerFilePath(
+        src_obj_metadata.bucket, src_obj_metadata.name,
+        dst_obj_metadata.bucket, dst_obj_metadata.name, self.test_api)
+    try:
+      try:
+        gsutil_api.CopyObject(
+            src_obj_metadata, dst_obj_metadata, canned_acl='private',
+            progress_callback=_HaltingRewriteCallbackHandler(ONE_MIB*2).call,
+            max_bytes_per_call=ONE_MIB)
+        self.fail('Expected _RewriteHaltException.')
+      except _RewriteHaltException:
+        pass
+
+      # Tracker file for original object should still exist.
+      self.assertTrue(os.path.exists(tracker_file_name))
+
+      # Copy the same object but with different call parameters.
+      gsutil_api.CopyObject(src_obj_metadata, dst_obj_metadata,
+                            canned_acl='public-read',
+                            max_bytes_per_call=ONE_MIB)
+
+      # Copy completed; original tracker file should be deleted.
+      self.assertFalse(os.path.exists(tracker_file_name))
+
+      new_obj_metadata = gsutil_api.GetObjectMetadata(
+          dst_obj_metadata.bucket, dst_obj_metadata.name,
+          fields=['acl,md5Hash'])
+      self.assertEqual(
+          gsutil_api.GetObjectMetadata(src_obj_metadata.bucket,
+                                       src_obj_metadata.name,
+                                       fields=['md5Hash']).md5Hash,
+          new_obj_metadata.md5Hash,
+          'Error: Rewritten object\'s hash doesn\'t match source object.')
+      # New object should have a public-read ACL from the second command.
+      found_public_acl = False
+      for acl_entry in new_obj_metadata.acl:
+        if acl_entry.entity == 'allUsers':
+          found_public_acl = True
+      self.assertTrue(found_public_acl,
+                      'New object was not written with a public ACL.')
+    finally:
+      # Clean up if something went wrong.
+      DeleteTrackerFile(tracker_file_name)
 
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):

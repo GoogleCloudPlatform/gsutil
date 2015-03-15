@@ -63,9 +63,9 @@ class Bucket(messages.Message):
     projectNumber: The project number of the project the bucket belongs to.
     selfLink: The URI of this bucket.
     storageClass: The bucket's storage class. This defines how objects in the
-      bucket are stored and determines the SLA and the cost of storage.
-      Typical values are STANDARD and DURABLE_REDUCED_AVAILABILITY. Defaults
-      to STANDARD. See the developer's guide for the authoritative list.
+      bucket are stored and determines the SLA and the cost of storage. Values
+      include STANDARD, NEARLINE and DURABLE_REDUCED_AVAILABILITY. Defaults to
+      STANDARD. For more information, see storage classes.
     timeCreated: Creation time of the bucket in RFC 3339 format.
     versioning: The bucket's versioning configuration.
     website: The bucket's website configuration.
@@ -449,9 +449,11 @@ class Object(messages.Message):
     selfLink: The link to this object.
     size: Content-Length of the data in bytes.
     storageClass: Storage class of the object.
-    timeDeleted: Deletion time of the object in RFC 3339 format. Will be
+    timeDeleted: The deletion time of the object in RFC 3339 format. Will be
       returned if and only if this version of the object has been deleted.
-    updated: Modification time of the object metadata in RFC 3339 format.
+    updated: The creation or modification time of the object in RFC 3339
+      format. For buckets with versioning enabled, changing an object's
+      metadata does not change this property.
   """
 
   @encoding.MapUnrecognizedFields('additionalProperties')
@@ -604,6 +606,29 @@ class Objects(messages.Message):
   prefixes = messages.StringField(4, repeated=True)
 
 
+class RewriteResponse(messages.Message):
+  """A Rewrite response.
+
+  Messages:
+    ResourceValue: A ResourceValue object.
+
+  Fields:
+    done: A boolean attribute.
+    kind: The kind of item this is.
+    objectSize: A string attribute.
+    resource: A Object attribute.
+    rewriteToken: A string attribute.
+    totalBytesRewritten: A string attribute.
+  """
+
+  done = messages.BooleanField(1)
+  kind = messages.StringField(2, default=u'storage#rewriteResponse')
+  objectSize = messages.IntegerField(3, variant=messages.Variant.UINT64)
+  resource = messages.MessageField('Object', 4)
+  rewriteToken = messages.StringField(5)
+  totalBytesRewritten = messages.IntegerField(6, variant=messages.Variant.UINT64)
+
+
 class StandardQueryParameters(messages.Message):
   """Query parameters accepted by all methods.
 
@@ -745,6 +770,8 @@ class StorageBucketsInsertRequest(messages.Message):
   Enums:
     PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
       this bucket.
+    PredefinedDefaultObjectAclValueValuesEnum: Apply a predefined set of
+      default object access controls to this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to noAcl,
       unless the bucket resource specifies acl or defaultObjectAcl properties,
       when it defaults to full.
@@ -752,7 +779,8 @@ class StorageBucketsInsertRequest(messages.Message):
   Fields:
     bucket: A Bucket resource to be passed as the request body.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
-    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object
+      access controls to this bucket.
     project: A valid API project identifier.
     projection: Set of properties to return. Defaults to noAcl, unless the
       bucket resource specifies acl or defaultObjectAcl properties, when it
@@ -780,7 +808,8 @@ class StorageBucketsInsertRequest(messages.Message):
     publicReadWrite = 4
 
   class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
-    """Apply a predefined set of default object access controls to this bucket.
+    """Apply a predefined set of default object access controls to this
+    bucket.
 
     Values:
       authenticatedRead: Object owner gets OWNER access, and
@@ -831,6 +860,7 @@ class StorageBucketsListRequest(messages.Message):
     maxResults: Maximum number of buckets to return.
     pageToken: A previously-returned page token representing part of the
       larger set of results to view.
+    prefix: Filter results to buckets whose names begin with this prefix.
     project: A valid API project identifier.
     projection: Set of properties to return. Defaults to noAcl.
   """
@@ -847,8 +877,9 @@ class StorageBucketsListRequest(messages.Message):
 
   maxResults = messages.IntegerField(1, variant=messages.Variant.UINT32)
   pageToken = messages.StringField(2)
-  project = messages.StringField(3, required=True)
-  projection = messages.EnumField('ProjectionValueValuesEnum', 4)
+  prefix = messages.StringField(3)
+  project = messages.StringField(4, required=True)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 5)
 
 
 class StorageBucketsPatchRequest(messages.Message):
@@ -857,6 +888,8 @@ class StorageBucketsPatchRequest(messages.Message):
   Enums:
     PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
       this bucket.
+    PredefinedDefaultObjectAclValueValuesEnum: Apply a predefined set of
+      default object access controls to this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -868,7 +901,8 @@ class StorageBucketsPatchRequest(messages.Message):
       conditional on whether the bucket's current metageneration does not
       match the given value.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
-    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object
+      access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
 
@@ -893,7 +927,8 @@ class StorageBucketsPatchRequest(messages.Message):
     publicReadWrite = 4
 
   class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
-    """Apply a predefined set of default object access controls to this bucket.
+    """Apply a predefined set of default object access controls to this
+    bucket.
 
     Values:
       authenticatedRead: Object owner gets OWNER access, and
@@ -940,6 +975,8 @@ class StorageBucketsUpdateRequest(messages.Message):
   Enums:
     PredefinedAclValueValuesEnum: Apply a predefined set of access controls to
       this bucket.
+    PredefinedDefaultObjectAclValueValuesEnum: Apply a predefined set of
+      default object access controls to this bucket.
     ProjectionValueValuesEnum: Set of properties to return. Defaults to full.
 
   Fields:
@@ -951,7 +988,8 @@ class StorageBucketsUpdateRequest(messages.Message):
       conditional on whether the bucket's current metageneration does not
       match the given value.
     predefinedAcl: Apply a predefined set of access controls to this bucket.
-    predefinedDefaultObjectAcl: Apply a predefined set of default object access controls to this bucket.
+    predefinedDefaultObjectAcl: Apply a predefined set of default object
+      access controls to this bucket.
     projection: Set of properties to return. Defaults to full.
   """
 
@@ -976,7 +1014,8 @@ class StorageBucketsUpdateRequest(messages.Message):
     publicReadWrite = 4
 
   class PredefinedDefaultObjectAclValueValuesEnum(messages.Enum):
-    """Apply a predefined set of default object access controls to this bucket.
+    """Apply a predefined set of default object access controls to this
+    bucket.
 
     Values:
       authenticatedRead: Object owner gets OWNER access, and
@@ -1602,6 +1641,118 @@ class StorageObjectsPatchRequest(messages.Message):
   projection = messages.EnumField('ProjectionValueValuesEnum', 10)
 
 
+class StorageObjectsRewriteRequest(messages.Message):
+  """A StorageObjectsRewriteRequest object.
+
+  Enums:
+    DestinationPredefinedAclValueValuesEnum: Apply a predefined set of access
+      controls to the destination object.
+    ProjectionValueValuesEnum: Set of properties to return. Defaults to noAcl,
+      unless the object resource specifies the acl property, when it defaults
+      to full.
+
+  Fields:
+    destinationBucket: Name of the bucket in which to store the new object.
+      Overrides the provided object metadata's bucket value, if any.
+    destinationObject: Name of the new object. Required when the object
+      metadata is not otherwise provided. Overrides the object metadata's name
+      value, if any.
+    destinationPredefinedAcl: Apply a predefined set of access controls to the
+      destination object.
+    ifGenerationMatch: Makes the operation conditional on whether the
+      destination object's current generation matches the given value.
+    ifGenerationNotMatch: Makes the operation conditional on whether the
+      destination object's current generation does not match the given value.
+    ifMetagenerationMatch: Makes the operation conditional on whether the
+      destination object's current metageneration matches the given value.
+    ifMetagenerationNotMatch: Makes the operation conditional on whether the
+      destination object's current metageneration does not match the given
+      value.
+    ifSourceGenerationMatch: Makes the operation conditional on whether the
+      source object's generation matches the given value.
+    ifSourceGenerationNotMatch: Makes the operation conditional on whether the
+      source object's generation does not match the given value.
+    ifSourceMetagenerationMatch: Makes the operation conditional on whether
+      the source object's current metageneration matches the given value.
+    ifSourceMetagenerationNotMatch: Makes the operation conditional on whether
+      the source object's current metageneration does not match the given
+      value.
+    maxBytesRewrittenPerCall: The maximum number of bytes that will be
+      rewritten per Rewrite request. Most callers shouldn't need to specify
+      this parameter - it is primarily in place to support testing. If
+      specified the value must be an integral multiple of 1 MiB (1048576).
+      Also, this only applies to requests where the source and destination
+      span locations and/or storage classes. Finally, this value must not
+      change across Rewrite calls else you'll get an error that the rewrite
+      token is invalid.
+    object: A Object resource to be passed as the request body.
+    projection: Set of properties to return. Defaults to noAcl, unless the
+      object resource specifies the acl property, when it defaults to full.
+    rewriteToken: Include this field (from the previous Rewrite response) on
+      each Rewrite request after the first one, until the Rewrite response
+      'done' flag is true. Calls that provide a rewriteToken can omit all
+      other request fields, but if included those fields must match the values
+      provided in the first rewrite request.
+    sourceBucket: Name of the bucket in which to find the source object.
+    sourceGeneration: If present, selects a specific revision of the source
+      object (as opposed to the latest version, the default).
+    sourceObject: Name of the source object.
+  """
+
+  class DestinationPredefinedAclValueValuesEnum(messages.Enum):
+    """Apply a predefined set of access controls to the destination object.
+
+    Values:
+      authenticatedRead: Object owner gets OWNER access, and
+        allAuthenticatedUsers get READER access.
+      bucketOwnerFullControl: Object owner gets OWNER access, and project team
+        owners get OWNER access.
+      bucketOwnerRead: Object owner gets OWNER access, and project team owners
+        get READER access.
+      private: Object owner gets OWNER access.
+      projectPrivate: Object owner gets OWNER access, and project team members
+        get access according to their roles.
+      publicRead: Object owner gets OWNER access, and allUsers get READER
+        access.
+    """
+    authenticatedRead = 0
+    bucketOwnerFullControl = 1
+    bucketOwnerRead = 2
+    private = 3
+    projectPrivate = 4
+    publicRead = 5
+
+  class ProjectionValueValuesEnum(messages.Enum):
+    """Set of properties to return. Defaults to noAcl, unless the object
+    resource specifies the acl property, when it defaults to full.
+
+    Values:
+      full: Include all properties.
+      noAcl: Omit the acl property.
+    """
+    full = 0
+    noAcl = 1
+
+  destinationBucket = messages.StringField(1, required=True)
+  destinationObject = messages.StringField(2, required=True)
+  destinationPredefinedAcl = messages.EnumField('DestinationPredefinedAclValueValuesEnum', 3)
+  ifGenerationMatch = messages.IntegerField(4)
+  ifGenerationNotMatch = messages.IntegerField(5)
+  ifMetagenerationMatch = messages.IntegerField(6)
+  ifMetagenerationNotMatch = messages.IntegerField(7)
+  ifSourceGenerationMatch = messages.IntegerField(8)
+  ifSourceGenerationNotMatch = messages.IntegerField(9)
+  ifSourceMetagenerationMatch = messages.IntegerField(10)
+  ifSourceMetagenerationNotMatch = messages.IntegerField(11)
+  maxBytesRewrittenPerCall = messages.IntegerField(12)
+  object = messages.MessageField('Object', 13)
+  projection = messages.EnumField('ProjectionValueValuesEnum', 14)
+  rewriteToken = messages.StringField(15)
+  sourceBucket = messages.StringField(16, required=True)
+  sourceGeneration = messages.IntegerField(17)
+  sourceObject = messages.StringField(18, required=True)
+
+
 class StorageObjectsUpdateRequest(messages.Message):
   """A StorageObjectsUpdateRequest object.
 
@@ -1715,3 +1866,5 @@ class StorageObjectsWatchAllRequest(messages.Message):
   prefix = messages.StringField(6)
   projection = messages.EnumField('ProjectionValueValuesEnum', 7)
   versions = messages.BooleanField(8)
+
+

@@ -197,6 +197,11 @@ _COPY_IN_CLOUD_TEXT = """
   or re-create that metadata, downloading to a file will not retain the
   metadata.
 
+  Copies spanning locations and/or storage classes cause data to be rewritten
+  in the cloud, which may take some time. Such operations can be resumed with
+  the same command if they are interrupted, so long as the command parameters
+  are identical. 
+
   Note that by default, the gsutil cp command does not copy the object
   ACL to the new object, and instead will use the default bucket ACL (see
   "gsutil help defacl").  You can override this behavior with the -p

@@ -247,13 +247,14 @@ class CloudApiDelegator(CloudApi):
         serialization_data=serialization_data,
         tracker_callback=tracker_callback, progress_callback=progress_callback)
 
-  def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, canned_acl=None, preconditions=None,
-                 provider=None, fields=None):
+  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
+                 canned_acl=None, preconditions=None, progress_callback=None,
+                 max_bytes_per_call=None, provider=None, fields=None):
     return self._GetApi(provider).CopyObject(
-        src_bucket_name, src_obj_name, dst_obj_metadata,
-        src_generation=src_generation, canned_acl=canned_acl,
-        preconditions=preconditions, fields=fields)
+        src_obj_metadata, dst_obj_metadata, src_generation=src_generation,
+        canned_acl=canned_acl, preconditions=preconditions,
+        progress_callback=progress_callback,
+        max_bytes_per_call=max_bytes_per_call, fields=fields)
 
   def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
                     preconditions=None, provider=None, fields=None):

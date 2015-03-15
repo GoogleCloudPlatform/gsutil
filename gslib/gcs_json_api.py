@@ -59,9 +59,15 @@ from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
 from gslib.no_op_credentials import NoOpCredentials
+from gslib.progress_callback import ProgressCallbackWithBackoff
 from gslib.project_id import PopulateProjectId
 from gslib.third_party.storage_apitools import storage_v1_client as apitools_client
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.tracker_file import DeleteTrackerFile
+from gslib.tracker_file import GetRewriteTrackerFilePath
+from gslib.tracker_file import HashRewriteParameters
+from gslib.tracker_file import ReadRewriteTrackerFile
+from gslib.tracker_file import WriteRewriteTrackerFile
 from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
@@ -960,15 +966,15 @@ class GcsJsonApi(CloudApi):
         tracker_callback=tracker_callback, progress_callback=progress_callback,
         apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD)
 
-  def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, canned_acl=None, preconditions=None,
-                 provider=None, fields=None):
+  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
+                 canned_acl=None, preconditions=None, progress_callback=None,
+                 max_bytes_per_call=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     ValidateDstObjectMetadata(dst_obj_metadata)
     predefined_acl = None
     if canned_acl:
       predefined_acl = (
-          apitools_messages.StorageObjectsCopyRequest.
+          apitools_messages.StorageObjectsRewriteRequest.
           DestinationPredefinedAclValueValuesEnum(
               self._ObjectCannedAclToPredefinedAcl(canned_acl)))
 
@@ -978,24 +984,67 @@ class GcsJsonApi(CloudApi):
     if not preconditions:
       preconditions = Preconditions()
 
-    projection = (apitools_messages.StorageObjectsCopyRequest
-                  .ProjectionValueValuesEnum.full)
+    projection = (apitools_messages.StorageObjectsRewriteRequest.
+                  ProjectionValueValuesEnum.full)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
-      global_params.fields = ','.join(set(fields))
+      # Rewrite returns the resultant object under the 'resource' field.
+      new_fields = set(['done', 'objectSize', 'rewriteToken',
+                        'totalBytesRewritten'])
+      for field in fields:
+        new_fields.add('resource/' + field)
+      global_params.fields = ','.join(set(new_fields))
 
-    apitools_request = apitools_messages.StorageObjectsCopyRequest(
-        sourceBucket=src_bucket_name, sourceObject=src_obj_name,
-        destinationBucket=dst_obj_metadata.bucket,
-        destinationObject=dst_obj_metadata.name,
-        projection=projection, object=dst_obj_metadata,
-        sourceGeneration=src_generation,
-        ifGenerationMatch=preconditions.gen_match,
-        ifMetagenerationMatch=preconditions.meta_gen_match,
-        destinationPredefinedAcl=predefined_acl)
+    # Check to see if we are resuming a rewrite.
+    tracker_file_name = GetRewriteTrackerFilePath(
+        src_obj_metadata.bucket, src_obj_metadata.name, dst_obj_metadata.bucket,
+        dst_obj_metadata.name, 'JSON')
+    rewrite_params_hash = HashRewriteParameters(
+        src_obj_metadata, dst_obj_metadata, projection,
+        src_generation=src_generation, gen_match=preconditions.gen_match,
+        meta_gen_match=preconditions.meta_gen_match,
+        canned_acl=predefined_acl, fields=global_params.fields,
+        max_bytes_per_call=max_bytes_per_call)
+    resume_rewrite_token = ReadRewriteTrackerFile(tracker_file_name,
+                                                  rewrite_params_hash)
+
+    progress_cb_with_backoff = None
     try:
-      return self.api_client.objects.Copy(apitools_request,
-                                          global_params=global_params)
+      last_bytes_written = 0L
+      while True:
+        apitools_request = apitools_messages.StorageObjectsRewriteRequest(
+            sourceBucket=src_obj_metadata.bucket,
+            sourceObject=src_obj_metadata.name,
+            destinationBucket=dst_obj_metadata.bucket,
+            destinationObject=dst_obj_metadata.name,
+            projection=projection, object=dst_obj_metadata,
+            sourceGeneration=src_generation,
+            ifGenerationMatch=preconditions.gen_match,
+            ifMetagenerationMatch=preconditions.meta_gen_match,
+            destinationPredefinedAcl=predefined_acl,
+            rewriteToken=resume_rewrite_token,
+            maxBytesRewrittenPerCall=max_bytes_per_call)
+        rewrite_response = self.api_client.objects.Rewrite(
+            apitools_request, global_params=global_params)
+        bytes_written = long(rewrite_response.totalBytesRewritten)
+        if progress_callback and not progress_cb_with_backoff:
+          progress_cb_with_backoff = ProgressCallbackWithBackoff(
+              long(rewrite_response.objectSize), progress_callback)
+        if progress_cb_with_backoff:
+          progress_cb_with_backoff.Progress(
+              bytes_written - last_bytes_written)
+
+        if rewrite_response.done:
+          break
+        elif not resume_rewrite_token:
+          # Save the token and make a tracker file if they don't already exist.
+          resume_rewrite_token = rewrite_response.rewriteToken
+          WriteRewriteTrackerFile(tracker_file_name, rewrite_params_hash,
+                                  rewrite_response.rewriteToken)
+        last_bytes_written = bytes_written
+
+      DeleteTrackerFile(tracker_file_name)
+      return rewrite_response.resource
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=dst_obj_metadata.bucket,
                                        object_name=dst_obj_metadata.name)

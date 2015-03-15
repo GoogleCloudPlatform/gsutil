@@ -26,7 +26,6 @@ from gslib.command import CreateGsutilLogger
 from gslib.copy_helper import _AppendComponentTrackerToParallelUploadTrackerFile
 from gslib.copy_helper import _CreateParallelUploadTrackerFile
 from gslib.copy_helper import _GetPartitionInfo
-from gslib.copy_helper import _HashFilename
 from gslib.copy_helper import _ParseParallelUploadTrackerFile
 from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import ObjectFromTracker
@@ -42,12 +41,6 @@ from gslib.util import CreateLock
 
 class TestCpFuncs(GsUtilUnitTestCase):
   """Unit tests for parallel upload functions in cp command."""
-
-  def test_HashFilename(self):
-    # Tests that _HashFilename function works for both string and unicode
-    # filenames (without raising any Unicode encode/decode errors).
-    _HashFilename('file1')
-    _HashFilename(u'file1')
 
   def test_GetPartitionInfo(self):
     """Tests the _GetPartitionInfo function."""

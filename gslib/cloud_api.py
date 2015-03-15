@@ -389,20 +389,25 @@ class CloudApi(object):
     """
     raise NotImplementedError('UploadObjectResumable must be overloaded')
 
-  def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, canned_acl=None, preconditions=None,
-                 provider=None, fields=None):
+  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
+                 canned_acl=None, preconditions=None, progress_callback=None,
+                 max_bytes_per_call=None, provider=None, fields=None):
     """Copies an object in the cloud.
 
     Args:
-      src_bucket_name: Bucket containing the source object
-      src_obj_name: Name of the source object.
+      src_obj_metadata: Object metadata for source object.  Must include
+                        bucket name, object name, and etag.
       dst_obj_metadata: Object metadata for new object.  Must include bucket
                         and object name.
       src_generation: Generation of the source object to copy.
       canned_acl: Optional canned ACL to apply to destination object. Overrides
                   ACL set in dst_obj_metadata.
       preconditions: Destination object preconditions for the request.
+      progress_callback: Optional callback function for progress notifications.
+                         Receives calls with arguments
+                         (bytes_transferred, total_size).
+      max_bytes_per_call: Integer describing maximum number of bytes
+                          to rewrite per service call.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
       fields: If present, return only these Object metadata fields.

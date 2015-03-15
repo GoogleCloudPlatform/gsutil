@@ -876,11 +876,14 @@ class BotoTranslation(CloudApi):
                                        object_name=object_name,
                                        generation=generation)
 
-  def CopyObject(self, src_bucket_name, src_obj_name, dst_obj_metadata,
-                 src_generation=None, canned_acl=None, preconditions=None,
-                 provider=None, fields=None):
+  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
+                 canned_acl=None, preconditions=None, progress_callback=None,
+                 max_bytes_per_call=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
+
+    if max_bytes_per_call is not None:
+      raise NotImplementedError('XML API does not suport max_bytes_per_call')
     dst_uri = self._StorageUriForObject(dst_obj_metadata.bucket,
                                         dst_obj_metadata.name)
 
@@ -907,9 +910,9 @@ class BotoTranslation(CloudApi):
 
     try:
       new_key = dst_uri.copy_key(
-          src_bucket_name, src_obj_name, preserve_acl=preserve_acl,
-          headers=headers, src_version_id=src_version_id,
-          src_generation=src_generation)
+          src_obj_metadata.bucket, src_obj_metadata.name,
+          preserve_acl=preserve_acl, headers=headers,
+          src_version_id=src_version_id, src_generation=src_generation)
 
       return self._BotoKeyToObject(new_key, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
