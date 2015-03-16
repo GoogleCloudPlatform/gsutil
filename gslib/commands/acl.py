@@ -159,7 +159,7 @@ _CH_DESCRIPTION = """
   Grant the owners of project example-project-123 WRITE access to the bucket
   example-bucket:
 
-    gsutil acl ch -p owners-example-project-123 gs://example-bucket
+    gsutil acl ch -p owners-example-project-123:W gs://example-bucket
 
   NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
   to a project's viewers/editors respectively.
