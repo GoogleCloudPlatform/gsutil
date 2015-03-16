@@ -101,10 +101,10 @@ _CH_DESCRIPTION = """
 
     gsutil defacl ch -g admins@example.com:O gs://example-bucket
 
-  Grant the owners of project example-project-123 WRITE access to the bucket
-  example-bucket:
+  Grant the owners of project example-project-123 READ access to new objects
+  created in the bucket example-bucket:
 
-    gsutil acl ch -p owners-example-project-123 gs://example-bucket
+    gsutil acl ch -p owners-example-project-123:R gs://example-bucket
 
   NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
   to a project's viewers/editors respectively.
