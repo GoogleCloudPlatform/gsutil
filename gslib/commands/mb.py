@@ -119,7 +119,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>OPTIONS</B>
   -c class          Can be DRA (or DURABLE_REDUCED_AVAILABILITY), NL (or
-                    NEARLINE, or S (or STANDARD). Default is STANDARD.
+                    NEARLINE), or S (or STANDARD). Default is STANDARD.
 
   -l location       Can be any continental location as described above, or
                     for DRA storage class, any regional or continental
