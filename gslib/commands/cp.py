@@ -347,27 +347,42 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   the cloud will be deleted after successful composition. No additional local
   disk space is required for this operation.
 
-  If the "parallel_composite_upload_threshold" config value is not 0 (which
-  disables the feature), any file whose size exceeds the specified size will
-  trigger a parallel composite upload. Note that at present parallel composite
-  uploads are disabled by default, because using composite objects requires a
-  compiled crcmod (see "gsutil help crcmod"), and for operating systems that
-  don't already have this package installed this makes gsutil harder to use.
-  Google is actively working with a number of the Linux distributions to get
-  crcmod included with the stock distribution. Once that is done we will
-  re-enable parallel composite uploads by default in gsutil.
+  If the "parallel_composite_upload_threshold" config value is not 0 (0 disables
+  the feature), any file whose size exceeds the specified size will trigger a
+  parallel composite upload. Note that at present parallel composite uploads are
+  disabled by default, because using composite objects requires a compiled
+  crcmod (see "gsutil help crcmod"), and for operating systems that don't
+  already have this package installed this makes gsutil harder to use. Google is
+  actively working with a number of the Linux distributions to get crcmod
+  included with the stock distribution. Once that is done we will re-enable
+  parallel composite uploads by default in gsutil.
 
   The ideal size of a component can also be set with the
   "parallel_composite_upload_component_size" config variable. See the comments
   in the .boto config file for details about how these values are used.
 
-  If the transfer fails prior to composition, running the command again will
-  take advantage of resumable uploads for those components that failed, and
-  the component objects will be deleted after the first successful attempt.
-  Any temporary objects that were uploaded successfully before gsutil failed
-  will still exist until the upload is completed successfully. The temporary
-  objects will be named in the following fashion:
-  <random ID>%s<hash>
+  To try parallel composite uploads you could run a command such as:
+
+    gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp bigfile gs://your-bucket
+
+  where bigfile is larger than 150 MiB. When you do this notice that the upload
+  progress indicator continuously updates for several different uploads at once
+  (corresponding to each of the sections of the file being uploaded in
+  parallel), until the parallel upload completes. If you then want to enable
+  parallel composite uploads for all of your future uploads (notwithstanding the
+  caveats mentioned earlier), you can uncomment and set the
+  "parallel_composite_upload_threshold" config value in your .boto configuration
+  file to this value.
+
+  If a parallel composite upload fails prior to composition, re-running the
+  gsutil command will take advantage of resumable uploads for those components
+  that failed, and the component objects will be deleted after the first
+  successful attempt. Any temporary objects that were uploaded successfully
+  before gsutil failed will still exist until the upload is completed
+  successfully. The temporary objects will be named in the following fashion:
+
+    <random ID>%s<hash>
+
   where <random ID> is some numerical value, and <hash> is an MD5 hash (not
   related to the hash of the contents of the file or object).
 
@@ -396,7 +411,9 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   uploads for that transfer.
 
   Also note that an object uploaded using this feature will have a CRC32C hash,
-  but it will not have an MD5 hash. For details see 'gsutil help crc32c'.
+  but it will not have an MD5 hash (and because of that, requires users who
+  download the object to have crcmod installed, as noted earlier). For details
+  see 'gsutil help crc32c'.
 
   Note that this feature can be completely disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
