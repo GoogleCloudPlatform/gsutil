@@ -329,6 +329,11 @@ _STREAMING_TRANSFERS_TEXT = """
   (say, more than 100 MiB) it is recommended to write the data to a local file
   and then copy that file to the cloud rather than streaming it (and similarly
   for large downloads).
+
+  WARNING: When performing streaming transfers gsutil does not compute a
+  checksum of the uploaded or downloaded data.  Therefore, we recommend that
+  users either perform their own validation of the data or use non-streaming
+  transfers (which perform integrity checking automatically).
 """
 
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
