@@ -350,12 +350,20 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   If the "parallel_composite_upload_threshold" config value is not 0 (0 disables
   the feature), any file whose size exceeds the specified size will trigger a
   parallel composite upload. Note that at present parallel composite uploads are
-  disabled by default, because using composite objects requires a compiled
-  crcmod (see "gsutil help crcmod"), and for operating systems that don't
-  already have this package installed this makes gsutil harder to use. Google is
-  actively working with a number of the Linux distributions to get crcmod
-  included with the stock distribution. Once that is done we will re-enable
-  parallel composite uploads by default in gsutil.
+  disabled by default, because uploading/downloading composite objects using
+  gsutil requires a compiled crcmod (see "gsutil help crcmod"), and for
+  operating systems that don't already have this package installed this makes
+  gsutil harder to use. Google is actively working with a number of the Linux
+  distributions to get crcmod included with the stock distribution. Once that is
+  done we will re-enable parallel composite uploads by default in gsutil.
+
+  Note that the crcmod problem only impacts Python applications (such as
+  gsutil). If you can install crcmod on your machine and no users will need to
+  download the data using gsutil or another Python application it makes sense to
+  enable parallel composite uploads (see below). For example, if you use gsutil
+  to upload video assets but those assets will only ever be served via a Java
+  application (there are efficient crc32c implementations available in Java),
+  it would make sense to enable parallel composite uploads on your machine.
 
   The ideal size of a component can also be set with the
   "parallel_composite_upload_component_size" config variable. See the comments
