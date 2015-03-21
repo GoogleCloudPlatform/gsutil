@@ -1466,7 +1466,8 @@ class PerfDiagCommand(Command):
                               provider=self.bucket_url.scheme,
                               fields=['id'])
     self.exceptions = [httplib.HTTPException, socket.error, socket.gaierror,
-                       httplib.BadStatusLine, ServiceException]
+                       socket.timeout, httplib.BadStatusLine,
+                       ServiceException]
 
   # Command entry point.
   def RunCommand(self):

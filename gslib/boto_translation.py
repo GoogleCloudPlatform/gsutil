@@ -60,6 +60,8 @@ from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
+from gslib.hashing_helper import Base64EncodeHash
+from gslib.hashing_helper import Base64ToHexHash
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
@@ -845,8 +847,7 @@ class BotoTranslation(CloudApi):
       if object_metadata.md5Hash:
         md5 = []
         # boto expects hex at index 0, base64 at index 1
-        md5.append(binascii.hexlify(
-            base64.decodestring(object_metadata.md5Hash.strip('\n"\''))))
+        md5.append(Base64ToHexHash(object_metadata.md5Hash))
         md5.append(object_metadata.md5Hash.strip('\n"\''))
       self._PerformSimpleUpload(dst_uri, upload_stream, md5=md5,
                                 canned_acl=canned_acl,
@@ -1221,8 +1222,7 @@ class BotoTranslation(CloudApi):
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
         md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip('\n')
       elif self._GetMD5FromETag(getattr(key, 'etag', None)):
-        md5_hash = base64.encodestring(
-            binascii.unhexlify(self._GetMD5FromETag(key.etag))).rstrip('\n')
+        md5_hash = Base64EncodeHash(self._GetMD5FromETag(key.etag))
       elif self.provider == 's3':
         # S3 etags are MD5s for non-multi-part objects, but multi-part objects
         # (which include all objects >= 5 GB) have a custom checksum

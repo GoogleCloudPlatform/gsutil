@@ -1844,7 +1844,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
           raise CommandException(
               '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
               'if you re-try this download it will start from scratch' %
-              (fp.name, existing_file_size, src_url.object_name,
+              (download_file_name, existing_file_size, src_url.object_name,
                src_obj_metadata.size))
         else:
           if existing_file_size == src_obj_metadata.size:

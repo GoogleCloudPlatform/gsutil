@@ -40,6 +40,10 @@ from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
+from gslib.hashing_helper import CHECK_HASH_ALWAYS
+from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
+from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
+from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
@@ -293,11 +297,6 @@ else:
 # revert DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD value to '150M'.
 DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '0'
 DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
-
-CHECK_HASH_IF_FAST_ELSE_FAIL = 'if_fast_else_fail'
-CHECK_HASH_IF_FAST_ELSE_SKIP = 'if_fast_else_skip'
-CHECK_HASH_ALWAYS = 'always'
-CHECK_HASH_NEVER = 'never'
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]

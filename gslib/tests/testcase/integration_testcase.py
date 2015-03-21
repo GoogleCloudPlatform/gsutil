@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+import cStringIO
 import locale
 import logging
 import os
@@ -27,7 +28,11 @@ import tempfile
 import boto
 from boto.exception import StorageResponseError
 from boto.s3.deletemarker import DeleteMarker
+from boto.storage_uri import BucketStorageUri
+
 import gslib
+from gslib.gcs_json_api import GcsJsonApi
+from gslib.hashing_helper import Base64ToHexHash
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
@@ -37,8 +42,10 @@ from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
+from gslib.util import UTF8
 
 
 LOGGER = logging.getLogger('integration-test')
@@ -69,6 +76,8 @@ def SkipForS3(reason):
     return lambda func: func
 
 
+# TODO: Right now, most tests use the XML API. Instead, they should respect
+# prefer_api in the same way that commands do.
 @unittest.skipUnless(util.RUN_INTEGRATION_TESTS,
                      'Not running integration tests.')
 class GsUtilIntegrationTestCase(base.GsUtilTestCase):
@@ -94,6 +103,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # Set up API version and project ID handler.
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
+
+    # Instantiate a JSON API for use by the current integration test.
+    self.json_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                               'gs')
 
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (
@@ -180,7 +193,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return _Check1()
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
-                   provider=None):
+                   provider=None, prefer_json_api=False):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -192,12 +205,24 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     Defaults to 0.
       storage_class: storage class to use. If not provided we us standard.
       provider: Provider to use - either "gs" (the default) or "s3".
+      prefer_json_api: If true, use the JSON creation functions where possible.
 
     Returns:
       StorageUri for the created bucket.
     """
     if not provider:
       provider = self.default_provider
+
+    if prefer_json_api and provider == 'gs':
+      json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
+                                          test_objects=test_objects,
+                                          storage_class=storage_class)
+      bucket_uri = boto.storage_uri(
+          'gs://%s' % json_bucket.name.encode(UTF8).lower(),
+          suppress_consec_slashes=False)
+      self.bucket_uris.append(bucket_uri)
+      return bucket_uri
+
     bucket_name = bucket_name or self.MakeTempName('bucket')
 
     bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
@@ -244,7 +269,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     bucket_uri.configure_versioning(True)
     return bucket_uri
 
-  def CreateObject(self, bucket_uri=None, object_name=None, contents=None):
+  def CreateObject(self, bucket_uri=None, object_name=None, contents=None,
+                   prefer_json_api=False):
     """Creates a test object.
 
     Args:
@@ -255,16 +281,95 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       contents: The contents to write to the object. If not specified, the key
                 is not written to, which means that it isn't actually created
                 yet on the server.
+      prefer_json_api: If true, use the JSON creation functions where possible.
 
     Returns:
       A StorageUri for the created object.
     """
+    bucket_uri = bucket_uri or self.CreateBucket()
+
+    if prefer_json_api and bucket_uri.scheme == 'gs' and contents:
+      object_name = object_name or self.MakeTempName('obj')
+      json_object = self.CreateObjectJson(contents=contents,
+                                          bucket_name=bucket_uri.bucket_name,
+                                          object_name=object_name)
+      object_uri = bucket_uri.clone_replace_name(object_name)
+      # pylint: disable=protected-access
+      # Need to update the StorageUri with the correct values while
+      # avoiding creating a versioned string.
+      object_uri._update_from_values(None,
+                                     json_object.generation,
+                                     True,
+                                     md5=(Base64ToHexHash(json_object.md5Hash),
+                                          json_object.md5Hash.strip('\n"\'')))
+      # pylint: enable=protected-access
+      return object_uri
+
     bucket_uri = bucket_uri or self.CreateBucket()
     object_name = object_name or self.MakeTempName('obj')
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
       key_uri.set_contents_from_string(contents)
     return key_uri
+
+  def CreateBucketJson(self, bucket_name=None, test_objects=0,
+                       storage_class=None):
+    """Creates a test bucket using the JSON API.
+
+    The bucket and all of its contents will be deleted after the test.
+
+    Args:
+      bucket_name: Create the bucket with this name. If not provided, a
+                   temporary test bucket name is constructed.
+      test_objects: The number of objects that should be placed in the bucket.
+                    Defaults to 0.
+      storage_class: storage class to use. If not provided we us standard.
+
+    Returns:
+      Apitools Bucket for the created bucket.
+    """
+    bucket_name = bucket_name or self.MakeTempName('bucket')
+    bucket_metadata = None
+    if storage_class:
+      bucket_metadata = apitools_messages.Bucket(
+          name=bucket_name.lower(),
+          storageClass=storage_class)
+
+    # TODO: Add retry and exponential backoff.
+    bucket = self.json_api.CreateBucket(bucket_name.lower(),
+                                        metadata=bucket_metadata)
+    # Add bucket to list of buckets to be cleaned up.
+    # TODO: Clean up JSON buckets using JSON API.
+    self.bucket_uris.append(
+        boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                         suppress_consec_slashes=False))
+    for i in range(test_objects):
+      self.CreateObjectJson(bucket_name=bucket_name,
+                            object_name=self.MakeTempName('obj'),
+                            contents='test %d' % i)
+    return bucket
+
+  def CreateObjectJson(self, contents, bucket_name=None, object_name=None):
+    """Creates a test object (GCS provider only) using the JSON API.
+
+    Args:
+      contents: The contents to write to the object.
+      bucket_name: Name of bucket to place the object in. If not
+                   specified, a new temporary bucket is created.
+      object_name: The name to use for the object. If not specified, a temporary
+                   test object name is constructed.
+
+    Returns:
+      An apitools Object for the created object.
+    """
+    bucket_name = bucket_name or self.CreateBucketJson().name
+    object_name = object_name or self.MakeTempName('obj')
+    object_metadata = apitools_messages.Object(
+        name=object_name,
+        bucket=bucket_name,
+        contentType='application/octet-stream')
+    return self.json_api.UploadObject(cStringIO.StringIO(contents),
+                                      object_metadata, provider='gs')
 
   def RunGsUtil(self, cmd, return_status=False, return_stdout=False,
                 return_stderr=False, expected_status=0, stdin=None):

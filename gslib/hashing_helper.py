@@ -22,10 +22,6 @@ import os
 from boto import config
 import crcmod
 
-from gslib.commands.config import CHECK_HASH_ALWAYS
-from gslib.commands.config import CHECK_HASH_IF_FAST_ELSE_FAIL
-from gslib.commands.config import CHECK_HASH_IF_FAST_ELSE_SKIP
-from gslib.commands.config import CHECK_HASH_NEVER
 from gslib.exception import CommandException
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
@@ -75,6 +71,13 @@ see:
 To force integrity checking, see the "check_hashes" option in your boto config
 file.
 """
+
+
+# Configuration values for hashing.
+CHECK_HASH_IF_FAST_ELSE_FAIL = 'if_fast_else_fail'
+CHECK_HASH_IF_FAST_ELSE_SKIP = 'if_fast_else_skip'
+CHECK_HASH_ALWAYS = 'always'
+CHECK_HASH_NEVER = 'never'
 
 
 def _CalculateHashFromContents(fp, hash_alg):
@@ -162,6 +165,19 @@ def CalculateMd5FromContents(fp):
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
   return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
+
+
+def Base64ToHexHash(base64_hash):
+  """Returns the hex digest value of the input base64-encoded hash.
+
+  Args:
+    base64_hash: Base64-encoded hash, which may contain newlines and single or
+        double quotes.
+
+  Returns:
+    Hex digest of the input argument.
+  """
+  return binascii.hexlify(base64.decodestring(base64_hash.strip('\n"\'')))
 
 
 def _CalculateB64EncodedHashFromContents(fp, hash_alg):

@@ -355,7 +355,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertIn(object_name_bytes, stdout)
     if self.default_provider == 'gs':
-      self.assertIn(key_uri.generation, stdout)
+      self.assertIn(str(key_uri.generation), stdout)
       self.assertIn(
           'metageneration=%s' % key_uri.get_key().metageneration, stdout)
       if self.test_api == ApiSelector.XML:
