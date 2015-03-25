@@ -1871,6 +1871,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       else:
         # Starting a new download, blow away whatever is already there.
         fp.truncate(0)
+        fp.seek(0)
 
     else:
       raise CommandException('Invalid download strategy %s chosen for'
