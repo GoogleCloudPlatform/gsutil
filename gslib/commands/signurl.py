@@ -55,7 +55,7 @@ except ImportError:
 
 
 _SYNOPSIS = """
-  gsutil signurl pkcs12-file url...
+  gsutil signurl [-c] [-d] [-m] [-p] pkcs12-file url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -117,17 +117,19 @@ _DETAILED_HELP_TEXT = ("""
 
   Create a signed url for downloading an object valid for 10 minutes:
 
-    gsutil signurl <private-key-file> -d 10m gs://<bucket>/<object>
+    gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>
 
   Create a signed url for uploading a plain text file via HTTP PUT:
 
-    gsutil signurl <private-key-file> -m PUT -d 1h -c text/plain gs://<bucket>/<obj>
+    gsutil signurl -m PUT -d 1h -c text/plain <private-key-file> \\
+        gs://<bucket>/<obj>
 
   To construct a signed URL that allows anyone in possession of
   the URL to PUT to the specified bucket for one day, creating
   any object of Content-Type image/jpg, run:
 
-    gsutil signurl <private-key-file> -m PUT -d 1d -c image/jpg gs://<bucket>/<obj>
+    gsutil signurl -m PUT -d 1d -c image/jpg <private-key-file> \\
+        gs://<bucket>/<obj>
 
 
 """)
