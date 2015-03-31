@@ -63,12 +63,16 @@ _DETAILED_HELP_TEXT = ("""
   Note: Unlike the gsutil ls command, the stat command does not support
   operations on sub-directories. For example, if you run the command:
 
-    gsutil -q stat gs://some-bucket/some-object/
+    gsutil -q stat gs://some-bucket/some-subdir/
 
-  gsutil will look up information about the object "some-object/" (with a
-  trailing slash) inside bucket "some-bucket", as opposed to operating on
-  objects nested under gs://some-bucket/some-object. Unless you actually have an
-  object with that name, the operation will fail.
+  gsutil will look for information about an object called "some-subdir/" (with a
+  trailing slash) inside the bucket "some-bucket", as opposed to operating on
+  objects nested under gs://some-bucket/some-subdir/. Unless you actually have
+  an object with that name, the operation will fail. However, you can use the
+  stat command on objects within subdirectories. For example, this command will
+  work as expected:
+
+    gsutil -q stat gs://some-bucket/some-subdir/file.txt
 """)
 
 
