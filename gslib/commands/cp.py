@@ -347,29 +347,18 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   the cloud will be deleted after successful composition. No additional local
   disk space is required for this operation.
 
-  If the "parallel_composite_upload_threshold" config value is not 0 (0 disables
-  the feature), any file whose size exceeds the specified size will trigger a
-  parallel composite upload. Note that at present parallel composite uploads are
-  disabled by default, because uploading/downloading composite objects using
-  gsutil requires a compiled crcmod (see "gsutil help crcmod"), and for
-  operating systems that don't already have this package installed this makes
-  gsutil harder to use. Google is actively working with a number of the Linux
+  Using parallel composite uploads presents a tradeoff between upload
+  performance and download configuration: If you enable parallel composite
+  uploads your uploads will run faster, but someone will need to install a
+  compiled crcmod (see "gsutil help crcmod") on every machine where objects are
+  downloaded by gsutil or other Python applications. For some distributions this
+  is easy (e.g., it comes pre-installed on MacOS), but in some cases users have
+  found it difficult. Because of this at present parallel composite uploads are
+  disabled by default. Google is actively working with a number of the Linux
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Note that the crcmod problem only impacts Python applications (such as
-  gsutil). If you can install crcmod on your machine and no users will need to
-  download the data using gsutil or another Python application it makes sense to
-  enable parallel composite uploads (see below). For example, if you use gsutil
-  to upload video assets but those assets will only ever be served via a Java
-  application (there are efficient crc32c implementations available in Java),
-  it would make sense to enable parallel composite uploads on your machine.
-
-  The ideal size of a component can also be set with the
-  "parallel_composite_upload_component_size" config variable. See the comments
-  in the .boto config file for details about how these values are used.
-
-  To try parallel composite uploads you could run a command such as:
+  To try parallel composite uploads you can run the command:
 
     gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp bigfile gs://your-bucket
 
@@ -381,6 +370,14 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   caveats mentioned earlier), you can uncomment and set the
   "parallel_composite_upload_threshold" config value in your .boto configuration
   file to this value.
+
+  Note that the crcmod problem only impacts downloads via Python applications
+  (such as gsutil). If any users who need to download the data using gsutil or
+  other Python applications can install crcmod, it makes sense to enable
+  parallel composite uploads (see above). For example, if you use gsutil to
+  upload video assets and those assets will only ever be served via a Java
+  application (there are efficient crc32c implementations available in Java), it
+  would make sense to enable parallel composite uploads on your machine.
 
   If a parallel composite upload fails prior to composition, re-running the
   gsutil command will take advantage of resumable uploads for those components
