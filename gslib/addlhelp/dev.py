@@ -30,10 +30,10 @@ _DETAILED_HELP_TEXT = ("""
      - If you are an individual writing original source code and you're
        sure you own the intellectual property,
        then you'll need to sign an individual CLA
-       (http://code.google.com/legal/individual-cla-v1.0.html).
+       (https://cla.developers.google.com/about/google-individual).
      - If you work for a company that wants to allow you to contribute your
        work to gsutil, then you'll need to sign a corporate CLA
-       (http://code.google.com/legal/corporate-cla-v1.0.html)
+       (https://cla.developers.google.com/about/google-corporate)
 
      Follow either of the two links above to access the appropriate CLA and
      instructions for how to sign and return it. Once we receive it, we'll
@@ -122,7 +122,7 @@ _DETAILED_HELP_TEXT = ("""
       - Check out the gsutil code from your fork of the gsutil repository and
         apply your changes.
       - Download the "upload.py" script from
-        http://code.google.com/p/rietveld/wiki/UploadPyUsage
+        https://github.com/rietveld-codereview/rietveld
       - Run upload.py from your git directory with the changes.
       - Click the codereview.appspot.com link it generates, click "Edit Issue",
         and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
