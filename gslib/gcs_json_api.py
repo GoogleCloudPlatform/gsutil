@@ -260,8 +260,7 @@ class GcsJsonApi(CloudApi):
       raise
 
   def _HasOauth2ServiceAccountCreds(self):
-    return (config.has_option('Credentials', 'gs_service_client_id') and
-            config.has_option('Credentials', 'gs_service_key_file'))
+    return config.has_option('Credentials', 'gs_service_key_file')
 
   def _HasOauth2UserAccountCreds(self):
     return config.has_option('Credentials', 'gs_oauth2_refresh_token')
