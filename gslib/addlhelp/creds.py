@@ -126,7 +126,8 @@ _DETAILED_HELP_TEXT = ("""
 
        - Select "Service Account" as your application type.
 
-       - Save the private key and password provided.
+       - Save the JSON private key or the .p12 private key and password
+         provided.
 
     For further information about account roles, see:
       https://developers.google.com/console/help/#DifferentRoles
