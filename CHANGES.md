@@ -1,3 +1,23 @@
+Release 4.12 (release date: 2015-04-20)
+=======================================
+New Features
+------------
+- Added support for JSON-format service account private key files.
+- Added support for the Rewrite API (JSON API only). This is used for
+  all copies within the Google Cloud and supports copying objects across
+  storage classes and/or locations.
+
+Bug Fixes
+---------
+- Fixed a bug that could cause downloads to have a hash mismatch (and deletion
+  of the corrupted file) when resumed across process breaks via a tracker file.
+
+Other Changes
+-------------
+- Updated documentation and examples for several topics including
+  acl, cp, dev, signurl, stat, and wildcards.
+
+
 Release 4.11 (release date: 2015-03-10)
 =======================================
 New Features
