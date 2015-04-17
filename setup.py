@@ -37,7 +37,7 @@ management tasks, including:
 requires = [
     'boto==2.30.0',
     'crcmod>=1.7',
-    'gcs-oauth2-boto-plugin>=1.8',
+    'gcs-oauth2-boto-plugin>=1.9',
     'google-apitools>=0.4',
     'httplib2>=0.8',
     'oauth2client>=1.4.4',
