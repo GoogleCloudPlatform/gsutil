@@ -100,6 +100,7 @@ from gslib.util import GetStreamFromFileUrl
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
+from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import MultiprocessingIsAvailable
 from gslib.util import ResumableThreshold
@@ -188,6 +189,10 @@ ObjectFromTracker = namedtuple('ObjectFromTracker',
 GZIP_CHUNK_SIZE = 8192
 
 PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
+
+# S3 requires special Multipart upload logic (that we currently don't implement)
+# for files > 5GiB in size.
+S3_MAX_UPLOAD_SIZE = 5 * 1024 * 1024 * 1024
 
 suggested_parallel_composites = False
 
@@ -2209,6 +2214,14 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   if global_copy_helper_opts.use_manifest:
     # Set the source size in the manifest.
     manifest.Set(src_url.url_string, 'size', src_obj_size)
+
+  if (dst_url.scheme == 's3' and src_obj_size > S3_MAX_UPLOAD_SIZE
+      and src_url != 's3'):
+    raise CommandException(
+        '"%s" exceeds the maximum gsutil-supported size for an S3 upload. S3 '
+        'objects greater than %s in size require multipart uploads, which '
+        'gsutil does not support.' % (src_url,
+                                      MakeHumanReadable(S3_MAX_UPLOAD_SIZE)))
 
   # On Windows, stdin is opened as text mode instead of binary which causes
   # problems when piping a binary file, so this switches it to binary mode.
