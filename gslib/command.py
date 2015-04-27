@@ -1446,20 +1446,25 @@ class _ConsumerPool(object):
 
 
 def KillProcess(pid):
-  # os.kill doesn't work in 2.X or 3.Y on Windows for any X < 7 or Y < 2.
-  if IS_WINDOWS and ((2, 6) <= sys.version_info[:3] < (2, 7) or
-                     (3, 0) <= sys.version_info[:3] < (3, 2)):
-    try:
+  """Make best effort to kill the given process.
+
+  We ignore all exceptions so a caller looping through a list of processes will
+  continue attempting to kill each, even if one encounters a problem.
+
+  Args:
+    pid: The process ID.
+  """
+  try:
+    # os.kill doesn't work in 2.X or 3.Y on Windows for any X < 7 or Y < 2.
+    if IS_WINDOWS and ((2, 6) <= sys.version_info[:3] < (2, 7) or
+                       (3, 0) <= sys.version_info[:3] < (3, 2)):
       kernel32 = ctypes.windll.kernel32
       handle = kernel32.OpenProcess(1, 0, pid)
       kernel32.TerminateProcess(handle, 0)
-    except:  # pylint: disable=bare-except
-      pass
-  else:
-    try:
+    else:
       os.kill(pid, signal.SIGKILL)
-    except OSError:
-      pass
+  except:  # pylint: disable=bare-except
+    pass
 
 
 class Task(namedtuple('Task', (
