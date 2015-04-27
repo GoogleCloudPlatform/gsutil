@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from gslib.commands.compose import MAX_COMPOSE_ARITY
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
@@ -113,8 +114,22 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
     self.assertIn('PreconditionException', stderr)
 
+  def test_compose_missing_second_source_object(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+
+    # Compose with missing source object
+    stderr = self.RunGsUtil(['compose', suri(object_uri),
+                             suri(bucket_uri, 'nonexistent-obj'),
+                             suri(bucket_uri, 'valid-destination')],
+                            expected_status=1, return_stderr=True)
+    self.assertIn('NotFoundException', stderr)
+    if self.test_api == ApiSelector.JSON:
+      self.assertIn('One of the source objects does not exist', stderr)
+
 
 class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
+
   def test_compose_non_gcs_target(self):
     stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
                             expected_status=1, return_stderr=True)

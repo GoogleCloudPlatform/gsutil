@@ -1101,8 +1101,11 @@ class GcsJsonApi(CloudApi):
       return self.api_client.objects.Compose(apitools_request,
                                              global_params=global_params)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
-      self._TranslateExceptionAndRaise(e, bucket_name=dst_bucket_name,
-                                       object_name=dst_obj_name)
+      # We can't be sure which object was missing in the 404 case.
+      if isinstance(e, apitools_exceptions.HttpError) and e.status_code == 404:
+        raise NotFoundException('One of the source objects does not exist.')
+      else:
+        self._TranslateExceptionAndRaise(e)
 
   def WatchBucket(self, bucket_name, address, channel_id, token=None,
                   provider=None, fields=None):
