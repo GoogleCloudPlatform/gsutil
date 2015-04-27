@@ -140,7 +140,6 @@ class LifecycleCommand(Command):
     lifecycle_file = open(lifecycle_arg, 'r')
     lifecycle_txt = lifecycle_file.read()
     lifecycle_file.close()
-    lifecycle = LifecycleTranslation.JsonLifecycleToMessage(lifecycle_txt)
 
     # Iterate over URLs, expanding wildcards and setting the lifecycle on each.
     some_matched = False
@@ -155,6 +154,7 @@ class LifecycleCommand(Command):
           self.gsutil_api.XmlPassThroughSetLifecycle(
               lifecycle_txt, url, provider=url.scheme)
         else:
+          lifecycle = LifecycleTranslation.JsonLifecycleToMessage(lifecycle_txt)
           bucket_metadata = apitools_messages.Bucket(lifecycle=lifecycle)
           self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                       provider=url.scheme, fields=['id'])

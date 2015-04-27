@@ -151,10 +151,6 @@ class CorsCommand(Command):
     self.api = self.gsutil_api.GetApiSelector(
         StorageUrlFromString(url_args[0]).scheme)
 
-    cors = CorsTranslation.JsonCorsToMessageEntries(cors_txt)
-    if not cors:
-      cors = REMOVE_CORS_CONFIG
-
     # Iterate over URLs, expanding wildcards and setting the CORS on each.
     some_matched = False
     for url_str in url_args:
@@ -167,6 +163,9 @@ class CorsCommand(Command):
           self.gsutil_api.XmlPassThroughSetCors(
               cors_txt, url, provider=url.scheme)
         else:
+          cors = CorsTranslation.JsonCorsToMessageEntries(cors_txt)
+          if not cors:
+            cors = REMOVE_CORS_CONFIG
           bucket_metadata = apitools_messages.Bucket(cors=cors)
           self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                       provider=url.scheme, fields=['id'])

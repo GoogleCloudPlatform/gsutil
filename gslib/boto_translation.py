@@ -41,7 +41,9 @@ from boto.exception import ResumableDownloadException as BotoResumableDownloadEx
 from boto.exception import ResumableTransferDisposition
 from boto.gs.cors import Cors
 from boto.gs.lifecycle import LifecycleConfig
+from boto.s3.cors import CORSConfiguration as S3Cors
 from boto.s3.deletemarker import DeleteMarker
+from boto.s3.lifecycle import Lifecycle as S3Lifecycle
 from boto.s3.prefix import Prefix
 
 from gslib.boto_resumable_upload import BotoResumableUpload
@@ -1507,7 +1509,10 @@ class BotoTranslation(CloudApi):
   def XmlPassThroughSetCors(self, cors_text, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     # Parse XML document and convert into Cors object.
-    cors_obj = Cors()
+    if storage_url.scheme == 's3':
+      cors_obj = S3Cors()
+    else:
+      cors_obj = Cors()
     h = handler.XmlHandler(cors_obj, None)
     try:
       xml.sax.parseString(cors_text, h)
@@ -1558,7 +1563,10 @@ class BotoTranslation(CloudApi):
   def XmlPassThroughSetLifecycle(self, lifecycle_text, storage_url):
     """See CloudApiDelegator class for function doc strings."""
     # Parse XML document and convert into lifecycle object.
-    lifecycle_obj = LifecycleConfig()
+    if storage_url.scheme == 's3':
+      lifecycle_obj = S3Lifecycle()
+    else:
+      lifecycle_obj = LifecycleConfig()
     h = handler.XmlHandler(lifecycle_obj, None)
     try:
       xml.sax.parseString(lifecycle_text, h)
