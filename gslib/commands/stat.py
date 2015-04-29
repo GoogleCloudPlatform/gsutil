@@ -16,7 +16,7 @@
 
 from __future__ import absolute_import
 
-import logging
+import logging, sys
 
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import AccessDeniedException
@@ -145,7 +145,7 @@ class StatCommand(Command):
         pass
       if not arg_matches:
         if logging.getLogger().isEnabledFor(logging.INFO):
-          print 'No URLs matched %s' % url_str
+          print >>sys.stderr, 'No URLs matched %s' % url_str
         found_nonmatching_arg = True
     if found_nonmatching_arg:
       return 1
