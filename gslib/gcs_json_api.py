@@ -55,6 +55,7 @@ from gslib.exception import CommandException
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
+from gslib.gcs_json_media import HttpWithNoRetries
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
@@ -115,7 +116,6 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             socket.timeout,
                             ssl.SSLError,
                             ValueError)
-
 
 _VALIDATE_CERTIFICATES_503_MESSAGE = (
     """Service Unavailable. If you have recently changed
@@ -297,6 +297,10 @@ class GcsJsonApi(CloudApi):
 
   def _GetNewDownloadHttp(self, download_stream):
     return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
+
+  def _GetNewUploadHttp(self):
+    """Returns an upload-safe Http object (by disabling httplib2 retries)."""
+    return GetNewHttp(http_class=HttpWithNoRetries)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -760,7 +764,7 @@ class GcsJsonApi(CloudApi):
         bytes_uploaded_container, total_size=total_size,
         progress_callback=progress_callback)
 
-    upload_http = GetNewHttp()
+    upload_http = self._GetNewUploadHttp()
     upload_http_class = callback_class_factory.GetConnectionClass()
     upload_http.connections = {'http': upload_http_class,
                                'https': upload_http_class}
