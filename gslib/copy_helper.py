@@ -1448,16 +1448,21 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       logger.info('Restarting upload from scratch after exception %s', e)
       num_startover_attempts += 1
       retryable = (num_startover_attempts < GetNumRetries())
-      if retryable:
-        DeleteTrackerFile(tracker_file_name)
-        tracker_data = None
-        src_obj_filestream.seek(0)
-        logger.info('\n'.join(textwrap.wrap(
-            'Resumable upload of %s failed with a response code indicating we '
-            'need to start over with a new resumable upload ID. Backing off '
-            'and retrying.' % src_url.url_string)))
-        time.sleep(min(random.random() * (2 ** num_startover_attempts),
-                       GetMaxRetryDelay()))
+      if not retryable:
+        raise
+
+      DeleteTrackerFile(tracker_file_name)
+      tracker_data = None
+      src_obj_filestream.seek(0)
+      # Reset the progress callback handler.
+      progress_callback = FileProgressCallbackHandler(
+          ConstructAnnounceText('Uploading', dst_url.url_string), logger).call
+      logger.info('\n'.join(textwrap.wrap(
+          'Resumable upload of %s failed with a response code indicating we '
+          'need to start over with a new resumable upload ID. Backing off '
+          'and retrying.' % src_url.url_string)))
+      time.sleep(min(random.random() * (2 ** num_startover_attempts),
+                     GetMaxRetryDelay()))
     except ResumableUploadAbortException:
       retryable = False
       raise
