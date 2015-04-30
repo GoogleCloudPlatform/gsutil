@@ -51,7 +51,7 @@ _SET_DESCRIPTION = """
 <B>SET</B>
   Sets the lifecycle configuration on one or more buckets. The config-json-file
   specified on the command line should be a path to a local file containing
-  the lifecycle congfiguration JSON document.
+  the lifecycle configuration JSON document.
 
 """
 
