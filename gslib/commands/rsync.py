@@ -163,7 +163,7 @@ _DETAILED_HELP_TEXT = ("""
   The rsync command operates by listing the source and destination URLs, and
   then performing copy and remove operations according to the differences
   between these listings. Because bucket listing is eventually (not strongly)
-  consistent, if you upload new objets or delete objects from a bucket and then
+  consistent, if you upload new objects or delete objects from a bucket and then
   immediately run gsutil rsync with that bucket as the source or destination,
   it's possible the rsync command will not see the recent updates and thus
   synchronize incorrectly. You can rerun the rsync operation again later to
