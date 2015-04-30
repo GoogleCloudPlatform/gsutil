@@ -219,7 +219,7 @@ _COPY_IN_CLOUD_TEXT = """
 _CHECKSUM_VALIDATION_TEXT = """
 <B>CHECKSUM VALIDATION</B>
   At the end of every upload or download the gsutil cp command validates that
-  that the checksum it computes for the source file/object matches the checksum
+  the checksum it computes for the source file/object matches the checksum
   the service computes. If the checksums do not match, gsutil will delete the
   corrupted object and print a warning message. This very rarely happens, but
   if it does, please contact gs-team@google.com.
