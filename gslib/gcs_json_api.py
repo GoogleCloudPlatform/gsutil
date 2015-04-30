@@ -299,6 +299,7 @@ class GcsJsonApi(CloudApi):
     return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
 
   def _GetNewUploadHttp(self):
+    """Returns an upload-safe Http object (by disabling httplib2 retries)."""
     return GetNewHttp(http_class=HttpWithNoRetries)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):

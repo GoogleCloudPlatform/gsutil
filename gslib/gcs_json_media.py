@@ -388,19 +388,17 @@ class HttpWithNoRetries(httplib2.Http):
 
   httplib2 automatically retries requests according to httplib2.RETRIES, but
   in certain cases httplib2 ignores the RETRIES value and forces a retry.
-  Because httplib2 is not stream-aware, if the body of an upload is a stream,
-  a retry may cause a non-idempotent write as the stream is partially consumed
-  and not reset before the retry occurs.
+  Because httplib2 does not handle the case where the underlying request body
+  is a stream, a retry may cause a non-idempotent write as the stream is
+  partially consumed and not reset before the retry occurs.
 
   Here we override _conn_request to disable retries unequivocally, so that
-  uploads may be retried at higher layers that are stream-safe.
+  uploads may be retried at higher layers that properly handle stream request
+  bodies.
   """
 
-  def __init__(self, *args, **kwds):
-    super(HttpWithNoRetries, self).__init__(*args, **kwds)
+  def _conn_request(self, conn, request_uri, method, body, headers):  # pylint: disable=too-many-statements
 
-  # pylint: disable=too-many-statements
-  def _conn_request(self, conn, request_uri, method, body, headers):
     try:
       if hasattr(conn, 'sock') and conn.sock is None:
         conn.connect()
@@ -468,8 +466,7 @@ class HttpWithDownloadStream(httplib2.Http):
   def stream(self):
     return self._stream
 
-  # pylint: disable=too-many-statements
-  def _conn_request(self, conn, request_uri, method, body, headers):
+  def _conn_request(self, conn, request_uri, method, body, headers):  # pylint: disable=too-many-statements
     try:
       if hasattr(conn, 'sock') and conn.sock is None:
         conn.connect()
