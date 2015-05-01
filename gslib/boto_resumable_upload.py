@@ -245,8 +245,8 @@ class BotoResumableUpload(object):
     body = resp.read()
 
     # Check for various status conditions.
-    if resp.status in [500, 503]:
-      # Retry status 500 and 503 errors after a delay.
+    if resp.status in [429, 500, 503]:
+      # Retry after a delay.
       raise ResumableUploadException(
           'Got status %d from attempt to start resumable upload. '
           'Will wait/retry' % resp.status,
@@ -361,8 +361,8 @@ class BotoResumableUpload(object):
       return (resp.getheader('etag'),
               resp.getheader('x-goog-generation'),
               resp.getheader('x-goog-metageneration'))
-    # Retry timeout (408) and status 500 and 503 errors after a delay.
-    elif resp.status in [408, 500, 503]:
+    # Retry timeout (408) and status 429, 500 and 503 errors after a delay.
+    elif resp.status in [408, 429, 500, 503]:
       disposition = ResumableTransferDisposition.WAIT_BEFORE_RETRY
     else:
       # Catch all for any other error codes.

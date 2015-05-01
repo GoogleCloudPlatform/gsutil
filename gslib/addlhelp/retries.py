@@ -25,9 +25,9 @@ _DETAILED_HELP_TEXT = ("""
     - Access denied, because the bucket or object you are trying to use has an
       ACL that doesn't permit the action you're trying to perform.
 
-  In other cases errors are retryable - basically, the HTTP 5xx error codes. For
-  these cases, gsutil will retry using a truncated binary exponential backoff
-  strategy:
+  In other cases errors are retryable - basically, the HTTP 429 and 5xx error
+  codes. For these cases, gsutil will retry using a truncated binary exponential
+  backoff strategy:
 
     - Wait a random period between [0..1] seconds and retry;
     - If that fails, wait a random period between [0..2] seconds and retry;

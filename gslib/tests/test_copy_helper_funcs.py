@@ -353,6 +353,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadException))
 
+    gsutil_api.http.disable_ssl_certificate_validation = False
+    exc = apitools_exceptions.HttpError({'status': 429}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadException))
+
     exc = apitools_exceptions.HttpError({'status': 410}, None, None)
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc,
