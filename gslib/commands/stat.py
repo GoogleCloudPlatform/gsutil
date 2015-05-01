@@ -138,14 +138,14 @@ class StatCommand(Command):
             if logging.getLogger().isEnabledFor(logging.INFO):
               PrintFullInfoAboutObject(blr, incl_acl=False)
       except AccessDeniedException:
-        print 'You aren\'t authorized to read %s - skipping' % url_str
+        logging.info('You aren\'t authorized to read %s - skipping', url_str)
       except InvalidUrlError:
         raise
       except NotFoundException:
         pass
       if not arg_matches:
         if logging.getLogger().isEnabledFor(logging.INFO):
-          print 'No URLs matched %s' % url_str
+          logging.info('No URLs matched %s', url_str)
         found_nonmatching_arg = True
     if found_nonmatching_arg:
       return 1

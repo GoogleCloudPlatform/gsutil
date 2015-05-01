@@ -72,20 +72,20 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
                       contents='z')
-    stdout = self.RunGsUtil(['stat', suri(bucket_uri, 'missing'),
-                             suri(bucket_uri, 'notmissing')], expected_status=1,
-                            return_stdout=True)
-    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missing'), stdout)
+    stdout, stderr = self.RunGsUtil(
+        ['stat', suri(bucket_uri, 'missing'), suri(bucket_uri, 'notmissing')],
+        expected_status=1, return_stdout=True, return_stderr=True)
+    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missing'), stderr)
     self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
 
   def test_stat_one_missing_wildcard(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
                       contents='z')
-    stdout = self.RunGsUtil(['stat', suri(bucket_uri, 'missin*'),
-                             suri(bucket_uri, 'notmissin*')], expected_status=1,
-                            return_stdout=True)
-    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missin*'), stdout)
+    stdout, stderr = self.RunGsUtil(
+        ['stat', suri(bucket_uri, 'missin*'), suri(bucket_uri, 'notmissin*')],
+        expected_status=1, return_stdout=True, return_stderr=True)
+    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missin*'), stderr)
     self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
 
   def test_stat_bucket_wildcard(self):
