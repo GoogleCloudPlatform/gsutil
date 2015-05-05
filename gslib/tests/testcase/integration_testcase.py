@@ -41,6 +41,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import IS_WINDOWS
@@ -465,4 +466,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     boto_config_path = self.CreateTempFile(
         contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
     with SetBotoConfigFileForTest(boto_config_path):
-      yield
+      # Make sure to reset Developer Shell credential port so that the child
+      # gsutil process is really anonymous.
+      with SetEnvironmentForTest({'DEVSHELL_CLIENT_PORT': None}):
+        yield
