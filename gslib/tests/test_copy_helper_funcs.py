@@ -89,14 +89,23 @@ class TestCpFuncs(GsUtilUnitTestCase):
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
     contents = '\n'.join([random_prefix] + objects)
-    fpath = self.CreateTempFile(file_name='foo',
-                                contents=contents)
+    fpath = self.CreateTempFile(file_name='foo', contents=contents)
     expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
                         for i in range(0, len(objects) / 2)]
     (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(
         fpath, tracker_file_lock)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(expected_objects, actual_objects)
+
+  def test_ParseEmptyParallelUploadTrackerFile(self):
+    """Tests _ParseParallelUploadTrackerFile with an empty tracker file."""
+    tracker_file_lock = CreateLock()
+    fpath = self.CreateTempFile(file_name='foo', contents='')
+    expected_objects = []
+    (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(
+        fpath, tracker_file_lock)
+    self.assertEqual(actual_objects, expected_objects)
+    self.assertIsNotNone(actual_prefix)
 
   def test_CreateParallelUploadTrackerFile(self):
     """Tests the _CreateParallelUploadTrackerFile function."""

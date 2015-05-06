@@ -142,6 +142,7 @@ class GsUtilTestCase(unittest.TestCase):
       os.makedirs(os.path.dirname(fpath))
 
     with open(fpath, 'wb') as f:
-      contents = contents or self.MakeTempName('contents')
+      contents = (contents if contents is not None
+                  else self.MakeTempName('contents'))
       f.write(contents)
     return fpath

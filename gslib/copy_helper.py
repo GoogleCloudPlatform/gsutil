@@ -2560,16 +2560,25 @@ def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
     existing_objects: A list of ObjectFromTracker objects representing
                       the set of files that have already been uploaded.
   """
+  
+  def GenerateRandomPrefix():
+    return str(random.randint(1, (10 ** 10) - 1))
+
   existing_objects = []
   try:
     with tracker_file_lock:
-      f = open(tracker_file, 'r')
-      lines = f.readlines()
-      lines = [line.strip() for line in lines]
-      f.close()
+      with open(tracker_file, 'r') as fp:
+        lines = fp.readlines()
+        lines = [line.strip() for line in lines]
+        if not lines:
+          print('Parallel upload tracker file (%s) was invalid. '
+                'Restarting upload from scratch.' % tracker_file)
+          lines = [GenerateRandomPrefix()]
+          
+          
   except IOError as e:
     # We can't read the tracker file, so generate a new random prefix.
-    lines = [str(random.randint(1, (10 ** 10) - 1))]
+    lines = [GenerateRandomPrefix()]
 
     # Ignore non-existent file (happens first time an upload
     # is attempted on a file), but warn user for other errors.
