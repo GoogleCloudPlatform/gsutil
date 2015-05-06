@@ -37,13 +37,17 @@ _DETAILED_HELP_TEXT = ("""
   other API in cases as noted above). This applies to the gsutil test command
   as well; it will run integration tests against the preferred API.
 
-<B>PERFORMANCE DIFFERENCES BETWEEN APIS</B>
+<B>PERFORMANCE AND COST DIFFERENCES BETWEEN APIS</B>
   The XML API uses the boto framework.  This framework re-reads downloaded files
   to compute an MD5 hash if one is not present. For objects that do not
   include MD5 hashes in their metadata (for example Google Cloud Storage
   composite objects), this doubles the bandwidth consumed and elapsed time
   needed by the download. Therefore, if you are working with composite objects,
   it is recommended that you use the default value for prefer_api.
+
+  The XML API also requires separate calls to get different object and bucket
+  metadata fields, such as ACLs or bucket configuration. Thus, using the JSON
+  API when possible uses fewer operations (and thus has a lower cost).
 """)
 
 

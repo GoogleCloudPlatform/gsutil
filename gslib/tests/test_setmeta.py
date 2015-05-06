@@ -47,7 +47,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     inpath = self.CreateTempFile()
     self.RunGsUtil(['-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
                     '-h', 'Content-Type:image/gif', 'cp', inpath, objuri])
-    self.RunGsUtil(['setmeta', '-n', '-h', 'Content-Type:text/html', '-h',
+    self.RunGsUtil(['setmeta', '-h', 'Content-Type:text/html', '-h',
                     'x-%s-meta-xyz' % self.provider_custom_meta, objuri])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)

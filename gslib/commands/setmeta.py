@@ -33,7 +33,7 @@ from gslib.util import Retry
 
 
 _SYNOPSIS = """
-  gsutil setmeta [-n] -h [header:value|header] ... url...
+  gsutil setmeta -h [header:value|header] ... url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -67,6 +67,10 @@ _DETAILED_HELP_TEXT = ("""
       -h "Cache-Control:public, max-age=3600" \\
       -h "Content-Disposition" gs://bucket/*.html
 
+  You can also use the setmeta command to set custom metadata on an object:
+
+    gsutil setmeta -h "x-goog-meta-icecreamflavor:vanilla" gs://bucket/object
+
   See "gsutil help metadata" for details about how you can set metadata
   while uploading objects, what metadata fields can be set and the meaning of
   these fields, use of custom metadata, and how to view currently set metadata.
@@ -82,25 +86,9 @@ _DETAILED_HELP_TEXT = ("""
       -h "Cache-Control:private, max-age=0, no-transform" gs://bucket/*.html
 
 
-<B>OPERATION COST</B>
-  This command uses four operations per URL (one to read the ACL, one to read
-  the current metadata, one to set the new metadata, and one to set the ACL).
-
-  For cases where you want all objects to have the same ACL you can avoid half
-  these operations by setting a default ACL on the bucket(s) containing the
-  named objects, and using the setmeta -n option. See "help gsutil defacl".
-
-
 <B>OPTIONS</B>
   -h          Specifies a header:value to be added, or header to be removed,
               from each named object.
-  -n          Causes the operations for reading and writing the ACL to be
-              skipped. This halves the number of operations performed per
-              request, improving the speed and reducing the cost of performing
-              the operations. This option makes sense for cases where you want
-              all objects to have the same ACL, for which you have set a default
-              ACL on the bucket(s) containing the objects. See "help gsutil
-              defacl".
 """)
 
 # Setmeta assumes a header-like model which doesn't line up with the JSON way
@@ -131,7 +119,7 @@ class SetMetaCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='h:nrR',
+      supported_sub_args='h:rR',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
@@ -156,12 +144,7 @@ class SetMetaCommand(Command):
     headers = []
     if self.sub_opts:
       for o, a in self.sub_opts:
-        if o == '-n':
-          self.logger.warning(
-              'Warning: gsutil setmeta -n is now on by default, and will be '
-              'removed in the future.\nPlease use gsutil acl set ... to set '
-              'canned ACLs.')
-        elif o == '-h':
+        if o == '-h':
           if 'x-goog-acl' in a or 'x-amz-acl' in a:
             raise CommandException(
                 'gsutil setmeta no longer allows canned ACLs. Use gsutil acl '
