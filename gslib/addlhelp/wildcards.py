@@ -58,16 +58,20 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>BUCKET WILDCARDS</B>
-  You can specify wildcards for bucket names. For example:
+  You can specify wildcards for bucket names within a single project. For
+  example:
 
     gsutil ls gs://data*.example.com
 
   will list the contents of all buckets whose name starts with "data" and
-  ends with ".example.com".
+  ends with ".example.com" in the default project. The -p option can be used
+  to specify a project other than the default.  For example:
+
+    gsutil ls -p other-project gs://data*.example.com
 
   You can also combine bucket and object name wildcards. For example this
   command will remove all ".txt" files in any of your Google Cloud Storage
-  buckets:
+  buckets in the default project:
 
     gsutil rm gs://*/**.txt
 
