@@ -46,7 +46,6 @@ from boto.s3.deletemarker import DeleteMarker
 from boto.s3.lifecycle import Lifecycle as S3Lifecycle
 from boto.s3.prefix import Prefix
 
-import gslib.devshell_auth_plugin
 from gslib.boto_resumable_upload import BotoResumableUpload
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -61,6 +60,8 @@ from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
+# Imported for boto AuthHandler purposes.
+import gslib.devshell_auth_plugin  # pylint: disable=unused-import
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.hashing_helper import Base64EncodeHash
@@ -1246,6 +1247,9 @@ class BotoTranslation(CloudApi):
     size = None
     if not fields or 'size' in fields:
       size = key.size or 0
+    storage_class = None
+    if not fields or 'storageClass' in fields:
+      storage_class = getattr(key, 'storage_class', None)
 
     cloud_api_object = apitools_messages.Object(
         bucket=key.bucket.name,
@@ -1264,7 +1268,8 @@ class BotoTranslation(CloudApi):
         componentCount=component_count,
         updated=updated,
         metadata=custom_metadata,
-        mediaLink=media_link)
+        mediaLink=media_link,
+        storageClass=storage_class)
 
     # Remaining functions amend cloud_api_object.
     self._TranslateDeleteMarker(key, cloud_api_object)

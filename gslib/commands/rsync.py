@@ -36,6 +36,7 @@ from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
 from gslib.copy_helper import CreateCopyHelperOpts
+from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
@@ -54,7 +55,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-x] src_url dst_url
+  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-U] [-x] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -300,6 +301,9 @@ _DETAILED_HELP_TEXT = ("""
                 synchronized recursively. If you neglect to use this option
                 gsutil will make only the top-level directory in the source
                 and destination URLs match, skipping any sub-directories.
+
+  -U            Skip objects with unsupported object types instead of failing.
+                Unsupported object types are s3 glacier objects.
 
   -x pattern    Causes files/objects matching pattern to be excluded, i.e., any
                 matching files/objects will not be copied or deleted. Note that
@@ -861,9 +865,14 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     if cls.dryrun:
       cls.logger.info('Would copy %s to %s', src_url, dst_url)
     else:
-      copy_helper.PerformCopy(cls.logger, src_url, dst_url, gsutil_api, cls,
-                              _RsyncExceptionHandler,
-                              headers=cls.headers)
+      try:
+        copy_helper.PerformCopy(cls.logger, src_url, dst_url, gsutil_api, cls,
+                                _RsyncExceptionHandler,
+                                headers=cls.headers)
+      except SkipUnsupportedObjectError, e:
+        cls.logger.info('Skipping item %s with unsupported object type %s',
+                        src_url, e.unsupported_type)
+
   else:
     raise CommandException('Got unexpected DiffAction (%d)'
                            % diff_to_apply.diff_action)
@@ -892,7 +901,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='cCdenprRx:',
+      supported_sub_args='cCdenprRUx:',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -986,6 +995,7 @@ class RsyncCommand(Command):
     self.compute_file_checksums = False
     self.dryrun = False
     self.exclude_pattern = None
+    self.skip_unsupported_objects = False
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
 
@@ -1008,6 +1018,8 @@ class RsyncCommand(Command):
           preserve_acl = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-U':
+          self.skip_unsupported_objects = True
         elif o == '-x':
           if not a:
             raise CommandException('Invalid blank exclude filter')
@@ -1015,4 +1027,6 @@ class RsyncCommand(Command):
             self.exclude_pattern = re.compile(a)
           except re.error:
             raise CommandException('Invalid exclude filter (%s)' % a)
-    return CreateCopyHelperOpts(preserve_acl=preserve_acl)
+    return CreateCopyHelperOpts(
+        preserve_acl=preserve_acl,
+        skip_unsupported_objects=self.skip_unsupported_objects)

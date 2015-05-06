@@ -32,6 +32,7 @@ from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.copy_helper import ItemExistsError
 from gslib.copy_helper import Manifest
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
@@ -571,6 +572,9 @@ _OPTIONS_TEXT = """
                  will cause gsutil to copy any objects at the current bucket
                  directory level, and skip any subdirectories.
 
+  -U             Skip objects with unsupported object types instead of failing.
+                 Unsupported object types are s3 glacier objects.
+
   -v             Requests that the version-specific URL for each uploaded object
                  be printed. Given this URL you can make future upload requests
                  that are safe in the face of concurrent updates, because Google
@@ -627,7 +631,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:cDeIL:MNnprRtvz:'
+CP_SUB_ARGS = 'a:cDeIL:MNnprRtUvz:'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -800,6 +804,12 @@ class CpCommand(Command):
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
+    except SkipUnsupportedObjectError, e:
+      message = ('Skipping item %s with unsupported object type %s' %
+                 (exp_src_url.url_string, e.unsupported_type))
+      self.logger.info(message)
+      if copy_helper_opts.use_manifest:
+        self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
     except copy_helper.FileConcurrencySkipError, e:
       self.logger.warn('Skipping copy of source URL %s because destination URL '
                        '%s is already being copied by another gsutil process '
@@ -963,6 +973,8 @@ class CpCommand(Command):
     # Command class, so save in Command state rather than CopyHelperOpts.
     self.canned = None
 
+    self.skip_unsupported_objects = False
+
     # Files matching these extensions should be gzipped before uploading.
     self.gzip_exts = []
 
@@ -1003,6 +1015,8 @@ class CpCommand(Command):
           preserve_acl = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-U':
+          self.skip_unsupported_objects = True
         elif o == '-v':
           print_ver = True
         elif o == '-z':
@@ -1019,6 +1033,7 @@ class CpCommand(Command):
         use_manifest=use_manifest,
         preserve_acl=preserve_acl,
         canned_acl=canned_acl,
+        skip_unsupported_objects=self.skip_unsupported_objects,
         test_callback_file=test_callback_file)
 
   def _GetBucketWithVersioningConfig(self, exp_dst_url):

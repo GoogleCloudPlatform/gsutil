@@ -269,6 +269,7 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
     'use_manifest',
     'preserve_acl',
     'canned_acl',
+    'skip_unsupported_objects',
     'test_callback_file'])
 
 
@@ -276,7 +277,8 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
 def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
                          read_args_from_stdin=False, print_ver=False,
                          use_manifest=False, preserve_acl=False,
-                         canned_acl=None, test_callback_file=None):
+                         canned_acl=None, skip_unsupported_objects=False,
+                         test_callback_file=None):
   """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
@@ -290,6 +292,7 @@ def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
       use_manifest=use_manifest,
       preserve_acl=preserve_acl,
       canned_acl=canned_acl,
+      skip_unsupported_objects=skip_unsupported_objects,
       test_callback_file=test_callback_file)
   return global_copy_helper_opts
 
@@ -2136,7 +2139,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
 
   Raises:
     ItemExistsError: if no clobber flag is specified and the destination
-                     object already exists.
+        object already exists.
+    SkipUnsupportedObjectError: if skip_unsupported_objects flag is specified
+        and the source is an unsupported type.
     CommandException: if other errors encountered.
   """
   if headers:
@@ -2183,6 +2188,11 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       # Just get the fields needed to validate the download.
       src_obj_fields = ['crc32c', 'contentEncoding', 'contentType', 'etag',
                         'mediaLink', 'md5Hash', 'size']
+
+    if (src_url.scheme == 's3' and
+        global_copy_helper_opts.skip_unsupported_objects):
+      src_obj_fields.append('storageClass')
+
     try:
       src_generation = GenerationFromUrlAndString(src_url, src_url.generation)
       src_obj_metadata = gsutil_api.GetObjectMetadata(
@@ -2193,6 +2203,11 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       raise CommandException(
           'NotFoundException: Could not retrieve source object %s.' %
           src_url.url_string)
+    if (src_url.scheme == 's3' and
+        global_copy_helper_opts.skip_unsupported_objects and
+        src_obj_metadata.storageClass == 'GLACIER'):
+      raise SkipGlacierError()
+
     src_obj_size = src_obj_metadata.size
     dst_obj_metadata.contentType = src_obj_metadata.contentType
     if global_copy_helper_opts.preserve_acl:
@@ -2432,6 +2447,22 @@ class Manifest(object):
 class ItemExistsError(Exception):
   """Exception class for objects that are skipped because they already exist."""
   pass
+
+
+class SkipUnsupportedObjectError(Exception):
+  """Exception for objects skipped because they are an unsupported type."""
+
+  def __init__(self):
+    super(SkipUnsupportedObjectError, self).__init__()
+    self.unsupported_type = 'Unknown'
+
+
+class SkipGlacierError(SkipUnsupportedObjectError):
+  """Exception for objects skipped because they are an unsupported type."""
+
+  def __init__(self):
+    super(SkipGlacierError, self).__init__()
+    self.unsupported_type = 'GLACIER'
 
 
 def GetPathBeforeFinalDir(url):
