@@ -68,7 +68,7 @@ _DETAILED_HELP_TEXT = ("""
   the specified objects without authentication for a specific period of time.
 
   Please see the `Signed URLs documentation
-  https://developers.google.com/storage/docs/accesscontrol#Signed-URLs` for
+  <https://developers.google.com/storage/docs/accesscontrol#Signed-URLs>`_ for
   background about signed URLs.
 
   Multiple gs:// urls may be provided and may contain wildcards.  A signed url
@@ -87,7 +87,7 @@ _DETAILED_HELP_TEXT = ("""
   the private key file (default 'notasecret').  For more information
   regarding generating a private key for use with the signurl command please
   see the `Authentication documentation.
-  https://developers.google.com/storage/docs/authentication#generating-a-private-key`
+  <https://developers.google.com/storage/docs/authentication#generating-a-private-key>`_
 
   gsutil will look up information about the object "some-object/" (with a
   trailing slash) inside bucket "some-bucket", as opposed to operating on
