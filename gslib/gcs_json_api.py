@@ -34,7 +34,7 @@ import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
 import httplib2
-from oauth2client import devshell as devshell_creds
+from oauth2client import devshell
 from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
@@ -300,8 +300,8 @@ class GcsJsonApi(CloudApi):
 
   def _GetDevshellCreds(self):
     try:
-      return devshell_creds.DevshellCredentials()
-    except devshell_creds.NoDevshellServer:
+      return devshell.DevshellCredentials()
+    except devshell.NoDevshellServer:
       return None
     except:
       raise
