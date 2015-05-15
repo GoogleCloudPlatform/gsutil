@@ -653,7 +653,8 @@ class GcsJsonApi(CloudApi):
               (self.num_retries, str(e)))
         time.sleep(CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
         self.logger.debug(
-            'Retrying download from byte %s after exception.', start_byte)
+            'Retrying download from byte %s after exception: %s',
+            start_byte, str(e))
         apitools_http_wrapper.RebuildHttpConnections(
             apitools_download.bytes_http)
 
@@ -937,7 +938,8 @@ class GcsJsonApi(CloudApi):
             time.sleep(
                 CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
           self.logger.debug(
-              'Retrying upload from byte %s after exception.', start_byte)
+              'Retrying upload from byte %s after exception: %s.',
+              start_byte, str(e))
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:
