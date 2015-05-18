@@ -27,6 +27,7 @@ from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import ObjectMetadataFromHeaders
+from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import Retry
@@ -85,6 +86,15 @@ _DETAILED_HELP_TEXT = ("""
     gsutil setmeta -h "Content-Type:text/html" \\
       -h "Cache-Control:private, max-age=0, no-transform" gs://bucket/*.html
 
+  The setmeta command reads each object's current generation and metageneration
+  and uses those as preconditions unless they are otherwise specified by
+  top-level arguments. For example:
+
+    gsutil -h "x-goog-if-metageneration-match:2" setmeta
+      -h "x-goog-meta-icecreamflavor:vanilla"
+
+  will set the icecreamflavor:vanilla metadata if the current live object has a
+  metageneration of 2.
 
 <B>OPTIONS</B>
   -h          Specifies a header:value to be added, or header to be removed,
@@ -165,6 +175,8 @@ class SetMetaCommand(Command):
     # Used to track if any objects' metadata failed to be set.
     self.everything_set_okay = True
 
+    self.preconditions = PreconditionsFromHeaders(self.headers)
+
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug, self.logger, self.gsutil_api,
         self.args, self.recursion_requested, all_versions=self.all_versions,
@@ -206,8 +218,12 @@ class SetMetaCommand(Command):
         fields=fields)
 
     preconditions = Preconditions(
-        gen_match=cloud_obj_metadata.generation,
-        meta_gen_match=cloud_obj_metadata.metageneration)
+        gen_match=self.preconditions.gen_match,
+        meta_gen_match=self.preconditions.meta_gen_match)
+    if preconditions.gen_match is None:
+      preconditions.gen_match = cloud_obj_metadata.generation
+    if preconditions.meta_gen_match is None:
+      preconditions.meta_gen_match = cloud_obj_metadata.metageneration
 
     # Patch handles the patch semantics for most metadata, but we need to
     # merge the custom metadata field manually.
@@ -222,6 +238,9 @@ class SetMetaCommand(Command):
       CopyObjectMetadata(patch_obj_metadata, cloud_obj_metadata,
                          override=True)
       patch_obj_metadata = cloud_obj_metadata
+      # Patch body does not need the object generation and metageneration.
+      patch_obj_metadata.generation = None
+      patch_obj_metadata.metageneration = None
 
     gsutil_api.PatchObjectMetadata(
         exp_src_url.bucket_name, exp_src_url.object_name, patch_obj_metadata,
