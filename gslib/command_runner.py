@@ -250,6 +250,11 @@ class CommandRunner(object):
             OLD_ALIAS_MAP.get(close_matches[0], close_matches)[0])
         print >> sys.stderr, 'Did you mean this?'
         print >> sys.stderr, '\t%s' % translated_command_name
+      elif command_name == 'update' and gslib.IS_PACKAGE_INSTALL:
+        sys.stderr.write(
+            'Update command is not supported for package installs; '
+            'please instead update using your package manager.')
+
       raise CommandException('Invalid command "%s".' % command_name)
     if '--help' in args:
       new_args = [command_name]
