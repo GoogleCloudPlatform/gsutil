@@ -18,10 +18,12 @@ from __future__ import absolute_import
 
 import httplib
 import json
+import logging
 import os
 import socket
 import ssl
 import time
+import traceback
 
 from apitools.base.py import credentials_lib
 from apitools.base.py import encoding
@@ -82,6 +84,7 @@ from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
+from gslib.util import UTF8
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -650,11 +653,12 @@ class GcsJsonApi(CloudApi):
         if retries > self.num_retries:
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
-              (self.num_retries, str(e)))
+              (self.num_retries, unicode(e).encode(UTF8)))
         time.sleep(CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
-        self.logger.debug(
-            'Retrying download from byte %s after exception: %s',
-            start_byte, str(e))
+        if self.logger.isEnabledFor(logging.DEBUG):
+          self.logger.debug(
+              'Retrying download from byte %s after exception: %s. Trace: %s',
+              start_byte, unicode(e).encode(UTF8), traceback.format_exc())
         apitools_http_wrapper.RebuildHttpConnections(
             apitools_download.bytes_http)
 
@@ -934,12 +938,13 @@ class GcsJsonApi(CloudApi):
             if retries > self.num_retries:
               raise ResumableUploadException(
                   'Transfer failed after %d retries. Final exception: %s' %
-                  (self.num_retries, e))
+                  (self.num_retries, unicode(e).encode(UTF8)))
             time.sleep(
                 CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
-          self.logger.debug(
-              'Retrying upload from byte %s after exception: %s.',
-              start_byte, str(e))
+          if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                'Retrying upload from byte %s after exception: %s. Trace: %s',
+                start_byte, unicode(e).encode(UTF8), traceback.format_exc())
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:
