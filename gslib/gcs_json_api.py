@@ -696,11 +696,12 @@ class GcsJsonApi(CloudApi):
     }
     if start_byte or end_byte:
       apitools_download.GetRange(additional_headers=additional_headers,
-                                 start=start_byte, end=end_byte)
+                                 start=start_byte, end=end_byte,
+                                 use_chunks=False)
     else:
-      apitools_download.StreamInChunks(
+      apitools_download.StreamMedia(
           callback=_NoOpCallback, finish_callback=_NoOpCallback,
-          additional_headers=additional_headers)
+          additional_headers=additional_headers, use_chunks=False)
     return apitools_download.encoding
 
   def PatchObjectMetadata(self, bucket_name, object_name, metadata,
