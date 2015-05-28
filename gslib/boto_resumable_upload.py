@@ -463,6 +463,8 @@ class BotoResumableUpload(object):
         self.logger.debug('Caught non-retryable ResumableUploadException (%s); '
                           'aborting and removing tracker file', e.message)
       raise
+    elif e.disposition == ResumableTransferDisposition.START_OVER:
+      raise
     else:
       if debug >= 1:
         self.logger.debug(

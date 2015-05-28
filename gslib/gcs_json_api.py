@@ -1259,6 +1259,9 @@ class GcsJsonApi(CloudApi):
       elif e.status_code == 410:
         return ResumableUploadStartOverException(
             message or 'Bad Request', status=e.status_code)
+      elif e.status_code == 404:
+        return ResumableUploadStartOverException(
+            message or 'Bad Request', status=e.status_code)
       elif e.status_code >= 400:
         return ResumableUploadAbortException(
             message or 'Bad Request', status=e.status_code)

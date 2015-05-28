@@ -372,6 +372,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertTrue(isinstance(translated_exc,
                                ResumableUploadStartOverException))
 
+    exc = apitools_exceptions.HttpError({'status': 404}, None, None)
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc,
+                               ResumableUploadStartOverException))
+
     exc = apitools_exceptions.HttpError({'status': 401}, None, None)
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))

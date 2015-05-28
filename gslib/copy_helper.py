@@ -1448,12 +1448,19 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       # This can happen, for example, if the server sends a 410 response code.
       # In that case the current resumable upload ID can't be reused, so delete
       # the tracker file and try again up to max retries.
-      logger.info('Restarting upload from scratch after exception %s', e)
       num_startover_attempts += 1
       retryable = (num_startover_attempts < GetNumRetries())
       if not retryable:
         raise
 
+      # If the server sends a 404 response code, then the upload should only
+      # be restarted if it was the object (and not the bucket) that was missing.
+      try:
+        gsutil_api.GetBucket(dst_obj_metadata.bucket, provider=dst_url.scheme)
+      except NotFoundException:
+        raise
+
+      logger.info('Restarting upload from scratch after exception %s', e)
       DeleteTrackerFile(tracker_file_name)
       tracker_data = None
       src_obj_filestream.seek(0)
@@ -2560,7 +2567,7 @@ def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
     existing_objects: A list of ObjectFromTracker objects representing
                       the set of files that have already been uploaded.
   """
-  
+
   def GenerateRandomPrefix():
     return str(random.randint(1, (10 ** 10) - 1))
 
@@ -2574,8 +2581,7 @@ def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
           print('Parallel upload tracker file (%s) was invalid. '
                 'Restarting upload from scratch.' % tracker_file)
           lines = [GenerateRandomPrefix()]
-          
-          
+
   except IOError as e:
     # We can't read the tracker file, so generate a new random prefix.
     lines = [GenerateRandomPrefix()]
