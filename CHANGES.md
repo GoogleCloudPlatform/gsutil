@@ -1,3 +1,36 @@
+Release 4.13 (release date: 2015-06-03)
+=======================================
+New Features
+------------
+- Added -U flag to cp and rsync commands to allow skipping of unsupported
+  object types.
+- Added support for Google Developer Shell credentials.
+
+Bug Fixes
+---------
+- Precondition headers (x-goog-if-...) are now respected for the setmeta
+  command.
+- Fixed an index out of range error that could occur with an empty
+  parallel composite upload tracker file.
+- The stat command outputs errors to stderr instead of stdout.
+- Fixed two possible sources of ResumableUploadStartOverException from
+  httplib2 and oauth2client.
+- Fixed a bug in the compose command where a missing source object resulted
+  in an error message claiming the destination object was missing.
+
+Other Changes
+-------------
+- Added a help section on throttling gsutil.
+- Resumable uploads will now start over if a PUT to the upload ID returns
+  an HTTP 404. Previously this behavior applied only to an HTTP 410.
+- XML API resumable uploads now retry on HTTP 429 errors, matching the
+  behavior of JSON API resumable uploads.
+- Improved response to process kill signals, reducing the likelihood of
+  leaving orphaned child processes and temporary files.
+- Bucket lifecycle configuration now works for S3.
+- Removed the deprecated setmeta -n option.
+
+
 Release 4.12 (release date: 2015-04-20)
 =======================================
 New Features
