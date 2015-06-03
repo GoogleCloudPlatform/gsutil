@@ -187,6 +187,7 @@ def main():
   from gslib.util import CERTIFICATE_VALIDATION_ENABLED
   # pylint: disable=unused-variable
   from gcs_oauth2_boto_plugin import oauth2_client
+  from apitools.base.py import credentials_lib
   # pylint: enable=unused-variable
   from gslib.util import MultiprocessingIsAvailable
   if MultiprocessingIsAvailable()[0]:
@@ -204,6 +205,7 @@ def main():
     gcs_oauth2_boto_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
         GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
     gcs_oauth2_boto_plugin.oauth2_helper.SetLock(CreateLock())
+    credentials_lib.SetCredentialsCacheFileLock(CreateLock())
   except ImportError:
     pass
 
