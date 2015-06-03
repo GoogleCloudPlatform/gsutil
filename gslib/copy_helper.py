@@ -24,7 +24,6 @@ import datetime
 import errno
 import gzip
 from hashlib import md5
-import json
 import logging
 import mimetypes
 import os
@@ -52,7 +51,7 @@ from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
-from gslib.cloud_api_helper import GetDownloadSerializationDict
+from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
@@ -1668,8 +1667,205 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           uploaded_object.md5Hash)
 
 
-# TODO: Refactor this long function into smaller pieces.
-# pylint: disable=too-many-statements
+def _GetDownloadFile(dst_url, src_obj_metadata, logger):
+  """Creates the file that an object will be downloaded to.
+
+  Args:
+    dst_url: Destination FileUrl.
+    src_obj_metadata: Metadata from the source object.
+    logger: for outputting log messages.
+
+  Returns:
+    (download_file_name, need_to_unzip)
+  """
+  dir_name = os.path.dirname(dst_url.object_name)
+  if dir_name and not os.path.exists(dir_name):
+    # Do dir creation in try block so can ignore case where dir already
+    # exists. This is needed to avoid a race condition when running gsutil
+    # -m cp.
+    try:
+      os.makedirs(dir_name)
+    except OSError, e:
+      if e.errno != errno.EEXIST:
+        raise
+
+  # For gzipped objects download to a temp file and unzip. For the XML API,
+  # the represents the result of a HEAD request. For the JSON API, this is
+  # the stored encoding which the service may not respect. However, if the
+  # server sends decompressed bytes for a file that is stored compressed
+  # (double compressed case), there is no way we can validate the hash and
+  # we will fail our hash check for the object.
+  if (src_obj_metadata.contentEncoding and
+      src_obj_metadata.contentEncoding.lower().endswith('gzip')):
+    # We can't use tempfile.mkstemp() here because we need a predictable
+    # filename for resumable downloads.
+    download_file_name = _GetDownloadZipFileName(dst_url.object_name)
+    logger.info(
+        'Downloading to temp gzip filename %s', download_file_name)
+    need_to_unzip = True
+  else:
+    download_file_name = dst_url.object_name
+    need_to_unzip = False
+
+  return download_file_name, need_to_unzip
+
+
+def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
+                                   download_file_name, gsutil_api, logger,
+                                   digesters, progress_callback):
+  """Downloads an object to a local file using the resumable strategy.
+
+  Args:
+    src_url: Source CloudUrl.
+    src_obj_metadata: Metadata from the source object.
+    dst_url: Destination FileUrl.
+    download_file_name: File to be used for download (differs from dst_url if
+                        using a temp file)
+    gsutil_api: gsutil Cloud API instance to use for the download.
+    logger: for outputting log messages.
+    digesters: Digesters corresponding to the hash algorithms that will be used
+               for validation.
+    progress_callback: Callback function for progress notifications.
+
+  Returns:
+    (bytes_transferred, server_encoding)
+    bytes_transferred: Number of bytes transferred from server this call.
+    server_encoding: Content-encoding string if it was detected that the server
+                     sent an encoded object during transfer, None otherwise.
+  """
+  global open_files_map
+  api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
+  download_complete = False
+  download_start_point = 0
+  fp = None
+  open_files = []
+  server_encoding = None
+
+  try:
+    if open_files_map.get(download_file_name, False):
+      # Ensure another process/thread is not already writing to this file.
+      raise FileConcurrencySkipError
+    open_files.append(download_file_name)
+    open_files_map[download_file_name] = True
+    fp = open(download_file_name, 'ab')
+
+    api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
+    existing_file_size = GetFileSize(fp)
+    tracker_file_name = GetTrackerFilePath(dst_url, TrackerFileType.DOWNLOAD,
+                                           api_selector)
+
+    resuming = ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
+                                               api_selector)
+
+    # Catch up our digester with the hash data.
+    if resuming:
+      if existing_file_size > src_obj_metadata.size:
+        DeleteTrackerFile(tracker_file_name)
+        raise CommandException(
+            '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
+            'if you re-try this download it will start from scratch' %
+            (download_file_name, existing_file_size, src_url.object_name,
+             src_obj_metadata.size))
+      elif existing_file_size == src_obj_metadata.size:
+        download_complete = True
+        logger.info(
+            'Download already complete for file %s, skipping download but '
+            'will run integrity checks.', download_file_name)
+
+      download_start_point = existing_file_size
+      logger.info('Resuming download for %s', src_url.url_string)
+      # Catch up our digester with the hash data.
+      if existing_file_size > TEN_MIB:
+        for alg_name in digesters:
+          logger.info(
+              'Catching up %s for %s', alg_name, download_file_name)
+      with open(download_file_name, 'rb') as hash_fp:
+        while True:
+          data = hash_fp.read(DEFAULT_FILE_BUFFER_SIZE)
+          if not data:
+            break
+          for alg_name in digesters:
+            digesters[alg_name].update(data)
+    else:
+      fp.truncate(0)
+      existing_file_size = 0
+
+    # This is used for resuming downloads, but also for passing the mediaLink
+    # and size into the download for new downloads so that we can avoid
+    # making an extra HTTP call.
+    serialization_data = GetDownloadSerializationData(
+        src_obj_metadata, progress=download_start_point)
+
+    # TODO: With gzip encoding (which may occur on-the-fly and not be part of
+    # the object's metadata), when we request a range to resume, it's possible
+    # that the server will just resend the entire object, which means our
+    # caught-up hash will be incorrect.  We recalculate the hash on
+    # the local file in the case of a failed gzip hash anyway, but it would
+    # be better if we actively detected this case.
+    if not download_complete:
+      server_encoding = gsutil_api.GetObjectMedia(
+          src_url.bucket_name, src_url.object_name, fp,
+          start_byte=download_start_point, generation=src_url.generation,
+          object_size=src_obj_metadata.size,
+          download_strategy=CloudApi.DownloadStrategy.RESUMABLE,
+          provider=src_url.scheme, serialization_data=serialization_data,
+          digesters=digesters, progress_callback=progress_callback)
+
+  except ResumableDownloadException as e:
+    logger.warning('Caught ResumableDownloadException (%s) for file %s.',
+                   e.reason, download_file_name)
+    raise
+  finally:
+    if fp:
+      fp.close()
+    for file_name in open_files:
+      open_files_map.delete(file_name)
+
+  bytes_transferred = src_obj_metadata.size - download_start_point
+  return bytes_transferred, server_encoding
+
+
+def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata,
+                                      download_file_name, gsutil_api, digesters,
+                                      progress_callback):
+  """Downloads an object to a local file using the non-resumable strategy.
+
+  Args:
+    src_url: Source CloudUrl.
+    src_obj_metadata: Metadata from the source object.
+    download_file_name: File to be used for download (differs from dst_url if
+                        using a temp file)
+    gsutil_api: gsutil Cloud API instance to use for the download.
+    digesters: Digesters corresponding to the hash algorithms that will be used
+               for validation.
+    progress_callback: Callback function for progress notifications.
+
+  Returns:
+    (bytes_transferred, server_encoding)
+    bytes_transferred: Number of bytes transferred from server this call.
+    server_encoding: Content-encoding string if it was detected that the server
+                     sent an encoded object during transfer, None otherwise.
+  """
+  try:
+    fp = open(download_file_name, 'wb')
+
+    # This is used to pass the mediaLink and the size into the download so that
+    # we can avoid making an extra HTTP call.
+    serialization_data = GetDownloadSerializationData(src_obj_metadata)
+
+    server_encoding = gsutil_api.GetObjectMedia(
+        src_url.bucket_name, src_url.object_name, fp,
+        generation=src_url.generation, object_size=src_obj_metadata.size,
+        download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+        provider=src_url.scheme, serialization_data=serialization_data,
+        digesters=digesters, progress_callback=progress_callback)
+  finally:
+    if fp:
+      fp.close()
+
+  return src_obj_metadata.size, server_encoding
+
+
 def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                           gsutil_api, logger, test_method=None):
   """Downloads an object to a local file.
@@ -1683,50 +1879,28 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     test_method: Optional test method for modifying the file before validation
                  during unit tests.
   Returns:
-    (elapsed_time, bytes_transferred, dst_url, md5), excluding overhead like
-    initial GET.
+    (elapsed_time, bytes_transferred, dst_url, md5)
+    elapsed_time: Time spent downloading, excluding overhead like initial GET.
+    bytes_transferred: Number of bytes transferred from server this call.
+    dst_url: Destination FileUrl
+    md5: An md5 of the local file, if one was calculated.
 
   Raises:
     CommandException: if errors encountered.
   """
-  global open_files_map
-  file_name = dst_url.object_name
-  dir_name = os.path.dirname(file_name)
-  if dir_name and not os.path.exists(dir_name):
-    # Do dir creation in try block so can ignore case where dir already
-    # exists. This is needed to avoid a race condition when running gsutil
-    # -m cp.
-    try:
-      os.makedirs(dir_name)
-    except OSError, e:
-      if e.errno != errno.EEXIST:
-        raise
-  api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
-  # For gzipped objects download to a temp file and unzip. For the XML API,
-  # the represents the result of a HEAD request. For the JSON API, this is
-  # the stored encoding which the service may not respect. However, if the
-  # server sends decompressed bytes for a file that is stored compressed
-  # (double compressed case), there is no way we can validate the hash and
-  # we will fail our hash check for the object.
-  if (src_obj_metadata.contentEncoding and
-      src_obj_metadata.contentEncoding.lower().endswith('gzip')):
-    # We can't use tempfile.mkstemp() here because we need a predictable
-    # filename for resumable downloads.
-    download_file_name = _GetDownloadZipFileName(file_name)
-    logger.info(
-        'Downloading to temp gzip filename %s', download_file_name)
-    need_to_unzip = True
-  else:
-    download_file_name = file_name
-    need_to_unzip = False
-
-  if download_file_name.endswith(dst_url.delim):
+  if dst_url.object_name.endswith(dst_url.delim):
     logger.warn('\n'.join(textwrap.wrap(
         'Skipping attempt to download to filename ending with slash (%s). This '
         'typically happens when using gsutil to download from a subdirectory '
         'created by the Cloud Console (https://cloud.google.com/console)'
-        % download_file_name)))
+        % dst_url.object_name)))
     return (0, 0, dst_url, '')
+
+  download_strategy = _SelectDownloadStrategy(dst_url)
+  download_file_name, need_to_unzip = _GetDownloadFile(
+      dst_url, src_obj_metadata, logger)
+
+  api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
 
   # Set up hash digesters.
   hash_algs = GetDownloadHashAlgs(
@@ -1734,128 +1908,43 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       src_has_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
-  fp = None
-  # Tracks whether the server used a gzip encoding.
-  server_encoding = None
-  download_complete = False
-  download_strategy = _SelectDownloadStrategy(dst_url)
-  download_start_point = 0
-  # This is used for resuming downloads, but also for passing the mediaLink
-  # and size into the download for new downloads so that we can avoid
-  # making an extra HTTP call.
-  serialization_data = None
-  serialization_dict = GetDownloadSerializationDict(src_obj_metadata)
-  open_files = []
-  try:
-    if download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
-      fp = open(download_file_name, 'wb')
-    elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-      # If this is a resumable download, we need to open the file for append and
-      # manage a tracker file.
-      if open_files_map.get(download_file_name, False):
-        # Ensure another process/thread is not already writing to this file.
-        raise FileConcurrencySkipError
-      open_files.append(download_file_name)
-      open_files_map[download_file_name] = True
-      fp = open(download_file_name, 'ab')
+  progress_callback = FileProgressCallbackHandler(
+      ConstructAnnounceText('Downloading', dst_url.url_string), logger).call
+  if global_copy_helper_opts.test_callback_file:
+    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+      progress_callback = pickle.loads(test_fp.read()).call
 
-      resuming = ReadOrCreateDownloadTrackerFile(
-          src_obj_metadata, dst_url, api_selector)
-      if resuming:
-        # Find out how far along we are so we can request the appropriate
-        # remaining range of the object.
-        existing_file_size = GetFileSize(fp, position_to_eof=True)
-        if existing_file_size > src_obj_metadata.size:
-          DeleteTrackerFile(GetTrackerFilePath(
-              dst_url, TrackerFileType.DOWNLOAD, api_selector))
-          raise CommandException(
-              '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
-              'if you re-try this download it will start from scratch' %
-              (download_file_name, existing_file_size, src_url.object_name,
-               src_obj_metadata.size))
-        else:
-          if existing_file_size == src_obj_metadata.size:
-            logger.info(
-                'Download already complete for file %s, skipping download but '
-                'will run integrity checks.', download_file_name)
-            download_complete = True
-          else:
-            download_start_point = existing_file_size
-            serialization_dict['progress'] = download_start_point
-            logger.info('Resuming download for %s', src_url.url_string)
-          # Catch up our digester with the hash data.
-          if existing_file_size > TEN_MIB:
-            for alg_name in digesters:
-              logger.info(
-                  'Catching up %s for %s', alg_name, download_file_name)
-          with open(download_file_name, 'rb') as hash_fp:
-            while True:
-              data = hash_fp.read(DEFAULT_FILE_BUFFER_SIZE)
-              if not data:
-                break
-              for alg_name in digesters:
-                digesters[alg_name].update(data)
-      else:
-        # Starting a new download, blow away whatever is already there.
-        fp.truncate(0)
-        fp.seek(0)
+  start_time = time.time()
+  if download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
+    (bytes_transferred, server_encoding) = (
+        _DownloadObjectToFileNonResumable(src_url, src_obj_metadata,
+                                          download_file_name, gsutil_api,
+                                          digesters, progress_callback))
+  elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
+    (bytes_transferred, server_encoding) = (
+        _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
+                                       download_file_name, gsutil_api, logger,
+                                       digesters, progress_callback))
+  else:
+    raise CommandException('Invalid download strategy %s chosen for'
+                           'file %s' % (download_strategy,
+                                        download_file_name))
+  end_time = time.time()
 
-    else:
-      raise CommandException('Invalid download strategy %s chosen for'
-                             'file %s' % (download_strategy, fp.name))
-
-    if not dst_url.IsStream():
-      serialization_data = json.dumps(serialization_dict)
-
-    progress_callback = FileProgressCallbackHandler(
-        ConstructAnnounceText('Downloading', dst_url.url_string),
-        logger).call
-    if global_copy_helper_opts.test_callback_file:
-      with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
-        progress_callback = pickle.loads(test_fp.read()).call
-
-    start_time = time.time()
-    # TODO: With gzip encoding (which may occur on-the-fly and not be part of
-    # the object's metadata), when we request a range to resume, it's possible
-    # that the server will just resend the entire object, which means our
-    # caught-up hash will be incorrect.  We recalculate the hash on
-    # the local file in the case of a failed gzip hash anyway, but it would
-    # be better if we actively detected this case.
-    if not download_complete:
-      server_encoding = gsutil_api.GetObjectMedia(
-          src_url.bucket_name, src_url.object_name, fp,
-          start_byte=download_start_point, generation=src_url.generation,
-          object_size=src_obj_metadata.size,
-          download_strategy=download_strategy, provider=src_url.scheme,
-          serialization_data=serialization_data, digesters=digesters,
-          progress_callback=progress_callback)
-
-    end_time = time.time()
-
-    # If a custom test method is defined, call it here. For the copy command,
-    # test methods are expected to take one argument: an open file pointer,
-    # and are used to perturb the open file during download to exercise
-    # download error detection.
-    if test_method:
-      test_method(fp)
-
-  except ResumableDownloadException as e:
-    logger.warning('Caught ResumableDownloadException (%s) for file %s.',
-                   e.reason, file_name)
-    raise
-
-  finally:
-    if fp:
-      fp.close()
-    for file_name in open_files:
-      open_files_map.delete(file_name)
+  # If a custom test method is defined, call it here. For the copy command,
+  # test methods are expected to take one argument: an open file pointer,
+  # and are used to perturb the open file during download to exercise
+  # download error detection.
+  if test_method:
+    fp = open(download_file_name, 'ab')
+    test_method(fp)
+    fp.close()
 
   # If we decompressed a content-encoding gzip file on the fly, this may not
   # be accurate, but it is the best we can do without going deep into the
   # underlying HTTP libraries. Note that this value is only used for
   # reporting in log messages; inaccuracy doesn't impact the integrity of the
   # download.
-  bytes_transferred = src_obj_metadata.size - download_start_point
   server_gzip = server_encoding and server_encoding.lower().endswith('gzip')
   local_md5 = _ValidateDownloadHashes(logger, src_url, src_obj_metadata,
                                       dst_url, need_to_unzip, server_gzip,

@@ -278,8 +278,8 @@ class CloudApi(object):
       progress_callback: Optional callback function for progress notifications.
                          Receives calls with arguments
                          (bytes_transferred, total_size).
-      serialization_data: Implementation-specific dict containing serialization
-                          information for the download.
+      serialization_data: Implementation-specific JSON string of a dict
+                          containing serialization information for the download.
       digesters: Dict of {string : digester}, where string is a name of a hash
                  algorithm, and digester is a validation digester that supports
                  update(bytes) and digest() using that algorithm.

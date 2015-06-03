@@ -41,7 +41,7 @@ import boto.gs.connection
 import gslib
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
-from gslib.cloud_api_helper import GetDownloadSerializationDict
+from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
@@ -508,8 +508,7 @@ class PerfDiagCommand(Command):
                                                 'mediaLink', 'size'])
         # Download will get the metadata first if we don't pass it in.
         download_metadata = self._RunOperation(_Metadata)
-        serialization_dict = GetDownloadSerializationDict(download_metadata)
-        serialization_data = json.dumps(serialization_dict)
+        serialization_data = GetDownloadSerializationData(download_metadata)
 
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
@@ -577,8 +576,7 @@ class PerfDiagCommand(Command):
     # Get the metadata for the object so that we are just measuring performance
     # on the actual bytes transfer.
     download_metadata = self._RunOperation(_Upload2)
-    serialization_dict = GetDownloadSerializationDict(download_metadata)
-    serialization_data = json.dumps(serialization_dict)
+    serialization_data = GetDownloadSerializationData(download_metadata)
 
     if self.processes == 1 and self.threads == 1:
 
