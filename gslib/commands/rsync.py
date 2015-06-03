@@ -303,7 +303,8 @@ _DETAILED_HELP_TEXT = ("""
                 and destination URLs match, skipping any sub-directories.
 
   -U            Skip objects with unsupported object types instead of failing.
-                Unsupported object types are s3 glacier objects.
+                Unsupported object types are Amazon S3 Objects in the GLACIER
+                storage class.
 
   -x pattern    Causes files/objects matching pattern to be excluded, i.e., any
                 matching files/objects will not be copied or deleted. Note that

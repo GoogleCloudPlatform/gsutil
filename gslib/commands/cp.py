@@ -573,7 +573,8 @@ _OPTIONS_TEXT = """
                  directory level, and skip any subdirectories.
 
   -U             Skip objects with unsupported object types instead of failing.
-                 Unsupported object types are s3 glacier objects.
+                 Unsupported object types are Amazon S3 Objects in the GLACIER
+                 storage class.
 
   -v             Requests that the version-specific URL for each uploaded object
                  be printed. Given this URL you can make future upload requests
