@@ -226,12 +226,12 @@ def _RevertBotoConfig(revert_list):
     boto.config.remove_section(section)
 
 
-def PerformsFileToObjectUpload(func):
-  """Decorator indicating that a test uploads from a local file to an object.
+def SequentialAndParallelTransfer(func):
+  """Decorator for tests that perform file to object transfers, or vice versa.
 
   This forces the test to run once normally, and again with special boto
   config settings that will ensure that the test follows the parallel composite
-  upload code path.
+  upload and/or parallel object download code paths.
 
   Args:
     func: Function to wrap.
@@ -244,9 +244,11 @@ def PerformsFileToObjectUpload(func):
     # Run the test normally once.
     func(*args, **kwargs)
 
-    # Try again, forcing parallel composite uploads.
+    # Try again, forcing parallel upload and download.
     with SetBotoConfigForTest([
         ('GSUtil', 'parallel_composite_upload_threshold', '1'),
+        ('GSUtil', 'parallel_object_download_threshold', '1'),
+        ('GSUtil', 'parallel_object_download_max_components', '3'),
         ('GSUtil', 'check_hashes', 'always')]):
       func(*args, **kwargs)
 

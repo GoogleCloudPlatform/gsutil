@@ -86,7 +86,6 @@ from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
-from gslib.util import GetFileSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNumRetries
 from gslib.util import S3_DELETE_MARKER_GUID
@@ -112,7 +111,7 @@ NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
 
 
-def InitializeMultiprocessingVariables():
+def InitializeMultiprocessingVariables():  # pylint: disable=invalid-name
   """Perform necessary initialization for multiprocessing.
 
     See gslib.command.InitializeMultiprocessingVariables for an explanation
@@ -120,6 +119,29 @@ def InitializeMultiprocessingVariables():
   """
   global boto_auth_initialized  # pylint: disable=global-variable-undefined
   boto_auth_initialized = multiprocessing.Value('i', 0)
+
+
+class DownloadProxyCallbackHandler(object):
+  """Intermediary callback to keep track of the number of bytes downloaded."""
+
+  def __init__(self, start_byte, callback):
+    self._start_byte = start_byte
+    self._callback = callback
+    self.total_bytes_downloaded = 0
+    self.bytes_downloaded_this_call = 0
+
+  def call(self, bytes_downloaded, total_size):
+    """Saves necessary data and then calls the given Cloud API callback.
+
+    Args:
+      bytes_downloaded: Number of bytes processed so far.
+      total_size: Total size of the ongoing operation.
+    """
+    self.bytes_downloaded_this_call = (bytes_downloaded -
+                                       self.total_bytes_downloaded)
+    self.total_bytes_downloaded = bytes_downloaded
+    if self._callback:
+      self._callback(self._start_byte + self.total_bytes_downloaded, total_size)
 
 
 class BotoTranslation(CloudApi):
@@ -447,7 +469,8 @@ class BotoTranslation(CloudApi):
     try:
       if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
         self._PerformResumableDownload(
-            download_stream, key, headers=headers, callback=progress_callback,
+            download_stream, start_byte, end_byte, key,
+            headers=headers, callback=progress_callback,
             num_callbacks=num_progress_callbacks, hash_algs=hash_algs)
       elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
         self._PerformSimpleDownload(
@@ -509,13 +532,16 @@ class BotoTranslation(CloudApi):
       key.get_contents_to_file(download_stream, cb=progress_callback,
                                num_cb=num_progress_callbacks, headers=headers)
 
-  def _PerformResumableDownload(self, fp, key, headers=None, callback=None,
+  def _PerformResumableDownload(self, fp, start_byte, end_byte, key,
+                                headers=None, callback=None,
                                 num_callbacks=XML_PROGRESS_CALLBACKS,
                                 hash_algs=None):
     """Downloads bytes from key to fp, resuming as needed.
 
     Args:
-      fp: File pointer into which data should be downloaded
+      fp: File pointer into which data should be downloaded.
+      start_byte: Start byte of the download.
+      end_byte: End byte of the download.
       key: Key object from which data is to be downloaded
       headers: Headers to send when retrieving the file
       callback: (optional) a callback function that will be called to report
@@ -544,37 +570,24 @@ class BotoTranslation(CloudApi):
 
     num_retries = GetNumRetries()
     progress_less_iterations = 0
+    cb_handler = DownloadProxyCallbackHandler(start_byte, callback)
 
     while True:  # Retry as long as we're making progress.
-      had_file_bytes_before_attempt = GetFileSize(fp)
       try:
-        cur_file_size = GetFileSize(fp, position_to_eof=True)
-
-        def DownloadProxyCallback(total_bytes_downloaded, total_size):
-          """Translates a boto callback into a gsutil Cloud API callback.
-
-          Callbacks are originally made by boto.s3.Key.get_file(); here we take
-          into account that we're resuming a download.
-
-          Args:
-            total_bytes_downloaded: Actual bytes downloaded so far, not
-                                    including the point we resumed from.
-            total_size: Total size of the download.
-          """
-          if callback:
-            callback(cur_file_size + total_bytes_downloaded, total_size)
-
+        cb_handler.bytes_downloaded_this_call = 0
         headers = headers.copy()
-        headers['Range'] = 'bytes=%d-%d' % (cur_file_size, key.size - 1)
-        cb = DownloadProxyCallback
+        headers['Range'] = 'bytes=%d-%d' % (start_byte +
+                                            cb_handler.total_bytes_downloaded,
+                                            end_byte)
 
         # Disable AWSAuthConnection-level retry behavior, since that would
         # cause downloads to restart from scratch.
         try:
-          key.get_file(fp, headers, cb, num_callbacks, override_num_retries=0,
-                       hash_algs=hash_algs)
+          key.get_file(fp, headers, cb_handler.call, num_callbacks,
+                       override_num_retries=0, hash_algs=hash_algs)
         except TypeError:
-          key.get_file(fp, headers, cb, num_callbacks, override_num_retries=0)
+          key.get_file(fp, headers, cb_handler.call, num_callbacks,
+                       override_num_retries=0)
         fp.flush()
         # Download succeeded.
         return
@@ -587,9 +600,10 @@ class BotoTranslation(CloudApi):
           # so we need to close and reopen the key before resuming
           # the download.
           if self.provider == 's3':
-            key.get_file(fp, headers, cb, num_callbacks, override_num_retries=0)
+            key.get_file(fp, headers, cb_handler.call, num_callbacks,
+                         override_num_retries=0)
           else:  # self.provider == 'gs'
-            key.get_file(fp, headers, cb, num_callbacks,
+            key.get_file(fp, headers, cb_handler.call, num_callbacks,
                          override_num_retries=0, hash_algs=hash_algs)
       except BotoResumableDownloadException, e:
         if (e.disposition ==
@@ -601,7 +615,7 @@ class BotoTranslation(CloudApi):
                              'retry', e.message)
 
       # At this point we had a re-tryable failure; see if made progress.
-      if GetFileSize(fp) > had_file_bytes_before_attempt:
+      if cb_handler.bytes_downloaded_this_call > 0:
         progress_less_iterations = 0
       else:
         progress_less_iterations += 1

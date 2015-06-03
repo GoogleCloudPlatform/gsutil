@@ -40,6 +40,7 @@ from boto.storage_uri import BucketStorageUri
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
+from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.copy_helper import GetTrackerFilePath
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
@@ -52,13 +53,15 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
-from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import DeleteTrackerFile
+from gslib.tracker_file import GetParallelDownloadTrackerFilePaths
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.util import EIGHT_MIB
+from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
@@ -137,6 +140,24 @@ class _XMLResumableUploadStartOverCopyCallbackHandler(object):
       raise boto.exception.ResumableUploadException(
           'Forcing upload start over',
           ResumableTransferDisposition.START_OVER)
+
+
+class _HaltOneComponentCopyCallbackHandler(object):
+  """Test callback handler for stopping part of a parallel download."""
+
+  def __init__(self, halt_at_byte):
+    self._last_progress_byte = None
+    self._halt_at_byte = halt_at_byte
+
+  # pylint: disable=invalid-name
+  # pylint: disable=unused-argument
+  def call(self, current_progress_byte, total_size_unused):
+    """Forcibly exits if the passed the halting point since the last call."""
+    if (self._last_progress_byte is not None and
+        self._last_progress_byte < self._halt_at_byte < current_progress_byte):
+      sys.stderr.write('Halting transfer.\r\n')
+      raise ResumableDownloadException('Artifically halting download.')
+    self._last_progress_byte = current_progress_byte
 
 
 class _DeleteBucketThenStartOverCopyCallbackHandler(object):
@@ -239,7 +260,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % name)
     return self.CreateTempFile(file_name=name, contents=contents)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_noclobber(self):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='bar')
@@ -275,7 +296,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping existing item: %s' %
                   suri(bucket2_uri, key_uri.object_name), stderr)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_streaming(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
@@ -293,7 +314,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   # TODO: Implement a way to test both with and without using magic file.
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_detect_content_type(self):
     """Tests local detection of content type."""
     bucket_uri = self.CreateBucket()
@@ -375,7 +396,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
   @unittest.skipIf(IS_WINDOWS, 'magicfile is not available on Windows.')
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_magicfile_override(self):
     """Tests content type override with magicfile value."""
     bucket_uri = self.CreateBucket()
@@ -393,7 +414,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % content_type)
     _Check1()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_content_type_mismatches(self):
     """Tests overriding content type when it does not match the file type."""
     bucket_uri = self.CreateBucket()
@@ -429,7 +450,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check3()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_content_type_header_case_insensitive(self):
     """Tests that content type header is treated with case insensitivity."""
     bucket_uri = self.CreateBucket()
@@ -459,7 +480,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNotRegexpMatches(stdout, r'image/gif,\s*image/gif')
     _Check2()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_other_headers(self):
     """Tests that non-content-type headers are applied successfully on copy."""
     bucket_uri = self.CreateBucket()
@@ -481,7 +502,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
     self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_versioning(self):
     """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
@@ -598,7 +619,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(storage_uri(uri_str1).object_name, 'k')
     _Check3()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   @SkipForS3('Preconditions not supported for S3.')
   def test_cp_generation_zero_match(self):
     """Tests that cp handles an object-not-exists precondition header."""
@@ -619,7 +640,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True, expected_status=1)
     self.assertIn('PreconditionException', stderr)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   @SkipForS3('Preconditions not supported for S3.')
   def test_cp_v_generation_match(self):
     """Tests that cp -v option handles the if-generation-match header."""
@@ -651,7 +672,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Specifying x-goog-if-generation-match is not supported '
                   'with cp -n', stderr)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_nv(self):
     """Tests that cp -nv works when skipping existing file."""
     bucket_uri = self.CreateVersionedBucket()
@@ -668,7 +689,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Skipping existing item:', stderr)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_cp_v_option(self):
     """"Tests that cp -v returns the created object's version-specific URI."""
@@ -727,7 +748,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(created_uri, lines[-2])
     _Check1()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_stdin_args(self):
     """Tests cp with the -I option."""
     tmpdir = self.CreateTempDir()
@@ -872,7 +893,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(public_read_acl, new_acl_json)
     _Check()
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_canned_acl_upload(self):
     """Tests uploading a file with a canned ACL."""
     bucket1_uri = self.CreateBucket()
@@ -917,7 +938,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['cp', fpath, '-'], return_stdout=True)
     self.assertIn(contents, stdout)
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_zero_byte_file(self):
     dst_bucket_uri = self.CreateBucket()
     src_dir = self.CreateTempDir()
@@ -1052,12 +1073,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS,
                    'Unicode handling on Windows requires mods to site-packages')
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
     return self._ManifestUpload('foo-unicöde', 'bar-unicöde',
                                 'manifest-unicöde')
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_manifest_upload(self):
     """Tests uploading with a mnifest file."""
     return self._ManifestUpload('foo', 'bar', 'manifest')
@@ -1098,7 +1119,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_manifest_download(self):
     """Tests downloading with a manifest file."""
     key_uri = self.CreateObject(contents='foo')
@@ -1124,14 +1145,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     start_date = datetime.datetime.strptime(results[2], date_format)
     end_date = datetime.datetime.strptime(results[3], date_format)
     self.assertEqual(end_date > start_date, True)
-    self.assertEqual(results[4], 'rL0Y20zC+Fzt72VPzMSk2A==')  # md5
     self.assertEqual(int(results[6]), 3)  # Source Size
     # Bytes transferred might be more than 3 if the file was gzipped, since
     # the minimum gzip header is 10 bytes.
     self.assertGreaterEqual(int(results[7]), 3)  # Bytes Transferred
     self.assertEqual(results[8], 'OK')  # Result
 
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_copy_unicode_non_ascii_filename(self):
     key_uri = self.CreateObject(contents='foo')
     # Make file large enough to cause a resumable upload (which hashes filename
@@ -1149,6 +1169,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # such files (so, failed that test). Given that, we decided to remove the
   # test.
 
+  @SequentialAndParallelTransfer
   def test_gzip_upload_and_download(self):
     bucket_uri = self.CreateBucket()
     contents = 'x' * 10000
@@ -1185,6 +1206,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying file:', stderr)
     self.AssertNObjectsInBucket(bucket_uri, 1)
 
+  @SequentialAndParallelTransfer
   def test_cp_object_ending_with_slash(self):
     """Tests that cp works with object names ending with slash."""
     tmpdir = self.CreateTempDir()
@@ -1241,6 +1263,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-m', 'cp', wildcard_uri, suri(bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, num_test_files)
 
+  @SequentialAndParallelTransfer
   def test_cp_duplicate_source_args(self):
     """Tests that cp -m works when a source argument is provided twice."""
     object_contents = 'edge'
@@ -1443,7 +1466,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @NotParallelizable
   @SkipForS3('No resumable upload support for S3.')
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   def test_cp_unwritable_tracker_file(self):
     """Tests a resumable upload with an unwritable tracker file."""
     bucket_uri = self.CreateBucket()
@@ -1470,6 +1493,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # interferes with any parallel running tests that use the tracker directory.
   @NotParallelizable
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
+  @SequentialAndParallelTransfer
   def test_cp_unwritable_tracker_file_download(self):
     """Tests downloads with an unwritable tracker file."""
     object_uri = self.CreateObject(contents='foo' * ONE_KIB)
@@ -1518,6 +1542,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
 
+  @SequentialAndParallelTransfer
   def test_cp_resumable_download_etag_differs(self):
     """Tests that download restarts the file when the source object changes.
 
@@ -1525,7 +1550,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='a' * self.halt_size)
+                                   contents='abc' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
@@ -1543,6 +1568,41 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
+
+  # TODO: Enable this test for sequential downloads when their tracker files are
+  # modified to contain the source object generation.
+  def test_cp_resumable_download_generation_differs(self):
+    """Tests that a resumable download restarts if the generation differs."""
+    bucket_uri = self.CreateBucket()
+    file_contents = 'abcd' * self.halt_size
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents=file_contents)
+    fpath = self.CreateTempFile()
+
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '3')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('Artifically halting download.', stderr)
+
+      # Overwrite the object with an identical object, increasing
+      # the generation but leaving other metadata the same.
+      identical_file = self.CreateTempFile(contents=file_contents)
+      self.RunGsUtil(['cp', suri(identical_file), suri(object_uri)])
+
+      stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath)],
+                              return_stderr=True)
+      self.assertIn('Restarting download from scratch', stderr)
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), file_contents, 'File contents differ')
 
   def test_cp_resumable_download_file_larger(self):
     """Tests download deletes the tracker file when existing file is larger."""
@@ -1564,7 +1624,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               expected_status=1, return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
-      self.assertIn('is larger', stderr)
       self.assertIn('Deleting tracker file', stderr)
 
   def test_cp_resumable_download_content_differs(self):
@@ -1596,7 +1655,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 return_stderr=True, expected_status=1)
-        self.assertIn('Download already complete for file', stderr)
+        self.assertIn('Download already complete', stderr)
         self.assertIn('doesn\'t match cloud-supplied digest', stderr)
         # File and tracker file should be deleted.
         self.assertFalse(os.path.isfile(fpath))
@@ -1628,7 +1687,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with SetBotoConfigForTest([boto_config_for_test]):
         stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                                 return_stderr=True)
-        self.assertIn('Download already complete for file', stderr)
+        self.assertIn('Download already complete', stderr)
         # Tracker file should be removed after successful hash validation.
         self.assertFalse(os.path.isfile(tracker_filename))
     finally:
@@ -1670,6 +1729,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
 
+  @SequentialAndParallelTransfer
   def test_cp_resumable_download_gzip(self):
     """Tests that download can be resumed successfully with a gzipped file."""
     # Generate some reasonably incompressible data.  This compresses to a bit
@@ -1710,12 +1770,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                suri(object_uri), suri(fpath2)],
                               return_stderr=True, expected_status=1)
       self.assertIn('Artifically halting download.', stderr)
-      tracker_filename = GetTrackerFilePath(
-          StorageUrlFromString(fpath2), TrackerFileType.DOWNLOAD, self.test_api)
-      self.assertTrue(os.path.isfile(tracker_filename))
       self.assertIn('Downloading to temp gzip filename', stderr)
+
+      # Tracker files will have different names depending on if we are
+      # downloading sequentially or in parallel.
+      parallel_download_threshold = HumanReadableToBytes(
+          boto.config.get('GSUtil', 'parallel_object_download_threshold',
+                          DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD))
+      parallel_download = len(contents) > parallel_download_threshold
+      if parallel_download:
+        trackerfile_type = TrackerFileType.PARALLEL_DOWNLOAD
+      else:
+        trackerfile_type = TrackerFileType.DOWNLOAD
+      tracker_filename = GetTrackerFilePath(
+          StorageUrlFromString(fpath2), trackerfile_type, self.test_api)
+
       # We should have a temporary gzipped file, a tracker file, and no
       # final file yet.
+      self.assertTrue(os.path.isfile(tracker_filename))
       self.assertTrue(os.path.isfile('%s_.gztmp' % fpath2))
       stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)],
                               return_stderr=True)
@@ -1741,6 +1813,291 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1)
     self.assertIn('Deleting bucket', stderr)
     self.assertIn('bucket does not exist', stderr)
+
+  def test_cp_parallel_download(self):
+    """Tests that parallel object download works in the general case."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abc' * ONE_KIB)
+    fpath = self.CreateTempFile()
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
+        ('GSUtil', 'parallel_object_download_threshold', str(ONE_KIB)),
+        ('GSUtil', 'parallel_object_download_max_components', '3')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      self.RunGsUtil(['cp', suri(object_uri), fpath])
+
+      # Each tracker file should have been deleted.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), 'abc' * ONE_KIB, 'File contents differ')
+
+  def test_cp_unresumable_parallel_download(self):
+    """Tests parallel download works when resumability is disabled."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abcd' * self.halt_size)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size*5)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '4')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+      # Temporary download file should exist.
+      self.assertTrue(os.path.isfile(fpath + '_.tmp'))
+
+      # No tracker files should exist.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+
+    # Perform the entire download, without resuming.
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath)],
+                              return_stderr=True)
+      self.assertNotIn('Resuming download', stderr)
+      # Temporary download file should have been deleted.
+      self.assertFalse(os.path.isfile(fpath + '_.tmp'))
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), 'abcd' * self.halt_size,
+                         'File contents differ')
+
+  def test_cp_parallel_download_resume(self):
+    """Tests that parallel object download is resumable."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abc' * self.halt_size)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '3')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+
+      # Each tracker file should exist.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertTrue(os.path.isfile(tracker_filename))
+
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True)
+      self.assertIn('Resuming download', stderr)
+
+      # Each tracker file should have been deleted.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), 'abc' * self.halt_size,
+                         'File contents differ')
+
+  def test_cp_parallel_download_partial_resume(self):
+    """Test parallel download resumability when some components are finished."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abc' * self.halt_size)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltOneComponentCopyCallbackHandler(5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '3')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+
+      # Each tracker file should exist.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertTrue(os.path.isfile(tracker_filename))
+
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True)
+      self.assertIn('Resuming download', stderr)
+      self.assertIn('Download already complete', stderr)
+
+      # Each tracker file should have been deleted.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), 'abc' * self.halt_size,
+                         'File contents differ')
+
+  def test_cp_parallel_download_resume_content_differs(self):
+    """Tests differing file contents are detected by parallel downloads."""
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abc' * self.halt_size)
+    fpath = self.CreateTempFile(contents='')
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '3')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+
+      # Temporary download file should exist.
+      self.assertTrue(os.path.isfile(fpath + '_.tmp'))
+
+      # Each tracker file should exist.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertTrue(os.path.isfile(tracker_filename))
+
+      with open(fpath + '_.tmp', 'r+b') as f:
+        f.write('altered file contents')
+
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('Resuming download', stderr)
+      self.assertIn('doesn\'t match cloud-supplied digest', stderr)
+      self.assertIn('HashMismatchException: crc32c', stderr)
+
+      # Each tracker file should have been deleted.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+
+      # Temporary file should have been deleted due to hash mismatch.
+      self.assertFalse(os.path.isfile(fpath + '_.tmp'))
+      # Final file should have never been written to.
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), '')
+
+  def test_cp_parallel_download_component_size_changed(self):
+    """Tests parallel download doesn't break when the boto config changes.
+
+    If the number of components used changes cross-process, the download should
+    be restarted.
+    """
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abcd' * self.halt_size)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_component_size',
+         str(self.halt_size//4)),
+        ('GSUtil', 'parallel_object_download_max_components', '4')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_component_size',
+         str(self.halt_size//2)),
+        ('GSUtil', 'parallel_object_download_max_components', '2')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True)
+      self.assertIn('Parallel download tracker file doesn\'t match ', stderr)
+      self.assertIn('Restarting download from scratch', stderr)
+      self.assertNotIn('Resuming download', stderr)
+
+  def test_cp_parallel_download_disabled_cross_process(self):
+    """Tests temporary files are not orphaned if parallel download is disabled.
+
+    Specifically, temporary files should be deleted when the corresponding
+    non-parallel download is completed.
+    """
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents='abcd' * self.halt_size)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_max_components', '4')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), suri(fpath)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('not downloaded successfully', stderr)
+      # Temporary download file should exist.
+      self.assertTrue(os.path.isfile(fpath + '_.tmp'))
+
+      # Each tracker file should exist.
+      tracker_filenames = GetParallelDownloadTrackerFilePaths(
+          StorageUrlFromString(fpath), self.test_api)
+      for tracker_filename in tracker_filenames:
+        self.assertTrue(os.path.isfile(tracker_filename))
+
+    # Disable parallel downloads by increasing the threshold
+    boto_config_for_test = [
+        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
+        ('GSUtil', 'parallel_object_download_threshold', str(self.halt_size*5)),
+        ('GSUtil', 'parallel_object_download_max_components', '4')]
+
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True)
+      self.assertNotIn('Resuming download', stderr)
+      # Temporary download file should have been deleted.
+      self.assertFalse(os.path.isfile(fpath + '_.tmp'))
+
+      # Each tracker file should have been deleted.
+      for tracker_filename in tracker_filenames:
+        self.assertFalse(os.path.isfile(tracker_filename))
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), 'abcd' * self.halt_size)
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_start_over_http_error(self):

@@ -24,8 +24,10 @@ import datetime
 import errno
 import gzip
 from hashlib import md5
+import json
 import logging
 import mimetypes
+from operator import attrgetter
 import os
 import pickle
 import random
@@ -55,6 +57,9 @@ from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
+from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_COMPONENT_SIZE
+from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS
+from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
@@ -63,6 +68,9 @@ from gslib.file_part import FilePart
 from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateHashesFromContents
+from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
+from gslib.hashing_helper import CHECK_HASH_NEVER
+from gslib.hashing_helper import ConcatCrc32c
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
@@ -75,11 +83,13 @@ from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.tracker_file import DeleteDownloadTrackerFiles
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetTrackerFilePath
 from gslib.tracker_file import RaiseUnwritableTrackerFileException
 from gslib.tracker_file import ReadOrCreateDownloadTrackerFile
 from gslib.tracker_file import TrackerFileType
+from gslib.tracker_file import WriteDownloadComponentTrackerFile
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
@@ -103,6 +113,7 @@ from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
+from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 from gslib.wildcard_iterator import CreateWildcardIterator
 
@@ -122,18 +133,18 @@ if IS_WINDOWS:
 # assigning to a class member (which breaks pickling done by multiprocessing).
 # For details see
 # http://stackoverflow.com/questions/16377215/how-to-pickle-a-namedtuple-instance-correctly
-# Similarly can't pickle logger.
 # pylint: disable=global-at-module-level
-global global_copy_helper_opts, global_logger
+global global_copy_helper_opts
 
 # In-memory map of local files that are currently opened for write. Used to
 # ensure that if we write to the same file twice (say, for example, because the
 # user specified two identical source URLs), the writes occur serially.
-global open_files_map
+global open_files_map, open_files_lock
 open_files_map = (
     ThreadSafeDict() if (
         IS_WINDOWS or not CheckMultiprocessingAvailableAndInit().is_available)
     else ThreadAndProcessSafeDict(gslib.util.manager))
+open_files_lock = CreateLock()
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
@@ -177,6 +188,15 @@ PerformParallelUploadFileToObjectArgs = namedtuple(
     'filename file_start file_length src_url dst_url canned_acl '
     'content_type tracker_file tracker_file_lock')
 
+PerformParallelDownloadObjectToFileArgs = namedtuple(
+    'PerformParallelDownloadObjectToFileArgs',
+    'component_num src_url src_obj_metadata dst_url download_file_name '
+    'start_byte end_byte')
+
+PerformParallelDownloadReturnValues = namedtuple(
+    'PerformParallelDownloadReturnValues',
+    'component_num crc32c bytes_transferred server_encoding')
+
 ObjectFromTracker = namedtuple('ObjectFromTracker',
                                'object_name generation')
 
@@ -186,6 +206,10 @@ ObjectFromTracker = namedtuple('ObjectFromTracker',
 
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
+
+# Number of bytes to wait before updating a parallel download component tracker
+# file.
+TRACKERFILE_UPDATE_THRESHOLD = TEN_MIB
 
 PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
 
@@ -205,7 +229,7 @@ def _RmExceptionHandler(cls, e):
   cls.logger.error(str(e))
 
 
-def _ParallelUploadCopyExceptionHandler(cls, e):
+def _ParallelCopyExceptionHandler(cls, e):
   """Simple exception handler to allow post-completion status."""
   cls.logger.error(str(e))
   cls.op_failure_count += 1
@@ -247,7 +271,7 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
       ret = _UploadFileToObject(args.src_url, fp, args.file_length,
                                 args.dst_url, dst_object_metadata,
                                 preconditions, gsutil_api, cls.logger, cls,
-                                _ParallelUploadCopyExceptionHandler,
+                                _ParallelCopyExceptionHandler,
                                 gzip_exts=None, allow_splitting=False)
     finally:
       if global_copy_helper_opts.canned_acl:
@@ -1667,16 +1691,21 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           uploaded_object.md5Hash)
 
 
-def _GetDownloadFile(dst_url, src_obj_metadata, logger):
+def _GetDownloadFile(dst_url, src_obj_metadata, parallel_download, logger):
   """Creates the file that an object will be downloaded to.
 
   Args:
     dst_url: Destination FileUrl.
     src_obj_metadata: Metadata from the source object.
+    parallel_download: Whether or not the download will be done in parallel.
     logger: for outputting log messages.
 
   Returns:
     (download_file_name, need_to_unzip)
+    download_file_name: The name of the (possibly temporary) file to which the
+                        object will be downloaded.
+    need_to_unzip: If true, a temporary zip file was used and must be
+                   uncompressed as part of validation.
   """
   dir_name = os.path.dirname(dst_url.object_name)
   if dir_name and not os.path.exists(dir_name):
@@ -1689,6 +1718,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
       if e.errno != errno.EEXIST:
         raise
 
+  need_to_unzip = False
   # For gzipped objects download to a temp file and unzip. For the XML API,
   # the represents the result of a HEAD request. For the JSON API, this is
   # the stored encoding which the service may not respect. However, if the
@@ -1697,22 +1727,336 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   # we will fail our hash check for the object.
   if (src_obj_metadata.contentEncoding and
       src_obj_metadata.contentEncoding.lower().endswith('gzip')):
-    # We can't use tempfile.mkstemp() here because we need a predictable
-    # filename for resumable downloads.
-    download_file_name = _GetDownloadZipFileName(dst_url.object_name)
+    need_to_unzip = True
+    download_file_name = _GetDownloadTempZipFileName(dst_url)
     logger.info(
         'Downloading to temp gzip filename %s', download_file_name)
-    need_to_unzip = True
+  elif parallel_download:
+    download_file_name = _GetDownloadTempFileName(dst_url)
   else:
     download_file_name = dst_url.object_name
-    need_to_unzip = False
 
+  # Downloads open the file in r+b mode which requires the file to already
+  # exist, so we create it here if it doesn't exist already.
+  fp = open(download_file_name, 'ab')
+  if parallel_download:
+    fp.truncate(src_obj_metadata.size)
+  fp.close()
   return download_file_name, need_to_unzip
+
+
+def _ShouldDoParallelDownload(download_strategy, src_obj_metadata,
+                              allow_splitting):
+  """Determines whether the parallel download strategy should be used.
+
+  Args:
+    download_strategy: CloudApi download strategy.
+    src_obj_metadata: Metadata from the source object.
+    allow_splitting: If false, then this function returns false.
+
+  Returns:
+    True iff a parallel download should be performed on the source file.
+  """
+  parallel_object_download_threshold = HumanReadableToBytes(config.get(
+      'GSUtil', 'parallel_object_download_threshold',
+      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD))
+
+  max_components = config.getint(
+      'GSUtil', 'parallel_object_download_max_components',
+      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS)
+
+  # Don't use parallel download if it will prevent us from performing an
+  # integrity check.
+  check_hashes_config = config.get(
+      'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
+  parallel_hashing = src_obj_metadata.crc32c and UsingCrcmodExtension(crcmod)
+  hashing_okay = parallel_hashing or check_hashes_config == CHECK_HASH_NEVER
+
+  return (allow_splitting
+          and download_strategy is not CloudApi.DownloadStrategy.ONE_SHOT
+          and max_components > 1
+          and hashing_okay
+          and parallel_object_download_threshold > 0
+          and src_obj_metadata.size >= parallel_object_download_threshold)
+
+
+def _PerformParallelDownloadObjectToFile(cls, args, thread_state=None):
+  """Function argument to Apply for performing parallel downloads.
+
+  Args:
+    cls: Calling Command class.
+    args: PerformParallelDownloadObjectToFileArgs tuple describing the target.
+    thread_state: gsutil Cloud API instance to use for the operation.
+
+  Returns:
+    PerformParallelDownloadReturnValues named-tuple filled with:
+    component_num: The component number for this download.
+    crc32c: CRC32C hash value (integer) of the downloaded bytes.
+    bytes_transferred: The number of bytes transferred, potentially less
+                       than the component size if the download was resumed.
+  """
+  gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
+  hash_algs = GetDownloadHashAlgs(
+      cls.logger, consider_crc32c=args.src_obj_metadata.crc32c)
+  digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
+
+  (bytes_transferred, server_encoding) = (
+      _DownloadObjectToFileResumable(args.src_url, args.src_obj_metadata,
+                                     args.dst_url, args.download_file_name,
+                                     gsutil_api, cls.logger, digesters,
+                                     component_num=args.component_num,
+                                     start_byte=args.start_byte,
+                                     end_byte=args.end_byte))
+
+  crc32c_val = None
+  if 'crc32c' in digesters:
+    crc32c_val = digesters['crc32c'].crcValue
+  return PerformParallelDownloadReturnValues(
+      args.component_num, crc32c_val, bytes_transferred, server_encoding)
+
+
+def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
+                                          api_selector, num_components):
+  """Maintains parallel download tracker files in order to permit resumability.
+
+  Reads or creates a parallel download tracker file representing this object
+  download. Upon an attempt at cross-process resumption, the contents of the
+  parallel download tracker file are verified to make sure a resumption is
+  possible and appropriate. In the case that a resumption should not be
+  attempted, existing component tracker files are deleted (to prevent child
+  processes from attempting resumption), and a new parallel download tracker
+  file is created.
+
+  Args:
+    src_obj_metadata: Metadata from the source object. Must include etag and
+                      generation.
+    dst_url: Destination FileUrl.
+    logger: for outputting log messages.
+    api_selector: The Cloud API implementation used.
+    num_components: The number of components to perform this download with.
+  """
+  assert src_obj_metadata.etag
+  tracker_file = None
+
+  # Only can happen if the resumable threshold is set higher than the
+  # parallel transfer threshold.
+  if src_obj_metadata.size < ResumableThreshold():
+    return
+
+  tracker_file_name = GetTrackerFilePath(dst_url,
+                                         TrackerFileType.PARALLEL_DOWNLOAD,
+                                         api_selector)
+
+  # Check to see if we already have a matching tracker file.
+  try:
+    tracker_file = open(tracker_file_name, 'r')
+    tracker_file_data = json.load(tracker_file)
+    if (tracker_file_data['etag'] == src_obj_metadata.etag and
+        tracker_file_data['generation'] == src_obj_metadata.generation and
+        tracker_file_data['num_components'] == num_components):
+      return
+    else:
+      tracker_file.close()
+      logger.warn('Parallel download tracker file doesn\'t match for download '
+                  'of %s. Restarting download from scratch.' %
+                  dst_url.object_name)
+
+  except (IOError, ValueError) as e:
+    # Ignore non-existent file (happens first time a download
+    # is attempted on an object), but warn user for other errors.
+    if isinstance(e, ValueError) or e.errno != errno.ENOENT:
+      logger.warn('Couldn\'t read parallel download tracker file (%s): %s. '
+                  'Restarting download from scratch.' %
+                  (tracker_file_name, str(e)))
+
+  finally:
+    if tracker_file:
+      tracker_file.close()
+
+  # Delete component tracker files to guarantee download starts from scratch.
+  DeleteDownloadTrackerFiles(dst_url, api_selector)
+
+  # Create a new parallel download tracker file to represent this download.
+  try:
+    with open(tracker_file_name, 'w') as tracker_file:
+      tracker_file_data = {'etag': src_obj_metadata.etag,
+                           'generation': src_obj_metadata.generation,
+                           'num_components': num_components}
+      tracker_file.write(json.dumps(tracker_file_data))
+  except IOError as e:
+    RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
+
+
+class ParallelDownloadFileWrapper(object):
+  """Wraps a file object to be used in GetObjectMedia for parallel downloads.
+
+  In order to allow resumability, the file object used by each thread in a
+  parallel object download should be wrapped using ParallelDownloadFileWrapper.
+  Passing a ParallelDownloadFileWrapper object to GetObjectMedia will allow the
+  download component tracker file for this component to be updated periodically,
+  while the downloaded bytes are normally written to file.
+  """
+
+  def __init__(self, fp, tracker_file_name, src_obj_metadata,
+               end_byte):
+    """Initializes the ParallelDownloadFileWrapper.
+
+    Args:
+      fp: The already-open file object to be used for writing in
+          GetObjectMedia. Data will be written to file starting at the current
+          seek position.
+      tracker_file_name: The name of the tracker file for this component.
+      src_obj_metadata: Metadata from the source object. Must include etag and
+                        generation.
+      end_byte: The last byte to be downloaded for this parallel component.
+    """
+    self._orig_fp = fp
+    self._tracker_file_name = tracker_file_name
+    self._src_obj_metadata = src_obj_metadata
+    self._last_tracker_file_byte = None
+    self._end_byte = end_byte
+
+  def write(self, data):  # pylint: disable=invalid-name
+    self._orig_fp.write(data)
+
+    threshold = TRACKERFILE_UPDATE_THRESHOLD
+    current_file_pos = self._orig_fp.tell()
+    if (self._last_tracker_file_byte is None or
+        current_file_pos - self._last_tracker_file_byte > threshold or
+        current_file_pos == self._end_byte + 1):
+      WriteDownloadComponentTrackerFile(
+          self._tracker_file_name, self._src_obj_metadata, current_file_pos)
+      self._last_tracker_file_byte = current_file_pos
+
+  def seek(self):  # pylint: disable=invalid-name
+    raise NotImplementedError(
+        'seek is not implemented in ParallelDownloadFileWrapper')
+
+  def tell(self):  # pylint: disable=invalid-name
+    raise NotImplementedError(
+        'tell is not implemented in ParallelDownloadFileWrapper')
+
+  def flush(self):  # pylint: disable=invalid-name
+    self._orig_fp.flush()
+
+  def close(self):  # pylint: disable=invalid-name
+    if self._orig_fp:
+      self._orig_fp.close()
+
+
+def _PartitionObject(src_url, src_obj_metadata, dst_url,
+                     download_file_name):
+  """Partitions an object into components to be downloaded.
+
+  Each component is a byte range of the object. The byte ranges
+  of the returned components are mutually exclusive and collectively
+  exhaustive. The byte ranges are inclusive at both end points.
+
+  Args:
+    src_url: Source CloudUrl.
+    src_obj_metadata: Metadata from the source object.
+    dst_url: Destination FileUrl.
+    download_file_name: Temporary file name to be used for the download.
+
+  Returns:
+    components_to_download: A list of PerformParallelDownloadObjectToFileArgs
+                            to be used in Apply for the parallel download.
+  """
+  parallel_download_component_size = HumanReadableToBytes(
+      config.get('GSUtil', 'parallel_object_download_component_size',
+                 DEFAULT_PARALLEL_OBJECT_DOWNLOAD_COMPONENT_SIZE))
+
+  max_components = config.getint(
+      'GSUtil', 'parallel_object_download_max_components',
+      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS)
+
+  num_components, component_size = _GetPartitionInfo(
+      src_obj_metadata.size, max_components, parallel_download_component_size)
+
+  components_to_download = []
+  component_lengths = []
+  for i in range(num_components):
+    start_byte = i * component_size
+    end_byte = min((i + 1) * (component_size) - 1, src_obj_metadata.size - 1)
+    component_lengths.append(end_byte - start_byte + 1)
+    components_to_download.append(
+        PerformParallelDownloadObjectToFileArgs(
+            i, src_url, src_obj_metadata, dst_url, download_file_name,
+            start_byte, end_byte))
+  return components_to_download, component_lengths
+
+
+def _DoParallelDownload(src_url, src_obj_metadata, dst_url, download_file_name,
+                        command_obj, logger, copy_exception_handler,
+                        api_selector):
+  """Downloads a cloud object to a local file using parallel download.
+
+  Byte ranges are decided for each thread/process, and then the parts are
+  downloaded in parallel.
+
+  Args:
+    src_url: Source CloudUrl.
+    src_obj_metadata: Metadata from the source object.
+    dst_url: Destination FileUrl.
+    download_file_name: File to be used for download (differs from dst_url if
+                        using a temp file)
+    command_obj: command object for use in Apply in parallel composite uploads.
+    logger: for outputting log messages.
+    copy_exception_handler: For handling copy exceptions during Apply.
+    api_selector: The Cloud API implementation used.
+
+  Returns:
+    (bytes_transferred, crc32c)
+    bytes_transferred: Number of bytes transferred from server this call.
+    crc32c: a crc32c hash value (integer) for the downloaded bytes, or None if
+            crc32c hashing wasn't performed.
+  """
+  components_to_download, component_lengths = _PartitionObject(
+      src_url, src_obj_metadata, dst_url, download_file_name)
+
+  num_components = len(components_to_download)
+  _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
+                                        api_selector, num_components)
+
+  cp_results = command_obj.Apply(
+      _PerformParallelDownloadObjectToFile, components_to_download,
+      copy_exception_handler, arg_checker=gslib.command.DummyArgChecker,
+      parallel_operations_override=True, should_return_results=True)
+
+  if len(cp_results) < num_components:
+    raise CommandException(
+        'Some components of %s were not downloaded successfully. '
+        'Please retry this download.' % dst_url.object_name)
+
+  # Crc32c hashes have to be concatenated in the correct order.
+  cp_results = sorted(cp_results, key=attrgetter('component_num'))
+  crc32c = cp_results[0].crc32c
+  if crc32c is not None:
+    for i in range(1, num_components):
+      crc32c = ConcatCrc32c(crc32c, cp_results[i].crc32c,
+                            component_lengths[i])
+
+  bytes_transferred = 0
+  expect_gzip = (src_obj_metadata.contentEncoding and
+                 src_obj_metadata.contentEncoding.lower().endswith('gzip'))
+  for cp_result in cp_results:
+    bytes_transferred += cp_result.bytes_transferred
+    server_gzip = (cp_result.server_encoding and
+                   cp_result.server_encoding.lower().endswith('gzip'))
+    # If the server gzipped any components on the fly, we will have no chance of
+    # properly reconstructing the file.
+    if server_gzip and not expect_gzip:
+      raise CommandException(
+          'Download of %s failed because the server sent back data with an '
+          'unexpected encoding.' % dst_url.object_name)
+
+  return bytes_transferred, crc32c
 
 
 def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
                                    download_file_name, gsutil_api, logger,
-                                   digesters, progress_callback):
+                                   digesters, component_num=None, start_byte=0,
+                                   end_byte=None):
   """Downloads an object to a local file using the resumable strategy.
 
   Args:
@@ -1725,76 +2069,95 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     logger: for outputting log messages.
     digesters: Digesters corresponding to the hash algorithms that will be used
                for validation.
-    progress_callback: Callback function for progress notifications.
+    component_num: Which component of a parallel download this call is for, or
+                   None if this is not a parallel download.
+    start_byte: The first byte of a byte range for a parallel download.
+    end_byte: The last byte of a byte range for a parallel download.
 
   Returns:
     (bytes_transferred, server_encoding)
     bytes_transferred: Number of bytes transferred from server this call.
     server_encoding: Content-encoding string if it was detected that the server
-                     sent an encoded object during transfer, None otherwise.
+                     sent encoded bytes during transfer, None otherwise.
   """
-  global open_files_map
+  if end_byte is None:
+    end_byte = src_obj_metadata.size - 1
+  download_size = end_byte - start_byte + 1
+
+  is_parallel = component_num is not None
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
-  download_complete = False
-  download_start_point = 0
-  fp = None
-  open_files = []
   server_encoding = None
 
-  try:
-    if open_files_map.get(download_file_name, False):
-      # Ensure another process/thread is not already writing to this file.
-      raise FileConcurrencySkipError
-    open_files.append(download_file_name)
-    open_files_map[download_file_name] = True
-    fp = open(download_file_name, 'ab')
+  # Used for logging
+  download_name = dst_url.object_name
+  if is_parallel:
+    download_name += ' component %d' % component_num
 
+  try:
+    fp = open(download_file_name, 'r+b')
+    fp.seek(start_byte)
     api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
     existing_file_size = GetFileSize(fp)
-    tracker_file_name = GetTrackerFilePath(dst_url, TrackerFileType.DOWNLOAD,
-                                           api_selector)
 
-    resuming = ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url,
-                                               api_selector)
+    tracker_file_name, download_start_byte = (
+        ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url, logger,
+                                        api_selector, start_byte,
+                                        existing_file_size, component_num))
 
-    # Catch up our digester with the hash data.
+    if download_start_byte < start_byte or download_start_byte > end_byte + 1:
+      DeleteTrackerFile(tracker_file_name)
+      raise CommandException(
+          'Resumable download start point for %s is not in the correct byte '
+          'range. Deleting tracker file, so if you re-try this download it '
+          'will start from scratch' % download_name)
+
+    download_complete = (download_start_byte == start_byte + download_size)
+    resuming = (download_start_byte != start_byte) and not download_complete
     if resuming:
-      if existing_file_size > src_obj_metadata.size:
-        DeleteTrackerFile(tracker_file_name)
-        raise CommandException(
-            '%s is larger (%d) than %s (%d).\nDeleting tracker file, so '
-            'if you re-try this download it will start from scratch' %
-            (download_file_name, existing_file_size, src_url.object_name,
-             src_obj_metadata.size))
-      elif existing_file_size == src_obj_metadata.size:
-        download_complete = True
-        logger.info(
-            'Download already complete for file %s, skipping download but '
-            'will run integrity checks.', download_file_name)
-
-      download_start_point = existing_file_size
-      logger.info('Resuming download for %s', src_url.url_string)
-      # Catch up our digester with the hash data.
-      if existing_file_size > TEN_MIB:
-        for alg_name in digesters:
-          logger.info(
-              'Catching up %s for %s', alg_name, download_file_name)
-      with open(download_file_name, 'rb') as hash_fp:
-        while True:
-          data = hash_fp.read(DEFAULT_FILE_BUFFER_SIZE)
-          if not data:
-            break
-          for alg_name in digesters:
-            digesters[alg_name].update(data)
-    else:
-      fp.truncate(0)
-      existing_file_size = 0
+      logger.info('Resuming download for %s', download_name)
+    elif download_complete:
+      logger.info(
+          'Download already complete for %s, skipping download but '
+          'will run integrity checks.', download_name)
 
     # This is used for resuming downloads, but also for passing the mediaLink
     # and size into the download for new downloads so that we can avoid
     # making an extra HTTP call.
     serialization_data = GetDownloadSerializationData(
-        src_obj_metadata, progress=download_start_point)
+        src_obj_metadata, progress=download_start_byte)
+
+    if resuming or download_complete:
+      # Catch up our digester with the hash data.
+      for alg_name in digesters:
+        fp.seek(start_byte)
+        logger.info(
+            'Catching up %s for %s', alg_name, download_name)
+        bytes_digested = 0
+        bytes_to_digest = download_start_byte - start_byte
+
+        while bytes_digested < bytes_to_digest:
+          bytes_to_read = min(DEFAULT_FILE_BUFFER_SIZE,
+                              bytes_to_digest-bytes_digested)
+          data = fp.read(bytes_to_read)
+          bytes_digested += bytes_to_read
+          for alg_name in digesters:
+            digesters[alg_name].update(data)
+    elif not is_parallel:
+      # Delete file contents and start entire object download from scratch.
+      fp.truncate(0)
+      existing_file_size = 0
+
+    progress_callback = FileProgressCallbackHandler(
+        ConstructAnnounceText('Downloading', dst_url.url_string), logger,
+        start_byte, download_size).call
+
+    if global_copy_helper_opts.test_callback_file:
+      with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+        progress_callback = pickle.loads(test_fp.read()).call
+
+    if is_parallel and src_obj_metadata.size >= ResumableThreshold():
+      fp = ParallelDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
+                                       end_byte)
 
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
     # the object's metadata), when we request a range to resume, it's possible
@@ -1805,53 +2168,58 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     if not download_complete:
       server_encoding = gsutil_api.GetObjectMedia(
           src_url.bucket_name, src_url.object_name, fp,
-          start_byte=download_start_point, generation=src_url.generation,
-          object_size=src_obj_metadata.size,
+          start_byte=download_start_byte, end_byte=end_byte,
+          generation=src_url.generation, object_size=src_obj_metadata.size,
           download_strategy=CloudApi.DownloadStrategy.RESUMABLE,
           provider=src_url.scheme, serialization_data=serialization_data,
           digesters=digesters, progress_callback=progress_callback)
 
   except ResumableDownloadException as e:
-    logger.warning('Caught ResumableDownloadException (%s) for file %s.',
-                   e.reason, download_file_name)
+    logger.warning('Caught ResumableDownloadException (%s) for download of %s.',
+                   e.reason, download_name)
     raise
   finally:
     if fp:
       fp.close()
-    for file_name in open_files:
-      open_files_map.delete(file_name)
 
-  bytes_transferred = src_obj_metadata.size - download_start_point
+  bytes_transferred = end_byte - download_start_byte + 1
   return bytes_transferred, server_encoding
 
 
-def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata,
-                                      download_file_name, gsutil_api, digesters,
-                                      progress_callback):
+def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
+                                      download_file_name, gsutil_api, logger,
+                                      digesters):
   """Downloads an object to a local file using the non-resumable strategy.
 
   Args:
     src_url: Source CloudUrl.
     src_obj_metadata: Metadata from the source object.
+    dst_url: Destination FileUrl.
     download_file_name: File to be used for download (differs from dst_url if
                         using a temp file)
     gsutil_api: gsutil Cloud API instance to use for the download.
+    logger: for outputting log messages.
     digesters: Digesters corresponding to the hash algorithms that will be used
                for validation.
-    progress_callback: Callback function for progress notifications.
-
   Returns:
     (bytes_transferred, server_encoding)
     bytes_transferred: Number of bytes transferred from server this call.
     server_encoding: Content-encoding string if it was detected that the server
-                     sent an encoded object during transfer, None otherwise.
+                     sent encoded bytes during transfer, None otherwise.
   """
   try:
-    fp = open(download_file_name, 'wb')
+    fp = open(download_file_name, 'w')
 
     # This is used to pass the mediaLink and the size into the download so that
     # we can avoid making an extra HTTP call.
     serialization_data = GetDownloadSerializationData(src_obj_metadata)
+
+    progress_callback = FileProgressCallbackHandler(
+        ConstructAnnounceText('Downloading', dst_url.url_string), logger).call
+
+    if global_copy_helper_opts.test_callback_file:
+      with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
+        progress_callback = pickle.loads(test_fp.read()).call
 
     server_encoding = gsutil_api.GetObjectMedia(
         src_url.bucket_name, src_url.object_name, fp,
@@ -1867,7 +2235,9 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata,
 
 
 def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
-                          gsutil_api, logger, test_method=None):
+                          gsutil_api, logger, command_obj,
+                          copy_exception_handler, allow_splitting=True,
+                          test_method=None):
   """Downloads an object to a local file.
 
   Args:
@@ -1876,18 +2246,20 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     dst_url: Destination FileUrl.
     gsutil_api: gsutil Cloud API instance to use for the download.
     logger: for outputting log messages.
+    command_obj: command object for use in Apply in parallel downloads.
+    copy_exception_handler: For handling copy exceptions during Apply.
+    allow_splitting: Whether or not to allow parallel download.
     test_method: Optional test method for modifying the file before validation
                  during unit tests.
   Returns:
-    (elapsed_time, bytes_transferred, dst_url, md5)
-    elapsed_time: Time spent downloading, excluding overhead like initial GET.
-    bytes_transferred: Number of bytes transferred from server this call.
-    dst_url: Destination FileUrl
-    md5: An md5 of the local file, if one was calculated.
+    (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
+    excludes initial GET.
 
   Raises:
-    CommandException: if errors encountered.
+    FileConcurrencySkipError: if this download is already in progress.
+    CommandException: if other errors encountered.
   """
+  global open_files_map, open_files_lock
   if dst_url.object_name.endswith(dst_url.delim):
     logger.warn('\n'.join(textwrap.wrap(
         'Skipping attempt to download to filename ending with slash (%s). This '
@@ -1896,39 +2268,54 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
         % dst_url.object_name)))
     return (0, 0, dst_url, '')
 
-  download_strategy = _SelectDownloadStrategy(dst_url)
-  download_file_name, need_to_unzip = _GetDownloadFile(
-      dst_url, src_obj_metadata, logger)
-
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
+  download_strategy = _SelectDownloadStrategy(dst_url)
+  parallel_download = _ShouldDoParallelDownload(
+      download_strategy, src_obj_metadata, allow_splitting)
+
+  download_file_name, need_to_unzip = _GetDownloadFile(
+      dst_url, src_obj_metadata, parallel_download, logger)
+
+  # Ensure another process/thread is not already writing to this file.
+  with open_files_lock:
+    if open_files_map.get(download_file_name, False):
+      raise FileConcurrencySkipError
+    open_files_map[download_file_name] = True
 
   # Set up hash digesters.
-  hash_algs = GetDownloadHashAlgs(
-      logger, src_has_md5=src_obj_metadata.md5Hash,
-      src_has_crc32c=src_obj_metadata.crc32c)
+  consider_md5 = src_obj_metadata.md5Hash and not parallel_download
+  hash_algs = GetDownloadHashAlgs(logger, consider_md5=consider_md5,
+                                  consider_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
-  progress_callback = FileProgressCallbackHandler(
-      ConstructAnnounceText('Downloading', dst_url.url_string), logger).call
-  if global_copy_helper_opts.test_callback_file:
-    with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
-      progress_callback = pickle.loads(test_fp.read()).call
+  # Tracks whether the server used a gzip encoding.
+  server_encoding = None
+  download_complete = (src_obj_metadata.size == 0)
+  bytes_transferred = 0
 
   start_time = time.time()
-  if download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
-    (bytes_transferred, server_encoding) = (
-        _DownloadObjectToFileNonResumable(src_url, src_obj_metadata,
-                                          download_file_name, gsutil_api,
-                                          digesters, progress_callback))
-  elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-    (bytes_transferred, server_encoding) = (
-        _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
-                                       download_file_name, gsutil_api, logger,
-                                       digesters, progress_callback))
-  else:
-    raise CommandException('Invalid download strategy %s chosen for'
-                           'file %s' % (download_strategy,
-                                        download_file_name))
+  if not download_complete:
+    if parallel_download:
+      (bytes_transferred, crc32c) = (
+          _DoParallelDownload(src_url, src_obj_metadata, dst_url,
+                              download_file_name, command_obj, logger,
+                              copy_exception_handler, api_selector))
+      if 'crc32c' in digesters:
+        digesters['crc32c'].crcValue = crc32c
+    elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
+      (bytes_transferred, server_encoding) = (
+          _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
+                                            download_file_name, gsutil_api,
+                                            logger, digesters))
+    elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
+      (bytes_transferred, server_encoding) = (
+          _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
+                                         download_file_name, gsutil_api, logger,
+                                         digesters))
+    else:
+      raise CommandException('Invalid download strategy %s chosen for'
+                             'file %s' % (download_strategy,
+                                          download_file_name))
   end_time = time.time()
 
   # If a custom test method is defined, call it here. For the copy command,
@@ -1940,29 +2327,56 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     test_method(fp)
     fp.close()
 
-  # If we decompressed a content-encoding gzip file on the fly, this may not
-  # be accurate, but it is the best we can do without going deep into the
-  # underlying HTTP libraries. Note that this value is only used for
-  # reporting in log messages; inaccuracy doesn't impact the integrity of the
-  # download.
   server_gzip = server_encoding and server_encoding.lower().endswith('gzip')
-  local_md5 = _ValidateDownloadHashes(logger, src_url, src_obj_metadata,
-                                      dst_url, need_to_unzip, server_gzip,
-                                      digesters, hash_algs, api_selector,
-                                      bytes_transferred)
+  local_md5 = _ValidateAndCompleteDownload(
+      logger, src_url, src_obj_metadata, dst_url, need_to_unzip, server_gzip,
+      digesters, hash_algs, download_file_name, api_selector, bytes_transferred)
+
+  _DeleteTempDownloadFiles(dst_url)
+  with open_files_lock:
+    open_files_map.delete(download_file_name)
 
   return (end_time - start_time, bytes_transferred, dst_url, local_md5)
 
 
-def _GetDownloadZipFileName(file_name):
-  """Returns the file name for a temporarily compressed downloaded file."""
-  return '%s_.gztmp' % file_name
+def _GetDownloadTempZipFileName(dst_url):
+  """Returns temporary file name for a temporarily compressed download."""
+  return '%s_.gztmp' % dst_url.object_name
 
 
-def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
-                            need_to_unzip, server_gzip, digesters, hash_algs,
-                            api_selector, bytes_transferred):
-  """Validates a downloaded file's integrity.
+def _GetDownloadTempFileName(dst_url):
+  """Returns temporary download file name, used for parallel downloads."""
+  return '%s_.tmp' % dst_url.object_name
+
+
+def _DeleteTempDownloadFiles(dst_url):
+  """Deletes temporary download files for downloads with dst_url.
+
+  There are edge cases where a temporary download file will not be deleted,
+  for example when parallel download is originally used but is disabled before
+  a cross process resumption. This function deletes temporary download files
+  for dst_url, in order to prevent confusing results for the user.
+
+  Args:
+    dst_url: StorageUrl describing the destination file.
+  """
+  temp_file_names = [_GetDownloadTempZipFileName(dst_url),
+                     _GetDownloadTempFileName(dst_url)]
+  for temp_file_name in temp_file_names:
+    if os.path.exists(temp_file_name):
+      os.unlink(temp_file_name)
+
+
+def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
+                                 need_to_unzip, server_gzip, digesters,
+                                 hash_algs, download_file_name,
+                                 api_selector, bytes_transferred):
+  """Validates and performs necessary operations on a downloaded file.
+
+  Validates the integrity of the downloaded file using hash_algs. If the file
+  was compressed (temporarily), the file will be decompressed. Also, if a
+  temporary file name was used during the download, the file will be renamed
+  to its permanent file name.
 
   Args:
     logger: For outputting log messages.
@@ -1980,6 +2394,8 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
                hash must be recomputed from the local file.
     hash_algs: dict of {string, hash algorithm} that can be used if digesters
                don't have up-to-date digests.
+    download_file_name: The name of the (possibly temporary) file to which data
+                        was downloaded.
     api_selector: The Cloud API implementation used (used tracker file naming).
     bytes_transferred: Number of bytes downloaded (used for logging).
 
@@ -1987,10 +2403,10 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     An MD5 of the local file, if one was calculated as part of the integrity
     check.
   """
-  file_name = dst_url.object_name
-  download_file_name = (_GetDownloadZipFileName(file_name) if need_to_unzip else
-                        file_name)
+  final_file_name = dst_url.object_name
+  file_name = download_file_name
   digesters_succeeded = True
+
   for alg in digesters:
     # If we get a digester with a None algorithm, the underlying
     # implementation failed to calculate a digest, so we will need to
@@ -2003,15 +2419,13 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
     local_hashes = _CreateDigestsFromDigesters(digesters)
   else:
     local_hashes = _CreateDigestsFromLocalFile(
-        logger, hash_algs, download_file_name, src_obj_metadata)
+        logger, hash_algs, file_name, src_obj_metadata)
 
   digest_verified = True
   hash_invalid_exception = None
   try:
-    _CheckHashes(logger, src_url, src_obj_metadata, download_file_name,
-                 local_hashes)
-    DeleteTrackerFile(GetTrackerFilePath(
-        dst_url, TrackerFileType.DOWNLOAD, api_selector))
+    _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
+    DeleteDownloadTrackerFiles(dst_url, api_selector)
   except HashMismatchException, e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
     # we calculate will match the gzipped bytes, not the original object. Thus,
@@ -2029,34 +2443,34 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       hash_invalid_exception = e
       digest_verified = False
     else:
-      DeleteTrackerFile(GetTrackerFilePath(
-          dst_url, TrackerFileType.DOWNLOAD, api_selector))
+      DeleteDownloadTrackerFiles(dst_url, api_selector)
       if _RENAME_ON_HASH_MISMATCH:
-        os.rename(download_file_name,
-                  download_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+        os.rename(file_name,
+                  file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
       else:
-        os.unlink(download_file_name)
+        os.unlink(file_name)
       raise
 
   if server_gzip and not need_to_unzip:
     # Server compressed bytes on-the-fly, thus we need to rename and decompress.
     # We can't decompress on-the-fly because prior to Python 3.2 the gzip
     # module makes a bunch of seek calls on the stream.
-    download_file_name = _GetDownloadZipFileName(file_name)
-    os.rename(file_name, download_file_name)
+    os.rename(file_name, _GetDownloadTempZipFileName(dst_url))
+    file_name = _GetDownloadTempZipFileName(dst_url)
 
   if need_to_unzip or server_gzip:
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
     if bytes_transferred > TEN_MIB:
       logger.info(
-          'Uncompressing downloaded tmp file to %s...', file_name)
+          'Uncompressing downloaded gztmp file to %s...', dst_url.object_name)
 
-    # Downloaded gzipped file to a filename w/o .gz extension, so unzip.
     gzip_fp = None
     try:
-      gzip_fp = gzip.open(download_file_name, 'rb')
-      with open(file_name, 'wb') as f_out:
+      # Downloaded temporarily gzipped file, unzip to file without '_.gztmp'
+      # suffix.
+      gzip_fp = gzip.open(file_name, 'rb')
+      with open(final_file_name, 'wb') as f_out:
         data = gzip_fp.read(GZIP_CHUNK_SIZE)
         while data:
           f_out.write(data)
@@ -2072,7 +2486,8 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       if gzip_fp:
         gzip_fp.close()
 
-    os.unlink(download_file_name)
+    os.unlink(file_name)
+    file_name = final_file_name
 
   if not digest_verified:
     try:
@@ -2080,17 +2495,23 @@ def _ValidateDownloadHashes(logger, src_url, src_obj_metadata, dst_url,
       local_hashes = _CreateDigestsFromLocalFile(logger, hash_algs, file_name,
                                                  src_obj_metadata)
       _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
-      DeleteTrackerFile(GetTrackerFilePath(
-          dst_url, TrackerFileType.DOWNLOAD, api_selector))
+      DeleteDownloadTrackerFiles(dst_url, api_selector)
     except HashMismatchException:
-      DeleteTrackerFile(GetTrackerFilePath(
-          dst_url, TrackerFileType.DOWNLOAD, api_selector))
+      DeleteDownloadTrackerFiles(dst_url, api_selector)
       if _RENAME_ON_HASH_MISMATCH:
         os.rename(file_name,
                   file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
       else:
         os.unlink(file_name)
       raise
+
+  if file_name != final_file_name:
+    # We are still using a temporary file. This can happen if the download was
+    # done in parallel. Rename to the expected file name.
+    if os.path.exists(final_file_name):
+      os.unlink(final_file_name)
+    os.rename(file_name,
+              final_file_name)
 
   if 'md5' in local_hashes:
     return local_hashes['md5']
@@ -2234,7 +2655,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     command_obj: command object for use in Apply in parallel composite uploads.
     copy_exception_handler: for handling copy exceptions during Apply.
     allow_splitting: Whether to allow the file to be split into component
-                     pieces for an parallel composite upload.
+                     pieces for an parallel composite upload or download.
     headers: optional headers to use for the copy operation.
     manifest: optional manifest for tracking copy operations.
     gzip_exts: List of file extensions to gzip for uploads, if any.
@@ -2294,7 +2715,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     else:
       # Just get the fields needed to validate the download.
       src_obj_fields = ['crc32c', 'contentEncoding', 'contentType', 'etag',
-                        'mediaLink', 'md5Hash', 'size']
+                        'mediaLink', 'md5Hash', 'size', 'generation']
 
     if (src_url.scheme == 's3' and
         global_copy_helper_opts.skip_unsupported_objects):
@@ -2408,7 +2829,10 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   if src_url.IsCloudUrl():
     if dst_url.IsFileUrl():
       return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
-                                   gsutil_api, logger, test_method=test_method)
+                                   gsutil_api, logger, command_obj,
+                                   copy_exception_handler,
+                                   allow_splitting=allow_splitting,
+                                   test_method=test_method)
     elif copy_in_the_cloud:
       return _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
                                      dst_obj_metadata, preconditions,

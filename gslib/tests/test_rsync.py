@@ -21,7 +21,7 @@ import crcmod
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
-from gslib.tests.util import PerformsFileToObjectUpload
+from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
@@ -49,6 +49,7 @@ def _TailSet(start_point, listing):
     Object name tails.
   """
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
+
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state
 # at the end of a retry block is depended upon by subsequent tests (since
@@ -277,7 +278,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check4()
 
   # Test sequential upload as well as parallel composite upload case.
-  @PerformsFileToObjectUpload
+  @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
   def test_dir_to_bucket_minus_d(self):

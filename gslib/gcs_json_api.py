@@ -623,8 +623,14 @@ class GcsJsonApi(CloudApi):
     if generation:
       generation = long(generation)
 
+    # 'outer_total_size' is only used for formatting user output, and is
+    # expected to be one higher than the last byte that should be downloaded.
+    # TODO: Change DownloadCallbackConnectionClassFactory and progress callbacks
+    # to more elegantly handle total size for components of files.
     outer_total_size = object_size
-    if serialization_data:
+    if end_byte:
+      outer_total_size = end_byte + 1
+    elif serialization_data:
       outer_total_size = json.loads(serialization_data)['total_size']
 
     if progress_callback:
@@ -632,7 +638,7 @@ class GcsJsonApi(CloudApi):
         raise ArgumentException('Download size is required when callbacks are '
                                 'requested for a download, but no size was '
                                 'provided.')
-      progress_callback(0, outer_total_size)
+      progress_callback(start_byte, outer_total_size)
 
     bytes_downloaded_container = BytesTransferredContainer()
     bytes_downloaded_container.bytes_transferred = start_byte

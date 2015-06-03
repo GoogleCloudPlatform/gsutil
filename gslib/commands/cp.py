@@ -340,6 +340,7 @@ _STREAMING_TRANSFERS_TEXT = """
   transfers (which perform integrity checking automatically).
 """
 
+# TODO: Create similar documentation for parallel object downloads.
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
   gsutil can automatically use
@@ -932,7 +933,7 @@ class CpCommand(Command):
             self.total_bytes_transferred, self.total_elapsed_time,
             MakeHumanReadable(self.total_bytes_per_second))
     if self.op_failure_count:
-      plural_str = 's' if self.op_failure_count else ''
+      plural_str = 's' if self.op_failure_count > 1 else ''
       raise CommandException('%d file%s/object%s could not be transferred.' % (
           self.op_failure_count, plural_str, plural_str))
 
