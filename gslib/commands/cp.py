@@ -364,6 +364,10 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
+  Parallel composite uploads should not be used with NEARLINE storage
+  class buckets, as doing this would incur an early deletion charge for each
+  component object.
+
   To try parallel composite uploads you can run the command:
 
     gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp bigfile gs://your-bucket

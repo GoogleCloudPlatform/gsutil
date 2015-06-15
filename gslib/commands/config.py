@@ -433,6 +433,10 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # Linux distributions to get crcmod included with the stock distribution. Once
 # that is done we will re-enable parallel composite uploads by default in
 # gsutil.
+#
+# Note: Parallel composite uploads should not be used with NEARLINE storage
+# class buckets, as doing this would incur an early deletion charge for each
+# component object.
 #parallel_composite_upload_threshold = %(parallel_composite_upload_threshold)s
 #parallel_composite_upload_component_size = %(parallel_composite_upload_component_size)s
 
