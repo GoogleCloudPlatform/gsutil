@@ -259,7 +259,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         '%s://%s' % (self.default_provider, self.nonexistent_bucket_name))
     stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
                             expected_status=1, return_stderr=True)
-    self.assertIn('does not exist.', stderr)
+    self.assertIn('does not exist', stderr)
 
   def test_copy_in_cloud_noclobber(self):
     bucket1_uri = self.CreateBucket()
@@ -526,9 +526,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_recursive_copying_versioned_bucket(self):
-    """Tests that cp -R with versioned buckets copies all versions in order."""
+    """Tests cp -R with versioned buckets."""
     bucket1_uri = self.CreateVersionedBucket()
     bucket2_uri = self.CreateVersionedBucket()
+    bucket3_uri = self.CreateVersionedBucket()
 
     # Write two versions of an object to the bucket1.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='k', contents='data0')
@@ -537,9 +538,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.AssertNObjectsInBucket(bucket1_uri, 2, versioned=True)
     self.AssertNObjectsInBucket(bucket2_uri, 0, versioned=True)
+    self.AssertNObjectsInBucket(bucket3_uri, 0, versioned=True)
 
     # Recursively copy to second versioned bucket.
-    self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'), suri(bucket2_uri)])
+    # -A flag should copy all versions in order.
+    self.RunGsUtil(['cp', '-R', '-A', suri(bucket1_uri, '*'),
+                    suri(bucket2_uri)])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -569,6 +573,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(size2, str(len('longer_data1')))
       self.assertEquals(storage_uri(uri_str2).object_name, 'k')
     _Check2()
+
+    # Recursively copy to second versioned bucket with no -A flag.
+    # This should copy only the live object.
+    self.RunGsUtil(['cp', '-R', suri(bucket1_uri, '*'),
+                    suri(bucket3_uri)])
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check3():
+      """Validates the results of the cp -R."""
+      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
+                                return_stdout=True).split('\n')
+      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket3_uri)],
+                                return_stdout=True).split('\n')
+      # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
+      self.assertEquals(len(listing1), 4)
+      # 1 lines of listing output, 1 summary line, 1 empty line from \n split.
+      self.assertEquals(len(listing2), 3)
+
+      # Live (second) object in bucket 1 should match the single live object.
+      size1, _, uri_str1, _ = listing2[0].split()
+      self.assertEquals(size1, str(len('longer_data1')))
+      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+    _Check3()
 
   @PerformsFileToObjectUpload
   @SkipForS3('Preconditions not supported for S3.')
@@ -909,7 +937,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertTrue(os.stat(download_path))
 
   def test_copy_bucket_to_bucket(self):
-    """Tests that recursively copying from bucket to bucket.
+    """Tests recursively copying from bucket to bucket.
 
     This should produce identically named objects (and not, in particular,
     destination objects named by the version-specific URI from source objects).

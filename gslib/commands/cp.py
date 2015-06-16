@@ -23,8 +23,6 @@ import traceback
 
 from gslib import copy_helper
 from gslib.cat_helper import CatHelper
-from gslib.cloud_api import AccessDeniedException
-from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
@@ -468,8 +466,13 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
 
 _OPTIONS_TEXT = """
 <B>OPTIONS</B>
-  -a canned_acl   Sets named canned_acl when uploaded objects created. See
-                  'gsutil help acls' for further details.
+  -a canned_acl  Sets named canned_acl when uploaded objects created. See
+                 'gsutil help acls' for further details.
+
+  -A             Copy all source versions from a source buckets/folders.
+                 If not set, only the live version of each source object is
+                 copied. Note: this option is only useful when the destination
+                 bucket has versioning enabled.
 
   -c             If an error occurs, continue to attempt to copy the remaining
                  files. If any copies were unsuccessful, gsutil's exit status
@@ -636,7 +639,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:cDeIL:MNnprRtUvz:'
+CP_SUB_ARGS = 'a:AcDeIL:MNnprRtUvz:'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -877,33 +880,11 @@ class CpCommand(Command):
         copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api,
                                          self.debug, self.project_id))
 
-    # If the destination bucket has versioning enabled iterate with
-    # all_versions=True. That way we'll copy all versions if the source bucket
-    # is versioned; and by leaving all_versions=False if the destination bucket
-    # has versioning disabled we will avoid copying old versions all to the same
-    # un-versioned destination object.
-    all_versions = False
-    try:
-      bucket = self._GetBucketWithVersioningConfig(self.exp_dst_url)
-      if bucket and bucket.versioning and bucket.versioning.enabled:
-        all_versions = True
-    except AccessDeniedException:
-      # This happens (in the XML API only) if the user doesn't have OWNER access
-      # on the bucket (needed to check if versioning is enabled). In this case
-      # fall back to copying all versions (which can be inefficient for the
-      # reason noted in the comment above). We don't try to warn the user
-      # because that would result in false positive warnings (since we can't
-      # check if versioning is enabled on the destination bucket).
-      #
-      # For JSON, we will silently not return versioning if we don't have
-      # access.
-      all_versions = True
-
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug,
         self.logger, self.gsutil_api, url_strs,
         self.recursion_requested or copy_helper_opts.perform_mv,
-        project_id=self.project_id, all_versions=all_versions,
+        project_id=self.project_id, all_versions=self.all_versions,
         continue_on_error=self.continue_on_error or self.parallel_operations)
 
     # Use a lock to ensure accurate statistics in the face of
@@ -978,6 +959,8 @@ class CpCommand(Command):
     # Command class, so save in Command state rather than CopyHelperOpts.
     self.canned = None
 
+    self.all_versions = False
+
     self.skip_unsupported_objects = False
 
     # Files matching these extensions should be gzipped before uploading.
@@ -993,6 +976,8 @@ class CpCommand(Command):
         if o == '-a':
           canned_acl = a
           self.canned = True
+        if o == '-A':
+          self.all_versions = True
         if o == '-c':
           self.continue_on_error = True
         elif o == '-D':
@@ -1040,33 +1025,3 @@ class CpCommand(Command):
         canned_acl=canned_acl,
         skip_unsupported_objects=self.skip_unsupported_objects,
         test_callback_file=test_callback_file)
-
-  def _GetBucketWithVersioningConfig(self, exp_dst_url):
-    """Gets versioning config for a bucket and ensures that it exists.
-
-    Args:
-      exp_dst_url: Wildcard-expanded destination StorageUrl.
-
-    Raises:
-      AccessDeniedException: if there was a permissions problem accessing the
-                             bucket or its versioning config.
-      CommandException: if URL refers to a cloud bucket that does not exist.
-
-    Returns:
-      apitools Bucket with versioning configuration.
-    """
-    bucket = None
-    if exp_dst_url.IsCloudUrl() and exp_dst_url.IsBucket():
-      try:
-        bucket = self.gsutil_api.GetBucket(
-            exp_dst_url.bucket_name, provider=exp_dst_url.scheme,
-            fields=['versioning'])
-      except AccessDeniedException, e:
-        raise
-      except NotFoundException, e:
-        raise CommandException('Destination bucket %s does not exist.' %
-                               exp_dst_url)
-      except Exception, e:
-        raise CommandException('Error retrieving destination bucket %s: %s' %
-                               (exp_dst_url, e.message))
-      return bucket

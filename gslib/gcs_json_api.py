@@ -73,6 +73,7 @@ from gslib.tracker_file import HashRewriteParameters
 from gslib.tracker_file import ReadRewriteTrackerFile
 from gslib.tracker_file import WriteRewriteTrackerFile
 from gslib.translation_helper import CreateBucketNotFoundException
+from gslib.translation_helper import CreateNotFoundExceptionForObjectWrite
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import REMOVE_CORS_CONFIG
@@ -835,8 +836,11 @@ class GcsJsonApi(CloudApi):
             global_params, bytes_uploaded_container, tracker_callback,
             additional_headers, progress_callback)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name)
+                                       object_name=object_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def _PerformResumableUpload(
       self, upload_stream, authorized_upload_http, content_type, size,
@@ -1069,8 +1073,13 @@ class GcsJsonApi(CloudApi):
       DeleteTrackerFile(tracker_file_name)
       return rewrite_response.resource
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, dst_obj_metadata.bucket, src_provider=self.provider,
+          src_bucket_name=src_obj_metadata.bucket,
+          src_object_name=src_obj_metadata.name, src_generation=src_generation)
       self._TranslateExceptionAndRaise(e, bucket_name=dst_obj_metadata.bucket,
-                                       object_name=dst_obj_metadata.name)
+                                       object_name=dst_obj_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def DeleteObject(self, bucket_name, object_name, preconditions=None,
                    generation=None, provider=None):
@@ -1210,7 +1219,7 @@ class GcsJsonApi(CloudApi):
     raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
 
   def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
-                                  generation=None):
+                                  generation=None, not_found_exception=None):
     """Translates an HTTP exception and raises the translated or original value.
 
     Args:
@@ -1218,6 +1227,7 @@ class GcsJsonApi(CloudApi):
       bucket_name: Optional bucket name in request that caused the exception.
       object_name: Optional object name in request that caused the exception.
       generation: Optional generation in request that caused the exception.
+      not_found_exception: Optional exception to raise in the not-found case.
 
     Raises:
       Translated CloudApi exception, or the original exception if it was not
@@ -1225,7 +1235,7 @@ class GcsJsonApi(CloudApi):
     """
     translated_exception = self._TranslateApitoolsException(
         e, bucket_name=bucket_name, object_name=object_name,
-        generation=generation)
+        generation=generation, not_found_exception=not_found_exception)
     if translated_exception:
       raise translated_exception
     else:
@@ -1242,8 +1252,7 @@ class GcsJsonApi(CloudApi):
           # If we couldn't decode anything, just leave the message as None.
           pass
 
-  def _TranslateApitoolsResumableUploadException(
-      self, e, bucket_name=None, object_name=None, generation=None):
+  def _TranslateApitoolsResumableUploadException(self, e):
     if isinstance(e, apitools_exceptions.HttpError):
       message = self._GetMessageFromHttpError(e)
       if (e.status_code == 503 and
@@ -1274,7 +1283,7 @@ class GcsJsonApi(CloudApi):
       return ResumableUploadAbortException(e.message)
 
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
-                                  generation=None):
+                                  generation=None, not_found_exception=None):
     """Translates apitools exceptions into their gsutil Cloud Api equivalents.
 
     Args:
@@ -1282,6 +1291,7 @@ class GcsJsonApi(CloudApi):
       bucket_name: Optional bucket name in request that caused the exception.
       object_name: Optional object name in request that caused the exception.
       generation: Optional generation in request that caused the exception.
+      not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
       CloudStorageApiServiceException for translatable exceptions, None
@@ -1333,7 +1343,12 @@ class GcsJsonApi(CloudApi):
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)
       elif e.status_code == 404:
-        if bucket_name:
+        if not_found_exception:
+          # The exception is pre-constructed prior to translation; the HTTP
+          # status code isn't available at that time.
+          setattr(not_found_exception, 'status', e.status_code)
+          return not_found_exception
+        elif bucket_name:
           if object_name:
             return CreateObjectNotFoundException(e.status_code, self.provider,
                                                  bucket_name, object_name,
@@ -1341,6 +1356,7 @@ class GcsJsonApi(CloudApi):
           return CreateBucketNotFoundException(e.status_code, self.provider,
                                                bucket_name)
         return NotFoundException(e.message, status=e.status_code)
+
       elif e.status_code == 409 and bucket_name:
         if 'The bucket you tried to delete was not empty.' in str(e):
           return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,

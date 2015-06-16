@@ -312,6 +312,40 @@ def PreconditionsFromHeaders(headers):
   return return_preconditions
 
 
+def CreateNotFoundExceptionForObjectWrite(
+    dst_provider, dst_bucket_name, src_provider=None,
+    src_bucket_name=None, src_object_name=None, src_generation=None):
+  """Creates a NotFoundException for an object upload or copy.
+
+  This is necessary because 404s don't necessarily specify which resource
+  does not exist.
+
+  Args:
+    dst_provider: String abbreviation of destination provider, e.g., 'gs'.
+    dst_bucket_name: Destination bucket name for the write operation.
+    src_provider: String abbreviation of source provider, i.e. 'gs', if any.
+    src_bucket_name: Source bucket name, if any (for the copy case).
+    src_object_name: Source object name, if any (for the copy case).
+    src_generation: Source object generation, if any (for the copy case).
+
+  Returns:
+    NotFoundException with appropriate message.
+  """
+  dst_url_string = '%s://%s' % (dst_provider, dst_bucket_name)
+  if src_bucket_name and src_object_name:
+    src_url_string = '%s://%s/%s' % (src_provider, src_bucket_name,
+                                     src_object_name)
+    if src_generation:
+      src_url_string += '#%s' % str(src_generation)
+    return NotFoundException(
+        'The source object %s or the destination bucket %s does not exist.' %
+        (src_url_string, dst_url_string))
+
+  return NotFoundException(
+      'The destination bucket %s does not exist or the write to the '
+      'destination must be restarted' % dst_url_string)
+
+
 def CreateBucketNotFoundException(code, provider, bucket_name):
   return NotFoundException('%s://%s bucket does not exist.' %
                            (provider, bucket_name), status=code)

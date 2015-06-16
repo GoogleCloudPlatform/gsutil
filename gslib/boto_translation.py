@@ -74,6 +74,7 @@ from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CorsTranslation
 from gslib.translation_helper import CreateBucketNotFoundException
+from gslib.translation_helper import CreateNotFoundExceptionForObjectWrite
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import EncodeStringAsLong
@@ -819,8 +820,11 @@ class BotoTranslation(CloudApi):
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name)
+                                       object_name=object_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, progress_callback=None,
@@ -836,8 +840,11 @@ class BotoTranslation(CloudApi):
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name)
+                                       object_name=object_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    preconditions=None, size=None, progress_callback=None,
@@ -860,8 +867,11 @@ class BotoTranslation(CloudApi):
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name)
+                                       object_name=object_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def DeleteObject(self, bucket_name, object_name, preconditions=None,
                    generation=None, provider=None):
@@ -920,8 +930,13 @@ class BotoTranslation(CloudApi):
 
       return self._BotoKeyToObject(new_key, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS, e:
-      self._TranslateExceptionAndRaise(e, dst_obj_metadata.bucket,
-                                       dst_obj_metadata.name)
+      not_found_exception = CreateNotFoundExceptionForObjectWrite(
+          self.provider, dst_obj_metadata.bucket, src_provider=self.provider,
+          src_bucket_name=src_obj_metadata.bucket,
+          src_object_name=src_obj_metadata.name, src_generation=src_generation)
+      self._TranslateExceptionAndRaise(e, bucket_name=dst_obj_metadata.bucket,
+                                       object_name=dst_obj_metadata.name,
+                                       not_found_exception=not_found_exception)
 
   def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
                     preconditions=None, provider=None, fields=None):
@@ -1382,7 +1397,7 @@ class BotoTranslation(CloudApi):
         raise
 
   def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
-                                  generation=None):
+                                  generation=None, not_found_exception=None):
     """Translates a Boto exception and raises the translated or original value.
 
     Args:
@@ -1390,6 +1405,7 @@ class BotoTranslation(CloudApi):
       bucket_name: Optional bucket name in request that caused the exception.
       object_name: Optional object name in request that caused the exception.
       generation: Optional generation in request that caused the exception.
+      not_found_exception: Optional exception to raise in the not-found case.
 
     Raises:
       Translated CloudApi exception, or the original exception if it was not
@@ -1397,14 +1413,14 @@ class BotoTranslation(CloudApi):
     """
     translated_exception = self._TranslateBotoException(
         e, bucket_name=bucket_name, object_name=object_name,
-        generation=generation)
+        generation=generation, not_found_exception=not_found_exception)
     if translated_exception:
       raise translated_exception
     else:
       raise
 
   def _TranslateBotoException(self, e, bucket_name=None, object_name=None,
-                              generation=None):
+                              generation=None, not_found_exception=None):
     """Translates boto exceptions into their gsutil Cloud API equivalents.
 
     Args:
@@ -1412,6 +1428,7 @@ class BotoTranslation(CloudApi):
       bucket_name: Optional bucket name in request that caused the exception.
       object_name: Optional object name in request that caused the exception.
       generation: Optional generation in request that caused the exception.
+      not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
       CloudStorageApiServiceException for translatable exceptions, None
@@ -1425,14 +1442,20 @@ class BotoTranslation(CloudApi):
       elif e.status == 401 or e.status == 403:
         return AccessDeniedException(e.code, status=e.status, body=e.body)
       elif e.status == 404:
-        if bucket_name:
+        if not_found_exception:
+          # The exception is pre-constructed prior to translation; the HTTP
+          # status code isn't available at that time.
+          setattr(not_found_exception, 'status', e.status)
+          return not_found_exception
+        elif bucket_name:
           if object_name:
             return CreateObjectNotFoundException(e.status, self.provider,
                                                  bucket_name, object_name,
                                                  generation=generation)
           return CreateBucketNotFoundException(e.status, self.provider,
                                                bucket_name)
-        return NotFoundException(e.code, status=e.status, body=e.body)
+        return NotFoundException(e.message, status=e.status, body=e.body)
+
       elif e.status == 409 and e.code and 'BucketNotEmpty' in e.code:
         return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                  status=e.status, body=e.body)
