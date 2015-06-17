@@ -170,9 +170,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
     Subdir is signified by a $folder$ object.
     """
-    # Create a $folder$ object to simulate a folder created by GCS manager (or
-    # various other tools), which gsutil understands to mean there is a folder
-    # into which the object is being copied.
+    # Create a $folder$ object to simulate a folder created by the legacy GCS
+    # console (or various other tools), which gsutil understands to mean there
+    # is a folder into which the object is being copied.
     dst_bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=dst_bucket_uri, object_name='abc_$folder$',
                       contents='')

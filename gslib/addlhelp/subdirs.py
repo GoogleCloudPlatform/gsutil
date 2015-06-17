@@ -39,7 +39,7 @@ _DETAILED_HELP_TEXT = ("""
 
   gsutil achieves the hierarchical file tree illusion by applying a variety of
   rules, to try to make naming work the way users would expect. For example, in
-  order to determine whether to treat a destination URI as an object name or the
+  order to determine whether to treat a destination URL as an object name or the
   root of a directory under which objects should be copied gsutil uses these
   rules:
 
@@ -58,8 +58,8 @@ _DETAILED_HELP_TEXT = ("""
      and there exists an object called abc_$folder$, gsutil will create the
      object gs://your-bucket/abc/file.
 
-  3. If you attempt to copy multiple source files to a destination URI, gsutil
-     treats the destination URI as a directory. For example, if you run
+  3. If you attempt to copy multiple source files to a destination URL, gsutil
+     treats the destination URL as a directory. For example, if you run
      the command:
 
        gsutil cp -r your-dir gs://your-bucket/abc
