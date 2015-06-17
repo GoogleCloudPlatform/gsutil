@@ -1104,34 +1104,52 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
   if storage_url.IsBucket():
     return (storage_url, True)
 
-  # For object/prefix URLs check 3 cases: (a) if the name ends with '/' treat
-  # as a subdir; otherwise, use the wildcard iterator with url to
-  # find if (b) there's a Prefix matching url, or (c) name is of form
-  # dir_$folder$ (and in both these cases also treat dir as a subdir).
-  # Cloud subdirs are always considered to be an existing container.
+  # For object/prefix URLs, there are four cases that indicate the destination
+  # is a cloud subdirectory; these are always considered to be an existing
+  # container. Checking each case allows gsutil to provide Unix-like
+  # destination folder semantics, but requires up to three HTTP calls, noted
+  # below.
+
+  # Case 1: If a placeholder object ending with '/' exists.
   if IsCloudSubdirPlaceholder(storage_url):
     return (storage_url, True)
 
-  # Check for the special case where we have a folder marker object.
-  folder_expansion = CreateWildcardIterator(
-      storage_url.versionless_url_string + '_$folder$', gsutil_api,
-      debug=debug, project_id=project_id).IterAll(
-          bucket_listing_fields=['name'])
-  for blr in folder_expansion:
+  # Case 2: If a placeholder object matching destination + _$folder$ exists.
+  # HTTP call to check (strongly consistent) for a matching $_folder$ object.
+  try:
+    gsutil_api.GetObjectMetadata(
+        storage_url.bucket_name, storage_url.object_name + '_$folder$',
+        provider=storage_url.scheme, fields=['name'])
     return (storage_url, True)
+  except NotFoundException:
+    pass
 
-  blr_expansion = CreateWildcardIterator(url_str, gsutil_api,
-                                         debug=debug,
-                                         project_id=project_id).IterAll(
-                                             bucket_listing_fields=['name'])
-  expansion_empty = True
-  for blr in blr_expansion:
-    expansion_empty = False
-    if blr.IsPrefix():
-      return (storage_url, True)
+  # Case 3: If there is a matching prefix when listing the destination URL.
+  if not treat_nonexistent_object_as_subdir:
+    # If we don't care about nonexistent objects, make only a single
+    # HTTP call: to check (eventually consistent) for a matching prefix.
+    return (storage_url, any(gsutil_api.ListObjects(
+        storage_url.bucket_name, prefix=storage_url.object_name, delimiter='/',
+        provider=storage_url.scheme, fields=['prefixes'])))
+  else:
+    # HTTP call(s): the wildcard iterator first calls GetObjectMetadata to
+    # check (strongly consistent) that the object does not exist. If it does
+    # not, then the iterator makes a second call to check
+    # (eventually consistent) for a matching prefix.
+    blr_expansion = CreateWildcardIterator(url_str, gsutil_api,
+                                           debug=debug,
+                                           project_id=project_id).IterAll(
+                                               bucket_listing_fields=['name'])
+    expansion_empty = True
+    for blr in blr_expansion:
+      expansion_empty = False
+      if blr.IsPrefix():
+        return (storage_url, True)
 
-  return (storage_url,
-          expansion_empty and treat_nonexistent_object_as_subdir)
+    # Case 4: If no objects/prefixes matched, and nonexistent objects should be
+    # treated as subdirectories.
+    return (storage_url,
+            expansion_empty and treat_nonexistent_object_as_subdir)
 
 
 def FixWindowsNaming(src_url, dst_url):

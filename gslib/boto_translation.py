@@ -319,8 +319,10 @@ class BotoTranslation(CloudApi):
     _ = provider
     get_fields = self._ListToGetFields(list_fields=fields)
     bucket_uri = self._StorageUriForBucket(bucket_name)
-    prefix_list = []
     headers = {}
+    yield_prefixes = fields is None or 'prefixes' in fields
+    yield_objects = fields is None or any(
+        field.startswith('items/') for field in fields)
     self._AddApiVersionToHeaders(headers)
     try:
       objects_iter = bucket_uri.list_bucket(prefix=prefix or '',
@@ -332,11 +334,10 @@ class BotoTranslation(CloudApi):
 
     try:
       for key in objects_iter:
-        if isinstance(key, Prefix):
-          prefix_list.append(key.name)
+        if yield_prefixes and isinstance(key, Prefix):
           yield CloudApi.CsObjectOrPrefix(key.name,
                                           CloudApi.CsObjectOrPrefixType.PREFIX)
-        else:
+        elif yield_objects:
           key_to_convert = key
 
           # Listed keys are populated with these fields during bucket listing.
