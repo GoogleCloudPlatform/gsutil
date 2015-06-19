@@ -439,12 +439,15 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   return http
 
 
+# Retry for 10 minutes with exponential backoff, which corresponds to
+# the maximum Downtime Period specified in the GCS SLA
+# (https://cloud.google.com/storage/sla)
 def GetNumRetries():
-  return config.getint('Boto', 'num_retries', 6)
+  return config.getint('Boto', 'num_retries', 23)
 
 
 def GetMaxRetryDelay():
-  return config.getint('Boto', 'max_retry_delay', 60)
+  return config.getint('Boto', 'max_retry_delay', 32)
 
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be

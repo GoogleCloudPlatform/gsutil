@@ -201,6 +201,7 @@ class GcsJsonApi(CloudApi):
             GetCredentialStoreFilename(), self.api_version))
 
     self.num_retries = GetNumRetries()
+    self.max_retry_wait = GetMaxRetryDelay()
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
@@ -209,6 +210,7 @@ class GcsJsonApi(CloudApi):
         url=self.url_base, http=self.http, log_request=log_request,
         log_response=log_response, credentials=self.credentials,
         version=self.api_version)
+    self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
 
     if no_op_credentials:
@@ -657,7 +659,7 @@ class GcsJsonApi(CloudApi):
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
               (self.num_retries, unicode(e).encode(UTF8)))
-        time.sleep(CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
+        time.sleep(CalculateWaitForRetry(retries, max_wait=self.max_retry_wait))
         if self.logger.isEnabledFor(logging.DEBUG):
           self.logger.debug(
               'Retrying download from byte %s after exception: %s. Trace: %s',
@@ -935,7 +937,7 @@ class GcsJsonApi(CloudApi):
                     'Transfer failed after %d retries. Final exception: %s' %
                     (self.num_retries, e2))
               time.sleep(
-                  CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
+                  CalculateWaitForRetry(retries, max_wait=self.max_retry_wait))
           if start_byte > last_progress_byte:
             # We've made progress, so allow a fresh set of retries.
             last_progress_byte = start_byte
@@ -947,7 +949,7 @@ class GcsJsonApi(CloudApi):
                   'Transfer failed after %d retries. Final exception: %s' %
                   (self.num_retries, unicode(e).encode(UTF8)))
             time.sleep(
-                CalculateWaitForRetry(retries, max_wait=GetMaxRetryDelay()))
+                CalculateWaitForRetry(retries, max_wait=self.max_retry_wait))
           if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 'Retrying upload from byte %s after exception: %s. Trace: %s',
