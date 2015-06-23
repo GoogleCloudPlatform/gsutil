@@ -103,6 +103,14 @@ DEBUG_WARNING = """
 ***************************** WARNING *****************************
 """.lstrip()
 
+TRACE_WARNING = """
+***************************** WARNING *****************************
+*** You are running gsutil with trace output enabled.
+*** Be aware that trace output includes authentication credentials
+*** and may include the contents of any files accessed during the trace.
+***************************** WARNING *****************************
+""".lstrip()
+
 HTTP_WARNING = """
 ***************************** WARNING *****************************
 *** You are running gsutil with the "https_validate_certificates" config
@@ -232,6 +240,7 @@ def main():
   quiet = False
   version = False
   debug = 0
+  trace_token = None
   test_exception_traces = False
 
   # If user enters no commands just print the usage info.
@@ -255,7 +264,7 @@ def main():
       opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
                                  ['debug', 'detailedDebug', 'version', 'option',
                                   'help', 'header', 'multithreaded', 'quiet',
-                                  'testexceptiontraces'])
+                                  'testexceptiontraces', 'trace-token='])
     except getopt.GetoptError as e:
       _HandleCommandException(gslib.exception.CommandException(e.msg))
     for o, a in opts:
@@ -284,6 +293,8 @@ def main():
         quiet = True
       elif o in ('-v', '--version'):
         version = True
+      elif o == '--trace-token':
+        trace_token = a
       elif o == '--testexceptiontraces':  # Hidden flag for integration tests.
         test_exception_traces = True
       elif o in ('-o', '--option'):
@@ -297,6 +308,8 @@ def main():
           boto.config.add_section(opt_section)
         boto.config.set(opt_section, opt_name, opt_value)
     httplib2.debuglevel = debug
+    if trace_token:
+      sys.stderr.write(TRACE_WARNING)
     if debug > 1:
       sys.stderr.write(DEBUG_WARNING)
     if debug >= 2:
@@ -341,7 +354,8 @@ def main():
 
     return _RunNamedCommandAndHandleExceptions(
         command_runner, command_name, args=args[1:], headers=headers,
-        debug_level=debug, parallel_operations=parallel_operations)
+        debug_level=debug, trace_token=trace_token,
+        parallel_operations=parallel_operations)
   finally:
     _Cleanup()
 
@@ -508,6 +522,7 @@ def _CheckAndHandleCredentialException(e, args):
 
 def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
                                         headers=None, debug_level=0,
+                                        trace_token=None,
                                         parallel_operations=False):
   """Runs the command with the given command runner and arguments."""
   # pylint: disable=g-import-not-at-top
@@ -523,7 +538,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     if not IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
     return command_runner.RunNamedCommand(command_name, args, headers,
-                                          debug_level, parallel_operations)
+                                          debug_level, trace_token,
+                                          parallel_operations)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit('Missing credentials for the given URI(s). Does your '

@@ -199,9 +199,9 @@ class CommandRunner(object):
             command_parser, command.command_spec.argparse_arguments, gsutil_api)
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
-                      parallel_operations=False, test_method=None,
-                      skip_update_check=False, logging_filters=None,
-                      do_shutdown=True):
+                      trace_token=None, parallel_operations=False,
+                      test_method=None, skip_update_check=False,
+                      logging_filters=None, do_shutdown=True):
     """Runs the named command.
 
     Used by gsutil main, commands built atop other commands, and tests.
@@ -211,6 +211,7 @@ class CommandRunner(object):
       args: Command-line args (arg0 = actual arg, not command name ala bash).
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
+      trace_token: Trace token to pass to the underlying API.
       parallel_operations: Should command operations be executed in parallel?
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
@@ -271,7 +272,7 @@ class CommandRunner(object):
 
     command_class = self.command_map[command_name]
     command_inst = command_class(
-        self, args, headers, debug, parallel_operations,
+        self, args, headers, debug, trace_token, parallel_operations,
         self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
         test_method, logging_filters, command_alias_used=command_name)
     return_code = command_inst.RunCommand()

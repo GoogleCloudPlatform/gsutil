@@ -359,10 +359,10 @@ class Command(HelpProvider):
            'command_name': self.command_name})))
     return args
 
-  def __init__(self, command_runner, args, headers, debug, parallel_operations,
-               bucket_storage_uri_class, gsutil_api_class_map_factory,
-               test_method=None, logging_filters=None,
-               command_alias_used=None):
+  def __init__(self, command_runner, args, headers, debug, trace_token,
+               parallel_operations, bucket_storage_uri_class,
+               gsutil_api_class_map_factory, test_method=None,
+               logging_filters=None, command_alias_used=None):
     """Instantiates a Command.
 
     Args:
@@ -370,6 +370,7 @@ class Command(HelpProvider):
       args: Command-line args (arg0 = actual arg, not command name ala bash).
       headers: Dictionary containing optional HTTP headers to pass to boto.
       debug: Debug level to pass in to boto connection (range 0..3).
+      trace_token: Trace token to pass to the API implementation.
       parallel_operations: Should command operations be executed in parallel?
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
@@ -378,7 +379,7 @@ class Command(HelpProvider):
       test_method: Optional general purpose method for testing purposes.
                    Application and semantics of this method will vary by
                    command and test type.
-      logging_filters: Optional list of logging.Filters to apply to this
+      logging_filters: Optional list of logging. Filters to apply to this
                        command's logger.
       command_alias_used: The alias that was actually used when running this
                           command (as opposed to the "official" command name,
@@ -395,6 +396,7 @@ class Command(HelpProvider):
     self.unparsed_args = args
     self.headers = headers
     self.debug = debug
+    self.trace_token = trace_token
     self.parallel_operations = parallel_operations
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
@@ -445,7 +447,7 @@ class Command(HelpProvider):
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(
         bucket_storage_uri_class, self.gsutil_api_map,
-        self.logger, debug=self.debug)
+        self.logger, debug=self.debug, trace_token=self.trace_token)
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''

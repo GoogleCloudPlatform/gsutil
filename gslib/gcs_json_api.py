@@ -133,7 +133,7 @@ class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
   def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               credentials=None, debug=0):
+               credentials=None, debug=0, trace_token=None):
     """Performs necessary setup for interacting with Google Cloud Storage.
 
     Args:
@@ -143,6 +143,7 @@ class GcsJsonApi(CloudApi):
       credentials: Credentials to be used for interacting with Google Cloud
                    Storage.
       debug: Debug level for the API implementation (0..3).
+      trace_token: Trace token to pass to the API implementation.
     """
     # TODO: Plumb host_header for perfdiag / test_perfdiag.
     # TODO: Add jitter to apitools' http_wrapper retry mechanism.
@@ -206,10 +207,13 @@ class GcsJsonApi(CloudApi):
     log_request = (debug >= 3)
     log_response = (debug >= 3)
 
+    self.global_params = apitools_messages.StandardQueryParameters(
+        trace='token:%s' % trace_token) if trace_token else None
+
     self.api_client = apitools_client.StorageV1(
         url=self.url_base, http=self.http, log_request=log_request,
         log_response=log_response, credentials=self.credentials,
-        version=self.api_version)
+        version=self.api_version, default_global_params=self.global_params)
     self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
 
