@@ -131,7 +131,7 @@ class BotoTranslation(CloudApi):
   """
 
   def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               credentials=None, debug=0):
+               credentials=None, debug=0, trace_token=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
@@ -143,6 +143,7 @@ class BotoTranslation(CloudApi):
                 the provider argument and use this one instead.
       credentials: Unused.
       debug: Debug level for the API implementation (0..3).
+      trace_token: Unused in this subclass.
     """
     super(BotoTranslation, self).__init__(bucket_storage_uri_class, logger,
                                           provider=provider, debug=debug)

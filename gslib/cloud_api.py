@@ -26,7 +26,8 @@ class CloudApi(object):
   a separate instance of the gsutil Cloud API should be instantiated per-thread.
   """
 
-  def __init__(self, bucket_storage_uri_class, logger, provider=None, debug=0):
+  def __init__(self, bucket_storage_uri_class, logger, provider=None,
+               debug=0, trace_token=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
@@ -36,11 +37,14 @@ class CloudApi(object):
       provider: Default provider prefix describing cloud storage provider to
                 connect to.
       debug: Debug level for the API implementation (0..3).
+      trace_token: Google internal trace token to pass to the API
+                   implementation (string).
     """
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.logger = logger
     self.provider = provider
     self.debug = debug
+    self.trace_token = trace_token
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """Gets Bucket metadata.
