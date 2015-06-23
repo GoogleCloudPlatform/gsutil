@@ -1224,6 +1224,10 @@ class Command(HelpProvider):
       # start and it scrolled off-screen.
       self._MaybeSuggestGsutilDashM()
 
+    # If the final iterated argument results in an exception, and that
+    # exception modifies shared_attrs, we need to publish the results.
+    worker_thread.shared_vars_updater.Update(caller_id, self)
+
   # pylint: disable=g-doc-args
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
                      arg_checker, process_count, thread_count,

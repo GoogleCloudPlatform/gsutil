@@ -353,12 +353,22 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       expected_sum += len(arg)
     self.assertEqual(expected_sum, command_inst.arg_length_sum)
 
-    # Test that shared variables work when the iterator fails.
-    command_inst = self.command_class(True)
-    args = FailingIterator(10, [1, 3, 5])
-    self._RunApply(_ReturnOneValue, args, process_count, thread_count,
-                   command_inst=command_inst, shared_attrs=['failure_count'])
-    self.assertEqual(3, command_inst.failure_count)
+    # Test that shared variables work when the iterator fails at the beginning,
+    # middle, and end.
+    for (failing_iterator, expected_failure_count) in (
+        (FailingIterator(5, [0]), 1),
+        (FailingIterator(10, [1, 3, 5]), 3),
+        (FailingIterator(5, [4]), 1)):
+      command_inst = self.command_class(True)
+      args = failing_iterator
+      self._RunApply(_ReturnOneValue, args, process_count, thread_count,
+                     command_inst=command_inst, shared_attrs=['failure_count'])
+      self.assertEqual(
+          expected_failure_count, command_inst.failure_count,
+          msg='Failure count did not match. Expected: %s, actual: %s '
+          'for failing iterator of size %s, failing indices %s' %
+          (expected_failure_count, command_inst.failure_count,
+           failing_iterator.size, failing_iterator.failure_indices))
 
   @RequiresIsolation
   def testThreadsSurviveExceptionsInFuncSingleProcessSingleThread(self):

@@ -36,6 +36,7 @@ from boto.gs.acl import USER_BY_EMAIL
 from boto.gs.acl import USER_BY_ID
 
 from gslib.cloud_api import ArgumentException
+from gslib.cloud_api import BucketNotFoundException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import Preconditions
 from gslib.exception import CommandException
@@ -347,8 +348,9 @@ def CreateNotFoundExceptionForObjectWrite(
 
 
 def CreateBucketNotFoundException(code, provider, bucket_name):
-  return NotFoundException('%s://%s bucket does not exist.' %
-                           (provider, bucket_name), status=code)
+  return BucketNotFoundException('%s://%s bucket does not exist.' %
+                                 (provider, bucket_name), bucket_name,
+                                 status=code)
 
 
 def CreateObjectNotFoundException(code, provider, bucket_name, object_name,
