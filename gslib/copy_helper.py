@@ -27,7 +27,6 @@ from hashlib import md5
 import json
 import logging
 import mimetypes
-import multiprocessing
 import os
 import pickle
 import random
@@ -89,6 +88,7 @@ from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
+from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CreateLock
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetCloudApiInstance
@@ -102,7 +102,6 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
-from gslib.util import MultiprocessingIsAvailable
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
 from gslib.util import UTF8
@@ -133,8 +132,9 @@ global global_copy_helper_opts, global_logger
 # user specified two identical source URLs), the writes occur serially.
 global open_files_map
 open_files_map = (
-    ThreadSafeDict() if (IS_WINDOWS or not MultiprocessingIsAvailable()[0])
-    else ThreadAndProcessSafeDict(multiprocessing.Manager()))
+    ThreadSafeDict() if (
+        IS_WINDOWS or not CheckMultiprocessingAvailableAndInit().is_available)
+    else ThreadAndProcessSafeDict(gslib.util.manager))
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.

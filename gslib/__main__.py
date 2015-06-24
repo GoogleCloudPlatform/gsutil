@@ -197,11 +197,10 @@ def main():
   from gcs_oauth2_boto_plugin import oauth2_client
   from apitools.base.py import credentials_lib
   # pylint: enable=unused-variable
-  from gslib.util import MultiprocessingIsAvailable
-  if MultiprocessingIsAvailable()[0]:
+  from gslib.util import CheckMultiprocessingAvailableAndInit
+  if CheckMultiprocessingAvailableAndInit().is_available:
     # These setup methods must be called, and, on Windows, they can only be
     # called from within an "if __name__ == '__main__':" block.
-    gslib.util.InitializeMultiprocessingVariables()
     gslib.command.InitializeMultiprocessingVariables()
     gslib.boto_translation.InitializeMultiprocessingVariables()
 

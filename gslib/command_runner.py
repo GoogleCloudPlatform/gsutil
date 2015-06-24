@@ -41,13 +41,13 @@ from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
+from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CompareVersions
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
-from gslib.util import MultiprocessingIsAvailable
 from gslib.util import RELEASE_NOTES_URL
 from gslib.util import SECONDS_PER_DAY
 from gslib.util import UTF8
@@ -277,7 +277,7 @@ class CommandRunner(object):
         test_method, logging_filters, command_alias_used=command_name)
     return_code = command_inst.RunCommand()
 
-    if MultiprocessingIsAvailable()[0] and do_shutdown:
+    if CheckMultiprocessingAvailableAndInit().is_available and do_shutdown:
       ShutDownGsutil()
     if GetFailureCount() > 0:
       return_code = 1

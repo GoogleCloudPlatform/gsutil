@@ -59,12 +59,12 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
+from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import GetConfigFilePath
 from gslib.util import GsutilStreamHandler
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
-from gslib.util import MultiprocessingIsAvailable
 from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
@@ -467,7 +467,8 @@ class Command(HelpProvider):
           self.recursion_requested = True
           break
 
-    self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
+    self.multiprocessing_is_available = (
+        CheckMultiprocessingAvailableAndInit().is_available)
 
   def RaiseWrongNumberOfArgumentsException(self):
     """Raises exception for wrong number of arguments supplied to command."""
@@ -1116,7 +1117,7 @@ class Command(HelpProvider):
         # self.multiprocessing_is_available, but we don't want to print the
         # warning until we're sure the user actually tried to use multiple
         # threads or processes.
-        MultiprocessingIsAvailable(logger=self.logger)
+        CheckMultiprocessingAvailableAndInit(logger=self.logger)
 
     if self.multiprocessing_is_available:
       caller_id = self._SetUpPerCallerState()

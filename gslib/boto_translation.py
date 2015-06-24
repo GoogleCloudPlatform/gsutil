@@ -83,12 +83,12 @@ from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
+from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetFileSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNumRetries
-from gslib.util import MultiprocessingIsAvailable
 from gslib.util import S3_DELETE_MARKER_GUID
 from gslib.util import TWO_MIB
 from gslib.util import UnaryDictToXml
@@ -149,7 +149,8 @@ class BotoTranslation(CloudApi):
                                           provider=provider, debug=debug)
     _ = credentials
     global boto_auth_initialized  # pylint: disable=global-variable-undefined
-    if MultiprocessingIsAvailable()[0] and not boto_auth_initialized.value:
+    if (CheckMultiprocessingAvailableAndInit().is_available
+        and not boto_auth_initialized.value):
       ConfigureNoOpAuthIfNeeded()
       boto_auth_initialized.value = 1
     elif not boto_auth_initialized:

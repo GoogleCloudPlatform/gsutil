@@ -34,8 +34,8 @@ from gslib.command import DummyArgChecker
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
+from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import IS_WINDOWS
-from gslib.util import MultiprocessingIsAvailable
 
 
 # Amount of time for an individual test to run before timing out. We need a
@@ -214,7 +214,8 @@ class FakeCommand(Command):
     self.logger = CreateGsutilLogger('FakeCommand')
     self.parallel_operations = do_parallel
     self.failure_count = 0
-    self.multiprocessing_is_available = MultiprocessingIsAvailable()[0]
+    self.multiprocessing_is_available = (
+        CheckMultiprocessingAvailableAndInit().is_available)
     self.debug = 0
 
 
@@ -574,11 +575,11 @@ class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):
   """Tests parallelism framework works with multiprocessing module unavailable.
 
   Notably, this test has no way to override previous calls
-  to gslib.util.MultiprocessingIsAvailable to prevent the initialization of
-  all of the global variables in command.py, so this still behaves slightly
-  differently than the behavior one would see on a machine where the
-  multiprocessing functionality is actually not available (in particular, it
-  will not catch the case where a global variable that is not available for
-  the sequential path is referenced before initialization).
+  to gslib.util.CheckMultiprocessingAvailableAndInit to prevent the
+  initialization of all of the global variables in command.py, so this still
+  behaves slightly differently than the behavior one would see on a machine
+  where the multiprocessing functionality is actually not available (in
+  particular, it will not catch the case where a global variable that is not
+  available for the sequential path is referenced before initialization).
   """
   command_class = FakeCommandWithoutMultiprocessingModule

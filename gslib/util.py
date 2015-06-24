@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import errno
 import logging
 import math
@@ -112,16 +113,6 @@ _EXP_STRINGS = [
 global manager  # pylint: disable=global-at-module-level
 certs_file_lock = threading.Lock()
 configured_certs_files = []
-
-
-def InitializeMultiprocessingVariables():
-  """Perform necessary initialization for multiprocessing.
-
-    See gslib.command.InitializeMultiprocessingVariables for an explanation
-    of why this is necessary.
-  """
-  global manager  # pylint: disable=global-variable-undefined
-  manager = multiprocessing.Manager()
 
 
 def _GenerateSuffixRegex():
@@ -893,8 +884,12 @@ def HaveProviderUrls(args_to_check):
       return True
   return False
 
+# This must be defined at the module level for pickling across processes.
+MultiprocessingIsAvailableResult = collections.namedtuple(
+    'MultiprocessingIsAvailableResult', ['is_available', 'stack_trace'])
 
-def MultiprocessingIsAvailable(logger=None):
+
+def CheckMultiprocessingAvailableAndInit(logger=None):
   """Checks if multiprocessing is available.
 
   There are some environments in which there is no way to use multiprocessing
@@ -902,6 +897,10 @@ def MultiprocessingIsAvailable(logger=None):
   we can't create semaphores). This simply tries out a few things that will be
   needed to make sure the environment can support the pieces of the
   multiprocessing module that we need.
+
+  If multiprocessing is available, this performs necessary initialization for
+  multiprocessing.  See gslib.command.InitializeMultiprocessingVariables for
+  an explanation of why this is necessary.
 
   Args:
     logger: logging.logger to use for debug output.
@@ -920,8 +919,9 @@ def MultiprocessingIsAvailable(logger=None):
     if logger:
       logger.debug(cached_multiprocessing_check_stack_trace)
       logger.warn(cached_multiprocessing_is_available_message)
-    return (cached_multiprocessing_is_available,
-            cached_multiprocessing_check_stack_trace)
+    return MultiprocessingIsAvailableResult(
+        is_available=cached_multiprocessing_is_available,
+        stack_trace=cached_multiprocessing_check_stack_trace)
 
   stack_trace = None
   multiprocessing_is_available = True
@@ -947,7 +947,9 @@ Please ensure that you have write access to both /dev/shm and /run/shm.
     # out as a sanity check. This definitely works on some versions of Windows,
     # but it's certainly possible that there is some unknown configuration for
     # which it won't.
-    multiprocessing.Manager()
+    global manager  # pylint: disable=global-variable-undefined
+
+    manager = multiprocessing.Manager()
 
     # Check that the max number of open files is reasonable. Always check this
     # after we're sure that the basic multiprocessing functionality is
@@ -998,7 +1000,9 @@ Alternatively, edit /etc/launchd.conf with something like:
   cached_multiprocessing_is_available = multiprocessing_is_available
   cached_multiprocessing_check_stack_trace = stack_trace
   cached_multiprocessing_is_available_message = message
-  return (multiprocessing_is_available, stack_trace)
+  return MultiprocessingIsAvailableResult(
+      is_available=cached_multiprocessing_is_available,
+      stack_trace=cached_multiprocessing_check_stack_trace)
 
 
 def CreateLock():
@@ -1010,7 +1014,7 @@ def CreateLock():
   Returns:
     Multiprocessing or threading lock.
   """
-  if MultiprocessingIsAvailable()[0]:
+  if CheckMultiprocessingAvailableAndInit().is_available:
     return manager.Lock()
   else:
     return threading.Lock()
