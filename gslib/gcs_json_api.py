@@ -76,6 +76,7 @@ from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateNotFoundExceptionForObjectWrite
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
+from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
@@ -366,6 +367,11 @@ class GcsJsonApi(CloudApi):
     if bucket_metadata.cors and bucket_metadata.cors == REMOVE_CORS_CONFIG:
       bucket_metadata.cors = []
       apitools_include_fields.append('cors')
+
+    if (bucket_metadata.defaultObjectAcl and
+        bucket_metadata.defaultObjectAcl[0] == PRIVATE_DEFAULT_OBJ_ACL):
+      bucket_metadata.defaultObjectAcl = []
+      apitools_include_fields.append('defaultObjectAcl')
 
     predefined_acl = None
     if canned_acl:

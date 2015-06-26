@@ -75,7 +75,7 @@ DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 
 # Because CORS is just a list in apitools, we need special handling or blank
 # CORS lists will get sent with other configuration commands such as lifecycle,
-# commands, which would cause CORS configuration to be unintentionally removed.
+# which would cause CORS configuration to be unintentionally removed.
 # Protorpc defaults list values to an empty list, and won't allow us to set the
 # value to None like other configuration fields, so there is no way to
 # distinguish the default value from when we actually want to remove the CORS
@@ -85,6 +85,14 @@ DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 # A value of REMOVE_CORS_CONFIG means remove the CORS configuration.
 REMOVE_CORS_CONFIG = [apitools_messages.Bucket.CorsValueListEntry(
     maxAgeSeconds=-1, method=['REMOVE_CORS_CONFIG'])]
+
+# Similar to CORS above, we need a sentinel value allowing us to specify
+# when a default object ACL should be private (containing no entries).
+# A defaultObjectAcl value of [] means don't modify the default object ACL.
+# A value of [PRIVATE_DEFAULT_OBJ_ACL] means create an empty/private default
+# object ACL.
+PRIVATE_DEFAULT_OBJ_ACL = apitools_messages.ObjectAccessControl(
+    id='PRIVATE_DEFAULT_OBJ_ACL')
 
 
 def ObjectMetadataFromHeaders(headers):
@@ -674,6 +682,10 @@ class AclTranslation(object):
   def BotoAclFromMessage(cls, acl_message):
     acl_dicts = []
     for message in acl_message:
+      if message == PRIVATE_DEFAULT_OBJ_ACL:
+        # Sentinel value indicating acl_dicts should be an empty list to create
+        # a private (no entries) default object ACL.
+        break
       acl_dicts.append(encoding.MessageToDict(message))
     return cls.BotoAclFromJson(acl_dicts)
 

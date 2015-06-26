@@ -58,6 +58,7 @@ from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
+from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.util import GetConfigFilePath
 from gslib.util import GsutilStreamHandler
 from gslib.util import HaveFileUrls
@@ -691,6 +692,10 @@ class Command(HelpProvider):
           else:
             def_obj_acl = AclTranslation.JsonToMessage(
                 self.acl_arg, apitools_messages.ObjectAccessControl)
+            if not def_obj_acl:
+              # Use a sentinel value to indicate a private (no entries) default
+              # object ACL.
+              def_obj_acl.append(PRIVATE_DEFAULT_OBJ_ACL)
             bucket_metadata = apitools_messages.Bucket(
                 defaultObjectAcl=def_obj_acl)
             gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
@@ -751,8 +756,6 @@ class Command(HelpProvider):
       self.canned = False
     else:
       # No file exists, so expect a canned ACL string.
-      # Canned ACLs are not supported in JSON and we need to use the XML API
-      # to set them.
       # validate=False because we allow wildcard urls.
       storage_uri = boto.storage_uri(
           url_args[0], debug=self.debug, validate=False,
