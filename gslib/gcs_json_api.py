@@ -36,6 +36,7 @@ import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
 import httplib2
+import oauth2client
 from oauth2client import devshell
 from oauth2client import multistore_file
 
@@ -198,9 +199,11 @@ class GcsJsonApi(CloudApi):
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
 
+    credential_store_key_dict = self._GetCredentialStoreKeyDict(credentials)
+
     self.credentials.set_store(
-        multistore_file.get_credential_storage_custom_string_key(
-            GetCredentialStoreFilename(), self.api_version))
+        multistore_file.get_credential_storage_custom_key(
+            GetCredentialStoreFilename(), credential_store_key_dict))
 
     self.num_retries = GetNumRetries()
     self.max_retry_wait = GetMaxRetryDelay()
@@ -316,6 +319,38 @@ class GcsJsonApi(CloudApi):
       return None
     except:
       raise
+
+  def _GetCredentialStoreKeyDict(self, credentials):
+    """Disambiguates a credential for caching in a credential store.
+
+    Different credential types have different fields that identify them.
+    This function assembles relevant information in a dict and returns it.
+
+    Args:
+      credentials: An OAuth2Credentials object.
+
+    Returns:
+      Dict of relevant identifiers for credentials.
+    """
+    # TODO: If scopes ever become available in the credentials themselves,
+    # include them in the key dict.
+    key_dict = {'api_version': self.api_version}
+    # pylint: disable=protected-access
+    if isinstance(credentials, devshell.DevshellCredentials):
+      key_dict['user_email'] = credentials.user_email
+    elif isinstance(credentials,
+                    oauth2client.service_account._ServiceAccountCredentials):
+      key_dict['_service_account_email'] = credentials._service_account_email
+    elif isinstance(credentials,
+                    oauth2client.client.SignedJwtAssertionCredentials):
+      key_dict['service_account_name'] = credentials.service_account_name
+    elif isinstance(credentials, oauth2client.client.OAuth2Credentials):
+      if credentials.client_id and credentials.client_id != 'null':
+        key_dict['client_id'] = credentials.client_id
+      key_dict['refresh_token'] = credentials.refresh_token
+    # pylint: enable=protected-access
+
+    return key_dict
 
   def _GetNewDownloadHttp(self, download_stream):
     return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
