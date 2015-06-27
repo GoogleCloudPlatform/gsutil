@@ -273,7 +273,8 @@ class CloudApi(object):
       start_byte: Starting point for download (for resumable downloads and
                   range requests). Can be set to negative to request a range
                   of bytes (python equivalent of [:-3])
-      end_byte: Ending point for download (for range requests).
+      end_byte: Ending byte number, inclusive, for download (for range
+                requests). If None, download the rest of the object.
       progress_callback: Optional callback function for progress notifications.
                          Receives calls with arguments
                          (bytes_transferred, total_size).

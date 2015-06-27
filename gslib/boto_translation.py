@@ -411,7 +411,7 @@ class BotoTranslation(CloudApi):
     self._AddApiVersionToHeaders(headers)
     if 'accept-encoding' not in headers:
       headers['accept-encoding'] = 'gzip'
-    if end_byte:
+    if end_byte is not None:
       headers['range'] = 'bytes=%s-%s' % (start_byte, end_byte)
     elif start_byte > 0:
       headers['range'] = 'bytes=%s-' % (start_byte)

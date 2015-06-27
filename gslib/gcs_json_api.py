@@ -744,7 +744,7 @@ class GcsJsonApi(CloudApi):
         'accept-encoding': 'gzip',
         'user-agent': self.api_client.user_agent
     }
-    if start_byte or end_byte:
+    if start_byte or end_byte is not None:
       apitools_download.GetRange(additional_headers=additional_headers,
                                  start=start_byte, end=end_byte,
                                  use_chunks=False)
