@@ -1008,7 +1008,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     stderr = self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir],
                             return_stderr=True)
-    self.assertIn('Skipping cloud sub-directory placeholder object', stderr)
     dir_list = []
     for dirname, _, filenames in os.walk(dst_dir):
       for filename in filenames:

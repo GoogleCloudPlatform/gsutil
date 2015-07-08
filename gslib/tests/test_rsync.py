@@ -683,8 +683,6 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(listing1, set(['/obj1', '//']))
       # Bucket should not have the placeholder object.
       self.assertEquals(listing2, set(['/obj1']))
-      # Stdout should report what happened.
-      self.assertRegexpMatches(output, r'.*Skipping cloud sub-directory.*')
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
