@@ -96,8 +96,9 @@ _SET_DESCRIPTION = """
     gsutil -m acl set acl.txt gs://bucket/*.jpg
 
   Note that multi-threading/multi-processing is only done when the named URLs
-  refer to objects. gsutil -m acl set gs://bucket1 gs://bucket2 will run the
-  acl set operations sequentially.
+  refer to objects or the recursive flag is on. Performing acl set on multiple 
+  buckets in one go eg. gsutil -m acl set gs://bucket1 gs://bucket2 will run 
+  the acl set operations sequentially.
 
 
 <B>SET OPTIONS</B>
