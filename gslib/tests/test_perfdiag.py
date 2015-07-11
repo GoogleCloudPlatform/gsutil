@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import os
 import socket
 
+import boto
+
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
@@ -30,12 +32,14 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
 
   # We want to test that perfdiag works both when connecting to the standard gs
   # endpoint, and when connecting to a specific IP or host while setting the
-  # host header. For the 2nd case we resolve storage.googleapis.com to a
-  # specific IP and connect to that explicitly.
-  _gs_ip = socket.gethostbyname('storage.googleapis.com')
+  # host header. For the 2nd case we resolve gs_host (normally
+  # storage.googleapis.com) to a specific IP and connect to that explicitly.
+  _gs_host = boto.config.get(
+      'Credentials', 'gs_host', boto.gs.connection.GSConnection.DefaultHost)
+  _gs_ip = socket.gethostbyname(_gs_host)
   _custom_endpoint_flags = [
       '-o', 'Credentials:gs_host=' + _gs_ip,
-      '-o', 'Credentials:gs_host_header=storage.googleapis.com',
+      '-o', 'Credentials:gs_host_header=' + _gs_host,
       # TODO: gsutil-beta: Add host header support for JSON
       '-o', 'Boto:https_validate_certificates=False']
 
