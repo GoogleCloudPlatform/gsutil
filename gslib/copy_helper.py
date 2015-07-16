@@ -1739,8 +1739,6 @@ def _GetDownloadFile(dst_url, src_obj_metadata, parallel_download, logger):
   # Downloads open the file in r+b mode which requires the file to already
   # exist, so we create it here if it doesn't exist already.
   fp = open(download_file_name, 'ab')
-  if parallel_download:
-    fp.truncate(src_obj_metadata.size)
   fp.close()
   return download_file_name, need_to_unzip
 
@@ -1815,7 +1813,8 @@ def _PerformParallelDownloadObjectToFile(cls, args, thread_state=None):
       args.component_num, crc32c_val, bytes_transferred, server_encoding)
 
 
-def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
+def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                          download_file_name, logger,
                                           api_selector, num_components):
   """Maintains parallel download tracker files in order to permit resumability.
 
@@ -1831,6 +1830,7 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
     src_obj_metadata: Metadata from the source object. Must include etag and
                       generation.
     dst_url: Destination FileUrl.
+    download_file_name: Temporary file name to be used for the download.
     logger: for outputting log messages.
     api_selector: The Cloud API implementation used.
     num_components: The number of components to perform this download with.
@@ -1847,19 +1847,24 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
                                          TrackerFileType.PARALLEL_DOWNLOAD,
                                          api_selector)
 
-  # Check to see if we already have a matching tracker file.
+  # Check to see if we should attempt resuming the download.
   try:
-    tracker_file = open(tracker_file_name, 'r')
-    tracker_file_data = json.load(tracker_file)
-    if (tracker_file_data['etag'] == src_obj_metadata.etag and
-        tracker_file_data['generation'] == src_obj_metadata.generation and
-        tracker_file_data['num_components'] == num_components):
-      return
-    else:
-      tracker_file.close()
-      logger.warn('Parallel download tracker file doesn\'t match for download '
-                  'of %s. Restarting download from scratch.' %
-                  dst_url.object_name)
+    fp = open(download_file_name, 'rb')
+    existing_file_size = GetFileSize(fp)
+    # A parallel resumption should be attempted only if the destination file
+    # size is exactly the same as the source size and the tracker file matches.
+    if existing_file_size == src_obj_metadata.size:
+      tracker_file = open(tracker_file_name, 'r')
+      tracker_file_data = json.load(tracker_file)
+      if (tracker_file_data['etag'] == src_obj_metadata.etag and
+          tracker_file_data['generation'] == src_obj_metadata.generation and
+          tracker_file_data['num_components'] == num_components):
+        return
+      else:
+        tracker_file.close()
+        logger.warn('Parallel download tracker file doesn\'t match for '
+                    'download of %s. Restarting download from scratch.' %
+                    dst_url.object_name)
 
   except (IOError, ValueError) as e:
     # Ignore non-existent file (happens first time a download
@@ -1868,8 +1873,9 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
       logger.warn('Couldn\'t read parallel download tracker file (%s): %s. '
                   'Restarting download from scratch.' %
                   (tracker_file_name, str(e)))
-
   finally:
+    if fp:
+      fp.close()
     if tracker_file:
       tracker_file.close()
 
@@ -2023,8 +2029,13 @@ def _DoParallelDownload(src_url, src_obj_metadata, dst_url, download_file_name,
       src_url, src_obj_metadata, dst_url, download_file_name)
 
   num_components = len(components_to_download)
-  _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url, logger,
+  _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                        download_file_name, logger,
                                         api_selector, num_components)
+
+  # Resize the download file so each child process can seek to its start byte.
+  with open(download_file_name, 'ab') as fp:
+    fp.truncate(src_obj_metadata.size)
 
   cp_results = command_obj.Apply(
       _PerformParallelDownloadObjectToFile, components_to_download,
