@@ -1777,7 +1777,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       parallel_download_threshold = HumanReadableToBytes(
           boto.config.get('GSUtil', 'parallel_object_download_threshold',
                           DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD))
-      parallel_download = len(contents) > parallel_download_threshold
+      parallel_download = (len(contents) > parallel_download_threshold
+                           and parallel_download_threshold > 0)
       if parallel_download:
         trackerfile_type = TrackerFileType.PARALLEL_DOWNLOAD
       else:
