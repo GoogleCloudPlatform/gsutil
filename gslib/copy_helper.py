@@ -1897,7 +1897,7 @@ class ParallelDownloadFileWrapper(object):
   while the downloaded bytes are normally written to file.
   """
 
-  def __init__(self, fp, tracker_file_name, src_obj_metadata,
+  def __init__(self, fp, tracker_file_name, src_obj_metadata, start_byte,
                end_byte):
     """Initializes the ParallelDownloadFileWrapper.
 
@@ -1908,19 +1908,25 @@ class ParallelDownloadFileWrapper(object):
       tracker_file_name: The name of the tracker file for this component.
       src_obj_metadata: Metadata from the source object. Must include etag and
                         generation.
+      start_byte: The first byte to be downloaded for this parallel component.
       end_byte: The last byte to be downloaded for this parallel component.
     """
     self._orig_fp = fp
     self._tracker_file_name = tracker_file_name
     self._src_obj_metadata = src_obj_metadata
     self._last_tracker_file_byte = None
+    self._start_byte = start_byte
     self._end_byte = end_byte
 
   def write(self, data):  # pylint: disable=invalid-name
+    current_file_pos = self._orig_fp.tell()
+    assert (self._start_byte <= current_file_pos and
+            current_file_pos + len(data) <= self._end_byte + 1)
+
     self._orig_fp.write(data)
+    current_file_pos = self._orig_fp.tell()
 
     threshold = TRACKERFILE_UPDATE_THRESHOLD
-    current_file_pos = self._orig_fp.tell()
     if (self._last_tracker_file_byte is None or
         current_file_pos - self._last_tracker_file_byte > threshold or
         current_file_pos == self._end_byte + 1):
@@ -1928,13 +1934,15 @@ class ParallelDownloadFileWrapper(object):
           self._tracker_file_name, self._src_obj_metadata, current_file_pos)
       self._last_tracker_file_byte = current_file_pos
 
-  def seek(self):  # pylint: disable=invalid-name
-    raise NotImplementedError(
-        'seek is not implemented in ParallelDownloadFileWrapper')
+  def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
+    if whence == os.SEEK_END:
+      self._orig_fp.seek(offset + self._end_byte + 1)
+    else:
+      self._orig_fp.seek(offset, whence)
+    assert self._start_byte <= self._orig_fp.tell() <= self._end_byte + 1
 
   def tell(self):  # pylint: disable=invalid-name
-    raise NotImplementedError(
-        'tell is not implemented in ParallelDownloadFileWrapper')
+    return self._orig_fp.tell()
 
   def flush(self):  # pylint: disable=invalid-name
     self._orig_fp.flush()
@@ -2157,7 +2165,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
 
     if is_parallel and src_obj_metadata.size >= ResumableThreshold():
       fp = ParallelDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
-                                       end_byte)
+                                       start_byte, end_byte)
 
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
     # the object's metadata), when we request a range to resume, it's possible

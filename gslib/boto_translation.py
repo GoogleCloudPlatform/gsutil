@@ -127,8 +127,6 @@ class DownloadProxyCallbackHandler(object):
   def __init__(self, start_byte, callback):
     self._start_byte = start_byte
     self._callback = callback
-    self.total_bytes_downloaded = 0
-    self.bytes_downloaded_this_call = 0
 
   def call(self, bytes_downloaded, total_size):
     """Saves necessary data and then calls the given Cloud API callback.
@@ -137,11 +135,8 @@ class DownloadProxyCallbackHandler(object):
       bytes_downloaded: Number of bytes processed so far.
       total_size: Total size of the ongoing operation.
     """
-    self.bytes_downloaded_this_call = (bytes_downloaded -
-                                       self.total_bytes_downloaded)
-    self.total_bytes_downloaded = bytes_downloaded
     if self._callback:
-      self._callback(self._start_byte + self.total_bytes_downloaded, total_size)
+      self._callback(self._start_byte + bytes_downloaded, total_size)
 
 
 class BotoTranslation(CloudApi):
@@ -570,15 +565,13 @@ class BotoTranslation(CloudApi):
 
     num_retries = GetNumRetries()
     progress_less_iterations = 0
-    cb_handler = DownloadProxyCallbackHandler(start_byte, callback)
+    last_progress_byte = start_byte
 
     while True:  # Retry as long as we're making progress.
       try:
-        cb_handler.bytes_downloaded_this_call = 0
+        cb_handler = DownloadProxyCallbackHandler(start_byte, callback)
         headers = headers.copy()
-        headers['Range'] = 'bytes=%d-%d' % (start_byte +
-                                            cb_handler.total_bytes_downloaded,
-                                            end_byte)
+        headers['Range'] = 'bytes=%d-%d' % (start_byte, end_byte)
 
         # Disable AWSAuthConnection-level retry behavior, since that would
         # cause downloads to restart from scratch.
@@ -615,7 +608,9 @@ class BotoTranslation(CloudApi):
                              'retry', e.message)
 
       # At this point we had a re-tryable failure; see if made progress.
-      if cb_handler.bytes_downloaded_this_call > 0:
+      start_byte = fp.tell()
+      if start_byte > last_progress_byte:
+        last_progress_byte = start_byte
         progress_less_iterations = 0
       else:
         progress_less_iterations += 1
