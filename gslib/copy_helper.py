@@ -664,23 +664,23 @@ def _CreateDigestsFromDigesters(digesters):
   return digests
 
 
-def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
+def _CreateDigestsFromLocalFile(logger, algs, file_name, final_file_name,
+                                src_obj_metadata):
   """Creates a base64 CRC32C and/or MD5 digest from file_name.
 
   Args:
-    logger: for outputting log messages.
-    algs: list of algorithms to compute.
-    file_name: file to digest.
-    src_obj_metadata: metadta of source object.
+    logger: For outputting log messages.
+    algs: List of algorithms to compute.
+    file_name: File to digest.
+    final_file_name: Permanent location to be used for the downloaded file
+                     after validation (used for logging).
+    src_obj_metadata: Metadata of source object.
 
   Returns:
     Dict of algorithm name : base 64 encoded digest
   """
   hash_dict = {}
   if 'md5' in algs:
-    if src_obj_metadata.size and src_obj_metadata.size > TEN_MIB:
-      logger.info(
-          'Computing MD5 for %s...', file_name)
     hash_dict['md5'] = md5()
   if 'crc32c' in algs:
     hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
@@ -689,7 +689,8 @@ def _CreateDigestsFromLocalFile(logger, algs, file_name, src_obj_metadata):
         fp, hash_dict, ProgressCallbackWithBackoff(
             src_obj_metadata.size,
             FileProgressCallbackHandler(
-                ConstructAnnounceText('Hashing', file_name), logger).call))
+                ConstructAnnounceText('Hashing', final_file_name),
+                logger).call))
   digests = {}
   for alg_name, digest in hash_dict.iteritems():
     digests[alg_name] = Base64EncodeHash(digest.hexdigest())
@@ -753,7 +754,8 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
     logger: for outputting log messages.
     obj_url: CloudUrl for cloud object.
     obj_metadata: Cloud Object being downloaded from or uploaded to.
-    file_name: Local file name on disk being downloaded to or uploaded from.
+    file_name: Local file name on disk being downloaded to or uploaded from
+               (used only for logging).
     digests: Computed Digests for the object.
     is_upload: If true, comparing for an uploaded object (controls logging).
 
@@ -1691,19 +1693,22 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           uploaded_object.md5Hash)
 
 
-def _GetDownloadFile(dst_url, src_obj_metadata, parallel_download, logger):
-  """Creates the file that an object will be downloaded to.
+def _GetDownloadFile(dst_url, src_obj_metadata, logger):
+  """Creates a new download file, and deletes the file that will be replaced.
+
+  Names and creates a temporary file for this download. Also, if there is an
+  existing file at the path where this file will be placed after the download
+  is completed, that file will be deleted.
 
   Args:
     dst_url: Destination FileUrl.
     src_obj_metadata: Metadata from the source object.
-    parallel_download: Whether or not the download will be done in parallel.
     logger: for outputting log messages.
 
   Returns:
     (download_file_name, need_to_unzip)
-    download_file_name: The name of the (possibly temporary) file to which the
-                        object will be downloaded.
+    download_file_name: The name of the temporary file to which the object will
+                        be downloaded.
     need_to_unzip: If true, a temporary zip file was used and must be
                    uncompressed as part of validation.
   """
@@ -1720,7 +1725,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, parallel_download, logger):
 
   need_to_unzip = False
   # For gzipped objects download to a temp file and unzip. For the XML API,
-  # the represents the result of a HEAD request. For the JSON API, this is
+  # this represents the result of a HEAD request. For the JSON API, this is
   # the stored encoding which the service may not respect. However, if the
   # server sends decompressed bytes for a file that is stored compressed
   # (double compressed case), there is no way we can validate the hash and
@@ -1731,13 +1736,17 @@ def _GetDownloadFile(dst_url, src_obj_metadata, parallel_download, logger):
     download_file_name = _GetDownloadTempZipFileName(dst_url)
     logger.info(
         'Downloading to temp gzip filename %s', download_file_name)
-  elif parallel_download:
-    download_file_name = _GetDownloadTempFileName(dst_url)
   else:
-    download_file_name = dst_url.object_name
+    download_file_name = _GetDownloadTempFileName(dst_url)
 
-  # Downloads open the file in r+b mode which requires the file to already
-  # exist, so we create it here if it doesn't exist already.
+  # If a file exists at the permanent destination (where the file will be moved
+  # after the download is completed), delete it here to reduce disk space
+  # requirements.
+  if os.path.exists(dst_url.object_name):
+    os.unlink(dst_url.object_name)
+
+  # Downloads open the temporary download file in r+b mode, which requires it
+  # to already exist, so we create it here if it doesn't exist already.
   fp = open(download_file_name, 'ab')
   fp.close()
   return download_file_name, need_to_unzip
@@ -2012,8 +2021,7 @@ def _DoParallelDownload(src_url, src_obj_metadata, dst_url, download_file_name,
     src_url: Source CloudUrl.
     src_obj_metadata: Metadata from the source object.
     dst_url: Destination FileUrl.
-    download_file_name: File to be used for download (differs from dst_url if
-                        using a temp file)
+    download_file_name: Temporary file name to be used for download.
     command_obj: command object for use in Apply in parallel composite uploads.
     logger: for outputting log messages.
     copy_exception_handler: For handling copy exceptions during Apply.
@@ -2082,8 +2090,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     src_url: Source CloudUrl.
     src_obj_metadata: Metadata from the source object.
     dst_url: Destination FileUrl.
-    download_file_name: File to be used for download (differs from dst_url if
-                        using a temp file)
+    download_file_name: Temporary file name to be used for download.
     gsutil_api: gsutil Cloud API instance to use for the download.
     logger: for outputting log messages.
     digesters: Digesters corresponding to the hash algorithms that will be used
@@ -2215,8 +2222,7 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
     src_url: Source CloudUrl.
     src_obj_metadata: Metadata from the source object.
     dst_url: Destination FileUrl.
-    download_file_name: File to be used for download (differs from dst_url if
-                        using a temp file)
+    download_file_name: Temporary file name to be used for download.
     gsutil_api: gsutil Cloud API instance to use for the download.
     logger: for outputting log messages.
     digesters: Digesters corresponding to the hash algorithms that will be used
@@ -2291,7 +2297,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       download_strategy, src_obj_metadata, allow_splitting)
 
   download_file_name, need_to_unzip = _GetDownloadFile(
-      dst_url, src_obj_metadata, parallel_download, logger)
+      dst_url, src_obj_metadata, logger)
 
   # Ensure another process/thread is not already writing to this file.
   with open_files_lock:
@@ -2340,7 +2346,6 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
       logger, src_url, src_obj_metadata, dst_url, need_to_unzip, server_gzip,
       digesters, hash_algs, download_file_name, api_selector, bytes_transferred)
 
-  _DeleteTempDownloadFiles(dst_url)
   with open_files_lock:
     open_files_map.delete(download_file_name)
 
@@ -2357,24 +2362,6 @@ def _GetDownloadTempFileName(dst_url):
   return '%s_.tmp' % dst_url.object_name
 
 
-def _DeleteTempDownloadFiles(dst_url):
-  """Deletes temporary download files for downloads with dst_url.
-
-  There are edge cases where a temporary download file will not be deleted,
-  for example when parallel download is originally used but is disabled before
-  a cross process resumption. This function deletes temporary download files
-  for dst_url, in order to prevent confusing results for the user.
-
-  Args:
-    dst_url: StorageUrl describing the destination file.
-  """
-  temp_file_names = [_GetDownloadTempZipFileName(dst_url),
-                     _GetDownloadTempFileName(dst_url)]
-  for temp_file_name in temp_file_names:
-    if os.path.exists(temp_file_name):
-      os.unlink(temp_file_name)
-
-
 def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
                                  need_to_unzip, server_gzip, digesters,
                                  hash_algs, download_file_name,
@@ -2382,9 +2369,9 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
   """Validates and performs necessary operations on a downloaded file.
 
   Validates the integrity of the downloaded file using hash_algs. If the file
-  was compressed (temporarily), the file will be decompressed. Also, if a
-  temporary file name was used during the download, the file will be renamed
-  to its permanent file name.
+  was compressed (temporarily), the file will be decompressed. Then, if the
+  integrity of the file was successfully validated, the file will be moved
+  from its temporary download location to its permanent location on disk.
 
   Args:
     logger: For outputting log messages.
@@ -2402,8 +2389,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
                hash must be recomputed from the local file.
     hash_algs: dict of {string, hash algorithm} that can be used if digesters
                don't have up-to-date digests.
-    download_file_name: The name of the (possibly temporary) file to which data
-                        was downloaded.
+    download_file_name: Temporary file name that was used for download.
     api_selector: The Cloud API implementation used (used tracker file naming).
     bytes_transferred: Number of bytes downloaded (used for logging).
 
@@ -2427,12 +2413,13 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
     local_hashes = _CreateDigestsFromDigesters(digesters)
   else:
     local_hashes = _CreateDigestsFromLocalFile(
-        logger, hash_algs, file_name, src_obj_metadata)
+        logger, hash_algs, file_name, final_file_name, src_obj_metadata)
 
   digest_verified = True
   hash_invalid_exception = None
   try:
-    _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
+    _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
+                 local_hashes)
     DeleteDownloadTrackerFiles(dst_url, api_selector)
   except HashMismatchException, e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
@@ -2454,24 +2441,17 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
       DeleteDownloadTrackerFiles(dst_url, api_selector)
       if _RENAME_ON_HASH_MISMATCH:
         os.rename(file_name,
-                  file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+                  final_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
       else:
         os.unlink(file_name)
       raise
-
-  if server_gzip and not need_to_unzip:
-    # Server compressed bytes on-the-fly, thus we need to rename and decompress.
-    # We can't decompress on-the-fly because prior to Python 3.2 the gzip
-    # module makes a bunch of seek calls on the stream.
-    os.rename(file_name, _GetDownloadTempZipFileName(dst_url))
-    file_name = _GetDownloadTempZipFileName(dst_url)
 
   if need_to_unzip or server_gzip:
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
     if bytes_transferred > TEN_MIB:
       logger.info(
-          'Uncompressing downloaded gztmp file to %s...', dst_url.object_name)
+          'Uncompressing temporarily gzipped file to %s...', final_file_name)
 
     gzip_fp = None
     try:
@@ -2500,9 +2480,10 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
   if not digest_verified:
     try:
       # Recalculate hashes on the unzipped local file.
-      local_hashes = _CreateDigestsFromLocalFile(logger, hash_algs, file_name,
-                                                 src_obj_metadata)
-      _CheckHashes(logger, src_url, src_obj_metadata, file_name, local_hashes)
+      local_hashes = _CreateDigestsFromLocalFile(
+          logger, hash_algs, file_name, final_file_name, src_obj_metadata)
+      _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
+                   local_hashes)
       DeleteDownloadTrackerFiles(dst_url, api_selector)
     except HashMismatchException:
       DeleteDownloadTrackerFiles(dst_url, api_selector)
@@ -2514,8 +2495,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
       raise
 
   if file_name != final_file_name:
-    # We are still using a temporary file. This can happen if the download was
-    # done in parallel. Rename to the expected file name.
+    # Data is still in a temporary file, so move it to a permanent location.
     if os.path.exists(final_file_name):
       os.unlink(final_file_name)
     os.rename(file_name,

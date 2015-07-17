@@ -1617,7 +1617,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                suri(object_uri), fpath],
                               expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
-      with open(fpath, 'w') as larger_file:
+      with open(fpath + '_.tmp', 'w') as larger_file:
         for _ in range(self.halt_size * 2):
           larger_file.write('a')
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
@@ -1635,7 +1635,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
-    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents='abcd' * ONE_KIB)
+    fpath = self.CreateTempFile(tmpdir=tmp_dir)
+    temp_download_file = fpath + '_.tmp'
+    with open(temp_download_file, 'w') as fp:
+      fp.write('abcd' * ONE_KIB)
+
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='efgh' * ONE_KIB)
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
@@ -1657,8 +1661,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertIn('Download already complete', stderr)
         self.assertIn('doesn\'t match cloud-supplied digest', stderr)
         # File and tracker file should be deleted.
-        self.assertFalse(os.path.isfile(fpath))
+        self.assertFalse(os.path.isfile(temp_download_file))
         self.assertFalse(os.path.isfile(tracker_filename))
+        # Permanent file should not have been created.
+        self.assertFalse(os.path.isfile(fpath))
     finally:
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
@@ -1667,8 +1673,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests download no-ops when tracker file matches existing file."""
     bucket_uri = self.CreateBucket()
     tmp_dir = self.CreateTempDir()
+    fpath = self.CreateTempFile(tmpdir=tmp_dir)
     matching_contents = 'abcd' * ONE_KIB
-    fpath = self.CreateTempFile(tmpdir=tmp_dir, contents=matching_contents)
+    temp_download_file = fpath + '_.tmp'
+    with open(temp_download_file, 'w') as fp:
+      fp.write(matching_contents)
+
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents=matching_contents)
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
@@ -2029,9 +2039,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Temporary file should have been deleted due to hash mismatch.
       self.assertFalse(os.path.isfile(fpath + '_.tmp'))
-      # Final file should have never been written to.
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), '')
+      # Final file should not exist.
+      self.assertFalse(os.path.isfile(fpath))
 
   def test_cp_parallel_download_component_size_changed(self):
     """Tests parallel download doesn't break when the boto config changes.
