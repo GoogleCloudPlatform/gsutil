@@ -1404,16 +1404,25 @@ class Command(HelpProvider):
 
     task_queue = task_queue or task_queues[recursive_apply_level]
 
+    # Ensure fairness across processes by filling our WorkerPool only with
+    # as many tasks as it has WorkerThreads. This semaphore is acquired each
+    # time that a task is retrieved from the queue and released each time
+    # a task is completed by a WorkerThread.
+    worker_semaphore = threading.BoundedSemaphore(thread_count)
+
     assert thread_count * process_count > 1, (
         'Invalid state, calling command._ApplyThreads with only one thread '
         'and process.')
+    # TODO: Presently, this pool gets recreated with each call to Apply. We
+    # should be able to do it just once, at process creation time.
     worker_pool = WorkerPool(
-        thread_count, self.logger,
+        thread_count, self.logger, worker_semaphore,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         gsutil_api_map=self.gsutil_api_map, debug=self.debug)
 
     num_enqueued = 0
     while True:
+      worker_semaphore.acquire()
       task = task_queue.get()
       if task.args != ZERO_TASKS_TO_DO_ARGUMENT:
         # If we have no tasks to do and we're performing a blocking call, we
@@ -1421,6 +1430,9 @@ class Command(HelpProvider):
         # the call to task_queue.get() forever.
         worker_pool.AddTask(task)
         num_enqueued += 1
+      else:
+        # No tasks remain; don't block the semaphore on WorkerThread completion.
+        worker_semaphore.release()
 
       if is_blocking_call:
         num_to_do = total_tasks[task.caller_id]
@@ -1604,13 +1616,13 @@ class ProducerThread(threading.Thread):
 class WorkerPool(object):
   """Pool of worker threads to which tasks can be added."""
 
-  def __init__(self, thread_count, logger, bucket_storage_uri_class=None,
-               gsutil_api_map=None, debug=0):
+  def __init__(self, thread_count, logger, worker_semaphore,
+               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0):
     self.task_queue = _NewThreadsafeQueue()
     self.threads = []
     for _ in range(thread_count):
       worker_thread = WorkerThread(
-          self.task_queue, logger,
+          self.task_queue, logger, worker_semaphore=worker_semaphore,
           bucket_storage_uri_class=bucket_storage_uri_class,
           gsutil_api_map=gsutil_api_map, debug=debug)
       self.threads.append(worker_thread)
@@ -1630,14 +1642,16 @@ class WorkerThread(threading.Thread):
   calling logic is also used in the single-threaded case.
   """
 
-  def __init__(self, task_queue, logger, bucket_storage_uri_class=None,
-               gsutil_api_map=None, debug=0):
+  def __init__(self, task_queue, logger, worker_semaphore=None,
+               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0):
     """Initializes the worker thread.
 
     Args:
       task_queue: The thread-safe queue from which this thread should obtain
                   its work.
       logger: Logger to use for this thread.
+      worker_semaphore: threading.BoundedSemaphore to be released each time a
+          task is completed, or None for single-threaded execution.
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
                                 Settable for testing/mocking.
       gsutil_api_map: Map of providers and API selector tuples to api classes
@@ -1647,6 +1661,7 @@ class WorkerThread(threading.Thread):
     """
     super(WorkerThread, self).__init__()
     self.task_queue = task_queue
+    self.worker_semaphore = worker_semaphore
     self.daemon = True
     self.cached_classes = {}
     self.shared_vars_updater = _SharedVariablesUpdater()
@@ -1683,6 +1698,8 @@ class WorkerThread(threading.Thread):
               'Caught exception while handling exception for %s:\n%s',
               task, traceback.format_exc())
     finally:
+      if self.worker_semaphore:
+        self.worker_semaphore.release()
       self.shared_vars_updater.Update(caller_id, cls)
 
       # Even if we encounter an exception, we still need to claim that that

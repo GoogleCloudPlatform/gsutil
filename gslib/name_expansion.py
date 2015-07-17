@@ -70,7 +70,7 @@ class NameExpansionResult(object):
     self.expanded_storage_url = expanded_storage_url
 
   def __repr__(self):
-    return '%s' % self._expanded_storage_url
+    return '%s' % self.expanded_storage_url
 
 
 class _NameExpansionIterator(object):

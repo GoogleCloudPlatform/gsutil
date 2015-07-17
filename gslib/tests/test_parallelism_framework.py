@@ -24,7 +24,10 @@
 from __future__ import absolute_import
 
 import functools
+import os
 import signal
+import threading
+import time
 
 from boto.storage_uri import BucketStorageUri
 from gslib import cs_api_map
@@ -72,6 +75,18 @@ class CustomException(Exception):
 
 def _ReturnOneValue(cls, args, thread_state=None):
   return 1
+
+
+def _ReturnProcAndThreadId(cls, args, thread_state=None):
+  return (os.getpid(), threading.currentThread().ident)
+
+
+def _SleepThenReturnProcAndThreadId(cls, args, thread_state=None):
+  # This can fail if the total time to spawn new processes and threads takes
+  # longer than 5 seconds, but if that occurs, then we have a performance
+  # problem that needs to be addressed.
+  time.sleep(5)
+  return _ReturnProcAndThreadId(cls, args, thread_state=thread_state)
 
 
 def _FailureFunc(cls, args, thread_state=None):
@@ -271,6 +286,82 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
 
     results = self._RunApply(_ReturnOneValue, args, process_count, thread_count)
     self.assertEqual(len(args), len(results))
+
+  @RequiresIsolation
+  def testNoTasksSingleProcessSingleThread(self):
+    self._TestApplyWithNoTasks(1, 1)
+
+  @RequiresIsolation
+  def testNoTasksSingleProcessMultiThread(self):
+    self._TestApplyWithNoTasks(1, 3)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def testNoTasksMultiProcessSingleThread(self):
+    self._TestApplyWithNoTasks(3, 1)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def testNoTasksMultiProcessMultiThread(self):
+    self._TestApplyWithNoTasks(3, 3)
+
+  @Timeout
+  def _TestApplyWithNoTasks(self, process_count, thread_count):
+    """Tests that calling Apply with no tasks releases locks/semaphores."""
+    empty_args = [()]
+
+    for _ in range(process_count * thread_count + 1):
+      self._RunApply(_ReturnOneValue, empty_args, process_count, thread_count)
+
+    # Ensure that work can still be performed.
+    self._TestBasicApply(process_count, thread_count)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def testApplySaturatesMultiProcessSingleThread(self):
+    self._TestApplySaturatesAvailableProcessesAndThreads(3, 1)
+
+  @RequiresIsolation
+  def testApplySaturatesSingleProcessMultiThread(self):
+    self._TestApplySaturatesAvailableProcessesAndThreads(1, 3)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def testApplySaturatesMultiProcessMultiThread(self):
+    self._TestApplySaturatesAvailableProcessesAndThreads(3, 3)
+
+  @RequiresIsolation
+  def _TestApplySaturatesAvailableProcessesAndThreads(self, process_count,
+                                                      thread_count):
+    """Tests that created processes and threads evenly share tasks."""
+    calls_per_thread = 2
+    args = [()] * (process_count * thread_count * calls_per_thread)
+
+    expected_calls_per_thread = calls_per_thread
+    return_proc_and_thread_id_func = _SleepThenReturnProcAndThreadId
+
+    if not self.command_class(True).multiprocessing_is_available:
+      # TODO: Currently, multiprocessing_is_available governs the use of
+      # both multiple threads and multiple processes. Until this is fixed,
+      # when multiprocessing is not available all calls will be performed by a
+      # single thread.
+      expected_calls_per_thread = len(args)
+      # Since everything is executed in a single thread, avoid unnecessary
+      # calls to sleep().
+      return_proc_and_thread_id_func = _ReturnProcAndThreadId
+
+    results = self._RunApply(return_proc_and_thread_id_func, args,
+                             process_count, thread_count)
+    usage_dict = {}  # (process_id, thread_id): number of tasks performed
+    for (process_id, thread_id) in results:
+      usage_dict[(process_id, thread_id)] = (
+          usage_dict.get((process_id, thread_id), 0) + 1)
+
+    for (id_tuple, num_tasks_completed) in usage_dict.iteritems():
+      self.assertEqual(num_tasks_completed, expected_calls_per_thread,
+                       'Process %s thread %s completed %s tasks. Expected: %s' %
+                       (id_tuple[0], id_tuple[1], num_tasks_completed,
+                        expected_calls_per_thread))
 
   @RequiresIsolation
   def testIteratorFailureSingleProcessSingleThread(self):
