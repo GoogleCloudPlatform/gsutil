@@ -2185,6 +2185,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     # the local file in the case of a failed gzip hash anyway, but it would
     # be better if we actively detected this case.
     if not download_complete:
+      fp.seek(download_start_byte)
       server_encoding = gsutil_api.GetObjectMedia(
           src_url.bucket_name, src_url.object_name, fp,
           start_byte=download_start_byte, end_byte=end_byte,

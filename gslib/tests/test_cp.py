@@ -1027,8 +1027,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_uri.set_contents_from_string('')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
-    stderr = self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir],
-                            return_stderr=True)
+    self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
     dir_list = []
     for dirname, _, filenames in os.walk(dst_dir):
       for filename in filenames:
@@ -1797,6 +1796,31 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
+
+  @SequentialAndParallelTransfer
+  def test_cp_resumable_download_check_hashes_never(self):
+    """Tests that resumble downloads work with check_hashes = never."""
+    bucket_uri = self.CreateBucket()
+    contents = 'abcd' * self.halt_size
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
+                                   contents=contents)
+    fpath = self.CreateTempFile()
+    test_callback_file = self.CreateTempFile(
+        contents=pickle.dumps(_HaltingCopyCallbackHandler(False, 5)))
+
+    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
+                            ('GSUtil', 'check_hashes', 'never')]
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
+                               suri(object_uri), fpath],
+                              expected_status=1, return_stderr=True)
+      self.assertIn('Artifically halting download.', stderr)
+      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+                              return_stderr=True)
+      self.assertIn('Resuming download', stderr)
+      self.assertIn('Found no hashes to validate object downloaded', stderr)
+      with open(fpath, 'r') as f:
+        self.assertEqual(f.read(), contents, 'File contents did not match.')
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_bucket_deleted(self):
