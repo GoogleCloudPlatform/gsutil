@@ -650,46 +650,6 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(1, len(actual))
     self.assertEqual('f0', actual[0].root_object.name)
 
-  def DownloadTestHelper(self, func):
-    """Test resumable download with custom test function.
-
-    The custom function distorts downloaded data. We expect an exception to be
-    raised and the dest file to be removed.
-
-    Args:
-      func: Custom test function used to distort the downloaded data.
-    """
-    object_uri = self.CreateObject(contents='foo')
-    # Need to explicitly tell the key to populate its etag so that hash
-    # validation will be performed.
-    object_uri.get_key().set_etag()
-    dst_dir = self.CreateTempDir()
-    got_expected_exception = False
-    try:
-      self.RunCommand('cp', [suri(object_uri), dst_dir], test_method=func)
-      self.fail('Did not get expected CommandException')
-    except HashMismatchException:
-      self.assertFalse(os.listdir(dst_dir))
-      got_expected_exception = True
-    except Exception, e:
-      self.fail('Unexpected exception raised: %s' % e)
-    if not got_expected_exception:
-      self.fail('Did not get expected CommandException')
-
-  def testDownloadWithObjectSizeChange(self):
-    """Test resumable download on an object that changes size.
-
-    Size change occurs before the downloaded file's checksum is validated.
-    """
-    self.DownloadTestHelper(_Append)
-
-  def testDownloadWithFileContentChange(self):
-    """Tests resumable download on an object that changes content.
-
-    Content change occurs before the downloaded file's checksum is validated.
-    """
-    self.DownloadTestHelper(_Overwrite)
-
   # @SequentialAndParallelTransfer
   def testFlatCopyingObjsAndFilesToBucketSubDir(self):
     """Tests copying flatly listed objects and files to bucket subdir."""

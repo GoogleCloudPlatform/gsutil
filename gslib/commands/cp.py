@@ -796,7 +796,7 @@ class CpCommand(Command):
               self.logger, exp_src_url, dst_url, gsutil_api,
               self, _CopyExceptionHandler, allow_splitting=True,
               headers=self.headers, manifest=self.manifest,
-              gzip_exts=self.gzip_exts, test_method=self.test_method))
+              gzip_exts=self.gzip_exts))
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)

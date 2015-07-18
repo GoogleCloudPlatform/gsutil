@@ -362,8 +362,8 @@ class Command(HelpProvider):
 
   def __init__(self, command_runner, args, headers, debug, trace_token,
                parallel_operations, bucket_storage_uri_class,
-               gsutil_api_class_map_factory, test_method=None,
-               logging_filters=None, command_alias_used=None):
+               gsutil_api_class_map_factory, logging_filters=None,
+               command_alias_used=None):
     """Instantiates a Command.
 
     Args:
@@ -377,9 +377,6 @@ class Command(HelpProvider):
                                 Settable for testing/mocking.
       gsutil_api_class_map_factory: Creates map of cloud storage interfaces.
                                     Settable for testing/mocking.
-      test_method: Optional general purpose method for testing purposes.
-                   Application and semantics of this method will vary by
-                   command and test type.
       logging_filters: Optional list of logging. Filters to apply to this
                        command's logger.
       command_alias_used: The alias that was actually used when running this
@@ -401,7 +398,6 @@ class Command(HelpProvider):
     self.parallel_operations = parallel_operations
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
-    self.test_method = test_method
     self.exclude_symlinks = False
     self.recursion_requested = False
     self.all_versions = False

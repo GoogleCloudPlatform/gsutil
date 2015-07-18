@@ -2256,8 +2256,7 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
 
 def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                           gsutil_api, logger, command_obj,
-                          copy_exception_handler, allow_splitting=True,
-                          test_method=None):
+                          copy_exception_handler, allow_splitting=True):
   """Downloads an object to a local file.
 
   Args:
@@ -2269,8 +2268,6 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     command_obj: command object for use in Apply in parallel downloads.
     copy_exception_handler: For handling copy exceptions during Apply.
     allow_splitting: Whether or not to allow parallel download.
-    test_method: Optional test method for modifying the file before validation
-                 during unit tests.
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
     excludes initial GET.
@@ -2337,15 +2334,6 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                              'file %s' % (download_strategy,
                                           download_file_name))
   end_time = time.time()
-
-  # If a custom test method is defined, call it here. For the copy command,
-  # test methods are expected to take one argument: an open file pointer,
-  # and are used to perturb the open file during download to exercise
-  # download error detection.
-  if test_method:
-    fp = open(download_file_name, 'ab')
-    test_method(fp)
-    fp.close()
 
   server_gzip = server_encoding and server_encoding.lower().endswith('gzip')
   local_md5 = _ValidateAndCompleteDownload(
@@ -2664,7 +2652,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 # pylint: disable=too-many-statements
 def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
                 copy_exception_handler, allow_splitting=True,
-                headers=None, manifest=None, gzip_exts=None, test_method=None):
+                headers=None, manifest=None, gzip_exts=None):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -2679,7 +2667,6 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     headers: optional headers to use for the copy operation.
     manifest: optional manifest for tracking copy operations.
     gzip_exts: List of file extensions to gzip for uploads, if any.
-    test_method: optional test method for modifying files during unit tests.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding
@@ -2851,8 +2838,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
       return _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                                    gsutil_api, logger, command_obj,
                                    copy_exception_handler,
-                                   allow_splitting=allow_splitting,
-                                   test_method=test_method)
+                                   allow_splitting=allow_splitting)
     elif copy_in_the_cloud:
       return _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
                                      dst_obj_metadata, preconditions,
