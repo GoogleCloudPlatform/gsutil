@@ -33,8 +33,8 @@ _DETAILED_HELP_TEXT = ("""
   name space supported by the Google Cloud Storage service. To the service,
   the object gs://your-bucket/abc/def/ghi.txt is just an object that happens to
   have "/" characters in its name. There are no "abc" or "abc/def" directories;
-  just a single object with the given name. This
-  `diagram <https://cloud.google.com/storage/images/gsutil-subdirectories-thumb.png>`
+  just a single object with the given name. This diagram:
+  https://cloud.google.com/storage/images/gsutil-subdirectories-thumb.png
   illustrates how gsutil provides a hierarchical view of objects in a bucket.
 
   gsutil achieves the hierarchical file tree illusion by applying a variety of
