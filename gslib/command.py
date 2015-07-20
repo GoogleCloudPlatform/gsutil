@@ -50,9 +50,7 @@ from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
-from gslib.parallelism_framework_util import AtomicIncrementDict
-from gslib.parallelism_framework_util import BasicIncrementDict
-from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
+from gslib.parallelism_framework_util import AtomicDict
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
@@ -222,14 +220,14 @@ def InitializeMultiprocessingVariables():
   caller_id_counter = multiprocessing.Value('i', 0)
 
   # Map from caller_id to total number of tasks to be completed for that ID.
-  total_tasks = ThreadAndProcessSafeDict(manager)
+  total_tasks = AtomicDict(manager=manager)
 
   # Map from caller_id to a boolean which is True iff all its tasks are
   # finished.
-  call_completed_map = ThreadAndProcessSafeDict(manager)
+  call_completed_map = AtomicDict(manager=manager)
 
   # Used to keep track of the set of return values for each caller ID.
-  global_return_values_map = AtomicIncrementDict(manager)
+  global_return_values_map = AtomicDict(manager=manager)
 
   # Condition used to notify any waiting threads that a task has finished or
   # that a call to Apply needs a new set of consumer processes.
@@ -240,7 +238,7 @@ def InitializeMultiprocessingVariables():
   worker_checking_level_lock = manager.Lock()
 
   # Map from caller_id to the current number of completed tasks for that ID.
-  caller_id_finished_count = AtomicIncrementDict(manager)
+  caller_id_finished_count = AtomicDict(manager=manager)
 
   # Used as a way for the main thread to distinguish between being woken up
   # by another call finishing and being woken up by a call that needs a new set
@@ -250,14 +248,41 @@ def InitializeMultiprocessingVariables():
   current_max_recursive_level = multiprocessing.Value('i', 0)
 
   # Map from (caller_id, name) to the value of that shared variable.
-  shared_vars_map = AtomicIncrementDict(manager)
-  shared_vars_list_map = ThreadAndProcessSafeDict(manager)
+  shared_vars_map = AtomicDict(manager=manager)
+  shared_vars_list_map = AtomicDict(manager=manager)
 
   # Map from caller_id to calling class.
   class_map = manager.dict()
 
   # Number of tasks that resulted in an exception in calls to Apply().
   failure_count = multiprocessing.Value('i', 0)
+
+
+def InitializeThreadingVariables():
+  """Initializes module-level variables used when running multi-threaded.
+
+  When multiprocessing is not available (or on Windows where only 1 process
+  is used), thread-safe analogs to the multiprocessing global variables
+  must be initialized. This function is the thread-safe analog to
+  InitializeMultiprocessingVariables.
+  """
+  # pylint: disable=global-variable-undefined
+  global global_return_values_map, shared_vars_map, failure_count
+  global caller_id_finished_count, shared_vars_list_map, total_tasks
+  global need_pool_or_done_cond, call_completed_map, class_map
+  global task_queues, caller_id_lock, caller_id_counter
+  caller_id_counter = 0
+  caller_id_finished_count = AtomicDict()
+  caller_id_lock = threading.Lock()
+  call_completed_map = AtomicDict()
+  class_map = AtomicDict()
+  failure_count = 0
+  global_return_values_map = AtomicDict()
+  need_pool_or_done_cond = threading.Condition()
+  shared_vars_list_map = AtomicDict()
+  shared_vars_map = AtomicDict()
+  task_queues = []
+  total_tasks = AtomicDict()
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -1004,10 +1029,21 @@ class Command(HelpProvider):
 
   def _SetUpPerCallerState(self):
     """Set up the state for a caller id, corresponding to one Apply call."""
+    # pylint: disable=global-variable-undefined,global-variable-not-assigned
+    # These variables are initialized in InitializeMultiprocessingVariables or
+    # InitializeThreadingVariables
+    global global_return_values_map, shared_vars_map, failure_count
+    global caller_id_finished_count, shared_vars_list_map, total_tasks
+    global need_pool_or_done_cond, call_completed_map, class_map
+    global task_queues, caller_id_lock, caller_id_counter
     # Get a new caller ID.
     with caller_id_lock:
-      caller_id_counter.value += 1
-      caller_id = caller_id_counter.value
+      if isinstance(caller_id_counter, int):
+        caller_id_counter += 1
+        caller_id = caller_id_counter
+      else:
+        caller_id_counter.value += 1
+        caller_id = caller_id_counter.value
 
     # Create a copy of self with an incremented recursive level. This allows
     # the class to report its level correctly if the function called from it
@@ -1027,8 +1063,8 @@ class Command(HelpProvider):
     class_map[caller_id] = cls
     total_tasks[caller_id] = -1  # -1 => the producer hasn't finished yet.
     call_completed_map[caller_id] = False
-    caller_id_finished_count.Put(caller_id, 0)
-    global_return_values_map.Put(caller_id, [])
+    caller_id_finished_count[caller_id] = 0
+    global_return_values_map[caller_id] = []
     return caller_id
 
   def _CreateNewConsumerPool(self, num_processes, num_threads):
@@ -1105,32 +1141,16 @@ class Command(HelpProvider):
     # fact that it's  wasteful to try this multiple times in general, it also
     # will never work when called from a subprocess since we use daemon
     # processes, and daemons can't create other processes.
-    if is_main_thread:
-      if ((not self.multiprocessing_is_available)
-          and thread_count * process_count > 1):
-        # Run the check again and log the appropriate warnings. This was run
-        # before, when the Command object was created, in order to calculate
-        # self.multiprocessing_is_available, but we don't want to print the
-        # warning until we're sure the user actually tried to use multiple
-        # threads or processes.
-        CheckMultiprocessingAvailableAndInit(logger=self.logger)
+    if (is_main_thread and not self.multiprocessing_is_available and
+        process_count > 1):
+      # Run the check again and log the appropriate warnings. This was run
+      # before, when the Command object was created, in order to calculate
+      # self.multiprocessing_is_available, but we don't want to print the
+      # warning until we're sure the user actually tried to use multiple
+      # threads or processes.
+      CheckMultiprocessingAvailableAndInit(logger=self.logger)
 
-    if self.multiprocessing_is_available:
-      caller_id = self._SetUpPerCallerState()
-    else:
-      self.sequential_caller_id += 1
-      caller_id = self.sequential_caller_id
-
-      if is_main_thread:
-        # pylint: disable=global-variable-undefined
-        global global_return_values_map, shared_vars_map, failure_count
-        global caller_id_finished_count, shared_vars_list_map
-        global_return_values_map = BasicIncrementDict()
-        global_return_values_map.Put(caller_id, [])
-        shared_vars_map = BasicIncrementDict()
-        caller_id_finished_count = BasicIncrementDict()
-        shared_vars_list_map = {}
-        failure_count = 0
+    caller_id = self._SetUpPerCallerState()
 
     # If any shared attributes passed by caller, create a dictionary of
     # shared memory variables for every element in the list of shared
@@ -1138,12 +1158,14 @@ class Command(HelpProvider):
     if shared_attrs:
       shared_vars_list_map[caller_id] = shared_attrs
       for name in shared_attrs:
-        shared_vars_map.Put((caller_id, name), 0)
+        shared_vars_map[(caller_id, name)] = 0
 
     # Make all of the requested function calls.
-    if self.multiprocessing_is_available and thread_count * process_count > 1:
+    usable_processes_count = (process_count if self.multiprocessing_is_available
+                              else 1)
+    if thread_count * usable_processes_count > 1:
       self._ParallelApply(func, args_iterator, exception_handler, caller_id,
-                          arg_checker, process_count, thread_count,
+                          arg_checker, usable_processes_count, thread_count,
                           should_return_results, fail_on_error)
     else:
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
@@ -1155,11 +1177,11 @@ class Command(HelpProvider):
         # and simply apply the delta after what was done during the call to
         # apply.
         final_value = (original_shared_vars_values[name] +
-                       shared_vars_map.Get((caller_id, name)))
+                       shared_vars_map.get((caller_id, name)))
         setattr(self, name, final_value)
 
     if should_return_results:
-      return global_return_values_map.Get(caller_id)
+      return global_return_values_map.get(caller_id)
 
   def _MaybeSuggestGsutilDashM(self):
     """Outputs a sugestion to the user to use gsutil -m."""
@@ -1289,7 +1311,10 @@ class Command(HelpProvider):
       # of task queues if it makes a call to Apply, so we always keep around
       # one more queue than we know we need. OTOH, if we don't create a new
       # process, the existing process still needs a task queue to use.
-      task_queues.append(_NewMultiprocessingQueue())
+      if process_count > 1:
+        task_queues.append(_NewMultiprocessingQueue())
+      else:
+        task_queues.append(_NewThreadsafeQueue())
 
     if process_count > 1:  # Handle process pool creation.
       # Check whether this call will need a new set of workers.
@@ -1321,8 +1346,10 @@ class Command(HelpProvider):
     # be consumer pools trying to use our processes.
     if process_count > 1:
       task_queue = task_queues[self.recursive_apply_level]
-    else:
+    elif self.multiprocessing_is_available:
       task_queue = _NewMultiprocessingQueue()
+    else:
+      task_queue = _NewThreadsafeQueue()
 
     # Kick off a producer thread to throw tasks in the global task queue. We
     # do this asynchronously so that the main thread can be free to create new
@@ -1606,7 +1633,7 @@ class ProducerThread(threading.Thread):
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.
       _NotifyIfDone(self.caller_id,
-                    caller_id_finished_count.Get(self.caller_id))
+                    caller_id_finished_count.get(self.caller_id))
 
 
 class WorkerPool(object):
@@ -1679,7 +1706,8 @@ class WorkerThread(threading.Thread):
     try:
       results = task.func(cls, task.args, thread_state=self.thread_gsutil_api)
       if task.should_return_results:
-        global_return_values_map.Update(caller_id, [results], default_value=[])
+        global_return_values_map.Increment(caller_id, [results],
+                                           default_value=[])
     except Exception, e:  # pylint: disable=broad-except
       _IncrementFailureCount()
       if task.fail_on_error:
@@ -1701,10 +1729,8 @@ class WorkerThread(threading.Thread):
       # Even if we encounter an exception, we still need to claim that that
       # the function finished executing. Otherwise, we won't know when to
       # stop waiting and return results.
-      num_done = caller_id_finished_count.Update(caller_id, 1)
-
-      if cls.multiprocessing_is_available:
-        _NotifyIfDone(caller_id, num_done)
+      num_done = caller_id_finished_count.Increment(caller_id, 1)
+      _NotifyIfDone(caller_id, num_done)
 
   def run(self):
     while True:
@@ -1764,7 +1790,7 @@ class _SharedVariablesUpdater(object):
 
         # Update the globally-consistent value by simply increasing it by the
         # computed delta.
-        shared_vars_map.Update(key, delta)
+        shared_vars_map.Increment(key, delta)
 
 
 def _NotifyIfDone(caller_id, num_done):

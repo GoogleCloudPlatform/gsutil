@@ -336,21 +336,14 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     """Tests that created processes and threads evenly share tasks."""
     calls_per_thread = 2
     args = [()] * (process_count * thread_count * calls_per_thread)
-
     expected_calls_per_thread = calls_per_thread
-    return_proc_and_thread_id_func = _SleepThenReturnProcAndThreadId
 
     if not self.command_class(True).multiprocessing_is_available:
-      # TODO: Currently, multiprocessing_is_available governs the use of
-      # both multiple threads and multiple processes. Until this is fixed,
-      # when multiprocessing is not available all calls will be performed by a
-      # single thread.
-      expected_calls_per_thread = len(args)
-      # Since everything is executed in a single thread, avoid unnecessary
-      # calls to sleep().
-      return_proc_and_thread_id_func = _ReturnProcAndThreadId
+      # When multiprocessing is unavailable, only a single process is used.
+      # Calls should be evenly distributed across threads.
+      expected_calls_per_thread = calls_per_thread * process_count
 
-    results = self._RunApply(return_proc_and_thread_id_func, args,
+    results = self._RunApply(_SleepThenReturnProcAndThreadId, args,
                              process_count, thread_count)
     usage_dict = {}  # (process_id, thread_id): number of tasks performed
     for (process_id, thread_id) in results:

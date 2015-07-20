@@ -75,8 +75,7 @@ from gslib.hashing_helper import ConcatCrc32c
 from gslib.hashing_helper import GetDownloadHashAlgs
 from gslib.hashing_helper import GetUploadHashAlgs
 from gslib.hashing_helper import HashingFileUploadWrapper
-from gslib.parallelism_framework_util import ThreadAndProcessSafeDict
-from gslib.parallelism_framework_util import ThreadSafeDict
+from gslib.parallelism_framework_util import AtomicDict
 from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithBackoff
@@ -142,9 +141,9 @@ global global_copy_helper_opts
 # user specified two identical source URLs), the writes occur serially.
 global open_files_map, open_files_lock
 open_files_map = (
-    ThreadSafeDict() if (
+    AtomicDict() if (
         IS_WINDOWS or not CheckMultiprocessingAvailableAndInit().is_available)
-    else ThreadAndProcessSafeDict(gslib.util.manager))
+    else AtomicDict(manager=gslib.util.manager))
 
 # We don't allow multiple processes on Windows, so using a process-safe lock
 # would be unnecessary.

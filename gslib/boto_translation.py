@@ -30,6 +30,7 @@ import re
 import socket
 import tempfile
 import textwrap
+import threading
 import time
 import xml
 from xml.dom.minidom import parseString as XmlParseString
@@ -83,7 +84,6 @@ from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
-from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetMaxRetryDelay
@@ -101,8 +101,11 @@ TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
                                 boto.exception.StorageCreateError,
                                 boto.exception.StorageResponseError)
 
-# If multiprocessing is available, this will be overridden to a (thread-safe)
-# multiprocessing.Value in a call to InitializeMultiprocessingVariables.
+# pylint: disable=global-at-module-level
+global boto_auth_initialized, boto_auth_initialized_lock
+# If multiprocessing is available, these will be overridden to process-safe
+# variables in InitializeMultiprocessingVariables.
+boto_auth_initialized_lock = threading.Lock()
 boto_auth_initialized = False
 
 NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
@@ -117,7 +120,9 @@ def InitializeMultiprocessingVariables():  # pylint: disable=invalid-name
     See gslib.command.InitializeMultiprocessingVariables for an explanation
     of why this is necessary.
   """
-  global boto_auth_initialized  # pylint: disable=global-variable-undefined
+  # pylint: disable=global-variable-undefined
+  global boto_auth_initialized, boto_auth_initialized_lock
+  boto_auth_initialized_lock = gslib.util.CreateLock()
   boto_auth_initialized = multiprocessing.Value('i', 0)
 
 
@@ -165,14 +170,14 @@ class BotoTranslation(CloudApi):
     super(BotoTranslation, self).__init__(bucket_storage_uri_class, logger,
                                           provider=provider, debug=debug)
     _ = credentials
-    global boto_auth_initialized  # pylint: disable=global-variable-undefined
-    if (CheckMultiprocessingAvailableAndInit().is_available
-        and not boto_auth_initialized.value):
+    # pylint: disable=global-variable-undefined, global-variable-not-assigned
+    global boto_auth_initialized, boto_auth_initialized_lock
+    with boto_auth_initialized_lock:
       ConfigureNoOpAuthIfNeeded()
-      boto_auth_initialized.value = 1
-    elif not boto_auth_initialized:
-      ConfigureNoOpAuthIfNeeded()
-      boto_auth_initialized = True
+      if isinstance(boto_auth_initialized, bool):
+        boto_auth_initialized = True
+      else:
+        boto_auth_initialized.value = 1
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
 

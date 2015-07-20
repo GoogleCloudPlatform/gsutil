@@ -203,6 +203,8 @@ def main():
     # called from within an "if __name__ == '__main__':" block.
     gslib.command.InitializeMultiprocessingVariables()
     gslib.boto_translation.InitializeMultiprocessingVariables()
+  else:
+    gslib.command.InitializeThreadingVariables()
 
   # This needs to be done after gslib.util.InitializeMultiprocessingVariables(),
   # since otherwise we can't call gslib.util.CreateLock.
