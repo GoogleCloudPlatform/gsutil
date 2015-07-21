@@ -2154,20 +2154,23 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
 
     if resuming or download_complete:
       # Catch up our digester with the hash data.
-      for alg_name in digesters:
-        fp.seek(start_byte)
-        logger.info(
-            'Catching up %s for %s', alg_name, download_name)
-        bytes_digested = 0
-        bytes_to_digest = download_start_byte - start_byte
+      bytes_digested = 0
+      total_bytes_to_digest = download_start_byte - start_byte
+      hash_callback = ProgressCallbackWithBackoff(
+          total_bytes_to_digest,
+          FileProgressCallbackHandler(
+              ConstructAnnounceText('Hashing',
+                                    dst_url.url_string), logger).call)
 
-        while bytes_digested < bytes_to_digest:
-          bytes_to_read = min(DEFAULT_FILE_BUFFER_SIZE,
-                              bytes_to_digest-bytes_digested)
-          data = fp.read(bytes_to_read)
-          bytes_digested += bytes_to_read
-          for alg_name in digesters:
-            digesters[alg_name].update(data)
+      while bytes_digested < total_bytes_to_digest:
+        bytes_to_read = min(DEFAULT_FILE_BUFFER_SIZE,
+                            total_bytes_to_digest - bytes_digested)
+        data = fp.read(bytes_to_read)
+        bytes_digested += bytes_to_read
+        for alg_name in digesters:
+          digesters[alg_name].update(data)
+        hash_callback.Progress(len(data))
+
     elif not is_parallel:
       # Delete file contents and start entire object download from scratch.
       fp.truncate(0)
