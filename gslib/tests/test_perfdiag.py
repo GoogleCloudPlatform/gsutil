@@ -82,6 +82,20 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def test_write_throughput_multi_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('wthru', 2, 2)
 
+  def test_file_write_throughput_single_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('wthru_file', 1, 1)
+
+  def test_file_write_throughput_single_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('wthru_file', 1, 2)
+
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def test_file_write_throughput_multi_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('wthru_file', 2, 1)
+
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def test_file_write_throughput_multi_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('wthru_file', 2, 2)
+
   def test_read_throughput_single_process_single_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 1, 1)
 
@@ -95,6 +109,20 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_read_throughput_multi_process_multi_thread(self):
     self._run_basic_wthru_or_rthru('rthru', 2, 2)
+
+  def test_file_read_throughput_single_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('rthru_file', 1, 1)
+
+  def test_file_read_throughput_single_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('rthru_file', 1, 2)
+
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def test_file_read_throughput_multi_process_single_thread(self):
+    self._run_basic_wthru_or_rthru('rthru_file', 2, 1)
+
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def test_file_read_throughput_multi_process_multi_thread(self):
+    self._run_basic_wthru_or_rthru('rthru_file', 2, 2)
 
   def test_input_output(self):
     outpath = self.CreateTempFile()

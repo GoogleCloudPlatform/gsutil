@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import calendar
 from collections import defaultdict
+from collections import namedtuple
 import contextlib
 import cStringIO
 import datetime
@@ -52,6 +53,7 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import GetCloudApiInstance
+from gslib.util import GetFileSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
@@ -117,8 +119,8 @@ _DETAILED_HELP_TEXT = ("""
               etc.)
 
   -t          Sets the list of diagnostic tests to perform. The default is to
-              run all diagnostic tests. Must be a comma-separated list
-              containing one or more of the following:
+              run the lat, rthru, and wthru diagnostic tests. Must be a
+              comma-separated list containing one or more of the following:
 
               lat
                  Runs N iterations (set with -n) of writing the file,
@@ -136,15 +138,22 @@ _DETAILED_HELP_TEXT = ("""
                  Runs N (set with -n) read operations, with at most C
                  (set with -c) reads outstanding at any given time.
 
+              rthru_file
+                 The same as rthru, but simultaneously writes data to the disk,
+                 to gauge the performance impact of the local disk on downloads.
+
               wthru
                  Runs N (set with -n) write operations, with at most C
                  (set with -c) writes outstanding at any given time.
 
+              wthru_file
+                 The same as wthru, but simultaneously reads data from the disk,
+                 to gauge the performance impact of the local disk on uploads.
+
   -m          Adds metadata to the result JSON file. Multiple -m values can be
               specified. Example:
 
-                  gsutil perfdiag -m "key1:value1" -m "key2:value2" \
-                                  gs://bucketname/
+                  gsutil perfdiag -m "key1:val1" -m "key2:val2" gs://bucketname
 
               Each metadata key will be added to the top-level "metadata"
               dictionary in the output JSON file.
@@ -177,6 +186,19 @@ _DETAILED_HELP_TEXT = ("""
   attempt to connect to your proxy server if you have one configured. None of
   this information will be sent to Google unless you choose to send it.
 """)
+
+FileDataTuple = namedtuple(
+    'FileDataTuple',
+    'file_size md5 data')
+
+DownloadObjectTuple = namedtuple(
+    'DownloadObjectTuple',
+    'bucket_name object_name serialization_data use_file')
+
+# Dict storing file_path:FileDataTuple for each temporary file used by
+# perfdiag. This data should be kept outside of the PerfDiagCommand class
+# since calls to Apply will make copies of all member data.
+temp_file_data = {}
 
 
 class Error(Exception):
@@ -214,6 +236,9 @@ class DummyFile(object):
   """A dummy, file-like object that throws away everything written to it."""
 
   def write(self, *args, **kwargs):  # pylint: disable=invalid-name
+    pass
+
+  def close(self):  # pylint: disable=invalid-name
     pass
 
 
@@ -262,12 +287,14 @@ class PerfDiagCommand(Command):
 
   # Test names.
   RTHRU = 'rthru'
+  RTHRU_FILE = 'rthru_file'
   WTHRU = 'wthru'
+  WTHRU_FILE = 'wthru_file'
   LAT = 'lat'
   LIST = 'list'
 
   # List of all diagnostic tests.
-  ALL_DIAG_TESTS = (RTHRU, WTHRU, LAT, LIST)
+  ALL_DIAG_TESTS = (RTHRU, RTHRU_FILE, WTHRU, WTHRU_FILE, LAT, LIST)
   # List of diagnostic tests to run by default.
   DEFAULT_DIAG_TESTS = (RTHRU, WTHRU, LAT)
 
@@ -331,14 +358,10 @@ class PerfDiagCommand(Command):
     self.results = {}
     # List of test files in a temporary location on disk for latency ops.
     self.latency_files = []
+    # Keeps track of temporary files to delete.
+    self.temporary_files = []
     # List of test objects to clean up in the test bucket.
     self.test_object_names = set()
-    # Maps each test file path to its size in bytes.
-    self.file_sizes = {}
-    # Maps each test file to its contents as a string.
-    self.file_contents = {}
-    # Maps each test file to its MD5 hash.
-    self.file_md5s = {}
     # Total number of HTTP requests made.
     self.total_requests = 0
     # Total number of HTTP 5xx errors.
@@ -348,46 +371,65 @@ class PerfDiagCommand(Command):
     # Total number of socket errors.
     self.connection_breaks = 0
 
-    def _MakeFile(file_size):
-      """Creates a temporary file of the given size and returns its path."""
+    def _MakeTempFile(file_size=0, mem_metadata=False, mem_data=False):
+      """Creates a temporary file of the given size and returns its path.
+
+      Args:
+        file_size: The size of the temporary file to create.
+        mem_metadata: If true, store md5 and file size in memory at
+                      temp_file_data[fpath].md5, tempfile_data[fpath].file_size.
+        mem_data: If true, store the file data in memory at
+                  temp_file_data[fpath].data
+
+      Returns:
+        The file path of the created temporary file.
+      """
       fd, fpath = tempfile.mkstemp(suffix='.bin', prefix='gsutil_test_file',
                                    text=False)
-      self.file_sizes[fpath] = file_size
-      random_bytes = os.urandom(min(file_size, self.MAX_UNIQUE_RANDOM_BYTES))
-      total_bytes = 0
-      file_contents = ''
-      while total_bytes < file_size:
-        num_bytes = min(self.MAX_UNIQUE_RANDOM_BYTES, file_size - total_bytes)
-        file_contents += random_bytes[:num_bytes]
-        total_bytes += num_bytes
-      self.file_contents[fpath] = file_contents
-      with os.fdopen(fd, 'wb') as f:
-        f.write(self.file_contents[fpath])
-      with open(fpath, 'rb') as f:
-        self.file_md5s[fpath] = CalculateB64EncodedMd5FromContents(f)
+      with os.fdopen(fd, 'wb') as fp:
+        random_bytes = os.urandom(min(file_size,
+                                      self.MAX_UNIQUE_RANDOM_BYTES))
+        total_bytes_written = 0
+        while total_bytes_written < file_size:
+          num_bytes = min(self.MAX_UNIQUE_RANDOM_BYTES,
+                          file_size - total_bytes_written)
+          fp.write(random_bytes[:num_bytes])
+          total_bytes_written += num_bytes
+
+      if mem_metadata or mem_data:
+        with open(fpath, 'rb') as fp:
+          file_size = GetFileSize(fp) if mem_metadata else None
+          md5 = CalculateB64EncodedMd5FromContents(fp) if mem_metadata else None
+          data = fp.read() if mem_data else None
+          temp_file_data[fpath] = FileDataTuple(file_size, md5, data)
+
+      self.temporary_files.append(fpath)
       return fpath
 
-    # Create files for latency tests.
-    for file_size in self.test_file_sizes:
-      fpath = _MakeFile(file_size)
-      self.latency_files.append(fpath)
+    # Create a file for warming up the TCP connection.
+    self.tcp_warmup_file = _MakeTempFile(5 * 1024 * 1024,  # 5 Mebibytes
+                                         mem_metadata=True, mem_data=True)
 
-    # Creating a file for warming up the TCP connection.
-    self.tcp_warmup_file = _MakeFile(5 * 1024 * 1024)  # 5 Mebibytes.
     # Remote file to use for TCP warmup.
     self.tcp_warmup_remote_file = (str(self.bucket_url) +
                                    os.path.basename(self.tcp_warmup_file))
 
-    # Local file on disk for write throughput tests.
-    self.thru_local_file = _MakeFile(self.thru_filesize)
+    # Local file on disk to be used as a source for uploads and downloads.
+    # Only need to store data in memory for rthru and wthru tests which have a
+    # size limit of 2GiB.
+    store_mem_data = self.thru_filesize <= HumanReadableToBytes('2GiB')
+    self.thru_local_file = _MakeTempFile(self.thru_filesize, mem_metadata=True,
+                                         mem_data=store_mem_data)
+
+    # A temporary file to be used for writing data to.
+    self.temp_fpath = _MakeTempFile()
 
     # Dummy file buffer to use for downloading that goes nowhere.
     self.discard_sink = DummyFile()
 
   def _TearDown(self):
     """Performs operations to clean things up after performing diagnostics."""
-    for fpath in self.latency_files + [self.thru_local_file,
-                                       self.tcp_warmup_file]:
+    for fpath in self.temporary_files:
       try:
         os.remove(fpath)
       except OSError:
@@ -404,6 +446,7 @@ class PerfDiagCommand(Command):
           pass
 
       self._RunOperation(_Delete)
+    temp_file_data.clear()
 
   @contextlib.contextmanager
   def _Time(self, key, bucket):
@@ -481,9 +524,10 @@ class PerfDiagCommand(Command):
     for i in range(self.num_iterations):
       self.logger.info('\nRunning latency iteration %d...', i+1)
       for fpath in self.latency_files:
+        file_data = temp_file_data[fpath]
         url = self.bucket_url.Clone()
         url.object_name = os.path.basename(fpath)
-        file_size = self.file_sizes[fpath]
+        file_size = file_data.file_size
         readable_file_size = MakeHumanReadable(file_size)
 
         self.logger.info(
@@ -493,7 +537,7 @@ class PerfDiagCommand(Command):
         upload_target = StorageUrlToUploadObjectMetadata(url)
 
         def _Upload():
-          io_fp = cStringIO.StringIO(self.file_contents[fpath])
+          io_fp = cStringIO.StringIO(file_data.data)
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
             self.gsutil_api.UploadObject(
                 io_fp, upload_target, size=file_size, provider=self.provider,
@@ -536,16 +580,19 @@ class PerfDiagCommand(Command):
     """Simple exception handler to allow post-completion status."""
     self.logger.error(str(e))
 
-  def _RunReadThruTests(self):
+  def _RunReadThruTests(self, use_file=False):
     """Runs read throughput tests."""
+    test_name = 'read_throughput_file' if use_file else 'read_throughput'
+    file_io_string = 'with file I/O' if use_file else ''
     self.logger.info(
-        '\nRunning read throughput tests (%s iterations of size %s)' %
-        (self.num_iterations, MakeHumanReadable(self.thru_filesize)))
+        '\nRunning read throughput tests %s (%s iterations of size %s)' %
+        (file_io_string, self.num_iterations,
+         MakeHumanReadable(self.thru_filesize)))
 
-    self.results['read_throughput'] = {'file_size': self.thru_filesize,
-                                       'num_times': self.num_iterations,
-                                       'processes': self.processes,
-                                       'threads': self.threads}
+    self.results[test_name] = {'file_size': self.thru_filesize,
+                               'num_times': self.num_iterations,
+                               'processes': self.processes,
+                               'threads': self.threads}
 
     # Copy the TCP warmup file.
     warmup_url = self.bucket_url.Clone()
@@ -554,8 +601,9 @@ class PerfDiagCommand(Command):
     self.test_object_names.add(warmup_url.object_name)
 
     def _Upload1():
+      warmup_file_data = temp_file_data[self.tcp_warmup_file].data
       self.gsutil_api.UploadObject(
-          cStringIO.StringIO(self.file_contents[self.tcp_warmup_file]),
+          cStringIO.StringIO(warmup_file_data),
           warmup_target, provider=self.provider, fields=['name'])
     self._RunOperation(_Upload1)
 
@@ -563,15 +611,20 @@ class PerfDiagCommand(Command):
     thru_url = self.bucket_url.Clone()
     thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
-    thru_target.md5Hash = self.file_md5s[self.thru_local_file]
+    thru_target.md5Hash = temp_file_data[self.thru_local_file].md5
     self.test_object_names.add(thru_url.object_name)
 
     # Get the mediaLink here so that we can pass it to download.
     def _Upload2():
-      return self.gsutil_api.UploadObject(
-          cStringIO.StringIO(self.file_contents[self.thru_local_file]),
-          thru_target, provider=self.provider, size=self.thru_filesize,
-          fields=['name', 'mediaLink', 'size'])
+      with open(self.thru_local_file, 'rb') as fp:
+        if self.thru_filesize < ResumableThreshold():
+          return self.gsutil_api.UploadObject(
+              fp, thru_target, provider=self.provider, size=self.thru_filesize,
+              fields=['name', 'mediaLink', 'size'])
+        else:
+          return self.gsutil_api.UploadObjectResumable(
+              fp, thru_target, provider=self.provider, size=self.thru_filesize,
+              fields=['name', 'mediaLink', 'size'])
 
     # Get the metadata for the object so that we are just measuring performance
     # on the actual bytes transfer.
@@ -591,20 +644,28 @@ class PerfDiagCommand(Command):
       times = []
 
       def _Download():
-        t0 = time.time()
-        self.gsutil_api.GetObjectMedia(
-            thru_url.bucket_name, thru_url.object_name, self.discard_sink,
-            provider=self.provider, serialization_data=serialization_data)
-        t1 = time.time()
-        times.append(t1 - t0)
+        fp = None
+        try:
+          fp = open(self.temp_fpath, 'wb') if use_file else self.discard_sink
+          t0 = time.time()
+          self.gsutil_api.GetObjectMedia(
+              thru_url.bucket_name, thru_url.object_name, fp,
+              provider=self.provider, serialization_data=serialization_data)
+          t1 = time.time()
+          times.append(t1 - t0)
+        finally:
+          if fp:
+            fp.close()
+
       for _ in range(self.num_iterations):
         self._RunOperation(_Download)
       time_took = sum(times)
     else:
-      args = ([(thru_url.bucket_name, thru_url.object_name, serialization_data)]
-              * self.num_iterations)
-      self.logger.addFilter(self._CpFilter())
+      args = ([DownloadObjectTuple(
+          thru_url.bucket_name, thru_url.object_name, serialization_data,
+          use_file)] * self.num_iterations)
 
+      self.logger.addFilter(self._CpFilter())
       t0 = time.time()
       self.Apply(_DownloadWrapper,
                  args,
@@ -619,20 +680,23 @@ class PerfDiagCommand(Command):
     total_bytes_copied = self.thru_filesize * self.num_iterations
     bytes_per_second = total_bytes_copied / time_took
 
-    self.results['read_throughput']['time_took'] = time_took
-    self.results['read_throughput']['total_bytes_copied'] = total_bytes_copied
-    self.results['read_throughput']['bytes_per_second'] = bytes_per_second
+    self.results[test_name]['time_took'] = time_took
+    self.results[test_name]['total_bytes_copied'] = total_bytes_copied
+    self.results[test_name]['bytes_per_second'] = bytes_per_second
 
-  def _RunWriteThruTests(self):
+  def _RunWriteThruTests(self, use_file=False):
     """Runs write throughput tests."""
+    test_name = 'write_throughput_file' if use_file else 'write_throughput'
+    file_io_string = 'with file I/O' if use_file else ''
     self.logger.info(
-        '\nRunning write throughput tests (%s iterations of size %s)' %
-        (self.num_iterations, MakeHumanReadable(self.thru_filesize)))
+        '\nRunning write throughput tests %s (%s iterations of size %s)' %
+        (file_io_string, self.num_iterations,
+         MakeHumanReadable(self.thru_filesize)))
 
-    self.results['write_throughput'] = {'file_size': self.thru_filesize,
-                                        'num_copies': self.num_iterations,
-                                        'processes': self.processes,
-                                        'threads': self.threads}
+    self.results[test_name] = {'file_size': self.thru_filesize,
+                               'num_copies': self.num_iterations,
+                               'processes': self.processes,
+                               'threads': self.threads}
 
     warmup_url = self.bucket_url.Clone()
     warmup_url.object_name = os.path.basename(self.tcp_warmup_file)
@@ -642,55 +706,64 @@ class PerfDiagCommand(Command):
     thru_url = self.bucket_url.Clone()
     thru_url.object_name = os.path.basename(self.thru_local_file)
     thru_target = StorageUrlToUploadObjectMetadata(thru_url)
-    thru_tuples = []
+    upload_tuples = []
     for i in xrange(self.num_iterations):
       # Create a unique name for each uploaded object.  Otherwise,
       # the XML API would fail when trying to non-atomically get metadata
       # for the object that gets blown away by the overwrite.
       remote_object_name = thru_target.name + str(i)
       self.test_object_names.add(remote_object_name)
-      thru_tuples.append(UploadObjectTuple(thru_target.bucket,
-                                           remote_object_name,
-                                           filepath=self.thru_local_file))
+      upload_tuples.append(UploadObjectTuple(
+          thru_target.bucket, remote_object_name,
+          filepath=self.thru_local_file, use_file=use_file))
 
     if self.processes == 1 and self.threads == 1:
       # Warm up the TCP connection.
       def _Warmup():
+        warmup_file_data = temp_file_data[self.tcp_warmup_file].data
         self.gsutil_api.UploadObject(
-            cStringIO.StringIO(self.file_contents[self.tcp_warmup_file]),
-            warmup_target, provider=self.provider, size=self.thru_filesize,
-            fields=['name'])
+            cStringIO.StringIO(warmup_file_data), warmup_target,
+            provider=self.provider, size=self.thru_filesize, fields=['name'])
       self._RunOperation(_Warmup)
 
       times = []
 
       for i in xrange(self.num_iterations):
-        thru_tuple = thru_tuples[i]
+        upload_tuple = upload_tuples[i]
         def _Upload():
           """Uploads the write throughput measurement object."""
           upload_target = apitools_messages.Object(
-              bucket=thru_tuple.bucket_name, name=thru_tuple.object_name,
-              md5Hash=thru_tuple.md5)
-          io_fp = cStringIO.StringIO(self.file_contents[self.thru_local_file])
-          t0 = time.time()
-          if self.thru_filesize < ResumableThreshold():
-            self.gsutil_api.UploadObject(
-                io_fp, upload_target, provider=self.provider,
-                size=self.thru_filesize, fields=['name'])
-          else:
-            self.gsutil_api.UploadObjectResumable(
-                io_fp, upload_target, provider=self.provider,
-                size=self.thru_filesize, fields=['name'],
-                tracker_callback=_DummyTrackerCallback)
+              bucket=upload_tuple.bucket_name, name=upload_tuple.object_name,
+              md5Hash=upload_tuple.md5)
+          fp = None
+          try:
+            if use_file:
+              fp = open(self.thru_local_file, 'rb')
+            else:
+              upload_data = temp_file_data[self.thru_local_file].data
+              fp = cStringIO.StringIO(upload_data)
 
-          t1 = time.time()
-          times.append(t1 - t0)
+            t0 = time.time()
+            if self.thru_filesize < ResumableThreshold():
+              self.gsutil_api.UploadObject(
+                  fp, upload_target, provider=self.provider,
+                  size=self.thru_filesize, fields=['name'])
+            else:
+              self.gsutil_api.UploadObjectResumable(
+                  fp, upload_target, provider=self.provider,
+                  size=self.thru_filesize, fields=['name'],
+                  tracker_callback=_DummyTrackerCallback)
+            t1 = time.time()
+            times.append(t1 - t0)
+          finally:
+            if fp:
+              fp.close()
 
         self._RunOperation(_Upload)
       time_took = sum(times)
 
     else:
-      args = thru_tuples
+      args = upload_tuples
       t0 = time.time()
       self.Apply(_UploadWrapper,
                  args,
@@ -705,9 +778,9 @@ class PerfDiagCommand(Command):
     total_bytes_copied = self.thru_filesize * self.num_iterations
     bytes_per_second = total_bytes_copied / time_took
 
-    self.results['write_throughput']['time_took'] = time_took
-    self.results['write_throughput']['total_bytes_copied'] = total_bytes_copied
-    self.results['write_throughput']['bytes_per_second'] = bytes_per_second
+    self.results[test_name]['time_took'] = time_took
+    self.results[test_name]['total_bytes_copied'] = total_bytes_copied
+    self.results[test_name]['bytes_per_second'] = bytes_per_second
 
   def _RunListTests(self):
     """Runs eventual consistency listing latency tests."""
@@ -727,7 +800,7 @@ class PerfDiagCommand(Command):
     empty_md5 = CalculateB64EncodedMd5FromContents(cStringIO.StringIO(''))
     args = [
         UploadObjectTuple(self.bucket_url.bucket_name, name, md5=empty_md5,
-                          contents='') for name in list_objects]
+                          data='') for name in list_objects]
     self.Apply(_UploadWrapper, args, _PerfdiagExceptionHandler,
                arg_checker=DummyArgChecker)
 
@@ -800,40 +873,70 @@ class PerfDiagCommand(Command):
         'time_took': total_end_time - total_start_time,
     }
 
-  def Upload(self, thru_tuple, thread_state=None):
-    gsutil_api = GetCloudApiInstance(self, thread_state)
-
-    md5hash = thru_tuple.md5
-    contents = thru_tuple.contents
-    if thru_tuple.filepath:
-      md5hash = self.file_md5s[thru_tuple.filepath]
-      contents = self.file_contents[thru_tuple.filepath]
-
-    upload_target = apitools_messages.Object(
-        bucket=thru_tuple.bucket_name, name=thru_tuple.object_name,
-        md5Hash=md5hash)
-    file_size = len(contents)
-    if file_size < ResumableThreshold():
-      gsutil_api.UploadObject(
-          cStringIO.StringIO(contents), upload_target,
-          provider=self.provider, size=file_size, fields=['name'])
-    else:
-      gsutil_api.UploadObjectResumable(
-          cStringIO.StringIO(contents), upload_target,
-          provider=self.provider, size=file_size, fields=['name'],
-          tracker_callback=_DummyTrackerCallback)
-
-  def Download(self, download_tuple, thread_state=None):
-    """Downloads a file.
+  def Upload(self, upload_tuple, thread_state=None):
+    """Uploads to an object.
 
     Args:
-      download_tuple: (bucket name, object name, serialization data for object).
+      upload_tuple: UploadObjectTuple object with data for this upload.
+      thread_state: gsutil Cloud API instance to use for the upload.
+    """
+    gsutil_api = GetCloudApiInstance(self, thread_state)
+    fp = None
+
+    try:
+      if upload_tuple.filepath:
+        md5 = temp_file_data[upload_tuple.filepath].md5
+        if upload_tuple.use_file:
+          fp = open(upload_tuple.filepath, 'rb')
+          file_size = GetFileSize(fp)
+        else:
+          data = temp_file_data[upload_tuple.filepath].data
+          fp = cStringIO.StringIO(data)
+          file_size = temp_file_data[upload_tuple.filepath].file_size
+      else:
+        md5 = upload_tuple.md5
+        fp = cStringIO.StringIO(upload_tuple.data)
+        file_size = len(upload_tuple.data)
+
+      upload_target = apitools_messages.Object(
+          bucket=upload_tuple.bucket_name, name=upload_tuple.object_name,
+          md5Hash=md5)
+
+      if file_size < ResumableThreshold():
+        gsutil_api.UploadObject(
+            fp, upload_target, provider=self.provider, size=file_size,
+            fields=['name'])
+      else:
+        gsutil_api.UploadObjectResumable(
+            fp, upload_target, provider=self.provider, size=file_size,
+            fields=['name'], tracker_callback=_DummyTrackerCallback)
+
+    finally:
+      if fp:
+        fp.close()
+
+  def Download(self, download_tuple, thread_state=None):
+    """Downloads an object.
+
+    Args:
+      download_tuple: DownloadObjectTuple object with data for this download.
       thread_state: gsutil Cloud API instance to use for the download.
     """
     gsutil_api = GetCloudApiInstance(self, thread_state)
-    gsutil_api.GetObjectMedia(
-        download_tuple[0], download_tuple[1], self.discard_sink,
-        provider=self.provider, serialization_data=download_tuple[2])
+    fp = None
+    try:
+      if download_tuple.use_file:
+        fp = open(self.temp_fpath, 'r+b')
+      else:
+        fp = self.discard_sink
+
+      gsutil_api.GetObjectMedia(
+          download_tuple.bucket_name, download_tuple.object_name, fp,
+          provider=self.provider,
+          serialization_data=download_tuple.serialization_data)
+    finally:
+      if fp:
+        fp.close()
 
   def Delete(self, thru_tuple, thread_state=None):
     gsutil_api = thread_state or self.gsutil_api
@@ -1183,6 +1286,19 @@ class PerfDiagCommand(Command):
       print 'Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8))
 
+    if 'write_throughput_file' in self.results:
+      print
+      print '-' * 78
+      print 'Write Throughput With File I/O'.center(78)
+      print '-' * 78
+      write_thru_file = self.results['write_throughput_file']
+      print 'Copied a %s file %d times for a total transfer size of %s.' % (
+          MakeHumanReadable(write_thru_file['file_size']),
+          write_thru_file['num_copies'],
+          MakeHumanReadable(write_thru_file['total_bytes_copied']))
+      print 'Write throughput: %s/s.' % (
+          MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8))
+
     if 'read_throughput' in self.results:
       print
       print '-' * 78
@@ -1195,6 +1311,19 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(read_thru['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8))
+
+    if 'read_throughput_file' in self.results:
+      print
+      print '-' * 78
+      print 'Read Throughput With File I/O'.center(78)
+      print '-' * 78
+      read_thru_file = self.results['read_throughput_file']
+      print 'Copied a %s file %d times for a total transfer size of %s.' % (
+          MakeHumanReadable(read_thru_file['file_size']),
+          read_thru_file['num_times'],
+          MakeHumanReadable(read_thru_file['total_bytes_copied']))
+      print 'Read throughput: %s/s.' % (
+          MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8))
 
     if 'listing' in self.results:
       print
@@ -1459,6 +1588,14 @@ class PerfDiagCommand(Command):
       raise CommandException('The perfdiag command requires a URL that '
                              'specifies a bucket.\n"%s" is not '
                              'valid.' % self.args[0])
+
+    if (self.thru_filesize > HumanReadableToBytes('2GiB') and
+        (self.RTHRU in self.diag_tests or self.WTHRU in self.diag_tests)):
+      raise CommandException(
+          'For in-memory tests maximum file size is 2GiB. If you want to test '
+          'using a larger file size consider specifying rthru_file and/or '
+          'wthru_file with the -t option.')
+
     # Ensure the bucket exists.
     self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
                               provider=self.bucket_url.scheme,
@@ -1514,8 +1651,12 @@ class PerfDiagCommand(Command):
         self._RunLatencyTests()
       if self.RTHRU in self.diag_tests:
         self._RunReadThruTests()
+      if self.RTHRU_FILE in self.diag_tests:
+        self._RunReadThruTests(use_file=True)
       if self.WTHRU in self.diag_tests:
         self._RunWriteThruTests()
+      if self.WTHRU_FILE in self.diag_tests:
+        self._RunWriteThruTests(use_file=True)
       if self.LIST in self.diag_tests:
         self._RunListTests()
 
@@ -1547,19 +1688,20 @@ class UploadObjectTuple(object):
   """Picklable tuple with necessary metadata for an insert object call."""
 
   def __init__(self, bucket_name, object_name, filepath=None, md5=None,
-               contents=None):
+               data=None, use_file=False):
     """Create an upload tuple.
 
     Args:
       bucket_name: Name of the bucket to upload to.
       object_name: Name of the object to upload to.
-      filepath: A file path located in self.file_contents and self.file_md5s.
+      filepath: A file path located in temp_file_data.
       md5: The MD5 hash of the object being uploaded.
-      contents: The contents of the file to be uploaded.
+      data: The data of the file to be uploaded.
+      use_file: Whether or not file i/o should be used for this upload.
 
-    Note: (contents + md5) and filepath are mutually exlusive. You may specify
+    Note: (data + md5) and filepath are mutually exlusive. You may specify
           one or the other, but not both.
-    Note: If one of contents or md5 are specified, they must both be specified.
+    Note: If one of data or md5 are specified, they must both be specified.
 
     Raises:
       InvalidArgument: if the arguments are invalid.
@@ -1568,13 +1710,18 @@ class UploadObjectTuple(object):
     self.object_name = object_name
     self.filepath = filepath
     self.md5 = md5
-    self.contents = contents
-    if filepath and (md5 or contents is not None):
+    self.data = data
+    self.use_file = use_file
+
+    if use_file and not filepath:
       raise InvalidArgument(
-          'Only one of filepath or (md5 + contents) may be specified.')
-    if not filepath and (not md5 or contents is None):
+          'if use_file=True is specified, filepath should also be specified')
+    if filepath and (md5 or data is not None):
       raise InvalidArgument(
-          'Both md5 and contents must be specified.')
+          'Only one of filepath or (md5 + data) may be specified.')
+    if not filepath and (not md5 or data is None):
+      raise InvalidArgument(
+          'Both md5 and data must be specified.')
 
 
 def StorageUrlToUploadObjectMetadata(storage_url):
