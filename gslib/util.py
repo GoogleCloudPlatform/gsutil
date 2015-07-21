@@ -52,6 +52,24 @@ from gslib.translation_helper import S3_ACL_MARKER_GUID
 from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
 
+# Detect platform types.
+PLATFORM = str(sys.platform).lower()
+IS_WINDOWS = 'win32' in PLATFORM
+IS_CYGWIN = 'cygwin' in PLATFORM
+IS_LINUX = 'linux' in PLATFORM
+IS_OSX = 'darwin' in PLATFORM
+
+# pylint: disable=g-import-not-at-top
+if IS_WINDOWS:
+  from ctypes import c_int
+  from ctypes import c_uint64
+  from ctypes import c_char_p
+  from ctypes import c_wchar_p
+  from ctypes import windll
+  from ctypes import POINTER
+  from ctypes import WINFUNCTYPE
+  from ctypes import WinError
+
 # pylint: disable=g-import-not-at-top
 try:
   # This module doesn't necessarily exist on Windows.
@@ -133,13 +151,6 @@ SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 SECONDS_PER_DAY = 3600 * 24
 
-# Detect platform types.
-PLATFORM = str(sys.platform).lower()
-IS_WINDOWS = 'win32' in PLATFORM
-IS_CYGWIN = 'cygwin' in PLATFORM
-IS_LINUX = 'linux' in PLATFORM
-IS_OSX = 'darwin' in PLATFORM
-
 # On Unix-like systems, we will set the maximum number of open files to avoid
 # hitting the limit imposed by the OS. This number was obtained experimentally.
 MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
@@ -168,6 +179,45 @@ def UsingCrcmodExtension(crcmod):
           getattr(crcmod.crcmod, '_usingExtension', None))
 
 
+def CheckFreeSpace(path):
+  """Return path/drive free space (in bytes)."""
+  if IS_WINDOWS:
+    try:
+      # pylint: disable=invalid-name
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p,
+                                           POINTER(c_uint64),
+                                           POINTER(c_uint64),
+                                           POINTER(c_uint64))
+      get_disk_free_space_ex = get_disk_free_space_ex(
+          ('GetDiskFreeSpaceExW', windll.kernel32), (
+              (1, 'lpszPathName'),
+              (2, 'lpFreeUserSpace'),
+              (2, 'lpTotalSpace'),
+              (2, 'lpFreeSpace'),))
+    except AttributeError:
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p,
+                                           POINTER(c_uint64),
+                                           POINTER(c_uint64),
+                                           POINTER(c_uint64))
+      get_disk_free_space_ex = get_disk_free_space_ex(
+          ('GetDiskFreeSpaceExA', windll.kernel32), (
+              (1, 'lpszPathName'),
+              (2, 'lpFreeUserSpace'),
+              (2, 'lpTotalSpace'),
+              (2, 'lpFreeSpace'),))
+
+    def GetDiskFreeSpaceExErrCheck(result, unused_func, args):
+      if not result:
+        raise WinError()
+      return args[1].value
+    get_disk_free_space_ex.errcheck = GetDiskFreeSpaceExErrCheck
+
+    return get_disk_free_space_ex(os.getenv('SystemDrive'))
+  else:
+    (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
+    return f_frsize * f_bavail
+
+
 def CreateDirIfNeeded(dir_path, mode=0777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
@@ -181,6 +231,25 @@ def CreateDirIfNeeded(dir_path, mode=0777):
     except OSError as e:
       if e.errno != errno.EEXIST:
         raise
+
+
+def DivideAndCeil(dividend, divisor):
+  """Returns ceil(dividend / divisor).
+
+  Takes care to avoid the pitfalls of floating point arithmetic that could
+  otherwise yield the wrong result for large numbers.
+
+  Args:
+    dividend: Dividend for the operation.
+    divisor: Divisor for the operation.
+
+  Returns:
+    Quotient.
+  """
+  quotient = dividend // divisor
+  if (dividend % divisor) != 0:
+    quotient += 1
+  return quotient
 
 
 def GetGsutilStateDir():

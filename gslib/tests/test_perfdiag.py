@@ -23,6 +23,7 @@ import boto
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 
@@ -58,71 +59,63 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
-  def _run_basic_wthru_or_rthru(self, test_name, num_processes, num_threads):
+  def _run_throughput_test(self, test_name, num_processes, num_threads,
+                           parallelism_strategy='fan'):
     bucket_uri = self.CreateBucket()
     cmd = ['perfdiag', '-n', str(num_processes * num_threads),
            '-s', '1024', '-c', str(num_processes),
-           '-k', str(num_threads), '-t', test_name, suri(bucket_uri)]
+           '-k', str(num_threads), '-p', parallelism_strategy,
+           '-t', test_name, suri(bucket_uri)]
     self.RunGsUtil(cmd)
     if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
+  def _run_each_parallel_throughput_test(self, test_name, num_processes,
+                                         num_threads):
+    self._run_throughput_test(test_name, num_processes, num_threads, 'fan')
+    if RUN_S3_TESTS and test_name in ('wthru', 'wthru_file'):
+      # Sliced uploads are not available for s3.
+      pass
+    else:
+      self._run_throughput_test(test_name, num_processes, num_threads, 'slice')
+      self._run_throughput_test(test_name, num_processes, num_threads, 'both')
+
   def test_write_throughput_single_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('wthru', 1, 1)
+    self._run_throughput_test('wthru', 1, 1)
+    self._run_throughput_test('wthru_file', 1, 1)
 
   def test_write_throughput_single_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('wthru', 1, 2)
+    self._run_each_parallel_throughput_test('wthru', 1, 2)
+    self._run_each_parallel_throughput_test('wthru_file', 1, 2)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_write_throughput_multi_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('wthru', 2, 1)
+    self._run_each_parallel_throughput_test('wthru', 2, 1)
+    self._run_each_parallel_throughput_test('wthru_file', 2, 1)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_write_throughput_multi_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('wthru', 2, 2)
-
-  def test_file_write_throughput_single_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('wthru_file', 1, 1)
-
-  def test_file_write_throughput_single_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('wthru_file', 1, 2)
-
-  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
-  def test_file_write_throughput_multi_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('wthru_file', 2, 1)
-
-  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
-  def test_file_write_throughput_multi_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('wthru_file', 2, 2)
+    self._run_each_parallel_throughput_test('wthru', 2, 2)
+    self._run_each_parallel_throughput_test('wthru_file', 2, 2)
 
   def test_read_throughput_single_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('rthru', 1, 1)
+    self._run_throughput_test('rthru', 1, 1)
+    self._run_throughput_test('rthru_file', 1, 1)
 
   def test_read_throughput_single_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('rthru', 1, 2)
+    self._run_each_parallel_throughput_test('rthru', 1, 2)
+    self._run_each_parallel_throughput_test('rthru_file', 1, 2)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_read_throughput_multi_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('rthru', 2, 1)
+    self._run_each_parallel_throughput_test('rthru', 2, 1)
+    self._run_each_parallel_throughput_test('rthru_file', 2, 1)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def test_read_throughput_multi_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('rthru', 2, 2)
-
-  def test_file_read_throughput_single_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('rthru_file', 1, 1)
-
-  def test_file_read_throughput_single_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('rthru_file', 1, 2)
-
-  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
-  def test_file_read_throughput_multi_process_single_thread(self):
-    self._run_basic_wthru_or_rthru('rthru_file', 2, 1)
-
-  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
-  def test_file_read_throughput_multi_process_multi_thread(self):
-    self._run_basic_wthru_or_rthru('rthru_file', 2, 2)
+    self._run_each_parallel_throughput_test('rthru', 2, 2)
+    self._run_each_parallel_throughput_test('rthru_file', 2, 2)
 
   def test_input_output(self):
     outpath = self.CreateTempFile()

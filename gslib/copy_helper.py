@@ -97,9 +97,11 @@ from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
+from gslib.util import CheckFreeSpace
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CreateLock
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
+from gslib.util import DivideAndCeil
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
 from gslib.util import GetJsonResumableChunkSize
@@ -120,14 +122,6 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 # pylint: disable=g-import-not-at-top
 if IS_WINDOWS:
   import msvcrt
-  from ctypes import c_int
-  from ctypes import c_uint64
-  from ctypes import c_char_p
-  from ctypes import c_wchar_p
-  from ctypes import windll
-  from ctypes import POINTER
-  from ctypes import WINFUNCTYPE
-  from ctypes import WinError
 
 # Declare copy_helper_opts as a global because namedtuple isn't aware of
 # assigning to a class member (which breaks pickling done by multiprocessing).
@@ -1281,46 +1275,6 @@ def _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
           dst_obj.md5Hash)
 
 
-def _CheckFreeSpace(path):
-  """Return path/drive free space (in bytes)."""
-  if IS_WINDOWS:
-    # pylint: disable=g-import-not-at-top
-    try:
-      # pylint: disable=invalid-name
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(
-          ('GetDiskFreeSpaceExW', windll.kernel32), (
-              (1, 'lpszPathName'),
-              (2, 'lpFreeUserSpace'),
-              (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
-    except AttributeError:
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(
-          ('GetDiskFreeSpaceExA', windll.kernel32), (
-              (1, 'lpszPathName'),
-              (2, 'lpFreeUserSpace'),
-              (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
-
-    def GetDiskFreeSpaceExErrCheck(result, unused_func, args):
-      if not result:
-        raise WinError()
-      return args[1].value
-    get_disk_free_space_ex.errcheck = GetDiskFreeSpaceExErrCheck
-
-    return get_disk_free_space_ex(os.getenv('SystemDrive'))
-  else:
-    (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
-    return f_frsize * f_bavail
-
-
 def _SetContentTypeFromFile(src_url, dst_obj_metadata):
   """Detects and sets Content-Type if src_url names a local file.
 
@@ -1548,7 +1502,7 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
     # Check for temp space. Assume the compressed object is at most 2x
     # the size of the object (normally should compress to smaller than
     # the object)
-    if _CheckFreeSpace(gzip_path) < 2*int(src_obj_size):
+    if CheckFreeSpace(gzip_path) < 2*int(src_obj_size):
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
@@ -3021,27 +2975,8 @@ def GetPathBeforeFinalDir(url):
   return url.url_string.rstrip(sep).rpartition(sep)[0]
 
 
-def _DivideAndCeil(dividend, divisor):
-  """Returns ceil(dividend / divisor).
-
-  Takes care to avoid the pitfalls of floating point arithmetic that could
-  otherwise yield the wrong result for large numbers.
-
-  Args:
-    dividend: Dividend for the operation.
-    divisor: Divisor for the operation.
-
-  Returns:
-    Quotient.
-  """
-  quotient = dividend // divisor
-  if (dividend % divisor) != 0:
-    quotient += 1
-  return quotient
-
-
 def _GetPartitionInfo(file_size, max_components, default_component_size):
-  """Gets info about a file partition for parallel composite uploads.
+  """Gets info about a file partition for parallel file/object transfers.
 
   Args:
     file_size: The number of bytes in the file to be partitioned.
@@ -3054,13 +2989,13 @@ def _GetPartitionInfo(file_size, max_components, default_component_size):
     file_size != 0 (mod num_components)).
   """
   # num_components = ceil(file_size / default_component_size)
-  num_components = _DivideAndCeil(file_size, default_component_size)
+  num_components = DivideAndCeil(file_size, default_component_size)
 
   # num_components must be in the range [2, max_components]
   num_components = max(min(num_components, max_components), 2)
 
   # component_size = ceil(file_size / num_components)
-  component_size = _DivideAndCeil(file_size, num_components)
+  component_size = DivideAndCeil(file_size, num_components)
   return (num_components, component_size)
 
 
