@@ -1042,3 +1042,30 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['rsync', '-d', '-x', 'obj[34]', tmpdir, suri(bucket_uri)],
           return_stderr=True))
     _Check2()
+
+  @unittest.skipIf(IS_WINDOWS,
+                   "os.chmod() won't make file unreadable on Windows.")
+  def test_dir_to_bucket_minus_C(self):
+    """Tests that rsync -C option works correctly."""
+    # Create dir with 3 objects, the middle of which is unreadable.
+    tmpdir = self.CreateTempDir()
+    bucket_uri = self.CreateBucket()
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+    path = self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
+    os.chmod(path, 0)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      """Tests rsync works as expected."""
+      stderr =  self.RunGsUtil(['rsync', '-C', tmpdir, suri(bucket_uri)],
+                               expected_status=1, return_stderr=True)
+      self.assertIn('1 files/objects could not be copied/removed.', stderr)
+      listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
+      listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
+      # Dir should have un-altered content.
+      self.assertEquals(listing1, set(['/obj1', '/obj2', '/obj3']))
+      # Bucket should have obj1 and obj3 even though obj2 was unreadable.
+      self.assertEquals(listing2, set(['/obj1', '/obj3']))
+    _Check()
