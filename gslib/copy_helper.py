@@ -1660,6 +1660,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
             'temporary file is still locked.', upload_url.object_name)
     # In the gzip case, this is the gzip stream.  _CompressFileForUpload will
     # have already closed the original source stream.
+    upload_stream.close()
 
   if not parallel_composite_upload:
     try:
