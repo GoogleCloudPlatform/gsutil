@@ -37,6 +37,7 @@ import stat
 import subprocess
 import tempfile
 import textwrap
+import threading
 import time
 import traceback
 
@@ -144,7 +145,10 @@ open_files_map = (
     ThreadSafeDict() if (
         IS_WINDOWS or not CheckMultiprocessingAvailableAndInit().is_available)
     else ThreadAndProcessSafeDict(gslib.util.manager))
-open_files_lock = CreateLock()
+
+# We don't allow multiple processes on Windows, so using a process-safe lock
+# would be unnecessary.
+open_files_lock = threading.Lock() if IS_WINDOWS else CreateLock()
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
