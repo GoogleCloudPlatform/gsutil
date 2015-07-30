@@ -199,7 +199,8 @@ class GcsJsonApi(CloudApi):
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
 
-    credential_store_key_dict = self._GetCredentialStoreKeyDict(credentials)
+    credential_store_key_dict = self._GetCredentialStoreKeyDict(
+        self.credentials)
 
     self.credentials.set_store(
         multistore_file.get_credential_storage_custom_key(
