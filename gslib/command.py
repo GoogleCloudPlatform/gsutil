@@ -893,8 +893,7 @@ class Command(HelpProvider):
           'command' % (url_str, self.command_name))
     return list(plurality_iter)[0]
 
-  def _HandleMultiProcessingSigs(self, unused_signal_num,
-                                 unused_cur_stack_frame):
+  def _HandleMultiProcessingSigs(self, signal_num, unused_cur_stack_frame):
     """Handles signals INT AND TERM during a multi-process/multi-thread request.
 
     Kills subprocesses.
@@ -907,7 +906,8 @@ class Command(HelpProvider):
     # https://github.com/GoogleCloudPlatform/gsutil/issues/99 for details
     # about why making it work correctly across OS's is harder and still open.
     ShutDownGsutil()
-    sys.stderr.write('Caught ^C - exiting\n')
+    if signal_num == signal.SIGINT:
+      sys.stderr.write('Caught ^C - exiting\n')
     # Simply calling sys.exit(1) doesn't work - see above bug for details.
     KillProcess(os.getpid())
 
