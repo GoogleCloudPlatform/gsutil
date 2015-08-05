@@ -254,8 +254,13 @@ _DETAILED_HELP_TEXT = ("""
      match those of the source object (it can't; timestamp setting is not
      allowed by the GCS API).
 
-  2. The gsutil rsync command ignores versioning, synchronizing only the live
-     object versions in versioned buckets.
+  2. The gsutil rsync command considers only the current object generations in
+     the source and destination buckets when deciding what to copy / delete. If
+     versioning is enabled in the destination bucket then gsutil rsync's
+     overwriting or deleting objects will end up creating versions, but the
+     command doesn't try to make the archived generations match in the source
+     and destination buckets.
+
 
 
 <B>OPTIONS</B>
