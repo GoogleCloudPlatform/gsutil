@@ -1006,9 +1006,10 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       # those that were uploaded by a previous, failed run and have since
       # changed (but still have an old generation lying around).
       objects_to_delete = components + existing_objects_to_delete
-      command_obj.Apply(_DeleteObjectFn, objects_to_delete, _RmExceptionHandler,
-                        arg_checker=gslib.command.DummyArgChecker,
-                        parallel_operations_override=True)
+      command_obj.Apply(
+          _DeleteTempComponentObjectFn, objects_to_delete, _RmExceptionHandler,
+          arg_checker=gslib.command.DummyArgChecker,
+          parallel_operations_override=True)
     except Exception:  # pylint: disable=broad-except
       # If some of the delete calls fail, don't cause the whole command to
       # fail. The copy was successful iff the compose call succeeded, so
@@ -2998,13 +2999,19 @@ def _GetPartitionInfo(file_size, max_components, default_component_size):
   return (num_components, component_size)
 
 
-def _DeleteObjectFn(cls, url_to_delete, thread_state=None):
-  """Wrapper function to be used with command.Apply()."""
+def _DeleteTempComponentObjectFn(cls, url_to_delete, thread_state=None):
+  """Wrapper func to be used with command.Apply to delete temporary objects."""
   gsutil_api = GetCloudApiInstance(cls, thread_state)
-  gsutil_api.DeleteObject(
-      url_to_delete.bucket_name, url_to_delete.object_name,
-      generation=url_to_delete.generation, provider=url_to_delete.scheme)
-
+  try:
+    gsutil_api.DeleteObject(
+        url_to_delete.bucket_name, url_to_delete.object_name,
+        generation=url_to_delete.generation, provider=url_to_delete.scheme)
+  except NotFoundException:
+    # The temporary object could already be gone if a retry was
+    # issued at a lower layer but the original request succeeded.
+    # Barring other errors, the top-level command should still report success,
+    # so don't raise here.
+    pass
 
 def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
   """Parse the tracker file from the last parallel composite upload attempt.
