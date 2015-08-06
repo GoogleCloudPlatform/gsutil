@@ -60,12 +60,16 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
   def _run_throughput_test(self, test_name, num_processes, num_threads,
-                           parallelism_strategy='fan'):
+                           parallelism_strategy=None):
     bucket_uri = self.CreateBucket()
+
     cmd = ['perfdiag', '-n', str(num_processes * num_threads),
-           '-s', '1024', '-c', str(num_processes),
-           '-k', str(num_threads), '-p', parallelism_strategy,
-           '-t', test_name, suri(bucket_uri)]
+           '-s', '1024', '-c', str(num_processes), '-k', str(num_threads),
+           '-t', test_name]
+    if parallelism_strategy:
+      cmd += ['-p', parallelism_strategy]
+    cmd += [suri(bucket_uri)]
+
     self.RunGsUtil(cmd)
     if self._should_run_with_custom_endpoints():
       self.RunGsUtil(self._custom_endpoint_flags + cmd)

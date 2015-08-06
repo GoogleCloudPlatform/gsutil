@@ -876,7 +876,9 @@ class PerfDiagCommand(Command):
 
     self.results[test_name] = {'file_size': self.thru_filesize,
                                'processes': self.processes,
-                               'threads': self.threads}
+                               'threads': self.threads,
+                               'parallelism': self.parallel_strategy
+                              }
 
     # Copy the file(s) to the test bucket, and also get the serialization data
     # so that we can pass it to download.
@@ -943,7 +945,8 @@ class PerfDiagCommand(Command):
 
     self.results[test_name] = {'file_size': self.thru_filesize,
                                'processes': self.processes,
-                               'threads': self.threads}
+                               'threads': self.threads,
+                               'parallelism': self.parallel_strategy}
 
     # Warmup the TCP connection.
     warmup_obj_name = os.path.basename(self.tcp_warmup_file)
@@ -1520,6 +1523,7 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(write_thru['total_bytes_copied']))
       print 'Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8))
+      print 'Parallelism strategy: %s' % write_thru['parallelism']
 
     if 'write_throughput_file' in self.results:
       print
@@ -1533,6 +1537,7 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(write_thru_file['total_bytes_copied']))
       print 'Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8))
+      print 'Parallelism strategy: %s' % write_thru_file['parallelism']
 
     if 'read_throughput' in self.results:
       print
@@ -1546,6 +1551,7 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(read_thru['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8))
+      print 'Parallelism strategy: %s' % read_thru['parallelism']
 
     if 'read_throughput_file' in self.results:
       print
@@ -1559,6 +1565,7 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(read_thru_file['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8))
+      print 'Parallelism strategy: %s' % read_thru_file['parallelism']
 
     if 'listing' in self.results:
       print
@@ -1757,7 +1764,7 @@ class PerfDiagCommand(Command):
     # From -k.
     self.threads = 1
     # From -p
-    self.parallel_strategy = self.FAN
+    self.parallel_strategy = None
     # From -y
     self.num_slices = 4
     # From -s.
@@ -1836,6 +1843,15 @@ class PerfDiagCommand(Command):
             raise CommandException("Could not decode input file (-i): '%s'." %
                                    a)
           return
+
+    # If parallelism is specified, default parallelism strategy to fan.
+    if self.processes > 1 and self.threads > 1 and not self.parallel_strategy:
+      self.parallel_strategy = self.FAN
+    elif self.processes == 1 and self.threads == 1 and self.parallel_strategy:
+      raise CommandException(
+          'Cannot specify parallelism strategy (-p) without also specifying '
+          'multiple threads and/or processes (-c and/or -k).')
+
     if not self.args:
       self.RaiseWrongNumberOfArgumentsException()
 
@@ -1886,12 +1902,14 @@ class PerfDiagCommand(Command):
         'Base bucket URI: %s\n'
         'Number of processes: %d\n'
         'Number of threads: %d\n'
+        'Parallelism strategy: %s\n'
         'Throughput file size: %s\n'
         'Diagnostics to run: %s',
         self.num_objects,
         self.bucket_url,
         self.processes,
         self.threads,
+        self.parallel_strategy,
         MakeHumanReadable(self.thru_filesize),
         (', '.join(self.diag_tests)))
 
