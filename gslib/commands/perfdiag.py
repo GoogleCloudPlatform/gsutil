@@ -68,7 +68,8 @@ from gslib.util import ResumableThreshold
 _SYNOPSIS = """
   gsutil perfdiag [-i in.json]
   gsutil perfdiag [-o out.json] [-n objects] [-c processes]
-      [-k threads] [-p parallelism type] [-y slices] [-s size] [-t tests] url...
+      [-k threads] [-p parallelism type] [-y slices] [-s size] [-d directory]
+      [-t tests] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -150,6 +151,9 @@ _DETAILED_HELP_TEXT = ("""
               Note: If rthru_file or wthru_file are performed, N (set with -n)
               times as much disk space as specified will be required for the
               operation.
+
+  -d          Sets the directory to store temporary local files in. If not
+              specified, a default temporary directory will be used.
 
   -t          Sets the list of diagnostic tests to perform. The default is to
               run the lat, rthru, and wthru diagnostic tests. Must be a
@@ -367,7 +371,7 @@ class PerfDiagCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=1,
-      supported_sub_args='n:c:k:p:y:s:t:m:i:o:',
+      supported_sub_args='n:c:k:p:y:s:d:t:m:i:o:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -488,7 +492,8 @@ class PerfDiagCommand(Command):
     Returns:
       The file path of the created temporary file.
     """
-    fd, fpath = tempfile.mkstemp(suffix='.bin', prefix=prefix, text=False)
+    fd, fpath = tempfile.mkstemp(suffix='.bin', prefix=prefix,
+                                 dir=self.directory, text=False)
     with os.fdopen(fd, 'wb') as fp:
       random_bytes = os.urandom(min(file_size,
                                     self.MAX_UNIQUE_RANDOM_BYTES))
@@ -558,7 +563,7 @@ class PerfDiagCommand(Command):
         self.thru_file_names = []
         self.thru_object_names = []
 
-        free_disk_space = CheckFreeSpace(tempfile.gettempdir())
+        free_disk_space = CheckFreeSpace(self.directory)
         if free_disk_space >= self.thru_filesize * self.num_objects:
           for _ in range(self.num_objects):
             file_name = self._MakeTempFile(self.thru_filesize,
@@ -584,11 +589,13 @@ class PerfDiagCommand(Command):
     if not self.teardown_completed:
       temp_file_dict.clear()
 
-      for fpath in self.temporary_files:
-        try:
+      try:
+        for fpath in self.temporary_files:
           os.remove(fpath)
-        except OSError:
-          pass
+        if self.delete_directory:
+          os.rmdir(self.directory)
+      except OSError:
+        pass
 
       if self.threads > 1 or self.processes > 1:
         args = [obj for obj in self.temporary_objects]
@@ -1295,7 +1302,7 @@ class PerfDiagCommand(Command):
       sysinfo['ip_address'] = ''
     # Record the temporary directory used since it can affect performance, e.g.
     # when on a networked filesystem.
-    sysinfo['tempdir'] = tempfile.gettempdir()
+    sysinfo['tempdir'] = self.directory
 
     # Produces an RFC 2822 compliant GMT timestamp.
     sysinfo['gmt_timestamp'] = time.strftime('%a, %d %b %Y %H:%M:%S +0000',
@@ -1755,6 +1762,10 @@ class PerfDiagCommand(Command):
     self.num_slices = 4
     # From -s.
     self.thru_filesize = 1048576
+    # From -d.
+    self.directory = tempfile.gettempdir()
+    # Keep track of whether or not to delete the directory upon completion.
+    self.delete_directory = False
     # From -t.
     self.diag_tests = set(self.DEFAULT_DIAG_TESTS)
     # From -o.
@@ -1792,6 +1803,11 @@ class PerfDiagCommand(Command):
           if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GiB.
             raise CommandException(
                 'Maximum throughput file size parameter (-s) is 20 GiB.')
+        if o == '-d':
+          self.directory = a
+          if not os.path.exists(self.directory):
+            self.delete_directory = True
+            os.makedirs(self.directory)
         if o == '-t':
           self.diag_tests = set()
           for test_name in a.strip().split(','):
