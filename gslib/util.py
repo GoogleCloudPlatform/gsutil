@@ -992,13 +992,23 @@ def CheckMultiprocessingAvailableAndInit(logger=None):
         is_available=cached_multiprocessing_is_available,
         stack_trace=cached_multiprocessing_check_stack_trace)
 
+  if IS_WINDOWS:
+    message = """
+Multiple processes are not supported on Windows. Operations requesting
+parallelism will be executed with multiple threads in a single process only.    
+"""
+  if logger:
+    logger.warn(message)
+  return MultiprocessingIsAvailableResult(is_available=False,
+                                          stack_trace=None)
+
   stack_trace = None
   multiprocessing_is_available = True
   message = """
-You have requested multiple threads or processes for an operation, but the
+You have requested multiple processes for an operation, but the
 required functionality of Python\'s multiprocessing module is not available.
-Your operations will be performed sequentially, and any requests for
-parallelism will be ignored.
+Operations requesting parallelism will be executed with multiple threads in a
+single process only.
 """
   try:
     # Fails if /dev/shm (or some equivalent thereof) is not available for use
@@ -1006,8 +1016,7 @@ parallelism will be ignored.
     try:
       multiprocessing.Value('i', 0)
     except:
-      if not IS_WINDOWS:
-        message += """
+      message += """
 Please ensure that you have write access to both /dev/shm and /run/shm.
 """
       raise  # We'll handle this in one place below.
@@ -1042,7 +1051,7 @@ Please ensure that you have write access to both /dev/shm and /run/shm.
       except AttributeError:
         pass
 
-    if limit < MIN_ACCEPTABLE_OPEN_FILES_LIMIT and not IS_WINDOWS:
+    if limit < MIN_ACCEPTABLE_OPEN_FILES_LIMIT:
       message += ("""
 Your max number of open files, %s, is too low to allow safe multiprocessing.
 On Linux you can fix this by adding something like "ulimit -n 10000" to your

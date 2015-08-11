@@ -135,13 +135,12 @@ global global_copy_helper_opts
 # user specified two identical source URLs), the writes occur serially.
 global open_files_map, open_files_lock
 open_files_map = (
-    AtomicDict() if (
-        IS_WINDOWS or not CheckMultiprocessingAvailableAndInit().is_available)
+    AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
     else AtomicDict(manager=gslib.util.manager))
 
 # We don't allow multiple processes on Windows, so using a process-safe lock
 # would be unnecessary.
-open_files_lock = threading.Lock() if IS_WINDOWS else CreateLock()
+open_files_lock = CreateLock()
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
