@@ -476,6 +476,11 @@ class PerfDiagCommand(Command):
                              "subprocess '%s'." % (p.returncode, ' '.join(cmd)))
     return stdoutdata if return_output else p.returncode
 
+  def _WarnIfLargeData(self):
+    """Outputs a warning message if a large amount of data is being used."""
+    if self.num_objects * self.thru_filesize > HumanReadableToBytes('2GiB'):
+      self.logger.info('This is a large operation, and could take a while.')
+
   def _MakeTempFile(self, file_size=0, mem_metadata=False,
                     mem_data=False, prefix='gsutil_test_file'):
     """Creates a temporary file of the given size and returns its path.
@@ -565,6 +570,10 @@ class PerfDiagCommand(Command):
 
         free_disk_space = CheckFreeSpace(self.directory)
         if free_disk_space >= self.thru_filesize * self.num_objects:
+          self.logger.info('\nCreating %d local files each of size %s.'
+                           % (self.num_objects,
+                              MakeHumanReadable(self.thru_filesize)))
+          self._WarnIfLargeData()
           for _ in range(self.num_objects):
             file_name = self._MakeTempFile(self.thru_filesize,
                                            mem_metadata=True)
@@ -873,6 +882,7 @@ class PerfDiagCommand(Command):
         '\nRunning read throughput tests %s (%s objects of size %s)' %
         (file_io_string, self.num_objects,
          MakeHumanReadable(self.thru_filesize)))
+    self._WarnIfLargeData()
 
     self.results[test_name] = {'file_size': self.thru_filesize,
                                'processes': self.processes,
@@ -942,6 +952,7 @@ class PerfDiagCommand(Command):
         '\nRunning write throughput tests %s (%s objects of size %s)' %
         (file_io_string, self.num_objects,
          MakeHumanReadable(self.thru_filesize)))
+    self._WarnIfLargeData()
 
     self.results[test_name] = {'file_size': self.thru_filesize,
                                'processes': self.processes,
