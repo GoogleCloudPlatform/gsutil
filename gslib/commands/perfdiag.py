@@ -1807,9 +1807,6 @@ class PerfDiagCommand(Command):
             self.thru_filesize = HumanReadableToBytes(a)
           except ValueError:
             raise CommandException('Invalid -s parameter.')
-          if self.thru_filesize > (20 * 1024 ** 3):  # Max 20 GiB.
-            raise CommandException(
-                'Maximum throughput file size parameter (-s) is 20 GiB.')
         if o == '-d':
           self.directory = a
           if not os.path.exists(self.directory):

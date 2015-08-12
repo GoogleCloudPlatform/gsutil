@@ -138,7 +138,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['perfdiag', '-n', '1', '-s', '3pb', '-t', 'wthru', 'gs://foobar'],
         expected_status=1, return_stderr=True)
-    self.assertIn('Maximum throughput file size', stderr)
+    self.assertIn('in-memory tests maximum file size', stderr)
 
   def test_listing(self):
     bucket_uri = self.CreateBucket()
