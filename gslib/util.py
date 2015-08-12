@@ -997,10 +997,10 @@ def CheckMultiprocessingAvailableAndInit(logger=None):
 Multiple processes are not supported on Windows. Operations requesting
 parallelism will be executed with multiple threads in a single process only.    
 """
-  if logger:
-    logger.warn(message)
-  return MultiprocessingIsAvailableResult(is_available=False,
-                                          stack_trace=None)
+    if logger:
+      logger.warn(message)
+    return MultiprocessingIsAvailableResult(is_available=False,
+                                            stack_trace=None)
 
   stack_trace = None
   multiprocessing_is_available = True
