@@ -406,14 +406,8 @@ def _CheckAndWarnForProxyDifferences():
 
 
 def _HandleUnknownFailure(e):
-  # Called if we fall through all known/handled exceptions. Allows us to
-  # print a stacktrace if -D option used.
-  if debug >= 2:
-    stack_trace = traceback.format_exc()
-    sys.stderr.write('DEBUG: Exception stack trace:\n    %s\n' %
-                     re.sub('\\n', '\n    ', stack_trace))
-  else:
-    _OutputAndExit('Failure: %s.' % e)
+  # Called if we fall through all known/handled exceptions.
+  _OutputAndExit('Failure: %s.' % e)
 
 
 def _HandleCommandException(e):
