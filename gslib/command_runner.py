@@ -224,9 +224,11 @@ class CommandRunner(object):
     Returns:
       Return value(s) from Command that was run.
     """
+    command_changed_to_update = False
     if (not skip_update_check and
         self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
+      command_changed_to_update = True
       args = ['-n']
 
     if not args:
@@ -278,6 +280,13 @@ class CommandRunner(object):
       ShutDownGsutil()
     if GetFailureCount() > 0:
       return_code = 1
+    if command_changed_to_update:
+      # If the command changed to update, the user's original command was
+      # not executed.
+      return_code = 1
+      print '\n'.join(textwrap.wrap(
+          'Update was successful. Exiting with code 1 as the original command '
+          'issued prior to the update was not executed and should be re-run.'))
     return return_code
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
