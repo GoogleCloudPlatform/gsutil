@@ -33,9 +33,9 @@ from apitools.base.py import exceptions as apitools_exceptions
 import boto
 from boto import storage_uri
 from boto.exception import ResumableTransferDisposition
-from boto.exception import ResumableUploadException
 from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
+import crcmod
 
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
@@ -68,6 +68,7 @@ from gslib.util import ONE_KIB
 from gslib.util import ONE_MIB
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
+from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
 
 
@@ -1787,7 +1788,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           boto.config.get('GSUtil', 'parallel_object_download_threshold',
                           DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD))
       parallel_download = (len(contents) > parallel_download_threshold
-                           and parallel_download_threshold > 0)
+                           and parallel_download_threshold > 0
+                           and UsingCrcmodExtension(crcmod))
       if parallel_download:
         trackerfile_type = TrackerFileType.PARALLEL_DOWNLOAD
       else:
@@ -1849,6 +1851,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Deleting bucket', stderr)
     self.assertIn('bucket does not exist', stderr)
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download(self):
     """Tests that parallel object download works in the general case."""
     bucket_uri = self.CreateBucket()
@@ -1873,6 +1877,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath, 'r') as f:
         self.assertEqual(f.read(), 'abc' * ONE_KIB, 'File contents differ')
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_unresumable_parallel_download(self):
     """Tests parallel download works when resumability is disabled."""
     bucket_uri = self.CreateBucket()
@@ -1912,6 +1918,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), 'abcd' * self.halt_size,
                          'File contents differ')
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download_resume(self):
     """Tests that parallel object download is resumable."""
     bucket_uri = self.CreateBucket()
@@ -1952,6 +1960,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), 'abc' * self.halt_size,
                          'File contents differ')
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download_partial_resume(self):
     """Test parallel download resumability when some components are finished."""
     bucket_uri = self.CreateBucket()
@@ -1993,6 +2003,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), 'abc' * self.halt_size,
                          'File contents differ')
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download_resume_content_differs(self):
     """Tests differing file contents are detected by parallel downloads."""
     bucket_uri = self.CreateBucket()
@@ -2042,6 +2054,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Final file should not exist.
       self.assertFalse(os.path.isfile(fpath))
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download_component_size_changed(self):
     """Tests parallel download doesn't break when the boto config changes.
 
@@ -2082,6 +2096,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Restarting download from scratch', stderr)
       self.assertNotIn('Resuming download', stderr)
 
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_cp_parallel_download_disabled_cross_process(self):
     """Tests temporary files are not orphaned if parallel download is disabled.
 

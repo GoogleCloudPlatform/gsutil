@@ -37,7 +37,6 @@ import stat
 import subprocess
 import tempfile
 import textwrap
-import threading
 import time
 import traceback
 
@@ -213,6 +212,8 @@ PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
 # for files > 5GiB in size.
 S3_MAX_UPLOAD_SIZE = 5 * 1024 * 1024 * 1024
 
+# TODO: This will be duplicated across processes and cause repeat messaging.
+# Create a multiprocessing framework allocator, then use it.
 suggested_parallel_composites = False
 
 
@@ -3012,6 +3013,7 @@ def _DeleteTempComponentObjectFn(cls, url_to_delete, thread_state=None):
     # Barring other errors, the top-level command should still report success,
     # so don't raise here.
     pass
+
 
 def _ParseParallelUploadTrackerFile(tracker_file, tracker_file_lock):
   """Parse the tracker file from the last parallel composite upload attempt.
