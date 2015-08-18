@@ -39,7 +39,6 @@ from gslib import copy_helper
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.exception import CommandException
-from gslib.exception import HashMismatchException
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -1089,16 +1088,6 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       self.fail('Did not get expected StorageCreateError')
     except ServiceException, e:
       self.assertEqual(e.status, 409)
-
-  def testRemoveBucketsCommand(self):
-    """Test rb on non-existent bucket."""
-    dst_bucket_uri = self.CreateBucket()
-    try:
-      self.RunCommand(
-          'rb', ['gs://no_exist_%s' % dst_bucket_uri.bucket_name])
-      self.fail('Did not get expected NotFoundException')
-    except NotFoundException, e:
-      self.assertEqual(e.status, 404)
 
   def testRemoveObjsCommand(self):
     """Test rm command on non-existent object."""
