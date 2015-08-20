@@ -121,6 +121,14 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self._run_each_parallel_throughput_test('rthru', 2, 2)
     self._run_each_parallel_throughput_test('rthru_file', 2, 2)
 
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def test_read_and_write_file_ordering(self):
+    """Tests that rthru_file and wthru_file work when run together."""
+    self._run_throughput_test('rthru_file,wthru_file', 1, 1)
+    self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'slice')
+    self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'fan')
+    self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'both')
+
   def test_input_output(self):
     outpath = self.CreateTempFile()
     bucket_uri = self.CreateBucket()

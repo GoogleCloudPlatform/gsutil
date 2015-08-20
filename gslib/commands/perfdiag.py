@@ -782,6 +782,9 @@ class PerfDiagCommand(Command):
                  should be discarded.
       serialization_data: The serialization data for the object.
     """
+    if file_name:
+      with open(file_name, 'ab') as fp:
+        fp.truncate(self.thru_filesize)
     component_size = DivideAndCeil(self.thru_filesize, self.num_slices)
     args = []
     for i in range(self.num_slices):
@@ -899,8 +902,20 @@ class PerfDiagCommand(Command):
       serialization_data = []
       for i in range(self.num_objects):
         self.temporary_objects.add(self.thru_object_names[i])
-        obj_metadata = self.Upload(self.thru_file_names[i],
-                                   self.thru_object_names[i], use_file)
+        if self.WTHRU_FILE in self.diag_tests:
+          # If we ran the WTHRU_FILE test, then the objects already exist.
+          obj_metadata = self.gsutil_api.GetObjectMetadata(
+              self.bucket_url.bucket_name, self.thru_object_names[i],
+              fields=['size', 'mediaLink'], provider=self.bucket_url.scheme)
+        else:
+          obj_metadata = self.Upload(self.thru_file_names[i],
+                                     self.thru_object_names[i], use_file)
+
+        # File overwrite causes performance issues with sliced downloads.
+        # Delete the file and reopen it for download. This matches what a real
+        # download would look like.
+        os.unlink(self.thru_file_names[i])
+        open(self.thru_file_names[i], 'ab').close()
         serialization_data.append(GetDownloadSerializationData(obj_metadata))
     else:
       # For in-memory test only use one file but copy it num_objects times, to
@@ -1941,12 +1956,14 @@ class PerfDiagCommand(Command):
         self._RunLatencyTests()
       if self.RTHRU in self.diag_tests:
         self._RunReadThruTests()
+      # Run WTHRU_FILE before RTHRU_FILE. If data is created in WTHRU_FILE it
+      # will be used in RTHRU_FILE to save time and bandwidth.
+      if self.WTHRU_FILE in self.diag_tests:
+        self._RunWriteThruTests(use_file=True)
       if self.RTHRU_FILE in self.diag_tests:
         self._RunReadThruTests(use_file=True)
       if self.WTHRU in self.diag_tests:
         self._RunWriteThruTests()
-      if self.WTHRU_FILE in self.diag_tests:
-        self._RunWriteThruTests(use_file=True)
       if self.LIST in self.diag_tests:
         self._RunListTests()
 
