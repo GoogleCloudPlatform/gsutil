@@ -167,6 +167,22 @@ class GcsJsonApi(CloudApi):
     self.certs_file = GetCertsFile()
 
     self.http = GetNewHttp()
+
+    # Re-use download and upload connections. This class is only called
+    # sequentially, but we can share TCP warmed-up connections across calls.
+    self.download_http = self._GetNewDownloadHttp()
+    self.upload_http = self._GetNewUploadHttp()
+    if self.credentials:
+      self.authorized_download_http = self.credentials.authorize(
+          self.download_http)
+      self.authorized_upload_http = self.credentials.authorize(self.upload_http)
+    else:
+      self.authorized_download_http = self.download_http
+      self.authorized_upload_http = self.upload_http
+
+    WrapDownloadHttpRequest(self.authorized_download_http)
+    WrapUploadHttpRequest(self.authorized_upload_http)
+
     self.http_base = 'https://'
     gs_json_host = config.get('Credentials', 'gs_json_host', None)
     self.host_base = gs_json_host or 'www.googleapis.com'
@@ -353,8 +369,8 @@ class GcsJsonApi(CloudApi):
 
     return key_dict
 
-  def _GetNewDownloadHttp(self, download_stream):
-    return GetNewHttp(http_class=HttpWithDownloadStream, stream=download_stream)
+  def _GetNewDownloadHttp(self):
+    return GetNewHttp(http_class=HttpWithDownloadStream)
 
   def _GetNewUploadHttp(self):
     """Returns an upload-safe Http object (by disabling httplib2 retries)."""
@@ -649,10 +665,9 @@ class GcsJsonApi(CloudApi):
         progress_callback=progress_callback, digesters=digesters)
     download_http_class = callback_class_factory.GetConnectionClass()
 
-    download_http = self._GetNewDownloadHttp(download_stream)
-    download_http.connections = {'https': download_http_class}
-    authorized_download_http = self.credentials.authorize(download_http)
-    WrapDownloadHttpRequest(authorized_download_http)
+    # Point our download HTTP at our download stream.
+    self.download_http.stream = download_stream
+    self.download_http.connections = {'https': download_http_class}
 
     if serialization_data:
       apitools_download = apitools_transfer.Download.FromData(
@@ -663,7 +678,7 @@ class GcsJsonApi(CloudApi):
           download_stream, auto_transfer=False, total_size=object_size,
           num_retries=self.num_retries)
 
-    apitools_download.bytes_http = authorized_download_http
+    apitools_download.bytes_http = self.authorized_download_http
     apitools_request = apitools_messages.StorageObjectsGetRequest(
         bucket=bucket_name, object=object_name, generation=generation)
 
@@ -838,13 +853,10 @@ class GcsJsonApi(CloudApi):
         bytes_uploaded_container, total_size=total_size,
         progress_callback=progress_callback)
 
-    upload_http = self._GetNewUploadHttp()
     upload_http_class = callback_class_factory.GetConnectionClass()
-    upload_http.connections = {'http': upload_http_class,
-                               'https': upload_http_class}
+    self.upload_http.connections = {'http': upload_http_class,
+                                    'https': upload_http_class}
 
-    authorized_upload_http = self.credentials.authorize(upload_http)
-    WrapUploadHttpRequest(authorized_upload_http)
     # Since bytes_http is created in this function, we don't get the
     # user-agent header from api_client's http automatically.
     additional_headers = {
@@ -879,7 +891,7 @@ class GcsJsonApi(CloudApi):
             upload_stream, content_type, total_size=size, auto_transfer=True,
             num_retries=self.num_retries)
         apitools_upload.strategy = apitools_strategy
-        apitools_upload.bytes_http = authorized_upload_http
+        apitools_upload.bytes_http = self.authorized_upload_http
 
         return self.api_client.objects.Insert(
             apitools_request,
@@ -887,7 +899,7 @@ class GcsJsonApi(CloudApi):
             global_params=global_params)
       else:  # Resumable upload.
         return self._PerformResumableUpload(
-            upload_stream, authorized_upload_http, content_type, size,
+            upload_stream, self.authorized_upload_http, content_type, size,
             serialization_data, apitools_strategy, apitools_request,
             global_params, bytes_uploaded_container, tracker_callback,
             additional_headers, progress_callback)
