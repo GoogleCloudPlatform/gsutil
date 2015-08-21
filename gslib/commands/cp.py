@@ -343,9 +343,12 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   be renamed to the destination file. No additional local disk space is
   required for this operation.
 
-  Using sliced object downloads requires a compiled crcmod
-  (see "gsutil help crcmod") on the machine performing the download. If
-  compiled crcmod is not available, normal download will instead be used.
+  This feature is only available for Google Cloud Storage objects because it
+  requires a fast composable checksum that can be used to verify the data
+  integrity of the slices. Thus, using sliced object downloads also requires a
+  compiled crcmod (see "gsutil help crcmod") on the machine performing the
+  download. If compiled crcmod is not available, normal download will instead
+  be used.
 
   Note: since sliced object downloads cause multiple writes to occur at various
   locations on disk, this can degrade performance for disks with slow seek

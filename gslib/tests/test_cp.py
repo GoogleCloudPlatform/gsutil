@@ -1573,6 +1573,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # modified to contain the source object generation.
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_resumable_download_generation_differs(self):
     """Tests that a resumable download restarts if the generation differs."""
     bucket_uri = self.CreateBucket()
@@ -1855,6 +1856,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download(self):
     """Tests that sliced object download works in the general case."""
     bucket_uri = self.CreateBucket()
@@ -1881,6 +1883,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_unresumable_sliced_download(self):
     """Tests sliced download works when resumability is disabled."""
     bucket_uri = self.CreateBucket()
@@ -1922,6 +1925,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_resume(self):
     """Tests that sliced object download is resumable."""
     bucket_uri = self.CreateBucket()
@@ -1964,6 +1968,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_partial_resume(self):
     """Test sliced download resumability when some components are finished."""
     bucket_uri = self.CreateBucket()
@@ -2007,6 +2012,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_resume_content_differs(self):
     """Tests differing file contents are detected by sliced downloads."""
     bucket_uri = self.CreateBucket()
@@ -2058,6 +2064,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_component_size_changed(self):
     """Tests sliced download doesn't break when the boto config changes.
 
@@ -2100,6 +2107,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
+  @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_disabled_cross_process(self):
     """Tests temporary files are not orphaned if sliced download is disabled.
 

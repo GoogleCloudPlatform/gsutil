@@ -26,7 +26,9 @@ import unittest
 import urlparse
 
 import boto
+import crcmod
 import gslib.tests as gslib_tests
+from gslib.util import UsingCrcmodExtension
 
 if not hasattr(unittest.TestCase, 'assertIsNone'):
   # external dependency unittest2 required for Python <= 2.6
@@ -244,13 +246,14 @@ def SequentialAndParallelTransfer(func):
     # Run the test normally once.
     func(*args, **kwargs)
 
-    # Try again, forcing parallel upload and sliced download.
-    with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-        ('GSUtil', 'sliced_object_download_threshold', '1'),
-        ('GSUtil', 'sliced_object_download_max_components', '3'),
-        ('GSUtil', 'check_hashes', 'always')]):
-      func(*args, **kwargs)
+    if not RUN_S3_TESTS and UsingCrcmodExtension(crcmod):
+      # Try again, forcing parallel upload and sliced download.
+      with SetBotoConfigForTest([
+          ('GSUtil', 'parallel_composite_upload_threshold', '1'),
+          ('GSUtil', 'sliced_object_download_threshold', '1'),
+          ('GSUtil', 'sliced_object_download_max_components', '3'),
+          ('GSUtil', 'check_hashes', 'always')]):
+        func(*args, **kwargs)
 
   return Wrapper
 

@@ -47,9 +47,9 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def _should_run_with_custom_endpoints(self):
     # Host headers are only supported for XML, and not when
     # using environment variables for proxies.
-    return self.test_api == 'XML' and not (os.environ.get('http_proxy') or
-                                           os.environ.get('https_proxy') or
-                                           os.environ.get('HTTPS_PROXY'))
+    return (self.test_api == 'XML' and not RUN_S3_TESTS and not
+            (os.environ.get('http_proxy') or os.environ.get('https_proxy') or
+             os.environ.get('HTTPS_PROXY')))
 
   def test_latency(self):
     bucket_uri = self.CreateBucket()
@@ -78,10 +78,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def _run_each_parallel_throughput_test(self, test_name, num_processes,
                                          num_threads):
     self._run_throughput_test(test_name, num_processes, num_threads, 'fan')
-    if RUN_S3_TESTS and test_name in ('wthru', 'wthru_file'):
-      # Sliced uploads are not available for s3.
-      pass
-    else:
+    if not RUN_S3_TESTS:
       self._run_throughput_test(test_name, num_processes, num_threads, 'slice')
       self._run_throughput_test(test_name, num_processes, num_threads, 'both')
 
@@ -125,9 +122,10 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def test_read_and_write_file_ordering(self):
     """Tests that rthru_file and wthru_file work when run together."""
     self._run_throughput_test('rthru_file,wthru_file', 1, 1)
-    self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'slice')
     self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'fan')
-    self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'both')
+    if not RUN_S3_TESTS:
+      self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'slice')
+      self._run_throughput_test('rthru_file,wthru_file', 2, 2, 'both')
 
   def test_input_output(self):
     outpath = self.CreateTempFile()
