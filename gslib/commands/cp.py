@@ -298,18 +298,11 @@ _RESUMABLE_TRANSFERS_TEXT = """
 
   Similarly, gsutil automatically performs resumable downloads (using HTTP
   standard Range GET operations) whenever you use the cp command, unless the
-  destination is a stream or null. In this case the partially downloaded file
-  will be visible as soon as it starts being written. Thus, before you attempt
-  to use any files downloaded by gsutil you should make sure the download
-  completed successfully, by checking the exit status from the gsutil command.
-  This can be done in a bash script, for example, by doing:
+  destination is a stream or null. In this case, a partially downloaded
+  temporary file will be visible in the destination directory. Upon completion,
+  the original file is deleted and overwritten with the downloaded contents.
 
-     gsutil cp gs://your-bucket/your-object ./local-file
-     if [ "$status" -ne "0" ] ; then
-       << Code that handles failures >>
-     fi
-
-  Resumable uploads and downloads store some state information in a file
+  Resumable uploads and downloads store some state information in a files
   in ~/.gsutil named by the destination object or file. If you attempt to
   resume a transfer from a machine with a different directory, the transfer
   will start over from scratch.
@@ -340,7 +333,28 @@ _STREAMING_TRANSFERS_TEXT = """
   transfers (which perform integrity checking automatically).
 """
 
-# TODO: Create similar documentation for parallel object downloads.
+_SLICED_OBJECT_DOWNLOADS_TEXT = """
+<B>SLICED OBJECT DOWNLOADS</B>
+  gsutil automatically uses HTTP Range GET requests to perform "sliced"
+  downloads in parallel for downloads of large objects. This means that, if
+  enabled, disk space for the temporary download destination file will be
+  pre-allocated and byte ranges (slices) within the file will be downloaded in
+  parallel. Once all slices have completed downloading, the temporary file will
+  be renamed to the destination file. No additional local disk space is
+  required for this operation.
+
+  Using sliced object downloads requires a compiled crcmod
+  (see "gsutil help crcmod") on the machine performing the download. If
+  compiled crcmod is not available, normal download will instead be used.
+
+  Note: since sliced object downloads cause multiple writes to occur at various
+  locations on disk, this can degrade performance for disks with slow seek
+  times, especially for large numbers of slices. While the default number of
+  slices is small to avoid this, sliced object download can be completely
+  disabled by setting the "sliced_object_download_threshold" variable in the
+  .boto config file to 0.
+"""
+
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
   gsutil can automatically use
@@ -635,6 +649,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _RETRY_HANDLING_TEXT,
                                    _RESUMABLE_TRANSFERS_TEXT,
                                    _STREAMING_TRANSFERS_TEXT,
+                                   _SLICED_OBJECT_DOWNLOADS_TEXT,
                                    _PARALLEL_COMPOSITE_UPLOADS_TEXT,
                                    _CHANGING_TEMP_DIRECTORIES_TEXT,
                                    _OPTIONS_TEXT])

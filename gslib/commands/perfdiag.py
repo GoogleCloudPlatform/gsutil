@@ -124,7 +124,7 @@ _DETAILED_HELP_TEXT = ("""
 
               fan
                  Use one thread per object. This is akin to using gsutil -m cp,
-                 with parallel object download / parallel composite upload
+                 with sliced object download / parallel composite upload
                  disabled.
 
               slice
@@ -136,7 +136,7 @@ _DETAILED_HELP_TEXT = ("""
               both
                  Use Y (specified with -y) threads for each object, transferring
                  multiple objects at a time. This is akin to simultaneously
-                 using parallel object download / parallel composite upload and
+                 using sliced object download / parallel composite upload and
                  gsutil -m cp. Sliced uploads not supported for s3.
 
   -y          Sets the number of slices to divide each file/object into while
@@ -287,7 +287,7 @@ def _DownloadObject(cls, args, thread_state=None):
 
 
 def _DownloadSlice(cls, args, thread_state=None):
-  """Function argument to apply for performing sliced parallel downloads.
+  """Function argument to apply for performing sliced downloads.
 
   Args:
     cls: The calling PerfDiagCommand class instance.
@@ -774,7 +774,7 @@ class PerfDiagCommand(Command):
                process_count=self.processes, thread_count=self.threads)
 
   def PerformSlicedDownload(self, object_name, file_name, serialization_data):
-    """Performs a parallel download of an object using the slice strategy.
+    """Performs a download of an object using the slice strategy.
 
     Args:
       object_name: The name of the object to download.

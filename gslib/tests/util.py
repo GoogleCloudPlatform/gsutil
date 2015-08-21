@@ -231,7 +231,7 @@ def SequentialAndParallelTransfer(func):
 
   This forces the test to run once normally, and again with special boto
   config settings that will ensure that the test follows the parallel composite
-  upload and/or parallel object download code paths.
+  upload and/or sliced object download code paths.
 
   Args:
     func: Function to wrap.
@@ -244,11 +244,11 @@ def SequentialAndParallelTransfer(func):
     # Run the test normally once.
     func(*args, **kwargs)
 
-    # Try again, forcing parallel upload and download.
+    # Try again, forcing parallel upload and sliced download.
     with SetBotoConfigForTest([
         ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-        ('GSUtil', 'parallel_object_download_threshold', '1'),
-        ('GSUtil', 'parallel_object_download_max_components', '3'),
+        ('GSUtil', 'sliced_object_download_threshold', '1'),
+        ('GSUtil', 'sliced_object_download_max_components', '3'),
         ('GSUtil', 'check_hashes', 'always')]):
       func(*args, **kwargs)
 

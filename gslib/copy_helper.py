@@ -57,9 +57,9 @@ from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
-from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_COMPONENT_SIZE
-from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS
-from gslib.commands.config import DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD
+from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE
+from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
+from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
@@ -183,13 +183,13 @@ PerformParallelUploadFileToObjectArgs = namedtuple(
     'filename file_start file_length src_url dst_url canned_acl '
     'content_type tracker_file tracker_file_lock')
 
-PerformParallelDownloadObjectToFileArgs = namedtuple(
-    'PerformParallelDownloadObjectToFileArgs',
+PerformSlicedDownloadObjectToFileArgs = namedtuple(
+    'PerformSlicedDownloadObjectToFileArgs',
     'component_num src_url src_obj_metadata dst_url download_file_name '
     'start_byte end_byte')
 
-PerformParallelDownloadReturnValues = namedtuple(
-    'PerformParallelDownloadReturnValues',
+PerformSlicedDownloadReturnValues = namedtuple(
+    'PerformSlicedDownloadReturnValues',
     'component_num crc32c bytes_transferred server_encoding')
 
 ObjectFromTracker = namedtuple('ObjectFromTracker',
@@ -202,7 +202,7 @@ ObjectFromTracker = namedtuple('ObjectFromTracker',
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
 
-# Number of bytes to wait before updating a parallel download component tracker
+# Number of bytes to wait before updating a sliced download component tracker
 # file.
 TRACKERFILE_UPDATE_THRESHOLD = TEN_MIB
 
@@ -212,9 +212,13 @@ PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
 # for files > 5GiB in size.
 S3_MAX_UPLOAD_SIZE = 5 * 1024 * 1024 * 1024
 
-# TODO: This will be duplicated across processes and cause repeat messaging.
-# Create a multiprocessing framework allocator, then use it.
-suggested_parallel_composites = False
+# TODO: Create a multiprocessing framework value allocator, then use it instead
+# of a dict.
+global suggested_sliced_transfers, suggested_sliced_transfers_lock
+suggested_sliced_transfers = (
+    AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
+    else AtomicDict(manager=gslib.util.manager))
+suggested_sliced_transfers_lock = CreateLock()
 
 
 class FileConcurrencySkipError(Exception):
@@ -1048,7 +1052,7 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
   Returns:
     True iff a parallel upload should be performed on the source file.
   """
-  global suggested_parallel_composites
+  global suggested_slice_transfers, suggested_sliced_transfers_lock
   parallel_composite_upload_threshold = HumanReadableToBytes(config.get(
       'GSUtil', 'parallel_composite_upload_threshold',
       DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))
@@ -1064,17 +1068,18 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
   # TODO: Once compiled crcmod is being distributed by major Linux distributions
   # remove this check.
   if (all_factors_but_size and parallel_composite_upload_threshold == 0
-      and file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD
-      and not suggested_parallel_composites):
-    logger.info('\n'.join(textwrap.wrap(
-        '==> NOTE: You are uploading one or more large file(s), which would '
-        'run significantly faster if you enable parallel composite uploads. '
-        'This feature can be enabled by editing the '
-        '"parallel_composite_upload_threshold" value in your .boto '
-        'configuration file. However, note that if you do this you and any '
-        'users that download such composite files will need to have a compiled '
-        'crcmod installed (see "gsutil help crcmod").')) + '\n')
-    suggested_parallel_composites = True
+      and file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD):
+    with suggested_sliced_transfers_lock:
+      if not suggested_sliced_transfers.get('suggested'):
+        logger.info('\n'.join(textwrap.wrap(
+            '==> NOTE: You are uploading one or more large file(s), which '
+            'would run significantly faster if you enable parallel composite '
+            'uploads. This feature can be enabled by editing the '
+            '"parallel_composite_upload_threshold" value in your .boto '
+            'configuration file. However, note that if you do this you and any '
+            'users that download such composite files will need to have a '
+            'compiled crcmod installed (see "gsutil help crcmod").')) + '\n')
+        suggested_sliced_transfers['suggested'] = True
 
   return (all_factors_but_size
           and parallel_composite_upload_threshold > 0
@@ -1710,51 +1715,68 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   return download_file_name, need_to_unzip
 
 
-def _ShouldDoParallelDownload(download_strategy, src_obj_metadata,
-                              allow_splitting):
-  """Determines whether the parallel download strategy should be used.
+def _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
+                            allow_splitting, logger):
+  """Determines whether the sliced download strategy should be used.
 
   Args:
     download_strategy: CloudApi download strategy.
     src_obj_metadata: Metadata from the source object.
     allow_splitting: If false, then this function returns false.
+    logger: logging.Logger for log message output.
 
   Returns:
-    True iff a parallel download should be performed on the source file.
+    True iff a sliced download should be performed on the source file.
   """
-  parallel_object_download_threshold = HumanReadableToBytes(config.get(
-      'GSUtil', 'parallel_object_download_threshold',
-      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_THRESHOLD))
+  sliced_object_download_threshold = HumanReadableToBytes(config.get(
+      'GSUtil', 'sliced_object_download_threshold',
+      DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD))
 
   max_components = config.getint(
-      'GSUtil', 'parallel_object_download_max_components',
-      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS)
+      'GSUtil', 'sliced_object_download_max_components',
+      DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS)
 
-  # Don't use parallel download if it will prevent us from performing an
+  # Don't use sliced download if it will prevent us from performing an
   # integrity check.
   check_hashes_config = config.get(
       'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
   parallel_hashing = src_obj_metadata.crc32c and UsingCrcmodExtension(crcmod)
   hashing_okay = parallel_hashing or check_hashes_config == CHECK_HASH_NEVER
 
-  return (allow_splitting
-          and download_strategy is not CloudApi.DownloadStrategy.ONE_SHOT
-          and max_components > 1
-          and hashing_okay
-          and parallel_object_download_threshold > 0
-          and src_obj_metadata.size >= parallel_object_download_threshold)
+  use_slice = (
+      allow_splitting
+      and download_strategy is not CloudApi.DownloadStrategy.ONE_SHOT
+      and max_components > 1
+      and hashing_okay
+      and sliced_object_download_threshold > 0
+      and src_obj_metadata.size >= sliced_object_download_threshold)
+
+  if (not use_slice
+      and src_obj_metadata.size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD
+      and not UsingCrcmodExtension(crcmod)
+      and check_hashes_config != CHECK_HASH_NEVER):
+    with suggested_sliced_transfers_lock:
+      if not suggested_sliced_transfers.get('suggested'):
+        logger.info('\n'.join(textwrap.wrap(
+            '==> NOTE: You are downloading one or more large file(s), which '
+            'would run significantly faster if you enabled sliced object '
+            'uploads. This feature is enabled by default but requires that '
+            'compiled crcmod be installed (see "gsutil help crcmod").')) + '\n')
+        suggested_sliced_transfers['suggested'] = True
+
+  return use_slice
 
 
-def _PerformParallelDownloadObjectToFile(cls, args, thread_state=None):
-  """Function argument to Apply for performing parallel downloads.
+def _PerformSlicedDownloadObjectToFile(cls, args, thread_state=None):
+  """Function argument to Apply for performing sliced downloads.
 
   Args:
     cls: Calling Command class.
-    args: PerformParallelDownloadObjectToFileArgs tuple describing the target.
+    args: PerformSlicedDownloadObjectToFileArgs tuple describing the target.
     thread_state: gsutil Cloud API instance to use for the operation.
 
   Returns:
-    PerformParallelDownloadReturnValues named-tuple filled with:
+    PerformSlicedDownloadReturnValues named-tuple filled with:
     component_num: The component number for this download.
     crc32c: CRC32C hash value (integer) of the downloaded bytes.
     bytes_transferred: The number of bytes transferred, potentially less
@@ -1776,21 +1798,21 @@ def _PerformParallelDownloadObjectToFile(cls, args, thread_state=None):
   crc32c_val = None
   if 'crc32c' in digesters:
     crc32c_val = digesters['crc32c'].crcValue
-  return PerformParallelDownloadReturnValues(
+  return PerformSlicedDownloadReturnValues(
       args.component_num, crc32c_val, bytes_transferred, server_encoding)
 
 
-def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
-                                          download_file_name, logger,
-                                          api_selector, num_components):
-  """Maintains parallel download tracker files in order to permit resumability.
+def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                        download_file_name, logger,
+                                        api_selector, num_components):
+  """Maintains sliced download tracker files in order to permit resumability.
 
-  Reads or creates a parallel download tracker file representing this object
+  Reads or creates a sliced download tracker file representing this object
   download. Upon an attempt at cross-process resumption, the contents of the
-  parallel download tracker file are verified to make sure a resumption is
+  sliced download tracker file are verified to make sure a resumption is
   possible and appropriate. In the case that a resumption should not be
   attempted, existing component tracker files are deleted (to prevent child
-  processes from attempting resumption), and a new parallel download tracker
+  processes from attempting resumption), and a new sliced download tracker
   file is created.
 
   Args:
@@ -1811,7 +1833,7 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
     return
 
   tracker_file_name = GetTrackerFilePath(dst_url,
-                                         TrackerFileType.PARALLEL_DOWNLOAD,
+                                         TrackerFileType.SLICED_DOWNLOAD,
                                          api_selector)
 
   # Check to see if we should attempt resuming the download.
@@ -1829,7 +1851,7 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
         return
       else:
         tracker_file.close()
-        logger.warn('Parallel download tracker file doesn\'t match for '
+        logger.warn('Sliced download tracker file doesn\'t match for '
                     'download of %s. Restarting download from scratch.' %
                     dst_url.object_name)
 
@@ -1837,7 +1859,7 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
     # Ignore non-existent file (happens first time a download
     # is attempted on an object), but warn user for other errors.
     if isinstance(e, ValueError) or e.errno != errno.ENOENT:
-      logger.warn('Couldn\'t read parallel download tracker file (%s): %s. '
+      logger.warn('Couldn\'t read sliced download tracker file (%s): %s. '
                   'Restarting download from scratch.' %
                   (tracker_file_name, str(e)))
   finally:
@@ -1849,7 +1871,7 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
   # Delete component tracker files to guarantee download starts from scratch.
   DeleteDownloadTrackerFiles(dst_url, api_selector)
 
-  # Create a new parallel download tracker file to represent this download.
+  # Create a new sliced download tracker file to represent this download.
   try:
     with open(tracker_file_name, 'w') as tracker_file:
       tracker_file_data = {'etag': src_obj_metadata.etag,
@@ -1860,19 +1882,19 @@ def _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
     RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
 
 
-class ParallelDownloadFileWrapper(object):
-  """Wraps a file object to be used in GetObjectMedia for parallel downloads.
+class SlicedDownloadFileWrapper(object):
+  """Wraps a file object to be used in GetObjectMedia for sliced downloads.
 
   In order to allow resumability, the file object used by each thread in a
-  parallel object download should be wrapped using ParallelDownloadFileWrapper.
-  Passing a ParallelDownloadFileWrapper object to GetObjectMedia will allow the
+  sliced object download should be wrapped using SlicedDownloadFileWrapper.
+  Passing a SlicedDownloadFileWrapper object to GetObjectMedia will allow the
   download component tracker file for this component to be updated periodically,
   while the downloaded bytes are normally written to file.
   """
 
   def __init__(self, fp, tracker_file_name, src_obj_metadata, start_byte,
                end_byte):
-    """Initializes the ParallelDownloadFileWrapper.
+    """Initializes the SlicedDownloadFileWrapper.
 
     Args:
       fp: The already-open file object to be used for writing in
@@ -1940,19 +1962,19 @@ def _PartitionObject(src_url, src_obj_metadata, dst_url,
     download_file_name: Temporary file name to be used for the download.
 
   Returns:
-    components_to_download: A list of PerformParallelDownloadObjectToFileArgs
-                            to be used in Apply for the parallel download.
+    components_to_download: A list of PerformSlicedDownloadObjectToFileArgs
+                            to be used in Apply for the sliced download.
   """
-  parallel_download_component_size = HumanReadableToBytes(
-      config.get('GSUtil', 'parallel_object_download_component_size',
-                 DEFAULT_PARALLEL_OBJECT_DOWNLOAD_COMPONENT_SIZE))
+  sliced_download_component_size = HumanReadableToBytes(
+      config.get('GSUtil', 'sliced_object_download_component_size',
+                 DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE))
 
   max_components = config.getint(
-      'GSUtil', 'parallel_object_download_max_components',
-      DEFAULT_PARALLEL_OBJECT_DOWNLOAD_MAX_COMPONENTS)
+      'GSUtil', 'sliced_object_download_max_components',
+      DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS)
 
   num_components, component_size = _GetPartitionInfo(
-      src_obj_metadata.size, max_components, parallel_download_component_size)
+      src_obj_metadata.size, max_components, sliced_download_component_size)
 
   components_to_download = []
   component_lengths = []
@@ -1961,16 +1983,16 @@ def _PartitionObject(src_url, src_obj_metadata, dst_url,
     end_byte = min((i + 1) * (component_size) - 1, src_obj_metadata.size - 1)
     component_lengths.append(end_byte - start_byte + 1)
     components_to_download.append(
-        PerformParallelDownloadObjectToFileArgs(
+        PerformSlicedDownloadObjectToFileArgs(
             i, src_url, src_obj_metadata, dst_url, download_file_name,
             start_byte, end_byte))
   return components_to_download, component_lengths
 
 
-def _DoParallelDownload(src_url, src_obj_metadata, dst_url, download_file_name,
-                        command_obj, logger, copy_exception_handler,
-                        api_selector):
-  """Downloads a cloud object to a local file using parallel download.
+def _DoSlicedDownload(src_url, src_obj_metadata, dst_url, download_file_name,
+                      command_obj, logger, copy_exception_handler,
+                      api_selector):
+  """Downloads a cloud object to a local file using sliced download.
 
   Byte ranges are decided for each thread/process, and then the parts are
   downloaded in parallel.
@@ -1995,16 +2017,16 @@ def _DoParallelDownload(src_url, src_obj_metadata, dst_url, download_file_name,
       src_url, src_obj_metadata, dst_url, download_file_name)
 
   num_components = len(components_to_download)
-  _MaintainParallelDownloadTrackerFiles(src_obj_metadata, dst_url,
-                                        download_file_name, logger,
-                                        api_selector, num_components)
+  _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                      download_file_name, logger,
+                                      api_selector, num_components)
 
   # Resize the download file so each child process can seek to its start byte.
   with open(download_file_name, 'ab') as fp:
     fp.truncate(src_obj_metadata.size)
 
   cp_results = command_obj.Apply(
-      _PerformParallelDownloadObjectToFile, components_to_download,
+      _PerformSlicedDownloadObjectToFile, components_to_download,
       copy_exception_handler, arg_checker=gslib.command.DummyArgChecker,
       parallel_operations_override=True, should_return_results=True)
 
@@ -2053,10 +2075,10 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     logger: for outputting log messages.
     digesters: Digesters corresponding to the hash algorithms that will be used
                for validation.
-    component_num: Which component of a parallel download this call is for, or
-                   None if this is not a parallel download.
-    start_byte: The first byte of a byte range for a parallel download.
-    end_byte: The last byte of a byte range for a parallel download.
+    component_num: Which component of a sliced download this call is for, or
+                   None if this is not a sliced download.
+    start_byte: The first byte of a byte range for a sliced download.
+    end_byte: The last byte of a byte range for a sliced download.
 
   Returns:
     (bytes_transferred, server_encoding)
@@ -2068,13 +2090,13 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     end_byte = src_obj_metadata.size - 1
   download_size = end_byte - start_byte + 1
 
-  is_parallel = component_num is not None
+  is_sliced = component_num is not None
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
   server_encoding = None
 
   # Used for logging
   download_name = dst_url.object_name
-  if is_parallel:
+  if is_sliced:
     download_name += ' component %d' % component_num
 
   try:
@@ -2129,7 +2151,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
           digesters[alg_name].update(data)
         hash_callback.Progress(len(data))
 
-    elif not is_parallel:
+    elif not is_sliced:
       # Delete file contents and start entire object download from scratch.
       fp.truncate(0)
       existing_file_size = 0
@@ -2142,9 +2164,9 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
       with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
         progress_callback = pickle.loads(test_fp.read()).call
 
-    if is_parallel and src_obj_metadata.size >= ResumableThreshold():
-      fp = ParallelDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
-                                       start_byte, end_byte)
+    if is_sliced and src_obj_metadata.size >= ResumableThreshold():
+      fp = SlicedDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
+                                     start_byte, end_byte)
 
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
     # the object's metadata), when we request a range to resume, it's possible
@@ -2232,9 +2254,9 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     dst_url: Destination FileUrl.
     gsutil_api: gsutil Cloud API instance to use for the download.
     logger: for outputting log messages.
-    command_obj: command object for use in Apply in parallel downloads.
+    command_obj: command object for use in Apply in sliced downloads.
     copy_exception_handler: For handling copy exceptions during Apply.
-    allow_splitting: Whether or not to allow parallel download.
+    allow_splitting: Whether or not to allow sliced download.
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
     excludes initial GET.
@@ -2254,8 +2276,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
 
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
   download_strategy = _SelectDownloadStrategy(dst_url)
-  parallel_download = _ShouldDoParallelDownload(
-      download_strategy, src_obj_metadata, allow_splitting)
+  sliced_download = _ShouldDoSlicedDownload(
+      download_strategy, src_obj_metadata, allow_splitting, logger)
 
   download_file_name, need_to_unzip = _GetDownloadFile(
       dst_url, src_obj_metadata, logger)
@@ -2267,7 +2289,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     open_files_map[download_file_name] = True
 
   # Set up hash digesters.
-  consider_md5 = src_obj_metadata.md5Hash and not parallel_download
+  consider_md5 = src_obj_metadata.md5Hash and not sliced_download
   hash_algs = GetDownloadHashAlgs(logger, consider_md5=consider_md5,
                                   consider_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
@@ -2279,11 +2301,11 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
 
   start_time = time.time()
   if not download_complete:
-    if parallel_download:
+    if sliced_download:
       (bytes_transferred, crc32c) = (
-          _DoParallelDownload(src_url, src_obj_metadata, dst_url,
-                              download_file_name, command_obj, logger,
-                              copy_exception_handler, api_selector))
+          _DoSlicedDownload(src_url, src_obj_metadata, dst_url,
+                            download_file_name, command_obj, logger,
+                            copy_exception_handler, api_selector))
       if 'crc32c' in digesters:
         digesters['crc32c'].crcValue = crc32c
     elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
@@ -2319,8 +2341,8 @@ def _GetDownloadTempZipFileName(dst_url):
 
 
 def _GetDownloadTempFileName(dst_url):
-  """Returns temporary download file name, used for parallel downloads."""
-  return '%s_.tmp' % dst_url.object_name
+  """Returns temporary download file name for uncompressed downloads."""
+  return '%s_.gstmp' % dst_url.object_name
 
 
 def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
@@ -2601,7 +2623,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     src_url: Source StorageUrl.
     dst_url: Destination StorageUrl.
     gsutil_api: gsutil Cloud API instance to use for the copy.
-    command_obj: command object for use in Apply in parallel composite uploads.
+    command_obj: command object for use in Apply in parallel composite uploads
+        and sliced object downloads.
     copy_exception_handler: for handling copy exceptions during Apply.
     allow_splitting: Whether to allow the file to be split into component
                      pieces for an parallel composite upload or download.

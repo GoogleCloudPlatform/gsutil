@@ -43,7 +43,7 @@ class TrackerFileType(object):
   DOWNLOAD = 'download'
   DOWNLOAD_COMPONENT = 'download_component'
   PARALLEL_UPLOAD = 'parallel_upload'
-  PARALLEL_DOWNLOAD = 'parallel_download'
+  SLICED_DOWNLOAD = 'sliced_download'
   REWRITE = 'rewrite'
 
 
@@ -151,10 +151,10 @@ def GetTrackerFilePath(dst_url, tracker_file_type, api_selector, src_url=None,
         re.sub('[/\\\\]', '_', 'parallel_upload__%s__%s__%s__%s.url' %
                (dst_url.bucket_name, dst_url.object_name,
                 src_url, api_selector)))
-  elif tracker_file_type == TrackerFileType.PARALLEL_DOWNLOAD:
+  elif tracker_file_type == TrackerFileType.SLICED_DOWNLOAD:
     # Encode the fully-qualified dest file name into the tracker file name.
     res_tracker_file_name = (
-        re.sub('[/\\\\]', '_', 'parallel_download__%s__%s.etag' %
+        re.sub('[/\\\\]', '_', 'sliced_download__%s__%s.etag' %
                (os.path.realpath(dst_url.object_name), api_selector)))
   elif tracker_file_type == TrackerFileType.REWRITE:
     # Should use GetRewriteTrackerFilePath instead.
@@ -170,19 +170,19 @@ def DeleteDownloadTrackerFiles(dst_url, api_selector):
     dst_url: StorageUrl describing the destination file.
     api_selector: The Cloud API implementation used.
   """
-  # Delete non-parallel download tracker file.
+  # Delete non-sliced download tracker file.
   DeleteTrackerFile(GetTrackerFilePath(dst_url, TrackerFileType.DOWNLOAD,
                                        api_selector))
 
-  # Delete all parallel download tracker files.
-  tracker_files = GetParallelDownloadTrackerFilePaths(dst_url, api_selector)
+  # Delete all sliced download tracker files.
+  tracker_files = GetSlicedDownloadTrackerFilePaths(dst_url, api_selector)
   for tracker_file in tracker_files:
     DeleteTrackerFile(tracker_file)
 
 
-def GetParallelDownloadTrackerFilePaths(dst_url, api_selector,
-                                        num_components=None):
-  """Gets a list of parallel download tracker file paths.
+def GetSlicedDownloadTrackerFilePaths(dst_url, api_selector,
+                                      num_components=None):
+  """Gets a list of sliced download tracker file paths.
 
   The list consists of the parent tracker file path in index 0, and then
   any existing component tracker files in [1:].
@@ -197,7 +197,7 @@ def GetParallelDownloadTrackerFilePaths(dst_url, api_selector,
     File path to tracker file.
   """
   parallel_tracker_file_path = GetTrackerFilePath(
-      dst_url, TrackerFileType.PARALLEL_DOWNLOAD, api_selector)
+      dst_url, TrackerFileType.SLICED_DOWNLOAD, api_selector)
   tracker_file_paths = [parallel_tracker_file_path]
 
   # If we don't know the number of components, check the tracker file.
@@ -345,10 +345,10 @@ def ReadOrCreateDownloadTrackerFile(src_obj_metadata, dst_url, logger,
   """Checks for a download tracker file and creates one if it does not exist.
 
   The methodology for determining the download start point differs between
-  normal and parallel downloads. For normal downloads, the existing bytes in
+  normal and sliced downloads. For normal downloads, the existing bytes in
   the file are presumed to be correct and have been previously downloaded from
   the server (if a tracker file exists). In this case, the existing file size
-  is used to determine the download start point. For parallel downloads, the
+  is used to determine the download start point. For sliced downloads, the
   number of bytes previously retrieved from the server cannot be determined
   from the existing file size, and so the number of bytes known to have been
   previously downloaded is retrieved from the tracker file.
