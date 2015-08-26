@@ -38,7 +38,7 @@ requires = [
     'boto==2.38.0',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.9',
-    'google-apitools==0.4.9',
+    'google-apitools==0.4.10',
     'httplib2>=0.8',
     'oauth2client>=1.4.11',
     'protorpc>=0.10.0',
