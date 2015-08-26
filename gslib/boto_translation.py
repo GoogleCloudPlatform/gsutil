@@ -437,7 +437,7 @@ class BotoTranslation(CloudApi):
       headers['range'] = 'bytes=%s-%s' % (start_byte, end_byte)
     elif start_byte > 0:
       headers['range'] = 'bytes=%s-' % (start_byte)
-    else:
+    elif start_byte < 0:
       headers['range'] = 'bytes=%s' % (start_byte)
 
     # Since in most cases we already made a call to get the object metadata,
