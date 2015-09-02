@@ -207,12 +207,19 @@ _COPY_IN_CLOUD_TEXT = """
   option (see OPTIONS below).
 
   One additional note about copying in the cloud: If the destination bucket has
-  versioning enabled, gsutil cp will copy all versions of the source object(s).
-  For example:
+  versioning enabled, gsutil cp will by default copy only live versions of the
+  source object(s). For example:
 
     gsutil cp gs://bucket1/obj gs://bucket2
 
-  will cause all versions of gs://bucket1/obj to be copied to gs://bucket2.
+  will cause only the single live version of of gs://bucket1/obj to be copied
+  to gs://bucket2, even if there are archived versions of gs://bucket1/obj. To
+  also copy archived versions, use the -A flag:
+
+    gsutil cp -A gs://bucket1/obj gs://bucket2
+
+  The gsutil -m flag is disallowed when using the cp -A flag, to ensure that
+  version ordering is preserved.
 """
 
 _CHECKSUM_VALIDATION_TEXT = """
@@ -1031,6 +1038,11 @@ class CpCommand(Command):
     if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
+    if self.all_versions and self.parallel_operations:
+      raise CommandException(
+          'The gsutil -m option is not supported with the cp -A flag, to '
+          'ensure that object version ordering is preserved. Please re-run '
+          'the command without the -m option.')
     return CreateCopyHelperOpts(
         perform_mv=perform_mv,
         no_clobber=no_clobber,

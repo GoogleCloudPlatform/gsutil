@@ -546,6 +546,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
+  def test_versioning_no_parallelism(self):
+    """Tests that copy all-versions errors when parallelism is enabled."""
+    stderr = self.RunGsUtil(
+        ['-m', 'cp', '-A', suri(self.nonexistent_bucket_name, 'foo'),
+         suri(self.nonexistent_bucket_name, 'bar')],
+        expected_status=1, return_stderr=True)
+    self.assertIn('-m option is not supported with the cp -A flag', stderr)
+
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_recursive_copying_versioned_bucket(self):
     """Tests cp -R with versioned buckets."""
