@@ -24,7 +24,9 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.ls_helper import ENCRYPTED_FIELDS
 from gslib.ls_helper import LsHelper
+from gslib.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
@@ -466,7 +468,8 @@ class LsCommand(Command):
 
         elif listing_style == ListingStyle.LONG_LONG:
           # List all fields
-          bucket_listing_fields = None
+          bucket_listing_fields = (UNENCRYPTED_FULL_LISTING_FIELDS +
+                                   ENCRYPTED_FIELDS)
           ls_helper = LsHelper(self.WildcardIterator, self.logger,
                                print_object_func=PrintFullInfoAboutObject,
                                print_dir_func=_PrintPrefixLong,

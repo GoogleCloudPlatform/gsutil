@@ -38,6 +38,11 @@ TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT = (
     'configured to save tracker files to an unwritable directory)')
 
 
+# Format for upload tracker files.
+ENCRYPTION_UPLOAD_TRACKER_ENTRY = 'encryption_key_sha256'
+SERIALIZATION_UPLOAD_TRACKER_ENTRY = 'serialization_data'
+
+
 class TrackerFileType(object):
   UPLOAD = 'upload'
   DOWNLOAD = 'download'
@@ -247,8 +252,9 @@ def DeleteTrackerFile(tracker_file_name):
 
 def HashRewriteParameters(
     src_obj_metadata, dst_obj_metadata, projection, src_generation=None,
-    gen_match=None, meta_gen_match=None, canned_acl=None, fields=None,
-    max_bytes_per_call=None):
+    gen_match=None, meta_gen_match=None, canned_acl=None,
+    max_bytes_per_call=None, src_dec_key_sha256=None, dst_enc_key_sha256=None,
+    fields=None):
   """Creates an MD5 hex digest of the parameters for a rewrite call.
 
   Resuming rewrites requires that the input parameters are identical. Thus,
@@ -268,8 +274,12 @@ def HashRewriteParameters(
     gen_match: Optional generation precondition.
     meta_gen_match: Optional metageneration precondition.
     canned_acl: Optional canned ACL string.
-    fields: Optional fields to include in response.
     max_bytes_per_call: Optional maximum bytes rewritten per call.
+    src_dec_key_sha256: Optional SHA256 hash string of decryption key for
+        source object.
+    dst_enc_key_sha256: Optional SHA256 hash string of encryption key for
+        destination object.
+    fields: Optional fields to include in response to call.
 
   Returns:
     MD5 hex digest Hash of the input parameters, or None if required parameters
@@ -287,8 +297,12 @@ def HashRewriteParameters(
   md5_hash = hashlib.md5()
   for input_param in (
       src_obj_metadata, dst_obj_metadata, projection, src_generation,
-      gen_match, meta_gen_match, canned_acl, fields, max_bytes_per_call):
-    md5_hash.update(str(input_param))
+      gen_match, meta_gen_match, canned_acl, fields, max_bytes_per_call,
+      src_dec_key_sha256, dst_enc_key_sha256):
+    # Tracker file matching changed between gsutil 4.15 -> 4.16 and will cause
+    # rewrites to start over from the beginning on a gsutil version upgrade.
+    if input_param is not None:
+      md5_hash.update(str(input_param))
   return md5_hash.hexdigest()
 
 
@@ -448,6 +462,65 @@ def _WriteTrackerFile(tracker_file_name, data):
     return False
   except (IOError, OSError) as e:
     raise RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
+
+
+def GetUploadTrackerData(tracker_file_name, logger,
+                         encryption_key_sha256=None):
+  """Reads tracker data from an upload tracker file if it exists.
+
+  Deletes the tracker file if it uses an old format or the desired
+  encryption key has changed.
+
+  Args:
+    tracker_file_name: Tracker file name for this upload.
+    logger: logging.Logger for outputting log messages.
+    encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
+
+  Returns:
+    Serialization data if the tracker file already exists (resume existing
+    upload), None otherwise.
+  """
+  tracker_file = None
+  remove_tracker_file = False
+  encryption_restart = False
+
+  # If we already have a matching tracker file, get the serialization data
+  # so that we can resume the upload.
+  try:
+    tracker_file = open(tracker_file_name, 'r')
+    tracker_data = tracker_file.read()
+    tracker_json = json.loads(tracker_data)
+    if tracker_json[ENCRYPTION_UPLOAD_TRACKER_ENTRY] != encryption_key_sha256:
+      encryption_restart = True
+      remove_tracker_file = True
+    else:
+      return tracker_json[SERIALIZATION_UPLOAD_TRACKER_ENTRY]
+  except IOError as e:
+    # Ignore non-existent file (happens first time a upload is attempted on an
+    # object, or when re-starting an upload after a
+    # ResumableUploadStartOverException), but warn user for other errors.
+    if e.errno != errno.ENOENT:
+      logger.warn('Couldn\'t read upload tracker file (%s): %s. Restarting '
+                  'upload from scratch.', tracker_file_name, e.strerror)
+  except (KeyError, ValueError) as e:
+    # Old tracker files used a non-JSON format; rewrite it and assume no
+    # encryption key.
+    remove_tracker_file = True
+    if encryption_key_sha256 is not None:
+      encryption_restart = True
+    else:
+      # If encryption key is still None, we can resume using the old format.
+      return tracker_data
+  finally:
+    if tracker_file:
+      tracker_file.close()
+    if encryption_restart:
+      logger.warn('Upload tracker file (%s) does not match current encryption '
+                  'key. Restarting upload from scratch with a new tracker '
+                  'file that uses the current encryption key.',
+                  tracker_file_name)
+    if remove_tracker_file:
+      DeleteTrackerFile(tracker_file_name)
 
 
 def RaiseUnwritableTrackerFileException(tracker_file_name, error_str):

@@ -60,6 +60,7 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
+from gslib.cloud_api_helper import ListToGetFields
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
 # Imported for boto AuthHandler purposes.
 import gslib.devshell_auth_plugin  # pylint: disable=unused-import
@@ -151,6 +152,10 @@ class BotoTranslation(CloudApi):
   This class takes gsutil Cloud API objects, translates them to XML service
   calls, and translates the results back into gsutil Cloud API objects for
   use by the caller.
+
+  This class does not support encryption and ignores encryption and decryption
+  parameters. Behavior when encountering encrypted objects is undefined.
+  TODO: Implement support.
   """
 
   def __init__(self, bucket_storage_uri_class, logger, provider=None,
@@ -202,7 +207,7 @@ class BotoTranslation(CloudApi):
   def ListBuckets(self, project_id=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
-    get_fields = self._ListToGetFields(list_fields=fields)
+    get_fields = ListToGetFields(list_fields=fields)
     headers = self._CreateBaseHeaders()
     if self.provider == 'gs':
       headers[GOOG_PROJ_ID_HDR] = PopulateProjectId(project_id)
@@ -344,7 +349,7 @@ class BotoTranslation(CloudApi):
                   all_versions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
-    get_fields = self._ListToGetFields(list_fields=fields)
+    get_fields = ListToGetFields(list_fields=fields)
     bucket_uri = self._StorageUriForBucket(bucket_name)
     headers = self._CreateBaseHeaders()
     yield_prefixes = fields is None or 'prefixes' in fields
@@ -428,7 +433,7 @@ class BotoTranslation(CloudApi):
       compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
       start_byte=0, end_byte=None, progress_callback=None,
-      serialization_data=None, digesters=None):
+      serialization_data=None, digesters=None, decryption_tuple=None):
     """See CloudApi class for function doc strings."""
     # This implementation will get the object metadata first if we don't pass it
     # in via serialization_data.
@@ -811,8 +816,9 @@ class BotoTranslation(CloudApi):
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
-      provider=None, fields=None, size=None, serialization_data=None,
-      tracker_callback=None, progress_callback=None):
+      size=None, serialization_data=None, tracker_callback=None,
+      progress_callback=None, encryption_tuple=None, provider=None,
+      fields=None):
     """See CloudApi class for function doc strings."""
     if self.provider == 's3':
       # Resumable uploads are not supported for s3.
@@ -842,7 +848,8 @@ class BotoTranslation(CloudApi):
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, progress_callback=None,
-                            preconditions=None, provider=None, fields=None):
+                            preconditions=None, encryption_tuple=None,
+                            provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
@@ -862,7 +869,7 @@ class BotoTranslation(CloudApi):
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    preconditions=None, size=None, progress_callback=None,
-                   provider=None, fields=None):
+                   encryption_tuple=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
@@ -905,7 +912,8 @@ class BotoTranslation(CloudApi):
 
   def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
                  canned_acl=None, preconditions=None, progress_callback=None,
-                 max_bytes_per_call=None, provider=None, fields=None):
+                 max_bytes_per_call=None, encryption_tuple=None,
+                 decryption_tuple=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
 
@@ -952,7 +960,8 @@ class BotoTranslation(CloudApi):
                                        not_found_exception=not_found_exception)
 
   def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
-                    preconditions=None, provider=None, fields=None):
+                    preconditions=None, encryption_tuple=None, provider=None,
+                    fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     ValidateDstObjectMetadata(dst_obj_metadata)
@@ -1079,29 +1088,6 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
-
-  def _ListToGetFields(self, list_fields=None):
-    """Removes 'items/' from the input fields and converts it to a set.
-
-    This way field sets requested for ListBucket/ListObject can be used in
-    _BotoBucketToBucket and _BotoKeyToObject calls.
-
-    Args:
-      list_fields: Iterable fields usable in ListBucket/ListObject calls.
-
-    Returns:
-      Set of fields usable in GetBucket/GetObject or
-      _BotoBucketToBucket/_BotoKeyToObject calls.
-    """
-    if list_fields:
-      get_fields = set()
-      for field in list_fields:
-        if field in ['kind', 'nextPageToken', 'prefixes']:
-          # These are not actually object / bucket metadata fields.
-          # They are fields specific to listing, so we don't consider them.
-          continue
-        get_fields.add(re.sub(r'items/', '', field))
-      return get_fields
 
   # pylint: disable=too-many-statements
   def _BotoBucketToBucket(self, bucket, fields=None):

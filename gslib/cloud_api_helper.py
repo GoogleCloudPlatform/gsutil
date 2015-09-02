@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import json
+import re
 
 from gslib.cloud_api import ArgumentException
 
@@ -68,3 +69,24 @@ def GetDownloadSerializationData(src_obj_metadata, progress=0):
   }
 
   return json.dumps(serialization_dict)
+
+
+def ListToGetFields(list_fields=None):
+  """Removes 'items/' from the input fields and converts it to a set.
+
+  Args:
+    list_fields: Iterable fields usable in ListBuckets/ListObjects calls.
+
+  Returns:
+    Set of fields usable in GetBucket/GetObjectMetadata calls (None implies
+    all fields should be returned).
+  """
+  if list_fields:
+    get_fields = set()
+    for field in list_fields:
+      if field in ('kind', 'nextPageToken', 'prefixes'):
+        # These are not actually object / bucket metadata fields.
+        # They are fields specific to listing, so we don't consider them.
+        continue
+      get_fields.add(re.sub(r'items/', '', field))
+    return get_fields

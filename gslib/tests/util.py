@@ -27,12 +27,48 @@ import urlparse
 
 import boto
 import crcmod
+from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 import gslib.tests as gslib_tests
 from gslib.util import UsingCrcmodExtension
 
 if not hasattr(unittest.TestCase, 'assertIsNone'):
   # external dependency unittest2 required for Python <= 2.6
   import unittest2 as unittest  # pylint: disable=g-import-not-at-top
+
+# 256-bit base64 encryption keys used for testing AES256 customer-supplied
+# encryption. These are public and open-source, so don't ever use them for
+# real data.
+TEST_ENCRYPTION_KEY1 = 'iMSM9eeXliDZHSBJZO71R98tfeW/+87VXTpk5chGd6Y='
+TEST_ENCRYPTION_KEY1_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
+    TEST_ENCRYPTION_KEY1)
+
+TEST_ENCRYPTION_KEY2 = '4TSaQ3S4U+5oxAbByA7HgIigD51zfzGed/c03Ts2TXc='
+TEST_ENCRYPTION_KEY2_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
+    TEST_ENCRYPTION_KEY2)
+
+TEST_ENCRYPTION_KEY3 = 'HO4Q2X28N/6SmuAJ1v1CTuJjf5emQcXf7YriKzT1gj0='
+TEST_ENCRYPTION_KEY3_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
+    TEST_ENCRYPTION_KEY3)
+
+TEST_ENCRYPTION_KEY4 = 'U6zIErjZCK/IpIeDS0pJrDayqlZurY8M9dvPJU0SXI8='
+TEST_ENCRYPTION_KEY4_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
+    TEST_ENCRYPTION_KEY4)
+
+TEST_ENCRYPTION_CONTENT1 = 'bar'
+TEST_ENCRYPTION_CONTENT1_MD5 = 'N7UdGUp1E+RbVvZSTy1R8g=='
+TEST_ENCRYPTION_CONTENT1_CRC32C = 'CrcTMQ=='
+TEST_ENCRYPTION_CONTENT2 = 'bar2'
+TEST_ENCRYPTION_CONTENT2_MD5 = 'Ik4lOfUiA+szcorNIotEMg=='
+TEST_ENCRYPTION_CONTENT2_CRC32C = 'QScXtg=='
+TEST_ENCRYPTION_CONTENT3 = 'bar3'
+TEST_ENCRYPTION_CONTENT3_MD5 = '9iW6smjfu9hm0A//VQTQfw=='
+TEST_ENCRYPTION_CONTENT3_CRC32C = 's0yUtQ=='
+TEST_ENCRYPTION_CONTENT4 = 'bar4'
+TEST_ENCRYPTION_CONTENT4_MD5 = 'kPCx6uZiUOU7W6E+cDCZFg=='
+TEST_ENCRYPTION_CONTENT4_CRC32C = 'Z4bwXg=='
+TEST_ENCRYPTION_CONTENT5 = 'bar5'
+TEST_ENCRYPTION_CONTENT5_MD5 = '758XbXQOVkp8fTKMm83NXA=='
+TEST_ENCRYPTION_CONTENT5_CRC32C = 'le1zXQ=='
 
 # Flags for running different types of tests.
 RUN_INTEGRATION_TESTS = True

@@ -18,11 +18,20 @@ from __future__ import absolute_import
 
 import fnmatch
 
+from gslib.cloud_api import EncryptionException
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.util import IS_WINDOWS
 from gslib.util import UTF8
 from gslib.wildcard_iterator import StorageUrlFromString
+
+
+ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
+UNENCRYPTED_FULL_LISTING_FIELDS = [
+    'cacheControl', 'componentCount', 'contentDisposition',
+    'contentEncoding', 'contentLanguage', 'contentType',
+    'customerEncryption', 'etag', 'generation', 'metadata',
+    'metageneration', 'size', 'updated']
 
 
 def PrintNewLine():
@@ -177,6 +186,19 @@ class LsHelper(object):
               expand_top_level_buckets=True,
               bucket_listing_fields=self.bucket_listing_fields))
       plurality = top_level_iterator.HasPlurality()
+
+      try:
+        top_level_iterator.PeekException()
+      except EncryptionException:
+        # Detailed listing on a single object can perform a GetObjectMetadata
+        # call, which raises if a matching encryption key isn't found.
+        # Re-iterate without requesting encrypted fields.
+        top_level_iterator = PluralityCheckableIterator(self._iterator_func(
+            url.CreatePrefixUrl(wildcard_suffix=None),
+            all_versions=self.all_versions).IterAll(
+                expand_top_level_buckets=True,
+                bucket_listing_fields=UNENCRYPTED_FULL_LISTING_FIELDS))
+        plurality = top_level_iterator.HasPlurality()
 
       for blr in top_level_iterator:
         if self._MatchesExcludedPattern(blr):

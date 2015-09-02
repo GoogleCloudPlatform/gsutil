@@ -22,6 +22,7 @@ import time
 
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import CloudApi
+from gslib.encryption_helper import CryptoTupleFromKey
 from gslib.util import CreateLock
 from gslib.util import TRANSFER_BUFFER_SIZE
 
@@ -84,7 +85,8 @@ class DaisyChainWrapper(object):
 
   def __init__(self, src_url, src_obj_size, gsutil_api,
                compressed_encoding=False, progress_callback=None,
-               download_chunk_size=_DEFAULT_DOWNLOAD_CHUNK_SIZE):
+               download_chunk_size=_DEFAULT_DOWNLOAD_CHUNK_SIZE,
+               decryption_key=None):
     """Initializes the daisy chain wrapper.
 
     Args:
@@ -98,7 +100,8 @@ class DaisyChainWrapper(object):
       download_chunk_size: Integer number of bytes to download per
           GetObjectMedia request. This is the upper bound of bytes that may be
           unnecessarily downloaded if there is a break in the resumable upload.
-
+      decryption_key: Base64-encoded decryption key for the source object,
+          if any.
     """
     # Current read position for the upload file pointer.
     self.position = 0
@@ -141,6 +144,9 @@ class DaisyChainWrapper(object):
     self.thread_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
+    # Python 2.6 will return None on timeout.
+    if self.thread_started.wait(60) == False:
+      raise Exception('Could not start download thread after 60 seconds.')
 
   def StartDownloadThread(self, start_byte=0, progress_callback=None):
     """Starts the download thread for the source object (from start_byte)."""
@@ -163,7 +169,6 @@ class DaisyChainWrapper(object):
       # object to support seek() and tell() which requires coordination with
       # the upload.
       try:
-        self.thread_started.set()
         while start_byte + self._download_chunk_size < self.src_obj_size:
           self.gsutil_api.GetObjectMedia(
               self.src_url.bucket_name, self.src_url.object_name,
@@ -172,7 +177,8 @@ class DaisyChainWrapper(object):
               end_byte=start_byte + self._download_chunk_size - 1,
               generation=self.src_url.generation, object_size=self.src_obj_size,
               download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-              provider=self.src_url.scheme, progress_callback=progress_callback)
+              provider=self.src_url.scheme, progress_callback=progress_callback,
+              decryption_tuple=self.decryption_tuple)
           if self.stop_download.is_set():
             # Download thread needs to be restarted, so exit.
             self.stop_download.clear()
@@ -184,7 +190,8 @@ class DaisyChainWrapper(object):
             start_byte=start_byte, generation=self.src_url.generation,
             object_size=self.src_obj_size,
             download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-            provider=self.src_url.scheme, progress_callback=progress_callback)
+            provider=self.src_url.scheme, progress_callback=progress_callback,
+            decryption_tuple=self.decryption_tuple)
       # We catch all exceptions here because we want to store them.
       except Exception, e:  # pylint: disable=broad-except
         # Save the exception so that it can be seen in the upload thread.

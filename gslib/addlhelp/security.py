@@ -160,7 +160,10 @@ _DETAILED_HELP_TEXT = ("""
   All Google Cloud Storage data are stored encrypted. For more information see
   `Server-Side Encryption
   <https://cloud.google.com/storage/docs/concepts-techniques#encryption>`_.
-  
+
+  You can also provide your own encryption keys. For more information, see
+  `gsutil help encryption`.
+
 
 <B>DATA PRIVACY FROM GOOGLE EMPLOYEES</B>
   Google employees will never look at your data unless you first explicitly
@@ -191,6 +194,9 @@ _DETAILED_HELP_TEXT = ("""
   sensitive information like OAuth2 tokens and the contents of any files
   accessed during the trace may be included in the content of the trace.
 
+  Customer-supplied encryption key information in the .boto configuration is
+  security sensitive.
+
   The proxy configuration information in the .boto configuration is
   security-sensitive, especially if your proxy setup requires user and
   password information. Even if your proxy setup doesn't require user and
@@ -211,8 +217,7 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='security',
-      help_name_aliases=['encryption', 'protection', 'privacy', 'proxies',
-                         'proxy'],
+      help_name_aliases=['protection', 'privacy', 'proxies', 'proxy'],
       help_type='additional_help',
       help_one_line_summary='Security and Privacy Considerations',
       help_text=_DETAILED_HELP_TEXT,

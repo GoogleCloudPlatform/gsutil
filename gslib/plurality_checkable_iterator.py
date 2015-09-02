@@ -93,3 +93,9 @@ class PluralityCheckableIterator(object):
 
   def HasPlurality(self):
     return len(self.head) > 1
+
+  def PeekException(self):
+    """Raises an exception if the first iterated element raised."""
+    if self.head and self.head[0][0] == 'exception':
+      exception_tuple = self.head[0]
+      raise exception_tuple[1].__class__, exception_tuple[1], exception_tuple[2]

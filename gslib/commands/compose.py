@@ -20,6 +20,7 @@ from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
+from gslib.encryption_helper import GetEncryptionTuple
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
@@ -165,6 +166,6 @@ class ComposeCommand(Command):
 
     self.logger.info(
         'Composing %s from %d component objects.', target_url, len(components))
-    self.gsutil_api.ComposeObject(components, dst_obj_metadata,
-                                  preconditions=preconditions,
-                                  provider=target_url.scheme)
+    self.gsutil_api.ComposeObject(
+        components, dst_obj_metadata, preconditions=preconditions,
+        provider=target_url.scheme, encryption_tuple=GetEncryptionTuple())

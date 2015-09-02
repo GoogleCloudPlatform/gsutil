@@ -183,8 +183,10 @@ _DETAILED_HELP_TEXT = ("""
     [GSUtil]
       check_hashes
       content_language
+      decryption_key1 ... 100
       default_api_version
       default_project_id
+      encryption_key
       json_api_version
       parallel_composite_upload_component_size
       parallel_composite_upload_threshold
@@ -487,6 +489,23 @@ content_language = en
 # This option is ignored for daisy-chain copies, which don't compute hashes but
 # instead (inexpensively) compare the cloud source and destination hashes.
 #check_hashes = if_fast_else_fail
+
+# 'encryption_key' specifies a single customer-supplied encryption key that
+# will be used for all data written to Google Cloud Storage. See
+# "gsutil help encryption" for more information
+# Encryption key: RFC 4648 section 4 base64-encoded AES256 string
+# Warning: If decrypt_key is specified without an encrypt_key, objects will be
+# decrypted when copied in the cloud.
+#encryption_key=
+
+# Each 'decryption_key' entry specifies a customer-supplied decryption key that
+# will be used to access and Google Cloud Storage objects encrypted with
+# the corresponding key.
+# Decryption keys: Up to 100 RFC 4648 section 4 base64-encoded AES256 strings
+# in ascending numerical order, starting with 1.
+#decryption_key1=
+#decryption_key2=
+#decryption_key3=
 
 # The ability to specify an alternative JSON API version is primarily for cloud
 # storage service developers.

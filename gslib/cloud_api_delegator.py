@@ -22,6 +22,7 @@ from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
+from gslib.exception import CommandException
 
 
 class CloudApiDelegator(CloudApi):
@@ -151,6 +152,25 @@ class CloudApiDelegator(CloudApi):
 
     api = self.api_map[ApiMapConstants.DEFAULT_MAP][selected_provider]
 
+    using_gs_hmac = (
+        provider == 'gs' and
+        not config.has_option('Credentials', 'gs_oauth2_refresh_token') and
+        not (config.has_option('Credentials', 'gs_service_client_id')
+             and config.has_option('Credentials', 'gs_service_key_file')) and
+        (config.has_option('Credentials', 'gs_access_key_id')
+         and config.has_option('Credentials', 'gs_secret_access_key')))
+
+    configured_encryption = (
+        provider == 'gs' and
+        (config.has_option('GSUtil', 'encryption_key') or
+         config.has_option('GSUtil', 'decryption_key1')))
+
+    if using_gs_hmac and configured_encryption:
+      raise CommandException(
+          'gsutil does not support HMAC credentials with customer-supplied '
+          'encryption keys. Please generate and include non-HMAC credentials '
+          'in your .boto configuration file, or to access public encrypted '
+          'objects, remove your HMAC credentials.')
     # If we have only HMAC credentials for Google Cloud Storage, we must use
     # the XML API as the JSON API does not support HMAC.
     #
@@ -158,13 +178,14 @@ class CloudApiDelegator(CloudApi):
     # access public read resources via the JSON API, but the XML API can do
     # that just as well. It is better to use it than inspect the credentials on
     # every HTTP call.
-    if (provider == 'gs' and
-        not config.has_option('Credentials', 'gs_oauth2_refresh_token') and
-        not (config.has_option('Credentials', 'gs_service_client_id')
-             and config.has_option('Credentials', 'gs_service_key_file')) and
-        (config.has_option('Credentials', 'gs_access_key_id')
-         and config.has_option('Credentials', 'gs_secret_access_key'))):
+    elif using_gs_hmac:
       api = ApiSelector.XML
+    # Customer-supplied encryption keys are only supported in the JSON API.
+    # We can't stop XML API users from interacting with encrypted objects,
+    # since we don't know the object is encrypted until after the API call is
+    # made, but if they specify configuration values we will use JSON.
+    elif configured_encryption:
+      api = ApiSelector.JSON
     # Try to force the user's preference to a supported API.
     elif self.prefer_api in (self.api_map[ApiMapConstants.SUPPORT_MAP]
                              [selected_provider]):
@@ -220,55 +241,63 @@ class CloudApiDelegator(CloudApi):
       compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
       start_byte=0, end_byte=None, progress_callback=None,
-      serialization_data=None, digesters=None):
+      serialization_data=None, digesters=None, decryption_tuple=None):
     return self._GetApi(provider).GetObjectMedia(
         bucket_name, object_name, download_stream,
         compressed_encoding=compressed_encoding,
         download_strategy=download_strategy, start_byte=start_byte,
         end_byte=end_byte, generation=generation, object_size=object_size,
         progress_callback=progress_callback,
-        serialization_data=serialization_data, digesters=digesters)
+        serialization_data=serialization_data, digesters=digesters,
+        decryption_tuple=decryption_tuple)
 
   def UploadObject(self, upload_stream, object_metadata, size=None,
                    canned_acl=None, preconditions=None, progress_callback=None,
-                   provider=None, fields=None):
+                   encryption_tuple=None, provider=None, fields=None):
     return self._GetApi(provider).UploadObject(
         upload_stream, object_metadata, size=size, canned_acl=canned_acl,
         preconditions=preconditions, progress_callback=progress_callback,
-        fields=fields)
+        encryption_tuple=encryption_tuple, fields=fields)
 
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, preconditions=None,
-                            progress_callback=None, provider=None, fields=None):
+                            progress_callback=None, encryption_tuple=None,
+                            provider=None, fields=None):
     return self._GetApi(provider).UploadObjectStreaming(
         upload_stream, object_metadata, canned_acl=canned_acl,
         preconditions=preconditions, progress_callback=progress_callback,
-        fields=fields)
+        encryption_tuple=encryption_tuple, fields=fields)
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
-      provider=None, fields=None, size=None, serialization_data=None,
-      tracker_callback=None, progress_callback=None):
+      size=None, serialization_data=None, tracker_callback=None,
+      progress_callback=None, encryption_tuple=None, provider=None,
+      fields=None):
     return self._GetApi(provider).UploadObjectResumable(
         upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, size=size, fields=fields,
+        preconditions=preconditions, size=size,
         serialization_data=serialization_data,
-        tracker_callback=tracker_callback, progress_callback=progress_callback)
+        tracker_callback=tracker_callback, progress_callback=progress_callback,
+        encryption_tuple=encryption_tuple, fields=fields)
 
   def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
                  canned_acl=None, preconditions=None, progress_callback=None,
-                 max_bytes_per_call=None, provider=None, fields=None):
+                 max_bytes_per_call=None, encryption_tuple=None,
+                 decryption_tuple=None, provider=None, fields=None):
     return self._GetApi(provider).CopyObject(
         src_obj_metadata, dst_obj_metadata, src_generation=src_generation,
         canned_acl=canned_acl, preconditions=preconditions,
         progress_callback=progress_callback,
-        max_bytes_per_call=max_bytes_per_call, fields=fields)
+        max_bytes_per_call=max_bytes_per_call,
+        encryption_tuple=encryption_tuple, decryption_tuple=decryption_tuple,
+        fields=fields)
 
   def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
-                    preconditions=None, provider=None, fields=None):
+                    preconditions=None, encryption_tuple=None, provider=None,
+                    fields=None):
     return self._GetApi(provider).ComposeObject(
         src_objs_metadata, dst_obj_metadata, preconditions=preconditions,
-        fields=fields)
+        encryption_tuple=encryption_tuple, fields=fields)
 
   def DeleteObject(self, bucket_name, object_name, preconditions=None,
                    generation=None, provider=None):

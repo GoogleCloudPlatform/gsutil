@@ -23,15 +23,12 @@ from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.command import CreateGsutilLogger
-from gslib.copy_helper import _AppendComponentTrackerToParallelUploadTrackerFile
-from gslib.copy_helper import _CreateParallelUploadTrackerFile
 from gslib.copy_helper import _GetPartitionInfo
-from gslib.copy_helper import _ParseParallelUploadTrackerFile
 from gslib.copy_helper import FilterExistingComponents
-from gslib.copy_helper import ObjectFromTracker
 from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
@@ -83,66 +80,6 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEquals(2, num_components)
     self.assertEqual(50, component_size)
 
-  def test_ParseParallelUploadTrackerFile(self):
-    """Tests the _ParseParallelUploadTrackerFile function."""
-    tracker_file_lock = CreateLock()
-    random_prefix = '123'
-    objects = ['obj1', '42', 'obj2', '314159']
-    contents = '\n'.join([random_prefix] + objects)
-    fpath = self.CreateTempFile(file_name='foo', contents=contents)
-    expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-                        for i in range(0, len(objects) / 2)]
-    (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(
-        fpath, tracker_file_lock)
-    self.assertEqual(random_prefix, actual_prefix)
-    self.assertEqual(expected_objects, actual_objects)
-
-  def test_ParseEmptyParallelUploadTrackerFile(self):
-    """Tests _ParseParallelUploadTrackerFile with an empty tracker file."""
-    tracker_file_lock = CreateLock()
-    fpath = self.CreateTempFile(file_name='foo', contents='')
-    expected_objects = []
-    (actual_prefix, actual_objects) = _ParseParallelUploadTrackerFile(
-        fpath, tracker_file_lock)
-    self.assertEqual(actual_objects, expected_objects)
-    self.assertIsNotNone(actual_prefix)
-
-  def test_CreateParallelUploadTrackerFile(self):
-    """Tests the _CreateParallelUploadTrackerFile function."""
-    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
-    random_prefix = '123'
-    objects = ['obj1', '42', 'obj2', '314159']
-    expected_contents = [random_prefix] + objects
-    objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-               for i in range(0, len(objects) / 2)]
-    _CreateParallelUploadTrackerFile(tracker_file, random_prefix, objects,
-                                     tracker_file_lock)
-    with open(tracker_file, 'rb') as f:
-      lines = f.read().splitlines()
-    self.assertEqual(expected_contents, lines)
-
-  def test_AppendComponentTrackerToParallelUploadTrackerFile(self):
-    """Tests the _CreateParallelUploadTrackerFile function with append."""
-    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
-    random_prefix = '123'
-    objects = ['obj1', '42', 'obj2', '314159']
-    expected_contents = [random_prefix] + objects
-    objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-               for i in range(0, len(objects) / 2)]
-    _CreateParallelUploadTrackerFile(tracker_file, random_prefix, objects,
-                                     tracker_file_lock)
-
-    new_object = ['obj2', '1234']
-    expected_contents += new_object
-    new_object = ObjectFromTracker(new_object[0], new_object[1])
-    _AppendComponentTrackerToParallelUploadTrackerFile(tracker_file, new_object,
-                                                       tracker_file_lock)
-    with open(tracker_file, 'rb') as f:
-      lines = f.read().splitlines()
-    self.assertEqual(expected_contents, lines)
-
   def test_FilterExistingComponentsNonVersioned(self):
     """Tests upload with a variety of component states."""
     mock_api = MockCloudApi()
@@ -172,7 +109,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
         object_uploaded_correctly_url, '', empty_object, tracker_file,
-        tracker_file_lock)
+        tracker_file_lock, None)
 
     # Not yet uploaded, but needed.
     fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents='2')
@@ -182,7 +119,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     args_not_uploaded = PerformParallelUploadFileToObjectArgs(
         fpath_not_uploaded, 0, 1, fpath_not_uploaded_url,
         object_not_uploaded_url, '', empty_object, tracker_file,
-        tracker_file_lock)
+        tracker_file_lock, None)
 
     # Already uploaded, but contents no longer match. Even though the contents
     # differ, we don't delete this since the bucket is not versioned and it
@@ -202,7 +139,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
         object_wrong_contents_url, '', empty_object, tracker_file,
-        tracker_file_lock)
+        tracker_file_lock, None)
 
     # Exists in tracker file, but component object no longer exists.
     fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents='5')
@@ -210,7 +147,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         str(fpath_remote_deleted))
     args_remote_deleted = PerformParallelUploadFileToObjectArgs(
         fpath_remote_deleted, 0, 1, fpath_remote_deleted_url, '', '',
-        empty_object, tracker_file, tracker_file_lock)
+        empty_object, tracker_file, tracker_file_lock, None)
 
     # Exists in tracker file and already uploaded, but no longer needed.
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
@@ -279,7 +216,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
         object_uploaded_correctly_url, object_uploaded_correctly.generation,
-        empty_object, tracker_file, tracker_file_lock)
+        empty_object, tracker_file, tracker_file_lock, None)
 
     # Duplicate object name in tracker file, but uploaded correctly.
     fpath_duplicate = fpath_uploaded_correctly
@@ -296,7 +233,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         fpath_duplicate, 0, 1, fpath_duplicate_url,
         duplicate_uploaded_correctly_url,
         duplicate_uploaded_correctly.generation, empty_object, tracker_file,
-        tracker_file_lock)
+        tracker_file_lock, None)
 
     # Already uploaded, but contents no longer match.
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
@@ -314,7 +251,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
         wrong_contents_url, '', empty_object, tracker_file,
-        tracker_file_lock)
+        tracker_file_lock, None)
 
     dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
                 fpath_wrong_contents: args_wrong_contents}

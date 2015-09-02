@@ -794,6 +794,12 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       for ap in non_marker_props:
         meta_string = '\t\t%s:\t\t%s' % (ap.key, ap.value)
         print meta_string.encode(UTF8)
+  if obj.customerEncryption:
+    if not obj.crc32c: print '\tHash (crc32c):\t\tencrypted'
+    if not obj.md5Hash: print '\tHash (md5):\t\tencrypted'
+    print ('\tEncryption algorithm:\t%s' %
+           obj.customerEncryption.encryptionAlgorithm)
+    print '\tEncryption key SHA256:\t%s' % obj.customerEncryption.keySha256
   if obj.crc32c: print '\tHash (crc32c):\t\t%s' % obj.crc32c
   if obj.md5Hash: print '\tHash (md5):\t\t%s' % obj.md5Hash
   print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
@@ -1242,3 +1248,9 @@ def StdinIterator():
   for line in sys.stdin:
     # Strip CRLF.
     yield line.rstrip()
+
+
+def ConvertRecursiveToFlatWildcard(url_strs):
+  """A generator that adds '**' to each url string in url_strs."""
+  for url_str in url_strs:
+    yield '%s**' % url_str

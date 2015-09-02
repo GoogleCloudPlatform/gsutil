@@ -18,6 +18,9 @@ from __future__ import absolute_import
 
 import sys
 
+from gslib.cloud_api import EncryptionException
+from gslib.encryption_helper import CryptoTupleFromKey
+from gslib.encryption_helper import FindMatchingCryptoKey
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.util import ObjectIsGzipEncoded
@@ -62,6 +65,21 @@ class CatHelper(object):
         did_some_work = False
         # TODO: Get only the needed fields here.
         for blr in self.command_obj.WildcardIterator(url_str).IterObjects():
+
+          decryption_tuple = None
+          if (blr.root_object and
+              blr.root_object.customerEncryption and
+              blr.root_object.customerEncryption.keySha256):
+            decryption_key = FindMatchingCryptoKey(
+                blr.root_object.customerEncryption.keySha256)
+            if not decryption_key:
+              raise EncryptionException(
+                  'Missing decryption key with SHA256 hash %s. No decryption '
+                  'key matches object %s'
+                  % (blr.root_object.customerEncryption.keySha256,
+                     blr.url_string))
+            decryption_tuple = CryptoTupleFromKey(decryption_key)
+
           did_some_work = True
           if show_header:
             if printed_one:
@@ -77,7 +95,7 @@ class CatHelper(object):
                 compressed_encoding=compressed_encoding,
                 start_byte=start_byte, end_byte=end_byte,
                 object_size=cat_object.size, generation=storage_url.generation,
-                provider=storage_url.scheme)
+                decryption_tuple=decryption_tuple, provider=storage_url.scheme)
           else:
             cat_outfd.write(open(storage_url.object_name, 'rb').read())
         if not did_some_work:
