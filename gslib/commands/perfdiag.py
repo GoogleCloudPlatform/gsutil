@@ -1868,7 +1868,7 @@ class PerfDiagCommand(Command):
           return
 
     # If parallelism is specified, default parallelism strategy to fan.
-    if self.processes > 1 and self.threads > 1 and not self.parallel_strategy:
+    if (self.processes > 1 or self.threads > 1) and not self.parallel_strategy:
       self.parallel_strategy = self.FAN
     elif self.processes == 1 and self.threads == 1 and self.parallel_strategy:
       raise CommandException(
