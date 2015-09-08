@@ -175,8 +175,9 @@ class ListingStyle(object):
 
 
 def UsingCrcmodExtension(crcmod):
-  return (getattr(crcmod, 'crcmod', None) and
-          getattr(crcmod.crcmod, '_usingExtension', None))
+  return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
+          (getattr(crcmod, 'crcmod', None) and
+           getattr(crcmod.crcmod, '_usingExtension', None)))
 
 
 def CheckFreeSpace(path):

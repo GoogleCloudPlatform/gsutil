@@ -148,7 +148,7 @@ def _ExtendByZeros(crc, num_bits):
     P(x)*x^num_bits
   """
   def _ReverseBits32(crc):
-    return int('{:032b}'.format(crc, width=32)[::-1], 2)
+    return int('{0:032b}'.format(crc, width=32)[::-1], 2)
   crc = _ReverseBits32(crc)
   i = 0
 

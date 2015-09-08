@@ -1862,8 +1862,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Deleting bucket', stderr)
     self.assertIn('bucket does not exist', stderr)
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download(self):
     """Tests that sliced object download works in the general case."""
@@ -1872,8 +1870,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents='abc' * ONE_KIB)
     fpath = self.CreateTempFile()
 
+    # Force fast crcmod to return True to test the basic sliced download
+    # scenario, ensuring that if the user installs crcmod, it will work.
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
+        ('GSUtil', 'test_assume_fast_crcmod', 'True'),
         ('GSUtil', 'sliced_object_download_threshold', str(ONE_KIB)),
         ('GSUtil', 'sliced_object_download_max_components', '3')]
 
