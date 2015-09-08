@@ -1,3 +1,26 @@
+Release 4.15 (release date: 2015-09-08)
+=======================================
+Bug Fixes
+---------
+- Fixed an OverflowError in apitools that caused download
+  failures for large files on 32-bit machines.
+- Removed unnecessary sending of range headers for downloads when
+  using the XML API.
+- Fixed a bug that caused perfdiag to report extremely high throughput
+  when the -p flag was unspecified and exactly one of the -c or -k flags
+  were specified.
+- Fixed a ValueError that occurred on Python 2.6 with sliced object downloads.
+
+Other Changes
+-------------
+- HTTP connections for downloads and uploads in the JSON API are now
+  re-used per-thread.
+- When gsutil's automatic update feature prompts and the user
+  chooses to update, gsutil will now exit with status code 1 after
+  updating (because the original command was not executed).
+- The cp -A flag is disabled when using gsutil -m to ensure that
+  ordering is preserved when copying between versioned buckets.
+
 Release 4.14 (release date: 2015-08-24)
 =======================================
 New Features
