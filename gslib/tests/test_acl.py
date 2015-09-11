@@ -41,7 +41,7 @@ class TestAclBase(testcase.GsUtilIntegrationTestCase):
   _set_defacl_prefix = ['defacl', 'set']
   _ch_acl_prefix = ['acl', 'ch']
 
-  _project_team = 'owners'
+  _project_team = 'editors'
   _project_test_acl = '%s-%s' % (_project_team, PopulateProjectId())
 
 
@@ -396,7 +396,6 @@ class TestAcl(TestAclBase):
 
   def testProjectAclChangesOnBucket(self):
     """Tests project entity acl changes on a bucket."""
-
     if self.test_api == ApiSelector.XML:
       stderr = self.RunGsUtil(self._ch_acl_prefix +
                               ['-p', self._project_test_acl +':w',

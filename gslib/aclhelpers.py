@@ -174,7 +174,9 @@ class AclChange(object):
             entry.domain and self.identifier == entry.domain):
         yield entry
       elif (self.scope_type == 'Project' and
-            entry.domain and self.identifier == entry.project):
+            entry.projectTeam and
+            self.identifier == '%s-%s' % (entry.projectTeam.team,
+                                          entry.projectTeam.projectNumber)):
         yield entry
       elif (self.scope_type == 'AllUsers' and
             entry.entity.lower() == self.public_entity_all_users.lower()):
@@ -297,11 +299,10 @@ class AclDel(object):
         yield entry
       elif entry.domain and self.identifier == entry.domain:
         yield entry
-      elif entry.projectTeam:
-        project_team = entry.projectTeam
-        acl_label = project_team.team + '-' + project_team.projectNumber
-        if acl_label == self.identifier:
-          yield entry
+      elif (entry.projectTeam and
+            self.identifier == '%s-%s' % (entry.projectTeam.team,
+                                          entry.projectTeam.projectNumber)):
+        yield entry
       elif entry.entity.lower() == 'allusers' and self.identifier == 'AllUsers':
         yield entry
       elif (entry.entity.lower() == 'allauthenticatedusers' and
