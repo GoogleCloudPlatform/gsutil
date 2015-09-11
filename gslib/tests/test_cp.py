@@ -2409,7 +2409,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       new_obj_metadata = gsutil_api.GetObjectMetadata(
           dst_obj_metadata.bucket, dst_obj_metadata.name,
-          fields=['acl,md5Hash'])
+          fields=['acl', 'md5Hash'])
       self.assertEqual(
           gsutil_api.GetObjectMetadata(src_obj_metadata.bucket,
                                        src_obj_metadata.name,

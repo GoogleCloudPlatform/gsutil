@@ -131,6 +131,11 @@ _VALIDATE_CERTIFICATES_503_MESSAGE = (
     and try again.""" % GetCredentialStoreFilename())
 
 
+# Fields requiring projection=full across all API calls.
+_ACL_FIELDS_SET = set(['acl', 'defaultObjectAcl', 'items/acl',
+                       'items/defaultObjectAcl', 'items/owner', 'owner'])
+
+
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
@@ -376,10 +381,25 @@ class GcsJsonApi(CloudApi):
     """Returns an upload-safe Http object (by disabling httplib2 retries)."""
     return GetNewHttp(http_class=HttpWithNoRetries)
 
+  def _FieldsContainsAclField(self, fields=None):
+    """Checks Returns true if ACL related values are in fields set.
+
+    Args:
+      fields: list or set of fields. May be in GET ['acl'] or List
+          ['items/acl'] call format.
+
+    Returns:
+      True if an ACL value is requested in the input fields, False otherwise.
+    """
+    return fields is None or _ACL_FIELDS_SET.intersection(set(fields))
+
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsGetRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageBucketsGetRequest
+                    .ProjectionValueValuesEnum.full)
     apitools_request = apitools_messages.StorageBucketsGetRequest(
         bucket=bucket_name, projection=projection)
     global_params = apitools_messages.StandardQueryParameters()
@@ -400,7 +420,10 @@ class GcsJsonApi(CloudApi):
                   fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsPatchRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageBucketsPatchRequest
+                    .ProjectionValueValuesEnum.full)
     bucket_metadata = metadata
 
     if not preconditions:
@@ -463,7 +486,10 @@ class GcsJsonApi(CloudApi):
                    provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsInsertRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageBucketsInsertRequest
+                    .ProjectionValueValuesEnum.full)
     if not metadata:
       metadata = apitools_messages.Bucket()
     metadata.name = bucket_name
@@ -512,7 +538,10 @@ class GcsJsonApi(CloudApi):
   def ListBuckets(self, project_id=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageBucketsListRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageBucketsListRequest
+                    .ProjectionValueValuesEnum.full)
     project_id = PopulateProjectId(project_id)
 
     apitools_request = apitools_messages.StorageBucketsListRequest(
@@ -555,7 +584,10 @@ class GcsJsonApi(CloudApi):
                   all_versions=None, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageObjectsListRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageObjectsListRequest
+                    .ProjectionValueValuesEnum.full)
     apitools_request = apitools_messages.StorageObjectsListRequest(
         bucket=bucket_name, prefix=prefix, delimiter=delimiter,
         versions=all_versions, projection=projection,
@@ -608,7 +640,10 @@ class GcsJsonApi(CloudApi):
                         provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageObjectsGetRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageObjectsGetRequest
+                    .ProjectionValueValuesEnum.full)
 
     if generation:
       generation = long(generation)
@@ -781,7 +816,10 @@ class GcsJsonApi(CloudApi):
                           provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     projection = (apitools_messages.StorageObjectsPatchRequest
-                  .ProjectionValueValuesEnum.full)
+                  .ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageObjectsPatchRequest
+                    .ProjectionValueValuesEnum.full)
 
     if not preconditions:
       preconditions = Preconditions()
@@ -1080,7 +1118,10 @@ class GcsJsonApi(CloudApi):
       preconditions = Preconditions()
 
     projection = (apitools_messages.StorageObjectsRewriteRequest.
-                  ProjectionValueValuesEnum.full)
+                  ProjectionValueValuesEnum.noAcl)
+    if self._FieldsContainsAclField(fields):
+      projection = (apitools_messages.StorageObjectsRewriteRequest.
+                    ProjectionValueValuesEnum.full)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       # Rewrite returns the resultant object under the 'resource' field.
