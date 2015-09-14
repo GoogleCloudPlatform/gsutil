@@ -146,7 +146,9 @@ class MvCommand(Command):
     if self.recursion_requested:
       unparsed_args.append('-R')
     unparsed_args.extend(self.unparsed_args)
-    self.command_runner.RunNamedCommand('cp', unparsed_args, self.headers,
-                                        self.debug, self.parallel_operations)
+    self.command_runner.RunNamedCommand(
+        'cp', args=unparsed_args, headers=self.headers, debug=self.debug,
+        trace_token=self.trace_token,
+        parallel_operations=self.parallel_operations)
 
     return 0
