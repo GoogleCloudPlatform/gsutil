@@ -86,35 +86,41 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>BUCKET LOCATIONS</B>
   If you don't specify a -l option, the bucket will be created in the default
-  location (US). Otherwise, you can specify one of the available continental
-  locations:
+  location (US). Otherwise, you can specify one of the available
+  `continental locations <https://cloud.google.com/storage/docs/bucket-locations>`_.
 
-  - ASIA (Asia)
+  - ASIA (Asia Pacific)
   - EU (European Union)
   - US (United States)
 
   Example:
     gsutil mb -l ASIA gs://some-bucket
 
-  If you specify the Durable Reduced Availability storage class (-c DRA), you
-  can specify one of the continental locations above or one of the regional
-  locations below: [1]_
+  You can also create a bucket in a
+  `regional location <https://cloud.google.com/storage/docs/bucket-locations>`_.
+  The following regional locations support all storage classes:
 
   - ASIA-EAST1 (Eastern Asia-Pacific)
+  - EUROPE-WEST1 (Western Europe)
+  - US-CENTRAL1 (Central United States)
   - US-EAST1 (Eastern United States)
+
+  Example:
+    gsutil mb -c NEARLINE -l EUROPE-WEST1 gs://some-bucket
+
+  The following regional locations are in Alpha and support just the Durable
+  Reduced Availability storage class (-C DRA). Data stored in these locations
+  is not subject to the usual SLA. See the
+  `bucket location <https://cloud.google.com/storage/docs/bucket-locations>`_
+  documentation for additional information.
+
+  - US-CENTRAL2 (Central United States)
   - US-EAST2 (Eastern United States)
   - US-EAST3 (Eastern United States)
-  - US-CENTRAL1 (Central United States)
-  - US-CENTRAL2 (Central United States)
   - US-WEST1 (Western United States)
 
   Example:
-    gsutil mb -c DRA -l US-CENTRAL1 gs://some-bucket
-
-  .. [1] These locations are for `Regional Buckets <https://developers.google.com/storage/docs/regional-buckets>`_.
-     Regional Buckets is an experimental feature and data stored in these
-     locations is not subject to the usual SLA. See the documentation for
-     additional information.
+    gsutil mb -c DRA -l US-CENTRAL2 gs://some-bucket
 
 
 <B>OPTIONS</B>
