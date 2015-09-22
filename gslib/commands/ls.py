@@ -41,7 +41,7 @@ from gslib.util import UTF8
 JSON_TIMESTAMP_RE = re.compile(r'([^\s]*)\s([^\.\+]*).*')
 
 _SYNOPSIS = """
-  gsutil ls [-a] [-b] [-l] [-L] [-r] [-p proj_id] url...
+  gsutil ls [-a] [-b] [-d] [-l] [-L] [-r] [-p proj_id] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -109,6 +109,10 @@ _DETAILED_HELP_TEXT = ("""
   or, for a flat listing of a subdirectory:
 
     gsutil ls -r gs://bucket/dir/**
+
+  If you want to see only the subdirectory itself, use the -d option:
+
+    gsutil ls -d gs://bucket/dir
 
 
 <B>LISTING OBJECT DETAILS</B>
@@ -203,6 +207,10 @@ _DETAILED_HELP_TEXT = ("""
               much more slowly (and cost more) using the XML API than the
               default JSON API.
 
+  -d          List matching subdirectory names instead of contents, and do not
+              recurse into matching subdirectories even if the -R option is
+              specified.
+
   -b          Prints info about the bucket when used with a bucket URL.
 
   -h          When used with -l, prints object sizes in human readable format
@@ -230,7 +238,7 @@ class LsCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='aeblLhp:rR',
+      supported_sub_args='aebdlLhp:rR',
       file_url_ok=False,
       provider_url_ok=True,
       urls_start_arg=0,
@@ -358,6 +366,7 @@ class LsCommand(Command):
     self.all_versions = False
     self.include_etag = False
     self.human_readable = False
+    self.list_subdir_contents = True
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
@@ -376,6 +385,8 @@ class LsCommand(Command):
           self.project_id = a
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-d':
+          self.list_subdir_contents = False
 
     if not self.args:
       # default to listing all gs buckets
@@ -435,7 +446,8 @@ class LsCommand(Command):
           ls_helper = LsHelper(self.WildcardIterator, self.logger,
                                all_versions=self.all_versions,
                                print_bucket_header_func=print_bucket_header,
-                               should_recurse=self.recursion_requested)
+                               should_recurse=self.recursion_requested,
+                               list_subdir_contents=self.list_subdir_contents)
         elif listing_style == ListingStyle.LONG:
           bucket_listing_fields = ['name', 'updated', 'size']
           if self.all_versions:
@@ -449,7 +461,8 @@ class LsCommand(Command):
                                print_bucket_header_func=print_bucket_header,
                                all_versions=self.all_versions,
                                should_recurse=self.recursion_requested,
-                               fields=bucket_listing_fields)
+                               fields=bucket_listing_fields,
+                               list_subdir_contents=self.list_subdir_contents)
 
         elif listing_style == ListingStyle.LONG_LONG:
           # List all fields
@@ -460,7 +473,8 @@ class LsCommand(Command):
                                print_bucket_header_func=print_bucket_header,
                                all_versions=self.all_versions,
                                should_recurse=self.recursion_requested,
-                               fields=bucket_listing_fields)
+                               fields=bucket_listing_fields,
+                               list_subdir_contents=self.list_subdir_contents)
         else:
           raise CommandException('Unknown listing style: %s' % listing_style)
 
