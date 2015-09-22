@@ -717,11 +717,14 @@ class GcsJsonApi(CloudApi):
     apitools_request = apitools_messages.StorageObjectsGetRequest(
         bucket=bucket_name, object=object_name, generation=generation)
 
+    # Disable retries in apitools. We will handle them explicitly for
+    # resumable downloads; one-shot downloads are not retriable as we do
+    # not track how many bytes were written to the stream.
+    apitools_download.retry_func = (
+        apitools_http_wrapper.RethrowExceptionHandler)
+
     try:
       if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
-        # Disable retries in apitools. We will handle them explicitly here.
-        apitools_download.retry_func = (
-            apitools_http_wrapper.RethrowExceptionHandler)
         return self._PerformResumableDownload(
             bucket_name, object_name, download_stream, apitools_request,
             apitools_download, bytes_downloaded_container,
