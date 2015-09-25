@@ -316,18 +316,18 @@ _DETAILED_HELP_TEXT = ("""
                 matching files/objects will not be copied or deleted. Note that
                 the pattern is a Python regular expression, not a wildcard (so,
                 matching any string ending in 'abc' would be specified using
-                '.*abc' rather than '*abc'). Note also that the exclude path is
+                '.*abc$' rather than '*abc'). Note also that the exclude path is
                 always relative (similar to Unix rsync or tar exclude options).
                 For example, if you run the command:
 
-                  gsutil rsync -x 'data./.*\\.txt' dir gs://my-bucket
+                  gsutil rsync -x 'data./.*\\.txt$' dir gs://my-bucket
 
                 it will skip the file dir/data1/a.txt.
 
                 You can use regex alternation to specify multiple exclusions,
                 for example:
 
-                  gsutil rsync -x '.*\\.txt|.*\\.jpg' dir gs://my-bucket
+                  gsutil rsync -x '.*\\.txt$|.*\\.jpg$' dir gs://my-bucket
 """)
 
 
