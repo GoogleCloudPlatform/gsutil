@@ -118,6 +118,7 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             httplib.IncompleteRead,
                             httplib.ResponseNotReady,
                             httplib2.ServerNotFoundError,
+                            oauth2client.client.HttpAccessTokenRefreshError,
                             socket.error,
                             socket.gaierror,
                             socket.timeout,
@@ -763,6 +764,7 @@ class GcsJsonApi(CloudApi):
             apitools_download, generation=generation, start_byte=start_byte,
             end_byte=end_byte, serialization_data=serialization_data)
       except HTTP_TRANSFER_EXCEPTIONS, e:
+        self._ValidateHttpAccessTokenRefreshError(e)
         start_byte = download_stream.tell()
         bytes_downloaded_container.bytes_transferred = start_byte
         if start_byte > last_progress_byte:
@@ -1037,6 +1039,7 @@ class GcsJsonApi(CloudApi):
                               apitools_upload.total_size)
           return processed_response
         except HTTP_TRANSFER_EXCEPTIONS, e:
+          self._ValidateHttpAccessTokenRefreshError(e)
           apitools_http_wrapper.RebuildHttpConnections(
               apitools_upload.bytes_http)
           while retries <= self.num_retries:
@@ -1048,6 +1051,7 @@ class GcsJsonApi(CloudApi):
               bytes_uploaded_container.bytes_transferred = start_byte
               break
             except HTTP_TRANSFER_EXCEPTIONS, e2:
+              self._ValidateHttpAccessTokenRefreshError(e2)
               apitools_http_wrapper.RebuildHttpConnections(
                   apitools_upload.bytes_http)
               retries += 1
@@ -1344,6 +1348,11 @@ class GcsJsonApi(CloudApi):
     if canned_acl_string in translation_dict:
       return translation_dict[canned_acl_string]
     raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
+
+  def _ValidateHttpAccessTokenRefreshError(self, e):
+    if (isinstance(e, oauth2client.client.HttpAccessTokenRefreshError)
+        and not (e.status == 429 or e.status >= 500)):
+      raise
 
   def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
                                   generation=None, not_found_exception=None):
