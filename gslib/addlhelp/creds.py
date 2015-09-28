@@ -110,8 +110,8 @@ _DETAILED_HELP_TEXT = ("""
     the fact that Editors have OWNER access in the default object and
     bucket ACLs, but the canned ACL options remove OWNER access from
     Editors, can lead to unexpected results. The solution to this problem is to
-    add the email address for your service account as a project editor. To find
-    the email address, visit the
+    ensure the service account is an Owner in the Permissions tab for your
+    project. To find the email address of your service account, visit the
     `Google Developers Console <https://cloud.google.com/console#/project>`_,
     click on the project you're using, click "APIs & auth", and click
     "Credentials".

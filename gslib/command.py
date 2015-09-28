@@ -815,8 +815,8 @@ class Command(HelpProvider):
           'attempting to perform a metadata operation. If you believe that you '
           'should have access to this metadata (i.e., if it is associated with '
           'your account), please make sure that your service account''s email '
-          'address is listed as an Owner in the Team tab of the API console. '
-          'See "gsutil help creds" for further information.\n')))
+          'address is listed as an Owner in the Permissions tab of the API '
+          'console. See "gsutil help creds" for further information.\n')))
 
   def GetAndPrintAcl(self, url_str):
     """Prints the standard or default object ACL depending on self.command_name.
