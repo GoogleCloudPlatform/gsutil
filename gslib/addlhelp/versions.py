@@ -134,6 +134,17 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rm -a gs://bucket/object
 
+  If you want to remove all versions of all objects in a bucket (and the bucket
+  itself), use the rm -r option (-r implies the -a option):
+
+    gsutil rm -r gs://bucket
+
+  If you want to remove only the live versions of objects in a bucket, use
+  the ** wildcard:
+
+    gsutil rm gs://bucket/**
+
+
   Note that there is no limit to the number of older versions of an object you
   will create if you continue to upload to the same object in a versioning-
   enabled bucket. It is your responsibility to delete versions beyond the ones
