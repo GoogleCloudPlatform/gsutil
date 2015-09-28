@@ -127,11 +127,12 @@ older object versions (see "gsutil help lifecycle").
               This allows you to run a program that generates the list of
               objects to remove.
 
-  -R, -r      Causes bucket or bucket subdirectory contents (all objects and
-              subdirectories that it contains) to be removed recursively. If
-              used with a bucket-only URL (like gs://bucket), after deleting
-              objects and subdirectories gsutil will delete the bucket.  The -r
-              flag implies the -a flag and will delete all object versions.
+  -R, -r      The -R and -r options are synonymous. Causes bucket or bucket
+              subdirectory contents (all objects and subdirectories that it
+              contains) to be removed recursively. If used with a bucket-only
+              URL (like gs://bucket), after deleting objects and subdirectories
+              gsutil will delete the bucket. This option implies the -a option
+              and will delete all object versions.
 
   -a          Delete all versions of an object.
 """)

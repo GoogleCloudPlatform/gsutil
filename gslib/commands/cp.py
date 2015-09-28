@@ -597,12 +597,13 @@ _OPTIONS_TEXT = """
                  Note that it's not valid to specify both the -a and -p options
                  together.
 
-  -R, -r         Causes directories, buckets, and bucket subdirectories to be
-                 copied recursively. If you neglect to use this option for
-                 an upload, gsutil will copy any files it finds and skip any
-                 directories. Similarly, neglecting to specify -r for a download
-                 will cause gsutil to copy any objects at the current bucket
-                 directory level, and skip any subdirectories.
+  -R, -r         The -R and -r options are synonymous. Causes directories,
+                 buckets, and bucket subdirectories to be copied recursively.
+                 If you neglect to use this option for an upload, gsutil will
+                 copy any files it finds and skip any directories. Similarly,
+                 neglecting to specify this option for a download will cause
+                 gsutil to copy any objects at the current bucket directory
+                 level, and skip any subdirectories.
 
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER

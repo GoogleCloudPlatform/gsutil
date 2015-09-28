@@ -303,10 +303,11 @@ _DETAILED_HELP_TEXT = ("""
                 end up with the same ACL by setting a default object ACL on that
                 bucket instead of using rsync -p. See 'help gsutil defacl'.
 
-  -R, -r        Causes directories, buckets, and bucket subdirectories to be
-                synchronized recursively. If you neglect to use this option
-                gsutil will make only the top-level directory in the source
-                and destination URLs match, skipping any sub-directories.
+  -R, -r        The -R and -r options are synonymous. Causes directories,
+                buckets, and bucket subdirectories to be synchronized
+                recursively. If you neglect to use this option gsutil will make
+                only the top-level directory in the source and destination URLs
+                match, skipping any sub-directories.
 
   -U            Skip objects with unsupported object types instead of failing.
                 Unsupported object types are Amazon S3 Objects in the GLACIER
