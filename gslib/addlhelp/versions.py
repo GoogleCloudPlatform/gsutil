@@ -89,13 +89,20 @@ _DETAILED_HELP_TEXT = ("""
   gs://bucket/object#1360035307075000 is the oldest available version.
 
   If you specify version-less URLs with gsutil, you will operate on the
-  latest not-deleted version of an object, for example:
+  latest archived version of an object, for example:
 
     gsutil cp gs://bucket/object ./dir
 
   or:
 
     gsutil rm gs://bucket/object
+
+  The same is true when using wildcards like * and **. These will operate only
+  on the latest archived version of matching objects. For example, this
+  command will remove the live version and create an archived version for each
+  object in a bucket:
+
+    gsutil rm gs://bucket/**
 
   To operate on a specific object version, use a version-specific URL.
   For example, suppose the output of the above gsutil ls -a command is:
@@ -148,11 +155,6 @@ _DETAILED_HELP_TEXT = ("""
   itself), use the rm -r option (-r implies the -a option):
 
     gsutil rm -r gs://bucket
-
-  If you want to remove only the live versions of objects in a bucket, use
-  the ** wildcard:
-
-    gsutil rm gs://bucket/**
 
 
   Note that there is no limit to the number of older versions of an object you
