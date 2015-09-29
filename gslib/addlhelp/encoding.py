@@ -51,6 +51,12 @@ _DETAILED_HELP_TEXT = ("""
   character encoding to UTF-8. One such tool is `native2ascii
   <http://docs.oracle.com/javase/7/docs/technotes/tools/solaris/native2ascii.html>`_.
 
+  Unicode errors for valid Unicode filepaths can be caused by lack of Python
+  locale configuration on Linux and Mac OSes. If your file paths are Unicode
+  and you get encoding errors, ensure the LANG environment variable is set
+  correctly. Typically, the LANG variable should be set to something like
+  "en_US.UTF-8" or "de_DE.UTF-8".
+
   Note also that there's no restriction on the character encoding used in file
   content - it can be UTF-8, a different encoding, or non-character
   data (like audio or video content). The gsutil UTF-8 character encoding
@@ -87,6 +93,14 @@ _DETAILED_HELP_TEXT = ("""
   There is one precaution users can exercise to prevent some of these problems:
   When using the Windows console specify wildcards or folders (using the -R
   option) rather than explicitly named individual files.
+
+
+<B>CONVERTING FILENAMES TO UNICODE</B>
+  Open-source tools are available to convert filenames for non-Unicode files.
+  For example, to convert from latin1 (a common Windows encoding) to Unicode,
+  you can use
+  `Windows iconv <http://gnuwin32.sourceforge.net/packages/libiconv.htm>`_. For
+  *nix systems, you can use `libiconv https://www.gnu.org/software/libiconv/`_.
 """)
 
 
