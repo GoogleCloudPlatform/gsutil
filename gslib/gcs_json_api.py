@@ -87,7 +87,7 @@ from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
-from gslib.util import UTF8
+from gslib.util import GetPrintableExceptionString
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -763,12 +763,13 @@ class GcsJsonApi(CloudApi):
         if retries > self.num_retries:
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
-              (self.num_retries, unicode(e).encode(UTF8)))
+              (self.num_retries, GetPrintableExceptionString(e)))
         time.sleep(CalculateWaitForRetry(retries, max_wait=self.max_retry_wait))
         if self.logger.isEnabledFor(logging.DEBUG):
           self.logger.debug(
               'Retrying download from byte %s after exception: %s. Trace: %s',
-              start_byte, unicode(e).encode(UTF8), traceback.format_exc())
+              start_byte, GetPrintableExceptionString(e),
+              traceback.format_exc())
         apitools_http_wrapper.RebuildHttpConnections(
             apitools_download.bytes_http)
 
@@ -1052,13 +1053,14 @@ class GcsJsonApi(CloudApi):
             if retries > self.num_retries:
               raise ResumableUploadException(
                   'Transfer failed after %d retries. Final exception: %s' %
-                  (self.num_retries, unicode(e).encode(UTF8)))
+                  (self.num_retries, GetPrintableExceptionString(e)))
             time.sleep(
                 CalculateWaitForRetry(retries, max_wait=self.max_retry_wait))
           if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 'Retrying upload from byte %s after exception: %s. Trace: %s',
-                start_byte, unicode(e).encode(UTF8), traceback.format_exc())
+                start_byte, GetPrintableExceptionString(e),
+                traceback.format_exc())
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:

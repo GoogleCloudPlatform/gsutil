@@ -292,6 +292,11 @@ def GetTabCompletionCacheFilename():
   return os.path.join(tab_completion_dir, 'cache')
 
 
+def GetPrintableExceptionString(exc):
+  """Returns a short Unicode string describing the exception."""
+  return unicode(exc).encode(UTF8) or str(exc.__class__)
+
+
 def PrintTrackerDirDeprecationWarningIfNeeded():
   # TODO: Remove this along with the tracker_dir config value 1 year after
   # 4.6 release date. Use state_dir instead.
