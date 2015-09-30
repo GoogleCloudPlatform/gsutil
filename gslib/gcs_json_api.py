@@ -625,16 +625,15 @@ class GcsJsonApi(CloudApi):
         yield object_or_prefix
 
   def _YieldObjectsAndPrefixes(self, object_list):
-    # Yield prefixes first so that checking for the presence of a subdirectory
-    # is fast.
-    if object_list.prefixes:
-      for prefix in object_list.prefixes:
-        yield CloudApi.CsObjectOrPrefix(prefix,
-                                        CloudApi.CsObjectOrPrefixType.PREFIX)
+    # ls depends on iterating objects before prefixes for proper display.
     if object_list.items:
       for cloud_obj in object_list.items:
         yield CloudApi.CsObjectOrPrefix(cloud_obj,
                                         CloudApi.CsObjectOrPrefixType.OBJECT)
+    if object_list.prefixes:
+      for prefix in object_list.prefixes:
+        yield CloudApi.CsObjectOrPrefix(prefix,
+                                        CloudApi.CsObjectOrPrefixType.PREFIX)
 
   def GetObjectMetadata(self, bucket_name, object_name, generation=None,
                         provider=None, fields=None):

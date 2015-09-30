@@ -1157,6 +1157,11 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
     # If this case becomes common, we could heurestically abort the
     # listing operation after the first page of results and just query for the
     # _$folder$ object directly using GetObjectMetadata.
+    # TODO: curently the ListObjects iterator yields objects before prefixes,
+    # because ls depends on this iteration order for proper display.  We could
+    # save up to 1ms in determining that a destination is a prefix if we had a
+    # way to yield prefixes first, but this would require poking a major hole
+    # through the abstraction to control this iteration order.
     expansion_empty = False
 
     if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.PREFIX:
