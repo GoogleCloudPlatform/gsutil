@@ -140,7 +140,8 @@ class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
   def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               credentials=None, debug=0, trace_token=None):
+               credentials=None, debug=0, trace_token=None,
+               perf_trace_token=None):
     """Performs necessary setup for interacting with Google Cloud Storage.
 
     Args:
@@ -151,11 +152,14 @@ class GcsJsonApi(CloudApi):
                    Storage.
       debug: Debug level for the API implementation (0..3).
       trace_token: Trace token to pass to the API implementation.
+      perf_trace_token: Performance trace token to use when making API calls.
     """
     # TODO: Plumb host_header for perfdiag / test_perfdiag.
     # TODO: Add jitter to apitools' http_wrapper retry mechanism.
     super(GcsJsonApi, self).__init__(bucket_storage_uri_class, logger,
-                                     provider='gs', debug=debug)
+                                     provider='gs', debug=debug,
+                                     trace_token=trace_token,
+                                     perf_trace_token=perf_trace_token)
     no_op_credentials = False
     if not credentials:
       loaded_credentials = self._CheckAndGetCredentials(logger)
@@ -235,11 +239,15 @@ class GcsJsonApi(CloudApi):
 
     self.global_params = apitools_messages.StandardQueryParameters(
         trace='token:%s' % trace_token) if trace_token else None
+    additional_http_headers = {}
+    if perf_trace_token:
+      additional_http_headers['cookie'] = perf_trace_token
 
     self.api_client = apitools_client.StorageV1(
         url=self.url_base, http=self.http, log_request=log_request,
         log_response=log_response, credentials=self.credentials,
-        version=self.api_version, default_global_params=self.global_params)
+        version=self.api_version, default_global_params=self.global_params,
+        additional_http_headers=additional_http_headers)
     self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
 
@@ -804,6 +812,7 @@ class GcsJsonApi(CloudApi):
         'accept-encoding': 'gzip',
         'user-agent': self.api_client.user_agent
     }
+
     if start_byte or end_byte is not None:
       apitools_download.GetRange(additional_headers=additional_headers,
                                  start=start_byte, end=end_byte,

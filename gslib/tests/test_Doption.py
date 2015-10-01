@@ -49,6 +49,19 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
         self.assertIn('total_bytes_transferred: %d' % len(file_contents),
                       stderr)
 
+  def test_minus_D_perf_trace_cp(self):
+    """Test upload and download with a sample perf trace token."""
+    file_name = 'bar'
+    fpath = self.CreateTempFile(file_name=file_name, contents='foo')
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['-D', '--perf-trace-token=123', 'cp', fpath,
+                             suri(bucket_uri)], return_stderr=True)
+    self.assertIn('\'cookie\': \'123\'', stderr)
+    stderr2 = self.RunGsUtil(['-D', '--perf-trace-token=123', 'cp',
+                              suri(bucket_uri, file_name), fpath],
+                             return_stderr=True)
+    self.assertIn('\'cookie\': \'123\'', stderr2)
+
   def test_minus_D_resumable_upload(self):
     fpath = self.CreateTempFile(contents='a1b2c3d4')
     bucket_uri = self.CreateBucket()

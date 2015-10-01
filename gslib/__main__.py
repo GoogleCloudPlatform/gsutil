@@ -242,6 +242,7 @@ def main():
   version = False
   debug = 0
   trace_token = None
+  perf_trace_token = None
   test_exception_traces = False
 
   # If user enters no commands just print the usage info.
@@ -265,7 +266,8 @@ def main():
       opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
                                  ['debug', 'detailedDebug', 'version', 'option',
                                   'help', 'header', 'multithreaded', 'quiet',
-                                  'testexceptiontraces', 'trace-token='])
+                                  'testexceptiontraces', 'trace-token=',
+                                  'perf-trace-token='])
     except getopt.GetoptError as e:
       _HandleCommandException(gslib.exception.CommandException(e.msg))
     for o, a in opts:
@@ -294,6 +296,8 @@ def main():
         quiet = True
       elif o in ('-v', '--version'):
         version = True
+      elif o == '--perf-trace-token':
+        perf_trace_token = a
       elif o == '--trace-token':
         trace_token = a
       elif o == '--testexceptiontraces':  # Hidden flag for integration tests.
@@ -356,7 +360,8 @@ def main():
     return _RunNamedCommandAndHandleExceptions(
         command_runner, command_name, args=args[1:], headers=headers,
         debug_level=debug, trace_token=trace_token,
-        parallel_operations=parallel_operations)
+        parallel_operations=parallel_operations,
+        perf_trace_token=perf_trace_token)
   finally:
     _Cleanup()
 
@@ -515,10 +520,9 @@ def _CheckAndHandleCredentialException(e, args):
         _ConstructAccountProblemHelp(e.reason))))
 
 
-def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
-                                        headers=None, debug_level=0,
-                                        trace_token=None,
-                                        parallel_operations=False):
+def _RunNamedCommandAndHandleExceptions(
+    command_runner, command_name, args=None, headers=None, debug_level=0,
+    trace_token=None, parallel_operations=False, perf_trace_token=None):
   """Runs the command with the given command runner and arguments."""
   # pylint: disable=g-import-not-at-top
   from gslib.util import GetConfigFilePath
@@ -532,9 +536,9 @@ def _RunNamedCommandAndHandleExceptions(command_runner, command_name, args=None,
     # Catch ^\ so we can force a breakpoint in a running gsutil.
     if not IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
-    return command_runner.RunNamedCommand(command_name, args, headers,
-                                          debug_level, trace_token,
-                                          parallel_operations)
+    return command_runner.RunNamedCommand(
+        command_name, args, headers, debug_level, trace_token,
+        parallel_operations, perf_trace_token=perf_trace_token)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit('Missing credentials for the given URI(s). Does your '

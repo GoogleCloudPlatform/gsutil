@@ -388,7 +388,7 @@ class Command(HelpProvider):
   def __init__(self, command_runner, args, headers, debug, trace_token,
                parallel_operations, bucket_storage_uri_class,
                gsutil_api_class_map_factory, logging_filters=None,
-               command_alias_used=None):
+               command_alias_used=None, perf_trace_token=None):
     """Instantiates a Command.
 
     Args:
@@ -407,6 +407,8 @@ class Command(HelpProvider):
       command_alias_used: The alias that was actually used when running this
                           command (as opposed to the "official" command name,
                           which will always correspond to the file name).
+      perf_trace_token: Performance measurement trace token to use when making
+          API calls.
 
     Implementation note: subclasses shouldn't need to define an __init__
     method, and instead depend on the shared initialization that happens
@@ -420,6 +422,7 @@ class Command(HelpProvider):
     self.headers = headers
     self.debug = debug
     self.trace_token = trace_token
+    self.perf_trace_token = perf_trace_token
     self.parallel_operations = parallel_operations
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.gsutil_api_class_map_factory = gsutil_api_class_map_factory
@@ -469,7 +472,8 @@ class Command(HelpProvider):
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(
         bucket_storage_uri_class, self.gsutil_api_map,
-        self.logger, debug=self.debug, trace_token=self.trace_token)
+        self.logger, debug=self.debug, trace_token=self.trace_token,
+        perf_trace_token=self.perf_trace_token)
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''

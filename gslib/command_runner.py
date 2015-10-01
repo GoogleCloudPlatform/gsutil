@@ -201,7 +201,7 @@ class CommandRunner(object):
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       trace_token=None, parallel_operations=False,
                       skip_update_check=False, logging_filters=None,
-                      do_shutdown=True):
+                      do_shutdown=True, perf_trace_token=None):
     """Runs the named command.
 
     Used by gsutil main, commands built atop other commands, and tests.
@@ -215,8 +215,10 @@ class CommandRunner(object):
       parallel_operations: Should command operations be executed in parallel?
       skip_update_check: Set to True to disable checking for gsutil updates.
       logging_filters: Optional list of logging.Filters to apply to this
-                       command's logger.
+          command's logger.
       do_shutdown: Stop all parallelism framework workers iff this is True.
+      perf_trace_token: Performance measurement trace token to pass to the
+          underlying API.
 
     Raises:
       CommandException: if errors encountered.
@@ -273,7 +275,8 @@ class CommandRunner(object):
     command_inst = command_class(
         self, args, headers, debug, trace_token, parallel_operations,
         self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
-        logging_filters, command_alias_used=command_name)
+        logging_filters, command_alias_used=command_name,
+        perf_trace_token=perf_trace_token)
     return_code = command_inst.RunCommand()
 
     if CheckMultiprocessingAvailableAndInit().is_available and do_shutdown:
