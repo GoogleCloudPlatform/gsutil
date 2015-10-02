@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 
-from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
@@ -69,11 +68,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
          'setmeta', '-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
          '-h', 'Content-Type:%s' % ct, suri(object_uri)], expected_status=1,
         return_stderr=True)
-    if self.test_api == ApiSelector.XML:
-      # XML API returns a 400 if the generation does not match some valid one.
-      self.assertIn('BadRequestException', stderr)
-    else:
-      self.assertIn('Precondition', stderr)
+    self.assertIn('Precondition', stderr)
 
     self.RunGsUtil(
         ['-h', 'x-goog-generation-match:%s' % generation, 'setmeta', '-h',
