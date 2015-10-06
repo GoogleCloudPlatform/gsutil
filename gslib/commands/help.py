@@ -182,7 +182,8 @@ class HelpCommand(Command):
     Args:
       help_str: String to format.
     """
-    # Replace <B> and </B> with terminal formatting strings if connected to tty.
+    # Remove <B> and </B> tags and replace them with ANSI control codes if
+    # writing to a compatible tty.
     if IS_WINDOWS or not IsRunningInteractively():
       help_str = re.sub('<B>', '', help_str)
       help_str = re.sub('</B>', '', help_str)
