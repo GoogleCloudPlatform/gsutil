@@ -31,6 +31,7 @@ from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
 from gslib.util import IsRunningInteractively
+from gslib.util import IS_WINDOWS
 
 _SYNOPSIS = """
   gsutil help [command or topic]
@@ -182,7 +183,7 @@ class HelpCommand(Command):
       help_str: String to format.
     """
     # Replace <B> and </B> with terminal formatting strings if connected to tty.
-    if not IsRunningInteractively():
+    if IS_WINDOWS or not IsRunningInteractively():
       help_str = re.sub('<B>', '', help_str)
       help_str = re.sub('</B>', '', help_str)
       print help_str
