@@ -87,7 +87,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>BUCKET LOCATIONS</B>
   If you don't specify a -l option, the bucket will be created in the default
   location (US). Otherwise, you can specify one of the available
-  `continental locations <https://cloud.google.com/storage/docs/bucket-locations>`_.
+  `multi-regional locations <https://cloud.google.com/storage/docs/bucket-locations>`_.
 
   - ASIA (Asia Pacific)
   - EU (European Union)
@@ -127,9 +127,8 @@ _DETAILED_HELP_TEXT = ("""
   -c class          Can be DRA (or DURABLE_REDUCED_AVAILABILITY), NL (or
                     NEARLINE), or S (or STANDARD). Default is STANDARD.
 
-  -l location       Can be any continental location as described above, or
-                    for DRA storage class, any regional or continental
-                    location. Default is US. Locations are case insensitive.
+  -l location       Can be any multi-regional or regional location as described
+                    above. Default is US. Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
 """)
