@@ -1549,7 +1549,8 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(write_thru['total_bytes_copied']))
       print 'Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8))
-      print 'Parallelism strategy: %s' % write_thru['parallelism']
+      if 'parallelism' in write_thru:  # Compatibility with old versions.
+        print 'Parallelism strategy: %s' % write_thru['parallelism']
 
     if 'write_throughput_file' in self.results:
       print
@@ -1563,7 +1564,8 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(write_thru_file['total_bytes_copied']))
       print 'Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8))
-      print 'Parallelism strategy: %s' % write_thru_file['parallelism']
+      if 'parallelism' in write_thru_file:  # Compatibility with old versions.
+        print 'Parallelism strategy: %s' % write_thru_file['parallelism']
 
     if 'read_throughput' in self.results:
       print
@@ -1577,7 +1579,8 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(read_thru['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8))
-      print 'Parallelism strategy: %s' % read_thru['parallelism']
+      if 'parallelism' in read_thru:  # Compatibility with old versions.
+        print 'Parallelism strategy: %s' % read_thru['parallelism']
 
     if 'read_throughput_file' in self.results:
       print
@@ -1591,7 +1594,8 @@ class PerfDiagCommand(Command):
           MakeHumanReadable(read_thru_file['total_bytes_copied']))
       print 'Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8))
-      print 'Parallelism strategy: %s' % read_thru_file['parallelism']
+      if 'parallelism' in read_thru_file:  # Compatibility with old versions.
+        print 'Parallelism strategy: %s' % read_thru_file['parallelism']
 
     if 'listing' in self.results:
       print
