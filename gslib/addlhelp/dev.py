@@ -125,7 +125,8 @@ _DETAILED_HELP_TEXT = ("""
         https://github.com/rietveld-codereview/rietveld
       - Run upload.py from your git directory with the changes.
       - Click the codereview.appspot.com link it generates, click "Edit Issue",
-        and add mfschwartz@google.com as a reviewer, and Cc gs-team@google.com.
+        and add mfschwartz@google.com and thobrla@google.com as reviewers, and
+        Cc gs-team@google.com.
       - Click Publish+Mail Comments.
       - Once your changes are accepted, submit a pull request on GitHub and we
         will merge your commits.
