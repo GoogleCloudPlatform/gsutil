@@ -30,6 +30,7 @@ from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.copy_helper import ItemExistsError
 from gslib.copy_helper import Manifest
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -649,6 +650,15 @@ _OPTIONS_TEXT = """
                  Note that if you download an object with Content-Encoding:gzip
                  gsutil will decompress the content before writing the local
                  file.
+
+  -Z             Applies gzip content-encoding to file uploads. This option
+                 works like the -z option described above, but it applies to
+                 all uploaded files, regardless of extension.
+
+                 Warning: If you use this option and some of the source files
+                 don't compress well (e.g., that's often true of binary data),
+                 this option may result in files taking up more space in the
+                 cloud than they would if left uncompressed.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
@@ -666,7 +676,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:AcDeIL:MNnprRtUvz:'
+CP_SUB_ARGS = 'a:AcDeIL:MNnprRtUvz:Z'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -989,7 +999,8 @@ class CpCommand(Command):
     self.skip_unsupported_objects = False
 
     # Files matching these extensions should be gzipped before uploading.
-    self.gzip_exts = []
+    gzip_arg_exts = None
+    gzip_arg_all = None
 
     test_callback_file = None
 
@@ -1035,7 +1046,9 @@ class CpCommand(Command):
         elif o == '-v':
           print_ver = True
         elif o == '-z':
-          self.gzip_exts = [x.strip() for x in a.split(',')]
+          gzip_arg_exts = [x.strip() for x in a.split(',')]
+        elif o == '-Z':
+          gzip_arg_all = GZIP_ALL_FILES
     if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
@@ -1044,6 +1057,11 @@ class CpCommand(Command):
           'The gsutil -m option is not supported with the cp -A flag, to '
           'ensure that object version ordering is preserved. Please re-run '
           'the command without the -m option.')
+    if gzip_arg_exts and gzip_arg_all:
+      raise CommandException(
+          'Specifying both the -z and -Z options together is invalid.')
+    self.gzip_exts = gzip_arg_exts or gzip_arg_all
+
     return CreateCopyHelperOpts(
         perform_mv=perform_mv,
         no_clobber=no_clobber,

@@ -202,6 +202,9 @@ ObjectFromTracker = namedtuple('ObjectFromTracker',
 # Chunk size to use while zipping/unzipping gzip files.
 GZIP_CHUNK_SIZE = 8192
 
+# Indicates that all files should be gzipped, in _UploadFileToObject
+GZIP_ALL_FILES = "GZIP_ALL_FILES"
+
 # Number of bytes to wait before updating a sliced download component tracker
 # file.
 TRACKERFILE_UPDATE_THRESHOLD = TEN_MIB
@@ -1549,6 +1552,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     command_obj: command object for use in Apply in parallel composite uploads.
     copy_exception_handler: For handling copy exceptions during Apply.
     gzip_exts: List of file extensions to gzip prior to upload, if any.
+               If gzip_exts is GZIP_ALL_FILES, gzip all files.
     allow_splitting: Whether to allow the file to be split into component
                      pieces for an parallel composite upload.
 
@@ -1569,7 +1573,8 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   upload_stream = src_obj_filestream
   upload_size = src_obj_size
   zipped_file = False
-  if gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts:
+  if (gzip_exts == GZIP_ALL_FILES or
+        (gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts)):
     upload_url, upload_size = _CompressFileForUpload(
         src_url, src_obj_filestream, src_obj_size, logger)
     upload_stream = open(upload_url.object_name, 'rb')
@@ -2635,7 +2640,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
                      pieces for an parallel composite upload or download.
     headers: optional headers to use for the copy operation.
     manifest: optional manifest for tracking copy operations.
-    gzip_exts: List of file extensions to gzip for uploads, if any.
+    gzip_exts: List of file extensions to gzip prior to upload, if any.
+               If gzip_exts is GZIP_ALL_FILES, gzip all files.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding
