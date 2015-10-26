@@ -39,7 +39,6 @@ from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
-from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
@@ -50,17 +49,6 @@ from gslib.util import UTF8
 
 
 LOGGER = logging.getLogger('integration-test')
-
-# Contents of boto config file that will tell gsutil not to override the real
-# error message with a warning about anonymous access if no credentials are
-# provided in the config file. Also, because we retry 401s, reduce the number
-# of retries so we don't go through a long exponential backoff in tests.
-BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING = """
-[Boto]
-num_retries = 2
-[Tests]
-bypass_anonymous_access_warning = True
-"""
 
 
 def SkipForGS(reason):
@@ -463,9 +451,27 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   @contextmanager
   def SetAnonymousBotoCreds(self):
-    boto_config_path = self.CreateTempFile(
-        contents=BOTO_CONFIG_CONTENTS_IGNORE_ANON_WARNING)
-    with SetBotoConfigFileForTest(boto_config_path):
+    # Tell gsutil not to override the real error message with a warning about
+    # anonymous access if no credentials are provided in the config file.
+    boto_config_for_test = [
+        ('Tests', 'bypass_anonymous_access_warning', 'True')]
+
+    # Also, maintain any custom host/port/API configuration, since we'll need
+    # to contact the same host when operating in a development environment.
+    for creds_config_key in (
+        'gs_host', 'gs_json_host', 'gs_post', 'gs_json_port'):
+      boto_config_for_test.append(
+          ('Credentials', creds_config_key,
+           boto.config.get('Credentials', creds_config_key, None)))
+    boto_config_for_test.append(
+        ('Boto', 'https_validate_certificates',
+         boto.config.get('Boto', 'https_validate_certificates', None)))
+    for api_config_key in ('json_api_version', 'prefer_api'):
+      boto_config_for_test.append(
+          ('GSUtil', api_config_key,
+           boto.config.get('GSUtil', api_config_key, None)))
+
+    with SetBotoConfigForTest(boto_config_for_test, use_existing_config=False):
       # Make sure to reset Developer Shell credential port so that the child
       # gsutil process is really anonymous.
       with SetEnvironmentForTest({'DEVSHELL_CLIENT_PORT': None}):

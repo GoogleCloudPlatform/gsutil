@@ -187,9 +187,9 @@ TEST_BOTO_REMOVE_SECTION = 'TestRemoveSection'
 def _SetBotoConfig(section, name, value, revert_list):
   """Sets boto configuration temporarily for testing.
 
-  SetBotoConfigForTest and SetBotoConfigFileForTest should be called by tests
-  instead of this function. Those functions will ensure that the configuration
-  is reverted to its original setting using _RevertBotoConfig.
+  SetBotoConfigForTest should be called by tests instead of this function.
+  This will ensure that the configuration is reverted to its original setting
+  using _RevertBotoConfig.
 
   Args:
     section: Boto config section to set
@@ -258,13 +258,53 @@ def SequentialAndParallelTransfer(func):
   return Wrapper
 
 
-@contextmanager
-def SetBotoConfigForTest(boto_config_list):
-  """Sets the input list of boto configs for the duration of a 'with' clause.
+def _SectionDictFromConfigList(boto_config_list):
+  """Converts the input config list to a dict that is easy to write to a file.
+
+  This is used to reset the boto config contents for a test instead of
+  preserving the existing values.
 
   Args:
     boto_config_list: list of tuples of:
-      (boto config section to set, boto config name to set, value to set)
+        (boto config section to set, boto config name to set, value to set)
+        If value to set is None, no entry is created.
+
+  Returns:
+    Dictionary of {section: {keys: values}} for writing to the file.
+  """
+  sections = {}
+  for config_entry in boto_config_list:
+    section, key, value = (config_entry[0], config_entry[1], config_entry[2])
+    if section not in sections:
+      sections[section] = {}
+    if value is not None:
+      sections[section][key] = value
+
+  return sections
+
+
+def _WriteSectionDictToFile(section_dict, tmp_filename):
+  """Writes a section dict from _SectionDictFromConfigList to tmp_filename."""
+  with open(tmp_filename, 'w') as tmp_file:
+    for section, key_value_pairs in section_dict.iteritems():
+      tmp_file.write('[%s]\n' % section)
+      for key, value in key_value_pairs.iteritems():
+        tmp_file.write('%s = %s\n' % (key, value))
+
+
+@contextmanager
+def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
+  """Sets the input list of boto configs for the duration of a 'with' clause.
+
+  This preserves any existing boto configuration unless it is overwritten in
+  the provided boto_config_list.
+
+  Args:
+    boto_config_list: list of tuples of:
+        (boto config section to set, boto config name to set, value to set)
+    use_existing_config: If True, apply boto_config_list to the existing
+        configuration, preserving any original values unless they are
+        overwritten. Otherwise, apply boto_config_list to a blank configuration.
 
   Yields:
     Once after config is set.
@@ -274,13 +314,17 @@ def SetBotoConfigForTest(boto_config_list):
   try:
     tmp_fd, tmp_filename = tempfile.mkstemp(prefix='gsutil-temp-cfg')
     os.close(tmp_fd)
-    for boto_config in boto_config_list:
-      _SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
-                     revert_configs)
-    with open(tmp_filename, 'w') as tmp_file:
-      boto.config.write(tmp_file)
+    if use_existing_config:
+      for boto_config in boto_config_list:
+        _SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
+                       revert_configs)
+      with open(tmp_filename, 'w') as tmp_file:
+        boto.config.write(tmp_file)
+    else:
+      _WriteSectionDictToFile(_SectionDictFromConfigList(boto_config_list),
+                              tmp_filename)
 
-    with SetBotoConfigFileForTest(tmp_filename):
+    with _SetBotoConfigFileForTest(tmp_filename):
       yield
   finally:
     _RevertBotoConfig(revert_configs)
@@ -315,8 +359,19 @@ def SetEnvironmentForTest(env_variable_dict):
 
 
 @contextmanager
-def SetBotoConfigFileForTest(boto_config_path):
-  """Sets a given file as the boto config file for a single test."""
+def _SetBotoConfigFileForTest(boto_config_path):
+  """Sets a given file as the boto config file for a single test.
+
+  This function applies only the configuration in boto_config_path and will
+  ignore existing configuration. It should not be called directly by tests;
+  instead, use SetBotoConfigForTest.
+
+  Args:
+    boto_config_path: Path to config file to use.
+
+  Yields:
+    When configuration has been applied, and again when reverted.
+  """
   # Setup for entering "with" block.
   try:
     old_boto_config_env_variable = os.environ['BOTO_CONFIG']

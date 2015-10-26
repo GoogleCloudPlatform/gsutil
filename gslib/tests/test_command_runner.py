@@ -35,7 +35,6 @@ from gslib.tab_complete import NoOpCompleter
 import gslib.tests.testcase as testcase
 import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
-from gslib.tests.util import SetBotoConfigFileForTest
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import GSUTIL_PUB_TARBALL
@@ -415,8 +414,8 @@ class TestCommandRunnerIntegrationTests(
   @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
   def test_lookup_version_without_credentials(self):
     """Tests that gsutil tarball version lookup works without credentials."""
-    with SetBotoConfigFileForTest(self.CreateTempFile(
-        contents='[GSUtil]\nsoftware_update_check_period=1')):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')],
+                              use_existing_config=False):
       self.command_runner = command_runner.CommandRunner()
       # Looking up software version shouldn't get auth failure exception.
       self.command_runner.RunNamedCommand('ls', [GSUTIL_PUB_TARBALL])
