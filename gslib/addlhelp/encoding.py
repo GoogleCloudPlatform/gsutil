@@ -63,6 +63,30 @@ _DETAILED_HELP_TEXT = ("""
   requirement applies only to filenames.
 
 
+<B>USING UNICODE FILENAMES ON WINDOWS</B>
+  Windows support for Unicode in the command shell (cmd.exe or powershell) is
+  somewhat painful, because Windows uses a Windows-specific character encoding
+  called `cp1252 <https://en.wikipedia.org/wiki/Windows-1252>`_. To use Unicode
+  characters you need to run this command in the command shell before the first
+  time you use gsutil in that shell:
+
+    chcp 65001
+
+  If you neglect to do this before using gsutil, the progress messages while
+  uploading files with Unicode names or listing buckets with Unicode object
+  names will look garbled (i.e., with different glyphs than you expect in the
+  output). If you simply run the chcp command and re-run the gsutil command, the
+  output should no longer look garbled.
+
+  gsutil attempts to translate between cp1252 encoding and UTF-8 in the main
+  places that Unicode encoding/decoding problems have been encountered to date
+  (traversing the local file system while uploading files, and printing Unicode
+  names while listing buckets). However, because gsutil must perform
+  translation, it is likely there are other erroneous edge cases when using
+  Windows with Unicode. If you encounter problems, you might consider instead
+  using cygwin (on Windows) or Linux or MacOS - all of which support Unicode.
+
+
 <B>CROSS-PLATFORM ENCODING PROBLEMS OF WHICH TO BE AWARE</B>
   Using UTF-8 for all object names and filenames will ensure that gsutil doesn't
   encounter character encoding errors while operating on the files.

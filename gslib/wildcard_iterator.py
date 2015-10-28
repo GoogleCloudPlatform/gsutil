@@ -35,6 +35,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
 from gslib.storage_url import WILDCARD_REGEX
 from gslib.translation_helper import GenerationFromUrlAndString
+from gslib.util import FixWindowsEncodingIfNeeded
 from gslib.util import UTF8
 
 
@@ -549,7 +550,8 @@ class FileWildcardIterator(WildcardIterator):
     for dirpath, unused_dirnames, filenames in os.walk(directory.encode(UTF8)):
       for f in fnmatch.filter(filenames, wildcard):
         try:
-          yield os.path.join(dirpath, f).decode(UTF8)
+          yield os.path.join(dirpath,
+                             FixWindowsEncodingIfNeeded(f)).decode(UTF8)
         except UnicodeDecodeError:
           # Note: We considered several ways to deal with this, but each had
           # problems:

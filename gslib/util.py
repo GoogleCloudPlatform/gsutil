@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import collections
 import errno
+import locale
 import logging
 import math
 import multiprocessing
@@ -59,6 +60,9 @@ IS_CYGWIN = 'cygwin' in PLATFORM
 IS_LINUX = 'linux' in PLATFORM
 IS_OSX = 'darwin' in PLATFORM
 
+UTF8 = 'utf-8'
+WINDOWS_1252 = 'cp1252'
+
 # pylint: disable=g-import-not-at-top
 if IS_WINDOWS:
   from ctypes import c_int
@@ -69,6 +73,9 @@ if IS_WINDOWS:
   from ctypes import POINTER
   from ctypes import WINFUNCTYPE
   from ctypes import WinError
+  IS_CP1252 = locale.getdefaultlocale()[1] == WINDOWS_1252
+else:
+  IS_CP1252 = False
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -109,8 +116,6 @@ XML_PROGRESS_CALLBACKS = 10
 MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MiB
 
 NO_MAX = sys.maxint
-
-UTF8 = 'utf-8'
 
 VERSION_MATCHER = re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?')
 
@@ -1164,6 +1169,28 @@ def GetTermLines():
   if not ioc:
     ioc = os.environ.get('LINES', _DEFAULT_LINES)
   return int(ioc)
+
+
+def FixWindowsEncodingIfNeeded(str):
+  """Attempts to detect Windows CP1252 encoding and convert to UTF8.
+
+  Windows doesn't provide a way to set UTF-8 for string encodings; you can set
+  the system locale (see
+  http://windows.microsoft.com/en-us/windows/change-system-locale#1TC=windows-7)
+  but that takes you to a "Change system locale" dropdown that just lists
+  languages (e.g., "English (United States)". Instead, we're forced to check if
+  a encoding as UTF8 raises an exception and if so, try converting from CP1252
+  to Unicode.
+
+  Args:
+    str: The input string.
+  Returns:
+    The converted string (or the original, if conversion wasn't needed).
+  """
+  if IS_CP1252:
+    return str.decode(WINDOWS_1252).encode(UTF8)
+  else:
+    return str
 
 
 class GsutilStreamHandler(logging.StreamHandler):

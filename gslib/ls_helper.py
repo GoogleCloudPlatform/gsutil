@@ -20,6 +20,7 @@ import fnmatch
 
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.util import IS_WINDOWS
 from gslib.util import UTF8
 from gslib.wildcard_iterator import StorageUrlFromString
 
@@ -80,7 +81,13 @@ def PrintObject(bucket_listing_ref):
   Returns:
     (num_objects, num_bytes).
   """
-  print bucket_listing_ref.url_string.encode(UTF8)
+  try:
+    print bucket_listing_ref.url_string.encode(UTF8)
+  except IOError as e:
+    # Windows throws an IOError 0 here for object names containing Unicode
+    # chars. Ignore it.
+    if not (IS_WINDOWS and e.errno == 0):
+      raise
   return (1, 0)
 
 
