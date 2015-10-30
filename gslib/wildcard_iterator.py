@@ -220,6 +220,17 @@ class CloudWildcardIterator(WildcardIterator):
                             self.all_versions or single_version_request))
             else:  # CloudApi.CsObjectOrPrefixType.PREFIX
               prefix = obj_or_prefix.data
+
+              if ContainsWildcard(prefix):
+                # TODO: Disambiguate user-supplied strings from iterated
+                # prefix and object names so that we can better reason
+                # about wildcards and handle this case without raising an error.
+                raise CommandException(
+                    'Cloud folder %s%s contains a wildcard; gsutil does '
+                    'not currently support objects with wildcards in their '
+                    'name.'
+                    % (bucket_url_string, prefix))
+
               # If the prefix ends with a slash, remove it.  Note that we only
               # remove one slash so that we can successfully enumerate dirs
               # containing multiple slashes.

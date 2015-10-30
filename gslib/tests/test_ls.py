@@ -450,6 +450,30 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # removed.
     self.assertIn(suri(bucket_uri) + '//', stdout)
 
+  def test_wildcard_prefix(self):
+    """Tests that an object name with a wildcard does not infinite loop."""
+    bucket_uri = self.CreateBucket()
+    wildcard_folder_object = 'wildcard*/'
+    object_matching_folder = 'wildcard10/foo'
+    self.CreateObject(bucket_uri=bucket_uri, object_name=wildcard_folder_object,
+                      contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, object_name=object_matching_folder,
+                      contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 2)
+    stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Cloud folder %s%s contains a wildcard' %
+                  (suri(bucket_uri), '/wildcard*/'), stderr)
+
+    # Listing with a flat wildcard should still succeed.
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri, '**')],
+                              return_stdout=True)
+      self.assertNumLines(stdout, 3)  # 2 object lines, one summary line.
+    _Check()
+
   @SkipForS3('S3 anonymous access is not supported.')
   def test_get_object_without_list_bucket_permission(self):
     # Bucket is not publicly readable by default.
