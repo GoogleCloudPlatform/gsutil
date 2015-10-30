@@ -290,7 +290,15 @@ _DETAILED_HELP_TEXT = ("""
                 what would be copied or deleted without actually doing any
                 copying/deleting.
 
-  -p            Causes ACLs to be preserved when synchronizing in the cloud.
+  -p            Causes ACLs to be preserved when objects are copied. Note that
+                rsync will decide whether or not to perform a copy based only
+                on object size and checksum, not current ACL state. Thus, if
+                the source and destination differ in size or checksum and you
+                run gsutil rsync -p, the file will be copied and ACL preserved.
+                However, if the source and destination don't differ in size or
+                checksum but have different ACLs, running gsutil rsync -p will
+                have no effect.
+
                 Note that this option has performance and cost implications when
                 using the XML API, as it requires separate HTTP calls for
                 interacting with ACLs. The performance issue can be mitigated to
