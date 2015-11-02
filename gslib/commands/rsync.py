@@ -647,7 +647,7 @@ def _BatchSort(in_iter, out_file):
       output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
                              mode='w+', encoding=UTF8)
       chunk_files.append(output_chunk)
-      output_chunk.writelines(unicode(''.join(current_chunk)))
+      output_chunk.write(unicode(''.join(current_chunk)))
       output_chunk.flush()
       output_chunk.seek(0)
     out_file.writelines(heapq.merge(*chunk_files))
