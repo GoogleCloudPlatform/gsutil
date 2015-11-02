@@ -467,7 +467,8 @@ class HttpWithDownloadStream(httplib2.Http):
   def stream(self, value):
     self._stream = value
 
-  def _conn_request(self, conn, request_uri, method, body, headers):  # pylint: disable=too-many-statements
+  # pylint: disable=too-many-statements
+  def _conn_request(self, conn, request_uri, method, body, headers):
     try:
       if hasattr(conn, 'sock') and conn.sock is None:
         conn.connect()
@@ -504,40 +505,43 @@ class HttpWithDownloadStream(httplib2.Http):
       if method == 'HEAD':
         conn.close()
         response = httplib2.Response(response)
-      else:
-        if response.status in (httplib.OK, httplib.PARTIAL_CONTENT):
-          content_length = None
-          if hasattr(response, 'msg'):
-            content_length = response.getheader('content-length')
-          http_stream = response
-          bytes_read = 0
-          while True:
-            new_data = http_stream.read(TRANSFER_BUFFER_SIZE)
-            if new_data:
-              if self.stream is None:
-                raise apitools_exceptions.InvalidUserInputError(
-                    'Cannot exercise HttpWithDownloadStream with no stream')
-              self.stream.write(new_data)
-              bytes_read += len(new_data)
-            else:
-              break
+      elif method == 'GET' and response.status in (httplib.OK,
+                                                   httplib.PARTIAL_CONTENT):
+        content_length = None
+        if hasattr(response, 'msg'):
+          content_length = response.getheader('content-length')
+        http_stream = response
+        bytes_read = 0
+        while True:
+          new_data = http_stream.read(TRANSFER_BUFFER_SIZE)
+          if new_data:
+            if self.stream is None:
+              raise apitools_exceptions.InvalidUserInputError(
+                  'Cannot exercise HttpWithDownloadStream with no stream')
+            self.stream.write(new_data)
+            bytes_read += len(new_data)
+          else:
+            break
 
-          if (content_length is not None and
-              long(bytes_read) != long(content_length)):
-            # The input stream terminated before we were able to read the
-            # entire contents, possibly due to a network condition. Set
-            # content-length to indicate how many bytes we actually read.
-            self._logger.log(
-                logging.DEBUG, 'Only got %s bytes out of content-length %s '
-                'for request URI %s. Resetting content-length to match '
-                'bytes read.', bytes_read, content_length, request_uri)
-            response.msg['content-length'] = str(bytes_read)
-          response = httplib2.Response(response)
-        else:
-          # We fall back to the current httplib2 behavior if we're
-          # not processing bytes (eg it's a redirect).
-          content = response.read()
-          response = httplib2.Response(response)
-          # pylint: disable=protected-access
-          content = httplib2._decompressContent(response, content)
+        if (content_length is not None and
+            long(bytes_read) != long(content_length)):
+          # The input stream terminated before we were able to read the
+          # entire contents, possibly due to a network condition. Set
+          # content-length to indicate how many bytes we actually read.
+          self._logger.log(
+              logging.DEBUG, 'Only got %s bytes out of content-length %s '
+              'for request URI %s. Resetting content-length to match '
+              'bytes read.', bytes_read, content_length, request_uri)
+          response.msg['content-length'] = str(bytes_read)
+        response = httplib2.Response(response)
+      else:
+        # We fall back to the current httplib2 behavior if we're
+        # not processing download bytes, e.g., it's a redirect, an
+        # oauth2client POST to refresh an access token, or any HTTP
+        # status code that doesn't include object content.
+        content = response.read()
+        response = httplib2.Response(response)
+        # pylint: disable=protected-access
+        content = httplib2._decompressContent(response, content)
     return (response, content)
+  # pylint: enable=too-many-statements
