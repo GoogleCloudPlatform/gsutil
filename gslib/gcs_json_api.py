@@ -240,8 +240,7 @@ class GcsJsonApi(CloudApi):
     self.global_params = apitools_messages.StandardQueryParameters(
         trace='token:%s' % trace_token) if trace_token else None
     additional_http_headers = {}
-    if perf_trace_token:
-      additional_http_headers['cookie'] = perf_trace_token
+    self._AddPerfTraceTokenToHeaders(additional_http_headers)
 
     self.api_client = apitools_client.StorageV1(
         url=self.url_base, http=self.http, log_request=log_request,
@@ -256,6 +255,10 @@ class GcsJsonApi(CloudApi):
       # anonymous requests.
       self.api_client.AddGlobalParam('key',
                                      u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
+
+  def _AddPerfTraceTokenToHeaders(self, headers):
+    if self.perf_trace_token:
+      headers['cookie'] = self.perf_trace_token
 
   def _CheckAndGetCredentials(self, logger):
     configured_cred_types = []
@@ -812,6 +815,7 @@ class GcsJsonApi(CloudApi):
         'accept-encoding': 'gzip',
         'user-agent': self.api_client.user_agent
     }
+    self._AddPerfTraceTokenToHeaders(additional_headers)
 
     if start_byte or end_byte is not None:
       apitools_download.GetRange(additional_headers=additional_headers,
@@ -912,6 +916,7 @@ class GcsJsonApi(CloudApi):
     additional_headers = {
         'user-agent': self.api_client.user_agent
     }
+    self._AddPerfTraceTokenToHeaders(additional_headers)
 
     try:
       content_type = None
