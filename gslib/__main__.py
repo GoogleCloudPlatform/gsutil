@@ -523,7 +523,7 @@ def _CheckAndHandleCredentialException(e, args):
 def _RunNamedCommandAndHandleExceptions(
     command_runner, command_name, args=None, headers=None, debug_level=0,
     trace_token=None, parallel_operations=False, perf_trace_token=None):
-  """Runs the command with the given command runner and arguments."""
+  """Runs the command and handles common exceptions."""
   # pylint: disable=g-import-not-at-top
   from gslib.util import GetConfigFilePath
   from gslib.util import IS_WINDOWS
@@ -605,6 +605,14 @@ def _RunNamedCommandAndHandleExceptions(
           'upload a large object you might retry with a small (say 200k) '
           'object, and see if you get a more specific error code.'
       )
+    elif e.args[0] == errno.ECONNRESET and ' '.join(args).contains('s3://'):
+      _OutputAndExit('\n'.join(textwrap.wrap(
+          'Got a "Connection reset by peer" error. One way this can happen is '
+          'when copying data to/from an S3 regional bucket. If you are using a '
+          'regional S3 bucket you could try re-running this command using the '
+          'regional S3 endpoint, for example '
+          's3://s3-<region>.amazonaws.com/your-bucket. For details about this '
+          'problem see https://github.com/boto/boto/issues/2207')))
     else:
       _HandleUnknownFailure(e)
   except Exception as e:
