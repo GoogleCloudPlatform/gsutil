@@ -1285,7 +1285,12 @@ class BotoTranslation(CloudApi):
       size = key.size or 0
     storage_class = None
     if not fields or 'storageClass' in fields:
-      storage_class = getattr(key, 'storage_class', None)
+      # TODO: Scrub all callers requesting the storageClass field and then
+      # revert this to storage_class; the base storage_class
+      # attribute calls GET on the bucket if the storage class is not already
+      # populated in the key, which can fail if the user does not have
+      # permission on the bucket.
+      storage_class = getattr(key, '_storage_class', None)
 
     cloud_api_object = apitools_messages.Object(
         bucket=key.bucket.name,
