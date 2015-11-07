@@ -41,7 +41,7 @@ class TestAclBase(testcase.GsUtilIntegrationTestCase):
   _set_defacl_prefix = ['defacl', 'set']
   _ch_acl_prefix = ['acl', 'ch']
 
-  _project_team = 'editors'
+  _project_team = 'viewers'
   _project_test_acl = '%s-%s' % (_project_team, PopulateProjectId())
 
 
