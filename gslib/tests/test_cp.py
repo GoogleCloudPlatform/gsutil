@@ -1399,6 +1399,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           stdin='a' * 512 * ONE_KIB, return_stderr=1)
       self.assertIn('Retrying', stderr)
 
+  @SkipForS3('preserve_acl flag not supported for S3.')
+  def test_cp_preserve_no_owner(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    # Anonymous user can read the object and write to the bucket, but does
+    # not own the object.
+    self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:R', suri(object_uri)])
+    self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:W', suri(bucket_uri)])
+    with self.SetAnonymousBotoCreds():
+      stderr = self.RunGsUtil(['cp', '-p', suri(object_uri),
+                               suri(bucket_uri, 'foo')],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('OWNER permission is required for preserving ACLs', stderr)
+
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload(self):
     """Tests that a basic resumable upload completes successfully."""

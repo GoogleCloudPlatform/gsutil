@@ -203,7 +203,7 @@ ObjectFromTracker = namedtuple('ObjectFromTracker',
 GZIP_CHUNK_SIZE = 8192
 
 # Indicates that all files should be gzipped, in _UploadFileToObject
-GZIP_ALL_FILES = "GZIP_ALL_FILES"
+GZIP_ALL_FILES = 'GZIP_ALL_FILES'
 
 # Number of bytes to wait before updating a sliced download component tracker
 # file.
@@ -1574,7 +1574,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   upload_size = src_obj_size
   zipped_file = False
   if (gzip_exts == GZIP_ALL_FILES or
-        (gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts)):
+         (gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts)):
     upload_url, upload_size = _CompressFileForUpload(
         src_url, src_obj_filestream, src_obj_size, logger)
     upload_stream = open(upload_url.object_name, 'rb')
@@ -2721,6 +2721,10 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     src_obj_size = src_obj_metadata.size
     dst_obj_metadata.contentType = src_obj_metadata.contentType
     if global_copy_helper_opts.preserve_acl:
+      if src_url.scheme == 'gs' and not src_obj_metadata.acl:
+        raise CommandException(
+            'No OWNER permission found for object %s. OWNER permission is '
+            'required for preserving ACLs.' % src_url)
       dst_obj_metadata.acl = src_obj_metadata.acl
       # Special case for S3-to-S3 copy URLs using
       # global_copy_helper_opts.preserve_acl.
