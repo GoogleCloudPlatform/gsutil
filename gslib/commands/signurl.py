@@ -102,7 +102,11 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>OPTIONS</B>
   -m          Specifies the HTTP method to be authorized for use
-              with the signed url, default is GET.
+              with the signed url, default is GET. You may also specify
+              RESUMABLE to create a signed resumable upload start URL. When
+              using a signed URL to start a resumable upload session, you will
+              need to specify the 'x-goog-resumable:start' header in the
+              request or else signature validation will fail.
 
   -d          Specifies the duration that the signed url should be valid
               for, default duration is 1 hour.
@@ -169,9 +173,16 @@ def _GenSignedUrl(key, client_id, method, md5,
   """Construct a string to sign with the provided key and returns \
   the complete url."""
 
-  tosign = ('{0}\n{1}\n{2}\n{3}\n/{4}'
+  if method == 'RESUMABLE':
+    method = 'POST'
+    canonicalized_resource = 'x-goog-resumable:start\n/{0}'.format(
+        gcs_path)
+  else:
+    canonicalized_resource = '/{0}'.format(gcs_path)
+
+  tosign = ('{0}\n{1}\n{2}\n{3}\n{4}'
             .format(method, md5, content_type,
-                    expiration, gcs_path))
+                    expiration, canonicalized_resource))
   signature = base64.b64encode(sign(key, tosign, 'RSA-SHA256'))
 
   final_url = ('https://storage.googleapis.com/{0}?'
@@ -285,8 +296,9 @@ class UrlSignCommand(Command):
       delta = timedelta(hours=1)
 
     expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
-    if method not in ['GET', 'PUT', 'DELETE', 'HEAD']:
-      raise CommandException('HTTP method must be one of [GET|HEAD|PUT|DELETE]')
+    if method not in ['GET', 'PUT', 'DELETE', 'HEAD', 'RESUMABLE']:
+      raise CommandException('HTTP method must be one of'
+                             '[GET|HEAD|PUT|DELETE|RESUMABLE]')
 
     return method, expiration, content_type, passwd
 
