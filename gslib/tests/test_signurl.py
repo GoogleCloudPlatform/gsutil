@@ -193,6 +193,25 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
         'test/test.txt')
     self.assertEquals(expected, signed_url)
 
+  def testSignResumable(self):
+    """Tests the return value of the _GenSignedUrl function with \
+    a resumable uploadmethod."""
+    expected = ('https://storage.googleapis.com/test/test.txt?'
+                'GoogleAccessId=test@developer.gserviceaccount.com'
+                '&Expires=1391816302&Signature=UjGs%2FBkE910Twb3Pqt0%2Fq49yNm9'
+                'xykmFYICOdgmdOxbiFtyjwrp%2FsjNgnu42UXuikzRVtM02nHyy8ZebWUome6'
+                '6Vkk7CKQNndDL3sdJD7ErqVTU2DjOH0ZMhmFIxqAwLnShdMDnE%2FhV7iTeF8'
+                'XjsM49IMxMvJiDuclzmxg4aJkkdrpodduxY8dtta1BKMWKjESzKn7nYxZcU06'
+                'iRhWN76OyH7RtRA4SpO5SDdepzsD5TPzAKmPQKLBTlcHkRbx3FE7ZDFJ5hF1L'
+                'ilSRr3GgD7E4kRFD3ybYuBQYEJJN5SIlpWw2n3De5QetxMGq6a%2FzkwA1zdc'
+                'WHCbL%2FVAmHkfuDJg%3D%3D')
+
+    expiration = 1391816302
+    signed_url = gslib.commands.signurl._GenSignedUrl(
+        self.key, self.client_email, 'RESUMABLE', '', '', expiration,
+        'test/test.txt')
+    self.assertEquals(expected, signed_url)
+
   def testSignurlPutContentype(self):
     """Tests the return value of the _GenSignedUrl function with \
     a PUT method and specified content type."""
