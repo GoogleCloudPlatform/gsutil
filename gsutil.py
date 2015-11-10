@@ -66,7 +66,6 @@ THIRD_PARTY_LIBS = [
     ('boto', ''),
     ('gcs-oauth2-boto-plugin', ''),
     ('httplib2', 'python2'),
-    ('protorpc', ''),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''),
