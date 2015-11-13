@@ -129,6 +129,8 @@ class DaisyChainWrapper(object):
     self.src_obj_size = src_obj_size
     self.src_url = src_url
     self.compressed_encoding = compressed_encoding
+    self.decryption_tuple = CryptoTupleFromKey(decryption_key)
+
 
     # This is safe to use the upload and download thread because the download
     # thread calls only GetObjectMedia, which creates a new HTTP connection
@@ -141,11 +143,11 @@ class DaisyChainWrapper(object):
     self.download_exception = None
     self.download_thread = None
     self.progress_callback = progress_callback
-    self.thread_started = threading.Event()
+    self.download_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
     # Python 2.6 will return None on timeout.
-    if self.thread_started.wait(60) == False:
+    if self.download_started.wait(60) == False:
       raise Exception('Could not start download thread after 60 seconds.')
 
   def StartDownloadThread(self, start_byte=0, progress_callback=None):
@@ -168,6 +170,7 @@ class DaisyChainWrapper(object):
       # TODO: Support resumable downloads. This would require the BufferWrapper
       # object to support seek() and tell() which requires coordination with
       # the upload.
+      self.download_started.set()
       try:
         while start_byte + self._download_chunk_size < self.src_obj_size:
           self.gsutil_api.GetObjectMedia(
@@ -204,7 +207,6 @@ class DaisyChainWrapper(object):
         target=PerformDownload,
         args=(start_byte, progress_callback))
     self.download_thread.start()
-    self.thread_started.wait()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
     """Exposes a stream from the in-memory buffer to the upload."""

@@ -28,7 +28,7 @@ from gslib.wildcard_iterator import StorageUrlFromString
 
 ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
 UNENCRYPTED_FULL_LISTING_FIELDS = [
-    'cacheControl', 'componentCount', 'contentDisposition',
+    'acl', 'cacheControl', 'componentCount', 'contentDisposition',
     'contentEncoding', 'contentLanguage', 'contentType',
     'customerEncryption', 'etag', 'generation', 'metadata',
     'metageneration', 'size', 'updated']

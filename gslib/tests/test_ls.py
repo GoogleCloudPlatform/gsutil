@@ -50,7 +50,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY3
 from gslib.tests.util import TEST_ENCRYPTION_KEY3_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY4
 from gslib.tests.util import TEST_ENCRYPTION_KEY4_SHA256_B64
-
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -419,6 +418,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertIn(key_uri.version_id, stdout)
       self.assertIn(key_uri.get_key().etag.strip('"\''), stdout)
 
+  def test_list_acl(self):
+    """Tests that long listing includes an ACL."""
+    key_uri = self.CreateObject(contents='foo')
+    stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
+    self.assertIn('ACL:', stdout)
+    self.assertNotIn('ACCESS DENIED', stdout)
+
   def test_list_gzip_content_length(self):
     """Tests listing a gzipped object."""
     file_size = 10000
@@ -515,6 +521,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('S3 customer-supplied encryption keys are not supported.')
   def test_list_encrypted_object(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'gsutil does not support encryption with the XML API')
     object_uri = self.CreateObject(object_name='foo',
                                    contents=TEST_ENCRYPTION_CONTENT1,
                                    encryption_key=TEST_ENCRYPTION_KEY1)

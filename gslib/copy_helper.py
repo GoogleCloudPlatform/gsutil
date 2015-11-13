@@ -511,8 +511,8 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     source and source is a stream.
   """
   if _ShouldTreatDstUrlAsSingleton(
-      have_multiple_srcs, have_existing_dest_subdir, exp_dst_url,
-      recursion_requested):
+      src_url_names_container, have_multiple_srcs, have_existing_dest_subdir,
+      exp_dst_url, recursion_requested):
     # We're copying one file or object to one file or object.
     return exp_dst_url
 
@@ -947,6 +947,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   # uploaded.
   tracker_file_name = GetTrackerFilePath(
       dst_url, TrackerFileType.PARALLEL_UPLOAD, api_selector, src_url)
+
   (existing_enc_key_sha256, existing_prefix, existing_components) = (
       ReadParallelUploadTrackerFile(tracker_file_name, logger))
 
@@ -954,8 +955,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   # perform any necessary cleanup.
   (existing_prefix, existing_components) = ValidateParallelCompositeTrackerData(
       tracker_file_name, existing_enc_key_sha256, existing_prefix,
-      existing_components, encryption_key_sha256, command_obj, logger,
-      _DeleteTempComponentObjectFn, _RmExceptionHandler)
+      existing_components, encryption_key_sha256, dst_bucket_url, command_obj,
+      logger, _DeleteTempComponentObjectFn, _RmExceptionHandler)
 
   random_prefix = (existing_prefix if existing_prefix is not None else
                    GenerateComponentObjectPrefix(
@@ -2624,12 +2625,13 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
       progress_callback = pickle.loads(test_fp.read()).call
 
   compressed_encoding = ObjectIsGzipEncoded(src_obj_metadata)
+  encryption_tuple = GetEncryptionTuple()
 
   start_time = time.time()
   upload_fp = DaisyChainWrapper(
       src_url, src_obj_metadata.size, gsutil_api,
       compressed_encoding=compressed_encoding,
-      progress_callback=progress_callback, decryption_key=decryption_key))
+      progress_callback=progress_callback, decryption_key=decryption_key)
   uploaded_object = None
   if src_obj_metadata.size == 0:
     # Resumable uploads of size 0 are not supported.

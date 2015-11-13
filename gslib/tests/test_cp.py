@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import base64
 import binascii
 import datetime
+from hashlib import md5
 import httplib
 import logging
 import os
@@ -42,6 +43,8 @@ from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.copy_helper import GetTrackerFilePath
+from gslib.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
+from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
 from gslib.gcs_json_api import GcsJsonApi
@@ -1724,29 +1727,45 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_url = StorageUrlFromString(suri(bucket_uri, 'foo'))
 
     file_contents = 'foobar'
-    source_file = self.CreateTempFile(contents=file_contents, file_name='foo')
+    source_file = self.CreateTempFile(
+        contents=file_contents, file_name=file_contents)
     src_url = StorageUrlFromString(source_file)
 
-    # Simulate an upload that had occurred by writing a tracker file.
+    # Simulate an upload that had occurred by writing a tracker file
+    # that points to a previously uploaded component.
     tracker_file_name = GetTrackerFilePath(
         dst_url, TrackerFileType.PARALLEL_UPLOAD, self.test_api, src_url)
     tracker_prefix = '123'
-    existing_component_name = 'foo_1'
+
+    # Create component 0 to be used in the resume; it must match the name
+    # that will be generated in copy_helper, so we use the same scheme.
+    encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + source_file).encode(UTF8)
+    content_md5 = md5()
+    content_md5.update(encoded_name)
+    digest = content_md5.hexdigest()
+    component_object_name = (tracker_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
+                             digest + '_0')
+
+    component_size = 3
     object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo_1',
-        contents='foo', encryption_key=TEST_ENCRYPTION_KEY1)
-    existing_component = ObjectFromTracker(existing_component_name,
+        bucket_uri=bucket_uri, object_name=component_object_name,
+        contents=file_contents[:component_size],
+        encryption_key=TEST_ENCRYPTION_KEY1)
+    existing_component = ObjectFromTracker(component_object_name,
                                            str(object_uri.generation))
     existing_components = [existing_component]
     enc_key_sha256 = TEST_ENCRYPTION_KEY1_SHA256_B64
+
     WriteParallelUploadTrackerFile(
-        tracker_file_name, tracker_prefix, existing_components, enc_key_sha256)
+        tracker_file_name, tracker_prefix, existing_components,
+        encryption_key_sha256=enc_key_sha256)
 
     try:
       # Now "resume" the upload using the original encryption key.
       with SetBotoConfigForTest([
           ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-          ('GSUtil', 'parallel_composite_upload_component_size', '3'),
+          ('GSUtil', 'parallel_composite_upload_component_size',
+           str(component_size)),
           ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]):
         stderr = self.RunGsUtil(['cp', source_file, suri(bucket_uri, 'foo')],
                                 return_stderr=True)
@@ -1754,7 +1773,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertFalse(
             os.path.exists(tracker_file_name),
             'Tracker file %s should have been deleted.' % tracker_file_name)
-        read_contents = self.RunGsutil(['cat', suri(bucket_uri, 'foo')],
+        read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
         self.assertEqual(read_contents, file_contents)
     finally:
@@ -1803,7 +1822,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertFalse(
             os.path.exists(tracker_file_name),
             'Tracker file %s should have been deleted.' % tracker_file_name)
-        read_contents = self.RunGsutil(['cat', suri(bucket_uri, 'foo')],
+        read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
         self.assertEqual(read_contents, file_contents)
     finally:
@@ -1919,7 +1938,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   def test_cp_resumable_encrypted_download_key_rotation(self):
-    """Tests that an download resumes with a rotated encryption key."""
+    """Tests that a download restarts with a rotated encryption key."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
@@ -1953,14 +1972,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest(boto_config_for_test2):
       self.RunGsUtil(['rewrite', '-k', suri(object_uri)])
 
-    # Now resume the download using only the new encryption key.
+    # Now resume the download using only the new encryption key. Since its
+    # generation changed, we must restart it.
     boto_config_for_test3 = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
         ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2)]
     with SetBotoConfigForTest(boto_config_for_test3):
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
-      self.assertIn('Resuming download', stderr)
+      self.assertIn('Restarting download', stderr)
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
 

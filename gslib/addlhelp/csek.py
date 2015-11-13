@@ -38,6 +38,10 @@ _DETAILED_HELP_TEXT = ("""
   Each key is a RFC 4648 Base64-encoded string of 256 bits of data for use
   with the AES256 encryption algorithm.
 
+  Note: As of 2016 Mar 03, the customer-supplied encryption key feature is
+  currently in beta, and is not covered by any SLA or deprecation policy and
+  may be subject to backward-incompatible changes.
+
 
 <B>ENCRYPTION BEHAVIOR</B>
   A single encryption_key may be specified in the .boto configuration file,
@@ -150,13 +154,6 @@ _DETAILED_HELP_TEXT = ("""
   gsutil does not support using the XML API to interact with encrypted objects,
   and will use the JSON API if any encryption_key or decryption_keys are
   specified in configuration.
-
-
-<B>ALPHA RELEASE</B>
-  Customer-supplied encryption key support is an Alpha release. This feature
-  might be changed in backward-incompatible ways before the General Availability
-  release and is not yet recommended for production use. It is not subject to
-  any SLAs or deprecation policy.
 """)
 
 
@@ -165,8 +162,9 @@ class CommandOptions(HelpProvider):
 
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
-      help_name='encryption',
-      help_name_aliases=['encrypt', 'decrypt', 'csk'],
+      help_name='csek',
+      help_name_aliases=['decrypt', 'decryption', 'encrypt', 'encryption',
+                         'csk'],
       help_type='additional_help',
       help_one_line_summary='Supplying Your Own Encryption Keys',
       help_text=_DETAILED_HELP_TEXT,

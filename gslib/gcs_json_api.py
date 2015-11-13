@@ -877,6 +877,7 @@ class GcsJsonApi(CloudApi):
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream,
       provider=None, generation=None, object_size=None,
+      compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT, start_byte=0,
       end_byte=None, progress_callback=None, serialization_data=None,
       digesters=None, decryption_tuple=None):
@@ -1032,7 +1033,8 @@ class GcsJsonApi(CloudApi):
     # Since bytes_http is created in this function, we don't get the
     # user-agent header from api_client's http automatically.
     additional_headers = {
-        'user-agent': self.api_client.user_agent
+        'user-agent': self.api_client.user_agent,
+        'accept-encoding': 'gzip'
     }
     AddAcceptEncodingGzipIfNeeded(additional_headers,
                                   compressed_encoding=compressed_encoding)

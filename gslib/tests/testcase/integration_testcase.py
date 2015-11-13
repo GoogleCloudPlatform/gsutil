@@ -193,6 +193,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         (object_uri_str, Base64Sha256FromBase64EncryptionKey(encryption_key),
          stdout))
 
+  def AssertObjectUnencrypted(self, object_uri_str):
+    stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+    self.assertNotIn('Encryption key SHA256', stdout)
+
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
                    provider=None, prefer_json_api=False):
     """Creates a test bucket.
@@ -303,10 +307,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       # Need to update the StorageUri with the correct values while
       # avoiding creating a versioned string.
 
-      # TODO(thobrla): There is a service bug in CSK that does not return the
-      # hash; return this to its original form once that is fixed.
-      md5 = None if encryption_key else (Base64ToHexHash(json_object.md5Hash),
-                                         json_object.md5Hash.strip('\n"\''))
+      md5 = (Base64ToHexHash(json_object.md5Hash),
+             json_object.md5Hash.strip('\n"\''))
       object_uri._update_from_values(None,
                                      json_object.generation,
                                      True,

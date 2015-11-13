@@ -55,12 +55,18 @@ class EnsureRewriteRestartCallbackHandler(object):
 
   def __init__(self, required_byte):
     self._required_byte = required_byte
+    self._got_restart_bytes = False
 
   # pylint: disable=invalid-name
   def call(self, total_bytes_rewritten, unused_total_size):
     """Exits if the total bytes rewritten is greater than expected."""
-    if total_bytes_rewritten > self._required_byte:
-      raise RewriteHaltException(
-          'Rewrite did not restart; %s bytes written, but no more than %s '
-          'bytes should have already been written.' % (total_bytes_rewritten,
-                                                       self._required_byte))
+    if not self._got_restart_bytes:
+      if total_bytes_rewritten <= self._required_byte:
+        # Restarted successfully, so future calls are allowed to rewrite the
+        # rest of the bytes.
+        self._got_restart_bytes = True
+      else:
+        raise RewriteHaltException(
+            'Rewrite did not restart; %s bytes written, but no more than %s '
+            'bytes should have already been written.' % (total_bytes_rewritten,
+                                                         self._required_byte))

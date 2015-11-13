@@ -129,8 +129,8 @@ def _ParseLegacyTrackerData(tracker_data):
 
 def ValidateParallelCompositeTrackerData(
     tracker_file_name, existing_enc_sha256, existing_prefix,
-    existing_components, current_enc_key_sha256, command_obj, logger,
-    delete_func, delete_exc_handler):
+    existing_components, current_enc_key_sha256, bucket_url, command_obj,
+    logger, delete_func, delete_exc_handler):
   """Validates that tracker data matches the current encryption key.
 
   If the data does not match, makes a best-effort attempt to delete existing
@@ -146,6 +146,7 @@ def ValidateParallelCompositeTrackerData(
         the set of files that have already been uploaded.
     current_enc_key_sha256: Current Encryption key SHA256 that should be used
         to encrypt objects.
+    bucket_url: Bucket URL in which the components exist.
     command_obj: Command class for calls to Apply.
     logger: logging.Logger for outputting log messages.
     delete_func: command.Apply-callable function for deleting objects.
@@ -162,8 +163,14 @@ def ValidateParallelCompositeTrackerData(
                   'key. Deleting old components and restarting upload from '
                   'scratch with a new tracker file that uses the current '
                   'encryption key.', tracker_file_name)
+      components_to_delete = []
+      for component in existing_components:
+        url = bucket_url.Clone()
+        url.object_name = component.object_name
+        url.generation = component.generation
+
       command_obj.Apply(
-          delete_func, existing_components,
+          delete_func, components_to_delete,
           delete_exc_handler, arg_checker=gslib.command.DummyArgChecker,
           parallel_operations_override=True)
     except:  # pylint: disable=bare-except

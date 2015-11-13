@@ -48,10 +48,6 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil rewrite command is not supported for the Alpha release of
-  customer-supplied encryption keys. See "gsutil help encryption" for details
-  about customer-supplied encryption keys.
-
   The gsutil rewrite command performs in-place transformations on cloud objects.
   The transformation(s) are atomic and applied based on the input
   transformation flags. Currently, only the "-k" flag is supported to add,

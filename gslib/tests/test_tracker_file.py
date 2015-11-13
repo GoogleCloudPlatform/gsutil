@@ -20,6 +20,7 @@ from gslib.parallel_tracker_file import ReadParallelUploadTrackerFile
 from gslib.parallel_tracker_file import ValidateParallelCompositeTrackerData
 from gslib.parallel_tracker_file import WriteComponentToParallelUploadTrackerFile
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
+from gslib.storage_url import StorageUrlFromString
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import _HashFilename
@@ -151,6 +152,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
     fpath = self.CreateTempFile(file_name='foo')
     random_prefix = '123'
     old_enc_key = '456'
+    bucket_url = StorageUrlFromString('gs://foo')
     objects = [ObjectFromTracker('obj1', '42'),
                ObjectFromTracker('obj2', '314159')]
     WriteParallelUploadTrackerFile(fpath, random_prefix, objects,
@@ -174,7 +176,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
     # Validate with correct key should succeed.
     (actual_prefix, actual_objects) = ValidateParallelCompositeTrackerData(
         fpath, old_enc_key, random_prefix,
-        objects, old_enc_key, command_obj, self.logger,
+        objects, old_enc_key, bucket_url, command_obj, self.logger,
         MockDeleteFunc, MockDeleteExceptionHandler)
     self.assertEqual(False, command_obj.delete_called)
     self.assertEqual(random_prefix, actual_prefix)
@@ -185,7 +187,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
 
     (actual_prefix, actual_objects) = ValidateParallelCompositeTrackerData(
         fpath, old_enc_key, random_prefix,
-        objects, new_enc_key, command_obj, self.logger,
+        objects, new_enc_key, bucket_url, command_obj, self.logger,
         MockDeleteFunc, MockDeleteExceptionHandler)
 
     self.assertEqual(True, command_obj.delete_called)

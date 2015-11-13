@@ -35,6 +35,7 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY2_SHA256_B64
+from gslib.tests.util import unittest
 from gslib.util import Retry
 
 
@@ -132,6 +133,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('S3 customer-supplied encryption keys are not supported.')
   def test_stat_encrypted_object(self):
     """Tests stat command with an encrypted object."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(
         bucket_uri=bucket_uri, object_name='foo',
@@ -154,6 +158,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_encrypted_object_wildcard(self):
     """Tests stat command with a mix of encrypted and unencrypted objects."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(
         bucket_uri=bucket_uri, object_name='foo1',
