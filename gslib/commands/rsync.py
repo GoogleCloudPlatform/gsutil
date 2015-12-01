@@ -199,9 +199,9 @@ _DETAILED_HELP_TEXT = ("""
   the source and destination sizes match. If they match, it next checks if their
   checksums match, using checksums if available (see below). Unlike the Unix
   rsync command, gsutil rsync does not use timestamps to determine if the
-  file/object changed, because the GCS API does not permit the caller to set an
-  object's timestamp (hence, timestamps of identical files/objects cannot be
-  made to match).
+  file/object changed, because the Google Cloud Storage API does not permit the
+  caller to set an object's timestamp (hence, timestamps of identical
+  files/objects cannot be made to match).
 
   Checksums will not be available in two cases:
 
@@ -213,9 +213,10 @@ _DETAILED_HELP_TEXT = ("""
      change without changing sizes (e.g., if you have files that contain fixed
      width data, such as timestamps).
 
-  2. When comparing composite GCS objects with objects at a cloud provider that
-     does not support CRC32C (which is the only checksum available for composite
-     objects). See 'gsutil help compose' for details about composite objects.
+  2. When comparing composite Google Cloud Storage objects with objects at a
+     cloud provider that does not support CRC32C (which is the only checksum
+     available for composite objects). See 'gsutil help compose' for details
+     about composite objects.
 
 
 <B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
@@ -252,7 +253,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>LIMITATIONS</B>
   1. The gsutil rsync command doesn't make the destination object's timestamps
      match those of the source object (it can't; timestamp setting is not
-     allowed by the GCS API).
+     allowed by the Google Cloud Storage API).
 
   2. The gsutil rsync command considers only the current object generations in
      the source and destination buckets when deciding what to copy / delete. If

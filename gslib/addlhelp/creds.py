@@ -60,11 +60,12 @@ _DETAILED_HELP_TEXT = ("""
   (e.g., by running BOTO_CONFIG=~/.boto_user_account gsutil ls).
 
   Note that when using the standalone version of gsutil with the JSON API you
-  can configure at most one of the following types of GCS credentials in a
-  single boto config file: OAuth2 User Account, OAuth2 Service Account. In
-  addition to these, you may also have S3 HMAC credentials (necessary for using
-  s3:// URLs) and GCE Internal Service Account credentials. GCE Internal Service
-  Account credentials are used only when OAuth2 credentials are not present.
+  can configure at most one of the following types of Google Cloud Storage
+  credentials in a single boto config file: OAuth2 User Account, OAuth2 Service
+  Account. In addition to these, you may also have S3 HMAC credentials
+  (necessary for using s3:// URLs) and Google Compute Engine Internal Service
+  Account credentials. Google Compute Engine Internal Service Account
+  credentials are used only when OAuth2 credentials are not present.
 
 
 <B>SUPPORTED CREDENTIAL TYPES</B>
@@ -135,12 +136,14 @@ _DETAILED_HELP_TEXT = ("""
     For more details about OAuth2 service accounts, see:
       https://developers.google.com/accounts/docs/OAuth2ServiceAccount
 
-  GCE Internal Service Account:
+  Google Compute Engine Internal Service Account:
     This is the type of service account used for accounts hosted by App Engine
-    or GCE. Such credentials are created automatically for you on GCE when you
-    run the gcutil addinstance command with the --service_account flag.
+    or Google Compute Engine. Such credentials are created automatically for
+    you on Google Compute Engine when you run the gcloud compute instances
+    creates command and the credentials can be controlled with the --scopes
+    flag.
 
-    For more details about GCE service accounts, see:
+    For more details about Google Compute Engine service accounts, see:
       https://developers.google.com/compute/docs/authentication;
 
     For more details about App Engine service accounts, see:

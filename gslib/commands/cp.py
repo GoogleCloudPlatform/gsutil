@@ -27,10 +27,10 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.copy_helper import CreateCopyHelperOpts
+from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import ItemExistsError
 from gslib.copy_helper import Manifest
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
-from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -367,7 +367,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   a non-sliced object download will instead be performed.
 
   Note: since sliced object downloads cause multiple writes to occur at various
-  locations on disk, this mechansim can degrade performance for disks with slow
+  locations on disk, this mechanism can degrade performance for disks with slow
   seek times, especially for large numbers of slices. While the default number
   of slices is set small to avoid this problem, you can disable sliced object
   download if necessary by setting the "sliced_object_download_threshold"

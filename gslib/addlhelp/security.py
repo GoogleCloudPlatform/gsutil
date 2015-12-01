@@ -115,20 +115,20 @@ _DETAILED_HELP_TEXT = ("""
   access to the object's metadata; and will allow all project viewers read
   access to the object.
 
-  The GCS access control system includes the ability to specify that objects are
-  publicly readable. Make sure you intend for any objects you write with this
-  permission to be public. Once "published", data on the Internet can be copied
-  to many places, so it's effectively impossible to regain read control over an
-  object written with this permission.
+  The Google Cloud Storage access control system includes the ability to
+  specify that objects are publicly readable. Make sure you intend for any
+  objects you write with this permission to be public. Once "published", data
+  on the Internet can be copied to many places, so it's effectively impossible
+  to regain read control over an object written with this permission.
 
-  The GCS access control system includes the ability to specify that buckets are
-  publicly writable. While configuring a bucket this way can be convenient for
-  various purposes, we recommend against using this permission - it can be
-  abused for distributing illegal content, viruses, and other malware, and the
-  bucket owner is legally and financially responsible for the content stored in
-  their buckets. If you need to make content available to customers who don't
-  have Google accounts consider instead using signed URLs (see
-  "gsutil help signurl").
+  The Google Cloud Storage access control system includes the ability to
+  specify that buckets are publicly writable. While configuring a bucket this
+  way can be convenient for various purposes, we recommend against using this
+  permission - it can be abused for distributing illegal content, viruses, and
+  other malware, and the bucket owner is legally and financially responsible
+  for the content stored in their buckets. If you need to make content
+  available to customers who don't have Google accounts consider instead using
+  signed URLs (see "gsutil help signurl").
 
 
 <B>SOFTWARE INTEGRITY AND UPDATES</B>
@@ -157,7 +157,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>ENCRYPTION AT REST</B>
-  All GCS data are stored encrypted. For more information see
+  All Google Cloud Storage data are stored encrypted. For more information see
   `Server-Side Encryption
   <https://cloud.google.com/storage/docs/concepts-techniques#encryption>`_.
   

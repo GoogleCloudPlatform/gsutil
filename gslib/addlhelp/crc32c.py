@@ -22,9 +22,9 @@ _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   Google Cloud Storage provides a cyclic redundancy check (CRC) header that
   allows clients to verify the integrity of object contents. For non-composite
-  objects GCS also provides an MD5 header to allow clients to verify object
-  integrity, but for composite objects only the CRC is available. gsutil
-  automatically performs integrity checks on all uploads and downloads.
+  objects Google Cloud Storage also provides an MD5 header to allow clients to
+  verify object integrity, but for composite objects only the CRC is available.
+  gsutil automatically performs integrity checks on all uploads and downloads.
   Additionally, you can use the "gsutil hash" command to calculate a CRC for
   any local file.
 
