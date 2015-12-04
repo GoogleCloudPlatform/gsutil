@@ -147,18 +147,18 @@ _DETAILED_HELP_TEXT = ("""
   specify with the rsync command, there are two more safety measures your can
   take when using gsutil rsync -d:
 
-    1. Try running the command with the rsync -n option first, to see what it
-       would do without actually performing the operations. For example, if
-       you run the command:
+  1. Try running the command with the rsync -n option first, to see what it
+     would do without actually performing the operations. For example, if
+     you run the command:
 
-         gsutil -m rsync -r -d -n gs://your-bucket/data gs://your-bucket
-       
-       it will be immediately evident that running that command without the -n
-       option would cause many objects to be deleted.
+       gsutil -m rsync -r -d -n gs://your-bucket/data gs://your-bucket
 
-    2. Enable object versioning in your bucket, which will allow you to restore
-       objects if you accidentally delete them. For more details see
-       "gsutil help versions".
+     it will be immediately evident that running that command without the -n
+     option would cause many objects to be deleted.
+
+  2. Enable object versioning in your bucket, which will allow you to restore
+     objects if you accidentally delete them. For more details see
+     "gsutil help versions".
 
 
 <B>IMPACT OF BUCKET LISTING EVENTUAL CONSISTENCY</B>
@@ -180,11 +180,14 @@ _DETAILED_HELP_TEXT = ("""
   if it does, please contact gs-team@google.com.
 
   The rsync command will retry when failures occur, but if enough failures
-  happen during a particular copy or delete operation the command will skip that
-  object and move on. At the end of the synchronization run if any failures were
-  not successfully retried, the rsync command will report the count of failures,
-  and exit with non-zero status. At this point you can run the rsync command
-  again, and it will attempt any remaining needed copy and/or delete operations.
+  happen during a particular copy or delete operation the command will fail.
+
+  If the -C option is provided, the command will instead skip the failing
+  object and move on. At the end of the synchronization run if any failures
+  were not successfully retried, the rsync command will report the count of
+  failures, and exit with non-zero status. At this point you can run the rsync
+  command again, and it will attempt any remaining needed copy and/or delete
+  operations.
 
   Note that there are cases where retrying will never succeed, such as if you
   don't have write permission to the destination bucket or if the destination
