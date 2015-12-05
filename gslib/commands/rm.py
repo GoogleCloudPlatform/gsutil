@@ -81,7 +81,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil rm gs://bucket/**
 
   If you have a large number of objects to remove you might want to use the
-  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
+  gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   removes:
 
     gsutil -m rm -r gs://my_bucket/subdir
