@@ -100,19 +100,13 @@ _DETAILED_HELP_TEXT = ("""
   or application (as opposed to a user).
 
   When you run gsutil config -e, you will be prompted for your service account
-  email address and the path to your private key file. To get these data, visit
-  the `Google Developers Console <https://cloud.google.com/console#/project>`_,
-  click on the project you are using, then click "APIs & auth", then click
-  "Credentials", then click "Create new Client ID"; on the pop-up dialog box
-  select "Service account" and click "Create Client ID". This will download
-  a private key file, which you should move to somewhere
-  accessible from the machine where you run gsutil. Make sure to set its
-  protection so only the users you want to be able to authenticate have
-  access.
+  email address and the path to your private key file. To get this data,
+  follow the instructions on
+  `Service Accounts <https://developers.google.com/console/help/new/#serviceaccounts>`_.
 
   Note that your service account will NOT be considered an Owner for the
   purposes of API access (see "gsutil help creds" for more information about
-  this). See https://developers.google.com/accounts/docs/OAuth2ServiceAccount
+  this). See https://developers.google.com/identity/protocols/OAuth2ServiceAccount
   for further information on service account authentication.
 
 
@@ -125,8 +119,8 @@ _DETAILED_HELP_TEXT = ("""
   changing environment variables.
 
   You can also set up a path of configuration files, by setting the BOTO_PATH
-  environment variable to contain a ":" delimited path. For example setting
-  the BOTO_PATH environment variable to:
+  environment variable to contain a ":" delimited path (or ";" for Windows).
+  For example setting the BOTO_PATH environment variable to:
 
     /etc/projects/my_group_project.boto.cfg:/home/mylogin/.boto
 
@@ -135,13 +129,13 @@ _DETAILED_HELP_TEXT = ("""
   state among many users: The shared state can go in the central shared file
   ( /etc/projects/my_group_project.boto.cfg) and each user's individual
   credentials can be placed in the configuration file in each of their home
-  directories. (For security reasons users should never share credentials
-  via a shared configuration file.)
+  directories. For security reasons, users should never share credentials
+  via a shared configuration file.
 
 
 <B>CONFIGURATION FILE STRUCTURE</B>
   The configuration file contains a number of sections: [Credentials],
-  [Boto], [GSUtil], and [OAuth2]. If you edit the file make sure to edit the
+  [Boto], [GSUtil], and [OAuth2]. If you edit the file, make sure to edit the
   appropriate section (discussed below), and to be careful not to mis-edit
   any of the setting names (like "gs_access_key_id") and not to remove the
   section delimiters (like "[Credentials]").
