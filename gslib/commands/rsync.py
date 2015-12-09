@@ -82,6 +82,12 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rsync -r data gs://mybucket/data
 
+  Note that the gsutil rsync command determines what objects to copy based only
+  on data content, not metadata fields. For example, if you have two buckets
+  that each contain an object with the same name and you update the metadata on
+  one of the objects and then run gsutil rsync, it will treat the objects as
+  identical and not perform any updates.
+
   If you have a large number of objects to synchronize you might want to use the
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   synchronization:
