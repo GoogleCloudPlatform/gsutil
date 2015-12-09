@@ -43,12 +43,11 @@ _DETAILED_HELP_TEXT = ("""
   2. If you found a bug or have an idea for a feature enhancement, we suggest
      you check https://github.com/GoogleCloudPlatform/gsutil/issues to see if it
      has already been reported by another user. From there you can also
-     subscribe to updates to the issue by clicking the "Watch thread" button at
-     the bottom of the page.
+     subscribe to updates to the issue.
 
-  3. It's usually worthwhile to send email to gs-team@google.com about your
-     idea before sending actual code. Often we can discuss the idea and help
-     propose things that could save you later revision work.
+  3. If a GitHub issue doesn't already exist, create one about your idea before
+     sending actual code. Often we can discuss the idea and help propose things
+     that could save you later revision work.
 
   4. We tend to avoid adding command line options that are of use to only
      a very small fraction of users, especially if there's some other way
@@ -70,7 +69,6 @@ _DETAILED_HELP_TEXT = ("""
      To clone a read-only copy of the repository:
 
        git clone git://github.com/GoogleCloudPlatform/gsutil.git
-       git submodule update --init --recursive
 
      To push your own changes to GitHub, click the Fork button on the
      repository page and clone the repository from your own fork.

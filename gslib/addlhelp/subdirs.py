@@ -34,7 +34,9 @@ _DETAILED_HELP_TEXT = ("""
   the object gs://your-bucket/abc/def/ghi.txt is just an object that happens to
   have "/" characters in its name. There are no "abc" or "abc/def" directories;
   just a single object with the given name. This diagram:
-  https://cloud.google.com/storage/images/gsutil-subdirectories-thumb.png
+
+  .. image::  https://cloud.google.com/storage/images/gsutil-subdirectories-thumb.png
+
   illustrates how gsutil provides a hierarchical view of objects in a bucket.
 
   gsutil achieves the hierarchical file tree illusion by applying a variety of
@@ -128,21 +130,21 @@ _DETAILED_HELP_TEXT = ("""
 
   There are a couple of ways to avoid this problem:
 
-    1. Use gsutil rsync. Since rsync doesn't use the Unix cp-defined directory
-    naming rules, it will work consistently whether the destination subdirectory
-    exists or not.
+  1. Use gsutil rsync. Since rsync doesn't use the Unix cp-defined directory
+  naming rules, it will work consistently whether the destination subdirectory
+  exists or not.
 
-    2. If using rsync won't work for you, you can start by creating a
-    "placeholder" object to establish that the destination is a subdirectory, by
-    running a command such as:
+  2. If using rsync won't work for you, you can start by creating a
+  "placeholder" object to establish that the destination is a subdirectory, by
+  running a command such as:
 
-        gsutil cp some-file gs://your-bucket/new/placeholder
+    gsutil cp some-file gs://your-bucket/new/placeholder
 
-      At this point running the gsutil cp -r command noted above will
-      consistently treat gs://your-bucket/new as a subdirectory. Once you have
-      at least one object under that subdirectory you can delete the placeholder
-      object and subsequent uploads to that subdirectory will continue to work
-      with naming working as you'd expect.
+  At this point running the gsutil cp -r command noted above will
+  consistently treat gs://your-bucket/new as a subdirectory. Once you have
+  at least one object under that subdirectory you can delete the placeholder
+  object and subsequent uploads to that subdirectory will continue to work
+  with naming working as you'd expect.
 """)
 
 

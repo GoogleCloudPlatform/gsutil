@@ -45,7 +45,7 @@ _DETAILED_HELP_TEXT = ("""
   object's content type. For more information, please see:
   https://developers.google.com/storage/docs/composite-objects
 
-  Note also that the gsutil cp command will automatically split uploads for
+  Note also that the gsutil cp command can automatically split uploads for
   large files into multiple component objects, upload them in parallel, and
   compose them into a final object (which will be subject to the component
   count limit). This will still perform all uploads from a single machine. For

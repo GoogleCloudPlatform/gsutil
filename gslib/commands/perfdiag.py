@@ -169,7 +169,6 @@ _DETAILED_HELP_TEXT = ("""
                  it takes for the eventually consistent listing call to return
                  the N objects in its result, delete the N objects, then record
                  how long it takes listing to stop returning the N objects.
-                 This test is off by default.
 
               rthru
                  Runs N (set with -n) read operations, with at most C

@@ -112,29 +112,16 @@ _DETAILED_HELP_TEXT = ("""
     bucket ACLs, but the canned ACL options remove OWNER access from
     Editors, can lead to unexpected results. The solution to this problem is to
     ensure the service account is an Owner in the Permissions tab for your
-    project. To find the email address of your service account, visit the
-    `Google Developers Console <https://cloud.google.com/console#/project>`_,
-    click on the project you're using, click "APIs & auth", and click
-    "Credentials".
+    project.
 
-    To create a service account, visit the Google Developers Console and then:
-
-       - Click "APIs & auth" in the left sidebar.
-
-       - Click "Credentials".
-
-       - Click "Create New Client ID".
-
-       - Select "Service Account" as your application type.
-
-       - Save the JSON private key or the .p12 private key and password
-         provided.
-
-    For further information about account roles, see:
-      https://developers.google.com/console/help/#DifferentRoles
+    To set up a service account for use with "gsutil config -e", see:
+      https://developers.google.com/console/help/new/#serviceaccounts
 
     For more details about OAuth2 service accounts, see:
       https://developers.google.com/accounts/docs/OAuth2ServiceAccount
+
+    For further information about account roles, see:
+      https://developers.google.com/console/help/#DifferentRoles
 
   Google Compute Engine Internal Service Account:
     This is the type of service account used for accounts hosted by App Engine

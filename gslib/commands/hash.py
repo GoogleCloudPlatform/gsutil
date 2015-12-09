@@ -34,7 +34,7 @@ from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
 
 _SYNOPSIS = """
-  gsutil [-c] [-h] [-m] hash filename...
+  gsutil hash [-c] [-h] [-m] filename...
 """
 
 _DETAILED_HELP_TEXT = ("""

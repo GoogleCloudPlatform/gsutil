@@ -46,7 +46,7 @@ _SET_DESCRIPTION = """
   The set sub-command has two sub-commands:
 
 <B>ON</B>
-  The "gsutil set on" command will enable access logging of the
+  The "gsutil logging set on" command will enable access logging of the
   buckets named by the specified URLs, outputting log files in the specified
   logging_bucket. logging_bucket must already exist, and all URLs must name
   buckets (e.g., gs://bucket). The required bucket parameter specifies the
@@ -61,8 +61,9 @@ _SET_DESCRIPTION = """
   gs://mybucket2 to be logged to objects prefixed with the name "AccessLog",
   with those log objects written to the bucket gs://my_logging_bucket.
 
-  Next, you need to grant cloud-storage-analytics@google.com write access to
-  the log bucket, using this command:
+  In addition to enabling logging on your bucket(s), you will also need to grant
+  cloud-storage-analytics@google.com write access to the log bucket, using this
+  command:
 
     gsutil acl ch -g cloud-storage-analytics@google.com:W gs://my_logging_bucket
 
@@ -108,7 +109,7 @@ _DESCRIPTION = """
 
 <B>ACCESS LOG AND STORAGE DATA FIELDS</B>
   For a complete list of access log fields and storage data fields, see:
-  https://developers.google.com/storage/docs/accesslogs#reviewing
+  https://developers.google.com/storage/docs/accesslogs#format
 """
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)

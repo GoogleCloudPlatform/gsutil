@@ -48,21 +48,21 @@ _DETAILED_HELP_TEXT = ("""
   gsutil takes a number of precautions to protect against security exploits in
   the files it stores locally:
 
-    - When the gsutil config command runs it sets file protection mode 600
-      ("-rw-------") on the the .boto configuration file it generates, so only
-      the user (or superuser) can read it. This is important because these files
-      contain security-sensitive information, including credentials and proxy
-      configuration.
+  - When the gsutil config command runs it sets file protection mode 600
+    ("-rw-------") on the the .boto configuration file it generates, so only
+    the user (or superuser) can read it. This is important because these files
+    contain security-sensitive information, including credentials and proxy
+    configuration.
 
-    - The gsutil config command also uses file protection mode 600 for the
-      private key file stored locally when you create service account
-      credentials.
+  - The gsutil config command also uses file protection mode 600 for the
+    private key file stored locally when you create service account
+    credentials.
 
-    - The default level of logging output from gsutil commands does not include
-      security-sensitive information, such as OAuth2 tokens and proxy
-      configuration information. (See the "RECOMMENDED USER PRECAUTIONS" section
-      below if you increase the level of debug output, using the gsutil -D
-      option.)
+  - The default level of logging output from gsutil commands does not include
+    security-sensitive information, such as OAuth2 tokens and proxy
+    configuration information. (See the "RECOMMENDED USER PRECAUTIONS" section
+    below if you increase the level of debug output, using the gsutil -D
+    option.)
 
   Note that protection modes are not supported on Windows, so if you
   use gsutil on Windows we recommend using an encrypted file system and strong
@@ -70,41 +70,41 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>SECURITY-SENSITIVE FILES WRITTEN TEMPORARILY TO DISK BY GSUTIL</B>
-    gsutil buffers data in temporary files in several situations:
+  gsutil buffers data in temporary files in several situations:
 
-      - While compressing data being uploaded via gsutil cp -z, gsutil
-        buffers the data in temporary files with protection 600, which it
-        deletes after the upload is complete (similarly for downloading files
-        that were uploaded with gsutil cp -z or some other process that sets the
-        Content-Encoding to "gzip"). However, if you kill the gsutil process
-        while the upload is under way the partially written file will be left
-        in place. See the "CHANGING TEMP DIRECTORIES" section in
-        "gsutil help cp" for details of where the temporary files are written
-        and how to change the temp directory location.
+  - While compressing data being uploaded via gsutil cp -z/-Z, gsutil
+    buffers the data in temporary files with protection 600, which it
+    deletes after the upload is complete (similarly for downloading files
+    that were uploaded with gsutil cp -z/-Z or some other process that sets the
+    Content-Encoding to "gzip"). However, if you kill the gsutil process
+    while the upload is under way the partially written file will be left
+    in place. See the "CHANGING TEMP DIRECTORIES" section in
+    "gsutil help cp" for details of where the temporary files are written
+    and how to change the temp directory location.
 
-      - When performing a resumable upload gsutil stores the upload ID (which,
-        as noted above, is a bearer token and thus should be safe-guarded) in a
-        file under ~/.gsutil/tracker-files with protection 600, and deletes this
-        file after the upload is complete. However, if the upload doesn't
-        complete successfully the tracker file is left in place so the resumable
-        upload can be re-attempted later. Over time it's possible to accumulate
-        these tracker files from aborted upload attempts, though resumable
-        upload IDs are only valid for 1 week, so the security risk only exists
-        for files less than that old. If you consider the risk of leaving
-        aborted upload IDs in the tracker directory too high you could modify
-        your upload scripts to delete the tracker files; or you could create a
-        cron job to clear the tracker directory periodically.
+  - When performing a resumable upload gsutil stores the upload ID (which,
+    as noted above, is a bearer token and thus should be safe-guarded) in a
+    file under ~/.gsutil/tracker-files with protection 600, and deletes this
+    file after the upload is complete. However, if the upload doesn't
+    complete successfully the tracker file is left in place so the resumable
+    upload can be re-attempted later. Over time it's possible to accumulate
+    these tracker files from aborted upload attempts, though resumable
+    upload IDs are only valid for 1 week, so the security risk only exists
+    for files less than that age. If you consider the risk of leaving
+    aborted upload IDs in the tracker directory too high you could modify
+    your upload scripts to delete the tracker files; or you could create a
+    cron job to clear the tracker directory periodically.
 
-      - The gsutil rsync command stores temporary files (with protection 600)
-        containing the names, sizes, and checksums of source and destination
-        directories/buckets, which it deletes after the rsync is complete.
-        However, if you kill the gsutil process while the rsync is under way the
-        listing files will be left in place.
+  - The gsutil rsync command stores temporary files (with protection 600)
+    containing the names, sizes, and checksums of source and destination
+    directories/buckets, which it deletes after the rsync is complete.
+    However, if you kill the gsutil process while the rsync is under way the
+    listing files will be left in place.
 
-    Note that gsutil deletes temporary files using the standard OS unlink system
-    call, which does not perform `data wiping
-    <https://en.wikipedia.org/wiki/Data_erasure>`_. Thus, the content of such
-    temporary files can be recovered by a determined adversary.
+  Note that gsutil deletes temporary files using the standard OS unlink system
+  call, which does not perform `data wiping
+  <https://en.wikipedia.org/wiki/Data_erasure>`_. Thus, the content of such
+  temporary files can be recovered by a determined adversary.
 
 
 <B>ACCESS CONTROL LISTS</B>
@@ -112,7 +112,7 @@ _DETAILED_HELP_TEXT = ("""
   default objects written to a bucket use the default object ACL on that bucket.
   Unless you modify that ACL (e.g., via the gsutil defacl command), by default
   it will allow all project editors write access to the object and read/write
-  access to the object's metadata; and will allow all project viewers read
+  access to the object's metadata and will allow all project viewers read
   access to the object.
 
   The Google Cloud Storage access control system includes the ability to

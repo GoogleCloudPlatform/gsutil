@@ -29,7 +29,8 @@ _DETAILED_HELP_TEXT = ("""
   various tools available on Linux and MacOS that can be used to throttle
   gsutil requests.
 
-  One tool is `trickle<http://monkey.org/~marius/pages/?page=trickle>`_
+  One tool is
+  `trickle <http://monkey.org/~marius/pages/?page=trickle>`_
   (available via apt-get on Ubuntu systems), which will let you limit how much
   bandwidth gsutil consumes. For example, the following command would limit
   upload and download bandwidth consumed by gsutil rsync to 100 KBps:
@@ -37,7 +38,7 @@ _DETAILED_HELP_TEXT = ("""
       trickle -d 100 -u 100 gsutil -m rsync -r ./dir gs://some bucket
 
   Another tool is
-  `ionice<http://www.tutorialspoint.com/unix_commands/ionice.htm>`_ (built
+  `ionice <http://www.tutorialspoint.com/unix_commands/ionice.htm>`_ (built
   in to many Linux systems), which will let you limit how much I/O capacity
   gsutil consumes (e.g., to avoid letting it monopolize your local disk). For
   example, the following command would reduce I/O priority of gsutil so it
