@@ -66,10 +66,10 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The gsutil rsync command makes the contents under dst_url the same as the
-  contents under src_url, by copying any missing files/objects, and (if the
-  -d option is specified) deleting any extra files/objects. For example, to
-  make gs://mybucket/data match the contents of the local directory "data"
-  you could do:
+  contents under src_url, by copying any missing files/objects (or those whose
+  data has changed), and (if the -d option is specified) deleting any extra
+  files/objects. For example, to make gs://mybucket/data match the contents of
+  the local directory "data" you could do:
 
     gsutil rsync -d data gs://mybucket/data
 
@@ -81,12 +81,6 @@ _DETAILED_HELP_TEXT = ("""
   gs://mybucket/data leave off the -d option:
 
     gsutil rsync -r data gs://mybucket/data
-
-  Note that the gsutil rsync command determines what objects to copy based only
-  on data content, not metadata fields. For example, if you have two buckets
-  that each contain an object with the same name and you update the metadata on
-  one of the objects and then run gsutil rsync, it will treat the objects as
-  identical and not perform any updates.
 
   If you have a large number of objects to synchronize you might want to use the
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
@@ -226,6 +220,11 @@ _DETAILED_HELP_TEXT = ("""
      cloud provider that does not support CRC32C (which is the only checksum
      available for composite objects). See 'gsutil help compose' for details
      about composite objects.
+
+  Note that change detection is based only on data content, not metadata fields.
+  For example, if you have two buckets that each contain an object with the same
+  name and you update the metadata on one of the objects and then run gsutil
+  rsync, it will treat the objects as identical and not perform any updates.
 
 
 <B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
