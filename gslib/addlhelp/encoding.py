@@ -126,7 +126,7 @@ _DETAILED_HELP_TEXT = ("""
   you can use
   `Windows iconv <http://gnuwin32.sourceforge.net/packages/libiconv.htm>`_.
   For Unix-based systems, you can use
-  `libiconv https://www.gnu.org/software/libiconv/`_.
+  `libiconv <https://www.gnu.org/software/libiconv/>`_.
 """)
 
 
