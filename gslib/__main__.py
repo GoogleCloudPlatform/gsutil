@@ -66,6 +66,7 @@ from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
 from gslib.util import GsutilStreamHandler
 from gslib.util import ProxyInfoFromEnvironmentVar
+from gslib.util import UTF8
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -128,6 +129,8 @@ test_exception_traces = False
 def _CleanupSignalHandler(signal_num, cur_stack_frame):
   """Cleans up if process is killed with SIGINT, SIGQUIT or SIGTERM."""
   _Cleanup()
+  if gslib.util.CheckMultiprocessingAvailableAndInit().is_available:
+    gslib.command.TeardownMultiprocessingProcesses()
 
 
 def _Cleanup():
@@ -139,8 +142,13 @@ def _Cleanup():
 
 
 def _OutputAndExit(message):
-  """Outputs message and exists with code 1."""
-  from gslib.util import UTF8  # pylint: disable=g-import-not-at-top
+  """Outputs message to stderr and exits gsutil with code 1.
+
+  This function should only be called in single-process, single-threaded mode.
+
+  Args:
+    message: Message to print to stderr.
+  """
   if debug >= 2 or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n' %
@@ -436,10 +444,10 @@ def _HandleControlC(signal_num, cur_stack_frame):
   if debug >= 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit(
-        'DEBUG: Caught signal %d - Exception stack trace:\n'
+        'DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
         '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)))
   else:
-    _OutputAndExit('Caught signal %d - exiting' % signal_num)
+    _OutputAndExit('Caught CTRL-C (signal %d) - exiting' % signal_num)
 
 
 def _HandleSigQuit(signal_num, cur_stack_frame):
@@ -536,6 +544,7 @@ def _RunNamedCommandAndHandleExceptions(
     # Catch ^\ so we can force a breakpoint in a running gsutil.
     if not IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
+
     return command_runner.RunNamedCommand(
         command_name, args, headers, debug_level, trace_token,
         parallel_operations, perf_trace_token=perf_trace_token)

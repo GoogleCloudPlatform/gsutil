@@ -1032,12 +1032,7 @@ Please ensure that you have write access to both /dev/shm and /run/shm.
 """
       raise  # We'll handle this in one place below.
 
-    # Manager objects and Windows are generally a pain to work with, so try it
-    # out as a sanity check. This definitely works on some versions of Windows,
-    # but it's certainly possible that there is some unknown configuration for
-    # which it won't.
     global manager  # pylint: disable=global-variable-undefined
-
     manager = multiprocessing.Manager()
 
     # Check that the max number of open files is reasonable. Always check this
