@@ -168,8 +168,16 @@ _DETAILED_HELP_TEXT = ("""
   consistent, if you upload new objects or delete objects from a bucket and then
   immediately run gsutil rsync with that bucket as the source or destination,
   it's possible the rsync command will not see the recent updates and thus
-  synchronize incorrectly. You can rerun the rsync operation again later to
-  correct the incorrect synchronization.
+  synchronize incorrectly. For example, if you rsync to a bucket immediately
+  after uploading to or deleting objects from that bucket, it's possible gsutil
+  will re-upload objects that have already been uploaded or attempt to delete
+  objects that were already deleted. A more troublesome problem can occur if
+  you run gsutil rsync, specifying a bucket as the source immediately after
+  uploading to or deleting objects from that bucket. In that case it's possible
+  rsync will miss copying objects to, or deleting objects from, the destination.
+  If this happens you can rerun the rsync operation again later (after the
+  bucket listing has "caught up"), to cause the missing objects to be copied and
+  extra objects to be deleted.
 
 
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
