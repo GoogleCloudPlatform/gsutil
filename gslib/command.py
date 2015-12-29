@@ -1825,6 +1825,14 @@ def _IncrementFailureCount():
     failure_count.value += 1
 
 
+def DecrementFailureCount():
+  global failure_count
+  if isinstance(failure_count, int):
+    failure_count -= 1
+  else:  # Otherwise it's a multiprocessing.Value() of type 'i'.
+    failure_count.value -= 1
+
+
 # pylint: disable=global-variable-undefined
 def GetFailureCount():
   """Returns the number of failures processed during calls to Apply()."""

@@ -21,11 +21,12 @@ from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
-from gslib.command import GetFailureCount
-from gslib.command import ResetFailureCount
+from gslib.command import DecrementFailureCount
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import PreconditionsFromHeaders
@@ -149,21 +150,47 @@ def _RemoveExceptionHandler(cls, e):
     cls.bucket_not_found_count += 1
     cls.logger.error(str(e))
   else:
-    cls.op_failure_count += 1
+    if _ExceptionMatchesBucketToDelete(cls.bucket_strings_to_delete, e):
+      DecrementFailureCount()
+    else:
+      cls.op_failure_count += 1
 
 
 # pylint: disable=unused-argument
 def _RemoveFoldersExceptionHandler(cls, e):
   """When removing folders, we don't mind if none exist."""
-  if (isinstance(e, CommandException.__class__) and
-      'No URLs matched' in e.message) or isinstance(e, NotFoundException):
-    pass
+  if ((isinstance(e, CommandException.__class__) and
+       NO_URLS_MATCHED_GENERIC in e.message)
+      or isinstance(e, NotFoundException)):
+    DecrementFailureCount()
   else:
     raise e
 
 
 def _RemoveFuncWrapper(cls, name_expansion_result, thread_state=None):
   cls.RemoveFunc(name_expansion_result, thread_state=thread_state)
+
+
+def _ExceptionMatchesBucketToDelete(bucket_strings_to_delete, e):
+  """Returns True if the exception matches a bucket slated for deletion.
+
+  A recursive delete call on an empty bucket will raise an exception when
+  listing its objects, but if we plan to delete the bucket that shouldn't
+  result in a user-visible error.
+
+  Args:
+    bucket_strings_to_delete: Buckets slated for recursive deletion.
+    e: Exception to check.
+
+  Returns:
+    True if the exception was a no-URLs-matched exception and it matched
+    one of bucket_strings_to_delete, None otherwise.
+  """
+  if bucket_strings_to_delete:
+    msg = NO_URLS_MATCHED_TARGET % ''
+    if msg in str(e):
+      parts = str(e).split(msg)
+      return len(parts) == 2 and parts[1] in bucket_strings_to_delete
 
 
 class RmCommand(Command):
@@ -225,14 +252,16 @@ class RmCommand(Command):
                                'least one URL.')
       url_strs = self.args
 
-    # Tracks if any deletes failed.
+    # Tracks number of object deletes that failed.
     self.op_failure_count = 0
 
     # Tracks if any buckets were missing.
     self.bucket_not_found_count = 0
 
+    # Tracks buckets that are slated for recursive deletion.
     bucket_urls_to_delete = []
-    bucket_strings_to_delete = []
+    self.bucket_strings_to_delete = []
+
     if self.recursion_requested:
       bucket_fields = ['id']
       for url_str in url_strs:
@@ -241,7 +270,7 @@ class RmCommand(Command):
           for blr in self.WildcardIterator(url_str).IterBuckets(
               bucket_fields=bucket_fields):
             bucket_urls_to_delete.append(blr.storage_url)
-            bucket_strings_to_delete.append(url_str)
+            self.bucket_strings_to_delete.append(url_str)
 
     self.preconditions = PreconditionsFromHeaders(self.headers or {})
 
@@ -270,17 +299,10 @@ class RmCommand(Command):
       # Don't raise if there are buckets to delete -- it's valid to say:
       #   gsutil rm -r gs://some_bucket
       # if the bucket is empty.
-      if not bucket_urls_to_delete and not self.continue_on_error:
+      if _ExceptionMatchesBucketToDelete(self.bucket_strings_to_delete, e):
+        DecrementFailureCount()
+      else:
         raise
-      # Reset the failure count if we failed due to an empty bucket that we're
-      # going to delete.
-      msg = 'No URLs matched: '
-      if msg in str(e):
-        parts = str(e).split(msg)
-        if len(parts) == 2 and parts[1] in bucket_strings_to_delete:
-          ResetFailureCount()
-        else:
-          raise
     except ServiceException, e:
       if not self.continue_on_error:
         raise
@@ -295,7 +317,6 @@ class RmCommand(Command):
     # remove any dir_$folder$ objects (which are created by various web UI
     # tools to simulate folders).
     if self.recursion_requested:
-      had_previous_failures = GetFailureCount() > 0
       folder_object_wildcards = []
       for url_str in url_strs:
         url = StorageUrlFromString(url_str)
@@ -316,10 +337,8 @@ class RmCommand(Command):
                      fail_on_error=False)
         except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
-          if not e.reason.startswith('No URLs matched:'):
+          if not e.reason.startswith(NO_URLS_MATCHED_GENERIC):
             raise
-        if not had_previous_failures:
-          ResetFailureCount()
 
     # Now that all data has been deleted, delete any bucket URLs.
     for url in bucket_urls_to_delete:

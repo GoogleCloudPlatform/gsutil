@@ -31,6 +31,8 @@ import sys
 
 import gslib
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 import gslib.wildcard_iterator
 from gslib.wildcard_iterator import StorageUrlFromString
@@ -220,13 +222,13 @@ class _NameExpansionIterator(object):
       if post_step2_iter.IsEmpty():
         if self.continue_on_error:
           try:
-            raise CommandException('No URLs matched: %s' % url_str)
+            raise CommandException(NO_URLS_MATCHED_TARGET % url_str)
           except CommandException, e:
             # Yield a specialized tuple of (exception, stack_trace) to
             # the wrapping PluralityCheckableIterator.
             yield (e, sys.exc_info()[2])
         else:
-          raise CommandException('No URLs matched: %s' % url_str)
+          raise CommandException(NO_URLS_MATCHED_TARGET % url_str)
 
       # Step 3. Omit any directories, buckets, or bucket subdirectories for
       # non-recursive expansions.
@@ -338,7 +340,7 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
       project_id=project_id, continue_on_error=continue_on_error)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.IsEmpty():
-    raise CommandException('No URLs matched')
+    raise CommandException(NO_URLS_MATCHED_GENERIC)
   return name_expansion_iterator
 
 

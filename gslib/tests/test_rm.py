@@ -18,6 +18,8 @@ from __future__ import absolute_import
 
 import re
 
+from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import MAX_BUCKET_LENGTH
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -70,7 +72,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       update_lines = True
       # Retry 404's and 409's due to eventual listing consistency, but don't add
       # the output to the set.
-      if ('No URLs matched' in stderr or
+      if (NO_URLS_MATCHED_GENERIC in stderr or
           '409 BucketNotEmpty' in stderr or
           '409 VersionedBucketNotEmpty' in stderr):
         update_lines = False
@@ -140,7 +142,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateVersionedBucket()
     stderr = self.RunGsUtil(['rm', '-a', '%s' % suri(bucket_uri, 'foo')],
                             return_stderr=True, expected_status=1)
-    self.assertIn('No URLs matched', stderr)
+    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'foo'), stderr)
 
   def test_remove_all_versions_recursive_on_bucket(self):
     """Test that 'rm -r' works on bucket."""
@@ -222,7 +224,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                              '%s' % suri(bucket_uri, 'missing')],
                             return_stderr=True, expected_status=1)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
-    self.assertIn('No URLs matched', stderr)
+    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'),
+                  stderr)
 
   def test_some_missing_force(self):
     """Test that 'rm -af' succeeds despite hidden first uri."""

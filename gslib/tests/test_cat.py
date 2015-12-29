@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
@@ -83,7 +84,8 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       # Attempting to cat invalid version should result in an error.
       stderr = self.RunGsUtil(['cat', uri2.version_specific_uri + '23'],
                               return_stderr=True, expected_status=1)
-      self.assertIn('No URLs matched', stderr)
+      self.assertIn(NO_URLS_MATCHED_TARGET % uri2.version_specific_uri + '23',
+                    stderr)
 
   def test_cat_multi_arg(self):
     """Tests cat command with multiple arguments."""

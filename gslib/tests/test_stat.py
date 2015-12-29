@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from gslib.cs_api_map import ApiSelector
+from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 
@@ -75,7 +76,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     stdout, stderr = self.RunGsUtil(
         ['stat', suri(bucket_uri, 'missing'), suri(bucket_uri, 'notmissing')],
         expected_status=1, return_stdout=True, return_stderr=True)
-    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missing'), stderr)
+    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'), stderr)
     self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
 
   def test_stat_one_missing_wildcard(self):
@@ -85,7 +86,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     stdout, stderr = self.RunGsUtil(
         ['stat', suri(bucket_uri, 'missin*'), suri(bucket_uri, 'notmissin*')],
         expected_status=1, return_stdout=True, return_stderr=True)
-    self.assertIn('No URLs matched %s' % suri(bucket_uri, 'missin*'), stderr)
+    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missin*'), stderr)
     self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
 
   def test_stat_bucket_wildcard(self):

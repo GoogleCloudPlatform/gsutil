@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import sys
 
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.wildcard_iterator import StorageUrlFromString
 
 
@@ -77,7 +78,7 @@ class CatHelper(object):
           else:
             cat_outfd.write(open(storage_url.object_name, 'rb').read())
         if not did_some_work:
-          raise CommandException('No URLs matched %s' % url_str)
+          raise CommandException(NO_URLS_MATCHED_TARGET % url_str)
       sys.stdout = cat_outfd
     finally:
       sys.stdout = cat_outfd

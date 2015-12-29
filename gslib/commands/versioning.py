@@ -20,6 +20,7 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
@@ -136,7 +137,7 @@ class VersioningCommand(Command):
         self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                     provider=url.scheme, fields=['id'])
     if not some_matched:
-      raise CommandException('No URLs matched')
+      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
   def _GetVersioning(self):
     """Gets versioning configuration for one or more buckets."""
@@ -155,7 +156,7 @@ class VersioningCommand(Command):
         else:
           print '%s: Suspended' % blr.url_string.rstrip('/')
     if not some_matched:
-      raise CommandException('No URLs matched')
+      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
   def RunCommand(self):
     """Command entry point for the versioning command."""

@@ -39,6 +39,7 @@ from gslib import copy_helper
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_GENERIC
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -428,7 +429,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('cp', [src_dir, dst_dir])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertIn('No URLs matched', e.reason)
+      self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testNonRecursiveFileAndSameNameSubdir(self):
     """Tests copying a file and subdirectory of the same name without -R."""
@@ -760,7 +761,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           'cp', [suri(src_bucket_uri, 'src_subdir'), dst_dir])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertIn('No URLs matched', e.reason)
+      self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testCopyingBucketSubDirToBucketSubDir(self):
     """Tests copying a bucket subdir to another bucket subdir."""
@@ -1096,7 +1097,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('rm', [suri(dst_bucket_uri, 'non_existent')])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      self.assertIn('No URLs matched', e.reason)
+      self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run
   # time (for in memory mocked tests that otherwise take ~ 0.1 seconds). Since

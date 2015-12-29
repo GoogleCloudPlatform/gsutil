@@ -27,6 +27,7 @@ from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.util import NO_MAX
@@ -148,7 +149,7 @@ class StatCommand(Command):
         pass
       if not arg_matches:
         if logging.getLogger().isEnabledFor(logging.INFO):
-          sys.stderr.write('No URLs matched %s' % url_str)
+          sys.stderr.write(NO_URLS_MATCHED_TARGET % url_str)
         found_nonmatching_arg = True
     if found_nonmatching_arg:
       return 1

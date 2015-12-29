@@ -27,6 +27,10 @@ The exceptions in this module are for use across multiple different classes.
 from __future__ import absolute_import
 
 
+NO_URLS_MATCHED_GENERIC = 'No URLs matched'
+NO_URLS_MATCHED_TARGET = 'No URLs matched: %s'
+
+
 class AbortException(StandardError):
   """Exception raised when a user aborts a command that needs to do cleanup."""
 

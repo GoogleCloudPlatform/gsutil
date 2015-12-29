@@ -24,6 +24,7 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
@@ -204,7 +205,7 @@ class LoggingCommand(Command):
         self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                     provider=url.scheme, fields=['id'])
     if not some_matched:
-      raise CommandException('No URLs matched')
+      raise CommandException(NO_URLS_MATCHED_TARGET % list(self.args))
     return 0
 
   def _Disable(self):
@@ -223,7 +224,7 @@ class LoggingCommand(Command):
         self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
                                     provider=url.scheme, fields=['id'])
     if not some_matched:
-      raise CommandException('No URLs matched')
+      raise CommandException(NO_URLS_MATCHED_TARGET % list(self.args))
     return 0
 
   def RunCommand(self):
