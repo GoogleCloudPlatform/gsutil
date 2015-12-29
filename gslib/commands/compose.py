@@ -63,10 +63,13 @@ _DETAILED_HELP_TEXT = ("""
         gs://bucket/append-target
     $ gsutil rm gs://bucket/data-to-append
 
-  Note that there is a limit (currently %d) to the number of components for a
-  given composite object. This means you can append to each object at most %d
-  times.
-""" % (MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1))
+  Note that there is a limit (currently %d) to the number of components that can
+  be composed in a single operation.
+
+  In addition, there is a limit (currently %d) to the total number of components
+  for a given composite object. This means you can append to each object at most
+  %d times.
+""" % (MAX_COMPOSE_ARITY, MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1))
 
 
 class ComposeCommand(Command):
