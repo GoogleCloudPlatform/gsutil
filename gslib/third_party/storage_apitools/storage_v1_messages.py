@@ -63,8 +63,8 @@ class Bucket(messages.Message):
     selfLink: The URI of this bucket.
     storageClass: The bucket's storage class. This defines how objects in the
       bucket are stored and determines the SLA and the cost of storage. Values
-      include STANDARD, NEARLINE and DURABLE_REDUCED_AVAILABILITY. Defaults to
-      STANDARD. For more information, see storage classes.
+      include standard, nearline and durable_reduced_availability. Defaults to
+      standard. For more information, see storage classes.
     timeCreated: Creation time of the bucket in RFC 3339 format.
     versioning: The bucket's versioning configuration.
     website: The bucket's website configuration.

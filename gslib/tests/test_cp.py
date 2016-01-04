@@ -777,9 +777,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   def test_cross_storage_class_cloud_cp(self):
-    bucket1_uri = self.CreateBucket(storage_class='STANDARD')
+    bucket1_uri = self.CreateBucket(storage_class='standard')
     bucket2_uri = self.CreateBucket(
-        storage_class='DURABLE_REDUCED_AVAILABILITY')
+        storage_class='durable_reduced_availability')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
     # Server now allows copy-in-the-cloud across storage classes.
     self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)])
@@ -832,9 +832,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_daisy_chain_cp(self):
     """Tests cp with the -D option."""
-    bucket1_uri = self.CreateBucket(storage_class='STANDARD')
+    bucket1_uri = self.CreateBucket(storage_class='standard')
     bucket2_uri = self.CreateBucket(
-        storage_class='DURABLE_REDUCED_AVAILABILITY')
+        storage_class='durable_reduced_availability')
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
     # Set some headers on source object so we can verify that headers are
     # presereved by daisy-chain copy.
@@ -2296,7 +2296,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Second bucket needs to be a different storage class so the service
     # actually rewrites the bytes.
     bucket_uri2 = self.CreateBucket(
-        storage_class='DURABLE_REDUCED_AVAILABILITY')
+        storage_class='durable_reduced_availability')
     # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
     # need 2 response from the service: 1 success, 1 failure prior to
     # completion.
@@ -2359,7 +2359,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Second bucket needs to be a different storage class so the service
     # actually rewrites the bytes.
     bucket_uri2 = self.CreateBucket(
-        storage_class='DURABLE_REDUCED_AVAILABILITY')
+        storage_class='durable_reduced_availability')
     # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
     # need 2 response from the service: 1 success, 1 failure prior to
     # completion.
@@ -2427,7 +2427,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Second bucket needs to be a different storage class so the service
     # actually rewrites the bytes.
     bucket_uri2 = self.CreateBucket(
-        storage_class='DURABLE_REDUCED_AVAILABILITY')
+        storage_class='durable_reduced_availability')
     # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
     # need 2 response from the service: 1 success, 1 failure prior to
     # completion.

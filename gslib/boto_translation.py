@@ -286,7 +286,7 @@ class BotoTranslation(CloudApi):
     bucket_uri = self._StorageUriForBucket(bucket_name)
     location = ''
     if metadata and metadata.location:
-      location = metadata.location
+      location = metadata.location.lower()
     # Pass storage_class param only if this is a GCS bucket. (In S3 the
     # storage class is specified on the key object.)
     headers = self._CreateBaseHeaders()

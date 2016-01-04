@@ -507,9 +507,9 @@ class GcsJsonApi(CloudApi):
     metadata.name = bucket_name
 
     if metadata.location:
-      metadata.location = metadata.location.upper()
+      metadata.location = metadata.location.lower()
     if metadata.storageClass:
-      metadata.storageClass = metadata.storageClass.upper()
+      metadata.storageClass = metadata.storageClass.lower()
 
     project_id = PopulateProjectId(project_id)
 

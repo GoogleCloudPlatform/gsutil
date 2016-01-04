@@ -59,7 +59,7 @@ _DETAILED_HELP_TEXT = ("""
   If you don't specify a -c option, the bucket will be created with the default
   (Standard) storage class.
 
-  If you specify -c DURABLE_REDUCED_AVAILABILITY (or -c DRA), it causes the data
+  If you specify -c durable_reduced_availability (or -c dra), it causes the data
   stored in the bucket to use Durable Reduced Availability storage. Buckets
   created with this storage class have lower availability than Standard storage
   class buckets, but durability equal to that of buckets created with Standard
@@ -73,7 +73,7 @@ _DETAILED_HELP_TEXT = ("""
   details.
 
 
-  If you specify -c NEARLINE (or -c NL), it causes the data
+  If you specify -c nearline (or -c nl), it causes the data
   stored in the bucket to use Nearline storage. Buckets created with this
   storage class have higher latency and lower throughput than Standard storage
   class buckets. The availability and durability remains equal to that of
@@ -100,32 +100,32 @@ _DETAILED_HELP_TEXT = ("""
   `regional location <https://cloud.google.com/storage/docs/bucket-locations>`_.
   The following regional locations support all storage classes:
 
-  - ASIA-EAST1 (Eastern Asia-Pacific)
-  - EUROPE-WEST1 (Western Europe)
-  - US-CENTRAL1 (Central United States)
-  - US-EAST1 (Eastern United States)
+  - asia-east1 (Eastern Asia-Pacific)
+  - europe-west1 (Western Europe)
+  - us-central1 (Central United States)
+  - us-east1 (Eastern United States)
 
   Example:
-    gsutil mb -c NEARLINE -l EUROPE-WEST1 gs://some-bucket
+    gsutil mb -c nearline -l europe-west1 gs://some-bucket
 
   The following regional locations are in Alpha and support just the Durable
-  Reduced Availability storage class (-C DRA). Data stored in these locations
+  Reduced Availability storage class (-C dra). Data stored in these locations
   is not subject to the usual SLA. See the
   `bucket location <https://cloud.google.com/storage/docs/bucket-locations>`_
   documentation for additional information.
 
-  - US-CENTRAL2 (Central United States)
-  - US-EAST2 (Eastern United States)
-  - US-EAST3 (Eastern United States)
-  - US-WEST1 (Western United States)
+  - us-central2 (Central United States)
+  - us-east2 (Eastern United States)
+  - us-east3 (Eastern United States)
+  - us-west1 (Western United States)
 
   Example:
-    gsutil mb -c DRA -l US-CENTRAL2 gs://some-bucket
+    gsutil mb -c dra -l US-CENTRAL2 gs://some-bucket
 
 
 <B>OPTIONS</B>
-  -c class          Can be DRA (or DURABLE_REDUCED_AVAILABILITY), NL (or
-                    NEARLINE), or S (or STANDARD). Default is STANDARD.
+  -c class          Can be dra (or durable_reduced_availability), nl (or
+                    nearline), or S (or standard). Default is standard.
 
   -l location       Can be any multi-regional or regional location as described
                     above. Default is US. Locations are case insensitive.
@@ -212,11 +212,11 @@ class MbCommand(Command):
     return 0
 
   def _Normalize_Storage_Class(self, sc):
-    sc = sc.upper()
-    if sc in ('DRA', 'DURABLE_REDUCED_AVAILABILITY'):
-      return 'DURABLE_REDUCED_AVAILABILITY'
-    if sc in ('S', 'STD', 'STANDARD'):
-      return 'STANDARD'
-    if sc in ('NL', 'NEARLINE'):
-      return 'NEARLINE'
+    sc = sc.lower()
+    if sc in ('dra', 'durable_reduced_availability'):
+      return 'durable_reduced_availability'
+    if sc in ('s', 'std', 'standard'):
+      return 'standard'
+    if sc in ('nl', 'nearline'):
+      return 'nearline'
     return sc
