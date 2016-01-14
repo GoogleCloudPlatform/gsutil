@@ -1079,9 +1079,14 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
             'would run significantly faster if you enable parallel composite '
             'uploads. This feature can be enabled by editing the '
             '"parallel_composite_upload_threshold" value in your .boto '
-            'configuration file. However, note that if you do this you and any '
-            'users that download such composite files will need to have a '
-            'compiled crcmod installed (see "gsutil help crcmod").')) + '\n')
+            'configuration file. However, note that if you do this large files '
+            'will be uploaded as '
+            '`composite objects <https://cloud.google.com/storage/docs/composite-objects>`_,'
+            'which means that any user who downloads such objects will need to '
+            'have a compiled crcmod installed (see "gsutil help crcmod"). This '
+            'is because without a compiled crcmod, computing checksums on '
+            'composite objects is so slow that gsutil disables downloads of '
+            'composite objects.')) + '\n')
         suggested_sliced_transfers['suggested'] = True
 
   return (all_factors_but_size
