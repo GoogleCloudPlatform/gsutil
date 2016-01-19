@@ -590,7 +590,7 @@ class Command(HelpProvider):
     """
     return CreateWildcardIterator(
         url_string, self.gsutil_api, all_versions=all_versions,
-        debug=self.debug, project_id=self.project_id)
+        debug=self.debug, project_id=self.project_id, logger=self.logger)
 
   def RunCommand(self):
     """Abstract function in base class. Subclasses must implement this.

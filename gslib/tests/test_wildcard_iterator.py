@@ -352,6 +352,92 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
       # Expected behavior.
       self.assertTrue(str(e).find('more than 2 consecutive') != -1)
 
+  def testRecursiveDirectoryFollowsSymbolicLinks(self):
+    """Tests that by default it follows symlinks without looping.
+
+    Symbolic links should be copied as files but since they may a generate
+    cyclic directory structure, each cycle should be broken.
+    """
+    pass
+    # Should ignore cycle:
+    # Create test directory structure with cycles:
+    # temp1/
+    #   a1/
+    #     b1/
+    #        a2/ --> ../../a2/
+    #        f1
+    #   a2/
+    #     b2/
+    #        a1/ --> ../../a1/
+    #        f2
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/a1/b1/f1
+    # temp1/a2/b2/f2
+
+    # Should ignore cycle pointing to same directory:
+    # Create test directory structure with cycles:
+    # temp1/
+    #   a1/ --> ../temp2/
+    # temp2/
+    #   a2/ --> ../temp1/
+    #   f1
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/a1/f1
+
+    # Should ignore cycle pointing to same directory:
+    # Create test directory structure with cycles:
+    # temp1/
+    #   a1/ --> ../temp2/
+    # temp2/
+    #   a2/ --> ../temp1/
+    #   f1
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/a1/f1
+
+    # Should not ignore another symlink starting by the same path.
+    # Create test directory structure with cycles:
+    # temp1/
+    #   a1/ --> ../temp2/
+    #   a1_prepend/ --> ../temp3/
+    # temp2/
+    #   f1
+    # temp3/
+    #   f2
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/a1/f1
+    # temp1/a1_prepend/f2
+
+    # Should traverse only once symlink to same path.
+    # Create test directory structure with cycles:
+    # temp1/
+    #   a1/ --> ../temp2/
+    #   a1_bis/ --> ../temp2/
+    # temp2/
+    #   f1
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/a1/f1
+
+    # Should traverse only once complex symlinks pointing to more and more base
+    # directories:
+    # Create test directory structure with cycles:
+    # temp1/
+    #   1/ --> ../temp2/a/b
+    #   2/ --> ../temp2/a
+    #   3/ --> ../temp3
+    # temp2/
+    #   a/
+    #     b/
+    #       f3
+    #     f2
+    #   f1
+    # temp3/
+    #   4/ --> ../temp2
+    # FileWildcardIterator of temp1 expected traversed structure:
+    # temp1/3/f1
+    # temp1/3/a/f2
+    # temp1/3/a/b/f3
+
+
   def testMissingDir(self):
     """Tests that wildcard gets empty iterator when directory doesn't exist."""
     res = list(

@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from collections import deque
 import fnmatch
 import glob
 import os
@@ -495,14 +496,16 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_url, debug=0):
+  def __init__(self, wildcard_url, logger=None, debug=0):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
+      logger: logger instance to use for output.
       debug: Debug level (range 0..3).
     """
     self.wildcard_url = wildcard_url
+    self.logger = logger
     self.debug = debug
 
   def __iter__(self):
@@ -551,47 +554,81 @@ class FileWildcardIterator(WildcardIterator):
         raise CommandException('\n'.join(textwrap.wrap(
             _UNICODE_EXCEPTION_TEXT % repr(filepath))))
 
-  def _IterDir(self, directory, wildcard):
+  def _IterDir(self, basedir, wildcard):
     """An iterator over the specified dir and wildcard."""
     # UTF8-encode directory before passing it to os.walk() so if there are
     # non-valid UTF8 chars in the file name (e.g., that can happen if the file
     # originated on Windows) os.walk() will not attempt to decode and then die
     # with a "codec can't decode byte" error, and instead we can catch the error
     # at yield time and print a more informative error message.
-    for dirpath, unused_dirnames, filenames in os.walk(directory.encode(UTF8)):
-      for f in fnmatch.filter(filenames, wildcard):
-        try:
-          yield os.path.join(dirpath,
-                             FixWindowsEncodingIfNeeded(f)).decode(UTF8)
-        except UnicodeDecodeError:
-          # Note: We considered several ways to deal with this, but each had
-          # problems:
-          # 1. Raise an exception and try to catch in a higher layer (the
-          #    gsutil cp command), so we can properly support the gsutil cp -c
-          #    option. That doesn't work because raising an exception during
-          #    iteration terminates the generator.
-          # 2. Accumulate a list of bad filenames and skip processing each
-          #    during iteration, then raise at the end, with exception text
-          #    printing the bad paths. That doesn't work because iteration is
-          #    wrapped in PluralityCheckableIterator, so it's possible there
-          #    are not-yet-performed copy operations at the time we reach the
-          #    end of the iteration and raise the exception - which would cause
-          #    us to skip copying validly named files. Moreover, the gsutil
-          #    cp command loops over argv, so if you run the command gsutil cp
-          #    -rc dir1 dir2 gs://bucket, an invalid unicode name inside dir1
-          #    would cause dir2 never to be visited.
-          # 3. Print the invalid pathname and skip it during iteration. That
-          #    would work but would mean gsutil cp could exit with status 0
-          #    even though some files weren't copied.
-          # 4. Change the WildcardIterator to include an error status along with
-          #    the result. That would solve the problem but would be a
-          #    substantial change (WildcardIterator is used in many parts of
-          #    gsutil), and we didn't feel that magnitude of change was
-          #    warranted by this relatively uncommon corner case.
-          # Instead we chose to abort when one such file is encountered, and
-          # require the user to remove or rename the files and try again.
-          raise CommandException('\n'.join(textwrap.wrap(
-              _UNICODE_EXCEPTION_TEXT % repr(os.path.join(dirpath, f)))))
+    directories_to_do = deque([basedir])
+    directories_planned_or_done = [os.path.realpath(basedir)]
+    directories_done = []
+    while directories_to_do:
+      directory = os.path.relpath(directories_to_do.popleft())
+      for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
+        # If we already copied files below this directory,
+        realdirpath = os.path.realpath(dirpath)
+        if any((realdirpath + os.path.sep).startswith(d + os.path.sep)
+               for d in directories_done):
+          # Skip this directory.
+          if self.logger:
+            self.logger.warn('Ignoring already processed directory: %s',
+                             dirpath)
+          continue
+
+        # Note symbolic link to later traverse.
+        for dirname in dirnames:
+          dirname = os.path.join(dirpath, dirname)
+          if os.path.islink(dirname):
+            realpath = os.path.realpath(dirname)
+            # If we already processed this directory (i.e. recursive symlink),
+            if any((realpath + os.path.sep).startswith(d + os.path.sep)
+                   for d in directories_planned_or_done):
+              # Save some time and ignore it.
+              if self.logger:
+                self.logger.warn('Ignoring cyclic symbolic link: %s --> %s',
+                                 dirname, os.readlink(dirname))
+              continue
+            else:
+              directories_planned_or_done.append(realpath)
+              directories_to_do.append(realpath)
+
+        for f in fnmatch.filter(filenames, wildcard):
+          try:
+            yield os.path.join(dirpath,
+                               FixWindowsEncodingIfNeeded(f)).decode(UTF8)
+          except UnicodeDecodeError:
+            # Note: We considered several ways to deal with this, but each had
+            # problems:
+            # 1. Raise an exception and try to catch in a higher layer (the
+            #    gsutil cp command), so we can properly support the gsutil cp -c
+            #    option. That doesn't work because raising an exception during
+            #    iteration terminates the generator.
+            # 2. Accumulate a list of bad filenames and skip processing each
+            #    during iteration, then raise at the end, with exception text
+            #    printing the bad paths. That doesn't work because iteration is
+            #    wrapped in PluralityCheckableIterator, so it's possible there
+            #    are not-yet-performed copy operations at the time we reach the
+            #    end of the iteration and raise the exception - which would cause
+            #    us to skip copying validly named files. Moreover, the gsutil
+            #    cp command loops over argv, so if you run the command gsutil cp
+            #    -rc dir1 dir2 gs://bucket, an invalid unicode name inside dir1
+            #    would cause dir2 never to be visited.
+            # 3. Print the invalid pathname and skip it during iteration. That
+            #    would work but would mean gsutil cp could exit with status 0
+            #    even though some files weren't copied.
+            # 4. Change the WildcardIterator to include an error status along with
+            #    the result. That would solve the problem but would be a
+            #    substantial change (WildcardIterator is used in many parts of
+            #    gsutil), and we didn't feel that magnitude of change was
+            #    warranted by this relatively uncommon corner case.
+            # Instead we chose to abort when one such file is encountered, and
+            # require the user to remove or rename the files and try again.
+            raise CommandException('\n'.join(textwrap.wrap(
+                _UNICODE_EXCEPTION_TEXT % repr(os.path.join(dirpath, f)))))
+
+      directories_done.append(os.path.realpath(directory))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
@@ -649,8 +686,8 @@ class WildcardException(StandardError):
     return 'WildcardException: %s' % self.reason
 
 
-def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
-                           project_id=None):
+def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
+                           debug=0, project_id=None, logger=None):
   """Instantiate a WildcardIterator for the given URL string.
 
   Args:
@@ -662,6 +699,7 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
                   object version.
     debug: Debug level to control debug output for iterator.
     project_id: Project id to use for bucket listings.
+    logger: logger instance to use for output.
 
   Returns:
     A WildcardIterator that handles the requested iteration.
@@ -669,7 +707,7 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
 
   url = StorageUrlFromString(url_str)
   if url.IsFileUrl():
-    return FileWildcardIterator(url, debug=debug)
+    return FileWildcardIterator(url, logger=logger, debug=debug)
   else:  # Cloud URL
     return CloudWildcardIterator(
         url, gsutil_api, all_versions=all_versions, debug=debug,

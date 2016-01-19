@@ -546,8 +546,11 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
     else:
       wildcard = '%s/*' % base_url_str.rstrip('/\\')
     iterator = CreateWildcardIterator(
-        wildcard, gsutil_api, debug=cls.debug,
-        project_id=cls.project_id).IterObjects(
+        wildcard,
+        gsutil_api,
+        debug=cls.debug,
+        project_id=cls.project_id,
+        logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=['crc32c', 'md5Hash', 'name', 'size'])
 
