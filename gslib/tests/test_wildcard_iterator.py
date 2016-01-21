@@ -23,6 +23,7 @@
 
 from __future__ import absolute_import
 
+import os
 import tempfile
 
 from gslib import wildcard_iterator
@@ -352,91 +353,127 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
       # Expected behavior.
       self.assertTrue(str(e).find('more than 2 consecutive') != -1)
 
-  def testRecursiveDirectoryFollowsSymbolicLinks(self):
-    """Tests that by default it follows symlinks without looping.
+  def testFollowsDirectorySymbolicLinks1(self):
+    """Tests that it follows non-recursive symlinks."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.mk_file('a1/f1')
+    helper.mk_file('a2/f2')
+    helper.symlink('a1/a2', '../a2')
+    helper.symlink('a1/a2_bis', '../a2')
 
-    Symbolic links should be copied as files but since they may a generate
-    cyclic directory structure, each cycle should be broken.
-    """
-    pass
-    # Should ignore cycle:
-    # Create test directory structure with cycles:
-    # temp1/
-    #   a1/
-    #     b1/
-    #        a2/ --> ../../a2/
-    #        f1
-    #   a2/
-    #     b2/
-    #        a1/ --> ../../a1/
-    #        f2
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/a1/b1/f1
-    # temp1/a2/b2/f2
+    self.assertItemsEqual(helper.run_wildcard_iterator(), [
+        'a1/a2/f2',
+        'a1/a2_bis/f2',
+        'a1/f1',
+        'a2/f2',
+    ])
 
-    # Should ignore cycle pointing to same directory:
-    # Create test directory structure with cycles:
-    # temp1/
-    #   a1/ --> ../temp2/
-    # temp2/
-    #   a2/ --> ../temp1/
-    #   f1
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/a1/f1
+  def testFollowsDirectorySymbolicLinks2(self):
+    """Tests that it ignore cycle pointing to same directory."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('1/t2', '../2')
+    helper.symlink('2/t3', '../3')
+    helper.symlink('3/t1-cyclic', '../1')
+    helper.mk_file('2/f1')
+    helper.mk_file('3/f2')
 
-    # Should ignore cycle pointing to same directory:
-    # Create test directory structure with cycles:
-    # temp1/
-    #   a1/ --> ../temp2/
-    # temp2/
-    #   a2/ --> ../temp1/
-    #   f1
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/a1/f1
+    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+        '1/t2/f1',
+        '1/t2/t3/f2',
+    ])
 
-    # Should not ignore another symlink starting by the same path.
-    # Create test directory structure with cycles:
-    # temp1/
-    #   a1/ --> ../temp2/
-    #   a1_prepend/ --> ../temp3/
-    # temp2/
-    #   f1
-    # temp3/
-    #   f2
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/a1/f1
-    # temp1/a1_prepend/f2
+  def testFollowsDirectorySymbolicLinks3(self):
+    """Test that it ignores cycles."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('1/a1/cycle1', '..')
+    helper.symlink('1/a1/b1/cycle2', '../../a2')
+    helper.mk_file('1/a1/b1/f1')
+    helper.symlink('1/a2/b2/cycle2', '../../a1')
+    helper.symlink('1/a3/b3', '../../2')
+    helper.mk_file('1/a2/b2/f2')
+    helper.symlink('2/cycle3', '..')
+    helper.symlink('2/cycle4', '../1')
+    helper.symlink('2/a4', '../1/a1')
+    helper.mk_file('2/f3')
 
-    # Should traverse only once symlink to same path.
-    # Create test directory structure with cycles:
-    # temp1/
-    #   a1/ --> ../temp2/
-    #   a1_bis/ --> ../temp2/
-    # temp2/
-    #   f1
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/a1/f1
+    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+        '1/a1/b1/f1',
+        '1/a2/b2/f2',
+        '1/a2/b2/cycle2/b1/f1',
+        '1/a3/b3/f3',
+        '1/a3/b3/a4/b1/f1',
+    ])
 
-    # Should traverse only once complex symlinks pointing to more and more base
-    # directories:
-    # Create test directory structure with cycles:
-    # temp1/
-    #   1/ --> ../temp2/a/b
-    #   2/ --> ../temp2/a
-    #   3/ --> ../temp3
-    # temp2/
-    #   a/
-    #     b/
-    #       f3
-    #     f2
-    #   f1
-    # temp3/
-    #   4/ --> ../temp2
-    # FileWildcardIterator of temp1 expected traversed structure:
-    # temp1/3/f1
-    # temp1/3/a/f2
-    # temp1/3/a/b/f3
+  def testFollowsDirectorySymbolicLinks4(self):
+    """Test it does include symlinks starting by the same path."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('1/a', '../1b/a')
+    helper.symlink('1/b', '../1b')
+    helper.mk_file('1b/f1')
+    helper.mk_file('1b/a/f2')
 
+    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+        '1/a/f2',
+        '1/b/f1',
+        '1/b/a/f2',
+    ])
+
+  def testFollowsDirectorySymbolicLinks5(self):
+    """Test complex symlinks pointing to more and more base directory."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('1/1', '../2/a/b')
+    helper.symlink('1/2', '../2/a')
+    helper.symlink('1/3', '../3')
+    helper.mk_file('2/f1')
+    helper.mk_file('2/a/f2')
+    helper.mk_file('2/a/b/f3')
+    helper.symlink('3/4', '../2')
+
+    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+        '1/1/f3',
+        '1/2/b/f3',
+        '1/2/f2',
+        '1/3/4/a/b/f3',
+        '1/3/4/a/f2',
+        '1/3/4/f1',
+    ])
+
+  def testFollowsDirectorySymbolicLinks6(self):
+    """Test symlink pointing to symlink from symlink basedir."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('1', '2')
+    helper.symlink('2/3', '../3')
+    helper.mk_file('2/f1')
+    helper.symlink('3', '4')
+    helper.symlink('4/cycle1', '../3')
+    helper.symlink('4/cycle2', '..')
+    helper.symlink('4/cycle3', '../2')
+    helper.symlink('4/cycle4', '../2/3')
+    helper.mk_file('4/f2')
+
+    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+        '1/f1',
+        '1/3/f2',
+    ])
+
+  def testFollowsDirectorySymbolicLinkToNotExisting(self):
+    """Test invalid symlinks."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('a', 'not/existing')
+    helper.mk_file('f1')
+
+    self.assertItemsEqual(helper.run_wildcard_iterator(), [
+        'a',
+        'f1',
+    ])
+
+  def testFollowsDirectorySymbolicLinkToSelf(self):
+    """Test invalid symlinks."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.symlink('a', '../b')
+    helper.symlink('b', 'b')
+
+    self.assertItemsEqual(helper.run_wildcard_iterator('a'), [])
 
   def testMissingDir(self):
     """Tests that wildcard gets empty iterator when directory doesn't exist."""
@@ -452,3 +489,40 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     res = list(self._test_wildcard_iterator(uri).IterAll(
         expand_top_level_buckets=True))
     self.assertEqual(0, len(res))
+
+
+class _FileWildcardIteratorTestHelper(object):
+  """Test helper to create some local files and check iterator results."""
+
+  def __init__(self, tmp):
+    self.tmp = tmp
+
+  def symlink(self, path, dst):
+    """Creates a symbolic link and parent folders if necessary."""
+    path = os.path.join(self.tmp, path)
+    if not os.path.exists(os.path.dirname(path)):
+      os.makedirs(os.path.dirname(path))
+    if os.path.exists(path):
+      os.remove(path)
+    os.symlink(dst, path)
+
+  def mk_file(self, path):
+    """Creates an empty file and parent folders if necessary.
+
+    Note: The name has been selected to match the length of other methods
+    for readability in tests.
+    """
+    path = os.path.join(self.tmp, path)
+    if not os.path.exists(os.path.dirname(path)):
+      os.makedirs(os.path.dirname(path))
+    open(path, 'a').close()
+
+  def run_wildcard_iterator(self, path=''):
+    """Returns all relative paths returned by FileWildcardIterator."""
+    file_wildcard_iterator = wildcard_iterator.CreateWildcardIterator(
+        suri(os.path.join(self.tmp, path), '**'),
+        None)
+    return [
+        str(u)[len(suri(self.tmp)) + 1:]
+        for u in file_wildcard_iterator.IterAll()
+    ]

@@ -51,6 +51,27 @@ _UNICODE_EXCEPTION_TEXT = (
     'gsutil-compatible encoding) see `gsutil help encoding`.')
 
 
+def _DetectSymlinkCycle(symlinks, src, dst):
+  """Detects cyclics symbolic links.
+
+  Args:
+    symlinks: dictionary of existing symbolic links src->dst.
+    src: absolute real path of the symbolic link.
+    dst: absolute real path of where that link is pointing to.
+
+  Returns:
+    True if adding this symlink would introduce a cycle.
+  """
+  if (src + os.path.sep).startswith(dst + os.path.sep):
+    return True
+
+  for symlink_src, symlink_dst in symlinks.items():
+    if (symlink_src + os.path.sep).startswith(dst + os.path.sep):
+      if _DetectSymlinkCycle(symlinks, src, symlink_dst):
+        return True
+  return False
+
+
 class WildcardIterator(object):
   """Class for iterating over Google Cloud Storage strings containing wildcards.
 
@@ -562,37 +583,26 @@ class FileWildcardIterator(WildcardIterator):
     # with a "codec can't decode byte" error, and instead we can catch the error
     # at yield time and print a more informative error message.
     directories_to_do = deque([basedir])
-    directories_planned_or_done = [os.path.realpath(basedir)]
-    directories_done = []
+    symlinks = {}
     while directories_to_do:
-      directory = os.path.relpath(directories_to_do.popleft())
-      for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
-        # If we already copied files below this directory,
-        realdirpath = os.path.realpath(dirpath)
-        if any((realdirpath + os.path.sep).startswith(d + os.path.sep)
-               for d in directories_done):
-          # Skip this directory.
-          if self.logger:
-            self.logger.warn('Ignoring already processed directory: %s',
-                             dirpath)
-          continue
+      directory = directories_to_do.popleft()
 
+      for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
         # Note symbolic link to later traverse.
         for dirname in dirnames:
-          dirname = os.path.join(dirpath, dirname)
-          if os.path.islink(dirname):
-            realpath = os.path.realpath(dirname)
-            # If we already processed this directory (i.e. recursive symlink),
-            if any((realpath + os.path.sep).startswith(d + os.path.sep)
-                   for d in directories_planned_or_done):
-              # Save some time and ignore it.
+          src = os.path.join(os.path.realpath(dirpath), dirname)
+          if os.path.islink(src):
+            # Detect symbolic links cycles (i.e. recursive symlink).
+            dst = os.path.realpath(src)
+            if _DetectSymlinkCycle(symlinks, src, dst):
               if self.logger:
                 self.logger.warn('Ignoring cyclic symbolic link: %s --> %s',
-                                 dirname, os.readlink(dirname))
+                                 os.path.relpath(src, basedir),
+                                 os.readlink(src))
               continue
             else:
-              directories_planned_or_done.append(realpath)
-              directories_to_do.append(realpath)
+              symlinks[src] = dst
+              directories_to_do.append(os.path.join(dirpath, dirname))
 
         for f in fnmatch.filter(filenames, wildcard):
           try:
@@ -610,16 +620,16 @@ class FileWildcardIterator(WildcardIterator):
             #    printing the bad paths. That doesn't work because iteration is
             #    wrapped in PluralityCheckableIterator, so it's possible there
             #    are not-yet-performed copy operations at the time we reach the
-            #    end of the iteration and raise the exception - which would cause
-            #    us to skip copying validly named files. Moreover, the gsutil
-            #    cp command loops over argv, so if you run the command gsutil cp
-            #    -rc dir1 dir2 gs://bucket, an invalid unicode name inside dir1
-            #    would cause dir2 never to be visited.
+            #    end of the iteration and raise the exception - which would
+            #    cause us to skip copying validly named files. Moreover, the
+            #    gsutil cp command loops over argv, so if you run the command
+            #    gsutil cp -rc dir1 dir2 gs://bucket, an invalid unicode name
+            #    inside dir1 would cause dir2 never to be visited.
             # 3. Print the invalid pathname and skip it during iteration. That
             #    would work but would mean gsutil cp could exit with status 0
             #    even though some files weren't copied.
-            # 4. Change the WildcardIterator to include an error status along with
-            #    the result. That would solve the problem but would be a
+            # 4. Change the WildcardIterator to include an error status along
+            #    with the result. That would solve the problem but would be a
             #    substantial change (WildcardIterator is used in many parts of
             #    gsutil), and we didn't feel that magnitude of change was
             #    warranted by this relatively uncommon corner case.
@@ -627,8 +637,6 @@ class FileWildcardIterator(WildcardIterator):
             # require the user to remove or rename the files and try again.
             raise CommandException('\n'.join(textwrap.wrap(
                 _UNICODE_EXCEPTION_TEXT % repr(os.path.join(dirpath, f)))))
-
-      directories_done.append(os.path.realpath(directory))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
