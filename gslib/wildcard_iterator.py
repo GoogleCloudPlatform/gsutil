@@ -517,15 +517,17 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_url, logger=None, debug=0):
+  def __init__(self, wildcard_url, copy_links=False, logger=None, debug=0):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
+      copy_links: If true, directory symlinks will be recursive traversed.
       logger: logger instance to use for output.
       debug: Debug level (range 0..3).
     """
     self.wildcard_url = wildcard_url
+    self.copy_links = copy_links
     self.logger = logger
     self.debug = debug
 
@@ -588,21 +590,22 @@ class FileWildcardIterator(WildcardIterator):
       directory = directories_to_do.popleft()
 
       for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
-        # Note symbolic link to later traverse.
-        for dirname in dirnames:
-          src = os.path.join(os.path.realpath(dirpath), dirname)
-          if os.path.islink(src):
-            # Detect symbolic links cycles (i.e. recursive symlink).
-            dst = os.path.realpath(src)
-            if _DetectSymlinkCycle(symlinks, src, dst):
-              if self.logger:
-                self.logger.warn('Ignoring cyclic symbolic link: %s --> %s',
-                                 os.path.relpath(src, basedir),
-                                 os.readlink(src))
-              continue
-            else:
-              symlinks[src] = dst
-              directories_to_do.append(os.path.join(dirpath, dirname))
+        if self.copy_links:
+          # Note symbolic link to later traverse.
+          for dirname in dirnames:
+            src = os.path.join(os.path.realpath(dirpath), dirname)
+            if os.path.islink(src):
+              # Detect symbolic links cycles (i.e. recursive symlink).
+              dst = os.path.realpath(src)
+              if _DetectSymlinkCycle(symlinks, src, dst):
+                if self.logger:
+                  self.logger.warn('Ignoring cyclic symbolic link: %s --> %s',
+                                   os.path.relpath(src, basedir),
+                                   os.readlink(src))
+                continue
+              else:
+                symlinks[src] = dst
+                directories_to_do.append(os.path.join(dirpath, dirname))
 
         for f in fnmatch.filter(filenames, wildcard):
           try:
@@ -695,7 +698,8 @@ class WildcardException(StandardError):
 
 
 def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
-                           debug=0, project_id=None, logger=None):
+                           copy_links=False, debug=0, project_id=None,
+                           logger=None):
   """Instantiate a WildcardIterator for the given URL string.
 
   Args:
@@ -705,6 +709,7 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
     all_versions: If true, the iterator yields all versions of objects
                   matching the wildcard.  If false, yields just the live
                   object version.
+    copy_links: If true, directory symlinks will be recursive traversed.
     debug: Debug level to control debug output for iterator.
     project_id: Project id to use for bucket listings.
     logger: logger instance to use for output.
@@ -715,7 +720,8 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
 
   url = StorageUrlFromString(url_str)
   if url.IsFileUrl():
-    return FileWildcardIterator(url, logger=logger, debug=debug)
+    return FileWildcardIterator(url, copy_links=copy_links, logger=logger,
+                                debug=debug)
   else:  # Cloud URL
     return CloudWildcardIterator(
         url, gsutil_api, all_versions=all_versions, debug=debug,

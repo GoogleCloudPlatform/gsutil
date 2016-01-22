@@ -353,7 +353,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
       # Expected behavior.
       self.assertTrue(str(e).find('more than 2 consecutive') != -1)
 
-  def testFollowsDirectorySymbolicLinks1(self):
+  def testNotFollowingDirectorySymbolicLinksByDefault(self):
     """Tests that it follows non-recursive symlinks."""
     helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
     helper.mk_file('a1/f1')
@@ -362,6 +362,19 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.symlink('a1/a2_bis', '../a2')
 
     self.assertItemsEqual(helper.run_wildcard_iterator(), [
+        'a1/f1',
+        'a2/f2',
+    ])
+
+  def testFollowsDirectorySymbolicLinks1(self):
+    """Tests that it follows non-recursive symlinks."""
+    helper = _FileWildcardIteratorTestHelper(self.CreateTempDir())
+    helper.mk_file('a1/f1')
+    helper.mk_file('a2/f2')
+    helper.symlink('a1/a2', '../a2')
+    helper.symlink('a1/a2_bis', '../a2')
+
+    self.assertItemsEqual(helper.run_wildcard_iterator(copy_links=True), [
         'a1/a2/f2',
         'a1/a2_bis/f2',
         'a1/f1',
@@ -377,7 +390,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.mk_file('2/f1')
     helper.mk_file('3/f2')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+    self.assertItemsEqual(helper.run_wildcard_iterator('1', copy_links=True), [
         '1/t2/f1',
         '1/t2/t3/f2',
     ])
@@ -396,7 +409,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.symlink('2/a4', '../1/a1')
     helper.mk_file('2/f3')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+    self.assertItemsEqual(helper.run_wildcard_iterator('1', copy_links=True), [
         '1/a1/b1/f1',
         '1/a2/b2/f2',
         '1/a2/b2/cycle2/b1/f1',
@@ -412,7 +425,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.mk_file('1b/f1')
     helper.mk_file('1b/a/f2')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+    self.assertItemsEqual(helper.run_wildcard_iterator('1', copy_links=True), [
         '1/a/f2',
         '1/b/f1',
         '1/b/a/f2',
@@ -429,7 +442,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.mk_file('2/a/b/f3')
     helper.symlink('3/4', '../2')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+    self.assertItemsEqual(helper.run_wildcard_iterator('1', copy_links=True), [
         '1/1/f3',
         '1/2/b/f3',
         '1/2/f2',
@@ -451,7 +464,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.symlink('4/cycle4', '../2/3')
     helper.mk_file('4/f2')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('1'), [
+    self.assertItemsEqual(helper.run_wildcard_iterator('1', copy_links=True), [
         '1/f1',
         '1/3/f2',
     ])
@@ -462,7 +475,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.symlink('a', 'not/existing')
     helper.mk_file('f1')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator(), [
+    self.assertItemsEqual(helper.run_wildcard_iterator(copy_links=True), [
         'a',
         'f1',
     ])
@@ -473,7 +486,8 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     helper.symlink('a', '../b')
     helper.symlink('b', 'b')
 
-    self.assertItemsEqual(helper.run_wildcard_iterator('a'), [])
+    self.assertItemsEqual(helper.run_wildcard_iterator('a', copy_links=True), [
+    ])
 
   def testMissingDir(self):
     """Tests that wildcard gets empty iterator when directory doesn't exist."""
@@ -511,17 +525,29 @@ class _FileWildcardIteratorTestHelper(object):
 
     Note: The name has been selected to match the length of other methods
     for readability in tests.
+
+    Args:
+      path: Relative path to the file to create (related to the temp directory).
     """
     path = os.path.join(self.tmp, path)
     if not os.path.exists(os.path.dirname(path)):
       os.makedirs(os.path.dirname(path))
     open(path, 'a').close()
 
-  def run_wildcard_iterator(self, path=''):
-    """Returns all relative paths returned by FileWildcardIterator."""
+  def run_wildcard_iterator(self, path='', copy_links=False):
+    """Run the FileWildcardIterator.
+
+    Args:
+      path: Relative path to the base directory to iterate (related to temp).
+      copy_links: Set to true ask to recursively copy symlinks.
+
+    Returns:
+      All relative paths returned by FileWildcardIterator
+    """
     file_wildcard_iterator = wildcard_iterator.CreateWildcardIterator(
         suri(os.path.join(self.tmp, path), '**'),
-        None)
+        None,
+        copy_links=copy_links)
     return [
         str(u)[len(suri(self.tmp)) + 1:]
         for u in file_wildcard_iterator.IterAll()
