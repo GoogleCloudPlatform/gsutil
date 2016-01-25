@@ -14,7 +14,7 @@ management tasks, including:
 
 For installation instructions, please see:
 
-https://developers.google.com/storage/docs/gsutil_install
+https://cloud.google.com/storage/docs/gsutil_install
 
 ## Testing / Development
 
@@ -24,7 +24,7 @@ For information on developing gsutil and instructions for running the gsutil
 test suite, run the "gsutil help dev" command. Instructions are also available
 online at:
 
-https://developers.google.com/storage/docs/gsutil/addlhelp/ContributingCodetogsutil
+https://cloud.google.com/storage/docs/gsutil/addlhelp/ContributingCodetogsutil
 
 ## Help and Support
 
@@ -32,9 +32,9 @@ Run the "gsutil help" command for a list of the built-in gsutil help topics.
 
 You can also browse the help pages online at:
 
-https://developers.google.com/storage/docs/gsutil
+https://cloud.google.com/storage/docs/gsutil
 
 For community support, visit:
 
-https://developers.google.com/storage/docs/resources-support#community
+https://cloud.google.com/storage/docs/resources-support#community
 
