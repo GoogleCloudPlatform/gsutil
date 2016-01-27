@@ -111,6 +111,8 @@ _DETAILED_HELP_TEXT = ("""
               This will not pass the option to gsutil integration tests, which
               run in a separate process.
 
+  -t          Override gs_oauth2_refresh_token in ~/.boto file
+
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,
               etc. Errors are still reported. This option can be useful for

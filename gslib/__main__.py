@@ -271,13 +271,17 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
+      opts, args = getopt.getopt(sys.argv[1:], 'dDvot:h:mq',
                                  ['debug', 'detailedDebug', 'version', 'option',
                                   'help', 'header', 'multithreaded', 'quiet',
                                   'testexceptiontraces', 'trace-token=',
                                   'perf-trace-token='])
     except getopt.GetoptError as e:
       _HandleCommandException(gslib.exception.CommandException(e.msg))
+    for opt, arg in opts:
+      if opt in ('-t', '--token'):
+        opts = opts + [('-o', 'Credentials:gs_oauth2_refresh_token=%s' % (arg,))]
+        break
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Passing debug=2 causes boto to include httplib header output.
