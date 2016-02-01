@@ -153,7 +153,7 @@ _DETAILED_HELP_TEXT = ("""
   Setting the Content-Disposition allows you to control presentation style
   of the content, for example determining whether an attachment should be
   automatically displayed vs should require some form of action from the user to
-  open it.  See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1
+  open it.  See https://tools.ietf.org/html/rfc6266
   for more details about the meaning of Content-Disposition.
 
 
