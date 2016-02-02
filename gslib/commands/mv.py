@@ -79,6 +79,13 @@ _DETAILED_HELP_TEXT = ("""
   to destination followed by removing the source for each object.
 
 
+<B>CHARGES FOR MOVING NEARLINE OBJECTS</B>
+  If you move a Nearline storage class object, deletion and data retrieval
+  charges apply, because gsutil actually copies the original object and deletes
+  the original. See the `documentation
+  <https://cloud.google.com/storage/pricing>`_ for pricing details.
+
+
 <B>OPTIONS</B>
   All options that are available for the gsutil cp command are also available
   for the gsutil mv command (except for the -R flag, which is implied by the
