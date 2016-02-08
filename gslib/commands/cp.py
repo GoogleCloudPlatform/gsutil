@@ -440,17 +440,15 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   exit status from the gsutil command.  This can be done in a bash script, for
   example, by doing:
 
-     gsutil cp ./local-file gs://your-bucket/your-object
-     if [ "$status" -ne "0" ] ; then
-       << Code that handles failures >>
-     fi
+    if ! gsutil cp ./local-file gs://your-bucket/your-object; then
+      << Code that handles failures >>
+    fi
 
   Or, for copying a directory, use this instead:
 
-     gsutil cp -c -L cp.log -r ./dir gs://bucket
-     if [ "$status" -ne "0" ] ; then
-       << Code that handles failures >>
-     fi
+    if ! gsutil cp -c -L cp.log -r ./dir gs://bucket; then
+      << Code that handles failures >>
+    fi
 
   One important caveat is that files uploaded using parallel composite uploads
   are subject to a maximum number of components limit. For example, if you
@@ -872,7 +870,7 @@ class CpCommand(Command):
                        '%s is already being copied by another gsutil process '
                        'or thread (did you specify the same source URL twice?) '
                        % (src_url, dst_url))
-    except Exception, e:
+    except Exception, e:  # pylint: disable=broad-except
       if (copy_helper_opts.no_clobber and
           copy_helper.IsNoClobberServerException(e)):
         message = 'Rejected (noclobber): %s' % dst_url
