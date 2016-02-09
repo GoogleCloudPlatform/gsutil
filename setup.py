@@ -135,8 +135,8 @@ class CustomSDist(sdist.sdist):
 setup(
     name='gsutil',
     version=VERSION,
-    url='https://developers.google.com/storage/docs/gsutil',
-    download_url='https://developers.google.com/storage/docs/gsutil_install',
+    url='https://cloud.google.com/storage/docs/gsutil',
+    download_url='https://cloud.google.com/storage/docs/gsutil_install',
     license='Apache 2.0',
     author='Google Inc.',
     author_email='gs-team@google.com',

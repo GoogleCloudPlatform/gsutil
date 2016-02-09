@@ -272,7 +272,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>FOR MORE INFORMATION</B>
   For more details on how to use versioning and preconditions, see
-  https://developers.google.com/storage/docs/object-versioning
+  https://cloud.google.com/storage/docs/object-versioning
 """)
 
 

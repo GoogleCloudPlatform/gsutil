@@ -1463,14 +1463,14 @@ class GcsJsonApi(CloudApi):
           return AccessDeniedException(
               'The bucket you tried to create requires domain ownership '
               'verification. Please see '
-              'https://developers.google.com/storage/docs/bucketnaming'
+              'https://cloud.google.com/storage/docs/naming'
               '?hl=en#verification for more details.', status=e.status_code)
         elif 'User Rate Limit Exceeded' in str(e):
           return AccessDeniedException('Rate limit exceeded. Please retry this '
                                        'request later.', status=e.status_code)
         elif 'Access Not Configured' in str(e):
           return AccessDeniedException(
-              'Access Not Configured. Please go to the Google Developers '
+              'Access Not Configured. Please go to the Google Cloud Platform '
               'Console (https://cloud.google.com/console#/project) for your '
               'project, select APIs and Auth and enable the '
               'Google Cloud Storage JSON API.',

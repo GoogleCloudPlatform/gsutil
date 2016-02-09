@@ -120,7 +120,7 @@ _DESCRIPTION = """
      http://www.example.com/photos/404.html.
 
   4. For additional details see
-     https://developers.google.com/storage/docs/website-configuration.
+     https://cloud.google.com/storage/docs/website-configuration.
 
   The web command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION

@@ -136,7 +136,7 @@ _NAME_CONSTRUCTION_TEXT = """
   the object gs://my-bucket/subdir/a/b/c.
 
   Note: If you use the
-  `Google Developers Console <https://console.developers.google.com>`_
+  `Google Cloud Platform Console <https://console.cloud.google.com>`_
   to create folders, it does so by creating a "placeholder" object that ends
   with a "/" character. gsutil skips these objects when downloading from the
   cloud to the local file system, because attempting to create a file that
@@ -379,7 +379,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
   gsutil can automatically use
-  `object composition <https://developers.google.com/storage/docs/composite-objects>`_
+  `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to Google
   Cloud Storage. If enabled (see next paragraph), a large file will be split
   into component pieces that are uploaded in parallel and then composed in the

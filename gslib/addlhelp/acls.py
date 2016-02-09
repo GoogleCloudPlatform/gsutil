@@ -202,7 +202,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>SHARING SCENARIOS</B>
   For more detailed examples how to achieve various useful sharing use
-  cases see https://developers.google.com/storage/docs/collaboration
+  cases see https://cloud.google.com/storage/docs/collaboration
 """)
 
 

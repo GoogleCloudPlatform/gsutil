@@ -60,7 +60,7 @@ _DESCRIPTION = """
   The lifecycle command can be used to get or set lifecycle management policies
   for the given bucket(s). This command is supported for buckets only, not
   objects. For more information on object lifecycle management, please see the
-  `developer guide <https://developers.google.com/storage/docs/lifecycle>`_.
+  `Google Cloud Storage docs <https://cloud.google.com/storage/docs/lifecycle>`_.
 
   The lifecycle command has two sub-commands:
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION + """

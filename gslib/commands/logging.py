@@ -110,7 +110,7 @@ _DESCRIPTION = """
 
 <B>ACCESS LOG AND STORAGE DATA FIELDS</B>
   For a complete list of access log fields and storage data fields, see:
-  https://developers.google.com/storage/docs/accesslogs#format
+  https://cloud.google.com/storage/docs/access-logs#format
 """
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)

@@ -70,7 +70,7 @@ def HandleArgCoding(args):
   # will be passed as headers, and thus per HTTP spec should not be encoded) as
   # utf-8. The exception is x-goog-meta-* headers, which are allowed to contain
   # non-ASCII content (and hence, should be decoded), per
-  # https://developers.google.com/storage/docs/gsutil/addlhelp/WorkingWithObjectMetadata
+  # https://cloud.google.com/storage/docs/gsutil/addlhelp/WorkingWithObjectMetadata
   processing_header = False
   for i in range(len(args)):
     arg = args[i]

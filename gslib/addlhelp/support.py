@@ -21,7 +21,7 @@ from gslib.help_provider import HelpProvider
 _DETAILED_HELP_TEXT = ("""
 <B>TECHNICAL SUPPORT</B>
   If you have any questions or encounter any problems with Google Cloud Storage,
-  please first read the `FAQ <https://developers.google.com/storage/docs/faq>`_.
+  please first read the `FAQ <https://cloud.google.com/storage/docs/faq>`_.
 
   If you still have questions please use one of the following methods as
   appropriate, providing the details noted below:
@@ -65,7 +65,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>BILLING AND ACCOUNT QUESTIONS</B>
   A) For billing documentation, please visit
-  https://developers.google.com/storage/docs/pricing-and-terms.
+  https://cloud.google.com/storage/pricing.
   If you want to cancel billing, follow the instructions at
   `Cloud Storage FAQ <https://cloud.google.com/storage/docs/faq#disablebilling>`_.
   Caution: When you disable billing, you also disable the Google Cloud Storage

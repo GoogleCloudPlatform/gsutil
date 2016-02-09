@@ -472,7 +472,7 @@ def _ConstructAccountProblemHelp(reason):
       "happens if you attempt to create a bucket without first having "
       "enabled billing for the project you are using. Please ensure billing is "
       "enabled for your project by following the instructions at "
-      "`Google Developers Console<https://developers.google.com/console/help/billing>`. ")
+      "`Google Cloud Platform Console<https://support.google.com/cloud/answer/6158867>`. ")
   if default_project_id:
     acct_help += (
         "In the project overview, ensure that the Project Number listed for "

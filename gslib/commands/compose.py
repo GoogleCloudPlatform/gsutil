@@ -43,7 +43,7 @@ _DETAILED_HELP_TEXT = ("""
   of a given sequence of component objects under the same bucket. gsutil uses
   the content type of the first source object to determine the destination
   object's content type. For more information, please see:
-  https://developers.google.com/storage/docs/composite-objects
+  https://cloud.google.com/storage/docs/composite-objects
 
   Note also that the gsutil cp command can automatically split uploads for
   large files into multiple component objects, upload them in parallel, and

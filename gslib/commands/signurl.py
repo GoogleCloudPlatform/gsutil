@@ -14,7 +14,7 @@
 # limitations under the License.
 """Implementation of Url Signing workflow.
 
-see: https://developers.google.com/storage/docs/accesscontrol#Signed-URLs)
+see: https://cloud.google.com/storage/docs/access-control#Signed-URLs)
 """
 
 from __future__ import absolute_import
@@ -73,7 +73,7 @@ _DETAILED_HELP_TEXT = ("""
   the specified objects without authentication for a specific period of time.
 
   Please see the `Signed URLs documentation
-  <https://developers.google.com/storage/docs/accesscontrol#Signed-URLs>`_ for
+  <https://cloud.google.com/storage/docs/access-control#Signed-URLs>`_ for
   background about signed URLs.
 
   Multiple gs:// urls may be provided and may contain wildcards.  A signed url
@@ -93,7 +93,7 @@ _DETAILED_HELP_TEXT = ("""
   (default 'notasecret').  For more information regarding generating a private
   key for use with the signurl command please see the `Authentication
   documentation.
-  <https://developers.google.com/storage/docs/authentication#generating-a-private-key>`_
+  <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_
 
   gsutil will look up information about the object "some-object/" (with a
   trailing slash) inside bucket "some-bucket", as opposed to operating on
@@ -207,10 +207,10 @@ def _ReadKeystore(ks_contents, passwd):
 def _ReadJSONKeystore(ks_contents, passwd=None):
   """Read the client email and private key from a JSON keystore.
 
-  Assumes this keystore was downloaded from the Developers Console. By default
-  JSON keystore private keys from the Developers Console aren't encrypted so the
-  passwd is optional as load_privatekey will prompt for the PEM passphrase if
-  the key is encrypted.
+  Assumes this keystore was downloaded from the Cloud Platform Console.
+  By default, JSON keystore private keys from the Cloud Platform Console
+  aren't encrypted so the passwd is optional as load_privatekey will
+  prompt for the PEM passphrase if the key is encrypted.
 
   Arguments:
     ks_contents: JSON formatted string representing the keystore contents. Must

@@ -40,7 +40,7 @@ _DETAILED_HELP_TEXT = ("""
   objects with access control appropriate for a project at your company, as
   the three group memberships can be configured by your administrative staff.
   Control over projects and their associated memberships is provided by the
-  `Google Developers Console <https://cloud.google.com/console#/project>`_.
+  `Google Cloud Platform Console <https://cloud.google.com/console#/project>`_.
 
 
 <B>HOW PROJECT MEMBERSHIP IS REFLECTED IN BUCKET ACLS</B>
@@ -78,7 +78,7 @@ _DETAILED_HELP_TEXT = ("""
   You can edit the bucket ACL if you want to (see "gsutil help acl"),
   but for many cases you'll never need to, and instead can change group
   membership via the
-  `Google Developers Console <https://cloud.google.com/console#/project>`_.
+  `Google Cloud Platform Console <https://cloud.google.com/console#/project>`_.
 
 
 <B>IDENTIFYING PROJECTS WHEN CREATING AND LISTING BUCKETS</B>
@@ -88,7 +88,8 @@ _DETAILED_HELP_TEXT = ("""
   the default_project_id in your ~/.boto configuration file. You can
   instead use the -p option (e.g., "gsutil mb -p <project-id>" or
   "gsutil ls -p <project-id>"). The project ID you use must be either the
-  project ID or the project number from the Google Developers Console dashboard.
+  project ID or the project number from the Google Cloud Platform Console
+  dashboard.
 
   Note that the project name a user-friendly name that you can choose, and it
   is not the same thing as project ID as required by the gsutil mb and ls

@@ -47,7 +47,7 @@ _WATCHBUCKET_DESCRIPTION = """
   The app_url parameter must be an HTTPS URL to an application that will be
   notified of changes to any object in the bucket. The URL endpoint must be
   a verified domain on your project. See
-  `Notification Authorization <https://developers.google.com/storage/docs/object-change-notification#_Authorization>`_
+  `Notification Authorization <https://cloud.google.com/storage/docs/object-change-notification#_Authorization>`_
   for details.
 
   The optional id parameter can be used to assign a unique identifier to the
@@ -73,7 +73,7 @@ _STOPCHANNEL_DESCRIPTION = """
 _DESCRIPTION = """
   The notification command can be used to configure notifications.
   For more information on the Object Change Notification feature, please see:
-  https://developers.google.com/storage/docs/object-change-notification
+  https://cloud.google.com/storage/docs/object-change-notification
 
   The notification command has two sub-commands:
 """ + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
@@ -128,7 +128,7 @@ authorized for the application URL. Notification endpoint URLs must also be
 whitelisted in your Cloud Console project. To do that, the domain must also be
 verified using Google Webmaster Tools. For instructions, please see:
 
-  https://developers.google.com/storage/docs/object-change-notification#_Authorization
+  https://cloud.google.com/storage/docs/object-change-notification#_Authorization
 """
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
