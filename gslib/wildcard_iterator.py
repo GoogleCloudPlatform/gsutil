@@ -323,7 +323,8 @@ class CloudWildcardIterator(WildcardIterator):
       sys.stderr.write(
           'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
           'prefix_wildcard=%s, suffix_wildcard=%s\n' %
-          (wildcard, prefix, delimiter, prefix_wildcard, suffix_wildcard))
+          (wildcard.encode(UTF8), prefix.encode(UTF8), delimiter.encode(UTF8),
+           prefix_wildcard.encode(UTF8), suffix_wildcard.encode(UTF8)))
     return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
   def _SingleVersionMatches(self, listed_generation):

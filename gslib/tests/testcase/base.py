@@ -94,6 +94,10 @@ class GsUtilTestCase(unittest.TestCase):
     name = '%s-%s' % (name, self.MakeRandomTestString())
     return name
 
+  # TODO: Convert tests to use this for object names.
+  def MakeTempUnicodeName(self, kind, prefix=''):
+    return self.MakeTempName(kind, prefix=prefix) + '材'
+
   def CreateTempDir(self, test_files=0):
     """Creates a temporary directory on disk.
 
