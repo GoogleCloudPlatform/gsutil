@@ -15,6 +15,7 @@
 """Wrapper for use in daisy-chained copies."""
 
 from collections import deque
+from contextlib import contextmanager
 import os
 import threading
 import time
@@ -60,6 +61,14 @@ class BufferWrapper(object):
         self.daisy_chain_wrapper.bytes_buffered += data_len
 
 
+@contextmanager
+def AcquireLockWithTimeout(lock, timeout):
+  result = lock.acquire(timeout=timeout)
+  yield result
+  if result:
+    lock.release()
+
+
 class DaisyChainWrapper(object):
   """Wrapper class for daisy-chaining a cloud download to an upload.
 
@@ -73,7 +82,8 @@ class DaisyChainWrapper(object):
   used.
   """
 
-  def __init__(self, src_url, src_obj_size, gsutil_api, progress_callback=None,
+  def __init__(self, src_url, src_obj_size, gsutil_api,
+               compressed_encoding=False, progress_callback=None,
                download_chunk_size=_DEFAULT_DOWNLOAD_CHUNK_SIZE):
     """Initializes the daisy chain wrapper.
 
@@ -81,6 +91,7 @@ class DaisyChainWrapper(object):
       src_url: Source CloudUrl to copy from.
       src_obj_size: Size of source object.
       gsutil_api: gsutil Cloud API to use for the copy.
+      compressed_encoding: If true, source object has content-encoding: gzip.
       progress_callback: Optional callback function for progress notifications
           for the download thread. Receives calls with arguments
           (bytes_transferred, total_size).
@@ -114,6 +125,7 @@ class DaisyChainWrapper(object):
 
     self.src_obj_size = src_obj_size
     self.src_url = src_url
+    self.compressed_encoding = compressed_encoding
 
     # This is safe to use the upload and download thread because the download
     # thread calls only GetObjectMedia, which creates a new HTTP connection
@@ -126,6 +138,7 @@ class DaisyChainWrapper(object):
     self.download_exception = None
     self.download_thread = None
     self.progress_callback = progress_callback
+    self.thread_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
 
@@ -150,10 +163,12 @@ class DaisyChainWrapper(object):
       # object to support seek() and tell() which requires coordination with
       # the upload.
       try:
+        self.thread_started.set()
         while start_byte + self._download_chunk_size < self.src_obj_size:
           self.gsutil_api.GetObjectMedia(
               self.src_url.bucket_name, self.src_url.object_name,
-              BufferWrapper(self), start_byte=start_byte,
+              BufferWrapper(self), compressed_encoding=self.compressed_encoding,
+              start_byte=start_byte,
               end_byte=start_byte + self._download_chunk_size - 1,
               generation=self.src_url.generation, object_size=self.src_obj_size,
               download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
@@ -165,8 +180,9 @@ class DaisyChainWrapper(object):
           start_byte += self._download_chunk_size
         self.gsutil_api.GetObjectMedia(
             self.src_url.bucket_name, self.src_url.object_name,
-            BufferWrapper(self), start_byte=start_byte,
-            generation=self.src_url.generation, object_size=self.src_obj_size,
+            BufferWrapper(self), compressed_encoding=self.compressed_encoding,
+            start_byte=start_byte, generation=self.src_url.generation,
+            object_size=self.src_obj_size,
             download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
             provider=self.src_url.scheme, progress_callback=progress_callback)
       # We catch all exceptions here because we want to store them.
@@ -181,6 +197,7 @@ class DaisyChainWrapper(object):
         target=PerformDownload,
         args=(start_byte, progress_callback))
     self.download_thread.start()
+    self.thread_started.wait()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
     """Exposes a stream from the in-memory buffer to the upload."""
@@ -197,11 +214,14 @@ class DaisyChainWrapper(object):
       with self.lock:
         if self.buffer:
           break
-        with self.download_exception_lock:
+        if AcquireLockWithTimeout(self.download_exception_lock, 30):
           if self.download_exception:
             # Download thread died, so we will never recover. Raise the
             # exception that killed it.
             raise self.download_exception  # pylint: disable=raising-bad-type
+        else:
+          if not self.download_thread.is_alive():
+            raise Exception('Download thread died suddenly.')
       # Buffer was empty, yield thread priority so the download thread can fill.
       time.sleep(0)
     with self.lock:

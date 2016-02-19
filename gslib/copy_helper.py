@@ -112,6 +112,7 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
+from gslib.util import ObjectIsGzipEncoded
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
@@ -143,7 +144,7 @@ open_files_lock = CreateLock()
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
-_RENAME_ON_HASH_MISMATCH = False
+_RENAME_ON_HASH_MISMATCH = True
 _RENAME_ON_HASH_MISMATCH_SUFFIX = '_corrupt'
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
@@ -1081,7 +1082,7 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
             '"parallel_composite_upload_threshold" value in your .boto '
             'configuration file. However, note that if you do this large files '
             'will be uploaded as '
-            '`composite objects <https://cloud.google.com/storage/docs/composite-objects>`_,'
+            '`composite objects <https://cloud.google.com/storage/docs/composite-objects>`_,'  # pylint: disable=line-too-long
             'which means that any user who downloads such objects will need to '
             'have a compiled crcmod installed (see "gsutil help crcmod"). This '
             'is because without a compiled crcmod, computing checksums on '
@@ -1579,11 +1580,23 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   upload_size = src_obj_size
   zipped_file = False
   if (gzip_exts == GZIP_ALL_FILES or
-         (gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts)):
+      (gzip_exts and len(fname_parts) > 1 and fname_parts[-1] in gzip_exts)):
     upload_url, upload_size = _CompressFileForUpload(
         src_url, src_obj_filestream, src_obj_size, logger)
     upload_stream = open(upload_url.object_name, 'rb')
     dst_obj_metadata.contentEncoding = 'gzip'
+    # If we're sending an object with gzip encoding, it's possible it also
+    # has an incompressible content type. Google Cloud Storage will remove
+    # the top layer of compression when serving the object, which would cause
+    # the served content not to match the CRC32C/MD5 hashes stored and make
+    # integrity checking impossible. Therefore we set cache control to
+    # no-transform to ensure it is served in its original form. The caveat is
+    # that to read this object, other clients must then support
+    # accept-encoding:gzip.
+    if not dst_obj_metadata.cacheControl:
+      dst_obj_metadata.cacheControl = 'no-transform'
+    elif 'no-transform' not in dst_obj_metadata.cacheControl.lower():
+      dst_obj_metadata.cacheControl += ',no-transform'
     zipped_file = True
 
   elapsed_time = None
@@ -1708,8 +1721,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   # server sends decompressed bytes for a file that is stored compressed
   # (double compressed case), there is no way we can validate the hash and
   # we will fail our hash check for the object.
-  if (src_obj_metadata.contentEncoding and
-      src_obj_metadata.contentEncoding.lower().endswith('gzip')):
+  if ObjectIsGzipEncoded(src_obj_metadata):
     need_to_unzip = True
     download_file_name = _GetDownloadTempZipFileName(dst_url)
     logger.info(
@@ -2059,8 +2071,7 @@ def _DoSlicedDownload(src_url, src_obj_metadata, dst_url, download_file_name,
                             component_lengths[i])
 
   bytes_transferred = 0
-  expect_gzip = (src_obj_metadata.contentEncoding and
-                 src_obj_metadata.contentEncoding.lower().endswith('gzip'))
+  expect_gzip = ObjectIsGzipEncoded(src_obj_metadata)
   for cp_result in cp_results:
     bytes_transferred += cp_result.bytes_transferred
     server_gzip = (cp_result.server_encoding and
@@ -2183,6 +2194,8 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
       fp = SlicedDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
                                      start_byte, end_byte)
 
+    compressed_encoding = ObjectIsGzipEncoded(src_obj_metadata)
+
     # TODO: With gzip encoding (which may occur on-the-fly and not be part of
     # the object's metadata), when we request a range to resume, it's possible
     # that the server will just resend the entire object, which means our
@@ -2194,6 +2207,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
       server_encoding = gsutil_api.GetObjectMedia(
           src_url.bucket_name, src_url.object_name, fp,
           start_byte=download_start_byte, end_byte=end_byte,
+          compressed_encoding=compressed_encoding,
           generation=src_url.generation, object_size=src_obj_metadata.size,
           download_strategy=CloudApi.DownloadStrategy.RESUMABLE,
           provider=src_url.scheme, serialization_data=serialization_data,
@@ -2572,9 +2586,13 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
     with open(global_copy_helper_opts.test_callback_file, 'rb') as test_fp:
       progress_callback = pickle.loads(test_fp.read()).call
 
+  compressed_encoding = ObjectIsGzipEncoded(src_obj_metadata)
+
   start_time = time.time()
-  upload_fp = DaisyChainWrapper(src_url, src_obj_metadata.size, gsutil_api,
-                                progress_callback=progress_callback)
+  upload_fp = DaisyChainWrapper(
+      src_url, src_obj_metadata.size, gsutil_api,
+      compressed_encoding=compressed_encoding,
+      progress_callback=progress_callback)
   uploaded_object = None
   if src_obj_metadata.size == 0:
     # Resumable uploads of size 0 are not supported.

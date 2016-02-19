@@ -51,6 +51,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
+from gslib.tests.util import HAS_GS_PORT
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
@@ -864,6 +865,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(acl_json, new_acl_json)
     _Check()
 
+  @unittest.skipUnless(
+      not HAS_GS_PORT, 'gs_port is defined in config which can cause '
+      'problems when uploading and downloading to the same local host port')
   def test_daisy_chain_cp_download_failure(self):
     """Tests cp with the -D option when the download thread dies."""
     bucket1_uri = self.CreateBucket()
@@ -1811,6 +1815,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     finally:
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
+
+  def test_cp_double_gzip(self):
+    """Tests that upload and download of a doubly-gzipped file succeeds."""
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents='foo')
+    self.RunGsUtil(['-h', 'content-type:application/gzip', 'cp', '-Z',
+                    suri(fpath), suri(bucket_uri, 'foo')])
+    self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
+
 
   @SequentialAndParallelTransfer
   def test_cp_resumable_download_gzip(self):

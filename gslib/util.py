@@ -40,9 +40,6 @@ from boto.exception import NoAuthHandlerFound
 from boto.gs.connection import GSConnection
 from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
-import httplib2
-from oauth2client.client import HAS_CRYPTO
-from retry_decorator import retry_decorator
 
 import gslib
 from gslib.exception import CommandException
@@ -52,6 +49,10 @@ from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import S3_ACL_MARKER_GUID
 from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
+
+import httplib2
+from oauth2client.client import HAS_CRYPTO
+from retry_decorator import retry_decorator
 
 # Detect platform types.
 PLATFORM = str(sys.platform).lower()
@@ -186,6 +187,30 @@ def UsingCrcmodExtension(crcmod):
   return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
           (getattr(crcmod, 'crcmod', None) and
            getattr(crcmod.crcmod, '_usingExtension', None)))
+
+
+def ObjectIsGzipEncoded(obj_metadata):
+  """Returns true if source apitools Object has gzip content-encoding."""
+  return (obj_metadata.contentEncoding and
+          obj_metadata.contentEncoding.lower().endswith('gzip'))
+
+
+def AddAcceptEncodingGzipIfNeeded(headers_dict, compressed_encoding=False):
+  if compressed_encoding:
+    # If we send accept-encoding: gzip with a range request, the service
+    # may respond with the whole object, which would be bad for resuming.
+    # So only accept gzip encoding if the object we are downloading has
+    # a gzip content encoding.
+    # TODO: If we want to support compressive transcoding fully in the client,
+    # condition on whether we are requesting the entire range of the object.
+    # In this case, we can accept the first bytes of the object compressively
+    # transcoded, but we must perform data integrity checking on bytes after
+    # they are decompressed on-the-fly, and any connection break must be
+    # resumed without compressive transcoding since we cannot specify an
+    # offset. We would also need to ensure that hashes for downloaded data
+    # from objects stored with content-encoding:gzip continue to be calculated
+    # prior to our own on-the-fly decompression so they match the stored hashes.
+    headers_dict['accept-encoding'] = 'gzip'
 
 
 def CheckFreeSpace(path):
@@ -709,13 +734,6 @@ BOTO_IS_SECURE = _BotoIsSecure()
 
 def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', EIGHT_MIB)
-
-
-def AddAcceptEncoding(headers):
-  """Adds accept-encoding:gzip to the dictionary of headers."""
-  # If Accept-Encoding is not already set, set it to enable gzip.
-  if 'accept-encoding' not in headers:
-    headers['accept-encoding'] = 'gzip'
 
 
 # pylint: disable=too-many-statements

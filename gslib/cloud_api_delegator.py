@@ -217,11 +217,13 @@ class CloudApiDelegator(CloudApi):
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream, provider=None,
       generation=None, object_size=None,
+      compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
       start_byte=0, end_byte=None, progress_callback=None,
       serialization_data=None, digesters=None):
     return self._GetApi(provider).GetObjectMedia(
         bucket_name, object_name, download_stream,
+        compressed_encoding=compressed_encoding,
         download_strategy=download_strategy, start_byte=start_byte,
         end_byte=end_byte, generation=generation, object_size=object_size,
         progress_callback=progress_callback,

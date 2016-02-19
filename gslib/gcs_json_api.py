@@ -35,10 +35,6 @@ from apitools.base.py.util import CalculateWaitForRetry
 import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
-import httplib2
-import oauth2client
-from oauth2client import devshell
-from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -79,6 +75,7 @@ from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.translation_helper import REMOVE_CORS_CONFIG
+from gslib.util import AddAcceptEncodingGzipIfNeeded
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
@@ -89,6 +86,11 @@ from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
 from gslib.util import JsonResumableChunkSizeDefined
+
+import httplib2
+import oauth2client
+from oauth2client import devshell
+from oauth2client import multistore_file
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -679,6 +681,7 @@ class GcsJsonApi(CloudApi):
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream,
       provider=None, generation=None, object_size=None,
+      compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT, start_byte=0,
       end_byte=None, progress_callback=None, serialization_data=None,
       digesters=None):
@@ -741,13 +744,16 @@ class GcsJsonApi(CloudApi):
         return self._PerformResumableDownload(
             bucket_name, object_name, download_stream, apitools_request,
             apitools_download, bytes_downloaded_container,
+            compressed_encoding=compressed_encoding,
             generation=generation, start_byte=start_byte, end_byte=end_byte,
             serialization_data=serialization_data)
       else:
         return self._PerformDownload(
             bucket_name, object_name, download_stream, apitools_request,
-            apitools_download, generation=generation, start_byte=start_byte,
-            end_byte=end_byte, serialization_data=serialization_data)
+            apitools_download, generation=generation,
+            compressed_encoding=compressed_encoding,
+            start_byte=start_byte, end_byte=end_byte,
+            serialization_data=serialization_data)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
@@ -756,14 +762,16 @@ class GcsJsonApi(CloudApi):
   def _PerformResumableDownload(
       self, bucket_name, object_name, download_stream, apitools_request,
       apitools_download, bytes_downloaded_container, generation=None,
-      start_byte=0, end_byte=None, serialization_data=None):
+      compressed_encoding=False, start_byte=0, end_byte=None,
+      serialization_data=None):
     retries = 0
     last_progress_byte = start_byte
     while retries <= self.num_retries:
       try:
         return self._PerformDownload(
             bucket_name, object_name, download_stream, apitools_request,
-            apitools_download, generation=generation, start_byte=start_byte,
+            apitools_download, generation=generation,
+            compressed_encoding=compressed_encoding, start_byte=start_byte,
             end_byte=end_byte, serialization_data=serialization_data)
       except HTTP_TRANSFER_EXCEPTIONS, e:
         self._ValidateHttpAccessTokenRefreshError(e)
@@ -789,8 +797,8 @@ class GcsJsonApi(CloudApi):
 
   def _PerformDownload(
       self, bucket_name, object_name, download_stream, apitools_request,
-      apitools_download, generation=None, start_byte=0, end_byte=None,
-      serialization_data=None):
+      apitools_download, generation=None, compressed_encoding=False,
+      start_byte=0, end_byte=None, serialization_data=None):
     if not serialization_data:
       try:
         self.api_client.objects.Get(apitools_request,
@@ -816,9 +824,11 @@ class GcsJsonApi(CloudApi):
     # Since bytes_http is created in this function, we don't get the
     # user-agent header from api_client's http automatically.
     additional_headers = {
-        'accept-encoding': 'gzip',
         'user-agent': self.api_client.user_agent
     }
+    AddAcceptEncodingGzipIfNeeded(additional_headers,
+                                  compressed_encoding=compressed_encoding)
+
     self._AddPerfTraceTokenToHeaders(additional_headers)
 
     if start_byte or end_byte is not None:

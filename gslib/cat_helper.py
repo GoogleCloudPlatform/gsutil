@@ -20,6 +20,7 @@ import sys
 
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
+from gslib.util import ObjectIsGzipEncoded
 from gslib.wildcard_iterator import StorageUrlFromString
 
 
@@ -70,8 +71,10 @@ class CatHelper(object):
           cat_object = blr.root_object
           storage_url = StorageUrlFromString(blr.url_string)
           if storage_url.IsCloudUrl():
+            compressed_encoding = ObjectIsGzipEncoded(cat_object)
             self.command_obj.gsutil_api.GetObjectMedia(
                 cat_object.bucket, cat_object.name, cat_outfd,
+                compressed_encoding=compressed_encoding,
                 start_byte=start_byte, end_byte=end_byte,
                 object_size=cat_object.size, generation=storage_url.generation,
                 provider=storage_url.scheme)

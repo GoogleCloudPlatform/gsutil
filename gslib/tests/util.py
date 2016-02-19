@@ -55,6 +55,13 @@ def _HasGSHost():
 HAS_GS_HOST = _HasGSHost()
 
 
+def _HasGSPort():
+  return boto.config.get('Credentials', 'gs_port', None) is not None
+
+
+HAS_GS_PORT = _HasGSPort()
+
+
 def _UsingJSONApi():
   return boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
 

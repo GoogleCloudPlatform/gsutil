@@ -84,6 +84,7 @@ from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
+from gslib.util import AddAcceptEncodingGzipIfNeeded
 from gslib.util import ConfigureNoOpAuthIfNeeded
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import GetMaxRetryDelay
@@ -424,6 +425,7 @@ class BotoTranslation(CloudApi):
   def GetObjectMedia(
       self, bucket_name, object_name, download_stream, provider=None,
       generation=None, object_size=None,
+      compressed_encoding=False,
       download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
       start_byte=0, end_byte=None, progress_callback=None,
       serialization_data=None, digesters=None):
@@ -431,8 +433,8 @@ class BotoTranslation(CloudApi):
     # This implementation will get the object metadata first if we don't pass it
     # in via serialization_data.
     headers = self._CreateBaseHeaders()
-    if 'accept-encoding' not in headers:
-      headers['accept-encoding'] = 'gzip'
+    AddAcceptEncodingGzipIfNeeded(
+        headers, compressed_encoding=compressed_encoding)
     if end_byte is not None:
       headers['range'] = 'bytes=%s-%s' % (start_byte, end_byte)
     elif start_byte > 0:
@@ -582,7 +584,7 @@ class BotoTranslation(CloudApi):
         fp.flush()
         # Download succeeded.
         return
-      except retryable_exceptions, e:
+      except retryable_exceptions, e:  # pylint: disable=catching-non-exception
         if debug >= 1:
           self.logger.info('Caught exception (%s)', repr(e))
         if isinstance(e, IOError) and e.errno == errno.EPIPE:

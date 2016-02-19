@@ -258,6 +258,7 @@ class CloudApi(object):
 
   def GetObjectMedia(self, bucket_name, object_name, download_stream,
                      provider=None, generation=None, object_size=None,
+                     compressed_encoding=False,
                      download_strategy=DownloadStrategy.ONE_SHOT, start_byte=0,
                      end_byte=None, progress_callback=None,
                      serialization_data=None, digesters=None):
@@ -271,6 +272,7 @@ class CloudApi(object):
                 class-wide default is used.
       generation: Generation of the object to retrieve.
       object_size: Total size of the object being downloaded.
+      compressed_encoding: If true, object is stored with a compressed encoding.
       download_strategy: Cloud API download strategy to use for download.
       start_byte: Starting point for download (for resumable downloads and
                   range requests). Can be set to negative to request a range
