@@ -163,7 +163,7 @@ class GcsJsonApi(CloudApi):
                                      perf_trace_token=perf_trace_token)
     no_op_credentials = False
     if not credentials:
-      loaded_credentials = self._CheckAndGetCredentials(logger)
+      loaded_credentials = self._CheckAndGetCredentials()
 
       if not loaded_credentials:
         loaded_credentials = NoOpCredentials()
@@ -261,7 +261,7 @@ class GcsJsonApi(CloudApi):
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
 
-  def _CheckAndGetCredentials(self, logger):
+  def _CheckAndGetCredentials(self):
     configured_cred_types = []
     try:
       if self._HasOauth2UserAccountCreds():
@@ -296,16 +296,17 @@ class GcsJsonApi(CloudApi):
       devshell_creds = self._GetDevshellCreds()
       return user_creds or service_account_creds or gce_creds or devshell_creds
     except:  # pylint: disable=bare-except
-
       # If we didn't actually try to authenticate because there were multiple
       # types of configured credentials, don't emit this warning.
       if failed_cred_type:
+        if self.logger.isEnabledFor(logging.DEBUG):
+          self.logger.debug(traceback.format_exc())
         if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-          logger.warn(
+          self.logger.warn(
               'Your "%s" credentials are invalid. Please run\n'
               '  $ gcloud auth login', failed_cred_type)
         else:
-          logger.warn(
+          self.logger.warn(
               'Your "%s" credentials are invalid. For more help, see '
               '"gsutil help creds", or re-run the gsutil config command (see '
               '"gsutil help config").', failed_cred_type)
@@ -1369,6 +1370,9 @@ class GcsJsonApi(CloudApi):
       Translated CloudApi exception, or the original exception if it was not
       translatable.
     """
+    if self.logger.isEnabledFor(logging.DEBUG):
+      self.logger.debug(
+          'TranslateExceptionAndRaise: %s', traceback.format_exc())
     translated_exception = self._TranslateApitoolsException(
         e, bucket_name=bucket_name, object_name=object_name,
         generation=generation, not_found_exception=not_found_exception)

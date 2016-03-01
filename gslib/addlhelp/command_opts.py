@@ -37,10 +37,10 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>OPTIONS</B>
   -D          Shows HTTP requests/headers and additional debug info needed when
-              posting support requests.
+              posting support requests, including exception stack traces.
 
-  -DD         Shows HTTP requests/headers, additional debug info plus HTTP
-              upstream payload.
+  -DD         Shows HTTP requests/headers, additional debug info,
+              execption stack traces, plus HTTP upstream payload.
 
   -h          Allows you to specify certain HTTP headers, for example:
 
