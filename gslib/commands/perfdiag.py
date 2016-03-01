@@ -864,10 +864,10 @@ class PerfDiagCommand(Command):
                 name=component_object_names[i]))
         request_components.append(src_obj_metadata)
 
-      dst_obj_metadata = apitools_messages.Object()
-      dst_obj_metadata.name = object_name
-      dst_obj_metadata.bucket = self.bucket_url.bucket_name
       def _Compose():
+        dst_obj_metadata = apitools_messages.Object()
+        dst_obj_metadata.name = object_name
+        dst_obj_metadata.bucket = self.bucket_url.bucket_name
         gsutil_api.ComposeObject(request_components, dst_obj_metadata,
                                  provider=self.provider)
       self._RunOperation(_Compose)
