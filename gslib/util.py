@@ -302,6 +302,10 @@ def GetPrintableExceptionString(exc):
   return unicode(exc).encode(UTF8) or str(exc.__class__)
 
 
+def PrintableStr(input_str):
+  return input_str.encode(UTF8) if input_str is not None else None
+
+
 def PrintTrackerDirDeprecationWarningIfNeeded():
   # TODO: Remove this along with the tracker_dir config value 1 year after
   # 4.6 release date. Use state_dir instead.
@@ -1172,7 +1176,7 @@ def GetTermLines():
   return int(ioc)
 
 
-def FixWindowsEncodingIfNeeded(str):
+def FixWindowsEncodingIfNeeded(input_str):
   """Attempts to detect Windows CP1252 encoding and convert to UTF8.
 
   Windows doesn't provide a way to set UTF-8 for string encodings; you can set
@@ -1184,14 +1188,14 @@ def FixWindowsEncodingIfNeeded(str):
   to Unicode.
 
   Args:
-    str: The input string.
+    input_str: The input string.
   Returns:
     The converted string (or the original, if conversion wasn't needed).
   """
   if IS_CP1252:
-    return str.decode(WINDOWS_1252).encode(UTF8)
+    return input_str.decode(WINDOWS_1252).encode(UTF8)
   else:
-    return str
+    return input_str
 
 
 class GsutilStreamHandler(logging.StreamHandler):
