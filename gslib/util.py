@@ -533,6 +533,12 @@ def GetJsonResumableChunkSize():
   return chunk_size
 
 
+def JsonResumableChunkSizeDefined():
+  chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size',
+                                  None)
+  return chunk_size_defined is not None
+
+
 def _RoundToNearestExponent(num):
   i = 0
   while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):

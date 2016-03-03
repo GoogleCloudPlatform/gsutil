@@ -88,6 +88,7 @@ from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
+from gslib.util import JsonResumableChunkSizeDefined
 
 
 # Implementation supports only 'gs' URLs, so provider is unused.
@@ -1015,7 +1016,7 @@ class GcsJsonApi(CloudApi):
           # TODO: On retry, this will seek to the bytes that the server has,
           # causing the hash to be recalculated. Make HashingFileUploadWrapper
           # save a digest according to json_resumable_chunk_size.
-          if size:
+          if size and not JsonResumableChunkSizeDefined():
             # If size is known, we can send it all in one request and avoid
             # making a round-trip per chunk.
             http_response = apitools_upload.StreamMedia(
