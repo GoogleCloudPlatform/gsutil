@@ -68,7 +68,7 @@ class ProgressCallbackWithBackoff(object):
          self._total_size and self._total_size is not None)):
       self._total_bytes_processed += self._bytes_processed_since_callback
       # TODO: We check if >= total_size and truncate because JSON uploads count
-      # headers+metadata during their send progress. If the size is unknown,
+      # multipart metadata during their send progress. If the size is unknown,
       # we can't do this and the progress message will make it appear that we
       # send more than the original stream.
       if self._total_size is not None:

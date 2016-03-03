@@ -37,6 +37,7 @@ from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import ContainsWildcard
 from gslib.util import CreateLock
+from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
@@ -971,7 +972,7 @@ class CpCommand(Command):
     self.total_bytes_per_second = (float(self.total_bytes_transferred) /
                                    float(self.total_elapsed_time))
 
-    if self.debug == 3:
+    if self.debug >= DEBUGLEVEL_DUMP_REQUESTS:
       # Note that this only counts the actual GET and PUT bytes for the copy
       # - not any transfers for doing wildcard expansion, the initial
       # HEAD/GET request performed to get the object metadata, etc.

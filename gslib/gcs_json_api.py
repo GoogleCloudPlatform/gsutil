@@ -909,7 +909,8 @@ class GcsJsonApi(CloudApi):
 
     callback_class_factory = UploadCallbackConnectionClassFactory(
         bytes_uploaded_container, total_size=total_size,
-        progress_callback=progress_callback)
+        progress_callback=progress_callback, logger=self.logger,
+        debug=self.debug)
 
     upload_http_class = callback_class_factory.GetConnectionClass()
     self.upload_http.connections = {'http': upload_http_class,

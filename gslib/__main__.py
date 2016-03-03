@@ -61,6 +61,8 @@ import gslib.exception
 from gslib.exception import CommandException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.util import CreateLock
+from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
+from gslib.util import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
@@ -149,7 +151,7 @@ def _OutputAndExit(message):
   Args:
     message: Message to print to stderr.
   """
-  if debug >= 2 or test_exception_traces:
+  if debug >= DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n' %
            re.sub('\\n', '\n    ', stack_trace))
@@ -280,17 +282,17 @@ def main():
       _HandleCommandException(gslib.exception.CommandException(e.msg))
     for o, a in opts:
       if o in ('-d', '--debug'):
-        # Passing debug=2 causes boto to include httplib header output.
-        debug = 3
+        # Also causes boto to include httplib header output.
+        debug = DEBUGLEVEL_DUMP_REQUESTS
       elif o in ('-D', '--detailedDebug'):
         # We use debug level 3 to ask gsutil code to output more detailed
         # debug output. This is a bit of a hack since it overloads the same
         # flag that was originally implemented for boto use. And we use -DD
         # to ask for really detailed debugging (i.e., including HTTP payload).
-        if debug == 3:
-          debug = 4
+        if debug == DEBUGLEVEL_DUMP_REQUESTS:
+          debug = DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
         else:
-          debug = 3
+          debug = DEBUGLEVEL_DUMP_REQUESTS
       elif o in ('-?', '--help'):
         _OutputUsageAndExit(command_runner)
       elif o in ('-h', '--header'):
@@ -323,9 +325,8 @@ def main():
     httplib2.debuglevel = debug
     if trace_token:
       sys.stderr.write(TRACE_WARNING)
-    if debug > 1:
+    if debug >= DEBUGLEVEL_DUMP_REQUESTS:
       sys.stderr.write(DEBUG_WARNING)
-    if debug >= 2:
       _ConfigureLogging(level=logging.DEBUG)
       command_runner.RunNamedCommand('ver', ['-l'])
       config_items = []

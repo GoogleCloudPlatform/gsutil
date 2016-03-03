@@ -320,9 +320,9 @@ CONFIG_BOTO_SECTION_CONTENT = """
 # in configuration files, to protect against "man-in-the-middle" attacks.
 https_validate_certificates = True
 
-# 'debug' controls the level of debug messages printed: 0 for none, 1
-# for basic boto debug, 2 for all boto debug plus HTTP requests/responses.
-# Note: 'gsutil -d' sets debug to 2 for that one command run.
+# 'debug' controls the level of debug messages printed for the XML API only:
+# 0 for none, 1 for basic boto debug, 2 for all boto debug plus HTTP
+# requests/responses.
 #debug = <0, 1, or 2>
 
 # 'num_retries' controls the number of retry attempts made when errors occur

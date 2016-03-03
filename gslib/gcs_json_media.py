@@ -30,6 +30,7 @@ from httplib2 import parse_uri
 
 from gslib.cloud_api import BadRequestException
 from gslib.progress_callback import ProgressCallbackWithBackoff
+from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import SSL_TIMEOUT
 from gslib.util import TRANSFER_BUFFER_SIZE
 
@@ -67,11 +68,14 @@ class UploadCallbackConnectionClassFactory(object):
 
   def __init__(self, bytes_uploaded_container,
                buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, progress_callback=None):
+               total_size=0, progress_callback=None,
+               logger=None, debug=0):
     self.bytes_uploaded_container = bytes_uploaded_container
     self.buffer_size = buffer_size
     self.total_size = total_size
     self.progress_callback = progress_callback
+    self.logger = logger
+    self.debug = debug
 
   def GetConnectionClass(self):
     """Returns a connection class that overrides send."""
@@ -79,6 +83,8 @@ class UploadCallbackConnectionClassFactory(object):
     outer_buffer_size = self.buffer_size
     outer_total_size = self.total_size
     outer_progress_callback = self.progress_callback
+    outer_logger = self.logger
+    outer_debug = self.debug
 
     class UploadCallbackConnection(httplib2.HTTPSConnectionWithTimeout):
       """Connection class override for uploads."""
@@ -95,7 +101,40 @@ class UploadCallbackConnectionClassFactory(object):
         kwargs['timeout'] = SSL_TIMEOUT
         httplib2.HTTPSConnectionWithTimeout.__init__(self, *args, **kwargs)
 
-      def send(self, data):
+      # Override httplib.HTTPConnection._send_output for debug logging.
+      # Because the distinction between headers and message body occurs
+      # only in this httplib function, we can only differentiate them here.
+      def _send_output(self, message_body=None):
+        """Send the currently buffered request and clear the buffer.
+
+        Appends an extra \\r\\n to the buffer.
+
+        Args:
+          message_body: if specified, this is appended to the request.
+        """
+        # TODO: Presently, apitools will set http2lib2.debuglevel to 0
+        # (no prints) or 4 (dump upload payload, httplib prints to stdout).
+        # Refactor to allow our media-handling functions to handle
+        # debuglevel == 4 and print messages to stderr.
+        self._buffer.extend(('', ''))
+        msg = '\r\n'.join(self._buffer)
+        metadata_bytes = len(msg)
+        if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
+          outer_logger.debug('send: %s' % msg)
+        del self._buffer[:]
+        # If msg and message_body are sent in a single send() call,
+        # it will avoid performance problems caused by the interaction
+        # between delayed ack and the Nagle algorithm.
+        if isinstance(message_body, str):
+          msg += message_body
+          message_body = None
+        self.send(msg, metadata_bytes=metadata_bytes)
+        if message_body is not None:
+          # message_body was not a string (i.e. it is a file) and
+          # we must run the risk of Nagle
+          self.send(message_body)
+
+      def send(self, data, metadata_bytes=0):
         """Overrides HTTPConnection.send."""
         if not self.processed_initial_bytes:
           self.processed_initial_bytes = True
@@ -113,19 +152,13 @@ class UploadCallbackConnectionClassFactory(object):
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         while partial_buffer:
           httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
-          send_length = len(partial_buffer)
+          send_length = len(partial_buffer) - metadata_bytes
           if self.callback_processor:
-            # This is the only place where gsutil has control over making a
-            # callback, but here we can't differentiate the metadata bytes
-            # (such as headers and OAuth2 refreshes) sent during an upload
-            # from the actual upload bytes, so we will actually report
-            # slightly more bytes than desired to the callback handler.
-            #
-            # One considered/rejected alternative is to move the callbacks
-            # into the HashingFileUploadWrapper which only processes reads on
-            # the bytes. This has the disadvantages of being removed from
-            # where we actually send the bytes and unnecessarily
-            # multi-purposing that class.
+            # TODO: We can't differentiate the multipart upload
+            # metadata in the request body from the actual upload bytes, so we
+            # will actually report slightly more bytes than desired to the
+            # callback handler. Get that data from apitools and subtract it
+            # from bytes sent.
             self.callback_processor.Progress(send_length)
           partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
 
