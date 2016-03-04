@@ -159,8 +159,8 @@ def _RemoveExceptionHandler(cls, e):
 # pylint: disable=unused-argument
 def _RemoveFoldersExceptionHandler(cls, e):
   """When removing folders, we don't mind if none exist."""
-  if ((isinstance(e, CommandException.__class__) and
-       NO_URLS_MATCHED_GENERIC in e.message)
+  if ((isinstance(e, CommandException) and
+       NO_URLS_MATCHED_GENERIC in e.reason)
       or isinstance(e, NotFoundException)):
     DecrementFailureCount()
   else:

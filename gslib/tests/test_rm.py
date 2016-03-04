@@ -144,6 +144,16 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True, expected_status=1)
     self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'foo'), stderr)
 
+  def test_remove_recursive_prefix(self):
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='a/b/c',
+                                contents='foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
+
+    stderr = self.RunGsUtil(['rm', '-r', suri(bucket_uri, 'a')],
+                            return_stderr=True)
+    self.assertIn('Removing %s' % suri(obj_uri), stderr)
+
   def test_remove_all_versions_recursive_on_bucket(self):
     """Test that 'rm -r' works on bucket."""
     bucket_uri = self.CreateVersionedBucket()
