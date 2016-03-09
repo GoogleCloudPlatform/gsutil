@@ -421,6 +421,31 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     expected = set([suri(dst_bucket_uri, 'dir3/dir2/foo')])
     self.assertEqual(expected, actual)
 
+  def testCopyingFileToDirRecursive(self):
+    """Tests copying a file with -R."""
+    src_file = self.CreateTempFile(file_name='foo')
+    dst_bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', ['-R', src_file,
+                           suri(dst_bucket_uri, 'dir/foo')])
+    actual = set(str(u) for u in self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+    expected = set([suri(dst_bucket_uri, 'dir/foo')])
+    self.assertEqual(expected, actual)
+
+  def testCopyingMultipleFilesToDirRecursive(self):
+    """Tests copying multiple files with -R."""
+    src_dir = self.CreateTempDir()
+    src_file1 = self.CreateTempFile(tmpdir=src_dir, file_name='foo')
+    src_file2 = self.CreateTempFile(tmpdir=src_dir, file_name='bar')
+    dst_bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', ['-R', src_file1, src_file2,
+                           suri(dst_bucket_uri, 'dir/foo')])
+    actual = set(str(u) for u in self._test_wildcard_iterator(
+        suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+    expected = set([suri(dst_bucket_uri, 'dir/foo/foo'),
+                    suri(dst_bucket_uri, 'dir/foo/bar')])
+    self.assertEqual(expected, actual)
+
   def testAttemptDirCopyWithoutRecursion(self):
     """Tests copying a directory without -R."""
     src_dir = self.CreateTempDir(test_files=1)

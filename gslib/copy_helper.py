@@ -468,7 +468,7 @@ def _ShouldTreatDstUrlAsBucketSubDir(have_multiple_srcs, dst_url,
             (src_url_names_container and recursion_requested))
 
 
-def _ShouldTreatDstUrlAsSingleton(have_multiple_srcs,
+def _ShouldTreatDstUrlAsSingleton(src_url_names_container, have_multiple_srcs,
                                   have_existing_dest_subdir, dst_url,
                                   recursion_requested):
   """Checks that dst_url names a single file/object after wildcard expansion.
@@ -476,6 +476,8 @@ def _ShouldTreatDstUrlAsSingleton(have_multiple_srcs,
   It is possible that an object path might name a bucket sub-directory.
 
   Args:
+    src_url_names_container: Bool indicator of whether the source for the
+        operation is a container (bucket, bucket subdir, or directory).
     have_multiple_srcs: Bool indicator of whether this is a multi-source
         operation.
     have_existing_dest_subdir: bool indicator whether dest is an existing
@@ -486,7 +488,7 @@ def _ShouldTreatDstUrlAsSingleton(have_multiple_srcs,
   Returns:
     bool indicator.
   """
-  if recursion_requested:
+  if recursion_requested and src_url_names_container: 
     return False
   if dst_url.IsFileUrl():
     return not dst_url.IsDirectory()
@@ -527,8 +529,8 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     source and source is a stream.
   """
   if _ShouldTreatDstUrlAsSingleton(
-      have_multiple_srcs, have_existing_dest_subdir, exp_dst_url,
-      recursion_requested):
+      src_url_names_container, have_multiple_srcs, have_existing_dest_subdir,
+      exp_dst_url, recursion_requested):
     # We're copying one file or object to one file or object.
     return exp_dst_url
 
