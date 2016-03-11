@@ -102,7 +102,8 @@ _DETAILED_HELP_TEXT = ("""
     filesystem.
   - Mac OS performs character encoding decomposition based on tables stored in
     the OS, and the tables change between Unicode versions. Thus the encoding
-    used by an external library may not match that performed by the OS.
+    used by an external library may not match that performed by the OS. It is
+    possible that two object names may translate to a single local filename.
   - Windows console support for Unicode is difficult to use correctly.
 
   For a more thorough list of such issues see `this presentation

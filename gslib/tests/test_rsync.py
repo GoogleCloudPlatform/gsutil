@@ -24,6 +24,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.util import IS_OSX
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UsingCrcmodExtension
@@ -1071,14 +1072,24 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   @unittest.skipIf(IS_WINDOWS,
-                   "Windows Unicode support is problematic in Python 2.x.")
+                   'Windows Unicode support is problematic in Python 2.x.')
   def test_dir_to_bucket_with_unicode_chars(self):
     """Tests that rsync -r works correctly with unicode filenames."""
 
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
+    # The Ì character is unicode 00CC, but OSX translates this to the second
+    # entry below.
     self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
+    # The Ì character is unicode 0049+0300; OSX uses this value in both cases.
+    self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
     self.CreateTempFile(tmpdir=tmpdir, file_name=u'fooꝾoo')
+
+    expected_list_results = (
+        frozenset(['/morales_suenÌƒos.jpg', '/fooꝾoo'])
+        if IS_OSX else
+        frozenset(['/morales_suenÌƒos.jpg', '/morales_suenÌƒos.jpg',
+                   '/fooꝾoo']))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1087,6 +1098,6 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
       listing1 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
-      self.assertEquals(listing1, set(['/morales_suenÌƒos.jpg', '/fooꝾoo']))
-      self.assertEquals(listing2, set(['/morales_suenÌƒos.jpg', '/fooꝾoo']))
+      self.assertEquals(listing1, expected_list_results)
+      self.assertEquals(listing2, expected_list_results)
     _Check()
