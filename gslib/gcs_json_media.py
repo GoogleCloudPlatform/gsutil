@@ -118,7 +118,7 @@ class UploadCallbackConnectionClassFactory(object):
         # debuglevel == 4 and print messages to stderr.
         self._buffer.extend(('', ''))
         msg = '\r\n'.join(self._buffer)
-        metadata_bytes = len(msg)
+        num_metadata_bytes = len(msg)
         if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
           outer_logger.debug('send: %s' % msg)
         del self._buffer[:]
@@ -128,14 +128,20 @@ class UploadCallbackConnectionClassFactory(object):
         if isinstance(message_body, str):
           msg += message_body
           message_body = None
-        self.send(msg, metadata_bytes=metadata_bytes)
+        self.send(msg, num_metadata_bytes=num_metadata_bytes)
         if message_body is not None:
           # message_body was not a string (i.e. it is a file) and
           # we must run the risk of Nagle
           self.send(message_body)
 
-      def send(self, data, metadata_bytes=0):
-        """Overrides HTTPConnection.send."""
+      def send(self, data, num_metadata_bytes=0):
+        """Overrides HTTPConnection.send.
+
+        Args:
+          data: string or file-like object (implements read()) of data to send.
+          num_metadata_bytes: number of bytes that consist of metadata
+              (headers, etc.) not representing the data being uploaded.
+        """
         if not self.processed_initial_bytes:
           self.processed_initial_bytes = True
           if outer_progress_callback:
@@ -152,14 +158,21 @@ class UploadCallbackConnectionClassFactory(object):
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         while partial_buffer:
           httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
-          send_length = len(partial_buffer) - metadata_bytes
+          sent_data_bytes = len(partial_buffer)
+          if num_metadata_bytes:
+            if num_metadata_bytes <= sent_data_bytes:
+              sent_data_bytes -= num_metadata_bytes
+              num_metadata_bytes = 0
+            else:
+              num_metadata_bytes -= sent_data_bytes
+              sent_data_bytes = 0
           if self.callback_processor:
             # TODO: We can't differentiate the multipart upload
             # metadata in the request body from the actual upload bytes, so we
             # will actually report slightly more bytes than desired to the
-            # callback handler. Get that data from apitools and subtract it
-            # from bytes sent.
-            self.callback_processor.Progress(send_length)
+            # callback handler. Get the number of multipart upload metadata
+            # bytes from apitools and subtract from sent_data_bytes.
+            self.callback_processor.Progress(sent_data_bytes)
           partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
 
     return UploadCallbackConnection

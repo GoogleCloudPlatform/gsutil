@@ -1418,6 +1418,25 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('OWNER permission is required for preserving ACLs', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  def test_cp_progress_callbacks(self):
+    bucket_uri = self.CreateBucket()
+    final_progress_callback = '1 MiB/1 MiB    \r\n'
+    fpath = self.CreateTempFile(contents='a'*ONE_MIB, file_name='foo')
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+                              return_stderr=True)
+      self.assertEquals(1, stderr.count(final_progress_callback))
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', str(2 * ONE_MIB))
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+                              return_stderr=True)
+      self.assertEquals(1, stderr.count(final_progress_callback))
+    stderr = self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath],
+                            return_stderr=True)
+    self.assertEquals(1, stderr.count(final_progress_callback))
+
+  @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload(self):
     """Tests that a basic resumable upload completes successfully."""
     bucket_uri = self.CreateBucket()
@@ -1823,7 +1842,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'content-type:application/gzip', 'cp', '-Z',
                     suri(fpath), suri(bucket_uri, 'foo')])
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
-
 
   @SequentialAndParallelTransfer
   def test_cp_resumable_download_gzip(self):
