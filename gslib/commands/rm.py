@@ -121,7 +121,8 @@ older object versions (see "gsutil help lifecycle").
   -f          Continues silently (without printing error messages) despite
               errors when removing multiple objects. If some of the objects
               could not be removed, gsutil's exit status will be non-zero even
-              if this flag is set. This option is implicitly set when running
+              if this flag is set. Execution will still halt if an inaccessible
+              bucket is encountered. This option is implicitly set when running
               "gsutil -m rm ...".
 
   -I          Causes gsutil to read the list of objects to remove from stdin.
