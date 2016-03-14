@@ -543,15 +543,6 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 #  token_cache_path_pattern = <tmpdir>/oauth2client-tokencache.%%(uid)s.%%(key)s
 # where <tmpdir> is the system-dependent default temp directory.
 
-# The following options specify the OAuth2 client identity and secret that is
-# used when requesting and using OAuth2 tokens. If not specified, a default
-# OAuth2 client for the gsutil tool is used; for uses of the boto library (with
-# OAuth2 authentication plugin) in other client software, it is recommended to
-# use a tool/client-specific OAuth2 client. For more information on OAuth2, see
-# http://code.google.com/apis/accounts/docs/OAuth2.html
-#client_id = <OAuth2 client id>
-#client_secret = <OAuth2 client secret>
-
 # The following options specify the label and endpoint URIs for the OAUth2
 # authorization provider being used. Primarily useful for tool developers.
 #provider_label = Google
@@ -562,6 +553,13 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 # rate limiting errors occur for OAuth2 requests to retrieve an access token.
 # The default value is 6.
 #oauth2_refresh_retries = <integer value>
+
+# The following options specify the OAuth2 client identity and secret that is
+# used when requesting and using OAuth2 tokens. If not specified, a default
+# OAuth2 client for the gsutil tool is used; for uses of the boto library (with
+# OAuth2 authentication plugin) in other client software, it is recommended to
+# use a tool/client-specific OAuth2 client. For more information on OAuth2, see
+# http://code.google.com/apis/accounts/docs/OAuth2.html
 """
 
 
@@ -983,8 +981,19 @@ class ConfigCommand(Command):
     config_file.write('%sdefault_project_id = %s\n\n\n' %
                       (project_id_section_prelude, default_project_id))
 
-    # Write the config file OAuth2 section.
+    # Write the config file OAuth2 section that doesn't depend on user input.
     config_file.write(CONFIG_OAUTH2_CONFIG_CONTENT)
+
+    # If the user ran gsutil config with a custom client ID, write that to the
+    # config file.
+    if (cred_type == CredTypes.OAUTH2_USER_ACCOUNT
+        and oauth2_client.client_id != oauth2_helper.CLIENT_ID
+        and oauth2_client.client_secret != oauth2_helper.CLIENT_SECRET):
+      config_file.write('client_id = %s\nclient_secret = %s\n' %
+                        (oauth2_client.client_id, oauth2_client.client_secret))
+    else:
+      config_file.write('#client_id = <OAuth2 client id>\n'
+                        '#client_secret = <OAuth2 client secret>\n')
 
   def RunCommand(self):
     """Command entry point for the config command."""
