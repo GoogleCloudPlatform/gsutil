@@ -721,6 +721,15 @@ class GcsJsonApi(CloudApi):
     self.download_http.connections = {'https': download_http_class}
 
     if serialization_data:
+      # If we have an apiary trace token, add it to the URL.
+      # TODO: Add query parameter support to apitools downloads so there is
+      # a well-defined way to express query parameters. Currently, we assume
+      # the URL ends in ?alt=media, and this will break if that changes.
+      if self.trace_token:
+        serialization_dict = json.loads(serialization_data)
+        serialization_dict['url'] += '&trace=token%%3A%s' % self.trace_token
+        serialization_data = json.dumps(serialization_dict)
+
       apitools_download = apitools_transfer.Download.FromData(
           download_stream, serialization_data, self.api_client.http,
           num_retries=self.num_retries)
