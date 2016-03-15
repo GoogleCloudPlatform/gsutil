@@ -1029,6 +1029,13 @@ class ConfigCommand(Command):
       raise CommandException('Both -a and -e cannot be specified. Please see '
                              '"gsutil help config" for more information.')
 
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1' and not has_a:
+      raise CommandException(
+          'OAuth2 is the preferred authentication mechanism with the Cloud '
+          'SDK. Run "gcloud auth login" to configure authentication, unless '
+          'you want to authenticate with an HMAC access key and secret, in '
+          'which case run "gsutil config -a".')
+
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
 
