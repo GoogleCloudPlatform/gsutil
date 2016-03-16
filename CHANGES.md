@@ -1,3 +1,49 @@
+Release 4.18 (release date: 2016-03-22)
+=======================================
+New Features
+------------
+- gsutil now supports the beta Customer-Supplied Encryption Keys
+  features for Google Cloud Storage objects, via the JSON API.
+  This feature allows you to encrypt your data with keys that
+  are not permanently stored on Google's servers. You can provide
+  encryption and decryption keys in your .boto configuration file.
+  As long as an encryption key is specified in the configuration file,
+  all gs:// objects that gsutil creates will be stored encrypted
+  with that key, and all encrypted objects will be decrypted when
+  downloaded. See "gsutil help csek" for more information.
+- Added the rewrite command, which can be used to perform
+  key rotation for objects encrypted with customer-supplied
+  encryption keys.
+
+Bug Fixes
+---------
+- Fixed an AttributeError that could occur when running in debug mode
+  for operations involving wildcards, recursion, or listing.
+- Fixed an ArgumentException that could occur when using perfdiag
+  write throughput tests with parallelism.
+- Restored debug mode output for resumable uploads using the JSON API.
+- Fixed a bug where rm -r on a bucket subdirectory would exit with
+  code 1 even though it succeeded.
+- Fixed a bug where cp -R of a single file with a destination other
+  than the bucket root would copy to the bucket root.
+- Fixed a bug when using a single process with multiple threads
+  where CTRL-C would not stop the process until one thread completed
+  a task.
+
+Other Changes
+-------------
+- Improved exception logging in debug mode.
+- Added "cache-control: no-transform" to all uploads
+  using compression ("gsutil cp -z" or "gsutil cp -Z") to ensure that
+  doubly-compressed objects can be downloaded with data integrity
+  checking.
+- Reduced the default number of threads per-process on Linux systems
+  from 10 to 5.
+- Documented additional OS X Unicode limitations.
+- The config command now includes the custom client ID and secret in the
+  configuration file output if the command is run with those values
+  configured.
+
 Release 4.17 (release date: 2016-02-18)
 =======================================
 Bug Fixes
@@ -20,7 +66,7 @@ Other Changes
 
 Release 4.16 (release date: 2015-11-25)
 =======================================
-New features
+New Features
 ------------
 - The ls command now supports a -d option (similar to Unix ls -d)
   for suppressing recursion into subdirectories.
