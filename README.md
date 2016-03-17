@@ -20,11 +20,9 @@ https://cloud.google.com/storage/docs/gsutil_install
 
 The gsutil source code is available at https://github.com/GoogleCloudPlatform/gsutil
 
-For information on developing gsutil and instructions for running the gsutil
-test suite, run the "gsutil help dev" command. Instructions are also available
-online at:
-
+Note: Currently we do not directly accept pull requests on GitHub -- see
 https://cloud.google.com/storage/docs/gsutil/addlhelp/ContributingCodetogsutil
+on how to contribute code changes.
 
 ## Help and Support
 
