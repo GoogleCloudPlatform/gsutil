@@ -111,8 +111,8 @@ _DETAILED_HELP_TEXT = ("""
     the fact that Editors have OWNER access in the default object and
     bucket ACLs, but the canned ACL options remove OWNER access from
     Editors, can lead to unexpected results. The solution to this problem is to
-    ensure the service account is an Owner in the Permissions tab for your
-    project.
+    use "gsutil acl ch" instead of "gsutil acl set <canned-ACL>" to change
+    permissions on a bucket.
 
     To set up a service account for use with "gsutil config -e", see:
       https://developers.google.com/console/help/new/#serviceaccounts
