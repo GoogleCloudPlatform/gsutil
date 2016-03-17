@@ -128,13 +128,6 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             ssl.SSLError,
                             ValueError)
 
-_VALIDATE_CERTIFICATES_503_MESSAGE = (
-    """Service Unavailable. If you have recently changed
-    https_validate_certificates from True to False in your boto configuration
-    file, please delete any cached access tokens in your filesystem (at %s)
-    and try again.""" % GetCredentialStoreFilename())
-
-
 # Fields requiring projection=full across all API calls.
 _ACL_FIELDS_SET = set(['acl', 'defaultObjectAcl', 'items/acl',
                        'items/defaultObjectAcl', 'items/owner', 'owner'])
@@ -1416,11 +1409,7 @@ class GcsJsonApi(CloudApi):
   def _TranslateApitoolsResumableUploadException(self, e):
     if isinstance(e, apitools_exceptions.HttpError):
       message = self._GetMessageFromHttpError(e)
-      if (e.status_code == 503 and
-          self.http.disable_ssl_certificate_validation):
-        return ServiceException(_VALIDATE_CERTIFICATES_503_MESSAGE,
-                                status=e.status_code)
-      elif e.status_code >= 500:
+      if e.status_code >= 500:
         return ResumableUploadException(
             message or 'Server Error', status=e.status_code)
       elif e.status_code == 429:
@@ -1526,10 +1515,6 @@ class GcsJsonApi(CloudApi):
             'Bucket %s already exists.' % bucket_name, status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
-      elif (e.status_code == 503 and
-            not self.http.disable_ssl_certificate_validation):
-        return ServiceException(_VALIDATE_CERTIFICATES_503_MESSAGE,
-                                status=e.status_code)
       return ServiceException(message, status=e.status_code)
     elif isinstance(e, apitools_exceptions.TransferInvalidError):
       return ServiceException('Transfer invalid (possible encoding error: %s)'
