@@ -35,6 +35,7 @@ import signal
 import sys
 import textwrap
 import threading
+import time
 import traceback
 
 import boto
@@ -1457,7 +1458,14 @@ class Command(HelpProvider):
 
     num_enqueued = 0
     while True:
-      worker_semaphore.acquire()
+      while not worker_semaphore.acquire(blocking=False):
+        # Because Python signal handlers are only called in between atomic
+        # instructions, if we block the main thread on an available worker
+        # thread, we won't be able to respond to signals such as a
+        # user-initiated CTRL-C until a worker thread completes a task.
+        # We poll the semaphore periodically as a compromise between
+        # efficiency and user responsiveness.
+        time.sleep(0.5)
       task = task_queue.get()
       if task.args != ZERO_TASKS_TO_DO_ARGUMENT:
         # If we have no tasks to do and we're performing a blocking call, we
