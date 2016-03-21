@@ -1465,7 +1465,7 @@ class Command(HelpProvider):
         # user-initiated CTRL-C until a worker thread completes a task.
         # We poll the semaphore periodically as a compromise between
         # efficiency and user responsiveness.
-        time.sleep(0.5)
+        time.sleep(0.01)
       task = task_queue.get()
       if task.args != ZERO_TASKS_TO_DO_ARGUMENT:
         # If we have no tasks to do and we're performing a blocking call, we
