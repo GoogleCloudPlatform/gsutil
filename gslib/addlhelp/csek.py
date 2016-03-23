@@ -30,15 +30,15 @@ _DETAILED_HELP_TEXT = ("""
   interacting with Google Cloud Storage objects using the JSON API. The keys
   are provided via the .boto configuration file like so:
 
-  [GSUtil]
-  encryption_key = ...
-  decryption_key1 = ...
-  decryption_key2 = ...
+    [GSUtil]
+    encryption_key = ...
+    decryption_key1 = ...
+    decryption_key2 = ...
 
   Each key is a RFC 4648 Base64-encoded string of 256 bits of data for use
   with the AES256 encryption algorithm.
 
-  Note: As of 2016 Mar 03, the customer-supplied encryption key feature is
+  Note: As of 2016 Mar 23, the customer-supplied encryption key feature is
   currently in beta, and is not covered by any SLA or deprecation policy and
   may be subject to backward-incompatible changes.
 
@@ -109,25 +109,25 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>ROTATING KEYS</B>
-  To rotate keys, you must download and re-upload the full object data. You can
-  do this by changing your encryption_key configuration value to a
-  decryption_key configuration value and then using a new value for the
-  encryption_key. For example, if your initial configuration is:
+  To rotate keys, you can change your encryption_key configuration value to a
+  decryption_key configuration value and then use a new value for the
+  encryption_key. Then you can use the rewrite command to rotate keys in the
+  cloud without downloading and re-uploading the data. For example, if your
+  initial configuration is:
 
-  # Old encryption key
-  encryption_key = keyA...
+    # Old encryption key
+    encryption_key = keyA...
 
   You can change it the configuration to:
 
-  # New encryption key
-  encryption_key = keyB...
-  # Encryption key prior to rotation
-  decryption_key1 = keyA...
+    # New encryption key
+    encryption_key = keyB...
+    # Encryption key prior to rotation
+    decryption_key1 = keyA...
 
   and rotate the encryption key on an object by running:
 
-  gsutil cp gs://bucket/object temp-file
-  gsutil cp temp-file gs://bucket/object
+    gsutil rewrite gs://bucket/object temp-file
 
 
 <B>PERFORMANCE IMPLICATIONS FOR CUSTOMER-SUPPLIED ENCRYPTION KEYS</B>
