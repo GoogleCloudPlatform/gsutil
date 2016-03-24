@@ -501,6 +501,16 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   is not necessary after running the export command on Linux and MacOS.)
 """
 
+_COPYING_SPECIAL_FILES_TEXT = """
+<B>COPYING SPECIAL FILES</B>
+
+gsutil cp does not support copying special file types such as sockets, device
+files, named pipes, or any other non-standard files intended to represent an
+operating system resource. You should not run gsutil cp with sources that
+include such files (for example, recursively copying the root directory on
+Linux that includes /dev ). If you do, gsutil cp may fail or hang.
+"""
+
 _OPTIONS_TEXT = """
 <B>OPTIONS</B>
   -a canned_acl  Sets named canned_acl when uploaded objects created. See
@@ -686,6 +696,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _SLICED_OBJECT_DOWNLOADS_TEXT,
                                    _PARALLEL_COMPOSITE_UPLOADS_TEXT,
                                    _CHANGING_TEMP_DIRECTORIES_TEXT,
+                                   _COPYING_SPECIAL_FILES_TEXT,
                                    _OPTIONS_TEXT])
 
 

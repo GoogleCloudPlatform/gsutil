@@ -278,6 +278,13 @@ _DETAILED_HELP_TEXT = ("""
      command doesn't try to make the archived generations match in the source
      and destination buckets.
 
+  3. The gsutil rsync command does not support copying special file types
+     such as sockets, device files, named pipes, or any other non-standard
+     files intended to represent an operating system resource. If you run
+     gsutil rsync on a source directory that includes such files (for example,
+     copying the root directory on Linux that includes /dev ), you should use
+     the -x flag to exclude these files. Otherwise, gsutil rsync may fail or
+     hang.
 
 
 <B>OPTIONS</B>
