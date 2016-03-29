@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 from gslib.help_provider import HelpProvider
 
+
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   gsutil currently supports several types of credentials/authentication, as
@@ -41,8 +42,8 @@ _DETAILED_HELP_TEXT = ("""
   be used regardless of whether the user has any boto configuration files (which
   are located at ~/.boto unless a different path is specified in the BOTO_CONFIG
   environment variable). However, gsutil will still look for credentials in the
-  boto config file if a type of credential is needed that's not stored in the
-  gcloud credential store (e.g., an HMAC credential for an S3 account).
+  boto config file if a type of non-GCS credential is needed that's not stored
+  in the gcloud credential store (e.g., an HMAC credential for an S3 account).
 
 
 <B>Configuring/Using Credentials via Standalone gsutil Distribution</B>
@@ -76,7 +77,7 @@ _DETAILED_HELP_TEXT = ("""
     This is the preferred type of credentials for authenticating requests on
     behalf of a specific user (which is probably the most common use of gsutil).
     This is the default type of credential that will be created when you run
-    "gsutil config".
+    "gsutil config" (or "gcloud init" for Cloud SDK installs).
     For more details about OAuth2 authentication, see:
     https://developers.google.com/accounts/docs/OAuth2#scenarios
 
@@ -91,9 +92,9 @@ _DETAILED_HELP_TEXT = ("""
     Note that it's possible to set up HMAC credentials for both Google Cloud
     Storage and another service provider; or to set up OAuth2 user account
     credentials for Google Cloud Storage and HMAC credentials for another
-    service provider. To do so, after you run the gsutil config command, you
-    can edit the generated ~/.boto config file and look for comments for where
-    other credentials can be added.
+    service provider. To do so, after you run the "gsutil config" command (or
+    "gcloud init" for Cloud SDK installs), you can edit the generated ~/.boto
+    config file and look for comments for where other credentials can be added.
 
     For more details about HMAC authentication, see:
       https://developers.google.com/storage/docs/reference/v1/getting-startedv1#keys
@@ -104,7 +105,9 @@ _DETAILED_HELP_TEXT = ("""
     you will run gsutil out of a nightly cron job to upload/download data,
     using a service account allows the cron job not to depend on credentials of
     an individual employee at your company. This is the type of credential that
-    will be configured when you run "gsutil config -e".
+    will be configured when you run "gsutil config -e". To configure service
+    account credentials when installed via the Cloud SDK, run "gcloud auth
+    activate-service-account".
 
     It is important to note that a service account is considered an Editor by
     default for the purposes of API access, rather than an Owner. In particular,
@@ -114,7 +117,8 @@ _DETAILED_HELP_TEXT = ("""
     use "gsutil acl ch" instead of "gsutil acl set <canned-ACL>" to change
     permissions on a bucket.
 
-    To set up a service account for use with "gsutil config -e", see:
+    To set up a service account for use with "gsutil config -e" or "gcloud auth
+    activate-service-account", see:
       https://developers.google.com/console/help/new/#serviceaccounts
 
     For more details about OAuth2 service accounts, see:

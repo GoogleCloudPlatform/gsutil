@@ -1089,6 +1089,13 @@ class ConfigCommand(Command):
           'you want to authenticate with an HMAC access key and secret, in '
           'which case run "gsutil config -a".')
 
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1' and has_a:
+      sys.stderr.write('\n'.join(textwrap.wrap(
+          'This command will configure HMAC credentials, but gsutil will use '
+          'OAuth2 credentials from the Cloud SDK by default. To make sure '
+          'the HMAC credentials are used, run: "gcloud config set '
+          'pass_credentials_to_gsutil false".')) + '\n\n')
+
     if not scopes:
       scopes.append(SCOPE_FULL_CONTROL)
 
