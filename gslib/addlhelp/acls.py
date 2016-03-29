@@ -70,6 +70,14 @@ _DETAILED_HELP_TEXT = ("""
      specific group of users).
 
 
+<B>ACCESSING PUBLIC OBJECTS</B>
+  Objects with public READ access can be accessed anonymously by gsutil, via
+  a browser, or via Cloud Storage APIs. For more details on accessing public
+  objects, see:
+
+    https://cloud.google.com/storage/docs/access-public-data
+
+
 <B>CANNED ACLS</B>
   The simplest way to set an ACL on a bucket or object is using a "canned
   ACL". The available canned ACLs are:
