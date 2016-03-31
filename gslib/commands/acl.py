@@ -157,13 +157,22 @@ _CH_DESCRIPTION = """
 
     gsutil acl ch -g admins@example.com:O gs://example-bucket/*.jpg
 
-  Grant the owners of project example-project-123 WRITE access to the bucket
+  Grant the owners of project example-project WRITE access to the bucket
   example-bucket:
 
-    gsutil acl ch -p owners-example-project-123:W gs://example-bucket
+    gsutil acl ch -p owners-example-project:W gs://example-bucket
 
   NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
   to a project's viewers/editors respectively.
+
+  Remove access to the bucket example-bucket for the owners of project number
+  12345:
+
+    gsutil acl ch -d owners-12345 gs://example-bucket
+
+  Note that removing a project requires you to reference the project by
+  its number (which you can see with the acl get command) as opposed to its
+  project ID string.
 
   Grant the user with the specified canonical ID READ access to all objects
   in example-bucket that begin with folder/:
