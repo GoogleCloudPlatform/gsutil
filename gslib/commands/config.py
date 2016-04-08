@@ -1002,7 +1002,7 @@ class ConfigCommand(Command):
         time.sleep(2)
       else:
         sys.stdout.write(
-            '\nPlease navigate your browser to %s,\nthen find the project'
+            '\nPlease navigate your browser to %s,\nthen find the project '
             'you will use, and copy the Project ID string from the\nsecond '
             'column. Older projects do not have Project ID strings. For such '
             'projects,\n click the project and then copy the Project Number '
