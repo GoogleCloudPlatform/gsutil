@@ -20,6 +20,7 @@ import os
 import shutil
 import signal
 import stat
+import sys
 import tarfile
 import tempfile
 import textwrap
@@ -347,6 +348,14 @@ class UpdateCommand(Command):
                                'installed.', informational=True)
 
     if not no_prompt:
+      if (2, 6) == sys.version_info[:2]:
+        print('\n'.join(textwrap.wrap(
+            'WARNING: You are using Python 2.6, which gsutil will stop '
+            'supporting on September 1, 2016. If run gsutil update to a '
+            'version released after that date, you will need to upgrade your '
+            'system\'s Python installation to a supported Python version '
+            '(at the time of this writing, version 2.7), or else gsutil will '
+            'fail.\n')))
       (_, major) = CompareVersions(tarball_version, gslib.VERSION)
       if major:
         print('\n'.join(textwrap.wrap(
