@@ -1,3 +1,22 @@
+Release 4.19 (release date: 2016-04-13)
+=======================================
+Deprecation Notice
+------------------
+- gsutil support for Python 2.6 is deprecated, and gsutil will stop
+  supporting Python 2.6 on September 1, 2016. This change is
+  being made for two reasons. First, Python 2.6 stopped
+  receiving security patches since October 2013. Second,
+  removing Python 2.6 support will enable gsutil to add support
+  for Python 3. Versions of gsutil released prior to September 1,
+  2016 will continue to work with Python 2.6. However, bug fixes
+  will not be made retroactively to older gsutil versions, and users
+  reporting bugs will be asked to upgrade to the current gsutil
+  version (using Python 2.7, or, when it is supported, Python 3).
+
+Other Changes
+-------------
+- Improved documentation around Cloud SDK (gcloud) installs.
+
 Release 4.18 (release date: 2016-03-22)
 =======================================
 New Features
