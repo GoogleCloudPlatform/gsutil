@@ -354,8 +354,6 @@ def main():
     if not CERTIFICATE_VALIDATION_ENABLED:
       sys.stderr.write(HTTP_WARNING)
 
-    _CheckAndWarnForPython26()
-
     if version:
       command_name = 'version'
     elif not args:
@@ -364,6 +362,10 @@ def main():
       command_name = args[0]
 
     _CheckAndWarnForProxyDifferences()
+
+    if not test_exception_traces:
+      # Disable warning for tests, as it interferes with test stderr parsing.
+      _CheckAndWarnForPython26()
 
     if os.environ.get('_ARGCOMPLETE', '0') == '1':
       return _PerformTabCompletion(command_runner)
