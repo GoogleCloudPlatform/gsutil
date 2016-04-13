@@ -137,7 +137,7 @@ class UpdateCommand(Command):
     # 'third_party', which isn't present in manifest but gets added to the
     # gsutil distro by the gsutil submodule configuration; and the MANIFEST.in
     # and CHANGES.md files.
-    manifest_lines = ['gslib', 'third_party', 'MANIFEST.in', 'CHANGES.md']
+    manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
 
     try:
       with open(os.path.join(gslib.GSUTIL_DIR, 'MANIFEST.in'), 'r') as fp:

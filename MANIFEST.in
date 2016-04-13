@@ -1,4 +1,6 @@
+include CHANGES.md
 include CHECKSUM
+include CONTRIBUTING.md
 include COPYING
 include README.md
 include VERSION
