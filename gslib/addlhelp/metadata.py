@@ -48,35 +48,20 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>CONTENT TYPE</B>
   The most commonly set metadata is Content-Type (also known as MIME type),
-  which allows browsers to render the object properly.
-  gsutil sets the Content-Type automatically at upload time, based on each
-  filename extension. For example, uploading files with names ending in .txt
-  will set Content-Type to text/plain. If you're running gsutil on Linux or
-  MacOS and would prefer to have content type set based on naming plus content
-  examination, see the use_magicfile configuration variable in the gsutil/boto
-  configuration file (See also "gsutil help config"). In general, using
-  use_magicfile is more robust and configurable, but is not available on
-  Windows.
+  which allows browsers to render the object properly. gsutil sets the
+  Content-Type automatically at upload time, based on each filename extension.
+  For example, uploading files with names ending in .txt will set Content-Type
+  to text/plain. If you're running gsutil on Linux or MacOS and would prefer to
+  have content type set based on naming plus content examination, see the
+  use_magicfile configuration variable in the .boto configuration file (See
+  also "gsutil help config"). In general, using use_magicfile is more robust
+  and configurable, but is not available on Windows.
 
   If you specify a Content-Type header with -h when uploading content (like the
   example gsutil command given in the previous section), it overrides the
   Content-Type that would have been set based on filename extension or content.
   This can be useful if the Content-Type detection algorithm doesn't work as
   desired for some of your files.
-
-  You can also completely suppress content type detection in gsutil, by
-  specifying an empty string on the Content-Type header:
-
-    gsutil -h 'Content-Type:' cp -r images gs://bucket/images
-
-  In this case, the Google Cloud Storage service will not attempt to detect
-  the content type. In general this approach will work better than using
-  filename extension-based content detection in gsutil, because the list of
-  filename extensions is kept more current in the server-side content detection
-  system than in the Python library upon which gsutil content type detection
-  depends. (For example, at the time of writing this, the filename extension
-  ".webp" was recognized by the server-side content detection system, but
-  not by gsutil.)
 
 
 <B>CACHE-CONTROL</B>
