@@ -191,6 +191,7 @@ global total_tasks, call_completed_map, global_return_values_map
 global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
 global current_max_recursive_level, shared_vars_map, shared_vars_list_map
 global class_map, worker_checking_level_lock, failure_count
+global glob_status_queue
 
 
 def InitializeMultiprocessingVariables():
@@ -207,7 +208,7 @@ def InitializeMultiprocessingVariables():
   global total_tasks, call_completed_map, global_return_values_map
   global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
   global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-  global class_map, worker_checking_level_lock, failure_count
+  global class_map, worker_checking_level_lock, failure_count, glob_status_queue
 
   manager = multiprocessing.Manager()
 
@@ -259,6 +260,18 @@ def InitializeMultiprocessingVariables():
   # Number of tasks that resulted in an exception in calls to Apply().
   failure_count = multiprocessing.Value('i', 0)
 
+  # Central queue for status reporting across multiple processes and threads.
+  # It's possible that if many processes and threads are executing small file
+  # writes or metadata changes quickly, performance may be bounded by lock
+  # contention on the queue. Initial testing conducted with
+  # 12 processes * 5 threads per process showed little difference.  If this
+  # becomes a performance bottleneck in the future, consider creating a queue
+  # per-process and having the UI thread poll all of the queues; that approach
+  # would need to address:
+  # - Queue fairness if one queue grows to be disproportionately large
+  # - Reasonable time correlation with events as they occur
+  glob_status_queue = _NewMultiprocessingQueue()
+
 
 def TeardownMultiprocessingProcesses():
   """Should be called by signal handlers prior to shut down."""
@@ -284,7 +297,7 @@ def InitializeThreadingVariables():
   global global_return_values_map, shared_vars_map, failure_count
   global caller_id_finished_count, shared_vars_list_map, total_tasks
   global need_pool_or_done_cond, call_completed_map, class_map
-  global task_queues, caller_id_lock, caller_id_counter
+  global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
   caller_id_counter = 0
   caller_id_finished_count = AtomicDict()
   caller_id_lock = threading.Lock()
@@ -297,6 +310,7 @@ def InitializeThreadingVariables():
   shared_vars_map = AtomicDict()
   task_queues = []
   total_tasks = AtomicDict()
+  glob_status_queue = _NewThreadsafeQueue()
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -487,7 +501,8 @@ class Command(HelpProvider):
     self.gsutil_api = CloudApiDelegator(
         bucket_storage_uri_class, self.gsutil_api_map,
         self.logger, debug=self.debug, trace_token=self.trace_token,
-        perf_trace_token=self.perf_trace_token)
+        perf_trace_token=self.perf_trace_token,
+        status_queue=_MainThreadUIQueue(self.logger))
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
@@ -1067,7 +1082,7 @@ class Command(HelpProvider):
     global_return_values_map[caller_id] = []
     return caller_id
 
-  def _CreateNewConsumerPool(self, num_processes, num_threads):
+  def _CreateNewConsumerPool(self, num_processes, num_threads, status_queue):
     """Create a new pool of processes that call _ApplyThreads."""
     processes = []
     task_queue = _NewMultiprocessingQueue()
@@ -1080,7 +1095,8 @@ class Command(HelpProvider):
       recursive_apply_level = len(consumer_pools)
       p = multiprocessing.Process(
           target=self._ApplyThreads,
-          args=(num_threads, num_processes, recursive_apply_level))
+          args=(num_threads, num_processes, recursive_apply_level,
+                status_queue))
       p.daemon = True
       processes.append(p)
       p.start()
@@ -1254,7 +1270,7 @@ class Command(HelpProvider):
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
                      arg_checker, process_count, thread_count,
                      should_return_results, fail_on_error):
-    """Dispatches input arguments across a thread/process pool.
+    r"""Dispatches input arguments across a thread/process pool.
 
     Pools are composed of parallel OS processes and/or Python threads,
     based on options (-m or not) and settings in the user's config file.
@@ -1294,6 +1310,12 @@ class Command(HelpProvider):
       caller_id: The caller ID unique to this call to command.Apply.
       See command.Apply for description of other arguments.
     """
+    # This is initialized in Initialize(Multiprocessing|Threading)Variables
+    # pylint: disable=global-variable-not-assigned
+    # pylint: disable=global-variable-undefined
+    global glob_status_queue
+    # pylint: enable=global-variable-not-assigned
+    # pylint: enable=global-variable-undefined
     is_main_thread = self.recursive_apply_level == 0
 
     if not IS_WINDOWS and is_main_thread:
@@ -1333,7 +1355,8 @@ class Command(HelpProvider):
             # Only the main thread is allowed to create new processes -
             # otherwise, we will run into some Python bugs.
             if is_main_thread:
-              self._CreateNewConsumerPool(process_count, thread_count)
+              self._CreateNewConsumerPool(process_count, thread_count,
+                                          glob_status_queue)
             else:
               # Notify the main thread that we need a new consumer pool.
               new_pool_needed.value = 1
@@ -1365,6 +1388,11 @@ class Command(HelpProvider):
                                      exception_handler, arg_checker,
                                      fail_on_error)
 
+    # Start the UI thread that is responsible for displaying operation status
+    # (aggregrated across processes and threads) to the user.
+    if is_main_thread:
+      _UIThread(glob_status_queue, self.logger)
+
     if process_count > 1:
       # Wait here until either:
       #   1. We're the main thread and someone needs a new consumer pool - in
@@ -1383,7 +1411,8 @@ class Command(HelpProvider):
             break
           elif is_main_thread and new_pool_needed.value:
             new_pool_needed.value = 0
-            self._CreateNewConsumerPool(process_count, thread_count)
+            self._CreateNewConsumerPool(process_count, thread_count,
+                                        glob_status_queue)
             need_pool_or_done_cond.notify_all()
 
           # Note that we must check the above conditions before the wait() call;
@@ -1393,7 +1422,13 @@ class Command(HelpProvider):
     else:  # Using a single process.
       self._ApplyThreads(thread_count, process_count,
                          self.recursive_apply_level,
+                         glob_status_queue,
                          is_blocking_call=True, task_queue=task_queue)
+
+    # We've completed all tasks (or excepted), so signal the UI thread to
+    # terminate.
+    if is_main_thread:
+      glob_status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
 
     # We encountered an exception from the producer thread before any arguments
     # were enqueued, but it wouldn't have been propagated, so we'll now
@@ -1409,7 +1444,7 @@ class Command(HelpProvider):
       raise producer_thread.iterator_exception
 
   def _ApplyThreads(self, thread_count, process_count, recursive_apply_level,
-                    is_blocking_call=False, task_queue=None):
+                    status_queue, is_blocking_call=False, task_queue=None):
     """Assigns the work from the multi-process global task queue.
 
     Work is assigned to an individual process for later consumption either by
@@ -1421,6 +1456,8 @@ class Command(HelpProvider):
       process_count: The number of processes used to perform the work.
       recursive_apply_level: The depth in the tree of recursive calls to Apply
                              of this thread.
+      status_queue: Multiprocessing/threading queue for progress reporting and
+          performance aggregation.
       is_blocking_call: True iff the call to Apply is blocked on this call
                         (which is true iff process_count == 1), implying that
                         _ApplyThreads must behave as a blocking call.
@@ -1454,7 +1491,8 @@ class Command(HelpProvider):
     worker_pool = WorkerPool(
         thread_count, self.logger, worker_semaphore,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
-        gsutil_api_map=self.gsutil_api_map, debug=self.debug)
+        gsutil_api_map=self.gsutil_api_map, debug=self.debug,
+        status_queue=status_queue)
 
     num_enqueued = 0
     while True:
@@ -1497,6 +1535,54 @@ class Command(HelpProvider):
 
 # Below here lie classes and functions related to controlling the flow of tasks
 # between various threads and processes.
+
+
+class _MainThreadUIQueue(object):
+  """Handles status display and processing in the main thread / master process.
+
+  This class emulates a queue to cover main-thread activity before or after
+  Apply, as well as for the single-threaded, single-process case, i.e.,
+  _SequentialApply. When multiple threads or processes are used, during calls
+  to Apply the main thread is waiting for work to complete, and this queue
+  should remain unused until Apply returns.
+
+  Presently, this class just prints strings that it receives verbatim; in the
+  future, typed status messages can be defined for processing.
+  """
+
+  def __init__(self, logger):
+    self.logger = logger
+
+  def put(self, status_item):  # pylint: disable=invalid-name
+    if self.logger.isEnabledFor(logging.INFO):
+      sys.stderr.write(str(status_item))
+
+
+class _UIThread(threading.Thread):
+  """Responsible for centralized printing across multiple processes/threads.
+
+  This class pulls status messages that are posted to the centralized status
+  queue and coordinates displaying status and progress to the user. It is
+  used only during calls to _ParallelApply, which in turn is called only when
+  multiple threads and/or processes are used.
+
+  Presently, this thread just prints strings that it receives verbatim; in the
+  future, typed status messages can be defined for processing.
+  """
+
+  def __init__(self, status_queue, logger):
+    super(_UIThread, self).__init__()
+    self.status_queue = status_queue
+    self.logger = logger
+    self.start()
+
+  def run(self):
+    while True:
+      status_item = self.status_queue.get()
+      if status_item == ZERO_TASKS_TO_DO_ARGUMENT:
+        break
+      if self.logger.isEnabledFor(logging.INFO):
+        sys.stderr.write(str(status_item))
 
 
 class _ConsumerPool(object):
@@ -1638,14 +1724,15 @@ class WorkerPool(object):
   """Pool of worker threads to which tasks can be added."""
 
   def __init__(self, thread_count, logger, worker_semaphore,
-               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0):
+               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0,
+               status_queue=None):
     self.task_queue = _NewThreadsafeQueue()
     self.threads = []
     for _ in range(thread_count):
       worker_thread = WorkerThread(
           self.task_queue, logger, worker_semaphore=worker_semaphore,
           bucket_storage_uri_class=bucket_storage_uri_class,
-          gsutil_api_map=gsutil_api_map, debug=debug)
+          gsutil_api_map=gsutil_api_map, debug=debug, status_queue=status_queue)
       self.threads.append(worker_thread)
       worker_thread.start()
 
@@ -1664,7 +1751,8 @@ class WorkerThread(threading.Thread):
   """
 
   def __init__(self, task_queue, logger, worker_semaphore=None,
-               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0):
+               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0,
+               status_queue=None):
     """Initializes the worker thread.
 
     Args:
@@ -1679,6 +1767,7 @@ class WorkerThread(threading.Thread):
                       which can be used to communicate with those providers.
                       Used for the instantiating CloudApiDelegator class.
       debug: debug level for the CloudApiDelegator class.
+      status_queue: Queue for reporting status updates.
     """
     super(WorkerThread, self).__init__()
     self.task_queue = task_queue
@@ -1690,7 +1779,8 @@ class WorkerThread(threading.Thread):
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
       self.thread_gsutil_api = CloudApiDelegator(
-          bucket_storage_uri_class, gsutil_api_map, logger, debug=debug)
+          bucket_storage_uri_class, gsutil_api_map, logger, status_queue,
+          debug=debug)
 
   def PerformTask(self, task, cls):
     """Makes the function call for a task.

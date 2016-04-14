@@ -331,7 +331,7 @@ class RewriteCommand(Command):
 
       progress_callback = FileProgressCallbackHandler(
           ConstructAnnounceText(announce_text, transform_url.url_string),
-          self.logger).call
+          gsutil_api.status_queue).call
 
       gsutil_api.CopyObject(
           src_metadata, dst_metadata, src_generation=transform_url.generation,

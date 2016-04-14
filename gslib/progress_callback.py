@@ -14,9 +14,6 @@
 # limitations under the License.
 """Helper functions for progress callbacks."""
 
-import logging
-import sys
-
 from gslib.util import MakeHumanReadable
 from gslib.util import UTF8
 
@@ -120,18 +117,18 @@ def ConstructAnnounceText(operation_name, url_string):
 class FileProgressCallbackHandler(object):
   """Outputs progress info for large operations like file copy or hash."""
 
-  def __init__(self, announce_text, logger, start_byte=0,
+  def __init__(self, announce_text, status_queue, start_byte=0,
                override_total_size=None):
     """Initializes the callback handler.
 
     Args:
       announce_text: String describing the operation.
-      logger: For outputting log messages.
+      status_queue: Queue for posting status messages for UI display.
       start_byte: The beginning of the file component, if one is being used.
       override_total_size: The size of the file component, if one is being used.
     """
     self._announce_text = announce_text
-    self._logger = logger
+    self._status_queue = status_queue
     self._start_byte = start_byte
     self._override_total_size = override_total_size
     # Ensures final newline is written once even if we get multiple callbacks.
@@ -149,7 +146,7 @@ class FileProgressCallbackHandler(object):
                            [start_byte:start_byte + override_total_size].
       total_size: Total size of the ongoing operation.
     """
-    if not self._logger.isEnabledFor(logging.INFO) or self._last_byte_written:
+    if self._last_byte_written:
       return
 
     if self._override_total_size:
@@ -162,10 +159,10 @@ class FileProgressCallbackHandler(object):
     # Use sys.stderr.write instead of self.logger.info so progress messages
     # output on a single continuously overwriting line.
     # TODO: Make this work with logging.Logger.
-    sys.stderr.write('%s%s%s    \r' % (
+    self._status_queue.put('%s%s%s    \r' % (
         self._announce_text,
         MakeHumanReadable(last_byte_processed - self._start_byte),
         total_size_string))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True
-      sys.stderr.write('\n')
+      self._status_queue.put('\n')

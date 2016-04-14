@@ -42,7 +42,8 @@ class CloudApiDelegator(CloudApi):
   """
 
   def __init__(self, bucket_storage_uri_class, gsutil_api_map, logger,
-               provider=None, debug=0, trace_token=None, perf_trace_token=None):
+               status_queue, provider=None, debug=0, trace_token=None,
+               perf_trace_token=None):
     """Performs necessary setup for delegating cloud storage requests.
 
     This function has different arguments than the gsutil Cloud API __init__
@@ -54,6 +55,7 @@ class CloudApiDelegator(CloudApi):
       gsutil_api_map: Map of providers and API selector tuples to api classes
                       which can be used to communicate with those providers.
       logger: logging.logger for outputting log messages.
+      status_queue: Queue for relaying status to UI.
       provider: Default provider prefix describing cloud storage provider to
                 connect to.
       debug: Debug level for the API implementation (0..3).
@@ -61,6 +63,7 @@ class CloudApiDelegator(CloudApi):
       perf_trace_token: Performance trace token to use when making API calls.
     """
     super(CloudApiDelegator, self).__init__(bucket_storage_uri_class, logger,
+                                            status_queue,
                                             provider=provider, debug=debug,
                                             trace_token=trace_token,
                                             perf_trace_token=perf_trace_token)
@@ -120,6 +123,7 @@ class CloudApiDelegator(CloudApi):
         self.api_map[ApiMapConstants.API_MAP][provider][api_selector](
             self.bucket_storage_uri_class,
             self.logger,
+            self.status_queue,
             provider=provider,
             debug=self.debug,
             trace_token=self.trace_token,

@@ -33,6 +33,7 @@ from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
+from gslib.util import DiscardMessagesQueue
 from gslib.util import GsutilStreamHandler
 
 
@@ -253,7 +254,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     }
 
     return CloudApiDelegator(
-        cls.mock_bucket_storage_uri, gsutil_api_map, cls.logger, debug=debug)
+        cls.mock_bucket_storage_uri, gsutil_api_map, cls.logger,
+        DiscardMessagesQueue(), debug=debug)
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):

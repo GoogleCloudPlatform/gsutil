@@ -74,6 +74,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
+from gslib.util import DiscardMessagesQueue
 from gslib.util import EIGHT_MIB
 from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
@@ -2650,7 +2651,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents='bar')
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            self.default_provider)
+                            DiscardMessagesQueue(), self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(
         name=key.name, bucket=key.bucket.name, contentType=key.content_type)
@@ -2686,7 +2687,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=('12'*ONE_MIB) + 'bar',
                                    prefer_json_api=True)
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            self.default_provider)
+                            DiscardMessagesQueue(), self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(
         name=key.name, bucket=key.bucket.name, contentType=key.content_type,
@@ -2751,7 +2752,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=('12'*ONE_MIB) + 'bar',
                                    prefer_json_api=True)
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            self.default_provider)
+                            DiscardMessagesQueue(), self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(
         name=key.name, bucket=key.bucket.name, contentType=key.content_type,
@@ -2821,7 +2822,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=('12'*ONE_MIB) + 'bar',
                                    prefer_json_api=True)
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            self.default_provider)
+                            DiscardMessagesQueue(), self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(
         name=key.name, bucket=key.bucket.name, contentType=key.content_type,

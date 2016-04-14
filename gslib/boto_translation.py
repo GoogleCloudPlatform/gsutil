@@ -158,8 +158,8 @@ class BotoTranslation(CloudApi):
   TODO: Implement support.
   """
 
-  def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               credentials=None, debug=0, trace_token=None,
+  def __init__(self, bucket_storage_uri_class, logger, status_queue,
+               provider=None, credentials=None, debug=0, trace_token=None,
                perf_trace_token=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
@@ -167,6 +167,7 @@ class BotoTranslation(CloudApi):
       bucket_storage_uri_class: boto storage_uri class, used by APIs that
                                 provide boto translation or mocking.
       logger: logging.logger for outputting log messages.
+      status_queue: Queue for relaying status to UI.
       provider: Provider prefix describing cloud storage provider to connect to.
                 'gs' and 's3' are supported. Function implementations ignore
                 the provider argument and use this one instead.
@@ -176,10 +177,9 @@ class BotoTranslation(CloudApi):
       perf_trace_token: Performance trace token to use when making API calls
           ('gs' provider only).
     """
-    super(BotoTranslation, self).__init__(bucket_storage_uri_class, logger,
-                                          provider=provider, debug=debug,
-                                          trace_token=trace_token,
-                                          perf_trace_token=perf_trace_token)
+    super(BotoTranslation, self).__init__(
+        bucket_storage_uri_class, logger, status_queue, provider=provider,
+        debug=debug, trace_token=trace_token, perf_trace_token=perf_trace_token)
     _ = credentials
     # pylint: disable=global-variable-undefined, global-variable-not-assigned
     global boto_auth_initialized, boto_auth_initialized_lock

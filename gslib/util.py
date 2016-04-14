@@ -708,6 +708,13 @@ def LookUpGsutilVersion(gsutil_api, url_str):
           return prop.value
 
 
+class DiscardMessagesQueue():
+  """Emulates a Cloud API status queue but drops all messages."""
+
+  def put(self):
+    pass
+
+
 def GetGsutilVersionModifiedTime():
   """Returns unix timestamp of when the VERSION file was last modified."""
   if not gslib.VERSION_FILE:

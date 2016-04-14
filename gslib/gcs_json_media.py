@@ -105,9 +105,9 @@ class UploadCallbackConnectionClassFactory(object):
       # Because the distinction between headers and message body occurs
       # only in this httplib function, we can only differentiate them here.
       def _send_output(self, message_body=None):
-        """Send the currently buffered request and clear the buffer.
+        r"""Send the currently buffered request and clear the buffer.
 
-        Appends an extra \\r\\n to the buffer.
+        Appends an extra \r\n to the buffer.
 
         Args:
           message_body: if specified, this is appended to the request.

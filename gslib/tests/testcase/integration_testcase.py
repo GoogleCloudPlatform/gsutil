@@ -45,6 +45,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
+from gslib.util import DiscardMessagesQueue
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UTF8
@@ -97,7 +98,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     # Instantiate a JSON API for use by the current integration test.
     self.json_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                               'gs')
+                               DiscardMessagesQueue(), 'gs')
 
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (

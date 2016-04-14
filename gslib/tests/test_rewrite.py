@@ -39,6 +39,7 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY4
 from gslib.tests.util import unittest
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
+from gslib.util import DiscardMessagesQueue
 from gslib.util import ONE_MIB
 
 
@@ -327,7 +328,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
                                    prefer_json_api=True,
                                    encryption_key=initial_dec_key)
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            self.default_provider)
+                            DiscardMessagesQueue(), self.default_provider)
     with SetBotoConfigForTest(
         [('GSUtil', 'decryption_key1', initial_dec_key)]):
       src_obj_metadata = gsutil_api.GetObjectMetadata(

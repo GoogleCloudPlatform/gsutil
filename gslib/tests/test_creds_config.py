@@ -20,6 +20,7 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.util import DiscardMessagesQueue
 
 
 class TestCredsConfig(testcase.GsUtilUnitTestCase):
@@ -37,7 +38,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         ('Credentials', 'gs_service_key_file', 'baz')]):
 
       try:
-        GcsJsonApi(None, self.logger)
+        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
         self.fail('Succeeded with multiple types of configured creds.')
       except CommandException, e:
         msg = str(e)
@@ -52,7 +53,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         ('Credentials', 'gs_service_key_file', None)]):
       succeeded = False
       try:
-        GcsJsonApi(None, self.logger)
+        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
         succeeded = True  # If we self.fail() here, the except below will catch
       except:  # pylint: disable=bare-except
         warning_messages = self.log_handler.messages['warning']

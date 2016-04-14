@@ -148,14 +148,15 @@ _SKIP_LISTING_OBJECT = 'skip'
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
-  def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               credentials=None, debug=0, trace_token=None,
+  def __init__(self, bucket_storage_uri_class, logger, status_queue,
+               provider=None, credentials=None, debug=0, trace_token=None,
                perf_trace_token=None):
     """Performs necessary setup for interacting with Google Cloud Storage.
 
     Args:
       bucket_storage_uri_class: Unused.
       logger: logging.logger for outputting log messages.
+      status_queue: Queue for relaying status to UI.
       provider: Unused.  This implementation supports only Google Cloud Storage.
       credentials: Credentials to be used for interacting with Google Cloud
                    Storage.
@@ -165,10 +166,9 @@ class GcsJsonApi(CloudApi):
     """
     # TODO: Plumb host_header for perfdiag / test_perfdiag.
     # TODO: Add jitter to apitools' http_wrapper retry mechanism.
-    super(GcsJsonApi, self).__init__(bucket_storage_uri_class, logger,
-                                     provider='gs', debug=debug,
-                                     trace_token=trace_token,
-                                     perf_trace_token=perf_trace_token)
+    super(GcsJsonApi, self).__init__(
+        bucket_storage_uri_class, logger, status_queue, provider='gs',
+        debug=debug, trace_token=trace_token, perf_trace_token=perf_trace_token)
     no_op_credentials = False
     if not credentials:
       loaded_credentials = self._CheckAndGetCredentials()

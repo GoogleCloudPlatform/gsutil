@@ -43,6 +43,7 @@ from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CompareVersions
+from gslib.util import DiscardMessagesQueue
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import IsRunningInteractively
@@ -181,7 +182,7 @@ class CommandRunner(object):
     logger = CreateGsutilLogger('tab_complete')
     gsutil_api = CloudApiDelegator(
         self.bucket_storage_uri_class, gsutil_api_map,
-        logger, debug=0)
+        logger, DiscardMessagesQueue(), debug=0)
 
     for command in set(self.command_map.values()):
       command_parser = subparsers.add_parser(
@@ -359,6 +360,7 @@ class CommandRunner(object):
       # Create a credential-less gsutil API to check for the public
       # update tarball.
       gsutil_api = GcsJsonApi(self.bucket_storage_uri_class, logger,
+                              DiscardMessagesQueue(),
                               credentials=NoOpCredentials(), debug=debug)
 
       cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)

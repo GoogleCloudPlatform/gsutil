@@ -26,14 +26,16 @@ class CloudApi(object):
   a separate instance of the gsutil Cloud API should be instantiated per-thread.
   """
 
-  def __init__(self, bucket_storage_uri_class, logger, provider=None,
-               debug=0, trace_token=None, perf_trace_token=None):
+  def __init__(self, bucket_storage_uri_class, logger, status_queue,
+               provider=None, debug=0, trace_token=None,
+               perf_trace_token=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
       bucket_storage_uri_class: boto storage_uri class, used by APIs that
                                 provide boto translation or mocking.
       logger: logging.logger for outputting log messages.
+      status_queue: Queue for relaying status to UI.
       provider: Default provider prefix describing cloud storage provider to
                 connect to.
       debug: Debug level for the API implementation (0..3).
@@ -43,6 +45,7 @@ class CloudApi(object):
     """
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.logger = logger
+    self.status_queue = status_queue
     self.provider = provider
     self.debug = debug
     self.trace_token = trace_token

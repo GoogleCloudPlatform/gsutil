@@ -169,7 +169,8 @@ class HashCommand(Command):
         file_size = os.path.getsize(file_name)
         callback_processor = ProgressCallbackWithBackoff(
             file_size, FileProgressCallbackHandler(
-                ConstructAnnounceText('Hashing', file_name), self.logger).call)
+                ConstructAnnounceText('Hashing', file_name),
+                self.gsutil_api.status_queue).call)
         hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
         with open(file_name, 'rb') as fp:
           CalculateHashesFromContents(fp, hash_dict,
