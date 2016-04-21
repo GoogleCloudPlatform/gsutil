@@ -616,7 +616,7 @@ _OPTIONS_TEXT = """
                  You can avoid the additional performance and cost of using
                  cp -p if you want all objects in the destination bucket to end
                  up with the same ACL by setting a default object ACL on that
-                 bucket instead of using cp -p. See "help gsutil defacl".
+                 bucket instead of using cp -p. See "gsutil help defacl".
 
                  Note that it's not valid to specify both the -a and -p options
                  together.

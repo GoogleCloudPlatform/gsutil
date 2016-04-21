@@ -333,7 +333,7 @@ _DETAILED_HELP_TEXT = ("""
                 You can avoid the additional performance and cost of using
                 rsync -p if you want all objects in the destination bucket to
                 end up with the same ACL by setting a default object ACL on that
-                bucket instead of using rsync -p. See 'help gsutil defacl'.
+                bucket instead of using rsync -p. See 'gsutil help defacl'.
 
   -R, -r        The -R and -r options are synonymous. Causes directories,
                 buckets, and bucket subdirectories to be synchronized
