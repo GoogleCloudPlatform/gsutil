@@ -36,10 +36,6 @@ from apitools.base.py.util import CalculateWaitForRetry
 import boto
 from boto import config
 from gcs_oauth2_boto_plugin import oauth2_helper
-import httplib2
-import oauth2client
-from oauth2client import devshell
-from oauth2client import multistore_file
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -96,6 +92,11 @@ from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
 from gslib.util import JsonResumableChunkSizeDefined
+
+import httplib2
+import oauth2client
+from oauth2client import devshell
+from oauth2client import multistore_file
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
@@ -349,6 +350,8 @@ class GcsJsonApi(CloudApi):
     if self._HasGceCreds():
       try:
         return credentials_lib.GceAssertionCredentials(
+            service_account_name=config.get(
+                'GoogleCompute', 'service_account', 'default'),
             cache_filename=GetGceCredentialCacheFilename())
       except apitools_exceptions.ResourceUnavailableError, e:
         if 'service account' in str(e) and 'does not exist' in str(e):

@@ -32,8 +32,6 @@ import webbrowser
 
 import boto
 from boto.provider import Provider
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
 
 import gslib
 from gslib.command import Command
@@ -48,6 +46,9 @@ from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
+
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
 
 
 _SYNOPSIS = """
@@ -179,6 +180,9 @@ _DETAILED_HELP_TEXT = ("""
       debug
       max_retry_delay
       num_retries
+
+    [GoogleCompute]
+      service_account
 
     [GSUtil]
       check_hashes
@@ -350,6 +354,16 @@ https_validate_certificates = True
 # Note: At present this value only impacts the XML API and the JSON API uses a
 # fixed value of 60.
 #max_retry_delay = <integer value>
+"""
+
+CONFIG_GOOGLECOMPUTE_SECTION_CONTENT = """
+[GoogleCompute]
+
+# 'service_account' specifies the a Google Compute Engine service account to
+# use for credentials. This value is intended for use only on Google Compute
+# Engine virtual machines and usually lives in /etc/boto.cfg. Most users
+# shouldn't need to edit this part of the config.
+#service_account = default
 """
 
 CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
@@ -962,6 +976,9 @@ class ConfigCommand(Command):
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
     self._WriteProxyConfigFileSection(config_file)
+
+    # Write the Google Compute Engine section.
+    config_file.write(CONFIG_GOOGLECOMPUTE_SECTION_CONTENT)
 
     # Write the config file GSUtil section that doesn't depend on user input.
     config_file.write(CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT)
