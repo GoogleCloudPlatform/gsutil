@@ -27,6 +27,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import unittest
 from gslib.translation_helper import AclTranslation
 from gslib.util import Retry
 
@@ -118,6 +119,9 @@ class TestAcl(TestAclBase):
 
   def test_set_valid_acl_bucket(self):
     """Ensures that valid canned and XML ACLs work with get/set."""
+    if self._ServiceAccountCredentialsPresent():
+      # See comments in _ServiceAccountCredentialsPresent
+      unittest.skip('Canned ACLs orphan service account permissions.')
     bucket_uri = suri(self.CreateBucket())
     acl_string = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                 return_stdout=True)

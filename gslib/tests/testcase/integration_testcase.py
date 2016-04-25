@@ -26,6 +26,7 @@ import sys
 import tempfile
 
 import boto
+from boto import config
 from boto.exception import StorageResponseError
 from boto.s3.deletemarker import DeleteMarker
 from boto.storage_uri import BucketStorageUri
@@ -148,6 +149,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         bucket_list = self._ListBucket(bucket_uri)
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
+
+  def _ServiceAccountCredentialsPresent(self):
+    # TODO: Currently, service accounts cannot be project owners (unless
+    # they are grandfathered). Unfortunately, setting a canned ACL other
+    # than project-private, the ACL that buckets get by default, removes
+    # project-editors access from the bucket ACL. So any canned ACL that would
+    # actually represent a change the bucket would also orphan the service
+    # account's access to the bucket. If service accounts can be owners
+    # in the future, remove this function and update all callers.
+    return (config.has_option('Credentials', 'gs_service_key_file') or
+            config.has_option('GoogleCompute', 'service_account'))
 
   def _ListBucket(self, bucket_uri):
     if bucket_uri.scheme == 's3':
