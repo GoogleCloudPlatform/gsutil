@@ -29,6 +29,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+from apitools.base.py import encoding
 import gslib
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_GENERIC
@@ -56,7 +57,7 @@ class NameExpansionResult(object):
   """
 
   def __init__(self, source_storage_url, is_multi_source_request,
-               names_container, expanded_storage_url):
+               names_container, expanded_storage_url, expanded_result):
     """Instantiates a result from name expansion.
 
     Args:
@@ -65,11 +66,16 @@ class NameExpansionResult(object):
           more than one BucketListingRef.
       names_container: Bool indicator whether src_url names a container.
       expanded_storage_url: StorageUrl that was expanded.
+      expanded_result: cloud object metadata in MessageToJson form (for
+          pickleability), if any was iterated; None otherwise.
+          Consumers must call JsonToMessage to get an apitools Object.
     """
     self.source_storage_url = source_storage_url
     self.is_multi_source_request = is_multi_source_request
     self.names_container = names_container
     self.expanded_storage_url = expanded_storage_url
+    self.expanded_result = encoding.MessageToJson(
+        expanded_result) if expanded_result else None
 
   def __repr__(self):
     return '%s' % self.expanded_storage_url
@@ -84,7 +90,7 @@ class _NameExpansionIterator(object):
   def __init__(self, command_name, debug, logger, gsutil_api, url_strs,
                recursion_requested, all_versions=False,
                cmd_supports_recursion=True, project_id=None,
-               continue_on_error=False):
+               continue_on_error=False, bucket_listing_fields=None):
     """Creates a NameExpansionIterator.
 
     Args:
@@ -102,6 +108,10 @@ class _NameExpansionIterator(object):
       project_id: Project id to use for bucket retrieval.
       continue_on_error: If true, yield no-match exceptions encountered during
                          iteration instead of raising them.
+      bucket_listing_fields: Iterable fields to include in expanded results.
+          Ex. ['name', 'acl']. Underyling iterator is responsible for converting
+          these to list-style format ['items/name', 'items/acl']. If this is
+          None, only the object name is included in the result.
 
     Examples of _NameExpansionIterator with recursion_requested=True:
       - Calling with one of the url_strs being 'gs://bucket' will enumerate all
@@ -145,6 +155,8 @@ class _NameExpansionIterator(object):
     self.cmd_supports_recursion = cmd_supports_recursion
     self.project_id = project_id
     self.continue_on_error = continue_on_error
+    self.bucket_listing_fields = (set(['name']) if not bucket_listing_fields
+                                  else bucket_listing_fields)
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -174,7 +186,7 @@ class _NameExpansionIterator(object):
         if self.url_strs.has_plurality:
           raise CommandException('Multiple URL strings are not supported '
                                  'with streaming ("-") URLs.')
-        yield NameExpansionResult(storage_url, False, False, storage_url)
+        yield NameExpansionResult(storage_url, False, False, storage_url, None)
         continue
 
       # Step 1: Expand any explicitly specified wildcards. The output from this
@@ -197,7 +209,7 @@ class _NameExpansionIterator(object):
         # to treat all of the top level expansions as names_container=True.
         post_step1_iter = PluralityCheckableIterator(
             self.WildcardIterator(url_str).IterAll(
-                bucket_listing_fields=['name'],
+                bucket_listing_fields=self.bucket_listing_fields,
                 expand_top_level_buckets=True))
         if storage_url.IsCloudUrl() and storage_url.IsBucket():
           src_names_bucket = True
@@ -209,7 +221,8 @@ class _NameExpansionIterator(object):
       subdir_exp_wildcard = self._flatness_wildcard[self.recursion_requested]
       if self.recursion_requested:
         post_step2_iter = _ImplicitBucketSubdirIterator(
-            self, post_step1_iter, subdir_exp_wildcard)
+            self, post_step1_iter, subdir_exp_wildcard,
+            self.bucket_listing_fields)
       else:
         post_step2_iter = _NonContainerTuplifyIterator(post_step1_iter)
       post_step2_iter = PluralityCheckableIterator(post_step2_iter)
@@ -251,7 +264,7 @@ class _NameExpansionIterator(object):
         if blr.IsObject():
           yield NameExpansionResult(
               storage_url, is_multi_source_request, src_names_container,
-              blr.storage_url)
+              blr.storage_url, blr.root_object)
         else:
           # Use implicit wildcarding to do the enumeration.
           # At this point we are guaranteed that:
@@ -270,7 +283,7 @@ class _NameExpansionIterator(object):
 
           wc_iter = PluralityCheckableIterator(
               self.WildcardIterator(url_to_iterate).IterObjects(
-                  bucket_listing_fields=['name']))
+                  bucket_listing_fields=self.bucket_listing_fields))
           src_url_expands_to_multi = (src_url_expands_to_multi
                                       or wc_iter.HasPlurality())
           is_multi_source_request = (self.url_strs.has_plurality
@@ -279,7 +292,8 @@ class _NameExpansionIterator(object):
           # subdir.
           for blr in wc_iter:
             yield NameExpansionResult(
-                storage_url, is_multi_source_request, True, blr.storage_url)
+                storage_url, is_multi_source_request, True, blr.storage_url,
+                blr.root_object)
 
   def WildcardIterator(self, url_string):
     """Helper to instantiate gslib.WildcardIterator.
@@ -302,7 +316,7 @@ class _NameExpansionIterator(object):
 def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
                           recursion_requested, all_versions=False,
                           cmd_supports_recursion=True, project_id=None,
-                          continue_on_error=False):
+                          continue_on_error=False, bucket_listing_fields=None):
   """Static factory function for instantiating _NameExpansionIterator.
 
   This wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -324,6 +338,10 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
     project_id: Project id to use for the current command.
     continue_on_error: If true, yield no-match exceptions encountered during
                        iteration instead of raising them.
+    bucket_listing_fields: Iterable fields to include in expanded results.
+        Ex. ['name', 'acl']. Underyling iterator is responsible for converting
+        these to list-style format ['items/name', 'items/acl']. If this is
+        None, only the object name is included in the result.
 
   Raises:
     CommandException if underlying iterator is empty.
@@ -337,7 +355,8 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
   name_expansion_iterator = _NameExpansionIterator(
       command_name, debug, logger, gsutil_api, url_strs, recursion_requested,
       all_versions=all_versions, cmd_supports_recursion=cmd_supports_recursion,
-      project_id=project_id, continue_on_error=continue_on_error)
+      project_id=project_id, continue_on_error=continue_on_error,
+      bucket_listing_fields=bucket_listing_fields)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.IsEmpty():
     raise CommandException(NO_URLS_MATCHED_GENERIC)
@@ -494,7 +513,8 @@ class _ImplicitBucketSubdirIterator(object):
   if those subdir objects exist, and [BucketListingRef("gs://abc") otherwise.
   """
 
-  def __init__(self, name_exp_instance, blr_iter, subdir_exp_wildcard):
+  def __init__(self, name_exp_instance, blr_iter, subdir_exp_wildcard,
+               bucket_listing_fields):
     """Instantiates the iterator.
 
     Args:
@@ -504,10 +524,12 @@ class _ImplicitBucketSubdirIterator(object):
           expected values are ** if the mapped-to results should contain
           objects spanning subdirectories, or * if only one level should
           be listed.
+      bucket_listing_fields: Fields requested in enumerated results.
     """
     self.blr_iter = blr_iter
     self.name_exp_instance = name_exp_instance
     self.subdir_exp_wildcard = subdir_exp_wildcard
+    self.bucket_listing_fields = bucket_listing_fields
 
   def __iter__(self):
     for blr in self.blr_iter:
@@ -517,7 +539,8 @@ class _ImplicitBucketSubdirIterator(object):
             wildcard_suffix=self.subdir_exp_wildcard)
         implicit_subdir_iterator = PluralityCheckableIterator(
             self.name_exp_instance.WildcardIterator(
-                prefix_url).IterAll(bucket_listing_fields=['name']))
+                prefix_url).IterAll(
+                    bucket_listing_fields=self.bucket_listing_fields))
         if not implicit_subdir_iterator.IsEmpty():
           for exp_blr in implicit_subdir_iterator:
             yield (True, exp_blr)

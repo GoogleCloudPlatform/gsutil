@@ -2696,11 +2696,69 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
           uploaded_object.md5Hash)
 
 
+def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
+                                 preserve_acl):
+  """Determines the metadata fields needed for a copy operation.
+
+  This function returns the fields we will need to successfully copy any
+  cloud objects that might be iterated. By determining this prior to iteration,
+  the cp command can request this metadata directly from the iterator's
+  get/list calls, avoiding the need for a separate get metadata HTTP call for
+  each iterated result. As a trade-off, filtering objects at the leaf nodes of
+  the iteration (based on a remaining wildcard) is more expensive. This is
+  because more metadata will be requested when object name is all that is
+  required for filtering.
+
+  The rsync command favors fast listing and comparison, and makes the opposite
+  trade-off, optimizing for the low-delta case by making per-object get
+  metadata HTTP call so that listing can return minimal metadata. It uses
+  this function to determine what is needed for get metadata HTTP calls.
+
+  Args:
+    dst_is_cloud: if true, destination is a Cloud URL.
+    skip_unsupported_objects: if true, get metadata for skipping unsupported
+        object types.
+    preserve_acl: if true, get object ACL.
+
+  Returns:
+    List of necessary field metadata field names.
+
+  """
+  if dst_is_cloud:
+    # For cloud or daisy chain copy, we need every copyable field.
+    # If we're not modifying or overriding any of the fields, we can get
+    # away without retrieving the object metadata because the copy
+    # operation can succeed with just the destination bucket and object
+    # name.  But if we are sending any metadata, the JSON API will expect a
+    # complete object resource.  Since we want metadata like the object size
+    # for our own tracking, we just get all of the metadata here.
+    src_obj_fields = ['cacheControl', 'componentCount',
+                      'contentDisposition', 'contentEncoding',
+                      'contentLanguage', 'contentType', 'crc32c',
+                      'customerEncryption', 'etag', 'generation', 'md5Hash',
+                      'mediaLink', 'metadata', 'metageneration', 'size']
+    # We only need the ACL if we're going to preserve it.
+    if preserve_acl:
+      src_obj_fields.append('acl')
+
+  else:
+    # Just get the fields needed to perform and validate the download.
+    src_obj_fields = ['crc32c', 'contentEncoding', 'contentType',
+                      'customerEncryption', 'etag', 'mediaLink', 'md5Hash',
+                      'size', 'generation']
+
+  if skip_unsupported_objects:
+    src_obj_fields.append('storageClass')
+
+  return src_obj_fields
+
+
 # pylint: disable=undefined-variable
 # pylint: disable=too-many-statements
-def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
-                copy_exception_handler, allow_splitting=True,
-                headers=None, manifest=None, gzip_exts=None):
+def PerformCopy(logger, src_url, dst_url, gsutil_api,
+                command_obj, copy_exception_handler, src_obj_metadata=None,
+                allow_splitting=True, headers=None, manifest=None,
+                gzip_exts=None):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -2711,6 +2769,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     command_obj: command object for use in Apply in parallel composite uploads
         and sliced object downloads.
     copy_exception_handler: for handling copy exceptions during Apply.
+    src_obj_metadata: If source URL is a cloud object, source object metadata
+        with all necessary fields (per GetSourceFieldsNeededForCopy).
+        Required for cloud source URLs, None for file source URLs.
     allow_splitting: Whether to allow the file to be split into component
                      pieces for an parallel composite upload or download.
     headers: optional headers to use for the copy operation.
@@ -2744,52 +2805,15 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
   else:
     preconditions = Preconditions()
 
-  src_obj_metadata = None
   src_obj_filestream = None
   decryption_key = None
+  copy_in_the_cloud = False
   if src_url.IsCloudUrl():
-    src_obj_fields = None
-    if dst_url.IsCloudUrl():
-      # For cloud or daisy chain copy, we need every copyable field.
-      # If we're not modifying or overriding any of the fields, we can get
-      # away without retrieving the object metadata because the copy
-      # operation can succeed with just the destination bucket and object
-      # name.  But if we are sending any metadata, the JSON API will expect a
-      # complete object resource.  Since we want metadata like the object size
-      # for our own tracking, we just get all of the metadata here.
-      src_obj_fields = ['cacheControl', 'componentCount',
-                        'contentDisposition', 'contentEncoding',
-                        'contentLanguage', 'contentType', 'crc32c',
-                        'customerEncryption', 'etag', 'generation', 'md5Hash',
-                        'mediaLink', 'metadata', 'metageneration', 'size']
-      # We only need the ACL if we're going to preserve it.
-      if global_copy_helper_opts.preserve_acl:
-        src_obj_fields.append('acl')
-      if (src_url.scheme == dst_url.scheme
-          and not global_copy_helper_opts.daisy_chain):
-        copy_in_the_cloud = True
-      else:
-        copy_in_the_cloud = False
-    else:
-      # Just get the fields needed to validate the download.
-      src_obj_fields = ['crc32c', 'contentEncoding', 'contentType',
-                        'customerEncryption', 'etag', 'mediaLink', 'md5Hash',
-                        'size', 'generation']
+    if (dst_url.IsCloudUrl() and
+        src_url.scheme == dst_url.scheme and
+        not global_copy_helper_opts.daisy_chain):
+      copy_in_the_cloud = True
 
-    if (src_url.scheme == 's3' and
-        global_copy_helper_opts.skip_unsupported_objects):
-      src_obj_fields.append('storageClass')
-
-    try:
-      src_generation = GenerationFromUrlAndString(src_url, src_url.generation)
-      src_obj_metadata = gsutil_api.GetObjectMetadata(
-          src_url.bucket_name, src_url.object_name,
-          generation=src_generation, provider=src_url.scheme,
-          fields=src_obj_fields)
-    except NotFoundException:
-      raise CommandException(
-          'NotFoundException: Could not retrieve source object %s.' %
-          src_url.url_string)
     if (src_url.scheme == 's3' and
         global_copy_helper_opts.skip_unsupported_objects and
         src_obj_metadata.storageClass == 'GLACIER'):
@@ -2823,14 +2847,13 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api, command_obj,
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
     except Exception, e:  # pylint: disable=broad-except
+      message = 'Error opening file "%s": %s.' % (src_url, e.message)
       if command_obj.continue_on_error:
-        message = 'Error copying %s: %s' % (src_url, str(e))
         command_obj.op_failure_count += 1
         logger.error(message)
         return
       else:
-        raise CommandException('Error opening file "%s": %s.' % (src_url,
-                                                                 e.message))
+        raise CommandException(message)
     if src_url.IsStream():
       src_obj_size = None
     else:

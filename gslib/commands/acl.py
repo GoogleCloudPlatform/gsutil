@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from apitools.base.py import encoding
 from gslib import aclhelpers
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
@@ -395,8 +396,9 @@ class AclCommand(Command):
               self.command_name))
 
     self.everything_set_okay = True
-    self.ApplyAclFunc(_ApplyAclChangesWrapper, _ApplyExceptionHandler,
-                      self.args)
+    self.ApplyAclFunc(
+        _ApplyAclChangesWrapper, _ApplyExceptionHandler,
+        self.args, object_fields=['acl', 'generation', 'metageneration'])
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
 
@@ -425,10 +427,8 @@ class AclCommand(Command):
                                     fields=['acl', 'metageneration'])
       current_acl = bucket.acl
     elif url.IsObject():
-      gcs_object = gsutil_api.GetObjectMetadata(
-          url.bucket_name, url.object_name, provider=url.scheme,
-          generation=url.generation,
-          fields=['acl', 'generation', 'metageneration'])
+      gcs_object = encoding.JsonToMessage(apitools_messages.Object,
+                                          name_expansion_result.expanded_result)
       current_acl = gcs_object.acl
     if not current_acl:
       self._RaiseForAccessDenied(url)
@@ -455,7 +455,7 @@ class AclCommand(Command):
         gsutil_api.PatchObjectMetadata(
             url.bucket_name, url.object_name, object_metadata,
             preconditions=preconditions, provider=url.scheme,
-            generation=url.generation)
+            generation=url.generation, fields=['id'])
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))

@@ -120,11 +120,21 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
       self.assertIn('footype', stdout)
 
+  def test_metadata_parallelism(self):
+    """Ensure that custom metadata works in the multi-thread/process case."""
+    # If this test hangs, it can indicate a pickling error.
+    bucket_uri = self.CreateBucket(test_objects=2)
+    self.AssertNObjectsInBucket(bucket_uri, 2)
+    self.RunGsUtil(
+        ['setmeta', '-h', 'x-%s-meta-abc:123' % self.provider_custom_meta,
+         suri(bucket_uri, '**')])
+
   def test_invalid_non_ascii_custom_header(self):
     unicode_header = u'x-%s-meta-soufflé:5' % self.provider_custom_meta
     unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
-        ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
+        ['setmeta', '-h', unicode_header_bytes,
+         '%s://foo/bar' % self.default_provider],
         expected_status=1, return_stderr=True)
     self.assertIn('Invalid non-ASCII header', stderr)
 

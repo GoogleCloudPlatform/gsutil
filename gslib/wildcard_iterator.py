@@ -108,7 +108,7 @@ class CloudWildcardIterator(WildcardIterator):
                              responsible for converting these to list-style
                              format ['items/name', 'items/acl'] as well as
                              adding any fields necessary for listing such as
-                             prefixes.  API implemenation is responsible for
+                             prefixes.  API implementation is responsible for
                              adding pagination fields.  If this is None,
                              all fields are returned.
       expand_top_level_buckets: If true, yield no BUCKET references.  Instead,
@@ -203,12 +203,15 @@ class CloudWildcardIterator(WildcardIterator):
               self._BuildBucketFilterStrings(url.object_name))
           prog = re.compile(fnmatch.translate(prefix_wildcard))
 
+          # If we have a suffix wildcard, we only care about listing prefixes.
+          listing_fields = (
+              set(['prefixes']) if suffix_wildcard else bucket_listing_fields)
+
           # List bucket for objects matching prefix up to delimiter.
           for obj_or_prefix in self.gsutil_api.ListObjects(
               url.bucket_name, prefix=prefix, delimiter=delimiter,
               all_versions=self.all_versions or single_version_request,
-              provider=self.wildcard_url.scheme,
-              fields=bucket_listing_fields):
+              provider=self.wildcard_url.scheme, fields=listing_fields):
             if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
               gcs_object = obj_or_prefix.data
               if prog.match(gcs_object.name):

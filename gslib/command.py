@@ -622,13 +622,16 @@ class Command(HelpProvider):
   # Shared helper functions that depend on base class state. #
   ############################################################
 
-  def ApplyAclFunc(self, acl_func, acl_excep_handler, url_strs):
+  def ApplyAclFunc(self, acl_func, acl_excep_handler, url_strs,
+                   object_fields=None):
     """Sets the standard or default object ACL depending on self.command_name.
 
     Args:
       acl_func: ACL function to be passed to Apply.
       acl_excep_handler: ACL exception handler to be passed to Apply.
       url_strs: URL strings on which to set ACL.
+      object_fields: If present, list of object metadata fields to retrieve;
+          if None, default name expansion iterator fields will be used.
 
     Raises:
       CommandException if an ACL could not be set.
@@ -653,7 +656,7 @@ class Command(HelpProvider):
           for blr in self.WildcardIterator(url.url_string).IterBuckets(
               bucket_fields=['id']):
             name_expansion_for_url = NameExpansionResult(
-                url, False, False, blr.storage_url)
+                url, False, False, blr.storage_url, None)
             acl_func(self, name_expansion_for_url)
       else:
         multi_threaded_url_args.append(url_str)
@@ -664,7 +667,8 @@ class Command(HelpProvider):
           self.logger, self.gsutil_api,
           multi_threaded_url_args, self.recursion_requested,
           all_versions=self.all_versions,
-          continue_on_error=self.continue_on_error or self.parallel_operations)
+          continue_on_error=self.continue_on_error or self.parallel_operations,
+          bucket_listing_fields=object_fields)
 
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,

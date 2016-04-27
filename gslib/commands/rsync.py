@@ -37,6 +37,7 @@ from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
 from gslib.copy_helper import CreateCopyHelperOpts
+from gslib.copy_helper import GetSourceFieldsNeededForCopy
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -47,6 +48,7 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
+from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import TEN_MIB
@@ -930,9 +932,19 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       cls.logger.info('Would copy %s to %s', src_url, dst_url)
     else:
       try:
-        copy_helper.PerformCopy(cls.logger, src_url, dst_url, gsutil_api, cls,
-                                _RsyncExceptionHandler,
-                                headers=cls.headers)
+        src_obj_metadata = None
+        if src_url.IsCloudUrl():
+          src_generation = GenerationFromUrlAndString(src_url,
+                                                      src_url.generation)
+          src_obj_metadata = gsutil_api.GetObjectMetadata(
+              src_url.bucket_name, src_url.object_name,
+              generation=src_generation, provider=src_url.scheme,
+              fields=cls.source_metadata_fields)
+
+        copy_helper.PerformCopy(
+            cls.logger, src_url, dst_url, gsutil_api, cls,
+            _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
+            headers=cls.headers)
       except SkipUnsupportedObjectError, e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
@@ -1019,6 +1031,9 @@ class RsyncCommand(Command):
     src_url = self._InsistContainer(self.args[0], False)
     dst_url = self._InsistContainer(self.args[1], True)
 
+    self.source_metadata_fields = GetSourceFieldsNeededForCopy(
+        dst_url.IsCloudUrl(), self.skip_unsupported_objects, self.preserve_acl)
+
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0
 
@@ -1055,7 +1070,7 @@ class RsyncCommand(Command):
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
     self.delete_extras = False
-    preserve_acl = False
+    self.preserve_acl = False
     self.compute_file_checksums = False
     self.dryrun = False
     self.exclude_pattern = None
@@ -1079,7 +1094,7 @@ class RsyncCommand(Command):
         elif o == '-n':
           self.dryrun = True
         elif o == '-p':
-          preserve_acl = True
+          self.preserve_acl = True
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-U':
@@ -1092,5 +1107,5 @@ class RsyncCommand(Command):
           except re.error:
             raise CommandException('Invalid exclude filter (%s)' % a)
     return CreateCopyHelperOpts(
-        preserve_acl=preserve_acl,
+        preserve_acl=self.preserve_acl,
         skip_unsupported_objects=self.skip_unsupported_objects)

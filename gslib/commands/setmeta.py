@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from apitools.base.py import encoding
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
@@ -25,13 +26,13 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import Retry
-
 
 _SYNOPSIS = """
   gsutil setmeta -h [header:value|header] ... url...
@@ -180,7 +181,8 @@ class SetMetaCommand(Command):
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug, self.logger, self.gsutil_api,
         self.args, self.recursion_requested, all_versions=self.all_versions,
-        continue_on_error=self.parallel_operations)
+        continue_on_error=self.parallel_operations,
+        bucket_listing_fields=['generation', 'metadata', 'metageneration'])
 
     try:
       # Perform requests in parallel (-m) mode, if requested, using
@@ -211,11 +213,8 @@ class SetMetaCommand(Command):
     exp_src_url = name_expansion_result.expanded_storage_url
     self.logger.info('Setting metadata on %s...', exp_src_url)
 
-    fields = ['generation', 'metadata', 'metageneration']
-    cloud_obj_metadata = gsutil_api.GetObjectMetadata(
-        exp_src_url.bucket_name, exp_src_url.object_name,
-        generation=exp_src_url.generation, provider=exp_src_url.scheme,
-        fields=fields)
+    cloud_obj_metadata = encoding.JsonToMessage(
+        apitools_messages.Object, name_expansion_result.expanded_result)
 
     preconditions = Preconditions(
         gen_match=self.preconditions.gen_match,
@@ -245,7 +244,7 @@ class SetMetaCommand(Command):
     gsutil_api.PatchObjectMetadata(
         exp_src_url.bucket_name, exp_src_url.object_name, patch_obj_metadata,
         generation=exp_src_url.generation, preconditions=preconditions,
-        provider=exp_src_url.scheme)
+        provider=exp_src_url.scheme, fields=['id'])
 
   def _ParseMetadataHeaders(self, headers):
     """Validates and parses metadata changes from the headers argument.
