@@ -934,6 +934,15 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     src_url_str = diff_to_apply.src_url_str
     src_url = StorageUrlFromString(src_url_str)
     if cls.dryrun:
+      if src_url.IsFileUrl():
+        # Try to open the local file to detect errors that would occur in
+        # non-dry-run mode.
+        try:
+          with open(src_url.object_name, 'rb') as _:
+            pass
+        except Exception, e:  # pylint: disable=broad-except
+          cls.logger.info('Could not open %s' % src_url.object_name)
+          raise
       cls.logger.info('Would copy %s to %s', src_url, dst_url)
     else:
       try:
