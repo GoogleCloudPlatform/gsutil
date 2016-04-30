@@ -1026,7 +1026,7 @@ class GcsJsonApi(CloudApi):
 
     # TODO: If we have a resumable download with accept-encoding:gzip
     # on a object that is compressible but not in gzip form in the cloud,
-    # on-the-fly compression will gzip the object.  In this case if our
+    # on-the-fly compression may gzip the object.  In this case if our
     # download breaks, future requests will ignore the range header and just
     # return the object (gzipped) in its entirety.  Ideally, we would unzip
     # the bytes that we have locally and send a range request without
@@ -1037,7 +1037,6 @@ class GcsJsonApi(CloudApi):
     # user-agent header from api_client's http automatically.
     additional_headers = {
         'user-agent': self.api_client.user_agent,
-        'accept-encoding': 'gzip'
     }
     AddAcceptEncodingGzipIfNeeded(additional_headers,
                                   compressed_encoding=compressed_encoding)
