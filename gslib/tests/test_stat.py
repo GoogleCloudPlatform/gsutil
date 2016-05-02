@@ -42,6 +42,24 @@ from gslib.util import Retry
 class TestStat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for stat command."""
 
+  @SkipForS3('\'Archived time\' is a GS-specific response field.')
+  def test_versioned_stat_output(self):
+    """Tests stat output of an outdated object under version control."""
+    bucket_uri = self.CreateVersionedBucket()
+    old_object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, contents='z')
+
+    # update file
+    self.CreateObject(
+        bucket_uri=bucket_uri,
+        object_name=old_object_uri.object_name,
+        contents='z')
+
+    stdout = self.RunGsUtil(
+        ['stat', old_object_uri.version_specific_uri], return_stdout=True)
+
+    self.assertIn('Archived time', stdout)
+
   def test_stat_output(self):
     """Tests stat output of a single object."""
     object_uri = self.CreateObject(contents='z')
@@ -68,6 +86,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Metageneration:', stdout)
       self.assertIn('Hash (crc32c):', stdout)
       self.assertIn('Hash (md5):', stdout)
+      self.assertNotIn('Archived time', stdout)  # object is not archived
     self.assertIn('Content-Length:', stdout)
     self.assertIn('Content-Type:', stdout)
     self.assertIn('ETag:', stdout)

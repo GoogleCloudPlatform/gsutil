@@ -788,6 +788,9 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   print '\tContent-Type:\t\t%s' % obj.contentType
   if obj.componentCount:
     print '\tComponent-Count:\t%d' % obj.componentCount
+  if obj.timeDeleted:
+    print '\tArchived time:\t\t%s' % obj.timeDeleted.strftime(
+        '%a, %d %b %Y %H:%M:%S GMT')
   marker_props = {}
   if obj.metadata and obj.metadata.additionalProperties:
     non_marker_props = []
