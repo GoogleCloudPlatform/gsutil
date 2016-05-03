@@ -837,38 +837,44 @@ class _DiffIterator(object):
     # or not in URL.
     base_src_url_len = len(self.base_src_url.url_string.rstrip('/\\'))
     base_dst_url_len = len(self.base_dst_url.url_string.rstrip('/\\'))
+    out_of_src_items = False
     src_url_str = dst_url_str = None
     # Invariant: After each yield, the URLs in src_url_str, dst_url_str,
     # self.sorted_src_urls_it, and self.sorted_dst_urls_it are not yet
     # processed. Each time we encounter None in src_url_str or dst_url_str we
     # populate from the respective iterator, and we reset one or the other value
     # to None after yielding an action that disposes of that URL.
-    while not self.sorted_src_urls_it.IsEmpty() or src_url_str is not None:
+    while True:
       if src_url_str is None:
-        (src_url_str, src_size, src_crc32c, src_md5) = self._ParseTmpFileLine(
-            self.sorted_src_urls_it.next())
-        # Skip past base URL and normalize slashes so we can compare across
-        # clouds/file systems (including Windows).
-        src_url_str_to_check = _EncodeUrl(
-            src_url_str[base_src_url_len:].replace('\\', '/'))
-        dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
-            self.base_src_url, StorageUrlFromString(src_url_str), True, True,
-            self.base_dst_url, False, self.recursion_requested).url_string
-      if self.sorted_dst_urls_it.IsEmpty():
-        # We've reached end of dst URLs, so copy src to dst.
-        yield _DiffToApply(
-            src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY)
-        src_url_str = None
-        continue
-      if not dst_url_str:
-        (dst_url_str, dst_size, dst_crc32c, dst_md5) = (
-            self._ParseTmpFileLine(self.sorted_dst_urls_it.next()))
-        # Skip past base URL and normalize slashes so we can compare acros
-        # clouds/file systems (including Windows).
-        dst_url_str_to_check = _EncodeUrl(
-            dst_url_str[base_dst_url_len:].replace('\\', '/'))
+        if self.sorted_src_urls_it.IsEmpty():
+          out_of_src_items = True
+        else:
+          (src_url_str, src_size, src_crc32c, src_md5) = self._ParseTmpFileLine(
+              self.sorted_src_urls_it.next())
+          # Skip past base URL and normalize slashes so we can compare across
+          # clouds/file systems (including Windows).
+          src_url_str_to_check = _EncodeUrl(
+              src_url_str[base_src_url_len:].replace('\\', '/'))
+          dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
+              self.base_src_url, StorageUrlFromString(src_url_str), True, True,
+              self.base_dst_url, False, self.recursion_requested).url_string
+      if dst_url_str is None:
+        if not self.sorted_dst_urls_it.IsEmpty():
+          (dst_url_str, dst_size, dst_crc32c, dst_md5) = (
+              self._ParseTmpFileLine(self.sorted_dst_urls_it.next()))
+          # Skip past base URL and normalize slashes so we can compare acros
+          # clouds/file systems (including Windows).
+          dst_url_str_to_check = _EncodeUrl(
+              dst_url_str[base_dst_url_len:].replace('\\', '/'))
+      # Only break once we've attempted to populate {str,dst}_url_to_check and
+      # we know we're out of src objects.
+      if out_of_src_items:
+        break
 
-      if src_url_str_to_check < dst_url_str_to_check:
+      # We're guaranteed to have a value for src_url_str_to_check here, but may
+      # be out of dst objects.
+      if (dst_url_str is None or
+          src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
         yield _DiffToApply(
             src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY)
@@ -882,23 +888,22 @@ class _DiffIterator(object):
       else:
         # There is a dst object corresponding to src object, so check if objects
         # match.
-        if self._ObjectsMatch(
+        if not self._ObjectsMatch(
             src_url_str, src_size, src_crc32c, src_md5,
             dst_url_str, dst_size, dst_crc32c, dst_md5):
-          # Continue iterating without yielding a _DiffToApply.
-          pass
-        else:
           yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY)
+        # else: we don't need to copy the file from src to dst since they're
+        # the same files.
+        # Advance to the next two objects.
         src_url_str = None
         dst_url_str = None
 
-    # If -d option specified any files/objects left in dst iteration should be
-    # removed.
     if not self.delete_extras:
       return
+    # If -d option was specified any files/objects left in dst iteration should
+    # be removed.
     if dst_url_str:
       yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
-      dst_url_str = None
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _) = self._ParseTmpFileLine(line)
       yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)

@@ -435,8 +435,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     with open(os.path.join(tmpdir2, '.obj2')) as f:
       self.assertEquals('.OBJ2', '\n'.join(f.readlines()))
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+    # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
+    # worry about eventual consistency of bucket listings. This also allows us
+    # to make sure that we don't miss any unintended behavior when a first
+    # attempt behaves incorrectly and a subsequent retry behaves correctly.
     def _Check1():
       # Check that re-running the same rsync command causes no more changes.
       self.assertEquals(NO_CHANGES, self.RunGsUtil(
@@ -459,8 +461,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     with open(os.path.join(tmpdir1, '.obj2')) as f:
       self.assertEquals('.obj2', '\n'.join(f.readlines()))
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+    # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
+    # worry about eventual consistency of bucket listings.
     def _Check2():
       # Check that re-running the same rsync command causes no more changes.
       self.assertEquals(NO_CHANGES, self.RunGsUtil(
@@ -482,13 +484,39 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # synchronized.
     self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir1/obj3']))
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+    # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
+    # worry about eventual consistency of bucket listings.
     def _Check3():
       # Check that re-running the same rsync command causes no more changes.
       self.assertEquals(NO_CHANGES, self.RunGsUtil(
           ['rsync', '-d', '-r', tmpdir1, tmpdir2], return_stderr=True))
     _Check3()
+
+    # Create 2 dirs and add a file to the first. Then create another file and
+    # add it to both dirs, making sure its filename evaluates to greater than
+    # the previous filename. Make sure both files are present in the second
+    # dir after issuing an rsync -d command.
+    tmpdir1 = self.CreateTempDir()
+    tmpdir2 = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents='obj1')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj2', contents='obj2')
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj2', contents='obj2')
+
+    self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
+    listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
+    listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
+    # First dir should have un-altered content.
+    self.assertEquals(listing1, set(['/obj1', '/obj2']))
+    # Second dir should have same content as first.
+    self.assertEquals(listing2, set(['/obj1', '/obj2']))
+
+    # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
+    # worry about eventual consistency of bucket listings.
+    def _Check4():
+      # Check that re-running the same rsync command causes no more changes.
+      self.assertEquals(NO_CHANGES, self.RunGsUtil(
+          ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
+    _Check4()
 
   def test_dir_to_dir_minus_d_more_files_than_bufsize(self):
     """Tests concurrently building listing from multiple tmp file ranges."""
@@ -511,8 +539,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     self.assertEquals(listing1, listing2)
 
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+    # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
+    # worry about eventual consistency of bucket listings.
     def _Check():
       # Check that re-running the same rsync command causes no more changes.
       self.assertEquals(NO_CHANGES, self.RunGsUtil(
