@@ -42,7 +42,7 @@ import gslib
 # substitution; ensure this works with both apitools and boto.
 boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-  boto.UserAgent += ' Cloud SDK Command Line Tool'
+  boto.UserAgent += ' google-cloud-sdk'
   if os.environ.get('CLOUDSDK_VERSION'):
     boto.UserAgent += ' %s' % os.environ.get('CLOUDSDK_VERSION')
 

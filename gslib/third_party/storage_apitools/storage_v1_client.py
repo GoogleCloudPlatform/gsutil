@@ -36,7 +36,7 @@ class StorageV1(base_api.BaseApiClient):
   _USER_AGENT = 'apitools gsutil/%s Python/%s (%s)' % (
       gslib.VERSION, platform.python_version(), sys.platform)
   if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-    _USER_AGENT += ' Cloud SDK Command Line Tool'
+    _USER_AGENT += ' google-cloud-sdk'
     if os.environ.get('CLOUDSDK_VERSION'):
       _USER_AGENT += ' %s' % os.environ.get('CLOUDSDK_VERSION')
   _CLIENT_CLASS_NAME = u'StorageV1'
