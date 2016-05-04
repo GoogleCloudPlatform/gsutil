@@ -296,6 +296,21 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
                               expand_top_level_buckets=True))
     self.assertEqual(self.immed_child_uri_strs, actual_uri_strs)
 
+  def testMatchingAllFilesWithSize(self):
+    """Tests matching all files, based on wildcard."""
+    uri = self._test_storage_uri(suri(self.test_dir, '*'))
+    blrs = self._test_wildcard_iterator(uri).IterAll(
+        expand_top_level_buckets=True, bucket_listing_fields=['size'])
+    num_expected_objects = 3
+    num_actual_objects = 0
+    for blr in blrs:
+      self.assertTrue(str(blr) in self.immed_child_uri_strs)
+      if blr.IsObject():
+        num_actual_objects += 1
+        # Size is based on contents "Test N" as created by CreateTempDir.
+        self.assertEqual(blr.root_object.size, 6)
+    self.assertEqual(num_expected_objects, num_actual_objects)
+
   def testMatchingFileSubset(self):
     """Tests matching a subset of files, based on wildcard."""
     exp_uri_strs = set(

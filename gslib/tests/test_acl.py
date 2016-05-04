@@ -26,6 +26,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.translation_helper import AclTranslation
 from gslib.util import Retry
@@ -486,6 +487,30 @@ class TestAcl(TestAclBase):
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
     self.assertRegexpMatches(json_text, all_users_regex)
+
+  def testSeekAheadAcl(self):
+    """Tests seek-ahead iterator with ACL sub-commands."""
+    object_uri = self.CreateObject(contents='foo')
+    # Get the object's current ACL for application via set.
+    current_acl = self.RunGsUtil(['acl', 'get', suri(object_uri)],
+                                 return_stdout=True)
+    current_acl_file = self.CreateTempFile(contents=current_acl)
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'acl', 'ch', '-u', 'AllUsers:R',
+                               suri(object_uri)], return_stderr=True)
+      self.assertIn('Estimated work for this command: objects: 1\n', stderr)
+
+      stderr = self.RunGsUtil(['-m', 'acl', 'set', current_acl_file,
+                               suri(object_uri)], return_stderr=True)
+      self.assertIn('Estimated work for this command: objects: 1\n', stderr)
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'acl', 'ch', '-u', 'AllUsers:R',
+                               suri(object_uri)], return_stderr=True)
+      self.assertNotIn('Estimated work', stderr)
 
   def testMultithreadedAclChange(self, count=10):
     """Tests multi-threaded acl changing on several objects."""

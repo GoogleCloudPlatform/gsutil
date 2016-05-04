@@ -2771,7 +2771,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
     copy_exception_handler: for handling copy exceptions during Apply.
     src_obj_metadata: If source URL is a cloud object, source object metadata
         with all necessary fields (per GetSourceFieldsNeededForCopy).
-        Required for cloud source URLs, None for file source URLs.
+        Required for cloud source URLs. If source URL is a file, an
+        apitools Object that may contain file size, or None.
     allow_splitting: Whether to allow the file to be split into component
                      pieces for an parallel composite upload or download.
     headers: optional headers to use for the copy operation.
@@ -2843,7 +2844,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         acl_text = S3MarkerAclFromObjectMetadata(src_obj_metadata)
         if acl_text:
           AddS3MarkerAclToObjectMetadata(dst_obj_metadata, acl_text)
-  else:
+  else:  # src_url.IsFileUrl()
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
     except Exception, e:  # pylint: disable=broad-except
@@ -2856,6 +2857,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         raise CommandException(message)
     if src_url.IsStream():
       src_obj_size = None
+    elif src_obj_metadata and src_obj_metadata.size:
+      # Iterator retrieved the file's size, no need to stat it again.
+      src_obj_size = src_obj_metadata.size
     else:
       src_obj_size = os.path.getsize(src_url.object_name)
 

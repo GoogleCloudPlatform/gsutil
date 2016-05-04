@@ -51,8 +51,10 @@ from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
+from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.seek_ahead_thread import SeekAheadThread
 from gslib.sig_handling import ChildProcessSignalHandler
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import KillProcess
@@ -155,6 +157,16 @@ def _NewThreadsafeQueue():
 # problems on some operating systems.
 MAX_QUEUE_SIZE = 32500
 
+# Related to the max queue size above, once we cross this threshold of
+# iterated tasks added to the queue, kick off the SeekAheadThread that will
+# estimate the total work necessary for the command.
+DEFAULT_TASK_ESTIMATION_THRESHOLD = 30000
+
+
+def _GetTaskEstimationThreshold():
+  return boto.config.getint('GSUtil', 'task_estimation_threshold',
+                            DEFAULT_TASK_ESTIMATION_THRESHOLD)
+
 # That maximum depth of the tree of recursive calls to command.Apply. This is
 # an arbitrary limit put in place to prevent developers from accidentally
 # causing problems with infinite recursion, and it can be increased if needed.
@@ -200,6 +212,62 @@ def InitializeMultiprocessingVariables():
   On Windows, a multiprocessing.Manager object should only
   be created within an "if __name__ == '__main__':" block. This function
   must be called, otherwise every command that calls Command.Apply will fail.
+
+  While multiprocessing variables are initialized at the beginning of
+  gsutil execution, new processes and threads are created only by calls
+  to Command.Apply. When multiple processes and threads are used,
+  the flow of startup/teardown looks like this:
+
+  1. __main__: initializes multiprocessing variables, including any necessary
+     Manager processes (here and in gslib.util).
+  2. __main__: Registers signal handlers for terminating signals responsible
+     for cleaning up multiprocessing variables and manager processes upon exit.
+  3. Command.Apply registers signal handlers for the main process to kill
+     itself after the cleanup handlers registered by __main__ have executed.
+  4. If worker processes have not been created for the current level of
+     recursive calls, Command.Apply creates those processes.
+
+  ---- Parallel operations start here, so steps are no longer numbered. ----
+  - Command.Apply in the main thread starts the ProducerThread.
+    - The Producer thread adds task arguments to the global task queue.
+      - It optionally starts the SeekAheadThread which estimates total
+        work for the Apply call.
+
+  - Command.Apply in the main thread starts the UIThread, which will consume
+    messages from the global status queue, process them, and display them to
+    the user.
+
+  - Each worker process creates a thread pool to perform work.
+    - The worker process registers signal handlers to kill itself in
+      response to a terminating signal.
+    - The main thread of the worker process moves items from the global
+      task queue to the process-local task queue.
+    - Worker threads retrieve items from the process-local task queue,
+      perform the work, and post messages to the global status queue.
+    - Worker threads may themselves call Command.Apply.
+      - This creates a new pool of worker subprocesses with the same size
+        as the main pool. This pool is shared amongst all Command.Apply calls
+        at the given recursion depth.
+      - This reuses the global UIThread, global status queue, and global task
+        queue.
+      - This starts a new ProducerThread.
+      - A SeekAheadThread is not started at this level; only one such thread
+        exists at the top level, and it provides estimates for top-level work
+        only.
+
+  - The ProducerThread runs out of tasks, or the user signals cancellation.
+    - The ProducerThread cancels the SeekAheadThread (if it is running) via
+      an event.
+    - The ProducerThread enqueues special terminating messages on the
+      global task queue and global status queue, signaling the UI Thread to
+      shut down and the main thread to continue operation.
+    - In the termination case, existing processes exit in response to
+      terminating signals from the main process.
+
+  ---- Parallel operations end here. ----
+  5. Further top-level calls to Command.Apply can be made, which will repeat
+     all of the steps made in #4, except that worker processes will be
+     reused.
   """
   # This list of global variables must exactly match the above list of
   # declarations.
@@ -458,6 +526,7 @@ class Command(HelpProvider):
     self.recursion_requested = False
     self.all_versions = False
     self.command_alias_used = command_alias_used
+    self.seek_ahead_gsutil_api = None
 
     # Global instance of a threaded logger object.
     self.logger = CreateGsutilLogger(self.command_name)
@@ -499,10 +568,9 @@ class Command(HelpProvider):
 
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(
-        bucket_storage_uri_class, self.gsutil_api_map,
-        self.logger, debug=self.debug, trace_token=self.trace_token,
-        perf_trace_token=self.perf_trace_token,
-        status_queue=_MainThreadUIQueue(self.logger))
+        self.bucket_storage_uri_class, self.gsutil_api_map,
+        self.logger, _MainThreadUIQueue(self.logger), debug=self.debug,
+        trace_token=self.trace_token, perf_trace_token=self.perf_trace_token)
 
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
@@ -608,6 +676,29 @@ class Command(HelpProvider):
         url_string, self.gsutil_api, all_versions=all_versions,
         debug=self.debug, project_id=self.project_id)
 
+  def GetSeekAheadGsutilApi(self):
+    """Helper to instantiate a Cloud API instance for a seek-ahead iterator.
+
+    This must be separate from the core command.gsutil_api instance for
+    thread-safety, since other iterators typically use that instance and the
+    SeekAheadIterator operates in parallel.
+
+    Returns:
+      Cloud API instance for use by the seek-ahead iterator.
+    """
+    # This is initialized in Initialize(Multiprocessing|Threading)Variables
+    # pylint: disable=global-variable-not-assigned
+    # pylint: disable=global-variable-undefined
+    global glob_status_queue
+    # pylint: enable=global-variable-not-assigned
+    # pylint: enable=global-variable-undefined
+    if not self.seek_ahead_gsutil_api:
+      self.seek_ahead_gsutil_api = CloudApiDelegator(
+          self.bucket_storage_uri_class, self.gsutil_api_map,
+          logging.getLogger('dummy'), glob_status_queue, debug=self.debug,
+          trace_token=self.trace_token, perf_trace_token=self.perf_trace_token)
+    return self.seek_ahead_gsutil_api
+
   def RunCommand(self):
     """Abstract function in base class. Subclasses must implement this.
 
@@ -622,6 +713,9 @@ class Command(HelpProvider):
   # Shared helper functions that depend on base class state. #
   ############################################################
 
+  # TODO: Refactor ACL functions to a different module and pass the
+  # command object as state, as opposed to defining them as member functions
+  # of the command class.
   def ApplyAclFunc(self, acl_func, acl_excep_handler, url_strs,
                    object_fields=None):
     """Sets the standard or default object ACL depending on self.command_name.
@@ -670,11 +764,17 @@ class Command(HelpProvider):
           continue_on_error=self.continue_on_error or self.parallel_operations,
           bucket_listing_fields=object_fields)
 
+      seek_ahead_iterator = SeekAheadNameExpansionIterator(
+          self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
+          multi_threaded_url_args, self.recursion_requested,
+          all_versions=self.all_versions)
+
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
       self.Apply(acl_func, name_expansion_iterator, acl_excep_handler,
-                 fail_on_error=not self.continue_on_error)
+                 fail_on_error=not self.continue_on_error,
+                 seek_ahead_iterator=seek_ahead_iterator)
 
     if not self.everything_set_okay and not self.continue_on_error:
       raise CommandException('ACLs for some objects could not be set.')
@@ -1075,9 +1175,10 @@ class Command(HelpProvider):
     # logger with the same name will be treated as a singleton.
     cls.logger = None
 
-    # Likewise, the default API connection can't be pickled, but it is unused
+    # Likewise, the default API connection(s) can't be pickled, but are unused
     # anyway as each thread gets its own API delegator.
     cls.gsutil_api = None
+    cls.seek_ahead_gsutil_api = None
 
     class_map[caller_id] = cls
     total_tasks[caller_id] = -1  # -1 => the producer hasn't finished yet.
@@ -1111,7 +1212,7 @@ class Command(HelpProvider):
             shared_attrs=None, arg_checker=_UrlArgChecker,
             parallel_operations_override=False, process_count=None,
             thread_count=None, should_return_results=False,
-            fail_on_error=False):
+            fail_on_error=False, seek_ahead_iterator=None):
     """Calls _Parallel/SequentialApply based on multiprocessing availability.
 
     Args:
@@ -1135,6 +1236,10 @@ class Command(HelpProvider):
       fail_on_error: If true, then raise any exceptions encountered when
                      executing func. This is only applicable in the case of
                      process_count == thread_count == 1.
+      seek_ahead_iterator: If present, a seek-ahead iterator that will
+          provide an approximation of the total number of tasks and bytes that
+          will be iterated by the ProducerThread. Used only if multiple
+          processes and/or threads are used.
 
     Returns:
       Results from spawned threads.
@@ -1186,7 +1291,8 @@ class Command(HelpProvider):
     if thread_count * usable_processes_count > 1:
       self._ParallelApply(func, args_iterator, exception_handler, caller_id,
                           arg_checker, usable_processes_count, thread_count,
-                          should_return_results, fail_on_error)
+                          should_return_results, fail_on_error,
+                          seek_ahead_iterator=seek_ahead_iterator)
     else:
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
                             arg_checker, should_return_results, fail_on_error)
@@ -1273,7 +1379,8 @@ class Command(HelpProvider):
   # pylint: disable=g-doc-args
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
                      arg_checker, process_count, thread_count,
-                     should_return_results, fail_on_error):
+                     should_return_results, fail_on_error,
+                     seek_ahead_iterator=None):
     r"""Dispatches input arguments across a thread/process pool.
 
     Pools are composed of parallel OS processes and/or Python threads,
@@ -1381,16 +1488,21 @@ class Command(HelpProvider):
     else:
       task_queue = _NewThreadsafeQueue()
 
+    # Only use the seek-ahead iterator in the main thread to provide an
+    # overall estimate of operations.
+    if seek_ahead_iterator and not is_main_thread:
+      seek_ahead_iterator = None
+
     # Kick off a producer thread to throw tasks in the global task queue. We
     # do this asynchronously so that the main thread can be free to create new
     # consumer pools when needed (otherwise, any thread with a task that needs
     # a new consumer pool must block until we're completely done producing; in
     # the worst case, every worker blocks on such a call and the producer fills
     # up the task queue before it finishes, so we block forever).
-    producer_thread = ProducerThread(copy.copy(self), args_iterator, caller_id,
-                                     func, task_queue, should_return_results,
-                                     exception_handler, arg_checker,
-                                     fail_on_error)
+    producer_thread = ProducerThread(
+        copy.copy(self), args_iterator, caller_id, func, task_queue,
+        should_return_results, exception_handler, arg_checker,
+        fail_on_error, seek_ahead_iterator=seek_ahead_iterator)
 
     # Start the UI thread that is responsible for displaying operation status
     # (aggregrated across processes and threads) to the user.
@@ -1559,7 +1671,7 @@ class _MainThreadUIQueue(object):
 
   def put(self, status_item):  # pylint: disable=invalid-name
     if self.logger.isEnabledFor(logging.INFO):
-      sys.stderr.write(str(status_item))
+      sys.stderr.write(status_item)
 
 
 class _UIThread(threading.Thread):
@@ -1622,12 +1734,40 @@ class Task(namedtuple('Task', (
   pass
 
 
+# TODO: Refactor the various threading code that doesn't need to depend on
+# command.py globals (ProducerThread, UIThread) to different files to aid
+# readability and reduce the size of command.py.
+def _StartSeekAheadThread(seek_ahead_iterator, seek_ahead_thread_cancel_event):
+  """Initializes and runs the seek-ahead thread.
+
+  We defer starting this thread until it is needed, since it is only useful
+  when the ProducerThread iterates more results than it can store on the global
+  task queue.
+
+  Args:
+    seek_ahead_iterator: Iterator that yields SeekAheadResults.
+    seek_ahead_thread_cancel_event: threading.Event for signaling the
+        seek-ahead thread to terminate.
+
+  Returns:
+    The thread object for the initialized thread.
+  """
+  # This is initialized in Initialize(Multiprocessing|Threading)Variables
+  # pylint: disable=global-variable-not-assigned
+  # pylint: disable=global-variable-undefined
+  global glob_status_queue
+  # pylint: enable=global-variable-not-assigned
+  # pylint: enable=global-variable-undefined
+  return SeekAheadThread(seek_ahead_iterator, seek_ahead_thread_cancel_event,
+                         glob_status_queue)
+
+
 class ProducerThread(threading.Thread):
   """Thread used to enqueue work for other processes and threads."""
 
   def __init__(self, cls, args_iterator, caller_id, func, task_queue,
                should_return_results, exception_handler, arg_checker,
-               fail_on_error):
+               fail_on_error, seek_ahead_iterator=None):
     """Initializes the producer thread.
 
     Args:
@@ -1648,6 +1788,9 @@ class ProducerThread(threading.Thread):
       fail_on_error: If true, then raise any exceptions encountered when
                      executing func. This is only applicable in the case of
                      process_count == thread_count == 1.
+      seek_ahead_iterator: If present, a seek-ahead iterator that will
+          provide an approximation of the total number of tasks and bytes that
+          will be iterated by the ProducerThread.
     """
     super(ProducerThread, self).__init__()
     self.func = func
@@ -1663,12 +1806,16 @@ class ProducerThread(threading.Thread):
     self.daemon = True
     self.unknown_exception = None
     self.iterator_exception = None
+    self.seek_ahead_iterator = seek_ahead_iterator
+    self.seek_ahead_thread_considered = False
+    self.seek_ahead_thread_cancel_event = None
     self.start()
 
   def run(self):
     num_tasks = 0
     cur_task = None
     last_task = None
+    task_estimation_threshold = None
     try:
       args_iterator = iter(self.args_iterator)
       while True:
@@ -1693,6 +1840,26 @@ class ProducerThread(threading.Thread):
 
         if self.arg_checker(self.cls, args):
           num_tasks += 1
+
+          if not self.seek_ahead_thread_considered:
+            if task_estimation_threshold is None:
+              task_estimation_threshold = _GetTaskEstimationThreshold()
+            if task_estimation_threshold <= 0:
+              # Disable the seek-ahead thread (never start it).
+              self.seek_ahead_thread_considered = True
+            elif num_tasks >= task_estimation_threshold:
+              if self.seek_ahead_iterator:
+                self.seek_ahead_thread_cancel_event = threading.Event()
+                seek_ahead_thread = _StartSeekAheadThread(
+                    self.seek_ahead_iterator,
+                    self.seek_ahead_thread_cancel_event)
+                # For integration testing only, force estimation to complete
+                # prior to producing further results.
+                if boto.config.get('GSUtil', 'task_estimation_force', None):
+                  seek_ahead_thread.join()
+
+              self.seek_ahead_thread_considered = True
+
           last_task = cur_task
           cur_task = Task(self.func, args, self.caller_id,
                           self.exception_handler, self.should_return_results,
@@ -1717,6 +1884,14 @@ class ProducerThread(threading.Thread):
         cur_task = Task(None, ZERO_TASKS_TO_DO_ARGUMENT, self.caller_id,
                         None, None, None, None)
       self.task_queue.put(cur_task)
+
+      # If the seek ahead thread is still running, cancel it since we've
+      # enumerated all of the tasks already. We don't want to block command
+      # completion on an estimate that has become meaningless, or, worse yet,
+      # tear down the underlying APIs on command exit while this thread is
+      # still running.
+      if self.seek_ahead_thread_cancel_event is not None:
+        self.seek_ahead_thread_cancel_event.set()
 
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.

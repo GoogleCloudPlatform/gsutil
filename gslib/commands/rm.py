@@ -28,6 +28,7 @@ from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_GENERIC
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
@@ -283,13 +284,23 @@ class RmCommand(Command):
           all_versions=self.all_versions,
           continue_on_error=self.continue_on_error or self.parallel_operations)
 
+      seek_ahead_iterator = None
+      # Cannot seek ahead with stdin args, since we can only iterate them
+      # once without buffering in memory.
+      if not self.read_args_from_stdin:
+        seek_ahead_iterator = SeekAheadNameExpansionIterator(
+            self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
+            url_strs, self.recursion_requested,
+            all_versions=self.all_versions, project_id=self.project_id)
+
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
       self.Apply(_RemoveFuncWrapper, name_expansion_iterator,
                  _RemoveExceptionHandler,
                  fail_on_error=(not self.continue_on_error),
-                 shared_attrs=['op_failure_count', 'bucket_not_found_count'])
+                 shared_attrs=['op_failure_count', 'bucket_not_found_count'],
+                 seek_ahead_iterator=seek_ahead_iterator)
 
     # Assuming the bucket has versioning enabled, url's that don't map to
     # objects should throw an error even with all_versions, since the prior

@@ -867,6 +867,44 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(stderr.count(
           'ResumableDownloadException: Artifically halting download'), 2)
 
+  def test_seek_ahead_upload_cp(self):
+    """Tests that the seek-ahead iterator estimates total upload work."""
+    tmpdir = self.CreateTempDir(test_files=3)
+    bucket_uri = self.CreateBucket()
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'cp', '-r', tmpdir, suri(bucket_uri)],
+                              return_stderr=True)
+      self.assertIn(
+          'Estimated work for this command: objects: 3, total size: 18',
+          stderr)
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'cp', '-r', tmpdir, suri(bucket_uri)],
+                              return_stderr=True)
+      self.assertNotIn('Estimated work', stderr)
+
+  def test_seek_ahead_download_cp(self):
+    tmpdir = self.CreateTempDir()
+    bucket_uri = self.CreateBucket(test_objects=3)
+    self.AssertNObjectsInBucket(bucket_uri, 3)
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'cp', '-r', suri(bucket_uri), tmpdir],
+                              return_stderr=True)
+      self.assertIn(
+          'Estimated work for this command: objects: 3, total size: 18',
+          stderr)
+
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'cp', '-r', suri(bucket_uri), tmpdir],
+                              return_stderr=True)
+      self.assertNotIn('Estimated work', stderr)
+
   def test_canned_acl_cp(self):
     """Tests copying with a canned ACL."""
     bucket1_uri = self.CreateBucket()

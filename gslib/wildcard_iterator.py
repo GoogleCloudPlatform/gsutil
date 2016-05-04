@@ -34,6 +34,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
 from gslib.storage_url import WILDCARD_REGEX
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.util import FixWindowsEncodingIfNeeded
 from gslib.util import PrintableStr
@@ -491,6 +492,21 @@ class CloudWildcardIterator(WildcardIterator):
         yield blr
 
 
+def _GetFileObject(filepath):
+  """Returns an apitools Object class with supported file attributes.
+
+  To provide size estimates for local to cloud file copies, we need to retrieve
+  expose the local file's size.
+
+  Args:
+    filepath: Path to the file.
+
+  Returns:
+    apitools Object that with file name and size attributes filled-in.
+  """
+  return apitools_messages.Object(size=os.path.getsize(filepath))
+
+
 class FileWildcardIterator(WildcardIterator):
   """WildcardIterator subclass for files and directories.
 
@@ -511,11 +527,17 @@ class FileWildcardIterator(WildcardIterator):
     self.wildcard_url = wildcard_url
     self.debug = debug
 
-  def __iter__(self):
+  def __iter__(self, bucket_listing_fields=None):
     """Iterator that gets called when iterating over the file wildcard.
 
     In the case where no wildcard is present, returns a single matching file
     or directory.
+
+    Args:
+      bucket_listing_fields: Iterable fields to include in listings.
+          Ex. ['size']. Currently only 'size' is supported.
+          If present, will populate yielded BucketListingObject.root_object
+          with the file name and size.
 
     Raises:
       WildcardException: if invalid wildcard found.
@@ -523,6 +545,9 @@ class FileWildcardIterator(WildcardIterator):
     Yields:
       BucketListingRef of type OBJECT (for files) or PREFIX (for directories)
     """
+    include_size = (bucket_listing_fields
+                    and 'size' in set(bucket_listing_fields))
+
     wildcard = self.wildcard_url.object_name
     match = FLAT_LIST_REGEX.match(wildcard)
     if match:
@@ -552,7 +577,8 @@ class FileWildcardIterator(WildcardIterator):
         if os.path.isdir(filepath):
           yield BucketListingPrefix(expanded_url)
         else:
-          yield BucketListingObject(expanded_url)
+          blr_object = _GetFileObject(filepath) if include_size else None
+          yield BucketListingObject(expanded_url, root_object=blr_object)
       except UnicodeEncodeError:
         raise CommandException('\n'.join(textwrap.wrap(
             _UNICODE_EXCEPTION_TEXT % repr(filepath))))
@@ -604,12 +630,16 @@ class FileWildcardIterator(WildcardIterator):
     """Iterates over the wildcard, yielding only object (file) refs.
 
     Args:
-      bucket_listing_fields: Ignored as filesystems don't have buckets.
+      bucket_listing_fields: Iterable fields to include in listings.
+          Ex. ['size']. Currently only 'size' is supported.
+          If present, will populate yielded BucketListingObject.root_object
+          with the file name and size.
 
     Yields:
       BucketListingRefs of type OBJECT or empty iterator if no matches.
     """
-    for bucket_listing_ref in self.IterAll():
+    for bucket_listing_ref in self.IterAll(
+        bucket_listing_fields=bucket_listing_fields):
       if bucket_listing_ref.IsObject():
         yield bucket_listing_ref
 
@@ -618,14 +648,18 @@ class FileWildcardIterator(WildcardIterator):
     """Iterates over the wildcard, yielding BucketListingRefs.
 
     Args:
-      bucket_listing_fields: Ignored; filesystems don't have buckets.
+      bucket_listing_fields: Iterable fields to include in listings.
+          Ex. ['size']. Currently only 'size' is supported.
+          If present, will populate yielded BucketListingObject.root_object
+          with the file name and size.
       expand_top_level_buckets: Ignored; filesystems don't have buckets.
 
     Yields:
       BucketListingRefs of type OBJECT (file) or PREFIX (directory),
       or empty iterator if no matches.
     """
-    for bucket_listing_ref in self.__iter__():
+    for bucket_listing_ref in self.__iter__(
+        bucket_listing_fields=bucket_listing_fields):
       yield bucket_listing_ref
 
   def IterBuckets(self, unused_bucket_fields=None):

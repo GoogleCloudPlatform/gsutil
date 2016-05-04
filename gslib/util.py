@@ -114,6 +114,9 @@ TRANSFER_BUFFER_SIZE = 1024*8
 # Default number of progress callbacks during transfer (XML API).
 XML_PROGRESS_CALLBACKS = 10
 
+# Number of objects to request in listing calls.
+NUM_OBJECTS_PER_LIST_PAGE = 1000
+
 # For files >= this size, output a message indicating that we're running an
 # operation on the file (like hashing or gzipping) so it does not appear to the
 # user that the command is hanging.
@@ -654,7 +657,7 @@ def Percentile(values, percent, key=lambda x: x):
 
 
 def RemoveCRLFFromString(input_str):
-  """Returns the input string with all \\n and \\r removed."""
+  r"""Returns the input string with all \n and \r removed."""
   return re.sub(r'[\r\n]', '', input_str)
 
 
@@ -708,10 +711,10 @@ def LookUpGsutilVersion(gsutil_api, url_str):
           return prop.value
 
 
-class DiscardMessagesQueue():
+class DiscardMessagesQueue(object):
   """Emulates a Cloud API status queue but drops all messages."""
 
-  def put(self):
+  def put(self):  # pylint: disable=invalid-name
     pass
 
 

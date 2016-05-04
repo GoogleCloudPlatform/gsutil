@@ -35,6 +35,7 @@ from boto.provider import Provider
 
 import gslib
 from gslib.command import Command
+from gslib.command import DEFAULT_TASK_ESTIMATION_THRESHOLD
 from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
@@ -207,6 +208,7 @@ _DETAILED_HELP_TEXT = ("""
       state_dir
       tab_completion_time_logs
       tab_completion_timeout
+      task_estimation_threshold
       use_magicfile
 
     [OAuth2]
@@ -469,6 +471,14 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #sliced_object_download_component_size = %(sliced_object_download_component_size)s
 #sliced_object_download_max_components = %(sliced_object_download_max_components)s
 
+# 'task_estimation_threshold' controls how many files or objects gsutil
+# processes before it attempts to estimate the total work that will be
+# performed by the command. Estimation makes extra directory listing or API
+# list calls and is performed only if multiple processes and/or threads are
+# used. Estimation can slightly increase cost due to extra
+# listing calls; to disable it entirely, set this value to 0.
+#task_estimation_threshold=%(task_estimation_threshold)s
+
 # 'use_magicfile' specifies if the 'file --mime-type <filename>' command should
 # be used to guess content types instead of the default filename extension-based
 # mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
@@ -549,7 +559,8 @@ content_language = en
            DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
        'sliced_object_download_max_components': (
            DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
-       'max_component_count': MAX_COMPONENT_COUNT}
+       'max_component_count': MAX_COMPONENT_COUNT,
+       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]

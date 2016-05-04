@@ -20,6 +20,7 @@ import errno
 import heapq
 import io
 from itertools import islice
+import logging
 import os
 import re
 import tempfile
@@ -45,6 +46,7 @@ from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.seek_ahead_thread import SeekAheadResult
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
@@ -405,17 +407,19 @@ def CleanUpTempFiles():
 class _DiffToApply(object):
   """Class that encapsulates info needed to apply diff for one object."""
 
-  def __init__(self, src_url_str, dst_url_str, diff_action):
+  def __init__(self, src_url_str, dst_url_str, diff_action, copy_size):
     """Constructor.
 
     Args:
       src_url_str: The source URL string, or None if diff_action is REMOVE.
       dst_url_str: The destination URL string.
       diff_action: _DiffAction to be applied.
+      copy_size: The amount of bytes to copy, or None if diff_action is REMOVE.
     """
     self.src_url_str = src_url_str
     self.dst_url_str = dst_url_str
     self.diff_action = diff_action
+    self.copy_size = copy_size
 
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
@@ -705,6 +709,7 @@ class _DiffIterator(object):
     self.logger = self.command_obj.logger
     self.base_src_url = base_src_url
     self.base_dst_url = base_dst_url
+
     self.logger.info('Building synchronization state...')
 
     (src_fh, self.sorted_list_src_file_name) = tempfile.mkstemp(
@@ -718,8 +723,8 @@ class _DiffIterator(object):
     os.close(src_fh)
     os.close(dst_fh)
 
-    # Build sorted lists of src and dst URLs in parallel. To do this, pass args
-    # to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
+    # Build sorted lists of src and dst URLs in parallel. To do this, pass
+    # args to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
     # where base_url_str is the starting URL string for listing.
     args_iter = iter([
         (self.base_src_url.url_string, self.sorted_list_src_file_name,
@@ -877,13 +882,13 @@ class _DiffIterator(object):
           src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
         yield _DiffToApply(
-            src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY)
+            src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY, src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
-          yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
+          yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -891,7 +896,8 @@ class _DiffIterator(object):
         if not self._ObjectsMatch(
             src_url_str, src_size, src_crc32c, src_md5,
             dst_url_str, dst_size, dst_crc32c, dst_md5):
-          yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY)
+          yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY,
+                             src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -903,10 +909,57 @@ class _DiffIterator(object):
     # If -d option was specified any files/objects left in dst iteration should
     # be removed.
     if dst_url_str:
-      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
+      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _) = self._ParseTmpFileLine(line)
-      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE)
+      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
+
+
+class _SeekAheadDiffIterator(object):
+  """Wraps _AvoidChecksumAndListingDiffIterator and yields SeekAheadResults."""
+
+  def __init__(self, cloned_diff_iterator):
+    self.cloned_diff_iterator = cloned_diff_iterator
+
+  def __iter__(self):
+    for diff_to_apply in self.cloned_diff_iterator:
+      yield SeekAheadResult(data_bytes=diff_to_apply.copy_size or 0)
+
+
+class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
+  """Iterator initialized from an existing _DiffIterator.
+
+  This iterator yields DiffToApply objects used to estimate the total work that
+  will be performed by the DiffIterator, while avoiding expensive computation.
+  """
+
+  # pylint: disable=super-init-not-called
+  def __init__(self, initialized_diff_iterator):
+    # Intentionally don't call the _DiffIterator constructor. This class
+    # reuses the initialized_diff_iterator values to avoid unnecessary
+    # computation, and inherits the __iter__ function.
+
+    # We're providing an estimate, so avoid computing checksums even though
+    # that may cause our estimate to be off.
+    self.compute_file_checksums = False
+    self.delete_extras = initialized_diff_iterator.delete_extras
+    self.recursion_requested = initialized_diff_iterator.delete_extras
+    # This iterator shouldn't output any log messages.
+    self.logger = logging.getLogger('dummy')
+    self.base_src_url = initialized_diff_iterator.base_src_url
+    self.base_dst_url = initialized_diff_iterator.base_dst_url
+
+    self.sorted_list_src_file = open(
+        initialized_diff_iterator.sorted_list_src_file_name, 'r')
+    self.sorted_list_dst_file = open(
+        initialized_diff_iterator.sorted_list_dst_file_name, 'r')
+
+    # Wrap iterators in PluralityCheckableIterator so we can check emptiness.
+    self.sorted_src_urls_it = PluralityCheckableIterator(
+        iter(self.sorted_list_src_file))
+    self.sorted_dst_urls_it = PluralityCheckableIterator(
+        iter(self.sorted_list_dst_file))
+  # pylint: enable=super-init-not-called
 
 
 def _RsyncFunc(cls, diff_to_apply, thread_state=None):
@@ -1062,11 +1115,18 @@ class RsyncCommand(Command):
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
     diff_iterator = _DiffIterator(self, src_url, dst_url)
+
+    # For estimation purposes, create a SeekAheadIterator based on the
+    # source and destination files generated when creating the diff iterator.
+    # This iteration should avoid expensive operations like file checksumming.
+    seek_ahead_iterator = _SeekAheadDiffIterator(
+        _AvoidChecksumAndListingDiffIterator(diff_iterator))
+
     self.logger.info('Starting synchronization')
     try:
       self.Apply(_RsyncFunc, diff_iterator, _RsyncExceptionHandler,
                  shared_attrs, arg_checker=_DiffToApplyArgChecker,
-                 fail_on_error=True)
+                 fail_on_error=True, seek_ahead_iterator=seek_ahead_iterator)
     finally:
       CleanUpTempFiles()
 

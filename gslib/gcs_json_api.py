@@ -92,6 +92,7 @@ from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
 from gslib.util import JsonResumableChunkSizeDefined
+from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
 import httplib2
 import oauth2client
@@ -104,7 +105,6 @@ from oauth2client import multistore_file
 DEFAULT_GCS_JSON_VERSION = 'v1'
 
 NUM_BUCKETS_PER_LIST_PAGE = 1000
-NUM_OBJECTS_PER_LIST_PAGE = 1000
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError,
                                     apitools_exceptions.StreamExhausted,

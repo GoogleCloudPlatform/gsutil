@@ -27,6 +27,7 @@ from gslib.encryption_helper import FindMatchingCryptoKey
 from gslib.encryption_helper import GetEncryptionTupleAndSha256Hash
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import StorageUrlFromString
@@ -222,8 +223,6 @@ class RewriteCommand(Command):
                                'least one URL.')
       url_strs = self.args
 
-    url_strs = GenerationCheckGenerator(url_strs)
-
     if not self.transform_types:
       raise CommandException(
           'rewrite command requires at least one transformation flag. '
@@ -232,22 +231,38 @@ class RewriteCommand(Command):
 
     self.preconditions = PreconditionsFromHeaders(self.headers or {})
 
+    url_strs_generator = GenerationCheckGenerator(url_strs)
+
     # Convert recursive flag to flat wildcard to avoid performing multiple
     # listings.
     if self.recursion_requested:
-      url_strs = ConvertRecursiveToFlatWildcard(url_strs)
+      url_strs_generator = ConvertRecursiveToFlatWildcard(url_strs_generator)
 
     # Expand the source argument(s).
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug, self.logger, self.gsutil_api,
-        url_strs, self.recursion_requested, project_id=self.project_id,
+        url_strs_generator, self.recursion_requested,
+        project_id=self.project_id,
         continue_on_error=self.continue_on_error or self.parallel_operations)
+
+    seek_ahead_iterator = None
+    # Cannot seek ahead with stdin args, since we can only iterate them
+    # once without buffering in memory.
+    if not self.read_args_from_stdin:
+      # Perform the same recursive-to-flat conversion on original url_strs so
+      # that it is as true to the original iterator as possible.
+      seek_ahead_url_strs = ConvertRecursiveToFlatWildcard(url_strs)
+      seek_ahead_iterator = SeekAheadNameExpansionIterator(
+          self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
+          seek_ahead_url_strs, self.recursion_requested,
+          all_versions=self.all_versions, project_id=self.project_id)
 
     # Perform rewrite requests in parallel (-m) mode, if requested.
     self.Apply(_RewriteFuncWrapper, name_expansion_iterator,
                _RewriteExceptionHandler,
                fail_on_error=(not self.continue_on_error),
-               shared_attrs=['op_failure_count'])
+               shared_attrs=['op_failure_count'],
+               seek_ahead_iterator=seek_ahead_iterator)
 
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''

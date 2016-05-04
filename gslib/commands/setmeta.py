@@ -25,6 +25,7 @@ from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyObjectMetadata
@@ -184,12 +185,18 @@ class SetMetaCommand(Command):
         continue_on_error=self.parallel_operations,
         bucket_listing_fields=['generation', 'metadata', 'metageneration'])
 
+    seek_ahead_iterator = SeekAheadNameExpansionIterator(
+        self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
+        self.args, self.recursion_requested,
+        all_versions=self.all_versions, project_id=self.project_id)
+
     try:
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
       self.Apply(_SetMetadataFuncWrapper, name_expansion_iterator,
-                 _SetMetadataExceptionHandler, fail_on_error=True)
+                 _SetMetadataExceptionHandler, fail_on_error=True,
+                 seek_ahead_iterator=seek_ahead_iterator)
     except AccessDeniedException as e:
       if e.status == 403:
         self._WarnServiceAccounts()

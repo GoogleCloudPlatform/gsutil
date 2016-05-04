@@ -284,6 +284,66 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  def test_dir_to_bucket_seek_ahead(self):
+    """Tests that rsync seek-ahead iterator works correctly."""
+    # Unfortunately, we have to retry the entire operation in the case of
+    # eventual consistency because the estimated values will differ.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Test estimating an rsync upload operation."""
+      tmpdir = self.CreateTempDir()
+      subdir = os.path.join(tmpdir, 'subdir')
+      os.mkdir(subdir)
+      self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+      self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
+      self.CreateTempFile(tmpdir=subdir, file_name='obj3',
+                          contents='subdir/obj3')
+      bucket_uri = self.CreateBucket()
+      self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
+                        contents='.OBJ2')
+      self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
+                        contents='obj4')
+      self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
+                        contents='subdir/obj5')
+      # Need to make sure the bucket listing is caught-up, otherwise the
+      # first rsync may not see .obj2 and overwrite it.
+      self.AssertNObjectsInBucket(bucket_uri, 3)
+
+      with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                                 ('GSUtil', 'task_estimation_force', 'True')]):
+        stderr = self.RunGsUtil(
+            ['-m', 'rsync', '-d', '-r', tmpdir, suri(bucket_uri)],
+            return_stderr=True)
+        # Objects: 4 (2 removed, 2 added)
+        # Bytes: 15 (added objects are 4 bytes and 11 bytes, respectively).
+        self.assertIn(
+            'Estimated work for this command: objects: 4, total size: 15',
+            stderr)
+
+        self.AssertNObjectsInBucket(bucket_uri, 3)
+        # Re-running should produce no estimate, because there is no work to do.
+        stderr = self.RunGsUtil(
+            ['-m', 'rsync', '-d', '-r', tmpdir, suri(bucket_uri)],
+            return_stderr=True)
+        self.assertNotIn('Estimated work', stderr)
+
+    _Check1()
+
+    tmpdir = self.CreateTempDir(test_files=1)
+    bucket_uri = self.CreateBucket()
+    # Running with task estimation turned off (and work to perform) should not
+    # produce an estimate.
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(
+          ['-m', 'rsync', '-d', '-r', tmpdir, suri(bucket_uri)],
+          return_stderr=True)
+      self.assertNotIn('Estimated work', stderr)
+
+  # Test sequential upload as well as parallel composite upload case.
+  @SequentialAndParallelTransfer
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_dir_to_bucket_minus_d(self):
     """Tests that flat and recursive rsync dir to bucket works correctly."""
     # Create dir and bucket with 1 overlapping object, 1 extra object at root

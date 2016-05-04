@@ -37,6 +37,7 @@ from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.storage_url import ContainsWildcard
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
@@ -849,7 +850,7 @@ class CpCommand(Command):
                              'the destination for gsutil cp - abort.'
                              % (cmd_name, dst_url))
 
-    if src_url.IsCloudUrl():
+    if name_expansion_result.expanded_result:
       src_obj_metadata = encoding.JsonToMessage(
           apitools_messages.Object, name_expansion_result.expanded_result)
     else:
@@ -959,6 +960,15 @@ class CpCommand(Command):
             copy_helper_opts.skip_unsupported_objects,
             copy_helper_opts.preserve_acl))
 
+    seek_ahead_iterator = None
+    # Cannot seek ahead with stdin args, since we can only iterate them
+    # once without buffering in memory.
+    if not copy_helper_opts.read_args_from_stdin:
+      seek_ahead_iterator = SeekAheadNameExpansionIterator(
+          self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
+          url_strs, self.recursion_requested or copy_helper_opts.perform_mv,
+          all_versions=self.all_versions, project_id=self.project_id)
+
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
     self.stats_lock = CreateLock()
@@ -978,7 +988,8 @@ class CpCommand(Command):
     # perform requests with sequential function calls in current process.
     self.Apply(_CopyFuncWrapper, name_expansion_iterator,
                _CopyExceptionHandler, shared_attrs,
-               fail_on_error=(not self.continue_on_error))
+               fail_on_error=(not self.continue_on_error),
+               seek_ahead_iterator=seek_ahead_iterator)
     self.logger.debug(
         'total_bytes_transferred: %d', self.total_bytes_transferred)
 

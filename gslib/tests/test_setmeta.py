@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import Retry
 from gslib.util import UTF8
 
@@ -108,6 +109,14 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
          'gs://foo/bar'], expected_status=1, return_stderr=True)
     self.assertIn('Each header must appear at most once', stderr)
+
+  def test_setmeta_seek_ahead(self):
+    object_uri = self.CreateObject(contents='foo')
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
+      stderr = self.RunGsUtil(['-m', 'setmeta', '-h', 'content-type:footype',
+                               suri(object_uri)], return_stderr=True)
+      self.assertIn('Estimated work for this command: objects: 1\n', stderr)
 
   def test_recursion_works(self):
     bucket_uri = self.CreateBucket()
