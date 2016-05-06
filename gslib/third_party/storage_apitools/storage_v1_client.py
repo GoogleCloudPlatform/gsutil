@@ -29,7 +29,7 @@ class StorageV1(base_api.BaseApiClient):
   MESSAGES_MODULE = messages
 
   _PACKAGE = u'storage'
-  _SCOPES = [u'https://www.googleapis.com/auth/devstorage.full_control', u'https://www.googleapis.com/auth/devstorage.read_only', u'https://www.googleapis.com/auth/devstorage.read_write']
+  _SCOPES = [u'https://www.googleapis.com/auth/cloud-platform', u'https://www.googleapis.com/auth/cloud-platform.read-only', u'https://www.googleapis.com/auth/devstorage.full_control', u'https://www.googleapis.com/auth/devstorage.read_only', u'https://www.googleapis.com/auth/devstorage.read_write']
   _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
@@ -41,6 +41,7 @@ class StorageV1(base_api.BaseApiClient):
       _USER_AGENT += ' %s' % os.environ.get('CLOUDSDK_VERSION')
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'
+  _API_KEY = None
 
   def __init__(self, url='', credentials=None,
                get_credentials=True, http=None, model=None,

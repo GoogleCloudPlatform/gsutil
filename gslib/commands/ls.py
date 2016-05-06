@@ -176,13 +176,15 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/ :
-            StorageClass:                 STANDARD
-            LocationConstraint:           US
+            Storage class:                STANDARD
+            Location constraint:          US
             Versioning enabled:           True
-            Logging:                      None
-            WebsiteConfiguration:         None
+            Logging configuration:        None
+            Website configuration:        None
             CORS configuration:           Present
             Lifecycle configuration:      None
+            Time created:                 Fri, 02 Mar 2012 19:25:17 GMT
+            Time updated:                 Fri, 02 Mar 2012 21:17:59 GMT
     [
       {
         "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
@@ -198,6 +200,9 @@ _DETAILED_HELP_TEXT = ("""
         "role": "OWNER"
       }
     ]
+
+  Note that the Time created and Time updated fields above are not available
+  with the (non-default) XML API.
 
 
 <B>OPTIONS</B>
@@ -291,6 +296,11 @@ class LsCommand(Command):
     fields['logging_config'] = 'Present' if bucket.logging else 'None'
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
+    if bucket.timeCreated:
+      fields['time_created'] = bucket.timeCreated.strftime(
+          '%a, %d %b %Y %H:%M:%S GMT')
+    if bucket.updated:
+      fields['updated'] = bucket.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
     # For field values that are multiline, add indenting to make it look
     # prettier.
@@ -305,16 +315,26 @@ class LsCommand(Command):
         new_value = '\n\t  ' + new_value
       fields[key] = new_value
 
-    print('{bucket} :\n'
-          '\tStorage class:\t\t\t{storage_class}\n'
-          '\tLocation constraint:\t\t{location_constraint}\n'
-          '\tVersioning enabled:\t\t{versioning}\n'
-          '\tLogging configuration:\t\t{logging_config}\n'
-          '\tWebsite configuration:\t\t{website_config}\n'
-          '\tCORS configuration: \t\t{cors_config}\n'
-          '\tLifecycle configuration:\t{lifecycle_config}\n'
-          '\tACL:\t\t\t\t{acl}\n'
-          '\tDefault ACL:\t\t\t{default_acl}'.format(**fields))
+    # Only display time-related properties if the given API returned them.
+    time_created_line = ''
+    time_updated_line = ''
+    if 'time_created' in fields:
+      time_created_line = '\tTime created:\t\t\t{time_created}\n'
+    if 'updated' in fields:
+      time_updated_line = '\tTime updated:\t\t\t{updated}\n'
+
+    print(('{bucket} :\n'
+           '\tStorage class:\t\t\t{storage_class}\n'
+           '\tLocation constraint:\t\t{location_constraint}\n'
+           '\tVersioning enabled:\t\t{versioning}\n'
+           '\tLogging configuration:\t\t{logging_config}\n'
+           '\tWebsite configuration:\t\t{website_config}\n'
+           '\tCORS configuration: \t\t{cors_config}\n'
+           '\tLifecycle configuration:\t{lifecycle_config}\n' +
+           time_created_line +
+           time_updated_line +
+           '\tACL:\t\t\t\t{acl}\n'
+           '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
       print('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
@@ -414,7 +434,7 @@ class LsCommand(Command):
       elif listing_style == ListingStyle.LONG_LONG:
         bucket_fields = ['location', 'storageClass', 'versioning', 'acl',
                          'defaultObjectAcl', 'website', 'logging', 'cors',
-                         'lifecycle']
+                         'lifecycle', 'timeCreated', 'updated']
       if storage_url.IsProvider():
         # Provider URL: use bucket wildcard to list buckets.
         for blr in self.WildcardIterator(
