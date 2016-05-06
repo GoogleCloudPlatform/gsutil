@@ -1146,15 +1146,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SequentialAndParallelTransfer
   def test_copy_unicode_non_ascii_filename(self):
-    key_uri = self.CreateObject(contents='foo')
-    # Make file large enough to cause a resumable upload (which hashes filename
-    # to construct tracker filename).
+    key_uri = self.CreateObject()
+    # Try with and without resumable upload threshold, to ensure that each
+    # scenario works. In particular, resumable uploads have tracker filename
+    # logic.
+    file_contents = 'x' * START_CALLBACK_PER_BYTES * 2
     fpath = self.CreateTempFile(file_name=u'Аудиоархив',
-                                contents='x' * 3 * 1024 * 1024)
-    fpath_bytes = fpath.encode(UTF8)
-    stderr = self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)],
-                            return_stderr=True)
-    self.assertIn('Copying file:', stderr)
+                                contents=file_contents)
+    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
+      fpath_bytes = fpath.encode(UTF8)
+      self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)], return_stderr=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      self.assertEquals(stdout, file_contents)
+    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
+                                str(START_CALLBACK_PER_BYTES * 3))]):
+      fpath_bytes = fpath.encode(UTF8)
+      self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)], return_stderr=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      self.assertEquals(stdout, file_contents)
 
   # Note: We originally one time implemented a test
   # (test_copy_invalid_unicode_filename) that invalid unicode filenames were
