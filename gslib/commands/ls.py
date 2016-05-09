@@ -147,7 +147,8 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/obj1:
-            Creation Time:      Fri, 02 Mar 2012 19:25:17 GMT
+            Creation time:      Fri, 02 Mar 2012 19:25:17 GMT
+            Update time:        Fri, 04 Mar 2012 11:39:24 GMT
             Size:               2276224
             Cache-Control:      private, max-age=0
             Content-Type:       application/x-executable
@@ -163,6 +164,9 @@ _DETAILED_HELP_TEXT = ("""
       }
     ]
     TOTAL: 1 objects, 2276224 bytes (2.17 MiB)
+
+  Note that the Update time field above is not available with the (non-default)
+  XML API.
 
   See also "gsutil help acl" for getting a more readable version of the ACL.
 
@@ -358,7 +362,7 @@ class LsCommand(Command):
       num_objs = 1
 
     timestamp = JSON_TIMESTAMP_RE.sub(
-        r'\1T\2Z', str(obj.updated).decode(UTF8).encode('ascii'))
+        r'\1T\2Z', str(obj.timeCreated).decode(UTF8).encode('ascii'))
     printstr = '%(size)10s  %(timestamp)s  %(url)s'
     encoded_etag = None
     encoded_metagen = None
@@ -471,7 +475,7 @@ class LsCommand(Command):
                                should_recurse=self.recursion_requested,
                                list_subdir_contents=self.list_subdir_contents)
         elif listing_style == ListingStyle.LONG:
-          bucket_listing_fields = ['name', 'updated', 'size']
+          bucket_listing_fields = ['name', 'timeCreated', 'updated', 'size']
           if self.all_versions:
             bucket_listing_fields.extend(['generation', 'metageneration'])
           if self.include_etag:

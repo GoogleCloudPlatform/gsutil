@@ -1235,10 +1235,10 @@ class BotoTranslation(CloudApi):
     metageneration = None
     if not fields or 'metageneration' in fields:
       metageneration = self._TranslateBotoKeyMetageneration(key)
-    updated = None
-    # Translation code to avoid a dependency on dateutil.
-    if not fields or 'updated' in fields:
-      updated = self._TranslateBotoKeyTimestamp(key)
+    time_created = None
+    if not fields or 'timeCreated' in fields:
+      # Translation code to avoid a dependency on dateutil.
+      time_created = self._TranslateBotoKeyTimestamp(key)
     etag = None
     if not fields or 'etag' in fields:
       etag = getattr(key, 'etag', None)
@@ -1295,7 +1295,7 @@ class BotoTranslation(CloudApi):
         generation=generation,
         metageneration=metageneration,
         componentCount=component_count,
-        updated=updated,
+        timeCreated=time_created,
         metadata=custom_metadata,
         mediaLink=media_link,
         storageClass=storage_class)

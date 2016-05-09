@@ -236,17 +236,17 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     blrs = set(
         u for u in self._test_wildcard_iterator(
             self.test_bucket0_uri.clone_replace_name('**')).IterAll(
-                bucket_listing_fields=['updated']))
+                bucket_listing_fields=['timeCreated']))
     self.assertTrue(len(blrs))
     for blr in blrs:
-      self.assertTrue(blr.root_object and blr.root_object.updated)
+      self.assertTrue(blr.root_object and blr.root_object.timeCreated)
     blrs = set(
         u for u in self._test_wildcard_iterator(
             self.test_bucket0_uri.clone_replace_name('**')).IterAll(
                 bucket_listing_fields=['generation']))
     self.assertTrue(len(blrs))
     for blr in blrs:
-      self.assertTrue(blr.root_object and not blr.root_object.updated)
+      self.assertTrue(blr.root_object and not blr.root_object.timeCreated)
 
 
 class FileIteratorTests(testcase.GsUtilUnitTestCase):

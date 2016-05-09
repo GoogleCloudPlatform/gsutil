@@ -776,8 +776,11 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     num_objs = 1
 
   print '%s:' % url_str.encode(UTF8)
+  if obj.timeCreated:
+    print '\tCreation time:\t\t%s' % obj.timeCreated.strftime(
+        '%a, %d %b %Y %H:%M:%S GMT')
   if obj.updated:
-    print '\tCreation time:\t\t%s' % obj.updated.strftime(
+    print '\tUpdate time:\t\t%s' % obj.updated.strftime(
         '%a, %d %b %Y %H:%M:%S GMT')
   if obj.cacheControl:
     print '\tCache-Control:\t\t%s' % obj.cacheControl

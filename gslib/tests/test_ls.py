@@ -188,6 +188,42 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertEqual('%s\n' % obj_uri, stdout)
     _Check1()
 
+  def test_one_object_with_l(self):
+    """Tests listing one object with -l."""
+    obj_uri = self.CreateObject(contents='foo')
+    stdout = self.RunGsUtil(['ls', '-l', suri(obj_uri)], return_stdout=True)
+    output_items = stdout.split()
+    self.assertTrue(output_items[0].isdigit())
+    # Throws exception if time string is not formatted correctly.
+    time_created = time.strptime(stdout.split()[1], '%Y-%m-%dT%H:%M:%SZ')
+    self.assertEqual(output_items[2], suri(obj_uri))
+
+  def test_one_object_with_L(self):
+    """Tests listing one object with -L."""
+    obj_uri = self.CreateObject(contents='foo')
+    # Ensure that creation and update don't take place in the same second.
+    time.sleep(2)
+    # Check that the creation time, rather than the updated time, is displayed.
+    self.RunGsUtil(['setmeta', '-h', 'x-goog-meta-foo:bar', suri(obj_uri)])
+    find_time_created_re = re.compile(
+        r'^\s*Creation time:\s+(?P<time_created_val>.+)$', re.MULTILINE)
+    find_time_updated_re = re.compile(
+        r'^\s*Update time:\s+(?P<time_updated_val>.+)$', re.MULTILINE)
+    stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
+    time_created_match = re.search(find_time_created_re, stdout)
+    time_updated_match = re.search(find_time_updated_re, stdout)
+    time_created = time_created_match.group('time_created_val')
+    self.assertIsNotNone(time_created)
+    time_created = time.strptime(time_created, '%a, %d %b %Y %H:%M:%S %Z')
+    if self.test_api == ApiSelector.XML:
+      # XML API has no concept of updated time.
+      self.assertIsNone(time_updated_match)
+    elif self.test_api == ApiSelector.JSON:
+      time_updated = time_updated_match.group('time_updated_val')
+      self.assertIsNotNone(time_updated)
+      time_updated = time.strptime(time_updated, '%a, %d %b %Y %H:%M:%S %Z')
+      self.assertGreater(time_updated, time_created)
+
   def test_subdir(self):
     """Tests listing a bucket subdirectory."""
     bucket_uri = self.CreateBucket(test_objects=1)
