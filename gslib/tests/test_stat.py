@@ -20,6 +20,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
@@ -43,6 +44,11 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   """Integration tests for stat command."""
 
   @SkipForS3('\'Archived time\' is a GS-specific response field.')
+  @SkipForXML(
+      'XML API only supports \'DeletedTime\' response field when making a '
+      'GET Bucket request to list all objects, which is heavy overhead when '
+      'the real intent is just a HEAD Object call.'
+  )
   def test_versioned_stat_output(self):
     """Tests stat output of an outdated object under version control."""
     bucket_uri = self.CreateVersionedBucket()

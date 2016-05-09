@@ -45,6 +45,7 @@ from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
+from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import DiscardMessagesQueue
 from gslib.util import IS_WINDOWS
@@ -53,6 +54,21 @@ from gslib.util import UTF8
 
 
 LOGGER = logging.getLogger('integration-test')
+
+# TODO: Replace tests which looks for test_api == ApiSelector.(XML|JSON) with
+# these decorators.
+def SkipForXML(reason):
+  if not USING_JSON_API:
+    return unittest.skip(reason)
+  else:
+    return lambda func: func
+
+
+def SkipForJSON(reason):
+  if USING_JSON_API:
+    return unittest.skip(reason)
+  else:
+    return lambda func: func
 
 
 def SkipForGS(reason):
