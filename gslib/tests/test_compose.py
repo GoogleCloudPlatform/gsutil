@@ -52,10 +52,10 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_too_few_fails(self):
     stderr = self.RunGsUtil(
-        ['compose', 'gs://b/component-obj', 'gs://b/composite-obj'],
+        ['compose', 'gs://b/composite-obj'],
         expected_status=1, return_stderr=True)
     self.assertIn(
-        'CommandException: "compose" requires at least 2 component objects.\n',
+        'CommandException: "compose" requires at least 1 component object.\n',
         stderr)
 
   def test_compose_between_buckets_fails(self):
@@ -79,6 +79,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.assertIn(expected_msg, stderr)
 
   def test_simple_compose(self):
+    self.check_n_ary_compose(1)
     self.check_n_ary_compose(2)
 
   def test_maximal_compose(self):

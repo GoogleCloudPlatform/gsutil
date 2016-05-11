@@ -31,7 +31,7 @@ MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32
 
 _SYNOPSIS = """
-  gsutil compose gs://bucket/obj1 gs://bucket/obj2 ... gs://bucket/composite
+  gsutil compose gs://bucket/obj1 [gs://bucket/obj2 ...] gs://bucket/composite
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -81,7 +81,7 @@ class ComposeCommand(Command):
       'compose',
       command_name_aliases=['concat'],
       usage_synopsis=_SYNOPSIS,
-      min_args=2,
+      min_args=1,
       max_args=MAX_COMPOSE_ARITY + 1,
       supported_sub_args='',
       # Not files, just object names without gs:// prefix.
@@ -155,8 +155,8 @@ class ComposeCommand(Command):
           raise CommandException('"compose" called with too many component '
                                  'objects. Limit is %d.' % MAX_COMPOSE_ARITY)
 
-    if len(components) < 2:
-      raise CommandException('"compose" requires at least 2 component objects.')
+    if not components:
+      raise CommandException('"compose" requires at least 1 component object.')
 
     dst_obj_metadata.contentType = self.gsutil_api.GetObjectMetadata(
         first_src_url.bucket_name, first_src_url.object_name,
@@ -165,7 +165,8 @@ class ComposeCommand(Command):
     preconditions = PreconditionsFromHeaders(self.headers or {})
 
     self.logger.info(
-        'Composing %s from %d component objects.', target_url, len(components))
+        'Composing %s from %d component object(s).',
+        target_url, len(components))
     self.gsutil_api.ComposeObject(
         components, dst_obj_metadata, preconditions=preconditions,
         provider=target_url.scheme, encryption_tuple=GetEncryptionTuple())
