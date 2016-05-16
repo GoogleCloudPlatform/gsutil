@@ -19,6 +19,7 @@ from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
+from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import DiscardMessagesQueue
 
@@ -46,19 +47,15 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
         self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
 
+class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
+
   def testExactlyOneInvalid(self):
+    bucket_uri = self.CreateBucket()
     with SetBotoConfigForTest([
         ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
         ('Credentials', 'gs_service_client_id', None),
-        ('Credentials', 'gs_service_key_file', None)]):
-      succeeded = False
-      try:
-        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
-        succeeded = True  # If we self.fail() here, the except below will catch
-      except:  # pylint: disable=bare-except
-        warning_messages = self.log_handler.messages['warning']
-        self.assertEquals(1, len(warning_messages))
-        self.assertIn('credentials are invalid', warning_messages[0])
-        self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, warning_messages[0])
-      if succeeded:
-        self.fail('Succeeded with invalid credentials, one configured.')
+        ('Credentials', 'gs_service_key_file', None)],
+                              use_existing_config=False):
+      stderr = self.RunGsUtil(['ls', suri(bucket_uri)], expected_status=1,
+                              return_stderr=True)
+      self.assertIn('credentials are invalid', stderr)

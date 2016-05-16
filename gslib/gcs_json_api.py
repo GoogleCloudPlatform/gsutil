@@ -20,22 +20,18 @@ from contextlib import contextmanager
 import httplib
 import json
 import logging
-import os
 import socket
 import ssl
 import time
 import traceback
 
-from apitools.base.py import credentials_lib
 from apitools.base.py import encoding
 from apitools.base.py import exceptions as apitools_exceptions
 from apitools.base.py import http_wrapper as apitools_http_wrapper
 from apitools.base.py import transfer as apitools_transfer
 from apitools.base.py.util import CalculateWaitForRetry
 
-import boto
 from boto import config
-from gcs_oauth2_boto_plugin import oauth2_helper
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -54,10 +50,10 @@ from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import ListToGetFields
 from gslib.cloud_api_helper import ValidateDstObjectMetadata
-from gslib.cred_types import CredTypes
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.encryption_helper import FindMatchingCryptoKey
-from gslib.exception import CommandException
+from gslib.gcs_json_credentials import CheckAndGetCredentials
+from gslib.gcs_json_credentials import GetCredentialStoreKeyDict
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
@@ -82,10 +78,8 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import AddAcceptEncodingGzipIfNeeded
-from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCredentialStoreFilename
-from gslib.util import GetGceCredentialCacheFilename
 from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import GetNewHttp
@@ -97,8 +91,7 @@ from gslib.util import WarnAfterManyRetriesHandler
 
 import httplib2
 import oauth2client
-from oauth2client import devshell
-from oauth2client import multistore_file
+from oauth2client.contrib import multistore_file
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
@@ -173,7 +166,7 @@ class GcsJsonApi(CloudApi):
         debug=debug, trace_token=trace_token, perf_trace_token=perf_trace_token)
     no_op_credentials = False
     if not credentials:
-      loaded_credentials = self._CheckAndGetCredentials()
+      loaded_credentials = CheckAndGetCredentials(logger)
 
       if not loaded_credentials:
         loaded_credentials = NoOpCredentials()
@@ -235,8 +228,8 @@ class GcsJsonApi(CloudApi):
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
 
-    credential_store_key_dict = self._GetCredentialStoreKeyDict(
-        self.credentials)
+    credential_store_key_dict = GetCredentialStoreKeyDict(self.credentials,
+                                                          self.api_version)
 
     self.credentials.set_store(
         multistore_file.get_credential_storage_custom_key(
@@ -271,134 +264,6 @@ class GcsJsonApi(CloudApi):
   def _AddPerfTraceTokenToHeaders(self, headers):
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
-
-  def _CheckAndGetCredentials(self):
-    configured_cred_types = []
-    try:
-      if self._HasOauth2UserAccountCreds():
-        configured_cred_types.append(CredTypes.OAUTH2_USER_ACCOUNT)
-      if self._HasOauth2ServiceAccountCreds():
-        configured_cred_types.append(CredTypes.OAUTH2_SERVICE_ACCOUNT)
-      if len(configured_cred_types) > 1:
-        # We only allow one set of configured credentials. Otherwise, we're
-        # choosing one arbitrarily, which can be very confusing to the user
-        # (e.g., if only one is authorized to perform some action) and can
-        # also mask errors.
-        # Because boto merges config files, GCE credentials show up by default
-        # for GCE VMs. We don't want to fail when a user creates a boto file
-        # with their own credentials, so in this case we'll use the OAuth2
-        # user credentials.
-        failed_cred_type = None
-        raise CommandException(
-            ('You have multiple types of configured credentials (%s), which is '
-             'not supported. One common way this happens is if you run gsutil '
-             'config to create credentials and later run gcloud auth, and '
-             'create a second set of credentials. Your boto config path is: '
-             '%s. For more help, see "gsutil help creds".')
-            % (configured_cred_types, GetBotoConfigFileList()))
-
-      failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
-      user_creds = self._GetOauth2UserAccountCreds()
-      failed_cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
-      service_account_creds = self._GetOauth2ServiceAccountCreds()
-      failed_cred_type = CredTypes.GCE
-      gce_creds = self._GetGceCreds()
-      failed_cred_type = CredTypes.DEVSHELL
-      devshell_creds = self._GetDevshellCreds()
-      return user_creds or service_account_creds or gce_creds or devshell_creds
-    except:  # pylint: disable=bare-except
-      # If we didn't actually try to authenticate because there were multiple
-      # types of configured credentials, don't emit this warning.
-      if failed_cred_type:
-        if self.logger.isEnabledFor(logging.DEBUG):
-          self.logger.debug(traceback.format_exc())
-        if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-          self.logger.warn(
-              'Your "%s" credentials are invalid. Please run\n'
-              '  $ gcloud auth login', failed_cred_type)
-        else:
-          self.logger.warn(
-              'Your "%s" credentials are invalid. For more help, see '
-              '"gsutil help creds", or re-run the gsutil config command (see '
-              '"gsutil help config").', failed_cred_type)
-
-      # If there's any set of configured credentials, we'll fail if they're
-      # invalid, rather than silently falling back to anonymous config (as
-      # boto does). That approach leads to much confusion if users don't
-      # realize their credentials are invalid.
-      raise
-
-  def _HasOauth2ServiceAccountCreds(self):
-    return config.has_option('Credentials', 'gs_service_key_file')
-
-  def _HasOauth2UserAccountCreds(self):
-    return config.has_option('Credentials', 'gs_oauth2_refresh_token')
-
-  def _HasGceCreds(self):
-    return config.has_option('GoogleCompute', 'service_account')
-
-  def _GetOauth2ServiceAccountCreds(self):
-    if self._HasOauth2ServiceAccountCreds():
-      return oauth2_helper.OAuth2ClientFromBotoConfig(
-          boto.config,
-          cred_type=CredTypes.OAUTH2_SERVICE_ACCOUNT).GetCredentials()
-
-  def _GetOauth2UserAccountCreds(self):
-    if self._HasOauth2UserAccountCreds():
-      return oauth2_helper.OAuth2ClientFromBotoConfig(
-          boto.config).GetCredentials()
-
-  def _GetGceCreds(self):
-    if self._HasGceCreds():
-      try:
-        return credentials_lib.GceAssertionCredentials(
-            service_account_name=config.get(
-                'GoogleCompute', 'service_account', 'default'),
-            cache_filename=GetGceCredentialCacheFilename())
-      except apitools_exceptions.ResourceUnavailableError, e:
-        if 'service account' in str(e) and 'does not exist' in str(e):
-          return None
-        raise
-
-  def _GetDevshellCreds(self):
-    try:
-      return devshell.DevshellCredentials()
-    except devshell.NoDevshellServer:
-      return None
-    except:
-      raise
-
-  def _GetCredentialStoreKeyDict(self, credentials):
-    """Disambiguates a credential for caching in a credential store.
-
-    Different credential types have different fields that identify them.
-    This function assembles relevant information in a dict and returns it.
-
-    Args:
-      credentials: An OAuth2Credentials object.
-
-    Returns:
-      Dict of relevant identifiers for credentials.
-    """
-    # TODO: If scopes ever become available in the credentials themselves,
-    # include them in the key dict.
-    key_dict = {'api_version': self.api_version}
-    # pylint: disable=protected-access
-    if isinstance(credentials, devshell.DevshellCredentials):
-      key_dict['user_email'] = credentials.user_email
-    elif isinstance(credentials,
-                    oauth2client.service_account._ServiceAccountCredentials):
-      key_dict['_service_account_email'] = credentials._service_account_email
-    elif isinstance(credentials,
-                    oauth2client.client.SignedJwtAssertionCredentials):
-      key_dict['service_account_name'] = credentials.service_account_name
-    elif isinstance(credentials, oauth2client.client.OAuth2Credentials):
-      if credentials.client_id and credentials.client_id != 'null':
-        key_dict['client_id'] = credentials.client_id
-      key_dict['refresh_token'] = credentials.refresh_token
-    # pylint: enable=protected-access
-
-    return key_dict
 
   def _GetNewDownloadHttp(self):
     return GetNewHttp(http_class=HttpWithDownloadStream)

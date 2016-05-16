@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 from boto.auth_handler import AuthHandler
 from boto.auth_handler import NotReadyToAuthenticate
-import oauth2client.devshell as devshell
+import oauth2client.contrib.devshell as devshell
 
 
 class DevshellAuth(AuthHandler):

@@ -862,10 +862,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                '-D', suri(key_uri), suri(bucket2_uri)],
                               expected_status=1, return_stderr=True)
-      # Should have two exception traces; one from the download thread and
-      # one from the upload thread.
+      # Should have three exception traces; one from the download thread and
+      # two from the upload thread (expection message is repeated in main's
+      # _OutputAndExit).
       self.assertEqual(stderr.count(
-          'ResumableDownloadException: Artifically halting download'), 2)
+          'ResumableDownloadException: Artifically halting download'), 3)
 
   def test_seek_ahead_upload_cp(self):
     """Tests that the seek-ahead iterator estimates total upload work."""

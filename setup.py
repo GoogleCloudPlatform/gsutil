@@ -37,10 +37,10 @@ management tasks, including:
 requires = [
     'boto==2.39.0',
     'crcmod>=1.7',
-    'gcs-oauth2-boto-plugin>=1.12',
+    'gcs-oauth2-boto-plugin>=1.13',
     'google-apitools==0.5.3',
     'httplib2>=0.8',
-    'oauth2client==1.5.2',
+    'oauth2client==2.2.0',
     'pyOpenSSL>=0.13',
     'python-gflags>=2.0',
     'retry_decorator>=1.0.0',

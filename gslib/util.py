@@ -319,6 +319,27 @@ def GetGsutilStateDir():
   return config_file_dir
 
 
+def GetGsutilClientIdAndSecret():
+  """Returns a tuple of the gsutil OAuth2 client ID and secret.
+
+  Google OAuth2 clients always have a secret, even if the client is an installed
+  application/utility such as gsutil.  Of course, in such cases the "secret" is
+  actually publicly known; security depends entirely on the secrecy of refresh
+  tokens, which effectively become bearer tokens.
+
+  Returns:
+    Tuple of strings (client ID, secret).
+  """
+
+  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    # Cloud SDK installs have a separate client ID / secret.
+    return ('32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
+            'ZmssLNjJy2998hD4CTg2ejr2')                # Cloud SDK secret
+
+  return ('909320924072.apps.googleusercontent.com',   # gsutil client ID
+          'p3RlpR10xMFh9ZXBS/ZNLYUu')                  # gsutil secret
+
+
 def GetCredentialStoreFilename():
   return os.path.join(GetGsutilStateDir(), 'credstore')
 

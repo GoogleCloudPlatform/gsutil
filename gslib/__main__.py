@@ -66,6 +66,7 @@ from gslib.util import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
 from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
+from gslib.util import GetGsutilClientIdAndSecret
 from gslib.util import GsutilStreamHandler
 from gslib.util import ProxyInfoFromEnvironmentVar
 from gslib.util import UTF8
@@ -73,16 +74,6 @@ from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
 
-GSUTIL_CLIENT_ID = '909320924072.apps.googleusercontent.com'
-# Google OAuth2 clients always have a secret, even if the client is an installed
-# application/utility such as gsutil.  Of course, in such cases the "secret" is
-# actually publicly known; security depends entirely on the secrecy of refresh
-# tokens, which effectively become bearer tokens.
-GSUTIL_CLIENT_NOTSOSECRET = 'p3RlpR10xMFh9ZXBS/ZNLYUu'
-if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-  # Cloud SDK installs have a separate client ID / secret.
-  GSUTIL_CLIENT_ID = '32555940559.apps.googleusercontent.com'
-  GSUTIL_CLIENT_NOTSOSECRET = 'ZmssLNjJy2998hD4CTg2ejr2'
 
 CONFIG_KEYS_TO_REDACT = ['proxy', 'proxy_port', 'proxy_user', 'proxy_pass']
 
@@ -153,8 +144,8 @@ def _OutputAndExit(message):
   """
   if debug >= DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
-    err = ('DEBUG: Exception stack trace:\n    %s\n' %
-           re.sub('\\n', '\n    ', stack_trace))
+    err = ('DEBUG: Exception stack trace:\n    %s\n%s\n' %
+           (re.sub('\\n', '\n    ', stack_trace), message))
   else:
     err = '%s\n' % message
   try:
@@ -221,8 +212,9 @@ def main():
   try:
     # pylint: disable=unused-import,g-import-not-at-top
     import gcs_oauth2_boto_plugin
+    gsutil_client_id, gsutil_client_secret = GetGsutilClientIdAndSecret()
     gcs_oauth2_boto_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
-        GSUTIL_CLIENT_ID, GSUTIL_CLIENT_NOTSOSECRET)
+        gsutil_client_id, gsutil_client_secret)
     gcs_oauth2_boto_plugin.oauth2_helper.SetLock(CreateLock())
     credentials_lib.SetCredentialsCacheFileLock(CreateLock())
   except ImportError:
@@ -613,6 +605,15 @@ def _RunNamedCommandAndHandleExceptions(
     _OutputAndExit(e)
   except ServiceException as e:
     _OutputAndExit(e)
+  except oauth2client.client.HttpAccessTokenRefreshError as e:
+    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      _OutputAndExit(
+          'Your credentials are invalid. Please run\n$ gcloud auth login')
+    else:
+      _OutputAndExit(
+          'Your credentials are invalid. For more help, see '
+          '"gsutil help creds", or re-run the gsutil config command (see '
+          '"gsutil help config").')
   except apitools_exceptions.HttpError as e:
     # These should usually be retried by the underlying implementation or
     # wrapped by CloudApi ServiceExceptions, but if we do get them,
