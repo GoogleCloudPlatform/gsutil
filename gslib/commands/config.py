@@ -45,8 +45,8 @@ from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.sig_handling import RegisterSignalHandler
-from gslib.util import EIGHT_MIB
 from gslib.util import IS_WINDOWS
+from gslib.util import RESUMABLE_THRESHOLD_B
 
 from httplib2 import ServerNotFoundError
 from oauth2client.client import HAS_CRYPTO
@@ -546,7 +546,7 @@ content_language = en
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
        'hash_always': CHECK_HASH_ALWAYS,
        'hash_never': CHECK_HASH_NEVER,
-       'resumable_threshold': EIGHT_MIB,
+       'resumable_threshold': RESUMABLE_THRESHOLD_B,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
        'parallel_composite_upload_threshold': (

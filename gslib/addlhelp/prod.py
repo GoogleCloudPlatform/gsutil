@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from gslib.help_provider import HelpProvider
+from gslib.util import RESUMABLE_THRESHOLD_MIB
 
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
@@ -32,7 +33,7 @@ _DETAILED_HELP_TEXT = ("""
   and how your script needs to be implemented around this mechanism to work
   reliably. gsutil uses resumable transfer support when you attempt to download
   to a file of any size or to upload a file larger than a configurable
-  threshold (by default, this threshold is 2 MiB). If a transfer fails
+  threshold (by default, this threshold is %d MiB). If a transfer fails
   partway through (e.g., because of an intermittent network problem), gsutil
   uses a truncated randomized binary exponential backoff-and-retry strategy
   that by default will retry transfers up to 23 times over a 10 minute period
@@ -130,7 +131,7 @@ _DETAILED_HELP_TEXT = ("""
      speed, available memory, CPU load, and other conditions, this may or may
      not be optimal. Try experimenting with higher or lower numbers of threads
      to find the best number of threads for your environment.
-""")
+""" % RESUMABLE_THRESHOLD_MIB)
 
 
 class CommandOptions(HelpProvider):

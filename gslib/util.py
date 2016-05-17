@@ -96,6 +96,8 @@ EIGHT_MIB = 8 * ONE_MIB
 TEN_MIB = 10 * ONE_MIB
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 _DEFAULT_LINES = 25
+RESUMABLE_THRESHOLD_MIB = 8
+RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
 
 # By default, the timeout for SSL read errors is infinite. This could
 # cause gsutil to hang on network disconnect, so pick a more reasonable
