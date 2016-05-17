@@ -122,7 +122,7 @@ class CorsCommand(Command):
       help_name_aliases=['getcors', 'setcors', 'cross-origin'],
       help_type='command_help',
       help_one_line_summary=(
-          'Set a CORS JSON document for one or more buckets'),
+          'Get or set a CORS JSON document for one or more buckets'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
   )
