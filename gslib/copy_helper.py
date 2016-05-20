@@ -228,8 +228,8 @@ PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD = 150 * 1024 * 1024
 S3_MAX_UPLOAD_SIZE = 5 * 1024 * 1024 * 1024
 
 
-# TODO: Create a multiprocessing framework value allocator, then use it instead
-# of a dict.
+# TODO: Create a message class that serializes posting this message once
+# through the UI's global status queue.
 global suggested_sliced_transfers, suggested_sliced_transfers_lock
 suggested_sliced_transfers = (
     AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
@@ -1810,7 +1810,7 @@ def _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
         logger.info('\n'.join(textwrap.wrap(
             '==> NOTE: You are downloading one or more large file(s), which '
             'would run significantly faster if you enabled sliced object '
-            'uploads. This feature is enabled by default but requires that '
+            'downloads. This feature is enabled by default but requires that '
             'compiled crcmod be installed (see "gsutil help crcmod").')) + '\n')
         suggested_sliced_transfers['suggested'] = True
 
