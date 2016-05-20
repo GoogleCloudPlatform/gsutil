@@ -82,6 +82,7 @@ class SeekAheadThread(threading.Thread):
     self.cancel_event = cancel_event
     # For unit-testing only; use cancel_event to stop the thread.
     self.terminate = False
+
     self.start()
 
   def run(self):
@@ -97,6 +98,9 @@ class SeekAheadThread(threading.Thread):
           return
       num_objects += seek_ahead_result.est_num_ops
       num_data_bytes += seek_ahead_result.data_bytes
+
+    if self.cancel_event.isSet():
+      return
 
     # TODO: Convert this and other status messages to proper messages,
     # including types so that we can reason about time remaining.

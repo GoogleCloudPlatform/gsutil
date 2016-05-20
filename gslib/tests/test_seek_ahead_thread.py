@@ -74,10 +74,6 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
         (noplp, 1, noplp),
         (noplp * 2, noplp + 1, noplp * 2)):
 
-      # If the thread is cancelled after it lists the final page of results,
-      # it should instead complete and post a summary message.
-      expect_summary = (expected_iterations == num_iterations)
-
       cancel_event = threading.Event()
       status_queue = Queue.Queue()
 
@@ -98,10 +94,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
           '%s results, expected: %s results.' %
           (num_iterations_before_cancel, seek_ahead_iterator.iterated_results,
            expected_iterations))
-      if expect_summary and status_queue.empty():
-        self.fail('Status queue empty but SeekAheadThread should have '
-                  'completed prior to cancellation.')
-      if not expect_summary and not status_queue.empty():
+      if not status_queue.empty():
         self.fail('Status queue should be empty but contains message: %s' %
                   status_queue.get())
 

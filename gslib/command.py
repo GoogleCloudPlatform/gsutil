@@ -1807,8 +1807,6 @@ class ProducerThread(threading.Thread):
     self.unknown_exception = None
     self.iterator_exception = None
     self.seek_ahead_iterator = seek_ahead_iterator
-    self.seek_ahead_thread_considered = False
-    self.seek_ahead_thread_cancel_event = None
     self.start()
 
   def run(self):
@@ -1816,6 +1814,9 @@ class ProducerThread(threading.Thread):
     cur_task = None
     last_task = None
     task_estimation_threshold = None
+    seek_ahead_thread = None
+    seek_ahead_thread_cancel_event = None
+    seek_ahead_thread_considered = False
     try:
       args_iterator = iter(self.args_iterator)
       while True:
@@ -1841,24 +1842,24 @@ class ProducerThread(threading.Thread):
         if self.arg_checker(self.cls, args):
           num_tasks += 1
 
-          if not self.seek_ahead_thread_considered:
+          if not seek_ahead_thread_considered:
             if task_estimation_threshold is None:
               task_estimation_threshold = _GetTaskEstimationThreshold()
             if task_estimation_threshold <= 0:
               # Disable the seek-ahead thread (never start it).
-              self.seek_ahead_thread_considered = True
+              seek_ahead_thread_considered = True
             elif num_tasks >= task_estimation_threshold:
               if self.seek_ahead_iterator:
-                self.seek_ahead_thread_cancel_event = threading.Event()
+                seek_ahead_thread_cancel_event = threading.Event()
                 seek_ahead_thread = _StartSeekAheadThread(
                     self.seek_ahead_iterator,
-                    self.seek_ahead_thread_cancel_event)
+                    seek_ahead_thread_cancel_event)
                 # For integration testing only, force estimation to complete
                 # prior to producing further results.
                 if boto.config.get('GSUtil', 'task_estimation_force', None):
-                  seek_ahead_thread.join()
+                  seek_ahead_thread.join(timeout=60)
 
-              self.seek_ahead_thread_considered = True
+              seek_ahead_thread_considered = True
 
           last_task = cur_task
           cur_task = Task(self.func, args, self.caller_id,
@@ -1885,13 +1886,16 @@ class ProducerThread(threading.Thread):
                         None, None, None, None)
       self.task_queue.put(cur_task)
 
-      # If the seek ahead thread is still running, cancel it since we've
-      # enumerated all of the tasks already. We don't want to block command
-      # completion on an estimate that has become meaningless, or, worse yet,
-      # tear down the underlying APIs on command exit while this thread is
-      # still running.
-      if self.seek_ahead_thread_cancel_event is not None:
-        self.seek_ahead_thread_cancel_event.set()
+      # If the seek ahead thread is still running, cancel it and wait for it
+      # to exit since we've enumerated all of the tasks already. We don't want
+      # to delay command completion on an estimate that has become meaningless.
+      # However, we must wait for the seek ahead thread to exit gracefully
+      # after cancellation. Otherwise command exit might tear down the
+      # underlying multiprocessing status queue that the seek ahead thread uses
+      # while it is still running.
+      if seek_ahead_thread is not None:
+        seek_ahead_thread_cancel_event.set()
+        seek_ahead_thread.join()
 
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.
