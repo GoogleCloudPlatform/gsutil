@@ -93,6 +93,7 @@ from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
 from gslib.util import JsonResumableChunkSizeDefined
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.util import WarnAfterManyRetriesHandler
 
 import httplib2
 import oauth2client
@@ -259,6 +260,7 @@ class GcsJsonApi(CloudApi):
         additional_http_headers=additional_http_headers)
     self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
+    self.api_client.retry_func = WarnAfterManyRetriesHandler
 
     if no_op_credentials:
       # This API key is not secret and is used to identify gsutil during

@@ -432,7 +432,8 @@ class Object(_messages.Message):
     contentDisposition: Content-Disposition of the object data.
     contentEncoding: Content-Encoding of the object data.
     contentLanguage: Content-Language of the object data.
-    contentType: Content-Type of the object data.
+    contentType: Content-Type of the object data. If contentType is not
+      specified, object downloads will be served as application/octet-stream.
     crc32c: CRC32c checksum, as described in RFC 4960, Appendix B; encoded
       using base64 in big-endian byte order. For more information about using
       the CRC32c checksum, see Hashes and ETags: Best Practices.

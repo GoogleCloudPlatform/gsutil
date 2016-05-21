@@ -27,6 +27,7 @@ class StorageV1(base_api.BaseApiClient):
   """Generated client library for service storage version v1."""
 
   MESSAGES_MODULE = messages
+  BASE_URL = u'https://www.googleapis.com/storage/v1/'
 
   _PACKAGE = u'storage'
   _SCOPES = [u'https://www.googleapis.com/auth/cloud-platform', u'https://www.googleapis.com/auth/cloud-platform.read-only', u'https://www.googleapis.com/auth/devstorage.full_control', u'https://www.googleapis.com/auth/devstorage.read_only', u'https://www.googleapis.com/auth/devstorage.read_write']
@@ -49,7 +50,7 @@ class StorageV1(base_api.BaseApiClient):
                credentials_args=None, default_global_params=None,
                version=_VERSION, additional_http_headers=None):
     """Create a new storage handle."""
-    url = url or u'https://www.googleapis.com/storage/v1/'
+    url = url or self.BASE_URL
     super(StorageV1, self).__init__(
         url, credentials=credentials,
         get_credentials=get_credentials, http=http, model=model,
@@ -914,7 +915,7 @@ class StorageV1(base_api.BaseApiClient):
           download=download)
 
     def Copy(self, request, global_params=None, download=None):
-      """Copies an object to a specified location. Optionally overrides metadata.
+      """Copies a source object to a destination object. Optionally overrides metadata.
 
       Args:
         request: (StorageObjectsCopyRequest) input message

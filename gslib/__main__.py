@@ -312,6 +312,9 @@ def main():
         trace_token = a
       elif o == '--testexceptiontraces':  # Hidden flag for integration tests.
         test_exception_traces = True
+        # Avoid printing extra warnings to stderr regarding long retries by
+        # setting the threshold very high.
+        gslib.util.LONG_RETRY_WARN_SEC = 3600
       elif o in ('-o', '--option'):
         (opt_section_name, _, opt_value) = a.partition('=')
         if not opt_section_name:

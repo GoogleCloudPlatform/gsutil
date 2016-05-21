@@ -23,11 +23,12 @@
 
 from __future__ import absolute_import
 
-import httplib2
 from gslib import util
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.util import CompareVersions
+import httplib2
+import mock
 
 
 class TestUtil(testcase.GsUtilUnitTestCase):
@@ -209,3 +210,25 @@ class TestUtil(testcase.GsUtilUnitTestCase):
             self._AssertProxyInfosEqual(
                 util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
+
+  # We want to make sure the wrapped function is called without executing it.
+  @mock.patch.object(util.http_wrapper,
+                     'HandleExceptionsAndRebuildHttpConnections')
+  @mock.patch.object(util.logging, 'info')
+  def test_WarnAfterManyRetriesHandler(self, mock_log_info_fn, mock_wrapped_fn):
+    # The only ExceptionRetryArgs attributes that the function cares about are
+    # num_retries and total_wait_sec; we can pass None for the other values.
+    retry_args_over_threshold = util.http_wrapper.ExceptionRetryArgs(
+        None, None, None, 3, None, util.LONG_RETRY_WARN_SEC + 1)
+    retry_args_under_threshold = util.http_wrapper.ExceptionRetryArgs(
+        None, None, None, 2, None, util.LONG_RETRY_WARN_SEC - 1)
+
+    util.WarnAfterManyRetriesHandler(retry_args_under_threshold)
+    self.assertTrue(mock_wrapped_fn.called)
+    # Check that we didn't emit a message.
+    self.assertFalse(mock_log_info_fn.called)
+
+    util.WarnAfterManyRetriesHandler(retry_args_over_threshold)
+    self.assertEqual(mock_wrapped_fn.call_count, 2)
+    # Check that we did emit a message.
+    self.assertTrue(mock_log_info_fn.called)

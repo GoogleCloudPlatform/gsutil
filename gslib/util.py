@@ -33,6 +33,8 @@ import threading
 import traceback
 import xml.etree.ElementTree as ElementTree
 
+from apitools.base.py import http_wrapper
+
 import boto
 from boto import config
 import boto.auth
@@ -140,6 +142,9 @@ _EXP_STRINGS = [
     (50, 'PiB', 'Pibit', 'P'),
     (60, 'EiB', 'Eibit', 'E'),
 ]
+
+# Number of seconds to wait before printing a long retry warning message.
+LONG_RETRY_WARN_SEC = 10
 
 
 global manager  # pylint: disable=global-at-module-level
@@ -1241,6 +1246,22 @@ def FixWindowsEncodingIfNeeded(input_str):
     return input_str.decode(WINDOWS_1252).encode(UTF8)
   else:
     return input_str
+
+
+def WarnAfterManyRetriesHandler(retry_args):
+  """Exception handler for http failures in Apitools.
+
+  If the user has had to wait several seconds since their first request,
+  print a progress message to the terminal to let them know we're still
+  retrying, then perform the default retry logic.
+
+  Args:
+    retry_args: An apitools ExceptionRetryArgs tuple.
+  """
+  if retry_args.total_wait_sec >= LONG_RETRY_WARN_SEC:
+    logging.info(
+        'Retrying request, attempt #%d...', retry_args.num_retries)
+  http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
 
 
 class GsutilStreamHandler(logging.StreamHandler):

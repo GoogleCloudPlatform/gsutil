@@ -43,3 +43,6 @@
 [submodule "third_party/pyasn1-modules"]
 	path = third_party/pyasn1-modules
 	url = https://github.com/gsutil-mirrors/pyasn1-modules.git
+[submodule "third_party/mock"]
+	path = third_party/mock
+	url = git://github.com/houglum/mock.git

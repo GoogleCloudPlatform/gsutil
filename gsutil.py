@@ -70,6 +70,7 @@ THIRD_PARTY_LIBS = [
     ('retry-decorator', ''),
     ('six', ''),
     ('socksipy-branch', ''),
+    ('mock', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):

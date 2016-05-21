@@ -38,7 +38,7 @@ requires = [
     'boto==2.39.0',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.12',
-    'google-apitools==0.5.2',
+    'google-apitools==0.5.3',
     'httplib2>=0.8',
     'oauth2client==1.5.2',
     'pyOpenSSL>=0.13',
@@ -48,6 +48,8 @@ requires = [
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',
+    # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
+    'mock==2.0.0',
 ]
 
 dependency_links = [
