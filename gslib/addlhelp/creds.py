@@ -119,7 +119,7 @@ _DETAILED_HELP_TEXT = ("""
 
     To set up a service account for use with "gsutil config -e" or "gcloud auth
     activate-service-account", see:
-      https://developers.google.com/console/help/new/#serviceaccounts
+     https://cloud.google.com/storage/docs/authentication#generating-a-private-key 
 
     For more details about OAuth2 service accounts, see:
       https://developers.google.com/accounts/docs/OAuth2ServiceAccount

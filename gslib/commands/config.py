@@ -104,7 +104,7 @@ _DETAILED_HELP_TEXT = ("""
   When you run gsutil config -e, you will be prompted for your service account
   email address and the path to your private key file. To get this data,
   follow the instructions on
-  `Service Accounts <https://developers.google.com/console/help/new/#serviceaccounts>`_.
+  `Service Accounts <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_.
 
   Note that your service account will NOT be considered an Owner for the
   purposes of API access (see "gsutil help creds" for more information about
