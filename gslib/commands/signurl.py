@@ -60,7 +60,8 @@ except ImportError:
 
 
 _SYNOPSIS = """
-  gsutil signurl [-c] [-d] [-m] [-p] keystore-file url...
+  gsutil signurl [-c content_type] [-d duration] [-m http_method]
+                 [-p password] keystore-file url...
 """
 
 _DETAILED_HELP_TEXT = ("""
