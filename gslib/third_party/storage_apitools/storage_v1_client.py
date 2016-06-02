@@ -39,7 +39,7 @@ class StorageV1(base_api.BaseApiClient):
   if os.environ.get('CLOUDSDK_WRAPPER') == '1':
     _USER_AGENT += ' google-cloud-sdk'
     if os.environ.get('CLOUDSDK_VERSION'):
-      _USER_AGENT += ' %s' % os.environ.get('CLOUDSDK_VERSION')
+      _USER_AGENT += '/%s' % os.environ.get('CLOUDSDK_VERSION')
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'
   _API_KEY = None

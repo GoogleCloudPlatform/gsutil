@@ -44,7 +44,7 @@ boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
 if os.environ.get('CLOUDSDK_WRAPPER') == '1':
   boto.UserAgent += ' google-cloud-sdk'
   if os.environ.get('CLOUDSDK_VERSION'):
-    boto.UserAgent += ' %s' % os.environ.get('CLOUDSDK_VERSION')
+    boto.UserAgent += '/%s' % os.environ.get('CLOUDSDK_VERSION')
 
 # pylint: disable=g-bad-import-order
 # pylint: disable=g-import-not-at-top
