@@ -58,6 +58,9 @@ warnings.filterwarnings('ignore', category=UserWarning,
 # the directory under third_party and the second element is the subdirectory
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
+    ('mock', ''),  # mock and dependencies must be before boto.
+    ('pbr', ''),  # mock dependency
+    ('funcsigs', ''),  # mock dependency
     ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
     ('pyasn1', ''),  # oauth2client dependency
     ('pyasn1-modules', ''),  # oauth2client dependency
