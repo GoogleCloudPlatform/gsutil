@@ -38,10 +38,6 @@ _DETAILED_HELP_TEXT = ("""
   Each key is a RFC 4648 Base64-encoded string of 256 bits of data for use
   with the AES256 encryption algorithm.
 
-  Note: As of 2016 Mar 23, the customer-supplied encryption key feature is
-  currently in beta, and is not covered by any SLA or deprecation policy and
-  may be subject to backward-incompatible changes.
-
 
 <B>ENCRYPTION BEHAVIOR</B>
   A single encryption_key may be specified in the .boto configuration file,
