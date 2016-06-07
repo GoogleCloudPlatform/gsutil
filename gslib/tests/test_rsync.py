@@ -111,6 +111,32 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   # reasonable test coverage because the -d handling it src/dest URI-type
   # independent, and keeps the test case combinations more manageable.
 
+  def test_invalid_mtime_in_bucket(self):
+    """Tests that an exception is thrown if mtime cannot be cast as a long."""
+    # Create 1 bucket with 1 file present with mtime set as a string of
+    # non-numeric characters, and as a number.
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
+                      contents='obj1', mtime='xyz')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj2',
+                      contents='obj2', mtime='123')
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stderr = self.RunGsUtil(['rsync', '-x', 'obj2', suri(bucket1_uri),
+                               suri(bucket2_uri)], return_stderr=True)
+      self.assertIn('obj1 has an invalid mtime in its metadata', stderr)
+    _Check1()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      stderr = self.RunGsUtil(['rsync', '-x', 'obj1', suri(bucket1_uri),
+                               suri(bucket2_uri)], return_stderr=True)
+      self.assertNotIn('obj2 has an invalid mtime in its metadata', stderr)
+    _Check2()
+
   def test_bucket_to_bucket(self):
     """Tests that flat and recursive rsync between 2 buckets works correctly."""
     # Create 2 buckets with 1 overlapping object, 1 extra object at root level

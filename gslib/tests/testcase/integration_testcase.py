@@ -49,11 +49,13 @@ from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import DiscardMessagesQueue
 from gslib.util import IS_WINDOWS
+from gslib.util import MTIME_ATTR
 from gslib.util import Retry
 from gslib.util import UTF8
 
 
 LOGGER = logging.getLogger('integration-test')
+
 
 # TODO: Replace tests which looks for test_api == ApiSelector.(XML|JSON) with
 # these decorators.
@@ -304,7 +306,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None,
-                   prefer_json_api=False, encryption_key=None):
+                   prefer_json_api=False, encryption_key=None, mtime=None):
     """Creates a test object.
 
     Args:
@@ -318,6 +320,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       prefer_json_api: If true, use the JSON creation functions where possible.
       encryption_key: AES256 encryption key to use when creating the object,
           if any.
+      mtime: The modification time of the file in POSIX time (seconds since
+             UTC 1970-01-01). If not specified, this defaults to the current
+             system time.
 
     Returns:
       A StorageUri for the created object.
@@ -330,7 +335,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       json_object = self.CreateObjectJson(contents=contents,
                                           bucket_name=bucket_uri.bucket_name,
                                           object_name=object_name,
-                                          encryption_key=encryption_key)
+                                          encryption_key=encryption_key,
+                                          mtime=mtime)
       object_uri = bucket_uri.clone_replace_name(object_name)
       # pylint: disable=protected-access
       # Need to update the StorageUri with the correct values while
@@ -350,6 +356,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
       key_uri.set_contents_from_string(contents)
+    if mtime is not None:
+      key_uri.set_metadata({MTIME_ATTR: mtime}, {}, True)
     return key_uri
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
@@ -390,7 +398,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return bucket
 
   def CreateObjectJson(self, contents, bucket_name=None, object_name=None,
-                       encryption_key=None):
+                       encryption_key=None, mtime=None):
     """Creates a test object (GCS provider only) using the JSON API.
 
     Args:
@@ -401,14 +409,24 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    test object name is constructed.
       encryption_key: AES256 encryption key to use when creating the object,
           if any.
+      mtime: The modification time of the file in POSIX time (seconds since
+             UTC 1970-01-01). If not specified, this defaults to the current
+             system time.
 
     Returns:
       An apitools Object for the created object.
     """
     bucket_name = bucket_name or self.CreateBucketJson().name
     object_name = object_name or self.MakeTempName('obj')
+    custom_metadata = apitools_messages.Object.MetadataValue(
+        additionalProperties=[])
+    if mtime is not None:
+      custom_metadata.additionalProperties.append(
+          apitools_messages.Object.MetadataValue.AdditionalProperty(
+              key=MTIME_ATTR, value=str(mtime)))
     object_metadata = apitools_messages.Object(
         name=object_name,
+        metadata=custom_metadata,
         bucket=bucket_name,
         contentType='application/octet-stream')
     encryption_tuple = None

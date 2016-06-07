@@ -120,7 +120,8 @@ class GsUtilTestCase(unittest.TestCase):
       self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents='test %d' % i)
     return tmpdir
 
-  def CreateTempFile(self, tmpdir=None, contents=None, file_name=None):
+  def CreateTempFile(self, tmpdir=None, contents=None, file_name=None,
+                     mtime=None):
     """Creates a temporary file on disk.
 
     Args:
@@ -132,6 +133,9 @@ class GsUtilTestCase(unittest.TestCase):
                  test file name is constructed. This can also be a tuple, where
                  ('dir', 'foo') means to create a file named 'foo' inside a
                  subdirectory named 'dir'.
+      mtime: The modification time of the file in POSIX time (seconds since
+             UTC 1970-01-01). If not specified, this defaults to the current
+             system time.
 
     Returns:
       The path to the new temporary file.
@@ -149,4 +153,7 @@ class GsUtilTestCase(unittest.TestCase):
       contents = (contents if contents is not None
                   else self.MakeTempName('contents'))
       f.write(contents)
+    if mtime is not None:
+      # Set the atime and mtime to be the same.
+      os.utime(fpath, (mtime, mtime))
     return fpath

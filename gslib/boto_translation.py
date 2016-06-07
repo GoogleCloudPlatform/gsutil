@@ -1216,7 +1216,8 @@ class BotoTranslation(CloudApi):
       apitools Object corresponding to key.
     """
     custom_metadata = None
-    if not fields or 'metadata' in fields:
+    if not fields or 'metadata' in fields or len(
+        [field for field in fields if field.startswith('metadata/')]) >= 1:
       custom_metadata = self._TranslateBotoKeyCustomMetadata(key)
     cache_control = None
     if not fields or 'cacheControl' in fields:

@@ -125,6 +125,7 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
+from gslib.util import MTIME_ATTR
 from gslib.util import ObjectIsGzipEncoded
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
@@ -2557,6 +2558,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
       os.unlink(final_file_name)
     os.rename(file_name,
               final_file_name)
+    # TODO: Set mtime for downloaded files.
 
   if 'md5' in local_hashes:
     return local_hashes['md5']
@@ -2697,7 +2699,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
 
 def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
-                                 preserve_acl):
+                                 preserve_acl, is_rsync=False):
   """Determines the metadata fields needed for a copy operation.
 
   This function returns the fields we will need to successfully copy any
@@ -2719,6 +2721,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     skip_unsupported_objects: if true, get metadata for skipping unsupported
         object types.
     preserve_acl: if true, get object ACL.
+    is_rsync: if true, the calling function is rsync. Determines if metadata is
+              needed to verify download.
 
   Returns:
     List of necessary field metadata field names.
@@ -2729,9 +2733,9 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     # If we're not modifying or overriding any of the fields, we can get
     # away without retrieving the object metadata because the copy
     # operation can succeed with just the destination bucket and object
-    # name.  But if we are sending any metadata, the JSON API will expect a
-    # complete object resource.  Since we want metadata like the object size
-    # for our own tracking, we just get all of the metadata here.
+    # name. But if we are sending any metadata, the JSON API will expect a
+    # complete object resource. Since we want metadata like the object size for
+    # our own tracking, we just get all of the metadata here.
     src_obj_fields = ['cacheControl', 'componentCount',
                       'contentDisposition', 'contentEncoding',
                       'contentLanguage', 'contentType', 'crc32c',
@@ -2746,7 +2750,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     src_obj_fields = ['crc32c', 'contentEncoding', 'contentType',
                       'customerEncryption', 'etag', 'mediaLink', 'md5Hash',
                       'size', 'generation']
-
+    if is_rsync:
+      src_obj_fields.append('metadata/%s' % MTIME_ATTR)
   if skip_unsupported_objects:
     src_obj_fields.append('storageClass')
 
@@ -2923,6 +2928,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
       src_obj_metadata.name = src_url.object_name
       src_obj_metadata.bucket = src_url.bucket_name
     else:
+      # TODO: Copy metadata if available.
       _SetContentTypeFromFile(src_url, dst_obj_metadata)
   else:
     # Files don't have Cloud API metadata.

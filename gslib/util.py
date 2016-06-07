@@ -146,6 +146,9 @@ _EXP_STRINGS = [
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
 
+# Metadata attribute name for file modification time.
+MTIME_ATTR = 'goog-reserved-file-mtime'
+
 
 global manager  # pylint: disable=global-at-module-level
 certs_file_lock = threading.Lock()

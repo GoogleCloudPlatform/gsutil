@@ -50,9 +50,11 @@ from gslib.seek_ahead_thread import SeekAheadResult
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
+from gslib.util import MTIME_ATTR
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -376,8 +378,9 @@ class _DiffAction(object):
   COPY = 'copy'
   REMOVE = 'remove'
 
-
 _NA = '-'
+# _NA_TIME is a long value that takes the place of any invalid mtime.
+_NA_TIME = -1
 _OUTPUT_BUFFER_SIZE = 64 * 1024
 _PROGRESS_REPORT_LISTING_COUNT = 10000
 
@@ -566,8 +569,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
         wildcard, gsutil_api, debug=cls.debug,
         project_id=cls.project_id).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
-            bucket_listing_fields=['crc32c', 'md5Hash', 'name', 'size'])
-
+            bucket_listing_fields=['crc32c', 'md5Hash',
+                                   'metadata/%s' % MTIME_ATTR, 'name', 'size'])
   i = 0
   for blr in iterator:
     # Various GUI tools (like the GCS web console) create placeholder objects
@@ -605,23 +608,42 @@ def _BuildTmpOutputLine(blr):
     blr: The BucketListingRef.
 
   Returns:
-    The output line, formatted as _EncodeUrl(URL)<sp>size<sp>crc32c<sp>md5
-    where crc32c will only be present for GCS URLs, and md5 will only be
+    The output line, formatted as
+    _EncodeUrl(URL)<sp>size<sp>mtime<sp>crc32c<sp>md5 where md5 will only be
     present for cloud URLs that aren't composite objects. A missing field is
-    populated with '-'.
+    populated with '-', or -1 in the case of mtime.
   """
   crc32c = _NA
   md5 = _NA
+  mtime = _NA_TIME
   url = blr.storage_url
   if url.IsFileUrl():
     size = os.path.getsize(url.object_name)
+    # getmtime can return a float, so it needs to be converted to long
+    mtime = long(os.path.getmtime(url.object_name))
   elif url.IsCloudUrl():
     size = blr.root_object.size
+    if blr.root_object.metadata is not None:
+      mtime_str = next((attr.value for attr in
+                        blr.root_object.metadata.additionalProperties if
+                        attr.key == MTIME_ATTR), _NA_TIME)
+      try:
+        # The mtime value can be changed in the online console, this performs a
+        # sanity check and sets the mtime to _NA_TIME if it fails.
+        mtime = long(mtime_str)
+      except ValueError:
+        # Since mtime is a string, catch the case where it can't be cast as a
+        # long.
+        logger = logging.getLogger()
+        logger.warn('%s has an invalid mtime in its metadata',
+                    blr.root_object.name)
+        mtime = _NA_TIME
     crc32c = blr.root_object.crc32c or _NA
     md5 = blr.root_object.md5Hash or _NA
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
-  return '%s %d %s %s\n' % (_EncodeUrl(url.url_string), size, crc32c, md5)
+  return '%s %d %d %s %s\n' % (_EncodeUrl(url.url_string), size, mtime, crc32c,
+                               md5)
 
 
 def _EncodeUrl(url_string):
@@ -761,17 +783,18 @@ class _DiffIterator(object):
     """Parses output from _BuildTmpOutputLine.
 
     Parses into tuple:
-      (URL, size, crc32c, md5)
-    where crc32c and/or md5 can be _NA.
+      (URL, size, mtime, crc32c, md5)
+    where crc32c and/or md5 can be _NA and mtime can be _NA_TIME.
 
     Args:
       line: The line to parse.
 
     Returns:
-      Parsed tuple: (url, size, crc32c, md5)
+      Parsed tuple: (url, size, mtime, crc32c, md5)
     """
-    (encoded_url, size, crc32c, md5) = line.split()
-    return (_DecodeUrl(encoded_url), int(size), crc32c, md5.strip())
+    (encoded_url, size, mtime, crc32c, md5) = line.split()
+    return (_DecodeUrl(encoded_url), int(size), long(mtime),
+            crc32c, md5.strip())
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
     """Warns if given url_str is a cloud URL and is missing both crc32c and md5.
@@ -794,19 +817,21 @@ class _DiffIterator(object):
       return True
     return False
 
-  def _ObjectsMatch(self, src_url_str, src_size, src_crc32c, src_md5,
-                    dst_url_str, dst_size, dst_crc32c, dst_md5):
+  def _ObjectsMatch(self, src_url_str, src_size, src_mtime, src_crc32c, src_md5,
+                    dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5):
     """Returns True if src and dst objects are the same.
 
     Uses size plus whatever checksums are available.
 
     Args:
       src_url_str: Source URL string.
-      src_size: Source size
+      src_size: Source size.
+      src_mtime: Source modification time.
       src_crc32c: Source CRC32c.
       src_md5: Source MD5.
       dst_url_str: Destination URL string.
-      dst_size: Destination size
+      dst_size: Destination size.
+      dst_mtime: Destination modification time.
       dst_crc32c: Destination CRC32c.
       dst_md5: Destination MD5.
 
@@ -858,8 +883,8 @@ class _DiffIterator(object):
         if self.sorted_src_urls_it.IsEmpty():
           out_of_src_items = True
         else:
-          (src_url_str, src_size, src_crc32c, src_md5) = self._ParseTmpFileLine(
-              self.sorted_src_urls_it.next())
+          (src_url_str, src_size, src_mtime, src_crc32c, src_md5) = (
+              self._ParseTmpFileLine(self.sorted_src_urls_it.next()))
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           src_url_str_to_check = _EncodeUrl(
@@ -869,9 +894,9 @@ class _DiffIterator(object):
               self.base_dst_url, False, self.recursion_requested).url_string
       if dst_url_str is None:
         if not self.sorted_dst_urls_it.IsEmpty():
-          (dst_url_str, dst_size, dst_crc32c, dst_md5) = (
+          (dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5) = (
               self._ParseTmpFileLine(self.sorted_dst_urls_it.next()))
-          # Skip past base URL and normalize slashes so we can compare acros
+          # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           dst_url_str_to_check = _EncodeUrl(
               dst_url_str[base_dst_url_len:].replace('\\', '/'))
@@ -898,8 +923,8 @@ class _DiffIterator(object):
         # There is a dst object corresponding to src object, so check if objects
         # match.
         if not self._ObjectsMatch(
-            src_url_str, src_size, src_crc32c, src_md5,
-            dst_url_str, dst_size, dst_crc32c, dst_md5):
+            src_url_str, src_size, src_mtime, src_crc32c, src_md5,
+            dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5):
           yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY,
                              src_size)
         # else: we don't need to copy the file from src to dst since they're
@@ -915,7 +940,7 @@ class _DiffIterator(object):
     if dst_url_str:
       yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
-      (dst_url_str, _, _, _) = self._ParseTmpFileLine(line)
+      (dst_url_str, _, _, _, _) = self._ParseTmpFileLine(line)
       yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
 
 
@@ -1011,7 +1036,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
               src_url.bucket_name, src_url.object_name,
               generation=src_generation, provider=src_url.scheme,
               fields=cls.source_metadata_fields)
-
+        # TODO: Retrieve mtime and set the source object's custom metadata
+        #       field for mtime.
         copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,
             _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
@@ -1103,7 +1129,8 @@ class RsyncCommand(Command):
     dst_url = self._InsistContainer(self.args[1], True)
 
     self.source_metadata_fields = GetSourceFieldsNeededForCopy(
-        dst_url.IsCloudUrl(), self.skip_unsupported_objects, self.preserve_acl)
+        dst_url.IsCloudUrl(), self.skip_unsupported_objects, self.preserve_acl,
+        is_rsync=True)
 
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0
