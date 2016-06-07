@@ -33,11 +33,11 @@ from gslib.util import UrlsAreForSingleProvider
 
 
 _GET_SYNOPSIS = """
-gsutil cors get url
+  gsutil cors get url
 """
 
 _SET_SYNOPSIS = """
-gsutil cors set cors-json-file url...
+  gsutil cors set cors-json-file url...
 """
 
 _GET_DESCRIPTION = """
