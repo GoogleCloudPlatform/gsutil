@@ -49,6 +49,3 @@
 [submodule "third_party/funcsigs"]
 	path = third_party/funcsigs
 	url = git://github.com/testing-cabal/funcsigs.git
-[submodule "third_party/pbr"]
-	path = third_party/pbr
-	url = git://github.com/openstack-dev/pbr.git

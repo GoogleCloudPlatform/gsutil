@@ -59,7 +59,6 @@ warnings.filterwarnings('ignore', category=UserWarning,
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
     ('mock', ''),  # mock and dependencies must be before boto.
-    ('pbr', ''),  # mock dependency
     ('funcsigs', ''),  # mock dependency
     ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
     ('pyasn1', ''),  # oauth2client dependency
@@ -73,7 +72,6 @@ THIRD_PARTY_LIBS = [
     ('retry-decorator', ''),
     ('six', ''),
     ('socksipy-branch', ''),
-    ('mock', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
