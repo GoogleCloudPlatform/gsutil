@@ -265,8 +265,6 @@ class BotoTranslation(CloudApi):
             metadata.lifecycle)
         bucket_uri.configure_lifecycle(boto_lifecycle, False, headers=headers)
       if metadata.logging:
-        if self.provider == 'gs':
-          headers[GOOG_PROJ_ID_HDR] = PopulateProjectId(None)
         if metadata.logging.logBucket and metadata.logging.logObjectPrefix:
           bucket_uri.enable_logging(metadata.logging.logBucket,
                                     metadata.logging.logObjectPrefix,

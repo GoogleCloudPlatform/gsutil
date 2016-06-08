@@ -30,6 +30,7 @@ from gslib.exception import InvalidUrlError
 from gslib.storage_url import ContainsWildcard
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetDummyProjectForUnitTest
 
 
 class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
@@ -186,9 +187,10 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     """Tests matching a single bucket based on a wildcarded bucket URI."""
     exp_obj_uri_strs = set([
         suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim])
-    actual_obj_uri_strs = set(
-        str(u) for u in self._test_wildcard_iterator(
-            '%s*1' % self.base_uri_str).IterBuckets(bucket_fields=['id']))
+    with SetDummyProjectForUnitTest():
+      actual_obj_uri_strs = set(
+          str(u) for u in self._test_wildcard_iterator(
+              '%s*1' % self.base_uri_str).IterBuckets(bucket_fields=['id']))
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def testMultiMatchWildcardedBucketUri(self):
@@ -196,19 +198,21 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     exp_obj_uri_strs = set([
         suri(self.test_bucket0_uri) + self.test_bucket0_uri.delim,
         suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim])
-    actual_obj_uri_strs = set(
-        str(u) for u in self._test_wildcard_iterator(
-            '%s*' % self.base_uri_str).IterBuckets(bucket_fields=['id']))
+    with SetDummyProjectForUnitTest():
+      actual_obj_uri_strs = set(
+          str(u) for u in self._test_wildcard_iterator(
+              '%s*' % self.base_uri_str).IterBuckets(bucket_fields=['id']))
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def testWildcardBucketAndObjectUri(self):
     """Tests matching with both bucket and object wildcards."""
     exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
         'abcd'))])
-    actual_obj_uri_strs = set(
-        str(u) for u in self._test_wildcard_iterator(
-            '%s0*/abc*' % self.base_uri_str).IterAll(
-                expand_top_level_buckets=True))
+    with SetDummyProjectForUnitTest():
+      actual_obj_uri_strs = set(
+          str(u) for u in self._test_wildcard_iterator(
+              '%s0*/abc*' % self.base_uri_str).IterAll(
+                  expand_top_level_buckets=True))
     self.assertEqual(exp_obj_uri_strs, actual_obj_uri_strs)
 
   def testWildcardUpToFinalCharSubdirPlusObjectName(self):

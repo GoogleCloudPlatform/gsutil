@@ -26,6 +26,7 @@ import textwrap
 import time
 
 import gslib
+from gslib.cloud_api import ProjectIdException
 from gslib.command import Command
 from gslib.command import ResetFailureCount
 from gslib.exception import CommandException
@@ -289,6 +290,13 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
   orig_test_index = test_index
   executable_prefix = [sys.executable] if sys.executable and IS_WINDOWS else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
+  project_id_arg = []
+  try:
+    project_id_arg = ['-o',
+                      'GSUtil:default_project_id=%s' % PopulateProjectId()]
+  except ProjectIdException:
+    # If we don't have a project ID, unit tests should still be able to pass.
+    pass
 
   process_create_start_time = time.time()
   last_log_time = process_create_start_time
@@ -298,8 +306,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     if root_coverage_file:
       env['GSUTIL_COVERAGE_OUTPUT_FILE'] = root_coverage_file
     process_list.append(subprocess.Popen(
-        executable_prefix + [gslib.GSUTIL_PATH] +
-        ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
+        executable_prefix + [gslib.GSUTIL_PATH] + project_id_arg +
         ['test'] + s3_argument +
         ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
         [parallel_tests[test_index][len('gslib.tests.test_'):]],

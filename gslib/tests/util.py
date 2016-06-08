@@ -336,6 +336,15 @@ def _WriteSectionDictToFile(section_dict, tmp_filename):
 
 
 @contextmanager
+def SetDummyProjectForUnitTest():
+  """Sets a dummy project in boto config for the duration of a 'with' clause."""
+  # Listing buckets requires a project ID, but unit tests should run
+  # regardless of whether one is specified in config.
+  with SetBotoConfigForTest([('GSUtil', 'default_project_id', 'dummy_proj')]):
+    yield
+
+
+@contextmanager
 def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
   """Sets the input list of boto configs for the duration of a 'with' clause.
 

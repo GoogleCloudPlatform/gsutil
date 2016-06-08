@@ -44,6 +44,7 @@ from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetDummyProjectForUnitTest
 from gslib.util import UTF8
 
 
@@ -115,9 +116,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
   # @SequentialAndParallelTransfer
   def testCopyingNestedFileToBucketSubdir(self):
-    """Tests copying a nested file to a bucket subdir.
+    r"""Tests copying a nested file to a bucket subdir.
 
-    Tests that we correctly translate local FS-specific delimiters ('\' on
+    Tests that we correctly translate local FS-specific delimiters (\ on
     Windows) to bucket delimiter (/).
     """
     tmpdir = self.CreateTempDir()
@@ -592,7 +593,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
   def testLsBucketRecursiveWithLeadingSlashObjectName(self):
     """Test that ls -R of a bucket with an object that has leading slash."""
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
-    output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri) + '*'],
+    output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
                              return_stdout=True)
     expected = set([suri(dst_bucket_uri, 'f0')])
     expected.add('')  # Blank line between subdir listings.
@@ -643,7 +644,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # present MockStorageService doesn't translate canned ACLs into actual ACL
     # XML.
     src_bucket_uri = self.CreateBucket(test_objects=['f0'])
-    self.RunCommand('acl', ['set', 'private', suri(src_bucket_uri)[:-2] + '*'])
+    with SetDummyProjectForUnitTest():
+      self.RunCommand('acl', ['set', 'private',
+                              suri(src_bucket_uri)[:-2] +'*'])
 
   def testSetAclOnObjectRuns(self):
     """Test that the 'acl set' command basically runs."""
@@ -1110,7 +1113,8 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     """Test mb on existing bucket."""
     dst_bucket_uri = self.CreateBucket()
     try:
-      self.RunCommand('mb', [suri(dst_bucket_uri)])
+      with SetDummyProjectForUnitTest():
+        self.RunCommand('mb', [suri(dst_bucket_uri)])
       self.fail('Did not get expected StorageCreateError')
     except ServiceException, e:
       self.assertEqual(e.status, 409)
