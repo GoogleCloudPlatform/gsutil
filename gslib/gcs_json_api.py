@@ -255,6 +255,7 @@ class GcsJsonApi(CloudApi):
         log_response=log_response, credentials=self.credentials,
         version=self.api_version, default_global_params=self.global_params,
         additional_http_headers=additional_http_headers)
+
     self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
     self.api_client.retry_func = WarnAfterManyRetriesHandler
@@ -296,6 +297,61 @@ class GcsJsonApi(CloudApi):
       raise ArgumentException(
           'gsutil client error: customerEncryption must be included when '
           'requesting potentially encrypted fields %s' % _ENCRYPTED_HASHES_SET)
+
+  def GetBucketIamPolicy(self, bucket_name, provider=None):
+    apitools_request = apitools_messages.StorageBucketsGetIamPolicyRequest(
+        bucket=bucket_name)
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.buckets.GetIamPolicy(
+          apitools_request,
+          global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
+  def GetObjectIamPolicy(self, bucket_name, object_name,
+                         generation, provider=None):
+    if generation is not None:
+      generation = long(generation)
+    apitools_request = apitools_messages.StorageObjectsGetIamPolicyRequest(
+        bucket=bucket_name, object=object_name, generation=generation)
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.objects.GetIamPolicy(
+          apitools_request,
+          global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(
+          e, bucket_name=bucket_name, object_name=object_name,
+          generation=generation)
+
+  def SetObjectIamPolicy(self, bucket_name, object_name, policy,
+                         generation=None, provider=None):
+    if generation is not None:
+      generation = long(generation)
+    api_request = apitools_messages.StorageObjectsSetIamPolicyRequest(
+        bucket=bucket_name, object=object_name, generation=generation,
+        policy=policy)
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.objects.SetIamPolicy(
+          api_request,
+          global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(
+          e, bucket_name=bucket_name, object_name=object_name)
+
+  def SetBucketIamPolicy(self, bucket_name, policy, provider=None):
+    apitools_request = apitools_messages.StorageBucketsSetIamPolicyRequest(
+        bucket=bucket_name,
+        policy=policy)
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.buckets.SetIamPolicy(
+          apitools_request,
+          global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""

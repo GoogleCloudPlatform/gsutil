@@ -1236,7 +1236,7 @@ class Command(HelpProvider):
                                     the top-level flag for a single call.
       process_count: The number of processes to use. If not specified, then
                      the configured default will be used.
-      thread_count: The number of threads per process. If not speficied, then
+      thread_count: The number of threads per process. If not specified, then
                     the configured default will be used..
       should_return_results: If true, then return the results of all successful
                              calls to func in a list.
@@ -1969,6 +1969,9 @@ class WorkerThread(threading.Thread):
     self.cached_classes = {}
     self.shared_vars_updater = _SharedVariablesUpdater()
 
+    # Note that thread_gsutil_api is not initialized in the sequential
+    # case; task functions should use util.GetCloudApiInstance to
+    # retrieve the main thread's CloudApiDelegator in that case.
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
       self.thread_gsutil_api = CloudApiDelegator(
