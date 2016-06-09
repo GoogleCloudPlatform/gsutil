@@ -20,6 +20,7 @@ import sys
 
 from apitools.base.py import encoding
 
+from gslib import metrics
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -229,4 +230,9 @@ class WebCommand(Command):
       raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
                               'See "gsutil help web".') %
                              (action_subcommand, self.command_name))
+
+    # Commands with both suboptions and subcommands need to reparse for
+    # suboptions, so we log again.
+    metrics.LogCommandParams(subcommands=[action_subcommand],
+                             sub_opts=self.sub_opts)
     return func()

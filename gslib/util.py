@@ -51,6 +51,7 @@ import gslib
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import RetryableErrorMessage
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import S3_ACL_MARKER_GUID
@@ -1414,20 +1415,55 @@ def FixWindowsEncodingIfNeeded(input_str):
     return input_str
 
 
-def WarnAfterManyRetriesHandler(retry_args):
-  """Exception handler for http failures in Apitools.
-
-  If the user has had to wait several seconds since their first request,
-  print a progress message to the terminal to let them know we're still
-  retrying, then perform the default retry logic.
+def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
+  """Higher-order function allowing retry handler to access global status queue.
 
   Args:
-    retry_args: An apitools ExceptionRetryArgs tuple.
+    is_data_transfer: If True, disable retries in apitools.
+    status_queue: The global status queue.
+
+  Returns:
+    A retry function for retryable errors in apitools.
   """
-  if retry_args.total_wait_sec >= LONG_RETRY_WARN_SEC:
-    logging.info(
-        'Retrying request, attempt #%d...', retry_args.num_retries)
-  http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
+  def WarnAfterManyRetriesHandler(retry_args):
+    """Exception handler for http failures in apitools.
+
+    If the user has had to wait several seconds since their first request, print
+    a progress message to the terminal to let them know we're still retrying,
+    then perform the default retry logic and post a RetryableErrorMessage to the
+    global status queue.
+
+    Args:
+      retry_args: An apitools ExceptionRetryArgs tuple.
+    """
+    if retry_args.total_wait_sec >= LONG_RETRY_WARN_SEC:
+      logging.info('Retrying request, attempt #%d...', retry_args.num_retries)
+    if status_queue:
+      status_queue.put(RetryableErrorMessage(
+          exception=retry_args.exc,
+          num_retries=retry_args.num_retries,
+          total_wait_sec=retry_args.total_wait_sec))
+    http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
+
+  def RetriesInDataTransferHandler(retry_args):
+    """Exception handler that disables retries in apitools data transfers.
+
+    Post a RetryableErrorMessage to the global status queue. We handle the
+    actual retries within the download and upload functions.
+
+    Args:
+      retry_args: An apitools ExceptionRetryArgs tuple.
+    """
+    if status_queue:
+      status_queue.put(RetryableErrorMessage(
+          exception=retry_args.exc,
+          num_retries=retry_args.num_retries,
+          total_wait_sec=retry_args.total_wait_sec))
+    http_wrapper.RethrowExceptionHandler(retry_args)
+
+  if is_data_transfer:
+    return RetriesInDataTransferHandler
+  return WarnAfterManyRetriesHandler
 
 
 class GsutilStreamHandler(logging.StreamHandler):

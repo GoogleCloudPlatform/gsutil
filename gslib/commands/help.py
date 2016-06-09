@@ -30,8 +30,8 @@ import gslib.commands
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
-from gslib.util import IsRunningInteractively
 from gslib.util import IS_WINDOWS
+from gslib.util import IsRunningInteractively
 
 _SYNOPSIS = """
   gsutil help [command or topic]

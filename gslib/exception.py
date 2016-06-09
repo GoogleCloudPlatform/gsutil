@@ -77,6 +77,15 @@ class HashMismatchException(Exception):
   pass
 
 
+class ControlCException(Exception):
+  """Exception to report to analytics when the user exits via ctrl-C.
+
+  This exception is never actually raised, but is used by analytics collection
+  to provide a more descriptive name for user exit.
+  """
+  pass
+
+
 class InvalidUrlError(Exception):
   """Exception raised when URL is invalid."""
 

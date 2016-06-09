@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import sys
 
+from gslib import metrics
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -201,4 +202,5 @@ class CorsCommand(Command):
       raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
                               'See "gsutil help cors".') %
                              (action_subcommand, self.command_name))
+    metrics.LogCommandParams(subcommands=[action_subcommand])
     return func()

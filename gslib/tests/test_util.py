@@ -223,12 +223,12 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     retry_args_under_threshold = util.http_wrapper.ExceptionRetryArgs(
         None, None, None, 2, None, util.LONG_RETRY_WARN_SEC - 1)
 
-    util.WarnAfterManyRetriesHandler(retry_args_under_threshold)
+    util.LogAndHandleRetries()(retry_args_under_threshold)
     self.assertTrue(mock_wrapped_fn.called)
     # Check that we didn't emit a message.
     self.assertFalse(mock_log_info_fn.called)
 
-    util.WarnAfterManyRetriesHandler(retry_args_over_threshold)
+    util.LogAndHandleRetries()(retry_args_over_threshold)
     self.assertEqual(mock_wrapped_fn.call_count, 2)
     # Check that we did emit a message.
     self.assertTrue(mock_log_info_fn.called)

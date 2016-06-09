@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import sys
 
+from gslib import metrics
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -184,8 +185,10 @@ class LifecycleCommand(Command):
     """Command entry point for the lifecycle command."""
     subcommand = self.args.pop(0)
     if subcommand == 'get':
+      metrics.LogCommandParams(subcommands=[subcommand])
       return self._GetLifecycleConfig()
     elif subcommand == 'set':
+      metrics.LogCommandParams(subcommands=[subcommand])
       return self._SetLifecycleConfig()
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.' %

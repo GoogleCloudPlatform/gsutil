@@ -44,6 +44,7 @@ from gslib.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.hashing_helper import CHECK_HASH_NEVER
+from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import IS_WINDOWS
 from gslib.util import RESUMABLE_THRESHOLD_B
@@ -191,6 +192,7 @@ _DETAILED_HELP_TEXT = ("""
       decryption_key1 ... 100
       default_api_version
       default_project_id
+      disable_analytics_prompt
       encryption_key
       json_api_version
       parallel_composite_upload_component_size
@@ -541,6 +543,9 @@ content_language = en
 # Commands typically default to XML for S3 and JSON for GCS.
 #prefer_api = json
 #prefer_api = xml
+
+# Disables the prompt asking for opt-in to data collection for analytics.
+#disable_analytics_prompt = True
 
 """ % {'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
@@ -1048,6 +1053,8 @@ class ConfigCommand(Command):
             'by the\nls and mb commands; please try again.')
       config_file.write('%sdefault_project_id = %s\n\n\n' %
                         (project_id_section_prelude, default_project_id))
+
+      CheckAndMaybePromptForAnalyticsEnabling()
 
     # Write the config file OAuth2 section that doesn't depend on user input.
     config_file.write(CONFIG_OAUTH2_CONFIG_CONTENT)

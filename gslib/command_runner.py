@@ -27,6 +27,7 @@ import time
 import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
+from gslib import metrics
 from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command import Command
 from gslib.command import CreateGsutilLogger
@@ -202,7 +203,8 @@ class CommandRunner(object):
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       trace_token=None, parallel_operations=False,
                       skip_update_check=False, logging_filters=None,
-                      do_shutdown=True, perf_trace_token=None):
+                      do_shutdown=True, perf_trace_token=None,
+                      collect_analytics=False):
     """Runs the named command.
 
     Used by gsutil main, commands built atop other commands, and tests.
@@ -220,6 +222,8 @@ class CommandRunner(object):
       do_shutdown: Stop all parallelism framework workers iff this is True.
       perf_trace_token: Performance measurement trace token to pass to the
           underlying API.
+      collect_analytics: Set to True to collect an analytics metric logging this
+          command.
 
     Raises:
       CommandException: if errors encountered.
@@ -233,6 +237,10 @@ class CommandRunner(object):
       command_name = 'update'
       command_changed_to_update = True
       args = ['-n']
+
+      # Check for opt-in analytics.
+      if IsRunningInteractively() and collect_analytics:
+        metrics.CheckAndMaybePromptForAnalyticsEnabling()
 
     if not args:
       args = []
@@ -278,6 +286,16 @@ class CommandRunner(object):
         self.bucket_storage_uri_class, self.gsutil_api_class_map_factory,
         logging_filters, command_alias_used=command_name,
         perf_trace_token=perf_trace_token)
+
+    # Log the command name, command alias, and sub-options after being parsed by
+    # RunCommand and the command constructor. For commands with subcommands and
+    # suboptions, we need to log the suboptions again within the command itself
+    # because the command constructor will not parse the suboptions fully.
+    if collect_analytics:
+      metrics.LogCommandParams(command_name=command_inst.command_name,
+                               sub_opts=command_inst.sub_opts,
+                               command_alias=command_name)
+
     return_code = command_inst.RunCommand()
 
     if CheckMultiprocessingAvailableAndInit().is_available and do_shutdown:

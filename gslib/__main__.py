@@ -45,9 +45,16 @@ if os.environ.get('CLOUDSDK_WRAPPER') == '1':
   boto.UserAgent += ' google-cloud-sdk'
   if os.environ.get('CLOUDSDK_VERSION'):
     boto.UserAgent += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+# pylint: disable=g-import-not-at-top
+# This module also imports boto, and will override the UserAgent global variable
+# if imported above.
+from gslib import metrics
+if metrics.MetricsCollector.IsDisabled():
+  boto.UserAgent += ' analytics/disabled'
+else:
+  boto.UserAgent += ' analytics/enabled'
 
 # pylint: disable=g-bad-import-order
-# pylint: disable=g-import-not-at-top
 import httplib2
 import oauth2client
 from gslib import wildcard_iterator
@@ -59,6 +66,7 @@ from gslib.cloud_api import ServiceException
 from gslib.command_runner import CommandRunner
 import gslib.exception
 from gslib.exception import CommandException
+from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
@@ -134,13 +142,14 @@ def _Cleanup():
       pass
 
 
-def _OutputAndExit(message):
+def _OutputAndExit(message, exception=None):
   """Outputs message to stderr and exits gsutil with code 1.
 
   This function should only be called in single-process, single-threaded mode.
 
   Args:
     message: Message to print to stderr.
+    exception: The exception that caused gsutil to fail.
   """
   if debug >= DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
@@ -153,6 +162,8 @@ def _OutputAndExit(message):
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)
+  if exception:
+    metrics.LogFatalError(exception)
   sys.exit(1)
 
 
@@ -224,8 +235,7 @@ def main():
   global test_exception_traces
 
   if not (2, 6) <= sys.version_info[:3] < (3,):
-    raise gslib.exception.CommandException(
-        'gsutil requires python 2.6 or 2.7.')
+    raise CommandException('gsutil requires python 2.6 or 2.7.')
 
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
@@ -271,7 +281,7 @@ def main():
                                   'testexceptiontraces', 'trace-token=',
                                   'perf-trace-token='])
     except getopt.GetoptError as e:
-      _HandleCommandException(gslib.exception.CommandException(e.msg))
+      _HandleCommandException(CommandException(e.msg))
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Also causes boto to include httplib header output.
@@ -317,6 +327,7 @@ def main():
         if not boto.config.has_section(opt_section):
           boto.config.add_section(opt_section)
         boto.config.set(opt_section, opt_name, opt_value)
+    metrics.LogCommandParams(global_opts=opts)
     httplib2.debuglevel = debug
     if trace_token:
       sys.stderr.write(TRACE_WARNING)
@@ -430,14 +441,14 @@ def _CheckAndWarnForProxyDifferences():
 
 def _HandleUnknownFailure(e):
   # Called if we fall through all known/handled exceptions.
-  _OutputAndExit('Failure: %s.' % e)
+  _OutputAndExit(message='Failure: %s.' % e, exception=e)
 
 
 def _HandleCommandException(e):
   if e.informational:
-    _OutputAndExit(e.reason)
+    _OutputAndExit(message=e.reason, exception=e)
   else:
-    _OutputAndExit('CommandException: %s' % e.reason)
+    _OutputAndExit(message='CommandException: %s' % e.reason, exception=e)
 
 
 # pylint: disable=unused-argument
@@ -455,9 +466,11 @@ def _HandleControlC(signal_num, cur_stack_frame):
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit(
         'DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
-        '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)))
+        '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)),
+        exception=ControlCException())
   else:
-    _OutputAndExit('Caught CTRL-C (signal %d) - exiting' % signal_num)
+    _OutputAndExit('Caught CTRL-C (signal %d) - exiting' % signal_num,
+                   exception=ControlCException())
 
 
 def _HandleSigQuit(signal_num, cur_stack_frame):
@@ -517,25 +530,27 @@ def _CheckAndHandleCredentialException(e, args):
     # simulate a second user without permissions, without actually requiring
     # two separate configured users.
     if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-      _OutputAndExit('\n'.join(textwrap.wrap(
+      message = '\n'.join(textwrap.wrap(
           'You are attempting to access protected data with no configured '
           'credentials. Please visit '
           'https://cloud.google.com/console#/project and sign up for an '
           'account, and then run the "gcloud auth login" command to '
-          'configure gsutil to use these credentials.')))
+          'configure gsutil to use these credentials.'))
     else:
-      _OutputAndExit('\n'.join(textwrap.wrap(
+      message = '\n'.join(textwrap.wrap(
           'You are attempting to access protected data with no configured '
           'credentials. Please visit '
           'https://cloud.google.com/console#/project and sign up for an '
           'account, and then run the "gsutil config" command to configure '
-          'gsutil to use these credentials.')))
+          'gsutil to use these credentials.'))
+    _OutputAndExit(message=message, exception=e)
   elif (e.reason and
         (e.reason == 'AccountProblem' or e.reason == 'Account disabled.' or
          'account for the specified project has been disabled' in e.reason)
         and ','.join(args).find('gs://') != -1):
-    _OutputAndExit('\n'.join(textwrap.wrap(
-        _ConstructAccountProblemHelp(e.reason))))
+    _OutputAndExit(
+        '\n'.join(textwrap.wrap(_ConstructAccountProblemHelp(e.reason))),
+        exception=e)
 
 
 def _RunNamedCommandAndHandleExceptions(
@@ -555,27 +570,31 @@ def _RunNamedCommandAndHandleExceptions(
     if not IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
 
-    return command_runner.RunNamedCommand(
-        command_name, args, headers, debug_level, trace_token,
-        parallel_operations, perf_trace_token=perf_trace_token)
+    return command_runner.RunNamedCommand(command_name, args, headers,
+                                          debug_level, trace_token,
+                                          parallel_operations,
+                                          perf_trace_token=perf_trace_token,
+                                          collect_analytics=True)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
-      _OutputAndExit('Missing credentials for the given URI(s). Does your '
-                     'boto config file contain all needed credentials?')
+      _OutputAndExit(
+          'Missing credentials for the given URI(s). Does your '
+          'boto config file contain all needed credentials?',
+          exception=e)
     else:
-      _OutputAndExit(str(e))
-  except gslib.exception.CommandException as e:
+      _OutputAndExit(message=str(e), exception=e)
+  except CommandException as e:
     _HandleCommandException(e)
   except getopt.GetoptError as e:
-    _HandleCommandException(gslib.exception.CommandException(e.msg))
+    _HandleCommandException(CommandException(e.msg))
   except boto.exception.InvalidUriError as e:
-    _OutputAndExit('InvalidUriError: %s.' % e.message)
+    _OutputAndExit(message='InvalidUriError: %s.' % e.message, exception=e)
   except gslib.exception.InvalidUrlError as e:
-    _OutputAndExit('InvalidUrlError: %s.' % e.message)
+    _OutputAndExit(message='InvalidUrlError: %s.' % e.message, exception=e)
   except boto.auth_handler.NotReadyToAuthenticate:
-    _OutputAndExit('NotReadyToAuthenticate')
+    _OutputAndExit(message='NotReadyToAuthenticate', exception=e)
   except OSError as e:
-    _OutputAndExit('OSError: %s.' % e.strerror)
+    _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
   except IOError as e:
     if (e.errno == errno.EPIPE or (IS_WINDOWS and e.errno == errno.EINVAL)
         and not IsRunningInteractively()):
@@ -587,39 +606,43 @@ def _RunNamedCommandAndHandleExceptions(
     else:
       raise
   except wildcard_iterator.WildcardException as e:
-    _OutputAndExit(e.reason)
+    _OutputAndExit(message=e.reason, exception=e)
   except ProjectIdException as e:
     _OutputAndExit(
         'You are attempting to perform an operation that requires a '
         'project id, with none configured. Please re-run '
         'gsutil config and make sure to follow the instructions for '
-        'finding and entering your default project id.')
+        'finding and entering your default project id.',
+        exception=e)
   except BadRequestException as e:
     if e.reason == 'MissingSecurityHeader':
       _CheckAndHandleCredentialException(e, args)
-    _OutputAndExit(e)
+    _OutputAndExit(message=e, exception=e)
   except AccessDeniedException as e:
     _CheckAndHandleCredentialException(e, args)
-    _OutputAndExit(e)
+    _OutputAndExit(message=e, exception=e)
   except ArgumentException as e:
-    _OutputAndExit(e)
+    _OutputAndExit(message=e, exception=e)
   except ServiceException as e:
-    _OutputAndExit(e)
+    _OutputAndExit(message=e, exception=e)
   except oauth2client.client.HttpAccessTokenRefreshError as e:
     if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-      _OutputAndExit(
-          'Your credentials are invalid. Please run\n$ gcloud auth login')
+      _OutputAndExit('Your credentials are invalid. '
+                     'Please run\n$ gcloud auth login',
+                     exception=e)
     else:
       _OutputAndExit(
           'Your credentials are invalid. For more help, see '
           '"gsutil help creds", or re-run the gsutil config command (see '
-          '"gsutil help config").')
+          '"gsutil help config").',
+          exception=e)
   except apitools_exceptions.HttpError as e:
     # These should usually be retried by the underlying implementation or
     # wrapped by CloudApi ServiceExceptions, but if we do get them,
     # print something useful.
-    _OutputAndExit('HttpError: %s, %s' % (getattr(e.response, 'status', ''),
-                                          e.content or ''))
+    _OutputAndExit('HttpError: %s, %s' %
+                   (getattr(e.response, 'status', ''), e.content or ''),
+                   exception=e)
   except socket.error as e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because
@@ -631,8 +654,8 @@ def _RunNamedCommandAndHandleExceptions(
           '2.x, when the server sends an error response and then closes the '
           'socket (see http://bugs.python.org/issue5542). If you are trying to '
           'upload a large object you might retry with a small (say 200k) '
-          'object, and see if you get a more specific error code.'
-      )
+          'object, and see if you get a more specific error code.',
+          exception=e)
     elif e.args[0] == errno.ECONNRESET and ' '.join(args).contains('s3://'):
       _OutputAndExit('\n'.join(textwrap.wrap(
           'Got a "Connection reset by peer" error. One way this can happen is '
@@ -640,7 +663,8 @@ def _RunNamedCommandAndHandleExceptions(
           'regional S3 bucket you could try re-running this command using the '
           'regional S3 endpoint, for example '
           's3://s3-<region>.amazonaws.com/your-bucket. For details about this '
-          'problem see https://github.com/boto/boto/issues/2207')))
+          'problem see https://github.com/boto/boto/issues/2207')),
+                     exception=e)
     else:
       _HandleUnknownFailure(e)
   except Exception as e:  # pylint: disable=broad-except
@@ -653,13 +677,15 @@ def _RunNamedCommandAndHandleExceptions(
           'Encountered an error while refreshing access token. '
           'If you are using a service account,\nplease verify that the '
           'gs_service_key_file_password field in your config file,'
-          '\n%s, is correct.' % GetConfigFilePath())
+          '\n%s, is correct.' % GetConfigFilePath(),
+          exception=e)
     elif 'asn1 encoding routines' in str(e):
       _OutputAndExit(
           'Encountered an error while refreshing access token. '
           'If you are using a service account,\nplease verify that the '
-          'gs_service_key_file field in your config file,\n%s, is correct.'
-          % GetConfigFilePath())
+          'gs_service_key_file field in your config file,\n%s, is correct.' %
+          GetConfigFilePath(),
+          exception=e)
     _HandleUnknownFailure(e)
 
 
@@ -671,8 +697,10 @@ def _PerformTabCompletion(command_runner):
     import argcomplete
     import argparse
   except ImportError as e:
-    _OutputAndExit('A library required for performing tab completion was'
-                   ' not found.\nCause: %s' % e)
+    _OutputAndExit(
+        'A library required for performing tab completion was'
+        ' not found.\nCause: %s' % e,
+        exception=e)
   parser = argparse.ArgumentParser(add_help=False)
   subparsers = parser.add_subparsers()
   command_runner.ConfigureCommandArgumentParsers(subparsers)

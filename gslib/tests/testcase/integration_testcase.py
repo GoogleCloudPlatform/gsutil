@@ -454,8 +454,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                       object_metadata, provider='gs',
                                       encryption_tuple=encryption_tuple)
 
-  def RunGsUtil(self, cmd, return_status=False, return_stdout=False,
-                return_stderr=False, expected_status=0, stdin=None):
+  def RunGsUtil(self, cmd, return_status=False,
+                return_stdout=False, return_stderr=False,
+                expected_status=0, stdin=None, env_vars=None):
     """Runs the gsutil command.
 
     Args:
@@ -467,6 +468,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                        0. If the return code is a different value, an exception
                        is raised.
       stdin: A string of data to pipe to the process as standard input.
+      env_vars: A dictionary of variables to extend the subprocess's os.environ
+                with.
 
     Returns:
       A tuple containing the desired return values specified by the return_*
@@ -477,8 +480,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
            cmd)
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
+    env = os.environ.copy()
+    if env_vars:
+      env.update(env_vars)
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         stdin=subprocess.PIPE)
+                         stdin=subprocess.PIPE, env=env)
     (stdout, stderr) = p.communicate(stdin)
     status = p.returncode
 

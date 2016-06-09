@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 from apitools.base.py import encoding
 from gslib import aclhelpers
+from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import Preconditions
@@ -468,12 +469,19 @@ class AclCommand(Command):
     """Command entry point for the acl command."""
     action_subcommand = self.args.pop(0)
     self.ParseSubOpts(check_args=True)
+
+    # Commands with both suboptions and subcommands need to reparse for
+    # suboptions, so we log again.
+    metrics.LogCommandParams(sub_opts=self.sub_opts)
     self.def_acl = False
     if action_subcommand == 'get':
+      metrics.LogCommandParams(subcommands=[action_subcommand])
       self.GetAndPrintAcl(self.args[0])
     elif action_subcommand == 'set':
+      metrics.LogCommandParams(subcommands=[action_subcommand])
       self._SetAcl()
     elif action_subcommand in ('ch', 'change'):
+      metrics.LogCommandParams(subcommands=[action_subcommand])
       self._ChAcl()
     else:
       raise CommandException(('Invalid subcommand "%s" for the %s command.\n'

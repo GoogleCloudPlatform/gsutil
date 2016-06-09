@@ -20,6 +20,7 @@ import sys
 from apitools.base.py import base_api
 
 import gslib
+from gslib.metrics import MetricsCollector
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
 
 
@@ -40,6 +41,11 @@ class StorageV1(base_api.BaseApiClient):
     _USER_AGENT += ' google-cloud-sdk'
     if os.environ.get('CLOUDSDK_VERSION'):
       _USER_AGENT += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+  if MetricsCollector.IsDisabled():
+    _USER_AGENT += ' analytics/disabled'
+  else:
+    _USER_AGENT += ' analytics/enabled'
+
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'
   _API_KEY = None

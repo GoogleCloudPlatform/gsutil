@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+from gslib import metrics
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -163,8 +164,13 @@ class VersioningCommand(Command):
     action_subcommand = self.args.pop(0)
     if action_subcommand == 'get':
       func = self._GetVersioning
+      metrics.LogCommandParams(subcommands=[action_subcommand])
     elif action_subcommand == 'set':
       func = self._SetVersioning
+      versioning_arg = self.args[0].lower()
+      if versioning_arg in ('on', 'off'):
+        metrics.LogCommandParams(
+            subcommands=[action_subcommand, versioning_arg])
     else:
       raise CommandException((
           'Invalid subcommand "%s" for the %s command.\n'

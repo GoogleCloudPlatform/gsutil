@@ -94,6 +94,7 @@ from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import RetryableErrorMessage
 from gslib.tracker_file import DeleteDownloadTrackerFiles
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import ENCRYPTION_UPLOAD_TRACKER_ENTRY
@@ -1511,6 +1512,9 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           'Resumable upload of %s failed with a response code indicating we '
           'need to start over with a new resumable upload ID. Backing off '
           'and retrying.' % src_url.url_string)))
+      # Report the retryable error to the global status queue.
+      gsutil_api.status_queue.put(RetryableErrorMessage(
+          exception=e, num_retries=num_startover_attempts))
       time.sleep(min(random.random() * (2 ** num_startover_attempts),
                      GetMaxRetryDelay()))
     except ResumableUploadAbortException:

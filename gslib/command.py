@@ -49,6 +49,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
+from gslib.metrics import LogRetryableError
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
@@ -65,6 +66,8 @@ from gslib.sig_handling import MultithreadedMainSignalHandler
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import RetryableErrorMessage
+from gslib.thread_message import StatusMessage
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.util import CheckMultiprocessingAvailableAndInit
@@ -1678,7 +1681,10 @@ class _MainThreadUIQueue(object):
 
   def put(self, status_item, timeout=None):  # pylint: disable=invalid-name
     if self.logger.isEnabledFor(logging.INFO):
-      sys.stderr.write(status_item)
+      if not isinstance(status_item, StatusMessage):
+        sys.stderr.write(str(status_item))
+    if isinstance(status_item, RetryableErrorMessage):
+      LogRetryableError(status_item.error_type)
 
 
 class _UIThread(threading.Thread):
@@ -1707,8 +1713,11 @@ class _UIThread(threading.Thread):
         continue
       if status_item == ZERO_TASKS_TO_DO_ARGUMENT:
         break
-      if self.logger.isEnabledFor(logging.INFO):
+      if (self.logger.isEnabledFor(logging.INFO) and
+          not isinstance(status_item, StatusMessage)):
         sys.stderr.write(str(status_item))
+      if isinstance(status_item, RetryableErrorMessage):
+        LogRetryableError(status_item.error_type)
 
 
 class _ConsumerPool(object):

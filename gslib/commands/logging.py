@@ -20,6 +20,7 @@ import sys
 
 from apitools.base.py import encoding
 
+from gslib import metrics
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -233,14 +234,19 @@ class LoggingCommand(Command):
     action_subcommand = self.args.pop(0)
     if action_subcommand == 'get':
       func = self._Get
+      metrics.LogCommandParams(subcommands=[action_subcommand])
     elif action_subcommand == 'set':
       state_subcommand = self.args.pop(0)
       if not self.args:
         self.RaiseWrongNumberOfArgumentsException()
       if state_subcommand == 'on':
         func = self._Enable
+        metrics.LogCommandParams(
+            subcommands=[action_subcommand, state_subcommand])
       elif state_subcommand == 'off':
         func = self._Disable
+        metrics.LogCommandParams(
+            subcommands=[action_subcommand, state_subcommand])
       else:
         raise CommandException((
             'Invalid subcommand "%s" for the "%s %s" command.\n'
@@ -251,5 +257,8 @@ class LoggingCommand(Command):
                               'See "gsutil help logging".') %
                              (action_subcommand, self.command_name))
     self.ParseSubOpts(check_args=True)
+    # Commands with both suboptions and subcommands need to reparse for
+    # suboptions, so we log again.
+    metrics.LogCommandParams(sub_opts=self.sub_opts)
     func()
     return 0

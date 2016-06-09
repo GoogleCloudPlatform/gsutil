@@ -22,6 +22,9 @@ import re
 import signal
 import sys
 import traceback
+
+from gslib import metrics
+from gslib.exception import ControlCException
 from gslib.util import IS_WINDOWS
 from gslib.util import UTF8
 
@@ -144,6 +147,8 @@ def MultithreadedMainSignalHandler(signal_num, cur_stack_frame):
     else:
       sys.stderr.write('Caught CTRL-C (signal %d) - exiting\n' % signal_num)
 
+  metrics.LogFatalError(exception=ControlCException())
+  metrics.Shutdown()
   KillProcess(os.getpid())
 
 

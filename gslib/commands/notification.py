@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import getopt
 import uuid
 
+from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
 from gslib.command import Command
 from gslib.command import NO_MAX
@@ -240,6 +241,9 @@ class NotificationCommand(Command):
     try:
       (self.sub_opts, self.args) = getopt.getopt(
           self.args, self.command_spec.supported_sub_args)
+      # Commands with both suboptions and subcommands need to reparse for
+      # suboptions, so we log again.
+      metrics.LogCommandParams(sub_opts=self.sub_opts)
       return func()
     except getopt.GetoptError, e:
       self.RaiseInvalidArgumentException()
@@ -247,10 +251,11 @@ class NotificationCommand(Command):
   def RunCommand(self):
     """Command entry point for the notification command."""
     subcommand = self.args.pop(0)
-
     if subcommand == 'watchbucket':
+      metrics.LogCommandParams(subcommands=[subcommand])
       return self._RunSubCommand(self._WatchBucket)
     elif subcommand == 'stopchannel':
+      metrics.LogCommandParams(subcommands=[subcommand])
       return self._RunSubCommand(self._StopChannel)
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.' %

@@ -585,6 +585,10 @@ class TestCommand(Command):
                               (len(parallel_integration_tests) <= 1
                                and not isolated_tests))
 
+    # Disable analytics for the duration of testing. This is set as an
+    # environment variable so that the subprocesses will also not report.
+    os.environ['GSUTIL_TEST_ANALYTICS'] = '1'
+
     if run_tests_sequentially:
       total_tests = suite.countTestCases()
       resultclass = MakeCustomTestResultClass(total_tests)
@@ -662,6 +666,9 @@ class TestCommand(Command):
       coverage_controller.save()
       print ('Coverage information was saved to: %s' %
              coverage_controller.data_files.filename)
+
+    # Re-enable analytics to report the test command.
+    os.environ['GSUTIL_TEST_ANALYTICS'] = '0'
 
     if sequential_success and not num_parallel_failures:
       ResetFailureCount()

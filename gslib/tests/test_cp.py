@@ -653,7 +653,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.assertIn('PreconditionException', stderr)
 
-    # Specifiying a generation with -n should fail before the request hits the
+    # Specifying a generation with -n should fail before the request hits the
     # server.
     stderr = self.RunGsUtil(['-h', gen_match_header, 'cp', '-n', fpath1,
                              suri(k1_uri)],

@@ -86,8 +86,9 @@ from gslib.util import GetNewHttp
 from gslib.util import GetNumRetries
 from gslib.util import GetPrintableExceptionString
 from gslib.util import JsonResumableChunkSizeDefined
+from gslib.util import LogAndHandleRetries
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
-from gslib.util import WarnAfterManyRetriesHandler
+
 
 import httplib2
 import oauth2client
@@ -257,7 +258,8 @@ class GcsJsonApi(CloudApi):
         additional_http_headers=additional_http_headers)
     self.api_client.max_retry_wait = self.max_retry_wait
     self.api_client.num_retries = self.num_retries
-    self.api_client.retry_func = WarnAfterManyRetriesHandler
+    self.api_client.retry_func = LogAndHandleRetries(
+        status_queue=self.status_queue)
 
     if no_op_credentials:
       # This API key is not secret and is used to identify gsutil during
@@ -813,10 +815,11 @@ class GcsJsonApi(CloudApi):
         bucket=bucket_name, object=object_name, generation=generation)
 
     # Disable retries in apitools. We will handle them explicitly for
-    # resumable downloads; one-shot downloads are not retriable as we do
+    # resumable downloads; one-shot downloads are not retryable as we do
     # not track how many bytes were written to the stream.
-    apitools_download.retry_func = (
-        apitools_http_wrapper.RethrowExceptionHandler)
+    apitools_download.retry_func = LogAndHandleRetries(
+        is_data_transfer=True,
+        status_queue=self.status_queue)
 
     try:
       if download_strategy == CloudApi.DownloadStrategy.RESUMABLE:
@@ -1104,8 +1107,9 @@ class GcsJsonApi(CloudApi):
               upload=apitools_upload,
               global_params=global_params)
       # Disable retries in apitools. We will handle them explicitly here.
-      apitools_upload.retry_func = (
-          apitools_http_wrapper.RethrowExceptionHandler)
+      apitools_upload.retry_func = LogAndHandleRetries(
+          is_data_transfer=True,
+          status_queue=self.status_queue)
 
       # Disable apitools' default print callbacks.
       def _NoOpCallback(unused_response, unused_upload_object):
