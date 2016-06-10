@@ -25,6 +25,7 @@ import os
 import re
 import tempfile
 import textwrap
+import time
 import traceback
 import urllib
 
@@ -44,6 +45,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadResult
@@ -52,9 +54,12 @@ from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import GenerationFromUrlAndString
+from gslib.util import CreateCustomMetadata
 from gslib.util import GetCloudApiInstance
+from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MTIME_ATTR
+from gslib.util import NA_TIME
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -212,33 +217,20 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>CHANGE DETECTION ALGORITHM</B>
-  To determine if a file or object has changed gsutil rsync first checks whether
-  the source and destination sizes match. If they match, it next checks if their
-  checksums match, using checksums if available (see below). Unlike the Unix
-  rsync command, gsutil rsync does not use timestamps to determine if the
-  file/object changed, because the Google Cloud Storage API does not permit the
-  caller to set an object's timestamp (hence, timestamps of identical
-  files/objects cannot be made to match).
+  To determine if a file or object has changed, gsutil rsync first checks
+  whether the file modification time (mtime) of both the source and destination
+  is available. If mtime is available at both source and destination, and the
+  destination has an older mtime, gsutil rsync will update the destination. If
+  mtime is not available for either the source or the destination, gsutil rsync
+  will fall back to using checksums. If the source and destination have matching
+  checksums and only the source has an mtime, gsutil rsync will copy the mtime
+  to the destination. If neither mtime nor checksums are available, gsutil rsync
+  will resort to comparing file sizes.
 
-  Checksums will not be available in two cases:
-
-  1. When synchronizing to or from a file system. By default, gsutil does not
-     checksum files, because of the slowdown caused when working with large
-     files. You can cause gsutil to checksum files by using the gsutil rsync -c
-     option, at the cost of increased local disk I/O and run time when working
-     with large files. You should consider using the -c option if your files can
-     change without changing sizes (e.g., if you have files that contain fixed
-     width data, such as timestamps).
-
-  2. When comparing composite Google Cloud Storage objects with objects at a
-     cloud provider that does not support CRC32C (which is the only checksum
-     available for composite objects). See 'gsutil help compose' for details
-     about composite objects.
-
-  Note that change detection is based only on data content, not metadata fields.
-  For example, if you have two buckets that each contain an object with the same
-  name and you update the metadata on one of the objects and then run gsutil
-  rsync, it will treat the objects as identical and not perform any updates.
+  Checksums will not be available when comparing composite Google Cloud Storage
+  objects with objects at a cloud provider that does not support CRC32C (which
+  is the only checksum available for composite objects). See 'gsutil help
+  compose' for details about composite objects.
 
 
 <B>COPYING IN THE CLOUD AND METADATA PRESERVATION</B>
@@ -247,9 +239,10 @@ _DETAILED_HELP_TEXT = ("""
   from the machine where you run gsutil). In addition to the performance and
   cost advantages of doing this, copying in the cloud preserves metadata (like
   Content-Type and Cache-Control). In contrast, when you download data from the
-  cloud it ends up in a file, which has no associated metadata. Thus, unless you
-  have some way to hold on to or re-create that metadata, synchronizing a bucket
-  to a directory in the local file system will not retain the metadata.
+  cloud it ends up in a file, which has no associated metadata, other than file
+  modification time (mtime). Thus, unless you have some way to hold on to or
+  re-create that metadata, synchronizing a bucket to a directory in the local
+  file system will not retain the metadata other than mtime.
 
   Note that by default, the gsutil rsync command does not copy the ACLs of
   objects being synchronized and instead will use the default bucket ACL (see
@@ -273,9 +266,10 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>LIMITATIONS</B>
-  1. The gsutil rsync command doesn't make the destination object's timestamps
-     match those of the source object (it can't; timestamp setting is not
-     allowed by the Google Cloud Storage API).
+
+  1. The gsutil rsync command will only allow non-negative file modification
+     times to be used in its comparisons. This means gsutil rsync will resort to
+     using checksums for any file with a timestamp before 1970-01-01 UTC.
 
   2. The gsutil rsync command considers only the current object generations in
      the source and destination buckets when deciding what to copy / delete. If
@@ -294,10 +288,10 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>OPTIONS</B>
-  -c            Causes the rsync command to compute checksums for files if the
-                size of source and destination match, and then compare
-                checksums.  This option increases local disk I/O and run time
-                if either src_url or dst_url are on the local file system.
+  -c            Causes the rsync command to compute and compare checksums
+                (instead of comparing mtime) for files if the size of source and
+                destination match. This option increases local disk I/O and run
+                time if either src_url or dst_url are on the local file system.
 
   -C            If an error occurs, continue to attempt to copy the remaining
                 files. If errors occurred, gsutil's exit status will be non-zero
@@ -373,20 +367,19 @@ _DETAILED_HELP_TEXT = ("""
                 you need to use double quotes.
 """)
 
+_NA = '-'
+_OUTPUT_BUFFER_SIZE = 64 * 1024
+_PROGRESS_REPORT_LISTING_COUNT = 10000
+_SECONDS_PER_DAY = 86400L
+
+# Tracks files we need to clean up at end or if interrupted.
+_tmp_files = []
+
 
 class _DiffAction(object):
   COPY = 'copy'
   REMOVE = 'remove'
-
-_NA = '-'
-# _NA_TIME is a long value that takes the place of any invalid mtime.
-_NA_TIME = -1
-_OUTPUT_BUFFER_SIZE = 64 * 1024
-_PROGRESS_REPORT_LISTING_COUNT = 10000
-
-
-# Tracks files we need to clean up at end or if interrupted.
-_tmp_files = []
+  MTIME_SRC_TO_DST = 'mtime_src_to_dst'
 
 
 # pylint: disable=unused-argument
@@ -414,17 +407,20 @@ def CleanUpTempFiles():
 class _DiffToApply(object):
   """Class that encapsulates info needed to apply diff for one object."""
 
-  def __init__(self, src_url_str, dst_url_str, diff_action, copy_size):
+  def __init__(self, src_url_str, dst_url_str, src_mtime, diff_action,
+               copy_size):
     """Constructor.
 
     Args:
       src_url_str: The source URL string, or None if diff_action is REMOVE.
       dst_url_str: The destination URL string.
+      src_mtime: The mtime of the source file.
       diff_action: _DiffAction to be applied.
       copy_size: The amount of bytes to copy, or None if diff_action is REMOVE.
     """
     self.src_url_str = src_url_str
     self.dst_url_str = dst_url_str
+    self.src_mtime = src_mtime
     self.diff_action = diff_action
     self.copy_size = copy_size
 
@@ -445,7 +441,7 @@ def _DiffToApplyArgChecker(command_instance, diff_to_apply):
 def _ComputeNeededFileChecksums(logger, src_url_str, src_size, src_crc32c,
                                 src_md5, dst_url_str, dst_size, dst_crc32c,
                                 dst_md5):
-  """Computes any file checksums needed by _ObjectsMatch.
+  """Computes any file checksums needed by _CompareObjects.
 
   Args:
     logger: logging.logger for outputting log messages.
@@ -615,29 +611,37 @@ def _BuildTmpOutputLine(blr):
   """
   crc32c = _NA
   md5 = _NA
-  mtime = _NA_TIME
+  mtime = NA_TIME
   url = blr.storage_url
   if url.IsFileUrl():
     size = os.path.getsize(url.object_name)
     # getmtime can return a float, so it needs to be converted to long
     mtime = long(os.path.getmtime(url.object_name))
+    # Don't use mtime for files older than 1970-01-01 UTC.
+    if mtime < 0:
+      mtime = NA_TIME
   elif url.IsCloudUrl():
     size = blr.root_object.size
     if blr.root_object.metadata is not None:
-      mtime_str = next((attr.value for attr in
-                        blr.root_object.metadata.additionalProperties if
-                        attr.key == MTIME_ATTR), _NA_TIME)
+      found, mtime_str = GetValueFromObjectCustomMetadata(blr.root_object,
+                                                          MTIME_ATTR, NA_TIME)
       try:
         # The mtime value can be changed in the online console, this performs a
-        # sanity check and sets the mtime to _NA_TIME if it fails.
+        # sanity check and sets the mtime to NA_TIME if it fails.
         mtime = long(mtime_str)
+        if found and mtime <= NA_TIME:
+          logging.getLogger().warn('%s has a negative mtime in its metadata',
+                                   url.url_string)
+        if mtime > long(time.time()) + _SECONDS_PER_DAY:
+          logging.getLogger().warn('%s has an mtime more than 1 day from '
+                                   'current system time',
+                                   url.url_string)
       except ValueError:
         # Since mtime is a string, catch the case where it can't be cast as a
         # long.
-        logger = logging.getLogger()
-        logger.warn('%s has an invalid mtime in its metadata',
-                    blr.root_object.name)
-        mtime = _NA_TIME
+        logging.getLogger().warn('%s has an invalid mtime in its metadata',
+                                 url.url_string)
+        mtime = NA_TIME
     crc32c = blr.root_object.crc32c or _NA
     md5 = blr.root_object.md5Hash or _NA
   else:
@@ -784,7 +788,7 @@ class _DiffIterator(object):
 
     Parses into tuple:
       (URL, size, mtime, crc32c, md5)
-    where crc32c and/or md5 can be _NA and mtime can be _NA_TIME.
+    where crc32c and/or md5 can be _NA and mtime can be NA_TIME.
 
     Args:
       line: The line to parse.
@@ -817,11 +821,12 @@ class _DiffIterator(object):
       return True
     return False
 
-  def _ObjectsMatch(self, src_url_str, src_size, src_mtime, src_crc32c, src_md5,
-                    dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5):
-    """Returns True if src and dst objects are the same.
+  def _CompareObjects(self, src_url_str, src_size, src_mtime, src_crc32c,
+                      src_md5, dst_url_str, dst_size, dst_mtime, dst_crc32c,
+                      dst_md5):
+    """Returns whether src should replace dst object, and if mtime is present.
 
-    Uses size plus whatever checksums are available.
+    Uses mtime, size, or whatever checksums are available.
 
     Args:
       src_url_str: Source URL string.
@@ -836,29 +841,39 @@ class _DiffIterator(object):
       dst_md5: Destination MD5.
 
     Returns:
-      True/False.
+      A 3-tuple indicating if src should replace dst, and if src and dst have
+      mtime.
     """
     # Note: This function is called from __iter__, which is called from the
     # Command.Apply driver. Thus, all checksum computation will be run in a
     # single thread, which is good (having multiple threads concurrently
     # computing checksums would thrash the disk).
+    #
+    # Comparison Hierarchy:
+    # 1. mtime
+    # 2. md5/crc32c hashes (if available)
+    # 3. size
+    has_src_mtime = src_mtime > NA_TIME
+    has_dst_mtime = dst_mtime > NA_TIME
+    if not self.compute_file_checksums and has_src_mtime and has_dst_mtime:
+      return src_mtime > dst_mtime, has_src_mtime, has_dst_mtime
     if src_size != dst_size:
-      return False
-    if self.compute_file_checksums:
-      (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
-          self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
-          dst_size, dst_crc32c, dst_md5)
+      return True, has_src_mtime, has_dst_mtime
+    (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
+        self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
+        dst_size, dst_crc32c, dst_md5)
     if src_md5 != _NA and dst_md5 != _NA:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
-      return src_md5 == dst_md5
+      return src_md5 != dst_md5, has_src_mtime, has_dst_mtime
     if src_crc32c != _NA and dst_crc32c != _NA:
       self.logger.debug(
           'Comparing crc32c for %s and %s', src_url_str, dst_url_str)
-      return src_crc32c == dst_crc32c
+      return src_crc32c != dst_crc32c, has_src_mtime, has_dst_mtime
     if not self._WarnIfMissingCloudHash(src_url_str, src_crc32c, src_md5):
       self._WarnIfMissingCloudHash(dst_url_str, dst_crc32c, dst_md5)
-    # Without checksums to compare we depend only on basic size comparison.
-    return True
+    # Without checksums or mtime to compare we depend only on basic size
+    # comparison.
+    return False, has_src_mtime, has_dst_mtime
 
   def __iter__(self):
     """Iterates over src/dst URLs and produces a _DiffToApply sequence.
@@ -911,22 +926,30 @@ class _DiffIterator(object):
           src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
         yield _DiffToApply(
-            src_url_str, dst_url_str_would_copy_to, _DiffAction.COPY, src_size)
+            src_url_str, dst_url_str_would_copy_to, src_mtime, _DiffAction.COPY,
+            src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
-          yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
+          yield _DiffToApply(None, dst_url_str, NA_TIME, _DiffAction.REMOVE,
+                             None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
         # match.
-        if not self._ObjectsMatch(
-            src_url_str, src_size, src_mtime, src_crc32c, src_md5,
-            dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5):
-          yield _DiffToApply(src_url_str, dst_url_str, _DiffAction.COPY,
-                             src_size)
+        should_replace, has_src_mtime, has_dst_mtime = (self._CompareObjects(
+            src_url_str, src_size, src_mtime, src_crc32c, src_md5, dst_url_str,
+            dst_size, dst_mtime, dst_crc32c, dst_md5))
+        if should_replace:
+          yield _DiffToApply(src_url_str, dst_url_str, src_mtime,
+                             _DiffAction.COPY, src_size)
+        elif has_src_mtime and not has_dst_mtime:
+          # File/object at destination matches source but is missing mtime
+          # attribute at destination.
+          yield _DiffToApply(src_url_str, dst_url_str, src_mtime,
+                             _DiffAction.MTIME_SRC_TO_DST, src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -938,10 +961,10 @@ class _DiffIterator(object):
     # If -d option was specified any files/objects left in dst iteration should
     # be removed.
     if dst_url_str:
-      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
+      yield _DiffToApply(None, dst_url_str, NA_TIME, _DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _, _) = self._ParseTmpFileLine(line)
-      yield _DiffToApply(None, dst_url_str, _DiffAction.REMOVE, None)
+      yield _DiffToApply(None, dst_url_str, NA_TIME, _DiffAction.REMOVE, None)
 
 
 class _SeekAheadDiffIterator(object):
@@ -1036,8 +1059,21 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
               src_url.bucket_name, src_url.object_name,
               generation=src_generation, provider=src_url.scheme,
               fields=cls.source_metadata_fields)
-        # TODO: Retrieve mtime and set the source object's custom metadata
-        #       field for mtime.
+        else:
+          if not src_obj_metadata:
+            src_obj_metadata = apitools_messages.Object()
+          # getmtime can return a float, so it needs to be converted to long.
+          mtime = diff_to_apply.src_mtime
+          if mtime > long(time.time()) + _SECONDS_PER_DAY:
+            logging.getLogger().warn('%s has mtime more than 1 day from current'
+                                     ' system time', src_url.url_string)
+          if src_obj_metadata.metadata:
+            custom_metadata = src_obj_metadata.metadata
+          else:
+            custom_metadata = apitools_messages.Object.MetadataValue(
+                additionalProperties=[])
+          CreateCustomMetadata({MTIME_ATTR: mtime}, custom_metadata)
+          src_obj_metadata.metadata = custom_metadata
         copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,
             _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
@@ -1045,7 +1081,21 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       except SkipUnsupportedObjectError, e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
-
+  elif diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST:
+    src_url = StorageUrlFromString(diff_to_apply.src_url_str)
+    dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
+    if cls.dryrun:
+      cls.logger.info('Would set mtime for %s', dst_url)
+    elif src_url.IsCloudUrl() and dst_url.IsCloudUrl():
+      logging.getLogger().info('Copying mtime from src to dst for %s',
+                               dst_url.url_string)
+      mtime = diff_to_apply.src_mtime
+      obj_metadata = apitools_messages.Object()
+      obj_metadata.metadata = CreateCustomMetadata({MTIME_ATTR: mtime})
+      gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
+                                     dst_url.object_name, obj_metadata,
+                                     provider=dst_url.scheme,
+                                     generation=dst_url.generation)
   else:
     raise CommandException('Got unexpected DiffAction (%d)'
                            % diff_to_apply.diff_action)
@@ -1122,8 +1172,11 @@ class RsyncCommand(Command):
   def RunCommand(self):
     """Command entry point for the rsync command."""
     self._ParseOpts()
-    if self.compute_file_checksums and not UsingCrcmodExtension(crcmod):
-      self.logger.warn(SLOW_CRCMOD_WARNING)
+    if not UsingCrcmodExtension(crcmod):
+      if self.compute_file_checksums:
+        self.logger.warn(SLOW_CRCMOD_WARNING)
+      else:
+        self.logger.warn(SLOW_CRCMOD_RSYNC_WARNING)
 
     src_url = self._InsistContainer(self.args[0], False)
     dst_url = self._InsistContainer(self.args[1], True)

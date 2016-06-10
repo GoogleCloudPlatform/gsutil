@@ -127,6 +127,7 @@ from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import MTIME_ATTR
 from gslib.util import ObjectIsGzipEncoded
+from gslib.util import ParseAndSetMtime
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
@@ -2557,7 +2558,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
       os.unlink(final_file_name)
     os.rename(file_name,
               final_file_name)
-    # TODO: Set mtime for downloaded files.
+    ParseAndSetMtime(final_file_name, src_obj_metadata)
 
   if 'md5' in local_hashes:
     return local_hashes['md5']
@@ -2923,15 +2924,12 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
     if src_url.IsCloudUrl():
       # Preserve relevant metadata from the source object if it's not already
       # provided from the headers.
-      CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
       src_obj_metadata.name = src_url.object_name
       src_obj_metadata.bucket = src_url.bucket_name
     else:
-      # TODO: Copy metadata if available.
       _SetContentTypeFromFile(src_url, dst_obj_metadata)
-  else:
-    # Files don't have Cloud API metadata.
-    dst_obj_metadata = None
+  if src_obj_metadata:
+    CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
 
   _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata)
 
@@ -2959,7 +2957,10 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
           copy_exception_handler, gzip_exts=gzip_exts,
           allow_splitting=allow_splitting)
     else:  # dst_url.IsFileUrl()
-      return _CopyFileToFile(src_url, dst_url)
+      result = _CopyFileToFile(src_url, dst_url)
+      # Need to let _CopyFileToFile return before setting the file mtime.
+      ParseAndSetMtime(dst_url.object_name, src_obj_metadata)
+      return result
 
 
 class Manifest(object):

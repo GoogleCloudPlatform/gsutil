@@ -47,6 +47,7 @@ from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
+from gslib.util import CreateCustomMetadata
 from gslib.util import DiscardMessagesQueue
 from gslib.util import IS_WINDOWS
 from gslib.util import MTIME_ATTR
@@ -421,9 +422,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     custom_metadata = apitools_messages.Object.MetadataValue(
         additionalProperties=[])
     if mtime is not None:
-      custom_metadata.additionalProperties.append(
-          apitools_messages.Object.MetadataValue.AdditionalProperty(
-              key=MTIME_ATTR, value=str(mtime)))
+      CreateCustomMetadata({MTIME_ATTR: mtime}, custom_metadata)
     object_metadata = apitools_messages.Object(
         name=object_name,
         metadata=custom_metadata,

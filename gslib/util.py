@@ -46,6 +46,7 @@ from boto.pyami.config import BotoConfigLocations
 import gslib
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import S3_ACL_MARKER_GUID
@@ -148,6 +149,8 @@ LONG_RETRY_WARN_SEC = 10
 
 # Metadata attribute name for file modification time.
 MTIME_ATTR = 'goog-reserved-file-mtime'
+# NA_TIME is a long value that takes the place of any invalid mtime.
+NA_TIME = -1
 
 
 global manager  # pylint: disable=global-at-module-level
@@ -775,6 +778,83 @@ BOTO_IS_SECURE = _BotoIsSecure()
 
 def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', EIGHT_MIB)
+
+
+def CreateCustomMetadata(entries=None, custom_metadata=None):
+  """Creates a custom metadata (apitools Object.MetadataValue) object.
+
+  Inserts the key/value pairs in entries.
+
+  Args:
+    entries: The dictionary containing key/value pairs to insert into metadata.
+    custom_metadata: A pre-existing custom metadata object to add to.
+
+  Returns:
+    An apitools Object.MetadataVlue.
+  """
+  if custom_metadata is None:
+    custom_metadata = apitools_messages.Object.MetadataValue(
+        additionalProperties=[])
+  if entries is None:
+    entries = {}
+  for key, value in entries.iteritems():
+    custom_metadata.additionalProperties.append(
+        apitools_messages.Object.MetadataValue.AdditionalProperty(
+            key=str(key), value=str(value)))
+  return custom_metadata
+
+
+def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
+                                     default_value=None):
+  """Filters a specific element out of an object's custom metadata.
+
+  Args:
+    obj_metadata: The metadata for an object.
+    search_key: The custom metadata key to search for.
+    default_value: The default value to use for the key if it cannot be found.
+
+  Returns:
+    A tuple indicating if the value could be found in metadata and a value
+    corresponding to search_key. The value at the specified key in custom
+    metadata or the default value, if the specified key does not exist in the
+    customer metadata.
+  """
+  try:
+    value = next((attr.value for attr in
+                  obj_metadata.metadata.additionalProperties
+                  if attr.key == search_key), None)
+    if value is None:
+      return False, default_value
+    return True, value
+  except AttributeError:
+    return False, default_value
+
+
+def ParseAndSetMtime(path, obj_metadata):
+  """Parses mtime from obj_metadata and sets the mtime of the file at path.
+
+  Also sets the atime of the file to be the same as the mtime. If mtime is not
+  in obj_metadata or if mtime is NA_TIME, neither atime nor mtime is set.
+
+  Args:
+    path: The local filesystem path for the file.
+    obj_metadata: The metadata for an object.
+
+  Returns:
+    None
+  """
+  try:
+    # GetValueFromObjectCustomMetadata returns a tuple, and we only need the
+    # second attribute.
+    mtime = long(GetValueFromObjectCustomMetadata(obj_metadata, MTIME_ATTR,
+                                                  NA_TIME)[1])
+    if mtime > NA_TIME:
+      os.utime(path, (mtime, mtime))
+  except (AttributeError, ValueError):
+    # It's possible that either obj_metadata or obj_metadata.metadata is None.
+    # If it does exist, the value with key MTIME_ATTR can have non-numeric
+    # characters.
+    pass
 
 
 # pylint: disable=too-many-statements
