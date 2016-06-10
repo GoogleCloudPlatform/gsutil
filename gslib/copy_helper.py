@@ -2199,8 +2199,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
           FileProgressCallbackHandler(
               ConstructAnnounceText('Hashing',
                                     dst_url.url_string),
-              gsutil_api.status_queue).call,
-          gsutil_api.status_queue)
+              gsutil_api.status_queue).call)
 
       while bytes_digested < total_bytes_to_digest:
         bytes_to_read = min(DEFAULT_FILE_BUFFER_SIZE,
