@@ -144,7 +144,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['compose', suri(object_uri1), suri(object_uri2),
                                suri(bucket_uri, 'obj')], expected_status=1,
                               return_stderr=True)
-      self.assertIn('is encrypted by a different customer-supplied key', stderr)
+      self.assertIn('provided encryption key is incorrect', stderr)
 
     with SetBotoConfigForTest(
         [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]):
@@ -165,7 +165,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['compose', suri(object_uri1), suri(object_uri2),
                                suri(bucket_uri, 'obj')], expected_status=1,
                               return_stderr=True)
-      self.assertIn('is encrypted by a different customer-supplied key', stderr)
+      self.assertIn('provided encryption key is incorrect', stderr)
 
     # Should also fail if we don't have the second key.
     with SetBotoConfigForTest(
@@ -173,7 +173,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['compose', suri(object_uri1), suri(object_uri2),
                                suri(bucket_uri, 'obj')], expected_status=1,
                               return_stderr=True)
-      self.assertIn('is encrypted by a different customer-supplied key', stderr)
+      self.assertIn('provided encryption key is incorrect', stderr)
 
   def test_compose_missing_second_source_object(self):
     bucket_uri = self.CreateBucket()
