@@ -131,11 +131,11 @@ def SetAclExceptionHandler(cls, e):
   cls.logger.error(str(e))
   cls.everything_set_okay = False
 
-# We will keep this list of all thread- or process-safe queues ever created by
-# the main thread so that we can forcefully kill them upon shutdown. Otherwise,
-# we encounter a Python bug in which empty queues block forever on join (which
-# is called as part of the Python exit function cleanup) under the impression
-# that they are non-empty.
+# We will keep this list of all thread- or process-safe queues (except the
+# global status queue) ever created by the main thread so that we can
+# forcefully kill them upon shutdown. Otherwise, we encounter a Python bug in
+# which empty queues block forever on join (which is called as part of the
+# Python exit function cleanup) under the impression that they are non-empty.
 # However, this also lets us shut down somewhat more cleanly when interrupted.
 queues = []
 
@@ -338,7 +338,11 @@ def InitializeMultiprocessingVariables():
   # would need to address:
   # - Queue fairness if one queue grows to be disproportionately large
   # - Reasonable time correlation with events as they occur
-  glob_status_queue = _NewMultiprocessingQueue()
+  #
+  # This queue must be torn down after worker processes/threads and the
+  # UI thread have been torn down. Otherwise, these threads may have
+  # undefined behavior when trying to interact with a non-existent queue.
+  glob_status_queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
 
 
 def TeardownMultiprocessingProcesses():
@@ -378,7 +382,7 @@ def InitializeThreadingVariables():
   shared_vars_map = AtomicDict()
   task_queues = []
   total_tasks = AtomicDict()
-  glob_status_queue = _NewThreadsafeQueue()
+  glob_status_queue = Queue.Queue(MAX_QUEUE_SIZE)
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -2086,8 +2090,10 @@ def _NotifyIfDone(caller_id, num_done):
       need_pool_or_done_cond.notify_all()
 
 
+# pylint: disable=global-variable-not-assigned,global-variable-undefined
 def ShutDownGsutil():
   """Shut down all processes in consumer pools in preparation for exiting."""
+  global glob_status_queue
   for q in queues:
     try:
       q.cancel_join_thread()
@@ -2095,9 +2101,12 @@ def ShutDownGsutil():
       pass
   for consumer_pool in consumer_pools:
     consumer_pool.ShutDown()
+  try:
+    glob_status_queue.cancel_join_thread()
+  except:  # pylint: disable=bare-except
+    pass
 
 
-# pylint: disable=global-variable-undefined
 def _IncrementFailureCount():
   global failure_count
   if isinstance(failure_count, int):
@@ -2114,7 +2123,6 @@ def DecrementFailureCount():
     failure_count.value -= 1
 
 
-# pylint: disable=global-variable-undefined
 def GetFailureCount():
   """Returns the number of failures processed during calls to Apply()."""
   try:
@@ -2136,3 +2144,4 @@ def ResetFailureCount():
       failure_count = multiprocessing.Value('i', 0)
   except NameError:  # If it wasn't initialized, Apply() wasn't called.
     pass
+# pylint: enable=global-variable-not-assigned,global-variable-undefined
