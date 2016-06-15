@@ -60,6 +60,7 @@ from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MTIME_ATTR
 from gslib.util import NA_TIME
+from gslib.util import ParseAndSetMtime
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -1082,20 +1083,26 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
   elif diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST:
+    # If the destination is an object in a bucket, this will not blow away other
+    # metadata. This behavior is unlike if the file/object actually needed to be
+    # copied from the source to the destination.
     src_url = StorageUrlFromString(diff_to_apply.src_url_str)
     dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
     if cls.dryrun:
       cls.logger.info('Would set mtime for %s', dst_url)
-    elif src_url.IsCloudUrl() and dst_url.IsCloudUrl():
+    else:
       logging.getLogger().info('Copying mtime from src to dst for %s',
                                dst_url.url_string)
       mtime = diff_to_apply.src_mtime
       obj_metadata = apitools_messages.Object()
       obj_metadata.metadata = CreateCustomMetadata({MTIME_ATTR: mtime})
-      gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
-                                     dst_url.object_name, obj_metadata,
-                                     provider=dst_url.scheme,
-                                     generation=dst_url.generation)
+      if dst_url.IsCloudUrl():
+        gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
+                                       dst_url.object_name, obj_metadata,
+                                       provider=dst_url.scheme,
+                                       generation=dst_url.generation)
+      else:
+        ParseAndSetMtime(dst_url.object_name, obj_metadata)
   else:
     raise CommandException('Got unexpected DiffAction (%d)'
                            % diff_to_apply.diff_action)
