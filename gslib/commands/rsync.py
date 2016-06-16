@@ -1086,7 +1086,6 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
     # copied from the source to the destination.
-    src_url = StorageUrlFromString(diff_to_apply.src_url_str)
     dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
     if cls.dryrun:
       cls.logger.info('Would set mtime for %s', dst_url)
@@ -1097,10 +1096,31 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       obj_metadata = apitools_messages.Object()
       obj_metadata.metadata = CreateCustomMetadata({MTIME_ATTR: mtime})
       if dst_url.IsCloudUrl():
-        gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
-                                       dst_url.object_name, obj_metadata,
-                                       provider=dst_url.scheme,
-                                       generation=dst_url.generation)
+        dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
+        dst_generation = GenerationFromUrlAndString(dst_url,
+                                                    dst_url.generation)
+        dst_obj_metadata = gsutil_api.GetObjectMetadata(
+            dst_url.bucket_name, dst_url.object_name,
+            generation=dst_generation, provider=dst_url.scheme,
+            fields=['acl'])
+        if dst_obj_metadata.acl:
+          # We have ownership, and can patch the object.
+          gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
+                                         dst_url.object_name, obj_metadata,
+                                         provider=dst_url.scheme,
+                                         generation=dst_url.generation)
+        else:
+          # We don't have object ownership, so it must be copied.
+          logging.getLogger().info('Copying whole file/object for %s instead '
+                                   'of patching because you don\'t have owner '
+                                   'permission on the object.',
+                                   dst_url.url_string)
+          _RsyncFunc(cls, _DiffToApply(diff_to_apply.src_url_str,
+                                       diff_to_apply.dst_url_str,
+                                       diff_to_apply.src_mtime,
+                                       _DiffAction.COPY,
+                                       diff_to_apply.copy_size),
+                     thread_state=thread_state)
       else:
         ParseAndSetMtime(dst_url.object_name, obj_metadata)
   else:
