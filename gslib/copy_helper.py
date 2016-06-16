@@ -2158,6 +2158,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
   if is_sliced:
     download_name += ' component %d' % component_num
 
+  fp = None
   try:
     fp = open(download_file_name, 'r+b')
     fp.seek(start_byte)
