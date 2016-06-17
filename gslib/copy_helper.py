@@ -1547,6 +1547,13 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
     # Check for temp space. Assume the compressed object is at most 2x
     # the size of the object (normally should compress to smaller than
     # the object)
+    if src_url.IsStream():
+      # TODO: Support streaming gzip uploads.
+      # https://github.com/GoogleCloudPlatform/gsutil/issues/364
+      raise CommandException(
+          'gzip compression is not currently supported on streaming uploads. '
+          'Remove the compression flag or save the streamed output '
+          'temporarily to a file before uploading.')
     if CheckFreeSpace(gzip_path) < 2*int(src_obj_size):
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '

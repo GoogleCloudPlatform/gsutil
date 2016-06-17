@@ -868,6 +868,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(stderr.count(
           'ResumableDownloadException: Artifically halting download'), 3)
 
+  def test_streaming_gzip_upload(self):
+    """Tests error when compression flag is requested on a streaming source."""
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['cp', '-Z', '-', suri(bucket_uri, 'foo')],
+                            return_stderr=True, expected_status=1,
+                            stdin='streaming data')
+    self.assertIn(
+        'gzip compression is not currently supported on streaming uploads',
+        stderr)
+
   def test_seek_ahead_upload_cp(self):
     """Tests that the seek-ahead iterator estimates total upload work."""
     tmpdir = self.CreateTempDir(test_files=3)
