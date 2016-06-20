@@ -2748,7 +2748,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
                       'contentDisposition', 'contentEncoding',
                       'contentLanguage', 'contentType', 'crc32c',
                       'customerEncryption', 'etag', 'generation', 'md5Hash',
-                      'mediaLink', 'metadata', 'metageneration', 'size']
+                      'mediaLink', 'metadata', 'metageneration', 'size',
+                      'timeCreated']
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
       src_obj_fields.append('acl')
@@ -2759,7 +2760,7 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
                       'customerEncryption', 'etag', 'mediaLink', 'md5Hash',
                       'size', 'generation']
     if is_rsync:
-      src_obj_fields.append('metadata/%s' % MTIME_ATTR)
+      src_obj_fields.extend(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
   if skip_unsupported_objects:
     src_obj_fields.append('storageClass')
 

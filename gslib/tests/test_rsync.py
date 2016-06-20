@@ -27,6 +27,7 @@ from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.util import ConvertDatetimeToPOSIX
 from gslib.util import CreateCustomMetadata
 from gslib.util import DiscardMessagesQueue
 from gslib.util import GetValueFromObjectCustomMetadata
@@ -93,41 +94,66 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     return self.RunGsUtil(['ls', suri(bucket_url_string, '**')],
                           return_stdout=True)
 
+  def _GetMetadataAttribute(self, bucket_name, object_name, attr_name):
+    """Retrieves and returns an attribute from an objects metadata.
+
+    Args:
+      bucket_name: The name of the bucket the object is in.
+      object_name: The name of the object itself.
+      attr_name: The name of the custom metadata attribute.
+
+    Returns:
+      The value at the specified attribute name in the metadata. If not present,
+      returns None.
+    """
+    gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue,
+                            self.default_provider)
+    metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
+                                            provider=self.default_provider,
+                                            fields=[attr_name])
+    return getattr(metadata, attr_name, None)
+
   def _VerifyObjectCustomAttribute(self, bucket_name, object_name, attr_name,
-                                   expected_value):
-    """Retrieves the and verifies an object's custom metadata attribute.
+                                   expected_value, not_equal=False):
+    """Retrieves and verifies an object's custom metadata attribute.
 
     Args:
       bucket_name: The name of the bucket the object is in.
       object_name: The name of the object itself.
       attr_name: The name of the custom metadata attribute.
       expected_value: The expected retrieved value for the attribute.
+      not_equal: Whether or not to assertEqual or assertNotEqual
 
     Returns:
       None
     """
-    gsutil_api = GcsJsonApi(None, logging.getLogger(),
-                            DiscardMessagesQueue, self.default_provider)
+    gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue,
+                            self.default_provider)
     metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
                                             provider=self.default_provider,
                                             fields=['metadata/%s' % attr_name])
     _, value = GetValueFromObjectCustomMetadata(metadata, attr_name,
-                                                expected_value)
-    self.assertEqual(value, expected_value)
+                                                default_value=expected_value)
+    if not_equal:
+      self.assertNotEqual(value, expected_value)
+    else:
+      self.assertEqual(value, expected_value)
 
-  def _VerifyObjectMtime(self, bucket_name, object_name, expected_value):
+  def _VerifyObjectMtime(self, bucket_name, object_name, expected_mtime,
+                         not_equal=False):
     """Retrieves the object's mtime.
 
     Args:
       bucket_name: The name of the bucket the object is in.
       object_name: The name of the object itself.
       expected_mtime: The expected retrieved mtime.
+      not_equal: Whether or not to assertEqual or assertNotEqual
 
     Returns:
       None
     """
     self._VerifyObjectCustomAttribute(bucket_name, object_name, MTIME_ATTR,
-                                      expected_value)
+                                      expected_mtime, not_equal=not_equal)
 
   def _SetObjectCustomMetadataAttribute(self, bucket_name, object_name,
                                         attr_name, attr_value):
@@ -309,7 +335,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj2',
                       contents='subdir/obj2', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='.obj3',
-                      contents='.obj3', mtime=10)
+                      contents='.OBJ3', mtime=1000000000000L)
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj5',
                       contents='subdir/obj5', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
@@ -319,8 +345,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', '-r', '-d', suri(src_bucket),
-                      suri(dst_bucket)])
+      self.RunGsUtil(['rsync', '-r', '-d', suri(src_bucket), suri(dst_bucket)])
       listing1 = _TailSet(suri(src_bucket), self._FlatListBucket(src_bucket))
       listing2 = _TailSet(suri(dst_bucket), self._FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
@@ -351,9 +376,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # used to compare the objects.
       self.assertEquals('OBJ1', self.RunGsUtil(
           ['cat', suri(dst_bucket, 'obj1')], return_stdout=True))
-      # Check that obj6 remained the same at the destination. The object was not
-      # changed because the mtime matched (even though the hashes did not).
-      self.assertEquals('obj6', self.RunGsUtil(
+      # Ensure that .obj3 was updated even though its modification time comes
+      # after the creation time of .obj3 at the source.
+      self.assertEquals('.obj3', self.RunGsUtil(
+          ['cat', suri(dst_bucket, '.obj3')], return_stdout=True))
+      # Check that obj6 was updated even though the mtimes match. In this case
+      # bucket to bucket sync will compare hashes.
+      self.assertEquals('OBJ6', self.RunGsUtil(
           ['cat', suri(dst_bucket, 'obj6')], return_stdout=True))
     _Check4()
 
@@ -392,9 +421,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
                       contents='obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents='.obj2', mtime=10)
     self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
                       contents='subdir/obj3')
+    # .obj2 will be replaced and have mtime of 10
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
                       contents='.OBJ2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
@@ -423,6 +453,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['cat', suri(bucket1_uri, '.obj2')], return_stdout=True))
       self.assertEquals('.obj2', self.RunGsUtil(
           ['cat', suri(bucket2_uri, '.obj2')], return_stdout=True))
+      # Verify that .obj2 had its mtime updated at the destination.
+      self._VerifyObjectMtime(bucket2_uri.bucket_name, '.obj2', '10')
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -868,10 +900,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                      '/obj6']))
     # Assert that the src/dest objects that had same length but different
     # checksums were synchronized properly according to mtime.
-    with open(os.path.join(tmpdir1, '.obj2')) as f:
-      self.assertEquals('.obj2', '\n'.join(f.readlines()))
     with open(os.path.join(tmpdir2, '.obj2')) as f:
-      self.assertEquals('.OBJ2', '\n'.join(f.readlines()))
+      self.assertEquals('.obj2', '\n'.join(f.readlines()))
     with open(os.path.join(tmpdir2, 'obj6')) as f:
       self.assertEquals('OBJ6', '\n'.join(f.readlines()))
 
@@ -1109,10 +1139,16 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='obj7', mtime=5)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
                       contents='obj8', mtime=100)
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
+                      contents='obj9', mtime=25)
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
+                      contents='obj10')
+    time_created = (ConvertDatetimeToPOSIX(self._GetMetadataAttribute(
+        bucket_uri.bucket_name, 'obj10', 'timeCreated')))
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2',
                         mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4',
-                        mtime=10)
+                        mtime=100)
     self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents='subdir/obj5',
                         mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj6',
@@ -1121,6 +1157,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                         contents='OBJ7', mtime=50)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj8',
                         contents='obj8', mtime=10)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj9',
+                        contents='OBJ9', mtime=25)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj10',
+                        contents='OBJ10', mtime=time_created)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1131,20 +1171,30 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8']))
+                                       '/obj4', '/obj6', '/obj7', '/obj8',
+                                       '/obj9', '/obj10']))
       # Dir should have content like bucket except without sub-directories
       # synced.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
                                        '/subdir/obj5', '/obj6', '/obj7',
-                                       '/obj8']))
+                                       '/obj8', '/obj9', '/obj10']))
       # Assert that the dst objects that had an earlier mtime were not
       # synchronized because the source didn't have an mtime.
       with open(os.path.join(tmpdir, '.obj2')) as f:
-        self.assertEquals('.OBJ2', '\n'.join(f.readlines()))
+        self.assertEquals('.obj2', '\n'.join(f.readlines()))
       # Assert that obj4 was synchronized to dst because mtime cannot be used,
       # and the hashes are different.
       with open(os.path.join(tmpdir, 'obj4')) as f:
         self.assertEquals('OBJ4', '\n'.join(f.readlines()))
+      # Verify obj9 and obj10 content didn't change because mtimes from src and
+      # dst were equal. obj9 had mtimes that matched while obj10 the mtime was
+      # equal to the creation time of the corresponding object.
+      with open(os.path.join(tmpdir, 'obj9')) as f:
+        self.assertEquals('OBJ9', '\n'.join(f.readlines()))
+      # Also verifies if obj10 used time created to determine if a copy was
+      # necessary.
+      with open(os.path.join(tmpdir, 'obj10')) as f:
+        self.assertEquals('OBJ10', '\n'.join(f.readlines()))
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1153,11 +1203,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       """Verify mtime was set for objects at destination."""
       self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, 'obj1'))), 5)
       self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, '.obj2'))),
-                        10)
+                        5)
       self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, 'obj6'))),
                         50)
       self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, 'obj8'))),
                         100)
+      self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, 'obj9'))),
+                        25)
     _Check2()
 
     # Now rerun the rsync with the -c option.
@@ -1170,11 +1222,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(tmpdir, self._FlatListDir(tmpdir))
       # Bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8']))
+                                       '/obj4', '/obj6', '/obj7', '/obj8',
+                                       '/obj9', '/obj10']))
       # Dir should have content like bucket this time with subdirectories
       # synced.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8']))
+                                       '/obj4', '/obj6', '/obj7', '/obj8',
+                                       '/obj9', '/obj10']))
       # Assert that the contents of obj7 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('obj7', self.RunGsUtil(
@@ -1182,6 +1236,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self._VerifyObjectMtime(bucket_uri.bucket_name, 'obj7', '5')
       # Check the mtime of obj7 in the destination to see that it changed.
       self.assertEquals(long(os.path.getmtime(os.path.join(tmpdir, 'obj7'))), 5)
+      # Verify obj9 and obj10 content has changed because hashes were used in
+      # comparisons.
+      with open(os.path.join(tmpdir, 'obj9')) as f:
+        self.assertEquals('obj9', '\n'.join(f.readlines()))
+      with open(os.path.join(tmpdir, 'obj10')) as f:
+        self.assertEquals('obj10', '\n'.join(f.readlines()))
     _Check3()
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -1199,8 +1259,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
                       contents='obj1')
+    # Set the mtime for obj2 because obj2 in the cloud and obj2 on the local
+    # file system have the potential to be created during the same second.
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents='.obj2', mtime=0)
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
                       contents='subdir/obj3')
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2')

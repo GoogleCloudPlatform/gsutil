@@ -54,6 +54,7 @@ from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import GenerationFromUrlAndString
+from gslib.util import ConvertDatetimeToPOSIX
 from gslib.util import CreateCustomMetadata
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetValueFromObjectCustomMetadata
@@ -221,9 +222,15 @@ _DETAILED_HELP_TEXT = ("""
   To determine if a file or object has changed, gsutil rsync first checks
   whether the file modification time (mtime) of both the source and destination
   is available. If mtime is available at both source and destination, and the
-  destination has an older mtime, gsutil rsync will update the destination. If
-  mtime is not available for either the source or the destination, gsutil rsync
-  will fall back to using checksums. If the source and destination have matching
+  destination mtime is different than the source, gsutil rsync will update the
+  destination. If the source is a cloud bucket and the destination is a local
+  file system, and if mtime is not available for the source, gsutil rsync will
+  use the time created for the cloud object as a substitute for mtime.
+  Otherwise, if mtime is not available for either the source or the destination,
+  gsutil rsync will fall back to using checksums. If the source and destination
+  are both cloud buckets with checksums available, gsutil rsync will use these
+  hashes instead of mtime. However, gsutil rsync will still update mtime at the
+  destination if it is not present. If the source and destination have matching
   checksums and only the source has an mtime, gsutil rsync will copy the mtime
   to the destination. If neither mtime nor checksums are available, gsutil rsync
   will resort to comparing file sizes.
@@ -291,8 +298,9 @@ _DETAILED_HELP_TEXT = ("""
 <B>OPTIONS</B>
   -c            Causes the rsync command to compute and compare checksums
                 (instead of comparing mtime) for files if the size of source and
-                destination match. This option increases local disk I/O and run
-                time if either src_url or dst_url are on the local file system.
+                destination as well as mtime (if available) match. This option
+                increases local disk I/O and run time if either src_url or
+                dst_url are on the local file system.
 
   -C            If an error occurs, continue to attempt to copy the remaining
                 files. If errors occurred, gsutil's exit status will be non-zero
@@ -567,7 +575,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
         project_id=cls.project_id).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=['crc32c', 'md5Hash',
-                                   'metadata/%s' % MTIME_ATTR, 'name', 'size'])
+                                   'metadata/%s' % MTIME_ATTR, 'name', 'size',
+                                   'timeCreated'])
   i = 0
   for blr in iterator:
     # Various GUI tools (like the GCS web console) create placeholder objects
@@ -606,13 +615,14 @@ def _BuildTmpOutputLine(blr):
 
   Returns:
     The output line, formatted as
-    _EncodeUrl(URL)<sp>size<sp>mtime<sp>crc32c<sp>md5 where md5 will only be
-    present for cloud URLs that aren't composite objects. A missing field is
-    populated with '-', or -1 in the case of mtime.
+    _EncodeUrl(URL)<sp>size<sp>time_created<sp>mtime<sp>crc32c<sp>md5 where md5
+    will only be present for cloud URLs that aren't composite objects. A missing
+    field is populated with '-', or -1 in the case of mtime/time_created.
   """
   crc32c = _NA
   md5 = _NA
   mtime = NA_TIME
+  time_created = NA_TIME
   url = blr.storage_url
   if url.IsFileUrl():
     size = os.path.getsize(url.object_name)
@@ -643,12 +653,15 @@ def _BuildTmpOutputLine(blr):
         logging.getLogger().warn('%s has an invalid mtime in its metadata',
                                  url.url_string)
         mtime = NA_TIME
+    # Sanitize the timestamp returned, and put it in UTC format. For more
+    # information see the UTC class in gslib/util.py.
+    time_created = ConvertDatetimeToPOSIX(blr.root_object.timeCreated)
     crc32c = blr.root_object.crc32c or _NA
     md5 = blr.root_object.md5Hash or _NA
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
-  return '%s %d %d %s %s\n' % (_EncodeUrl(url.url_string), size, mtime, crc32c,
-                               md5)
+  return '%s %d %d %d %s %s\n' % (_EncodeUrl(url.url_string), size,
+                                  time_created, mtime, crc32c, md5)
 
 
 def _EncodeUrl(url_string):
@@ -788,17 +801,17 @@ class _DiffIterator(object):
     """Parses output from _BuildTmpOutputLine.
 
     Parses into tuple:
-      (URL, size, mtime, crc32c, md5)
-    where crc32c and/or md5 can be _NA and mtime can be NA_TIME.
+      (URL, size, time_created, mtime, crc32c, md5)
+    where crc32c and/or md5 can be _NA and mtime/time_created can be NA_TIME.
 
     Args:
       line: The line to parse.
 
     Returns:
-      Parsed tuple: (url, size, mtime, crc32c, md5)
+      Parsed tuple: (url, size, time_created, mtime, crc32c, md5)
     """
-    (encoded_url, size, mtime, crc32c, md5) = line.split()
-    return (_DecodeUrl(encoded_url), int(size), long(mtime),
+    (encoded_url, size, time_created, mtime, crc32c, md5) = line.split()
+    return (_DecodeUrl(encoded_url), int(size), long(time_created), long(mtime),
             crc32c, md5.strip())
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
@@ -856,14 +869,17 @@ class _DiffIterator(object):
     # 3. size
     has_src_mtime = src_mtime > NA_TIME
     has_dst_mtime = dst_mtime > NA_TIME
-    if not self.compute_file_checksums and has_src_mtime and has_dst_mtime:
-      return src_mtime > dst_mtime, has_src_mtime, has_dst_mtime
+    use_hashes = (self.compute_file_checksums or
+                  (StorageUrlFromString(src_url_str).IsCloudUrl() and
+                   StorageUrlFromString(dst_url_str).IsCloudUrl()))
+    if not use_hashes and has_src_mtime and has_dst_mtime:
+      return src_mtime != dst_mtime, has_src_mtime, has_dst_mtime
     if src_size != dst_size:
       return True, has_src_mtime, has_dst_mtime
     (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
         self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
         dst_size, dst_crc32c, dst_md5)
-    if src_md5 != _NA and dst_md5 != _NA:
+    if src_md5 != _NA and dst_md5 != _NA and src_mtime == dst_mtime:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
       return src_md5 != dst_md5, has_src_mtime, has_dst_mtime
     if src_crc32c != _NA and dst_crc32c != _NA:
@@ -899,8 +915,8 @@ class _DiffIterator(object):
         if self.sorted_src_urls_it.IsEmpty():
           out_of_src_items = True
         else:
-          (src_url_str, src_size, src_mtime, src_crc32c, src_md5) = (
-              self._ParseTmpFileLine(self.sorted_src_urls_it.next()))
+          (src_url_str, src_size, src_time_created, src_mtime, src_crc32c,
+           src_md5) = (self._ParseTmpFileLine(self.sorted_src_urls_it.next()))
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           src_url_str_to_check = _EncodeUrl(
@@ -910,7 +926,8 @@ class _DiffIterator(object):
               self.base_dst_url, False, self.recursion_requested).url_string
       if dst_url_str is None:
         if not self.sorted_dst_urls_it.IsEmpty():
-          (dst_url_str, dst_size, dst_mtime, dst_crc32c, dst_md5) = (
+          # We don't need time created at the destination.
+          (dst_url_str, dst_size, _, dst_mtime, dst_crc32c, dst_md5) = (
               self._ParseTmpFileLine(self.sorted_dst_urls_it.next()))
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
@@ -940,6 +957,10 @@ class _DiffIterator(object):
       else:
         # There is a dst object corresponding to src object, so check if objects
         # match.
+        if (StorageUrlFromString(src_url_str).IsCloudUrl() and
+            StorageUrlFromString(dst_url_str).IsFileUrl() and
+            src_mtime == NA_TIME):
+          src_mtime = src_time_created
         should_replace, has_src_mtime, has_dst_mtime = (self._CompareObjects(
             src_url_str, src_size, src_mtime, src_crc32c, src_md5, dst_url_str,
             dst_size, dst_mtime, dst_crc32c, dst_md5))
@@ -964,7 +985,7 @@ class _DiffIterator(object):
     if dst_url_str:
       yield _DiffToApply(None, dst_url_str, NA_TIME, _DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
-      (dst_url_str, _, _, _, _) = self._ParseTmpFileLine(line)
+      (dst_url_str, _, _, _, _, _) = self._ParseTmpFileLine(line)
       yield _DiffToApply(None, dst_url_str, NA_TIME, _DiffAction.REMOVE, None)
 
 
@@ -1064,16 +1085,17 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           if not src_obj_metadata:
             src_obj_metadata = apitools_messages.Object()
           # getmtime can return a float, so it needs to be converted to long.
-          mtime = diff_to_apply.src_mtime
-          if mtime > long(time.time()) + _SECONDS_PER_DAY:
+          if diff_to_apply.src_mtime > long(time.time()) + _SECONDS_PER_DAY:
             logging.getLogger().warn('%s has mtime more than 1 day from current'
                                      ' system time', src_url.url_string)
-          if src_obj_metadata.metadata:
-            custom_metadata = src_obj_metadata.metadata
-          else:
-            custom_metadata = apitools_messages.Object.MetadataValue(
-                additionalProperties=[])
-          CreateCustomMetadata({MTIME_ATTR: mtime}, custom_metadata)
+        if src_obj_metadata.metadata:
+          custom_metadata = src_obj_metadata.metadata
+        else:
+          custom_metadata = apitools_messages.Object.MetadataValue(
+              additionalProperties=[])
+        if diff_to_apply.src_mtime != NA_TIME:
+          CreateCustomMetadata(entries={MTIME_ATTR: diff_to_apply.src_mtime},
+                               custom_metadata=custom_metadata)
           src_obj_metadata.metadata = custom_metadata
         copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,

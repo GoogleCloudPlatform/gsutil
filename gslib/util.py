@@ -16,7 +16,10 @@
 
 from __future__ import absolute_import
 
+from calendar import timegm
 import collections
+from datetime import timedelta
+from datetime import tzinfo
 import errno
 import locale
 import logging
@@ -30,6 +33,7 @@ import sys
 import tempfile
 import textwrap
 import threading
+import time
 import traceback
 import xml.etree.ElementTree as ElementTree
 
@@ -190,6 +194,59 @@ Retry = retry_decorator.retry  # pylint: disable=invalid-name
 cached_multiprocessing_is_available = None
 cached_multiprocessing_is_available_stack_trace = None
 cached_multiprocessing_is_available_message = None
+
+
+# This class is necessary to convert timestamps to UTC. By default Python
+# datetime objects are timezone unaware. This created problems when interacting
+# with cloud object timestamps which are timezone aware. This issue appeared
+# when handling the timeCreated metadata attribute. The values returned by the
+# service were placed in RFC 3339 format in the storage_v1_messages module. RFC
+# 3339 requires a timezone in any timestamp. This caused problems as the
+# datetime object elsewhere in the code was timezone unaware and was different
+# by exactly one hour. The main problem is because the local system uses
+# daylight savings time which consequently adjusted the timestamp ahead by one
+# hour.
+class UTC(tzinfo):
+  """Timezone information class used to convert datetime timestamps to UTC."""
+
+  def utcoffset(self, _):
+    """An offset of the number of minutes away from UTC this tzinfo object is.
+
+    Returns:
+      A time duration of zero. UTC is zero minutes away from UTC.
+    """
+    return timedelta(0)
+
+  def tzname(self, _):
+    """A method to retrieve the name of this timezone object.
+
+    Returns:
+      The name of the timezone (i.e. 'UTC').
+    """
+    return 'UTC'
+
+  def dst(self, _):
+    """A fixed offset to handle daylight savings time (DST).
+
+    Returns:
+      A time duration of zero as UTC does not use DST.
+    """
+    return timedelta(0)
+
+
+def ConvertDatetimeToPOSIX(dt):
+  """Converts a datetime object to UTC and formats as POSIX.
+
+  Sanitize the timestamp returned in dt, and put it in UTC format. For more
+  information see the UTC class.
+
+  Args:
+    dt: A Python datetime object.
+
+  Returns:
+    A POSIX timestamp according to UTC.
+  """
+  return long(timegm(dt.replace(tzinfo=UTC()).timetuple()))
 
 
 # Enum class for specifying listing style.
@@ -846,9 +903,14 @@ def ParseAndSetMtime(path, obj_metadata):
   try:
     # GetValueFromObjectCustomMetadata returns a tuple, and we only need the
     # second attribute.
-    mtime = long(GetValueFromObjectCustomMetadata(obj_metadata, MTIME_ATTR,
-                                                  NA_TIME)[1])
-    if mtime > NA_TIME:
+    found, mtime = GetValueFromObjectCustomMetadata(obj_metadata, MTIME_ATTR,
+                                                    NA_TIME)
+    if found:
+      mtime = long(mtime)
+      if mtime > NA_TIME:
+        os.utime(path, (mtime, mtime))
+    else:
+      mtime = long(time.mktime(obj_metadata.timeCreated.timetuple()))
       os.utime(path, (mtime, mtime))
   except (AttributeError, ValueError):
     # It's possible that either obj_metadata or obj_metadata.metadata is None.
