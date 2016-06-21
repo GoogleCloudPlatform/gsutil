@@ -113,7 +113,7 @@ SSL_TIMEOUT = 60
 # Start with a progress callback every 64 KiB during uploads/downloads (JSON
 # API). Callback implementation should back off until it hits the maximum size
 # so that callbacks do not create huge amounts of log output.
-START_CALLBACK_PER_BYTES = 1024*64
+START_CALLBACK_PER_BYTES = 1024*256
 MAX_CALLBACK_PER_BYTES = 1024*1024*100
 
 # Upload/download files in 8 KiB chunks over the HTTP connection.
@@ -147,6 +147,13 @@ _EXP_STRINGS = [
     (60, 'EiB', 'Eibit', 'E'),
 ]
 
+_EXP_TEN_STRING = [
+    (3, 'k'),
+    (6, 'm'),
+    (9, 'b'),
+    (12, 't'),
+    (15, 'q')
+]
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
 
@@ -683,7 +690,7 @@ def JsonResumableChunkSizeDefined():
 
 def _RoundToNearestExponent(num):
   i = 0
-  while i+1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
+  while i + 1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
     i += 1
   return i, round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
 
@@ -736,6 +743,81 @@ def HumanReadableToBytes(human_string):
   raise ValueError('Invalid byte string specified: %s' % human_string)
 
 
+def DecimalShort(num):
+  """Creates a shorter string version for a given number of objects.
+
+  Args:
+    num: The number of objects to be shortened.
+  Returns:
+    shortened string version for this number. It takes the largest
+    scale (thousand, million or billion) smaller than the number and divides it
+    by that scale, indicated by a suffix with one decimal place. This will thus
+    create a string of at most 6 characters, assuming num < 10^18.
+    Example: 123456789 => 123.4m
+  """
+  for divisor_exp, suffix in reversed(_EXP_TEN_STRING):
+    if num >= 10**divisor_exp:
+      quotient = '%.1lf' % (float(num) / 10**divisor_exp)
+      return quotient + suffix
+  return str(num)
+
+
+def PrettyTime(remaining_time):
+  """Creates a standard version for a given remaining time in seconds.
+
+  Created over using strftime because strftime seems to be
+    more suitable for a datetime object, rather than just a number of
+    seconds remaining.
+  Args:
+    remaining_time: The number of seconds remaining as a float, or a
+      string/None value indicating time was not correctly calculated.
+  Returns:
+    if remaining_time is a valid float, %H:%M:%D time remaining format with
+    the nearest integer from remaining_time (%H might be higher than 23).
+    Else, it returns the same message it received.
+  """
+  remaining_time = int(round(remaining_time))
+  hours = int(remaining_time / 3600)
+  if hours >= 100:
+    # Too large to display with precision of minutes and seconds.
+    # If over 1000, saying 999+ hours should be enough.
+    return '%d+ hrs' % min(hours, 999)
+  remaining_time -= (3600 * hours)
+  minutes = int(remaining_time / 60)
+  remaining_time -= (60 * minutes)
+  seconds = int(remaining_time)
+  return (str('%02d' % hours) + ':' + str('%02d' % minutes)+':' +
+          str('%02d' % seconds))
+
+
+def HumanReadableWithDecimalPlaces(number, decimal_places=2):
+  """Creates a human readable format for bytes with fixed decimal places.
+
+  Args:
+    number: The number of bytes.
+    decimal_places: The number of decimal places.
+  Returns:
+    String representing a readable format for number with decimal_places
+     decimal places.
+  """
+  number_format = MakeHumanReadable(number).split()
+  num = int(round(10**decimal_places * float(number_format[0])))
+  if not num:
+    # 0 is a special case
+    if decimal_places:
+      number_format[0] += '.'
+    for i in range(decimal_places):  # pylint: disable=unused-variable
+      number_format[0] += '0'
+  elif decimal_places and not num % (10**decimal_places):
+    number_format[0] += '.'
+  i = 0
+  while num and not num % 10 and i < decimal_places:
+    number_format[0] += '0'
+    num /= 10
+    i += 1
+  return ' '.join(number_format)
+
+
 def Percentile(values, percent, key=lambda x: x):
   """Find the percentile of a list of values.
 
@@ -758,8 +840,8 @@ def Percentile(values, percent, key=lambda x: x):
   c = math.ceil(k)
   if f == c:
     return key(values[int(k)])
-  d0 = key(values[int(f)]) * (c-k)
-  d1 = key(values[int(c)]) * (k-f)
+  d0 = key(values[int(f)]) * (c - k)
+  d1 = key(values[int(c)]) * (k - f)
   return d0 + d1
 
 

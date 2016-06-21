@@ -15,8 +15,10 @@
 """Threading code for estimating total work of long-running gsutil commands."""
 
 import threading
+import time
 
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
+from gslib.thread_message import SeekAheadMessage
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
 
@@ -103,11 +105,6 @@ class SeekAheadThread(threading.Thread):
     if self.cancel_event.isSet():
       return
 
-    # TODO: Convert this and other status messages to proper messages,
-    # including types so that we can reason about time remaining.
-    estimate_message = ('Estimated work for this command: objects: %s' %
-                        num_objects)
-    if num_data_bytes:
-      estimate_message += ', total size: %s' % num_data_bytes
-    estimate_message += '\n'
-    PutToQueueWithTimeout(self.status_queue, estimate_message)
+    PutToQueueWithTimeout(self.status_queue,
+                          SeekAheadMessage(num_objects, num_data_bytes,
+                                           time.time()))

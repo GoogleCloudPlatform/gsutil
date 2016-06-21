@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import Queue
 import threading
 
+ZERO_TASKS_TO_DO_ARGUMENT = ('There were no', 'tasks to do')
+
 
 # Timeout for puts/gets to the global status queue, in seconds.
 STATUS_QUEUE_OP_TIMEOUT = 5

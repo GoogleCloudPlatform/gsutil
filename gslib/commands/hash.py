@@ -16,6 +16,7 @@
 
 from hashlib import md5
 import os
+import time
 
 import crcmod
 
@@ -26,10 +27,10 @@ from gslib.exception import CommandException
 from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
-from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
-from gslib.progress_callback import ProgressCallbackWithBackoff
+from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.storage_url import StorageUrlFromString
+from gslib.thread_message import FileMessage
 from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
 
@@ -167,10 +168,16 @@ class HashCommand(Command):
         matched_one = True
         file_name = file_ref.storage_url.object_name
         file_size = os.path.getsize(file_name)
-        callback_processor = ProgressCallbackWithBackoff(
+        self.gsutil_api.status_queue.put(
+            FileMessage(StorageUrlFromString(url_str), None, time.time(),
+                        size=file_size, finished=False,
+                        message_type=FileMessage.FILE_HASH))
+
+        callback_processor = ProgressCallbackWithTimeout(
             file_size, FileProgressCallbackHandler(
-                ConstructAnnounceText('Hashing', file_name),
-                self.gsutil_api.status_queue).call)
+                self.gsutil_api.status_queue,
+                src_url=StorageUrlFromString(url_str),
+                operation_name='Hashing').call)
         hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
         with open(file_name, 'rb') as fp:
           CalculateHashesFromContents(fp, hash_dict,
@@ -178,6 +185,10 @@ class HashCommand(Command):
         print 'Hashes [%s] for %s:' % (output_format, file_name)
         for name, digest in hash_dict.iteritems():
           print '\tHash (%s):\t\t%s' % (name, format_func(digest))
+        self.gsutil_api.status_queue.put(
+            FileMessage(StorageUrlFromString(url_str), None, time.time(),
+                        size=file_size, finished=True,
+                        message_type=FileMessage.FILE_HASH))
 
     if not matched_one:
       raise CommandException('No files matched')

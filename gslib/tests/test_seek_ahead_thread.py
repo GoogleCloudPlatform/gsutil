@@ -17,12 +17,18 @@
 from __future__ import absolute_import
 
 import Queue
+import StringIO
 import threading
+
 
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.seek_ahead_thread import SeekAheadResult
 from gslib.seek_ahead_thread import SeekAheadThread
 import gslib.tests.testcase as testcase
+from gslib.ui_controller import UIController
+from gslib.ui_controller import UIThread
+from gslib.ui_controller import ZERO_TASKS_TO_DO_ARGUMENT
+from gslib.util import MakeHumanReadable
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
 
@@ -76,13 +82,17 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
       cancel_event = threading.Event()
       status_queue = Queue.Queue()
+      stream = StringIO.StringIO()
+      ui_controller = UIController()
+      ui_thread = UIThread(status_queue, stream, ui_controller)
 
       seek_ahead_iterator = TrackingCancellationIterator(
           num_iterations, num_iterations_before_cancel, cancel_event)
       seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                           status_queue)
       seek_ahead_thread.join(self.thread_wait_time)
-
+      status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+      ui_thread.join(self.thread_wait_time)
       if seek_ahead_thread.isAlive():
         seek_ahead_thread.terminate = True
         self.fail(
@@ -94,9 +104,10 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
           '%s results, expected: %s results.' %
           (num_iterations_before_cancel, seek_ahead_iterator.iterated_results,
            expected_iterations))
-      if not status_queue.empty():
+      message = stream.getvalue()
+      if message:
         self.fail('Status queue should be empty but contains message: %s' %
-                  status_queue.get())
+                  message)
 
   def testEstimateWithoutSize(self):
     """Tests SeekAheadThread providing an object count."""
@@ -114,20 +125,24 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     cancel_event = threading.Event()
     status_queue = Queue.Queue()
-
+    stream = StringIO.StringIO()
+    ui_controller = UIController()
+    ui_thread = UIThread(status_queue, stream, ui_controller)
     num_objects = 5
     seek_ahead_iterator = SeekAheadResultIterator(num_objects)
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
+    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    ui_thread.join(self.thread_wait_time)
     if seek_ahead_thread.isAlive():
       seek_ahead_thread.terminate = True
       self.fail('SeekAheadThread is still alive.')
 
-    if status_queue.empty():
+    message = stream.getvalue()
+    if not message:
       self.fail('Status queue empty but SeekAheadThread should have posted '
                 'summary message')
-    message = status_queue.get()
     self.assertEqual(
         message, 'Estimated work for this command: objects: %s\n' % num_objects)
 
@@ -149,6 +164,9 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     cancel_event = threading.Event()
     status_queue = Queue.Queue()
+    stream = StringIO.StringIO()
+    ui_controller = UIController()
+    ui_thread = UIThread(status_queue, stream, ui_controller)
 
     num_objects = 5
     object_size = 10
@@ -157,20 +175,24 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
+    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    ui_thread.join(self.thread_wait_time)
+
     if seek_ahead_thread.isAlive():
       seek_ahead_thread.terminate = True
       self.fail('SeekAheadThread is still alive.')
 
-    if status_queue.empty():
+    message = stream.getvalue()
+
+    if not message:
       self.fail('Status queue empty but SeekAheadThread should have posted '
                 'summary message')
-    message = status_queue.get()
 
     total_size = num_objects * object_size
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_objects, total_size))
+        (num_objects, MakeHumanReadable(total_size)))
 
   def testWithLocalFiles(self):
     """Tests SeekAheadThread with an actual directory."""
@@ -190,17 +212,26 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     cancel_event = threading.Event()
     status_queue = Queue.Queue()
+    stream = StringIO.StringIO()
+    ui_controller = UIController()
+    ui_thread = UIThread(status_queue, stream, ui_controller)
+
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
+    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    ui_thread.join(self.thread_wait_time)
+
     if seek_ahead_thread.isAlive():
       seek_ahead_thread.terminate = True
       self.fail('SeekAheadThread is still alive.')
-    if status_queue.empty():
+
+    message = stream.getvalue()
+    if not message:
       self.fail('Status queue empty but SeekAheadThread should have posted '
                 'summary message')
-    message = status_queue.get()
+
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_files, total_size))
+        (num_files, MakeHumanReadable(total_size)))

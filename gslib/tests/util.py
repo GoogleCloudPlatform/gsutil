@@ -21,17 +21,21 @@ import os
 import pkgutil
 import posixpath
 import re
+import sys
 import tempfile
 import unittest
 import urlparse
 
 import boto
 import crcmod
+from gslib.cloud_api import ResumableDownloadException
+from gslib.cloud_api import ResumableUploadException
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.posix_util import GetDefaultMode
 import gslib.tests as gslib_tests
 from gslib.util import IS_WINDOWS
 from gslib.util import LazyWrapper
+from gslib.util import MakeHumanReadable
 from gslib.util import UsingCrcmodExtension
 
 if not hasattr(unittest.TestCase, 'assertIsNone'):
@@ -562,3 +566,43 @@ def WorkingDirectory(new_working_directory):
   finally:
     if new_working_directory and prev_working_directory:
       os.chdir(prev_working_directory)
+
+
+# Custom test callbacks must be pickleable, and therefore at global scope.
+class HaltingCopyCallbackHandler(object):
+  """Test callback handler for intentionally stopping a resumable transfer."""
+
+  def __init__(self, is_upload, halt_at_byte):
+    self._is_upload = is_upload
+    self._halt_at_byte = halt_at_byte
+
+  # pylint: disable=invalid-name
+  def call(self, total_bytes_transferred, total_size):
+    """Forcibly exits if the transfer has passed the halting point."""
+    if total_bytes_transferred >= self._halt_at_byte:
+      sys.stderr.write(
+          'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
+              self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+              MakeHumanReadable(total_size)))
+      if self._is_upload:
+        raise ResumableUploadException('Artifically halting upload.')
+      else:
+        raise ResumableDownloadException('Artifically halting download.')
+
+
+class HaltOneComponentCopyCallbackHandler(object):
+  """Test callback handler for stopping part of a sliced download."""
+
+  def __init__(self, halt_at_byte):
+    self._last_progress_byte = None
+    self._halt_at_byte = halt_at_byte
+
+  # pylint: disable=invalid-name
+  # pylint: disable=unused-argument
+  def call(self, current_progress_byte, total_size_unused):
+    """Forcibly exits if the passed the halting point since the last call."""
+    if (self._last_progress_byte is not None and
+        self._last_progress_byte < self._halt_at_byte < current_progress_byte):
+      sys.stderr.write('Halting transfer.\r\n')
+      raise ResumableDownloadException('Artifically halting download.')
+    self._last_progress_byte = current_progress_byte

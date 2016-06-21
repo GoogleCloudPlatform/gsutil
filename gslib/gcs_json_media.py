@@ -29,7 +29,7 @@ import httplib2
 from httplib2 import parse_uri
 
 from gslib.cloud_api import BadRequestException
-from gslib.progress_callback import ProgressCallbackWithBackoff
+from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import SSL_TIMEOUT
 from gslib.util import TRANSFER_BUFFER_SIZE
@@ -145,7 +145,7 @@ class UploadCallbackConnectionClassFactory(object):
         if not self.processed_initial_bytes:
           self.processed_initial_bytes = True
           if outer_progress_callback:
-            self.callback_processor = ProgressCallbackWithBackoff(
+            self.callback_processor = ProgressCallbackWithTimeout(
                 outer_total_size, outer_progress_callback)
             self.callback_processor.Progress(
                 self.bytes_uploaded_container.bytes_transferred)
@@ -277,7 +277,7 @@ class DownloadCallbackConnectionClassFactory(object):
           if not self.processed_initial_bytes:
             self.processed_initial_bytes = True
             if self.outer_progress_callback:
-              self.callback_processor = ProgressCallbackWithBackoff(
+              self.callback_processor = ProgressCallbackWithTimeout(
                   self.outer_total_size, self.outer_progress_callback)
               self.callback_processor.Progress(
                   self.outer_bytes_downloaded_container.bytes_transferred)

@@ -27,6 +27,9 @@ from gslib import util
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.util import CompareVersions
+from gslib.util import DecimalShort
+from gslib.util import HumanReadableWithDecimalPlaces
+from gslib.util import PrettyTime
 import httplib2
 import mock
 
@@ -232,3 +235,41 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(mock_wrapped_fn.call_count, 2)
     # Check that we did emit a message.
     self.assertTrue(mock_log_info_fn.called)
+
+  def test_UIDecimalShort(self):
+    """Tests DecimalShort for UI."""
+    self.assertEqual('12.3b', DecimalShort(12345678910))
+    self.assertEqual('123.5m', DecimalShort(123456789))
+    self.assertEqual('1.2k', DecimalShort(1234))
+    self.assertEqual('1.0k', DecimalShort(1000))
+    self.assertEqual('432', DecimalShort(432))
+    self.assertEqual('43.2t', DecimalShort(43.25 * 10**12))
+    self.assertEqual('43.2q', DecimalShort(43.25 * 10**15))
+    self.assertEqual('43250.0q', DecimalShort(43.25 * 10**18))
+
+  def test_UIPrettyTime(self):
+    """Tests PrettyTime for UI."""
+    self.assertEqual('25:02:10', PrettyTime(90130))
+    self.assertEqual('01:00:00', PrettyTime(3600))
+    self.assertEqual('00:59:59', PrettyTime(3599))
+    self.assertEqual('100+ hrs', PrettyTime(3600*100))
+    self.assertEqual('999+ hrs', PrettyTime(3600*10000))
+
+  def test_UIHumanReadableWithDecimalPlaces(self):
+    """Tests HumanReadableWithDecimalPlaces for UI."""
+    self.assertEqual('1.00 GiB', HumanReadableWithDecimalPlaces(1024**3))
+    self.assertEqual('1.01 GiB', HumanReadableWithDecimalPlaces(1024**3 +
+                                                                1024**2 * 10))
+    self.assertEqual('1.000 GiB', HumanReadableWithDecimalPlaces(1024**3 +
+                                                                 1024**2*5, 3))
+    self.assertEqual('1.10 GiB', HumanReadableWithDecimalPlaces(1024**3 +
+                                                                1024**2 * 100))
+    self.assertEqual('1.100 GiB', HumanReadableWithDecimalPlaces(1024**3 +
+                                                                 1024**2 * 100,
+                                                                 3))
+    self.assertEqual('10.00 MiB', HumanReadableWithDecimalPlaces(1024**2 *10))
+    # The test below is good for rounding.
+    self.assertEqual('2.01 GiB', HumanReadableWithDecimalPlaces(2157969408))
+    self.assertEqual('0 B', HumanReadableWithDecimalPlaces(0, 0))
+    self.assertEqual('0.00 B', HumanReadableWithDecimalPlaces(0, 2))
+    self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))

@@ -62,7 +62,7 @@ from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
 from gslib.no_op_credentials import NoOpCredentials
-from gslib.progress_callback import ProgressCallbackWithBackoff
+from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.project_id import PopulateProjectId
 from gslib.third_party.storage_apitools import storage_v1_client as apitools_client
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
@@ -1295,7 +1295,7 @@ class GcsJsonApi(CloudApi):
     crypto_headers = self._RewriteCryptoHeadersFromTuples(
         decryption_tuple=decryption_tuple, encryption_tuple=encryption_tuple)
 
-    progress_cb_with_backoff = None
+    progress_cb_with_timeout = None
     try:
       last_bytes_written = 0L
       while True:
@@ -1315,11 +1315,11 @@ class GcsJsonApi(CloudApi):
           rewrite_response = self.api_client.objects.Rewrite(
               apitools_request, global_params=global_params)
         bytes_written = long(rewrite_response.totalBytesRewritten)
-        if progress_callback and not progress_cb_with_backoff:
-          progress_cb_with_backoff = ProgressCallbackWithBackoff(
+        if progress_callback and not progress_cb_with_timeout:
+          progress_cb_with_timeout = ProgressCallbackWithTimeout(
               long(rewrite_response.objectSize), progress_callback)
-        if progress_cb_with_backoff:
-          progress_cb_with_backoff.Progress(
+        if progress_cb_with_timeout:
+          progress_cb_with_timeout.Progress(
               bytes_written - last_bytes_written)
 
         if rewrite_response.done:

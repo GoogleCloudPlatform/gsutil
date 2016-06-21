@@ -16,6 +16,9 @@
 
 from __future__ import absolute_import
 
+import sys
+import time
+
 from apitools.base.py import encoding
 
 from gslib.cloud_api import EncryptionException
@@ -28,15 +31,18 @@ from gslib.encryption_helper import GetEncryptionTupleAndSha256Hash
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import FileMessage
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import ConvertRecursiveToFlatWildcard
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import StdinIterator
+from gslib.util import UTF8
+
+MAX_PROGRESS_INDICATOR_COLUMNS = 65
 
 _SYNOPSIS = """
   gsutil rewrite -k [-f] [-r] url...
@@ -243,7 +249,8 @@ class RewriteCommand(Command):
         self.command_name, self.debug, self.logger, self.gsutil_api,
         url_strs_generator, self.recursion_requested,
         project_id=self.project_id,
-        continue_on_error=self.continue_on_error or self.parallel_operations)
+        continue_on_error=self.continue_on_error or self.parallel_operations,
+        bucket_listing_fields=['name', 'size'])
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
@@ -330,7 +337,7 @@ class RewriteCommand(Command):
       decryption_tuple = None
 
       if src_encryption_sha256 is None:
-        announce_text = 'Encrypting'
+        operation_name = 'Encrypting'
       else:
         decryption_key = FindMatchingCryptoKey(src_encryption_sha256)
         if not decryption_key:
@@ -340,13 +347,24 @@ class RewriteCommand(Command):
         decryption_tuple = CryptoTupleFromKey(decryption_key)
 
         if self.current_encryption_sha256 is None:
-          announce_text = 'Decrypting'
+          operation_name = 'Decrypting'
         else:
-          announce_text = 'Rotating'
+          operation_name = 'Rotating'
+
+      # TODO: Remove this call (used to verify tests) and make it processed by
+      # the UIThread.
+      sys.stderr.write(
+          _ConstructAnnounceText(operation_name, transform_url.url_string))
+
+      # Message indicating beginning of operation.
+      gsutil_api.status_queue.put(
+          FileMessage(transform_url, None, time.time(), finished=False,
+                      size=src_metadata.size,
+                      message_type=FileMessage.FILE_REWRITE))
 
       progress_callback = FileProgressCallbackHandler(
-          ConstructAnnounceText(announce_text, transform_url.url_string),
-          gsutil_api.status_queue).call
+          gsutil_api.status_queue, src_url=transform_url,
+          operation_name=operation_name).call
 
       gsutil_api.CopyObject(
           src_metadata, dst_metadata, src_generation=transform_url.generation,
@@ -355,3 +373,40 @@ class RewriteCommand(Command):
           encryption_tuple=self.current_encryption_tuple,
           provider=transform_url.scheme, fields=[])
 
+      # Message indicating end of operation.
+      gsutil_api.status_queue.put(
+          FileMessage(transform_url, None, time.time(), finished=True,
+                      size=src_metadata.size,
+                      message_type=FileMessage.FILE_REWRITE))
+
+
+def _ConstructAnnounceText(operation_name, url_string):
+  """Constructs announce text for ongoing operations on url_string.
+
+  This truncates the text to a maximum of MAX_PROGRESS_INDICATOR_COLUMNS, and
+  informs the rewrite-related operation ('Encrypting', 'Rotating', or
+  'Decrypting').
+
+  Args:
+    operation_name: String describing the operation, i.e.
+        'Rotating' or 'Encrypting'.
+    url_string: String describing the file/object being processed.
+
+  Returns:
+    Formatted announce text for outputting operation progress.
+  """
+  # Operation name occupies 10 characters (enough for 'Encrypting'), plus a
+  # space. The rest is used for url_string. If a longer operation name is
+  # used, it will be truncated. We can revisit this size if we need to support
+  # a longer operation, but want to make sure the terminal output is meaningful.
+  justified_op_string = operation_name[:10].ljust(11)
+  start_len = len(justified_op_string)
+  end_len = len(': ')
+  if (start_len + len(url_string) + end_len >
+      MAX_PROGRESS_INDICATOR_COLUMNS):
+    ellipsis_len = len('...')
+    url_string = '...%s' % url_string[
+        -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - ellipsis_len):]
+  base_announce_text = '%s%s:' % (justified_op_string, url_string)
+  format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
+  return format_str.format(base_announce_text.encode(UTF8))

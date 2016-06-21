@@ -173,7 +173,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     (components_to_upload, uploaded_components, existing_objects_to_delete) = (
         FilterExistingComponents(dst_args, existing_components,
                                  bucket_url, mock_api))
-
+    uploaded_components = [i[0] for i in uploaded_components]
     for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
       self.assertTrue(arg in components_to_upload)
     self.assertEqual(1, len(uploaded_components))
@@ -270,7 +270,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     (components_to_upload, uploaded_components, existing_objects_to_delete) = (
         FilterExistingComponents(dst_args, existing_components,
                                  bucket_url, mock_api))
-
+    uploaded_components = [i[0] for i in uploaded_components]
     self.assertEqual([args_wrong_contents], components_to_upload)
     self.assertEqual(args_uploaded_correctly.dst_url.url_string,
                      uploaded_components[0].url_string)

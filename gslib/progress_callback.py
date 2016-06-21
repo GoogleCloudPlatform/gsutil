@@ -14,17 +14,75 @@
 # limitations under the License.
 """Helper functions for progress callbacks."""
 
+import time
+
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
+from gslib.thread_message import ProgressMessage
 from gslib.util import MakeHumanReadable
 from gslib.util import UTF8
 
+
 # Default upper and lower bounds for progress callback frequency.
-_START_BYTES_PER_CALLBACK = 1024*64
+_START_BYTES_PER_CALLBACK = 1024*256
 _MAX_BYTES_PER_CALLBACK = 1024*1024*100
+_TIMEOUT_SECONDS = 1
 
 # Max width of URL to display in progress indicator. Wide enough to allow
 # 15 chars for x/y display on an 80 char wide terminal.
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
+
+
+class ProgressCallbackWithTimeout(object):
+  """Makes progress callbacks at least once every _TIMEOUT_SECONDS.
+
+  This prevents wrong throughput calculation while not being excessively
+  overwhelming.
+  """
+
+  def __init__(self, total_size, callback_func,
+               start_bytes_per_callback=_START_BYTES_PER_CALLBACK,
+               timeout=_TIMEOUT_SECONDS):
+    """Initializes the callback with timeout.
+
+    Args:
+      total_size: Total bytes to process. If this is None, size is not known
+          at the outset.
+      callback_func: Func of (int: processed_so_far, int: total_bytes)
+          used to make callbacks.
+      start_bytes_per_callback: Lower bound of bytes per callback.
+      timeout: Number maximum of seconds without a callback.
+
+    """
+    self._bytes_per_callback = start_bytes_per_callback
+    self._callback_func = callback_func
+    self._total_size = total_size
+    self._last_time = time.time()
+    self._timeout = timeout
+    self._bytes_processed_since_callback = 0
+    self._callbacks_made = 0
+    self._total_bytes_processed = 0
+
+  def Progress(self, bytes_processed):
+    """Tracks byte processing progress, making a callback if necessary."""
+    self._bytes_processed_since_callback += bytes_processed
+    cur_time = time.time()
+    if (self._bytes_processed_since_callback > self._bytes_per_callback or
+        (self._total_bytes_processed + self._bytes_processed_since_callback >=
+         self._total_size and self._total_size is not None) or
+	       (self._last_time - cur_time) > self._timeout):
+      self._total_bytes_processed += self._bytes_processed_since_callback
+      # TODO: We check if >= total_size and truncate because JSON uploads count
+      # multipart metadata during their send progress. If the size is unknown,
+      # we can't do this and the progress message will make it appear that we
+      # send more than the original stream.
+      if self._total_size is not None:
+        bytes_sent = min(self._total_bytes_processed, self._total_size)
+      else:
+        bytes_sent = self._total_bytes_processed
+      self._callback_func(bytes_sent, self._total_size)
+      self._bytes_processed_since_callback = 0
+      self._callbacks_made += 1
+      self._last_time = cur_time
 
 
 class ProgressCallbackWithBackoff(object):
@@ -116,22 +174,34 @@ def ConstructAnnounceText(operation_name, url_string):
 
 
 class FileProgressCallbackHandler(object):
-  """Outputs progress info for large operations like file copy or hash."""
+  """Tracks progress info for large operations like file copy or hash.
 
-  def __init__(self, announce_text, status_queue, start_byte=0,
-               override_total_size=None):
+      Information is sent to the status_queue, which will print it in the
+      UI Thread.
+  """
+
+  def __init__(self, status_queue, start_byte=0,
+               override_total_size=None, src_url=None, component_num=None,
+               dst_url=None, operation_name=None):
     """Initializes the callback handler.
 
     Args:
-      announce_text: String describing the operation.
       status_queue: Queue for posting status messages for UI display.
       start_byte: The beginning of the file component, if one is being used.
       override_total_size: The size of the file component, if one is being used.
+      src_url: FileUrl/CloudUrl representing the source file.
+      component_num: Indicates the component number, if any.
+      dst_url: FileUrl/CloudUrl representing the destination file, or None
+        for unary operations like hashing.
+      operation_name: String representing the operation name
     """
-    self._announce_text = announce_text
     self._status_queue = status_queue
     self._start_byte = start_byte
     self._override_total_size = override_total_size
+    self._component_num = component_num
+    self._src_url = src_url
+    self._dst_url = dst_url
+    self._operation_name = operation_name
     # Ensures final newline is written once even if we get multiple callbacks.
     self._last_byte_written = False
 
@@ -139,7 +209,9 @@ class FileProgressCallbackHandler(object):
   def call(self,  # pylint: disable=invalid-name
            last_byte_processed,
            total_size):
-    """Prints an overwriting line to stderr describing the operation progress.
+    """Gathers information describing the operation progress.
+
+    Actual message is printed to stderr by UIThread.
 
     Args:
       last_byte_processed: The last byte processed in the file. For file
@@ -153,17 +225,13 @@ class FileProgressCallbackHandler(object):
     if self._override_total_size:
       total_size = self._override_total_size
 
-    if total_size:
-      total_size_string = '/%s' % MakeHumanReadable(total_size)
-    else:
-      total_size_string = ''
-    # Use sys.stderr.write instead of self.logger.info so progress messages
-    # output on a single continuously overwriting line.
-    # TODO: Make this work with logging.Logger.
-    PutToQueueWithTimeout(self._status_queue, ('%s%s%s    \r' % (
-        self._announce_text,
-        MakeHumanReadable(last_byte_processed - self._start_byte),
-        total_size_string)))
+    self._status_queue.put(
+        ProgressMessage(total_size,
+                        last_byte_processed - self._start_byte,
+                        self._src_url, time.time(),
+                        component_num=self._component_num,
+                        operation_name=self._operation_name,
+                        dst_url=self._dst_url))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True
-      PutToQueueWithTimeout(self._status_queue, '\n')
+      self._status_queue.put('\n')
