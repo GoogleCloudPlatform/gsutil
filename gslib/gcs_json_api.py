@@ -140,6 +140,10 @@ _ENCRYPTED_HASHES_SET = set(['crc32c', 'md5Hash'])
 _SKIP_LISTING_OBJECT = 'skip'
 
 
+_INSUFFICIENT_OAUTH2_SCOPE_MESSAGE = (
+    'Insufficient OAuth2 scope to perform this operation.')
+
+
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
@@ -1573,6 +1577,11 @@ class GcsJsonApi(CloudApi):
           return AccessDeniedException(
               message or 'Access denied: login required.',
               status=e.status_code)
+        elif 'insufficient_scope' in str(e):
+          # If the service includes insufficient scope error detail in the
+          # response body, this check can be removed.
+          return AccessDeniedException(_INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
+                                       status=e.status_code)
       elif e.status_code == 403:
         if 'The account for the specified project has been disabled' in str(e):
           return AccessDeniedException(message or 'Account disabled.',
@@ -1602,6 +1611,11 @@ class GcsJsonApi(CloudApi):
               'project, select APIs and Auth and enable the '
               'Google Cloud Storage JSON API.',
               status=e.status_code)
+        elif 'insufficient_scope' in str(e):
+          # If the service includes insufficient scope error detail in the
+          # response body, this check can be removed.
+          return AccessDeniedException(_INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
+                                       status=e.status_code)
         else:
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)
