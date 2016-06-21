@@ -214,6 +214,17 @@ PerformSlicedDownloadObjectToFileArgs = namedtuple(
     'component_num src_url src_obj_metadata_json dst_url download_file_name '
     'start_byte end_byte decryption_key')
 
+# This tuple is used only to encapsulate the arguments returned by
+#   _PerformSlicedDownloadObjectToFile.
+# component_num: Component number.
+# crc32c: CRC32C hash value (integer) of the downloaded bytes
+# bytes_transferred: The number of bytes transferred, potentially less
+#   than the component size if the download was resumed.
+# component_total_size: The number of bytes corresponding to the whole
+#    component size, potentially more than bytes_transferred
+#    if the download was resumed.
+# server_encoding: Content-encoding string if it was detected that the server
+#    sent encoded bytes during transfer, None otherwise.
 PerformSlicedDownloadReturnValues = namedtuple(
     'PerformSlicedDownloadReturnValues',
     'component_num crc32c bytes_transferred component_total_size '
@@ -1051,7 +1062,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
 
   if len(components) == len(dst_args):
     # Only try to compose if all of the components were uploaded successfully.
-
+    # Sort the components so that they will be composed in the correct order.
     components = sorted(components, key=_GetComponentNumber)
 
     request_components = []

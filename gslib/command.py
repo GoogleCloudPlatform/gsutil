@@ -185,6 +185,8 @@ def _GetTaskEstimationThreshold():
 # causing problems with infinite recursion, and it can be increased if needed.
 MAX_RECURSIVE_DEPTH = 5
 
+ZERO_TASKS_TO_DO_ARGUMENT = ('There were no', 'tasks to do')
+
 # Map from deprecated aliases to the current command and subcommands that
 # provide the same behavior.
 # TODO: Remove this map and deprecate old commands on 9/9/14.
@@ -1794,7 +1796,6 @@ class ProducerThread(threading.Thread):
     seek_ahead_thread_considered = False
     args = None
     try:
-      total_size = 0
       args_iterator = iter(self.args_iterator)
       while True:
         try:
@@ -1822,8 +1823,10 @@ class ProducerThread(threading.Thread):
             # Time to update the total number of tasks.
             if self.status_queue:
               if total_size:
-                self.status_queue.put(
-                    ProducerThreadMessage(num_tasks, total_size, time.time()))
+                PutToQueueWithTimeout(
+                    self.status_queue, ProducerThreadMessage(num_tasks,
+                                                             total_size, 
+                                                             time.time()))
 
           if self.status_queue and isinstance(args, NameExpansionResult):
             if args.expanded_result:
@@ -1887,10 +1890,11 @@ class ProducerThread(threading.Thread):
       
       # Final ProducerThread estimation message
       if self.status_queue and isinstance(args, NameExpansionResult):
-        self.status_queue.put(
-            ProducerThreadMessage(num_tasks, total_size, time.time(),
-                                  finished=True))
-
+        PutToQueueWithTimeout(
+            self.status_queue, ProducerThreadMessage(num_tasks,
+                                                     total_size,
+                                                     time.time(),
+                                                     finished=True))
 
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.
