@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import re
 import textwrap
 
 from gslib.cloud_api import BadRequestException
@@ -23,13 +24,14 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.exception import InvalidUrlError
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
 
 
 _SYNOPSIS = """
-  gsutil mb [-c class] [-l location] [-p proj_id] uri...
+  gsutil mb [-c class] [-l location] [-p proj_id] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -134,6 +136,12 @@ _DETAILED_HELP_TEXT = ("""
 """)
 
 
+# Regex to disallow buckets violating charset or not [3..255] chars total.
+BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
+# Regex to disallow buckets with individual DNS labels longer than 63.
+TOO_LONG_DNS_NAME_COMP = re.compile(r'[-_a-z0-9]{64}')
+
+
 class MbCommand(Command):
   """Implementation of gsutil mb command."""
 
@@ -183,23 +191,27 @@ class MbCommand(Command):
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class)
 
-    for bucket_uri_str in self.args:
-      bucket_uri = StorageUrlFromString(bucket_uri_str)
-      if not bucket_uri.IsBucket():
-        raise CommandException('The mb command requires a URI that specifies a '
-                               'bucket.\n"%s" is not valid.' % bucket_uri)
+    for bucket_url_str in self.args:
+      bucket_url = StorageUrlFromString(bucket_url_str)
+      if not bucket_url.IsBucket():
+        raise CommandException('The mb command requires a URL that specifies a '
+                               'bucket.\n"%s" is not valid.' % bucket_url)
+      if (not BUCKET_NAME_RE.match(bucket_url.bucket_name) or
+          TOO_LONG_DNS_NAME_COMP.search(bucket_url.bucket_name)):
+        raise InvalidUrlError(
+            'Invalid bucket name in URL "%s"' % bucket_url.bucket_name)
 
-      self.logger.info('Creating %s...', bucket_uri)
+      self.logger.info('Creating %s...', bucket_url)
       # Pass storage_class param only if this is a GCS bucket. (In S3 the
       # storage class is specified on the key object.)
       try:
         self.gsutil_api.CreateBucket(
-            bucket_uri.bucket_name, project_id=self.project_id,
-            metadata=bucket_metadata, provider=bucket_uri.scheme)
+            bucket_url.bucket_name, project_id=self.project_id,
+            metadata=bucket_metadata, provider=bucket_url.scheme)
       except BadRequestException as e:
         if (e.status == 400 and e.reason == 'DotfulBucketNameNotUnderTld' and
-            bucket_uri.scheme == 'gs'):
-          bucket_name = bucket_uri.bucket_name
+            bucket_url.scheme == 'gs'):
+          bucket_name = bucket_url.bucket_name
           final_comp = bucket_name[bucket_name.rfind('.')+1:]
           raise CommandException('\n'.join(textwrap.wrap(
               'Buckets with "." in the name must be valid DNS names. The bucket'

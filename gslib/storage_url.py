@@ -34,10 +34,6 @@ GS_GENERATION_REGEX = re.compile(r'(?P<object>.+)#(?P<generation>[0-9]+)$')
 S3_VERSION_REGEX = re.compile(r'(?P<object>.+)#(?P<version_id>.+)$')
 # Matches file strings of the form 'file://dir/filename'
 FILE_OBJECT_REGEX = re.compile(r'([^:]*://)(?P<filepath>.*)')
-# Regex to disallow buckets violating charset or not [3..255] chars total.
-BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
-# Regex to disallow buckets with individual DNS labels longer than 63.
-TOO_LONG_DNS_NAME_COMP = re.compile(r'[-_a-z0-9]{64}')
 # Regex to determine if a string contains any wildcards.
 WILDCARD_REGEX = re.compile(r'[*?\[\]]')
 
@@ -188,10 +184,6 @@ class _CloudUrl(StorageUrl):
     elif bucket_match:
       self.scheme = bucket_match.group('provider')
       self.bucket_name = bucket_match.group('bucket')
-      if (not ContainsWildcard(self.bucket_name) and
-          (not BUCKET_NAME_RE.match(self.bucket_name) or
-           TOO_LONG_DNS_NAME_COMP.search(self.bucket_name))):
-        raise InvalidUrlError('Invalid bucket name in URL "%s"' % url_string)
     else:
       object_match = OBJECT_REGEX.match(url_string)
       if object_match:
