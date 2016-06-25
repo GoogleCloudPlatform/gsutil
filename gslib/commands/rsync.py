@@ -81,7 +81,8 @@ _DETAILED_HELP_TEXT = ("""
   The gsutil rsync command makes the contents under dst_url the same as the
   contents under src_url, by copying any missing files/objects (or those whose
   data has changed), and (if the -d option is specified) deleting any extra
-  files/objects. For example, to make gs://mybucket/data match the contents of
+  files/objects. src_url must specify a directory, bucket, or bucket
+  subdirectory. For example, to make gs://mybucket/data match the contents of
   the local directory "data" you could do:
 
     gsutil rsync -d data gs://mybucket/data
@@ -294,6 +295,12 @@ _DETAILED_HELP_TEXT = ("""
      the -x flag to exclude these files. Otherwise, gsutil rsync may fail or
      hang.
 
+  4. The gsutil rsync command copies changed files in their entirety and does
+     not employ the
+     `rsync delta-transfer algorithm <https://rsync.samba.org/tech_report/>`_
+     to transfer portions of a changed file. This is because cloud objects are
+     immutable and no facility exists to read partial cloud object checksums or
+     perform partial overwrites.
 
 <B>OPTIONS</B>
   -c            Causes the rsync command to compute and compare checksums
