@@ -138,12 +138,17 @@ _DETAILED_HELP_TEXT = ("""
 
   To construct a signed URL that allows anyone in possession of
   the URL to PUT to the specified bucket for one day, creating
-  any object of Content-Type image/jpg, run:
+  an object of Content-Type image/jpg, run:
 
     gsutil signurl -m PUT -d 1d -c image/jpg <private-key-file> \\
         gs://<bucket>/<obj>
 
+  To construct a signed URL that allows anyone in possession of
+  the URL to POST a resumable upload to the specified bucket for one day,
+  creating an object of Content-Type image/jpg, run:
 
+    gsutil signurl -m RESUMABLE -d 1d -c image/jpg <private-key-file> \\
+        gs://bucket/<obj>
 """)
 
 
@@ -171,14 +176,34 @@ def _DurationToTimeDelta(duration):
 
 
 def _GenSignedUrl(key, client_id, method, md5,
-                  content_type, expiration, gcs_path):
-  """Construct a string to sign with the provided key and returns \
-  the complete url."""
+                  content_type, expiration, gcs_path, logger):
+  """Construct a string to sign with the provided key.
+
+  Args:
+    key: The private key to use for signing the URL.
+    client_id: Client ID signing this URL.
+    method: The HTTP method to be used with the signed URL.
+    md5: Optional base64 MD5 digest value, currently unused.
+    content_type: Optional Content-Type for the signed URL. HTTP requests using
+        the URL must match this Content-Type.
+    expiration: Expiration timestamp of signed URLs in seconds since
+        UTC 1970-01-01.
+    gcs_path: String path to the bucket of object for signing, in the form
+        'bucket' or 'bucket/object'.
+    logger: logging.Logger for warning and debug output.
+
+  Returns:
+    The complete url (string).
+  """
 
   if method == 'RESUMABLE':
     method = 'POST'
     canonicalized_resource = 'x-goog-resumable:start\n/{0}'.format(
         gcs_path)
+    if not content_type:
+      logger.warn('Warning: no Content-Type header was specified with the -c '
+                  'flag, so uploads to the resulting Signed URL must not '
+                  'specify a Content-Type.')
   else:
     canonicalized_resource = '/{0}'.format(gcs_path)
 
@@ -304,11 +329,11 @@ class UrlSignCommand(Command):
 
     return method, expiration, content_type, passwd
 
-  def _ProbeObjectAccessWithClient(self, key, client_email, gcs_path):
+  def _ProbeObjectAccessWithClient(self, key, client_email, gcs_path, logger):
     """Performs a head request against a signed url to check for read access."""
 
     signed_url = _GenSignedUrl(key, client_email, 'HEAD', '', '',
-                               int(time.time()) + 10, gcs_path)
+                               int(time.time()) + 10, gcs_path, logger)
 
     try:
       h = GetNewHttp()
@@ -366,6 +391,9 @@ class UrlSignCommand(Command):
         raise CommandException('Can only create signed urls from gs:// urls')
       if url.IsBucket():
         gcs_path = url.bucket_name
+        if method == 'RESUMABLE':
+          raise CommandException('Resumable signed URLs require an object '
+                                 'name.')
       else:
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
@@ -374,7 +402,7 @@ class UrlSignCommand(Command):
 
       final_url = _GenSignedUrl(key, client_email,
                                 method, '', content_type, expiration,
-                                gcs_path)
+                                gcs_path, self.logger)
 
       expiration_dt = datetime.fromtimestamp(expiration)
 
@@ -384,19 +412,20 @@ class UrlSignCommand(Command):
                                         final_url.encode(UTF8))
 
       response_code = self._ProbeObjectAccessWithClient(
-          key, client_email, gcs_path)
+          key, client_email, gcs_path, self.logger)
 
-      if response_code == 404 and method != 'PUT':
-        if url.IsBucket():
-          msg = ('Bucket {0} does not exist. Please create a bucket with '
-                 'that name before a creating signed URL to access it.'
-                 .format(url))
+      if response_code == 404:
+        if url.IsBucket() and method != 'PUT':
+          raise CommandException(
+              'Bucket {0} does not exist. Please create a bucket with '
+              'that name before a creating signed URL to access it.'
+              .format(url))
         else:
-          msg = ('Object {0} does not exist. Please create/upload an object '
-                 'with that name before a creating signed URL to access it.'
-                 .format(url))
-
-        raise CommandException(msg)
+          if method != 'PUT' and method != 'RESUMABLE':
+            raise CommandException(
+                'Object {0} does not exist. Please create/upload an object '
+                'with that name before a creating signed URL to access it.'
+                .format(url))
       elif response_code == 403:
         self.logger.warn(
             '%s does not have permissions on %s, using this link will likely '
