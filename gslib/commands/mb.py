@@ -87,43 +87,14 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>BUCKET LOCATIONS</B>
-  If you don't specify a -l option, the bucket will be created in the default
-  location (US). Otherwise, you can specify one of the available
-  `multi-regional locations <https://cloud.google.com/storage/docs/bucket-locations>`_.
+  If you don't specify a -l option, the bucket is created in the default
+  location (US). Otherwise, you can specify one of the `available
+  locations <https://cloud.google.com/storage/docs/bucket-locations>`_,
+  which are categorized as either regional or multi-regional.
 
-  - ASIA (Asia Pacific)
-  - EU (European Union)
-  - US (United States)
-
-  Example:
-    gsutil mb -l ASIA gs://some-bucket
-
-  You can also create a bucket in a
-  `regional location <https://cloud.google.com/storage/docs/bucket-locations>`_.
-  The following regional locations support all storage classes:
-
-  - asia-east1 (Eastern Asia-Pacific)
-  - europe-west1 (Western Europe)
-  - us-central1 (Central United States)
-  - us-east1 (Eastern United States)
-
-  Example:
-    gsutil mb -c nearline -l europe-west1 gs://some-bucket
-
-  The following regional locations are in Alpha and support just the Durable
-  Reduced Availability storage class (-C dra). Data stored in these locations
-  is not subject to the usual SLA. See the
-  `bucket location <https://cloud.google.com/storage/docs/bucket-locations>`_
-  documentation for additional information.
-
-  - us-central2 (Central United States)
-  - us-east2 (Eastern United States)
-  - us-east3 (Eastern United States)
-  - us-west1 (Western United States)
-
-  Example:
-    gsutil mb -c dra -l US-CENTRAL2 gs://some-bucket
-
+  Examples:
+    gsutil mb -l asia gs://some-bucket
+    gsutil mb -c dra -l us-east1 gs://some-bucket
 
 <B>OPTIONS</B>
   -c class          Can be dra (or durable_reduced_availability), nl (or
