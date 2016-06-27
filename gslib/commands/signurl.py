@@ -74,7 +74,7 @@ _DETAILED_HELP_TEXT = ("""
   the specified objects without authentication for a specific period of time.
 
   Please see the `Signed URLs documentation
-  <https://cloud.google.com/storage/docs/access-control#Signed-URLs>`_ for
+  <https://cloud.google.com/storage/docs/access-control/signed-urls>`_ for
   background about signed URLs.
 
   Multiple gs:// urls may be provided and may contain wildcards.  A signed url
