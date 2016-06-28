@@ -30,7 +30,9 @@ class DevshellAuth(AuthHandler):
   capability = ['s3']
 
   def __init__(self, path, config, provider):
-    if provider != 'gs':
+    # Provider here is a boto.provider.Provider object (as opposed to the
+    # provider attribute of CloudApi objects, which is a string).
+    if provider.name != 'google':
       # Devshell credentials are valid for Google only and can't be used for s3.
       raise NotReadyToAuthenticate()
     try:
