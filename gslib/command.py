@@ -342,7 +342,7 @@ def InitializeMultiprocessingVariables():
   # This queue must be torn down after worker processes/threads and the
   # UI thread have been torn down. Otherwise, these threads may have
   # undefined behavior when trying to interact with a non-existent queue.
-  glob_status_queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
+  glob_status_queue = manager.Queue(MAX_QUEUE_SIZE)
 
 
 def TeardownMultiprocessingProcesses():
@@ -2093,7 +2093,6 @@ def _NotifyIfDone(caller_id, num_done):
 # pylint: disable=global-variable-not-assigned,global-variable-undefined
 def ShutDownGsutil():
   """Shut down all processes in consumer pools in preparation for exiting."""
-  global glob_status_queue
   for q in queues:
     try:
       q.cancel_join_thread()
@@ -2101,10 +2100,6 @@ def ShutDownGsutil():
       pass
   for consumer_pool in consumer_pools:
     consumer_pool.ShutDown()
-  try:
-    glob_status_queue.cancel_join_thread()
-  except:  # pylint: disable=bare-except
-    pass
 
 
 def _IncrementFailureCount():
