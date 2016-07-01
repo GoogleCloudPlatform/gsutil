@@ -53,6 +53,9 @@ from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.parallelism_framework_util import AtomicDict
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
+from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.parallelism_framework_util import STATUS_QUEUE_OP_TIMEOUT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
 from gslib.sig_handling import ChildProcessSignalHandler
@@ -1548,7 +1551,7 @@ class Command(HelpProvider):
     # We've completed all tasks (or excepted), so signal the UI thread to
     # terminate.
     if is_main_thread:
-      glob_status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+      PutToQueueWithTimeout(glob_status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
 
     # We encountered an exception from the producer thread before any arguments
     # were enqueued, but it wouldn't have been propagated, so we'll now
@@ -1673,7 +1676,7 @@ class _MainThreadUIQueue(object):
   def __init__(self, logger):
     self.logger = logger
 
-  def put(self, status_item):  # pylint: disable=invalid-name
+  def put(self, status_item, timeout=None):  # pylint: disable=invalid-name
     if self.logger.isEnabledFor(logging.INFO):
       sys.stderr.write(status_item)
 
@@ -1698,7 +1701,10 @@ class _UIThread(threading.Thread):
 
   def run(self):
     while True:
-      status_item = self.status_queue.get()
+      try:
+        status_item = self.status_queue.get(timeout=STATUS_QUEUE_OP_TIMEOUT)
+      except Queue.Empty:
+        continue
       if status_item == ZERO_TASKS_TO_DO_ARGUMENT:
         break
       if self.logger.isEnabledFor(logging.INFO):
@@ -1861,7 +1867,7 @@ class ProducerThread(threading.Thread):
                 # For integration testing only, force estimation to complete
                 # prior to producing further results.
                 if boto.config.get('GSUtil', 'task_estimation_force', None):
-                  seek_ahead_thread.join(timeout=60)
+                  seek_ahead_thread.join(timeout=SEEK_AHEAD_JOIN_TIMEOUT)
 
               seek_ahead_thread_considered = True
 
@@ -1893,13 +1899,13 @@ class ProducerThread(threading.Thread):
       # If the seek ahead thread is still running, cancel it and wait for it
       # to exit since we've enumerated all of the tasks already. We don't want
       # to delay command completion on an estimate that has become meaningless.
-      # However, we must wait for the seek ahead thread to exit gracefully
-      # after cancellation. Otherwise command exit might tear down the
-      # underlying multiprocessing status queue that the seek ahead thread uses
-      # while it is still running.
       if seek_ahead_thread is not None:
         seek_ahead_thread_cancel_event.set()
-        seek_ahead_thread.join()
+        # It's possible that the seek-ahead-thread may attempt to put to the
+        # status queue after it has been torn down, for example if the system
+        # is overloaded. Because the put uses a timeout, it should never block
+        # command termination or signal handling.
+        seek_ahead_thread.join(timeout=SEEK_AHEAD_JOIN_TIMEOUT)
 
       # It's possible that the workers finished before we updated total_tasks,
       # so we need to check here as well.

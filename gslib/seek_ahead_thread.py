@@ -16,6 +16,7 @@
 
 import threading
 
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
 
@@ -109,4 +110,4 @@ class SeekAheadThread(threading.Thread):
     if num_data_bytes:
       estimate_message += ', total size: %s' % num_data_bytes
     estimate_message += '\n'
-    self.status_queue.put(estimate_message)
+    PutToQueueWithTimeout(self.status_queue, estimate_message)

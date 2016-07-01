@@ -14,6 +14,7 @@
 # limitations under the License.
 """Helper functions for progress callbacks."""
 
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.util import MakeHumanReadable
 from gslib.util import UTF8
 
@@ -159,10 +160,10 @@ class FileProgressCallbackHandler(object):
     # Use sys.stderr.write instead of self.logger.info so progress messages
     # output on a single continuously overwriting line.
     # TODO: Make this work with logging.Logger.
-    self._status_queue.put('%s%s%s    \r' % (
+    PutToQueueWithTimeout(self._status_queue, ('%s%s%s    \r' % (
         self._announce_text,
         MakeHumanReadable(last_byte_processed - self._start_byte),
-        total_size_string))
+        total_size_string)))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True
-      self._status_queue.put('\n')
+      PutToQueueWithTimeout(self._status_queue, '\n')
