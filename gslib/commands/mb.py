@@ -41,14 +41,14 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The mb command creates a new bucket. Google Cloud Storage has a single
-  namespace, so you will not be allowed to create a bucket with a name already
+  namespace, so you are not allowed to create a bucket with a name already
   in use by another user. You can, however, carve out parts of the bucket name
   space corresponding to your company's domain name (see "gsutil help naming").
 
-  If you don't specify a project ID using the -p option, the bucket
-  will be created using the default project ID specified in your gsutil
-  configuration file (see "gsutil help config"). For more details about
-  projects see "gsutil help projects".
+  If you don't specify a project ID using the -p option, the bucket is created
+  using the default project ID specified in your gsutil configuration file
+  (see "gsutil help config"). For more details about projects see "gsutil help
+  projects".
 
   The -c and -l options specify the storage class and location, respectively,
   for the bucket. Once a bucket is created in a given location and with a
@@ -58,50 +58,43 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>BUCKET STORAGE CLASSES</B>
-  If you don't specify a -c option, the bucket will be created with the default
-  (Standard) storage class.
+  You can specify one of the `storage classes
+  <https://cloud.google.com/storage/docs/storage-classes>`_ for a bucket
+  with the -c option.
 
-  If you specify -c durable_reduced_availability (or -c dra), it causes the data
-  stored in the bucket to use Durable Reduced Availability storage. Buckets
-  created with this storage class have lower availability than Standard storage
-  class buckets, but durability equal to that of buckets created with Standard
-  storage class. This option allows users to reduce costs for data for which
-  lower availability is acceptable. Durable Reduced Availability storage would
-  not be appropriate for "hot" objects (i.e., objects being accessed frequently)
-  or for interactive workloads; however, it might be appropriate for other types
-  of applications. See the online documentation for
-  `pricing <https://cloud.google.com/storage/pricing>`_
-  and `SLA <https://cloud.google.com/storage/sla>`_
-  details.
+  Example:
 
+    gsutil mb -c nearline gs://some-bucket
 
-  If you specify -c nearline (or -c nl), it causes the data
-  stored in the bucket to use Nearline storage. Buckets created with this
-  storage class have higher latency and lower throughput than Standard storage
-  class buckets. The availability and durability remains equal to that of
-  buckets created with the Standard storage class. This option is best for
-  objects which are accessed rarely and for which slower performance is
-  acceptable. See the online documentation for
+  See online documentation for
   `pricing <https://cloud.google.com/storage/pricing>`_ and
   `SLA <https://cloud.google.com/storage/sla>`_ details.
 
+  If you don't specify a -c option, the bucket is created with the
+  default (Standard) storage class.
 
 <B>BUCKET LOCATIONS</B>
-  If you don't specify a -l option, the bucket is created in the default
-  location (US). Otherwise, you can specify one of the `available
-  locations <https://cloud.google.com/storage/docs/bucket-locations>`_,
-  which are categorized as either regional or multi-regional.
+  You can specify one of the 'available locations
+  <https://cloud.google.com/storage/docs/bucket-locations>`_ for a bucket
+  with the -l option.
 
   Examples:
+
     gsutil mb -l asia gs://some-bucket
+
     gsutil mb -c dra -l us-east1 gs://some-bucket
 
-<B>OPTIONS</B>
-  -c class          Can be dra (or durable_reduced_availability), nl (or
-                    nearline), or S (or standard). Default is standard.
+  If you don't specify a -l option, the bucket is created in the default
+  location (US).
 
-  -l location       Can be any multi-regional or regional location as described
-                    above. Default is US. Locations are case insensitive.
+<B>OPTIONS</B>
+  -c class          Specifies the storage class for the bucket and all
+                    objects in the bucket. Default is "Standard".
+
+  -l location       Can be any multi-regional or regional location. See
+                    https://cloud.google.com/storage/docs/storage-classes
+                    for a discussion of this distinction. Default is US.
+                    Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
 """)
