@@ -713,7 +713,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_uri = storage_uri(fpath1)
     stderr = self.RunGsUtil(['cp', '-v', suri(k1_uri), suri(dst_uri)],
                             return_stderr=True)
-    self.assertIn('Created: %s' % dst_uri.uri, stderr.split('\n')[-2])
+    # TODO: Add ordering assertion (should be in stderr.split('\n)[-2]) back
+    # once both the creation and status messages are handled by the UI thread.
+    self.assertIn('Created: %s' % dst_uri.uri, stderr.split('\n'))
 
     # Case 5: Daisy-chain from object to object.
     self._run_cp_minus_v_test('-Dv', k1_uri.uri, k2_uri.uri)
