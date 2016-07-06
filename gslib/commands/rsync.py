@@ -223,18 +223,19 @@ _DETAILED_HELP_TEXT = ("""
   To determine if a file or object has changed, gsutil rsync first checks
   whether the file modification time (mtime) of both the source and destination
   is available. If mtime is available at both source and destination, and the
-  destination mtime is different than the source, gsutil rsync will update the
-  destination. If the source is a cloud bucket and the destination is a local
-  file system, and if mtime is not available for the source, gsutil rsync will
-  use the time created for the cloud object as a substitute for mtime.
-  Otherwise, if mtime is not available for either the source or the destination,
-  gsutil rsync will fall back to using checksums. If the source and destination
-  are both cloud buckets with checksums available, gsutil rsync will use these
-  hashes instead of mtime. However, gsutil rsync will still update mtime at the
-  destination if it is not present. If the source and destination have matching
-  checksums and only the source has an mtime, gsutil rsync will copy the mtime
-  to the destination. If neither mtime nor checksums are available, gsutil rsync
-  will resort to comparing file sizes.
+  destination mtime is different than the source, or if the source and
+  destination file size differ, gsutil rsync will update the destination. If the
+  source is a cloud bucket and the destination is a local file system, and if
+  mtime is not available for the source, gsutil rsync will use the time created
+  for the cloud object as a substitute for mtime. Otherwise, if mtime is not
+  available for either the source or the destination, gsutil rsync will fall
+  back to using checksums. If the source and destination are both cloud buckets
+  with checksums available, gsutil rsync will use these hashes instead of mtime.
+  However, gsutil rsync will still update mtime at the destination if it is not
+  present. If the source and destination have matching checksums and only the
+  source has an mtime, gsutil rsync will copy the mtime to the destination. If
+  neither mtime nor checksums are available, gsutil rsync will resort to
+  comparing file sizes.
 
   Checksums will not be available when comparing composite Google Cloud Storage
   objects with objects at a cloud provider that does not support CRC32C (which
@@ -880,7 +881,8 @@ class _DiffIterator(object):
                   (StorageUrlFromString(src_url_str).IsCloudUrl() and
                    StorageUrlFromString(dst_url_str).IsCloudUrl()))
     if not use_hashes and has_src_mtime and has_dst_mtime:
-      return src_mtime != dst_mtime, has_src_mtime, has_dst_mtime
+      return (src_mtime != dst_mtime or src_size != dst_size, has_src_mtime,
+              has_dst_mtime)
     if src_size != dst_size:
       return True, has_src_mtime, has_dst_mtime
     (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(

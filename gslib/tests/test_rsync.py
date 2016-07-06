@@ -424,6 +424,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='.obj2', mtime=10)
     self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
                       contents='subdir/obj3')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
+                      contents='obj6_', mtime=100)
     # .obj2 will be replaced and have mtime of 10
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
                       contents='.OBJ2')
@@ -431,6 +433,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='obj4')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
                       contents='subdir/obj5')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj6',
+                      contents='obj6', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -440,12 +444,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = _TailSet(suri(bucket1_uri), self._FlatListBucket(bucket1_uri))
       listing2 = _TailSet(suri(bucket2_uri), self._FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
+                                       '/obj6']))
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2,
-                        set(['/obj1', '/.obj2', '/obj4', '/subdir/obj5']))
+      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
+                                       '/subdir/obj5', '/obj6']))
       # Assert that the src/dest objects that had same length but different
       # content were correctly synchronized (bucket to bucket rsync uses
       # checksums).
@@ -453,6 +458,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['cat', suri(bucket1_uri, '.obj2')], return_stdout=True))
       self.assertEquals('.obj2', self.RunGsUtil(
           ['cat', suri(bucket2_uri, '.obj2')], return_stdout=True))
+      self.assertEquals('obj6_', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, 'obj6')], return_stdout=True))
       # Verify that .obj2 had its mtime updated at the destination.
       self._VerifyObjectMtime(bucket2_uri.bucket_name, '.obj2', '10')
     _Check1()
@@ -465,7 +472,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True))
     _Check2()
 
-    # Now add and remove some objects in each bucket and test rsync -r.
+    # Now add, overwrite, and remove some objects in each bucket and test
+    # rsync -r.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
                       contents='obj6')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj7',
@@ -608,6 +616,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                         contents='subdir/obj5', mtime=15)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj6',
                         contents='obj6', mtime=100)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj7',
+                        contents='obj7_', mtime=100)
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
                       contents='OBJ1')
@@ -621,6 +631,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='subdir/obj5', mtime=10)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
                       contents='OBJ6', mtime=100)
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
+                      contents='obj7', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -631,14 +643,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6']))
+                                       '/subdir/obj5', '/obj6', '/obj7']))
       # Bucket should have content like dir.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6']))
+                                       '/subdir/obj5', '/obj6', '/obj7']))
       # Check that obj6 didn't change even though the contents did. This is
       # because the object/file have the same mtime.
       self.assertEquals('OBJ6', self.RunGsUtil(
           ['cat', suri(bucket_uri, 'obj6')], return_stdout=True))
+      # Check that obj7 changed because the size was different.
+      self.assertEquals('obj7_', self.RunGsUtil(
+          ['cat', suri(bucket_uri, 'obj7')], return_stdout=True))
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -669,10 +684,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = _TailSet(suri(bucket_uri), self._FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6']))
+                                       '/subdir/obj5', '/obj6', '/obj7']))
       # Bucket should have content like dir with the subdirectories synced.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6']))
+                                       '/subdir/obj5', '/obj6', '/obj7']))
       # Assert that the contents of obj6 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('obj6', self.RunGsUtil(
@@ -880,6 +895,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                         contents='subdir1/obj3', mtime=10)
     self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6',
                         mtime=100)
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj7', contents='obj7_',
+                        mtime=100)
     self.CreateTempFile(tmpdir=tmpdir2, file_name='.obj2', contents='.OBJ2',
                         mtime=1000)
     self.CreateTempFile(tmpdir=tmpdir2, file_name='obj4', contents='obj4',
@@ -888,22 +905,26 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                         contents='subdir2/obj5', mtime=10)
     self.CreateTempFile(tmpdir=tmpdir2, file_name='obj6', contents='OBJ6',
                         mtime=100)
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents='obj7',
+                        mtime=100)
 
     self.RunGsUtil(['rsync', '-r', '-d', tmpdir1, tmpdir2])
     listing1 = _TailSet(tmpdir1, self._FlatListDir(tmpdir1))
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
     self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6']))
+                                     '/obj6', '/obj7']))
     # dir2 should now have content like dir1.
     self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6']))
+                                     '/obj6', '/obj7']))
     # Assert that the src/dest objects that had same length but different
     # checksums were synchronized properly according to mtime.
     with open(os.path.join(tmpdir2, '.obj2')) as f:
       self.assertEquals('.obj2', '\n'.join(f.readlines()))
     with open(os.path.join(tmpdir2, 'obj6')) as f:
       self.assertEquals('OBJ6', '\n'.join(f.readlines()))
+    with open(os.path.join(tmpdir2, 'obj7')) as f:
+      self.assertEquals('obj7_', '\n'.join(f.readlines()))
 
     def _Check1():
       # Check that re-running the same rsync command causes no more changes.
@@ -917,10 +938,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing2 = _TailSet(tmpdir2, self._FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
     self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6']))
+                                     '/obj6', '/obj7']))
     # dir2 should now have content like dir1.
     self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6']))
+                                     '/obj6', '/obj7']))
     # Assert that the src/dst objects that had same length, mtime, but different
     # content were synchronized (dir to dir rsync with -c uses checksums).
     with open(os.path.join(tmpdir1, '.obj2')) as f:
@@ -937,6 +958,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
     # Now add and remove some objects in both dirs and test rsync -r.
+    os.unlink(os.path.join(tmpdir1, 'obj7'))
+    os.unlink(os.path.join(tmpdir2, 'obj7'))
     self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6',
                         mtime=10)
     self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents='obj7',
@@ -1143,8 +1166,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='obj9', mtime=25)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
                       contents='obj10')
-    time_created = (ConvertDatetimeToPOSIX(self._GetMetadataAttribute(
-        bucket_uri.bucket_name, 'obj10', 'timeCreated')))
+    time_created = ConvertDatetimeToPOSIX(self._GetMetadataAttribute(
+        bucket_uri.bucket_name, 'obj10', 'timeCreated'))
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
+                      contents='obj11_', mtime=75)
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2',
                         mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4',
@@ -1161,6 +1186,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                         contents='OBJ9', mtime=25)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj10',
                         contents='OBJ10', mtime=time_created)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj11',
+                        contents='obj11', mtime=75)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1172,12 +1199,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
                                        '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10']))
+                                       '/obj9', '/obj10', '/obj11']))
       # Dir should have content like bucket except without sub-directories
       # synced.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
                                        '/subdir/obj5', '/obj6', '/obj7',
-                                       '/obj8', '/obj9', '/obj10']))
+                                       '/obj8', '/obj9', '/obj10', '/obj11']))
       # Assert that the dst objects that had an earlier mtime were not
       # synchronized because the source didn't have an mtime.
       with open(os.path.join(tmpdir, '.obj2')) as f:
@@ -1195,6 +1222,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # necessary.
       with open(os.path.join(tmpdir, 'obj10')) as f:
         self.assertEquals('OBJ10', '\n'.join(f.readlines()))
+      with open(os.path.join(tmpdir, 'obj11')) as f:
+        self.assertEquals('obj11_', '\n'.join(f.readlines()))
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1223,12 +1252,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Bucket should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
                                        '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10']))
+                                       '/obj9', '/obj10', '/obj11']))
       # Dir should have content like bucket this time with subdirectories
       # synced.
       self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
                                        '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10']))
+                                       '/obj9', '/obj10', '/obj11']))
       # Assert that the contents of obj7 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('obj7', self.RunGsUtil(
