@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import os
 import socket
+import sys
 
 import boto
 
@@ -47,7 +48,18 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def _should_run_with_custom_endpoints(self):
     # Host headers are only supported for XML, and not when
     # using environment variables for proxies.
-    return (self.test_api == 'XML' and not RUN_S3_TESTS and not
+    # TODO: Currently this is disabled for Python versions
+    # >= 2.7.9 which cause certificate errors due to validation
+    # added in https://www.python.org/dev/peps/pep-0466/
+    # If https://github.com/boto/boto/pull/2857 or its analog
+    # is accepted in boto, set https_validate_certificates to False
+    # in these tests and re-enable them.
+    python_version_less_than_2_7_9 = (
+        sys.version_info[0] == 2
+        and ((sys.version_info[1] < 7) or
+             (sys.version_info[1] == 7 and sys.version_info[2] < 9)))
+    return (self.test_api == 'XML' and not RUN_S3_TESTS and
+            python_version_less_than_2_7_9 and not
             (os.environ.get('http_proxy') or os.environ.get('https_proxy') or
              os.environ.get('HTTPS_PROXY')))
 
