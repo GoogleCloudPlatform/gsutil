@@ -42,7 +42,7 @@ _DETAILED_HELP_TEXT = ("""
   cloud storage providers. For example, to move all objects from a
   bucket to a local directory you could use:
 
-    gsutil mv gs://my_bucket dir
+    gsutil mv gs://my_bucket/* dir
 
   Similarly, to move all objects from a local directory to a bucket you could
   use:

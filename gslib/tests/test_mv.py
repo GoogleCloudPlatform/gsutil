@@ -70,6 +70,19 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket1_uri, 1)
     self.AssertNObjectsInBucket(bucket2_uri, 0)
 
+  def test_move_bucket_to_dir(self):
+    """Tests moving a local directory to a bucket."""
+    bucket_uri = self.CreateBucket(test_objects=2)
+    self.AssertNObjectsInBucket(bucket_uri, 2)
+    tmpdir = self.CreateTempDir()
+    self.RunGsUtil(['mv', suri(bucket_uri, '*'), tmpdir])
+    dir_list = []
+    for dirname, _, filenames in os.walk(tmpdir):
+      for filename in filenames:
+        dir_list.append(os.path.join(dirname, filename))
+    self.assertEqual(len(dir_list), 2)
+    self.AssertNObjectsInBucket(bucket_uri, 0)
+
   def test_move_dir_to_bucket(self):
     """Tests moving a local directory to a bucket."""
     bucket_uri = self.CreateBucket()
