@@ -1140,6 +1140,18 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
     _Check()
 
+  def test_bucket_to_dir_compressed_encoding(self):
+    temp_file = self.CreateTempFile(contents='foo', file_name='bar')
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    self.RunGsUtil(['cp', '-Z', temp_file, suri(bucket_uri)])
+    stderr = self.RunGsUtil(['rsync', suri(bucket_uri), tmpdir],
+                            return_stderr=True)
+    # rsync should decompress the destination file.
+    with open(os.path.join(tmpdir, 'bar'), 'rb') as fp:
+      self.assertEqual('foo', fp.read())
+    self.assertIn('bar has a compressed content-encoding', stderr)
+
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')

@@ -61,6 +61,7 @@ from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MTIME_ATTR
 from gslib.util import NA_TIME
+from gslib.util import ObjectIsGzipEncoded
 from gslib.util import ParseAndSetMtime
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
@@ -1090,9 +1091,18 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
               src_url.bucket_name, src_url.object_name,
               generation=src_generation, provider=src_url.scheme,
               fields=cls.source_metadata_fields)
-        else:
-          if not src_obj_metadata:
-            src_obj_metadata = apitools_messages.Object()
+          if ObjectIsGzipEncoded(src_obj_metadata):
+            cls.logger.info(
+                '%s has a compressed content-encoding, so it will be '
+                'decompressed upon download; future executions of gsutil rsync '
+                'with this source object will always download it. If you wish '
+                'to synchronize such an object efficiently, compress the '
+                'source objects in place before synchronizing them, rather '
+                'than (for example) using gsutil cp -Z to compress them '
+                'on-the-fly (which results in compressed content-encoding).'
+                % src_url)
+        else:  # src_url.IsFileUrl()
+          src_obj_metadata = apitools_messages.Object()
           # getmtime can return a float, so it needs to be converted to long.
           if diff_to_apply.src_mtime > long(time.time()) + _SECONDS_PER_DAY:
             logging.getLogger().warn('%s has mtime more than 1 day from current'
