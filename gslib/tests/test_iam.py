@@ -641,7 +641,7 @@ class TestIamCh(TestIamIntegration):
     """
 
     policy = json.loads(policy)
-    bindings = {p['role']: p for p in policy}
+    bindings = dict((p['role'], p) for p in policy)
     if role in bindings:
       if member in bindings[role]['members']:
         return
