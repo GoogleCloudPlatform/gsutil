@@ -138,6 +138,9 @@ _DETAILED_HELP_TEXT = ("""
 
   This will output an HTML report to a directory named 'htmlcov'.
 
+  Test coverage is compatible with v4.1 of the coverage module
+  (https://pypi.python.org/pypi/coverage).
+
 
 <B>OPTIONS</B>
   -c          Output coverage information.
@@ -639,7 +642,8 @@ class TestCommand(Command):
                  num_parallel_tests)
         (num_parallel_failures, parallel_time_elapsed) = self.RunParallelTests(
             parallel_integration_tests, max_parallel_tests,
-            coverage_controller.data.filename if perform_coverage else None)
+            coverage_controller.data_files.filename if perform_coverage
+            else None)
         self.PrintTestResults(
             num_sequential_tests, sequential_success,
             sequential_time_elapsed,
@@ -651,7 +655,7 @@ class TestCommand(Command):
       coverage_controller.combine()
       coverage_controller.save()
       print ('Coverage information was saved to: %s' %
-             coverage_controller.data.filename)
+             coverage_controller.data_files.filename)
 
     if sequential_success and not num_parallel_failures:
       ResetFailureCount()
