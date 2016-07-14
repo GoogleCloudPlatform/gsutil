@@ -40,6 +40,8 @@ import textwrap
 import time
 import traceback
 
+from apitools.base.protorpclite import protojson
+
 from boto import config
 import crcmod
 
@@ -202,7 +204,7 @@ PerformParallelUploadFileToObjectArgs = namedtuple(
 
 PerformSlicedDownloadObjectToFileArgs = namedtuple(
     'PerformSlicedDownloadObjectToFileArgs',
-    'component_num src_url src_obj_metadata dst_url download_file_name '
+    'component_num src_url src_obj_metadata_json dst_url download_file_name '
     'start_byte end_byte decryption_key')
 
 PerformSlicedDownloadReturnValues = namedtuple(
@@ -1842,13 +1844,16 @@ def _PerformSlicedDownloadObjectToFile(cls, args, thread_state=None):
                        than the component size if the download was resumed.
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
+  # Deserialize the picklable object metadata.
+  src_obj_metadata = protojson.decode_message(apitools_messages.Object,
+                                              args.src_obj_metadata_json)
   hash_algs = GetDownloadHashAlgs(
-      cls.logger, consider_crc32c=args.src_obj_metadata.crc32c)
+      cls.logger, consider_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
   (bytes_transferred, server_encoding) = (
       _DownloadObjectToFileResumable(
-          args.src_url, args.src_obj_metadata, args.dst_url,
+          args.src_url, src_obj_metadata, args.dst_url,
           args.download_file_name, gsutil_api, cls.logger, digesters,
           component_num=args.component_num, start_byte=args.start_byte,
           end_byte=args.end_byte, decryption_key=args.decryption_key))
@@ -2042,9 +2047,14 @@ def _PartitionObject(src_url, src_obj_metadata, dst_url,
     start_byte = i * component_size
     end_byte = min((i + 1) * (component_size) - 1, src_obj_metadata.size - 1)
     component_lengths.append(end_byte - start_byte + 1)
+
+    # We need to serialize src_obj_metadata for pickling since it can
+    # contain nested classes such as custom metadata.
+    src_obj_metadata_json = protojson.encode_message(src_obj_metadata)
+
     components_to_download.append(
         PerformSlicedDownloadObjectToFileArgs(
-            i, src_url, src_obj_metadata, dst_url, download_file_name,
+            i, src_url, src_obj_metadata_json, dst_url, download_file_name,
             start_byte, end_byte, decryption_key))
   return components_to_download, component_lengths
 

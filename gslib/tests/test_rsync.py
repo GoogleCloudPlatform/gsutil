@@ -1140,6 +1140,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
     _Check()
 
+  @SequentialAndParallelTransfer
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_bucket_to_dir_mtime(self):
     """Tests bucket to dir with mtime at the source."""
     # Create bucket and dir with overlapping content and other combinations of
