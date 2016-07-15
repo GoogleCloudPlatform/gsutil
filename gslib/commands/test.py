@@ -143,6 +143,9 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>OPTIONS</B>
+  -b          Run tests against multi-regional US buckets. By default,
+              tests run against regional buckets in us-central1.
+
   -c          Output coverage information.
 
   -f          Exit on first sequential test failure.
@@ -293,6 +296,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
   orig_test_index = test_index
   executable_prefix = [sys.executable] if sys.executable and IS_WINDOWS else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
+  multiregional_buckets = ['-b'] if tests.util.USE_MULTIREGIONAL_BUCKETS else []
   project_id_arg = []
   try:
     project_id_arg = ['-o',
@@ -310,7 +314,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
       env['GSUTIL_COVERAGE_OUTPUT_FILE'] = root_coverage_file
     process_list.append(subprocess.Popen(
         executable_prefix + [gslib.GSUTIL_PATH] + project_id_arg +
-        ['test'] + s3_argument +
+        ['test'] + s3_argument + multiregional_buckets +
         ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
         [parallel_tests[test_index][len('gslib.tests.test_'):]],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env))
@@ -337,7 +341,7 @@ class TestCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='uflp:sc',
+      supported_sub_args='buflp:sc',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -470,7 +474,9 @@ class TestCommand(Command):
     sequential_only = False
     if self.sub_opts:
       for o, a in self.sub_opts:
-        if o == '-c':
+        if o == '-b':
+          tests.util.USE_MULTIREGIONAL_BUCKETS = True
+        elif o == '-c':
           perform_coverage = True
         elif o == '-f':
           failfast = True

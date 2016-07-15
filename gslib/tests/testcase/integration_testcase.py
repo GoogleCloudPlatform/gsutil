@@ -120,6 +120,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.json_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
                                DiscardMessagesQueue(), 'gs')
 
+    self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
+
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (
           'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
@@ -204,16 +206,23 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       Listing split across lines.
     """
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=5, timeout_secs=1)
-    def _Check1():
+    def _CheckBucket():
       command = ['ls', '-a'] if versioned else ['ls']
       b_uri = [suri(bucket_uri) + '/**'] if num_objects else [suri(bucket_uri)]
       listing = self.RunGsUtil(command + b_uri, return_stdout=True).split('\n')
       # num_objects + one trailing newline.
       self.assertEquals(len(listing), num_objects + 1)
       return listing
-    return _Check1()
+
+    if self.multiregional_buckets:
+      # Use @Retry as hedge against bucket listing eventual consistency.
+      @Retry(AssertionError, tries=5, timeout_secs=1)
+      def _Check1():
+        return _CheckBucket()
+
+      return _Check1()
+    else:
+      return _CheckBucket()
 
   def AssertObjectUsesEncryptionKey(self, object_uri_str, encryption_key):
     """Strongly consistent check that the correct encryption key is used."""
@@ -240,7 +249,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
-      storage_class: storage class to use. If not provided we us standard.
+      storage_class: Storage class to use. If not provided we us standard.
       provider: Provider to use - either "gs" (the default) or "s3".
       prefer_json_api: If true, use the JSON creation functions where possible.
 
@@ -250,10 +259,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if not provider:
       provider = self.default_provider
 
+    # Location is controlled by the -b test flag.
+    if self.multiregional_buckets or provider == 's3':
+      location = None
+    else:
+      location = 'us-central1'
+
     if prefer_json_api and provider == 'gs':
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
                                           test_objects=test_objects,
-                                          storage_class=storage_class)
+                                          storage_class=storage_class,
+                                          location=location)
       bucket_uri = boto.storage_uri(
           'gs://%s' % json_bucket.name.encode(UTF8).lower(),
           suppress_consec_slashes=False)
@@ -277,7 +293,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # reasonably can.
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
-      bucket_uri.create_bucket(storage_class=storage_class, headers=headers)
+      bucket_uri.create_bucket(storage_class=storage_class,
+                               location=location or '',
+                               headers=headers)
 
     _CreateBucketWithExponentialBackoff()
     self.bucket_uris.append(bucket_uri)
@@ -362,7 +380,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return key_uri
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
-                       storage_class=None):
+                       storage_class=None, location=None):
     """Creates a test bucket using the JSON API.
 
     The bucket and all of its contents will be deleted after the test.
@@ -372,7 +390,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
-      storage_class: storage class to use. If not provided we us standard.
+      storage_class: Storage class to use. If not provided we use standard.
+      location: Location to use.
 
     Returns:
       Apitools Bucket for the created bucket.
