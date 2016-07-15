@@ -200,12 +200,6 @@ class CloudApiDelegator(CloudApi):
   def GetBucket(self, bucket_name, provider=None, fields=None):
     return self._GetApi(provider).GetBucket(bucket_name, fields=fields)
 
-  def GetBucketIamPolicy(self, bucket_name, provider=None):
-    return self._GetApi(provider).GetBucketIamPolicy(bucket_name)
-
-  def SetBucketIamPolicy(self, bucket_name, policy, provider=None):
-    return self._GetApi(provider).SetBucketIamPolicy(bucket_name, policy)
-
   def ListBuckets(self, project_id=None, provider=None, fields=None):
     return self._GetApi(provider).ListBuckets(project_id=project_id,
                                               fields=fields)
@@ -226,16 +220,6 @@ class CloudApiDelegator(CloudApi):
   def DeleteBucket(self, bucket_name, preconditions=None, provider=None):
     return self._GetApi(provider).DeleteBucket(bucket_name,
                                                preconditions=preconditions)
-
-  def GetObjectIamPolicy(self, bucket_name, object_name,
-                         generation=None, provider=None):
-    return self._GetApi(provider).GetObjectIamPolicy(
-        bucket_name, object_name, generation)
-
-  def SetObjectIamPolicy(self, bucket_name, object_name, policy,
-                         generation=None, provider=None):
-    return self._GetApi(provider).SetObjectIamPolicy(
-        bucket_name, object_name, policy, generation)
 
   def ListObjects(self, bucket_name, prefix=None, delimiter=None,
                   all_versions=None, provider=None, fields=None):

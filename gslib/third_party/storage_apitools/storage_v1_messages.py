@@ -65,8 +65,8 @@ class Bucket(_messages.Message):
     selfLink: The URI of this bucket.
     storageClass: The bucket's storage class. This defines how objects in the
       bucket are stored and determines the SLA and the cost of storage. Values
-      include STANDARD, NEARLINE and DURABLE_REDUCED_AVAILABILITY. Defaults to
-      STANDARD. For more information, see storage classes.
+      include standard, nearline and durable_reduced_availability. Defaults to
+      standard. For more information, see storage classes.
     timeCreated: The creation time of the bucket in RFC 3339 format.
     updated: The modification time of the bucket in RFC 3339 format.
     versioning: The bucket's versioning configuration.
@@ -629,82 +629,6 @@ class Objects(_messages.Message):
   prefixes = _messages.StringField(4, repeated=True)
 
 
-class Policy(_messages.Message):
-  """A bucket/object IAM policy.
-
-  Messages:
-    BindingsValueListEntry: A BindingsValueListEntry object.
-
-  Fields:
-    bindings: An association between a role, which comes with a set of
-      permissions, and members who may assume that role.
-    etag: HTTP 1.1  Entity tag for the policy.
-    kind: The kind of item this is. For policies, this is always
-      storage#policy. This field is ignored on input.
-    resourceId: The ID of the resource to which this policy belongs. Will be
-      of the form buckets/bucket for buckets, and
-      buckets/bucket/objects/object for objects. A specific generation may be
-      specified by appending #generationNumber to the end of the object name,
-      e.g. buckets/my-bucket/objects/data.txt#17. The current generation can
-      be denoted with #0. This field is ignored on input.
-  """
-
-  class BindingsValueListEntry(_messages.Message):
-    """A BindingsValueListEntry object.
-
-    Fields:
-      members: A collection of identifiers for members who may assume the
-        provided role. Recognized identifiers are as follows:   - allUsers \u2014 A
-        special identifier that represents anyone on the internet; with or
-        without a Google account.   - allAuthenticatedUsers \u2014 A special
-        identifier that represents anyone who is authenticated with a Google
-        account or a service account.   - user:emailid \u2014 An email address that
-        represents a specific account. For example, user:alice@gmail.com or
-        user:joe@example.com.   - serviceAccount:emailid \u2014 An email address
-        that represents a service account. For example,  serviceAccount:my-
-        other-app@appspot.gserviceaccount.com .   - group:emailid \u2014 An email
-        address that represents a Google group. For example,
-        group:admins@example.com.   - domain:domain \u2014 A Google Apps domain
-        name that represents all the users of that domain. For example,
-        domain:google.com or domain:example.com.   - projectOwner:projectid \u2014
-        Owners of the given project. For example, projectOwner:my-example-
-        project   - projectEditor:projectid \u2014 Editors of the given project.
-        For example, projectEditor:my-example-project   -
-        projectViewer:projectid \u2014 Viewers of the given project. For example,
-        projectViewer:my-example-project
-      role: The role to which members belong. Two types of roles are
-        supported: new IAM roles, which grant permissions that do not map
-        directly to those provided by ACLs, and legacy IAM roles, which do map
-        directly to ACL permissions. All roles are of the format
-        roles/storage.specificRole. The new IAM roles are:   -
-        roles/storage.admin \u2014 Full control of Google Cloud Storage resources.
-        - roles/storage.objectViewer \u2014 Read-Only access to Google Cloud
-        Storage objects.   - roles/storage.objectCreator \u2014 Access to create
-        objects in Google Cloud Storage.   - roles/storage.objectAdmin \u2014 Full
-        control of Google Cloud Storage objects.   The legacy IAM roles are:
-        - roles/storage.legacyObjectReader \u2014 Read-only access to objects
-        without listing. Equivalent to an ACL entry on an object with the
-        READER role.   - roles/storage.legacyObjectOwner \u2014 Read/write access
-        to existing objects without listing. Equivalent to an ACL entry on an
-        object with the OWNER role.   - roles/storage.legacyBucketReader \u2014
-        Read access to buckets with object listing. Equivalent to an ACL entry
-        on a bucket with the READER role.   - roles/storage.legacyBucketWriter
-        \u2014 Read access to buckets with object listing/creation/deletion.
-        Equivalent to an ACL entry on a bucket with the WRITER role.   -
-        roles/storage.legacyBucketOwner \u2014 Read and write access to existing
-        buckets with object listing/creation/deletion. Equivalent to an ACL
-        entry on a bucket with the OWNER role.
-    """
-
-    members = _messages.StringField(1, repeated=True)
-    role = _messages.StringField(2)
-
-  bindings = _messages.MessageField('BindingsValueListEntry', 1, repeated=True)
-  etag = _messages.BytesField(2)
-  kind = _messages.StringField(3, default=u'storage#policy')
-  resourceId = _messages.StringField(4)
-
-
 class RewriteResponse(_messages.Message):
   """A rewrite response.
 
@@ -833,15 +757,6 @@ class StorageBucketsDeleteRequest(_messages.Message):
 
 class StorageBucketsDeleteResponse(_messages.Message):
   """An empty StorageBucketsDelete response."""
-
-
-class StorageBucketsGetIamPolicyRequest(_messages.Message):
-  """A StorageBucketsGetIamPolicyRequest object.
-
-  Fields:
-    bucket: Name of a bucket.
-  """
-  bucket = _messages.StringField(1, required=True)
 
 
 class StorageBucketsGetRequest(_messages.Message):
@@ -1079,30 +994,6 @@ class StorageBucketsPatchRequest(_messages.Message):
   predefinedAcl = _messages.EnumField('PredefinedAclValueValuesEnum', 5)
   predefinedDefaultObjectAcl = _messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 6)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 7)
-
-
-class StorageBucketsSetIamPolicyRequest(_messages.Message):
-  """A StorageBucketsSetIamPolicyRequest object.
-
-  Fields:
-    bucket: Name of a bucket.
-    policy: A Policy resource to be passed as the request body.
-  """
-
-  bucket = _messages.StringField(1, required=True)
-  policy = _messages.MessageField('Policy', 2)
-
-
-class StorageBucketsTestIamPermissionsRequest(_messages.Message):
-  """A StorageBucketsTestIamPermissionsRequest object.
-
-  Fields:
-    bucket: Name of a bucket.
-    permissions: Permissions to test.
-  """
-
-  bucket = _messages.StringField(1, required=True)
-  permissions = _messages.StringField(2, required=True)
 
 
 class StorageBucketsUpdateRequest(_messages.Message):
@@ -1553,22 +1444,6 @@ class StorageObjectsDeleteResponse(_messages.Message):
   """An empty StorageObjectsDelete response."""
 
 
-class StorageObjectsGetIamPolicyRequest(_messages.Message):
-  """A StorageObjectsGetIamPolicyRequest object.
-
-  Fields:
-    bucket: Name of the bucket in which the object resides.
-    generation: If present, selects a specific revision of this object (as
-      opposed to the latest version, the default).
-    object: Name of the object. For information about how to URL encode object
-      names to be path safe, see Encoding URI Path Parts.
-  """
-
-  bucket = _messages.StringField(1, required=True)
-  generation = _messages.IntegerField(2)
-  object = _messages.StringField(3, required=True)
-
-
 class StorageObjectsGetRequest(_messages.Message):
   """A StorageObjectsGetRequest object.
 
@@ -1923,42 +1798,6 @@ class StorageObjectsRewriteRequest(_messages.Message):
   sourceObject = _messages.StringField(18, required=True)
 
 
-class StorageObjectsSetIamPolicyRequest(_messages.Message):
-  """A StorageObjectsSetIamPolicyRequest object.
-
-  Fields:
-    bucket: Name of the bucket in which the object resides.
-    generation: If present, selects a specific revision of this object (as
-      opposed to the latest version, the default).
-    object: Name of the object. For information about how to URL encode object
-      names to be path safe, see Encoding URI Path Parts.
-    policy: A Policy resource to be passed as the request body.
-  """
-
-  bucket = _messages.StringField(1, required=True)
-  generation = _messages.IntegerField(2)
-  object = _messages.StringField(3, required=True)
-  policy = _messages.MessageField('Policy', 4)
-
-
-class StorageObjectsTestIamPermissionsRequest(_messages.Message):
-  """A StorageObjectsTestIamPermissionsRequest object.
-
-  Fields:
-    bucket: Name of the bucket in which the object resides.
-    generation: If present, selects a specific revision of this object (as
-      opposed to the latest version, the default).
-    object: Name of the object. For information about how to URL encode object
-      names to be path safe, see Encoding URI Path Parts.
-    permissions: Permissions to test.
-  """
-
-  bucket = _messages.StringField(1, required=True)
-  generation = _messages.IntegerField(2)
-  object = _messages.StringField(3, required=True)
-  permissions = _messages.StringField(4, required=True)
-
-
 class StorageObjectsUpdateRequest(_messages.Message):
   """A StorageObjectsUpdateRequest object.
 
@@ -2075,27 +1914,4 @@ class StorageObjectsWatchAllRequest(_messages.Message):
   projection = _messages.EnumField('ProjectionValueValuesEnum', 7)
   versions = _messages.BooleanField(8)
 
-
-class TestIamPermissionsResponse(_messages.Message):
-  """A storage.(buckets|objects).testIamPermissions response.
-  Fields:
-    kind: The kind of item this is.
-    permissions: The permissions held by the caller. Permissions are always of
-      the format storage.resource.capability, where resource is one of buckets
-      or objects. The supported permissions are as follows:   -
-      storage.buckets.delete \u2014 Delete bucket.   - storage.buckets.get \u2014 Read
-      bucket metadata.   - storage.buckets.getIamPolicy \u2014 Read bucket IAM
-      policy.   - storage.buckets.create \u2014 Create bucket.   -
-     storage.buckets.list \u2014 List buckets.   - storage.buckets.setIamPolicy \u2014
-      Update bucket IAM policy.   - storage.buckets.update \u2014 Update bucket
-      metadata.   - storage.objects.delete \u2014 Delete object.   -
-      storage.objects.get \u2014 Read object data and metadata.   -
-      storage.objects.getIamPolicy \u2014 Read object IAM policy.   -
-      storage.objects.create \u2014 Create object.   - storage.objects.list \u2014 List
-      objects.   - storage.objects.setIamPolicy \u2014 Update object IAM policy.
-      - storage.objects.update \u2014 Update object metadata.
-  """
-
-  kind = _messages.StringField(1, default=u'storage#testIamPermissionsResponse')
-  permissions = _messages.StringField(2, repeated=True)
 

@@ -14,8 +14,6 @@
 # limitations under the License.
 """Additional help about Access Control Lists."""
 
-# TODO(iam-beta): Revise this to include new IAM syntax.
-
 from __future__ import absolute_import
 
 from gslib.help_provider import HelpProvider
