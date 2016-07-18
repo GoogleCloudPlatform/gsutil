@@ -18,10 +18,16 @@ from __future__ import absolute_import
 
 import os
 
+import crcmod
+from gslib.tests.test_cp import TestCpMvPOSIXErrors
+from gslib.tests.test_cp import TestCpMvPOSIXNoErrors
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
+from gslib.tests.util import unittest
+from gslib.util import IS_WINDOWS
 from gslib.util import Retry
+from gslib.util import UsingCrcmodExtension
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):
@@ -123,3 +129,29 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     contents = self.RunGsUtil(['cat', suri(object_uri)], return_stdout=True)
     self.assertEqual(contents, 'data2')
 
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
+  def test_mv_preserve_posix_no_errors(self):
+    """Tests use of the -P flag with mv.
+
+    Specifically tests combinations of POSIX attributes in metadata that will
+    pass validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    TestCpMvPOSIXNoErrors(self, bucket_uri, tmpdir, is_cp=False)
+
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  def test_mv_preserve_posix_errors(self):
+    """Tests use of the -P flag with mv.
+
+    Specifically, combinations of POSIX attributes in metadata that will fail
+    validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+
+    obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
+                            contents='obj')
+    TestCpMvPOSIXErrors(self, bucket_uri, obj, tmpdir, is_cp=False)

@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 
-from calendar import timegm
 import collections
 from datetime import timedelta
 from datetime import tzinfo
@@ -33,7 +32,6 @@ import sys
 import tempfile
 import textwrap
 import threading
-import time
 import traceback
 import xml.etree.ElementTree as ElementTree
 
@@ -152,11 +150,7 @@ _EXP_STRINGS = [
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
 
-# Metadata attribute name for file modification time.
-MTIME_ATTR = 'goog-reserved-file-mtime'
-# NA_TIME is a long value that takes the place of any invalid mtime.
-NA_TIME = -1
-
+SECONDS_PER_DAY = 86400L
 
 global manager  # pylint: disable=global-at-module-level
 certs_file_lock = threading.Lock()
@@ -235,19 +229,40 @@ class UTC(tzinfo):
     return timedelta(0)
 
 
-def ConvertDatetimeToPOSIX(dt):
-  """Converts a datetime object to UTC and formats as POSIX.
+class LazyWrapper(object):
+  """Wrapper for lazily instantiated objects."""
 
-  Sanitize the timestamp returned in dt, and put it in UTC format. For more
-  information see the UTC class.
+  def __init__(self, func):
+    """The init method for LazyWrapper.
 
-  Args:
-    dt: A Python datetime object.
+    Args:
+      func: A function (lambda or otherwise) to lazily evaluate.
+    """
+    self._func = func
 
-  Returns:
-    A POSIX timestamp according to UTC.
-  """
-  return long(timegm(dt.replace(tzinfo=UTC()).timetuple()))
+  def __call__(self):
+    """The call method for a LazyWrapper object."""
+    try:
+      return self._value
+    except AttributeError:
+      self._value = self._func()
+      return self._value
+
+  def __len__(self):
+    """The len method for a LazyWrapper object."""
+    try:
+      return len(self._value)
+    except AttributeError:
+      self.__call__()
+      return len(self._value)
+
+  def __iter__(self):
+    """The iter method for a LazyWrapper object."""
+    try:
+      return self._value.__iter__()
+    except AttributeError:
+      self.__call__()
+      return self._value.__iter__()
 
 
 # Enum class for specifying listing style.
@@ -886,38 +901,6 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     return True, value
   except AttributeError:
     return False, default_value
-
-
-def ParseAndSetMtime(path, obj_metadata):
-  """Parses mtime from obj_metadata and sets the mtime of the file at path.
-
-  Also sets the atime of the file to be the same as the mtime. If mtime is not
-  in obj_metadata or if mtime is NA_TIME, neither atime nor mtime is set.
-
-  Args:
-    path: The local filesystem path for the file.
-    obj_metadata: The metadata for an object.
-
-  Returns:
-    None
-  """
-  try:
-    # GetValueFromObjectCustomMetadata returns a tuple, and we only need the
-    # second attribute.
-    found, mtime = GetValueFromObjectCustomMetadata(obj_metadata, MTIME_ATTR,
-                                                    NA_TIME)
-    if found:
-      mtime = long(mtime)
-      if mtime > NA_TIME:
-        os.utime(path, (mtime, mtime))
-    else:
-      mtime = long(time.mktime(obj_metadata.timeCreated.timetuple()))
-      os.utime(path, (mtime, mtime))
-  except (AttributeError, ValueError):
-    # It's possible that either obj_metadata or obj_metadata.metadata is None.
-    # If it does exist, the value with key MTIME_ATTR can have non-numeric
-    # characters.
-    pass
 
 
 # pylint: disable=too-many-statements

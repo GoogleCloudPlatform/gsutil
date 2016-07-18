@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+import logging
 import os
 import time
 import traceback
@@ -38,6 +39,11 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
+from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
+from gslib.posix_util import InitializeUserGroups
+from gslib.posix_util import POSIXAttributes
+from gslib.posix_util import SerializeFileAttributesToObjectMetadata
+from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
@@ -625,6 +631,18 @@ _OPTIONS_TEXT = """
                  Note that it's not valid to specify both the -a and -p options
                  together.
 
+  -P             Causes POSIX attributes to be preserved when objects are
+                 copied. With this feature enabled, gsutil cp will copy fields
+                 provided by stat. These are the user ID of the owner, the group
+                 ID of the owning group, the mode (permissions) of the file, and
+                 the access/modification time of the file. For downloads, these
+                 attributes will only be set if the source objects were uploaded
+                 with this flag enabled.
+
+                 On Windows, this flag will only set and restore access time and
+                 modification time. This is because Windows doesn't have a
+                 notion of POSIX uid/gid/mode.
+
   -R, -r         The -R and -r options are synonymous. Causes directories,
                  buckets, and bucket subdirectories to be copied recursively.
                  If you neglect to use this option for an upload, gsutil will
@@ -704,11 +722,12 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:AcDeIL:MNnprRtUvz:Z'
+CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRtUvz:Z'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
-  cls.CopyFunc(args, thread_state=thread_state)
+  cls.CopyFunc(args, thread_state=thread_state,
+               preserve_posix=cls.preserve_posix_attrs)
 
 
 def _CopyExceptionHandler(cls, e):
@@ -774,7 +793,8 @@ class CpCommand(Command):
   )
 
   # pylint: disable=too-many-statements
-  def CopyFunc(self, name_expansion_result, thread_state=None):
+  def CopyFunc(self, name_expansion_result, thread_state=None,
+               preserve_posix=False):
     """Worker function for performing the actual copy (and rm, for mv)."""
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
@@ -792,6 +812,8 @@ class CpCommand(Command):
       raise CommandException(
           'The %s command does not allow provider-only source URLs (%s)' %
           (cmd_name, src_url))
+    if preserve_posix and src_url.IsFileUrl() and src_url.IsStream():
+      raise CommandException('Cannot preserve POSIX attributes with a stream.')
     if have_multiple_srcs:
       copy_helper.InsistDstUrlNamesContainer(
           self.exp_dst_url, self.have_existing_dst_container, cmd_name)
@@ -837,7 +859,7 @@ class CpCommand(Command):
     dst_url = copy_helper.ConstructDstUrl(
         src_url, exp_src_url, src_url_names_container, have_multiple_srcs,
         self.exp_dst_url, self.have_existing_dst_container,
-        self.recursion_requested)
+        self.recursion_requested, preserve_posix=preserve_posix)
     dst_url = copy_helper.FixWindowsNaming(src_url, dst_url)
 
     copy_helper.CheckForDirFileConflict(exp_src_url, dst_url)
@@ -853,8 +875,32 @@ class CpCommand(Command):
     if name_expansion_result.expanded_result:
       src_obj_metadata = encoding.JsonToMessage(
           apitools_messages.Object, name_expansion_result.expanded_result)
+    elif src_url.IsFileUrl() and not src_url.IsStream():
+      mode, _, _, _, uid, gid, _, atime, mtime, _ = os.stat(
+          exp_src_url.url_string)
+      posix_attrs = POSIXAttributes(atime=atime, mtime=mtime, uid=uid, gid=gid,
+                                    mode=mode)
+      src_obj_metadata = apitools_messages.Object()
+      custom_metadata = apitools_messages.Object.MetadataValue(
+          additionalProperties=[])
+      SerializeFileAttributesToObjectMetadata(posix_attrs, custom_metadata,
+                                              preserve_posix=preserve_posix)
+      src_obj_metadata.metadata = custom_metadata
     else:
       src_obj_metadata = None
+
+    if src_obj_metadata and dst_url.IsFileUrl():
+      posix_attrs = DeserializeFileAttributesFromObjectMetadata(
+          src_obj_metadata, src_url.url_string)
+      mode = posix_attrs.mode.permissions
+      valid, err = ValidateFilePermissionAccess(src_url.url_string,
+                                                uid=posix_attrs.uid,
+                                                gid=posix_attrs.gid,
+                                                mode=mode)
+      if preserve_posix and not valid:
+        logging.getLogger().critical(err)
+        raise CommandException('This sync will orphan file(s), please fix their'
+                               ' permissions before trying again.')
 
     elapsed_time = bytes_transferred = 0
     try:
@@ -866,7 +912,8 @@ class CpCommand(Command):
               self.logger, exp_src_url, dst_url, gsutil_api,
               self, _CopyExceptionHandler, src_obj_metadata=src_obj_metadata,
               allow_splitting=True, headers=self.headers,
-              manifest=self.manifest, gzip_exts=self.gzip_exts))
+              manifest=self.manifest, gzip_exts=self.gzip_exts,
+              preserve_posix=preserve_posix))
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -934,6 +981,9 @@ class CpCommand(Command):
 
     self.total_elapsed_time = self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
+      if self.preserve_posix_attrs:
+        raise CommandException('Cannot preserve POSIX attributes with a '
+                               'stream.')
       return CatHelper(self).CatUrlStrings(self.args[:-1])
 
     if copy_helper_opts.read_args_from_stdin:
@@ -958,7 +1008,8 @@ class CpCommand(Command):
         bucket_listing_fields=GetSourceFieldsNeededForCopy(
             self.exp_dst_url.IsCloudUrl(),
             copy_helper_opts.skip_unsupported_objects,
-            copy_helper_opts.preserve_acl))
+            copy_helper_opts.preserve_acl,
+            preserve_posix=self.preserve_posix_attrs))
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
@@ -1037,6 +1088,7 @@ class CpCommand(Command):
     print_ver = False
     use_manifest = False
     preserve_acl = False
+    self.preserve_posix_attrs = False
     canned_acl = None
     # canned_acl is handled by a helper function in parent
     # Command class, so save in Command state rather than CopyHelperOpts.
@@ -1087,6 +1139,9 @@ class CpCommand(Command):
           no_clobber = True
         elif o == '-p':
           preserve_acl = True
+        elif o == '-P':
+          self.preserve_posix_attrs = True
+          InitializeUserGroups()
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-U':

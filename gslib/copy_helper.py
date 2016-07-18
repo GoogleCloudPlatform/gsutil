@@ -87,6 +87,12 @@ from gslib.parallel_tracker_file import ValidateParallelCompositeTrackerData
 from gslib.parallel_tracker_file import WriteComponentToParallelUploadTrackerFile
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
 from gslib.parallelism_framework_util import AtomicDict
+from gslib.posix_util import ATIME_ATTR
+from gslib.posix_util import GID_ATTR
+from gslib.posix_util import MODE_ATTR
+from gslib.posix_util import MTIME_ATTR
+from gslib.posix_util import ParseAndSetPOSIXAttributes
+from gslib.posix_util import UID_ATTR
 from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithBackoff
@@ -128,9 +134,7 @@ from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
-from gslib.util import MTIME_ATTR
 from gslib.util import ObjectIsGzipEncoded
-from gslib.util import ParseAndSetMtime
 from gslib.util import ResumableThreshold
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
@@ -487,7 +491,7 @@ def _ShouldTreatDstUrlAsSingleton(src_url_names_container, have_multiple_srcs,
 
 def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
                     have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
-                    recursion_requested):
+                    recursion_requested, preserve_posix=False):
   """Constructs the destination URL for a given exp_src_url/exp_dst_url pair.
 
   Uses context-dependent naming rules that mimic Linux cp and mv behavior.
@@ -507,6 +511,7 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     have_existing_dest_subdir: bool indicator whether dest is an existing
       subdirectory.
     recursion_requested: True if a recursive operation has been requested.
+    preserve_posix: True if preservation of posix attributes has been requested.
 
   Returns:
     StorageUrl to use for copy.
@@ -515,6 +520,9 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     CommandException if destination object name not specified for
     source and source is a stream.
   """
+  if exp_dst_url.IsFileUrl() and exp_dst_url.IsStream() and preserve_posix:
+    raise CommandException('Cannot preserve POSIX attributes with a stream.')
+
   if _ShouldTreatDstUrlAsSingleton(
       src_url_names_container, have_multiple_srcs, have_existing_dest_subdir,
       exp_dst_url, recursion_requested):
@@ -2335,7 +2343,8 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
 def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
                           gsutil_api, logger, command_obj,
                           copy_exception_handler, allow_splitting=True,
-                          decryption_key=None):
+                          decryption_key=None, is_rsync=False,
+                          preserve_posix=False):
   """Downloads an object to a local file.
 
   Args:
@@ -2348,6 +2357,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
     copy_exception_handler: For handling copy exceptions during Apply.
     allow_splitting: Whether or not to allow sliced download.
     decryption_key: Base64-encoded decryption key for the source object, if any.
+    is_rsync: Whether or not the caller is the rsync command.
+    preserve_posix: Whether or not to preserve POSIX attributes.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
@@ -2421,7 +2432,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   local_md5 = _ValidateAndCompleteDownload(
       logger, src_url, src_obj_metadata, dst_url, need_to_unzip, server_gzip,
       digesters, hash_algs, download_file_name, api_selector, bytes_transferred,
-      gsutil_api)
+      gsutil_api, is_rsync=is_rsync, preserve_posix=preserve_posix)
 
   with open_files_lock:
     open_files_map.delete(download_file_name)
@@ -2442,7 +2453,9 @@ def _GetDownloadTempFileName(dst_url):
 def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
                                  need_to_unzip, server_gzip, digesters,
                                  hash_algs, download_file_name,
-                                 api_selector, bytes_transferred, gsutil_api):
+                                 api_selector, bytes_transferred, gsutil_api,
+                                 is_rsync=False,
+                                 preserve_posix=False):
   """Validates and performs necessary operations on a downloaded file.
 
   Validates the integrity of the downloaded file using hash_algs. If the file
@@ -2470,6 +2483,9 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
     api_selector: The Cloud API implementation used (used tracker file naming).
     bytes_transferred: Number of bytes downloaded (used for logging).
     gsutil_api: Cloud API to use for service and status.
+    is_rsync: Whether or not the caller is the rsync function. Used to determine
+              if timeCreated should be used.
+    preserve_posix: Whether or not to preserve the posix attributes.
 
   Returns:
     An MD5 of the local file, if one was calculated as part of the integrity
@@ -2580,7 +2596,8 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
       os.unlink(final_file_name)
     os.rename(file_name,
               final_file_name)
-    ParseAndSetMtime(final_file_name, src_obj_metadata)
+  ParseAndSetPOSIXAttributes(final_file_name, src_obj_metadata,
+                             is_rsync=is_rsync, preserve_posix=preserve_posix)
 
   if 'md5' in local_hashes:
     return local_hashes['md5']
@@ -2721,7 +2738,8 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
 
 def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
-                                 preserve_acl, is_rsync=False):
+                                 preserve_acl, is_rsync=False,
+                                 preserve_posix=False):
   """Determines the metadata fields needed for a copy operation.
 
   This function returns the fields we will need to successfully copy any
@@ -2745,6 +2763,7 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     preserve_acl: if true, get object ACL.
     is_rsync: if true, the calling function is rsync. Determines if metadata is
               needed to verify download.
+    preserve_posix: if true, retrieves POSIX attributes into user metadata.
 
   Returns:
     List of necessary field metadata field names.
@@ -2775,6 +2794,11 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
                       'size', 'generation']
     if is_rsync:
       src_obj_fields.extend(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
+    if preserve_posix:
+      posix_fields = ['metadata/%s' % ATIME_ATTR, 'metadata/%s' % MTIME_ATTR,
+                      'metadata/%s' % GID_ATTR, 'metadata/%s' % MODE_ATTR,
+                      'metadata/%s' % UID_ATTR]
+      src_obj_fields = list(set(src_obj_fields) | set(posix_fields))
   if skip_unsupported_objects:
     src_obj_fields.append('storageClass')
 
@@ -2786,7 +2810,7 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
 def PerformCopy(logger, src_url, dst_url, gsutil_api,
                 command_obj, copy_exception_handler, src_obj_metadata=None,
                 allow_splitting=True, headers=None, manifest=None,
-                gzip_exts=None):
+                gzip_exts=None, is_rsync=False, preserve_posix=False):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -2807,6 +2831,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
     manifest: optional manifest for tracking copy operations.
     gzip_exts: List of file extensions to gzip prior to upload, if any.
                If gzip_exts is GZIP_ALL_FILES, gzip all files.
+    is_rsync: Whether or not the caller is the rsync command.
+    preserve_posix: Whether or not to preserve posix attributes.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding
@@ -2962,7 +2988,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
                                    gsutil_api, logger, command_obj,
                                    copy_exception_handler,
                                    allow_splitting=allow_splitting,
-                                   decryption_key=decryption_key)
+                                   decryption_key=decryption_key,
+                                   is_rsync=is_rsync,
+                                   preserve_posix=preserve_posix)
     elif copy_in_the_cloud:
       return _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
                                      dst_obj_metadata, preconditions,
@@ -2981,8 +3009,10 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
           allow_splitting=allow_splitting)
     else:  # dst_url.IsFileUrl()
       result = _CopyFileToFile(src_url, dst_url)
-      # Need to let _CopyFileToFile return before setting the file mtime.
-      ParseAndSetMtime(dst_url.object_name, src_obj_metadata)
+      # Need to let _CopyFileToFile return before setting the POSIX attributes.
+      ParseAndSetPOSIXAttributes(dst_url.object_name, src_obj_metadata,
+                                 is_rsync=is_rsync,
+                                 preserve_posix=preserve_posix)
       return result
 
 

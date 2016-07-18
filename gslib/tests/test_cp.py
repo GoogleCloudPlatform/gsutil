@@ -52,6 +52,9 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
+from gslib.posix_util import GID_ATTR
+from gslib.posix_util import MODE_ATTR
+from gslib.posix_util import UID_ATTR
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.rewrite_helper import EnsureRewriteResumeCallbackHandler
 from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
@@ -59,17 +62,30 @@ from gslib.tests.rewrite_helper import RewriteHaltException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import BuildErrorRegex
+from gslib.tests.util import DEFAULT_MODE
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HAS_GS_PORT
 from gslib.tests.util import HAS_S3_CREDS
+from gslib.tests.util import INVALID_GID
+from gslib.tests.util import INVALID_UID
+from gslib.tests.util import NON_PRIMARY_GID
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import ORPHANED_FILE
+from gslib.tests.util import POSIX_GID_ERROR
+from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
+from gslib.tests.util import POSIX_MODE_ERROR
+from gslib.tests.util import POSIX_UID_ERROR
+from gslib.tests.util import PRIMARY_GID
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import TailSet
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY3
 from gslib.tests.util import unittest
+from gslib.tests.util import USER_ID
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
@@ -85,6 +101,127 @@ from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+
+
+def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
+  """Helper function for preserve_posix_errors tests in test_cp and test_mv.
+
+  Args:
+    cls: An instance of either TestCp or TestMv.
+    bucket_uri: The uri of the bucket that the object is in.
+    obj: The object to run the tests on.
+    tmpdir: The local file path to cp to.
+    is_cp: Whether or not the calling test suite is cp or mv.
+  """
+  error = 'error'
+  # A dict of test_name: attrs_dict.
+  # attrs_dict holds the different attributes that we want for the object in a
+  # specific test.
+  test_params = {'test1': {MODE_ATTR: '333', error: POSIX_MODE_ERROR},
+                 'test2': {GID_ATTR: INVALID_GID(), error: POSIX_GID_ERROR},
+                 'test3': {GID_ATTR: INVALID_GID(), MODE_ATTR: '420',
+                           error: POSIX_GID_ERROR},
+                 'test4': {UID_ATTR: INVALID_UID(), error: POSIX_UID_ERROR},
+                 'test5': {UID_ATTR: INVALID_UID(), MODE_ATTR: '530',
+                           error: POSIX_UID_ERROR},
+                 'test6': {UID_ATTR: INVALID_UID(), GID_ATTR: INVALID_GID(),
+                           error: POSIX_UID_ERROR},
+                 'test7': {UID_ATTR: INVALID_UID(), GID_ATTR: INVALID_GID(),
+                           MODE_ATTR: '640', error: POSIX_UID_ERROR},
+                 'test8': {UID_ATTR: INVALID_UID(), GID_ATTR: PRIMARY_GID,
+                           error: POSIX_UID_ERROR},
+                 'test9': {UID_ATTR: INVALID_UID(), GID_ATTR: NON_PRIMARY_GID(),
+                           error: POSIX_UID_ERROR},
+                 'test10': {UID_ATTR: INVALID_UID(), GID_ATTR: PRIMARY_GID,
+                            MODE_ATTR: '640', error: POSIX_UID_ERROR},
+                 'test11': {UID_ATTR: INVALID_UID(), GID_ATTR: NON_PRIMARY_GID(),
+                            MODE_ATTR: '640', error: POSIX_UID_ERROR},
+                 'test12': {UID_ATTR: USER_ID, GID_ATTR: INVALID_GID(),
+                            error: POSIX_GID_ERROR},
+                 'test13': {UID_ATTR: USER_ID, GID_ATTR: INVALID_GID(),
+                            MODE_ATTR: '640', error: POSIX_GID_ERROR},
+                 'test14': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '240',
+                            error: POSIX_INSUFFICIENT_ACCESS_ERROR}}
+  # The first variable below can be used to help debug the test if there is a
+  # problem.
+  for _, attrs_dict in test_params.iteritems():
+    cls.ClearPOSIXMetadata(obj)
+    # Attributes default to None if they are not in attrs_dict.
+    uid = attrs_dict.get(UID_ATTR)
+    gid = attrs_dict.get(GID_ATTR)
+    mode = attrs_dict.get(MODE_ATTR)
+    cls.SetPOSIXMetadata(bucket_uri.bucket_name, obj.object_name, uid=uid,
+                         gid=gid, mode=mode)
+    stderr = cls.RunGsUtil(['cp' if is_cp else 'mv', '-P',
+                            suri(bucket_uri, obj.object_name), tmpdir],
+                           expected_status=1, return_stderr=True)
+    cls.assertIn(ORPHANED_FILE, stderr)
+    cls.assertTrue(BuildErrorRegex(obj, attrs_dict.get(error)).search(stderr))
+    listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
+    listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
+    # Bucket should have un-altered content.
+    cls.assertEquals(listing1, set(['/%s' % obj.object_name]))
+    # Dir should have un-altered content.
+    cls.assertEquals(listing2, set(['']))
+
+
+def TestCpMvPOSIXNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
+  """Helper function for preserve_posix_no_erros tests in test_cp and text_mv.
+
+  Args:
+    cls: An instance of either TestCp or TestMv.
+    bucket_uri: The uri of the bucket that the object is in.
+    tmpdir: The local file path to cp to.
+    is_cp: Whether or not the calling test suite is cp or mv.
+  """
+  test_params = {'obj1': {GID_ATTR: PRIMARY_GID},
+                 'obj2': {GID_ATTR: NON_PRIMARY_GID()},
+                 'obj3': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '440'},
+                 'obj4': {GID_ATTR: NON_PRIMARY_GID(), MODE_ATTR: '444'},
+                 'obj5': {UID_ATTR: USER_ID},
+                 'obj6': {UID_ATTR: USER_ID, MODE_ATTR: '420'},
+                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID},
+                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID()},
+                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID,
+                          MODE_ATTR: '433'},
+                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID(),
+                           MODE_ATTR: '442'}}
+  for obj_name, attrs_dict in test_params.iteritems():
+    uid = attrs_dict.get(UID_ATTR)
+    gid = attrs_dict.get(GID_ATTR)
+    mode = attrs_dict.get(MODE_ATTR)
+    cls.CreateObject(bucket_uri=bucket_uri, object_name=obj_name,
+                     contents=obj_name, uid=uid, gid=gid, mode=mode)
+  for obj_name in test_params.iterkeys():
+    # Move objects one at a time to avoid listing consistency.
+    cls.RunGsUtil(['cp' if is_cp else 'mv', '-P', suri(bucket_uri, obj_name),
+                   tmpdir])
+  listing = TailSet(tmpdir, cls.FlatListDir(tmpdir))
+  cls.assertEquals(listing, set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5',
+                                 '/obj6', '/obj7', '/obj8', '/obj9', '/obj10']))
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
+                                  gid=PRIMARY_GID, mode=DEFAULT_MODE)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj2'),
+                                  gid=NON_PRIMARY_GID(), mode=DEFAULT_MODE)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj3'),
+                                  gid=PRIMARY_GID, mode=0o440)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj4'),
+                                  gid=NON_PRIMARY_GID(), mode=0o444)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj5'),
+                                  uid=USER_ID, gid=PRIMARY_GID,
+                                  mode=DEFAULT_MODE)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj6'),
+                                  uid=USER_ID, gid=PRIMARY_GID, mode=0o420)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj7'),
+                                  uid=USER_ID, gid=PRIMARY_GID,
+                                  mode=DEFAULT_MODE)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj8'),
+                                  uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                  mode=DEFAULT_MODE)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj9'),
+                                  uid=USER_ID, gid=PRIMARY_GID, mode=0o433)
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
+                                  uid=USER_ID, gid=NON_PRIMARY_GID(), mode=0o442)
 
 
 # Custom test callbacks must be pickleable, and therefore at global scope.
@@ -977,6 +1114,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['cp', suri(key_uri), '-'], return_stdout=True)
     self.assertIn(contents, stdout)
 
+  def test_cp_preserve_posix_attributes_stream(self):
+    """Tests proper behavior when preserve posix is used with a stream."""
+    contents = 'content'
+    fpath = self.CreateTempFile(contents=contents)
+    # Test that an exception is thrown in the cases where a stream is used for
+    # input or output.
+    self.RunGsUtil(['cp', '-P', fpath, '-'], expected_status=1)
+    self.RunGsUtil(['cp', '-P', '-', fpath], expected_status=1)
+
   def test_cp_local_file_to_local_stream(self):
     contents = 'content'
     fpath = self.CreateTempFile(contents=contents)
@@ -1027,6 +1173,35 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('%s%s/obj1\n' % (dst_bucket_uri,
                                      src_bucket_uri.bucket_name), stdout)
     _CopyAndCheck()
+
+  @SequentialAndParallelTransfer
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
+  def test_cp_bucket_to_dir_preserve_posix_no_errors(self):
+    """Tests use of the -P flag with cp.
+
+    Specifically combinations of POSIX attributes in metadata that will pass
+    validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    TestCpMvPOSIXNoErrors(self, bucket_uri, tmpdir, is_cp=True)
+
+  @SequentialAndParallelTransfer
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  def test_cp_bucket_to_dir_preserve_posix_errors(self):
+    """Tests use of the -P flag with cp.
+
+    Specifically combinations of POSIX attributes in metadata that will fail
+    validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
+                            contents='obj')
+
+    TestCpMvPOSIXErrors(self, bucket_uri, obj, tmpdir)
 
   def test_copy_bucket_to_dir(self):
     """Tests recursively copying from bucket to a directory.
