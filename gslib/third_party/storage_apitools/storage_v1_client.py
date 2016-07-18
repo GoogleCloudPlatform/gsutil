@@ -268,6 +268,18 @@ class StorageV1(base_api.BaseApiClient):
               response_type_name=u'Bucket',
               supports_download=False,
           ),
+          'GetIamPolicy': base_api.ApiMethodInfo(
+              http_method=u'GET',
+              method_id=u'storage.buckets.getIamPolicy',
+              ordered_params=[u'bucket'],
+              path_params=[u'bucket'],
+              query_params=[],
+              relative_path=u'b/{bucket}/iam',
+              request_field='',
+              request_type_name=u'StorageBucketsGetIamPolicyRequest',
+              response_type_name=u'Policy',
+              supports_download=False,
+          ),
           'Insert': base_api.ApiMethodInfo(
               http_method=u'POST',
               method_id=u'storage.buckets.insert',
@@ -302,6 +314,30 @@ class StorageV1(base_api.BaseApiClient):
               request_field=u'bucketResource',
               request_type_name=u'StorageBucketsPatchRequest',
               response_type_name=u'Bucket',
+              supports_download=False,
+          ),
+          'SetIamPolicy': base_api.ApiMethodInfo(
+              http_method=u'PUT',
+              method_id=u'storage.buckets.setIamPolicy',
+              ordered_params=[u'bucket'],
+              path_params=[u'bucket'],
+              query_params=[],
+              relative_path=u'b/{bucket}/iam',
+              request_field=u'policy',
+              request_type_name=u'StorageBucketsSetIamPolicyRequest',
+              response_type_name=u'Policy',
+              supports_download=False,
+          ),
+          'TestIamPermissions': base_api.ApiMethodInfo(
+              http_method=u'GET',
+              method_id=u'storage.buckets.testIamPermissions',
+              ordered_params=[u'bucket', u'permissions'],
+              path_params=[u'bucket'],
+              query_params=[u'permissions'],
+              relative_path=u'b/{bucket}/iam/testPermissions',
+              request_field='',
+              request_type_name=u'StorageBucketsTestIamPermissionsRequest',
+              response_type_name=u'TestIamPermissionsResponse',
               supports_download=False,
           ),
           'Update': base_api.ApiMethodInfo(
@@ -347,6 +383,19 @@ class StorageV1(base_api.BaseApiClient):
       return self._RunMethod(
           config, request, global_params=global_params)
 
+    def GetIamPolicy(self, request, global_params=None):
+      """Returns an IAM policy for the specified bucket.
+
+      Args:
+        request: (StorageBucketsGetIamPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Policy) The response message.
+      """
+      config = self.GetMethodConfig('GetIamPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
     def Insert(self, request, global_params=None):
       """Creates a new bucket.
 
@@ -383,6 +432,32 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('Patch')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def SetIamPolicy(self, request, global_params=None):
+      """Updates an IAM policy for the specified bucket.
+
+      Args:
+        request: (StorageBucketsSetIamPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Policy) The response message.
+      """
+      config = self.GetMethodConfig('SetIamPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def TestIamPermissions(self, request, global_params=None):
+      """Tests a set of permissions on the given bucket to see which, if any, are held by the caller.
+
+      Args:
+        request: (StorageBucketsTestIamPermissionsRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (TestIamPermissionsResponse) The response message.
+      """
+      config = self.GetMethodConfig('TestIamPermissions')
       return self._RunMethod(
           config, request, global_params=global_params)
 
@@ -819,6 +894,18 @@ class StorageV1(base_api.BaseApiClient):
               response_type_name=u'Object',
               supports_download=True,
           ),
+          'GetIamPolicy': base_api.ApiMethodInfo(
+              http_method=u'GET',
+              method_id=u'storage.objects.getIamPolicy',
+              ordered_params=[u'bucket', u'object'],
+              path_params=[u'bucket', u'object'],
+              query_params=[u'generation'],
+              relative_path=u'b/{bucket}/o/{object}/iam',
+              request_field='',
+              request_type_name=u'StorageObjectsGetIamPolicyRequest',
+              response_type_name=u'Policy',
+              supports_download=False,
+          ),
           'Insert': base_api.ApiMethodInfo(
               http_method=u'POST',
               method_id=u'storage.objects.insert',
@@ -865,6 +952,30 @@ class StorageV1(base_api.BaseApiClient):
               request_field=u'object',
               request_type_name=u'StorageObjectsRewriteRequest',
               response_type_name=u'RewriteResponse',
+              supports_download=False,
+          ),
+          'SetIamPolicy': base_api.ApiMethodInfo(
+              http_method=u'PUT',
+              method_id=u'storage.objects.setIamPolicy',
+              ordered_params=[u'bucket', u'object'],
+              path_params=[u'bucket', u'object'],
+              query_params=[u'generation'],
+              relative_path=u'b/{bucket}/o/{object}/iam',
+              request_field=u'policy',
+              request_type_name=u'StorageObjectsSetIamPolicyRequest',
+              response_type_name=u'Policy',
+              supports_download=False,
+          ),
+          'TestIamPermissions': base_api.ApiMethodInfo(
+              http_method=u'GET',
+              method_id=u'storage.objects.testIamPermissions',
+              ordered_params=[u'bucket', u'object', u'permissions'],
+              path_params=[u'bucket', u'object'],
+              query_params=[u'generation', u'permissions'],
+              relative_path=u'b/{bucket}/o/{object}/iam/testPermissions',
+              request_field='',
+              request_type_name=u'StorageObjectsTestIamPermissionsRequest',
+              response_type_name=u'TestIamPermissionsResponse',
               supports_download=False,
           ),
           'Update': base_api.ApiMethodInfo(
@@ -965,6 +1076,19 @@ class StorageV1(base_api.BaseApiClient):
           config, request, global_params=global_params,
           download=download)
 
+    def GetIamPolicy(self, request, global_params=None):
+      """Returns an IAM policy for the specified object.
+
+      Args:
+        request: (StorageObjectsGetIamPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Policy) The response message.
+      """
+      config = self.GetMethodConfig('GetIamPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
     def Insert(self, request, global_params=None, upload=None, download=None):
       """Stores a new object and metadata.
 
@@ -1021,6 +1145,33 @@ class StorageV1(base_api.BaseApiClient):
         (RewriteResponse) The response message.
       """
       config = self.GetMethodConfig('Rewrite')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+
+    def SetIamPolicy(self, request, global_params=None):
+      """Updates an IAM policy for the specified object.
+
+      Args:
+        request: (StorageObjectsSetIamPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Policy) The response message.
+      """
+      config = self.GetMethodConfig('SetIamPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def TestIamPermissions(self, request, global_params=None):
+      """Tests a set of permissions on the given object to see which, if any, are held by the caller.
+
+      Args:
+        request: (StorageObjectsTestIamPermissionsRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (TestIamPermissionsResponse) The response message.
+      """
+      config = self.GetMethodConfig('TestIamPermissions')
       return self._RunMethod(
           config, request, global_params=global_params)
 
