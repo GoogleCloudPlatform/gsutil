@@ -1,3 +1,45 @@
+Release 4.20 (release date: 2016-07-20)
+=======================================
+New Features
+------------------
+- gsutil now outputs a message that estimates the total number of objects for
+  commands affecting more than 30,000 objects. This value can be adjusted via
+  task_estimation_threshold in the .boto configuration file.
+
+Bug Fixes
+------------------
+- Fixed a bug in resumable downloads that could raise UnboundLocalError if
+  the download file was not readable.
+- Updated oauth2client to version 2.2.0, fixing some IOError and OSError cases.
+- Fixed bug in gsutil ls that would show update time instead of creation
+  time when using the JSON API and -L or -l flags.
+- Fixed a bug in gsutil rsync -d that could cause erroneous removal of
+  an extra destination object.
+- Fixed downloads to include accept-encoding:gzip logic when appropriate.
+
+Other Changes
+------------------
+- gsutil rsync now stores modification time (mtime) for cloud objects.
+- Changed the default change detection algorithm of gsutil rsync from file
+  size to file mtime, falling back to checksum and finally file
+  size as alternatives. This allows for increased accuracy of rsync without
+  the speed sacrifice that comes from checksum calculation, and makes gsutil
+  rsync work more similarly to how Linux rsync works. Note that the first
+  run of a local-to-cloud rsync using this new algorithm may be slower than
+  subsequent runs, as the cloud objects will not initially have an mtime, and
+  the algorithm will fall back to the slower checksum-based alternative in
+  addition to adding mtime to the cloud objects.
+- When using the JSON API, gsutil will output a progress message before
+  retrying a request if enough time has passed since the first attempt.
+- Improved error detection in dry runs of gsutil rsync by attempting to open
+  files that would be copied.
+- Added time created and time updated properties to output of gsutil ls -Lb.
+- Added archived time property to output of gsutil ls -La and gsutil stat.
+- Changed minimum number of source objects for gsutil compose from 2 to 1.
+- Removed an HTTP metadata get call from cp, acl, and setmeta commands. This
+  improves the speed of gsutil cp for small objects by over 50%.
+- Several documentation updates and clarifications.
+
 Release 4.19 (release date: 2016-04-13)
 =======================================
 Deprecation Notice
