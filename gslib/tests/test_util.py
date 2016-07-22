@@ -257,19 +257,26 @@ class TestUtil(testcase.GsUtilUnitTestCase):
 
   def test_UIHumanReadableWithDecimalPlaces(self):
     """Tests HumanReadableWithDecimalPlaces for UI."""
-    self.assertEqual('1.00 GiB', HumanReadableWithDecimalPlaces(1024**3))
+    self.assertEqual('1.0 GiB', HumanReadableWithDecimalPlaces(1024**3 +
+                                                               1024**2 * 10,
+                                                               1))
+    self.assertEqual('1.0 GiB', HumanReadableWithDecimalPlaces(1024**3), 1)
     self.assertEqual('1.01 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                1024**2 * 10))
+                                                                1024**2 * 10,
+                                                                2))
     self.assertEqual('1.000 GiB', HumanReadableWithDecimalPlaces(1024**3 +
                                                                  1024**2*5, 3))
     self.assertEqual('1.10 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                1024**2 * 100))
+                                                                1024**2 * 100,
+                                                                2))
     self.assertEqual('1.100 GiB', HumanReadableWithDecimalPlaces(1024**3 +
                                                                  1024**2 * 100,
                                                                  3))
-    self.assertEqual('10.00 MiB', HumanReadableWithDecimalPlaces(1024**2 *10))
+    self.assertEqual('10.00 MiB', HumanReadableWithDecimalPlaces(1024**2 *10,
+                                                                 2))
     # The test below is good for rounding.
-    self.assertEqual('2.01 GiB', HumanReadableWithDecimalPlaces(2157969408))
+    self.assertEqual('2.01 GiB', HumanReadableWithDecimalPlaces(2157969408, 2))
+    self.assertEqual('2.0 GiB', HumanReadableWithDecimalPlaces(2157969408, 1))
     self.assertEqual('0 B', HumanReadableWithDecimalPlaces(0, 0))
     self.assertEqual('0.00 B', HumanReadableWithDecimalPlaces(0, 2))
     self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))

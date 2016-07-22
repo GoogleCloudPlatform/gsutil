@@ -38,6 +38,7 @@ class StatusMessage(object):
     self.process_id = os.getpid()
     self.thread_id = threading.current_thread().ident
 
+
 class RetryableErrorMessage(StatusMessage):
   """Message class for retryable errors encountered by the JSON API.
 
@@ -69,6 +70,23 @@ class RetryableErrorMessage(StatusMessage):
 
     # The total amount of time waited on the request to display to the user.
     self.total_wait_sec = total_wait_sec
+
+
+class MetadataMessage(StatusMessage):
+  """Creates a MetadataMessage.
+
+  A MetadataMessage simply indicates that a metadata operation on a given object
+  has been successfully done. The only passed argument is the time when such
+  operation has finished.
+  """
+
+  def __init__(self, time):
+    """Creates a MetadataMessage.
+
+    Args:
+      time: Float representing when message was created (seconds since Epoch).
+    """
+    super(MetadataMessage, self).__init__(time)
 
 
 class FileMessage(StatusMessage):

@@ -18,8 +18,6 @@ import time
 
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.thread_message import ProgressMessage
-from gslib.util import MakeHumanReadable
-from gslib.util import UTF8
 
 
 # Default upper and lower bounds for progress callback frequency.
@@ -141,38 +139,6 @@ class ProgressCallbackWithBackoff(object):
         self._callbacks_made = 0
 
 
-def ConstructAnnounceText(operation_name, url_string):
-  """Constructs announce text for ongoing operations on url_to_display.
-
-  This truncates the text to a maximum of MAX_PROGRESS_INDICATOR_COLUMNS.
-  Thus, concurrent output (gsutil -m) leaves progress counters in a readable
-  (fixed) position.
-
-  Args:
-    operation_name: String describing the operation, i.e.
-        'Uploading' or 'Hashing'.
-    url_string: String describing the file/object being processed.
-
-  Returns:
-    Formatted announce text for outputting operation progress.
-  """
-  # Operation name occupies 11 characters (enough for 'Downloading'), plus a
-  # space. The rest is used for url_to_display. If a longer operation name is
-  # used, it will be truncated. We can revisit this size if we need to support
-  # a longer operation, but want to make sure the terminal output is meaningful.
-  justified_op_string = operation_name[:11].ljust(12)
-  start_len = len(justified_op_string)
-  end_len = len(': ')
-  if (start_len + len(url_string) + end_len >
-      MAX_PROGRESS_INDICATOR_COLUMNS):
-    ellipsis_len = len('...')
-    url_string = '...%s' % url_string[
-        -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - ellipsis_len):]
-  base_announce_text = '%s%s:' % (justified_op_string, url_string)
-  format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
-  return format_str.format(base_announce_text.encode(UTF8))
-
-
 class FileProgressCallbackHandler(object):
   """Tracks progress info for large operations like file copy or hash.
 
@@ -226,13 +192,11 @@ class FileProgressCallbackHandler(object):
       total_size = self._override_total_size
 
     PutToQueueWithTimeout(
-        self._status_queue, ProgressMessage(
-                                total_size,
-                                last_byte_processed - self._start_byte,
-                                self._src_url, time.time(),
-                                component_num=self._component_num,
-                                operation_name=self._operation_name,
-                                dst_url=self._dst_url))
+        self._status_queue,
+        ProgressMessage(total_size, last_byte_processed - self._start_byte,
+                        self._src_url, time.time(),
+                        component_num=self._component_num,
+                        operation_name=self._operation_name,
+                        dst_url=self._dst_url))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True
-      PutToQueueWithTimeout(self._status_queue, '\n')

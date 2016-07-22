@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 
+import time
+
 from apitools.base.py import encoding
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import PreconditionException
@@ -26,8 +28,10 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import MetadataMessage
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
@@ -252,6 +256,8 @@ class SetMetaCommand(Command):
         exp_src_url.bucket_name, exp_src_url.object_name, patch_obj_metadata,
         generation=exp_src_url.generation, preconditions=preconditions,
         provider=exp_src_url.scheme, fields=['id'])
+    PutToQueueWithTimeout(gsutil_api.status_queue,
+                          MetadataMessage(time=time.time()))
 
   def _ParseMetadataHeaders(self, headers):
     """Validates and parses metadata changes from the headers argument.

@@ -87,13 +87,13 @@ from gslib.parallel_tracker_file import ValidateParallelCompositeTrackerData
 from gslib.parallel_tracker_file import WriteComponentToParallelUploadTrackerFile
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
 from gslib.parallelism_framework_util import AtomicDict
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.posix_util import ATIME_ATTR
 from gslib.posix_util import GID_ATTR
 from gslib.posix_util import MODE_ATTR
 from gslib.posix_util import MTIME_ATTR
 from gslib.posix_util import ParseAndSetPOSIXAttributes
 from gslib.posix_util import UID_ATTR
-from gslib.progress_callback import ConstructAnnounceText
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
@@ -1027,7 +1027,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
   for component in components_to_upload:
     components_info[component.dst_url.url_string] = (
         FileMessage.COMPONENT_TO_UPLOAD, component.file_length)
-    gsutil_api.status_queue.put(
+    PutToQueueWithTimeout(
+        gsutil_api.status_queue,
         FileMessage(component.src_url, component.dst_url, time.time(),
                     size=component.file_length, finished=False,
                     component_num=_GetComponentNumber(component.dst_url),
@@ -1037,7 +1038,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
     component_str = component[0].versionless_url_string
     components_info[component_str] = (FileMessage.EXISTING_COMPONENT,
                                       component[1])
-    gsutil_api.status_queue.put(
+    PutToQueueWithTimeout(
+        gsutil_api.status_queue,
         FileMessage(src_url, component[0], time.time(),
                     finished=False,
                     size=component[1],
@@ -1045,7 +1047,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
                     message_type=FileMessage.EXISTING_COMPONENT))
 
   for component in existing_objects_to_delete:
-    gsutil_api.status_queue.put(
+    PutToQueueWithTimeout(
+        gsutil_api.status_queue,
         FileMessage(src_url, component, time.time(), finished=False,
                     message_type=FileMessage.EXISTING_OBJECT_TO_DELETE))
   # In parallel, copy all of the file parts that haven't already been
@@ -1094,17 +1097,20 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       for component in components:
         component_str = component.versionless_url_string
         try:
-          gsutil_api.status_queue.put(
+          PutToQueueWithTimeout(
+              gsutil_api.status_queue,
               FileMessage(src_url, component, time.time(), finished=True,
                           component_num=_GetComponentNumber(component),
                           size=components_info[component_str][1],
                           message_type=components_info[component_str][0]))
         except:  # pylint: disable=bare-except
-          gsutil_api.status_queue.put(
+          PutToQueueWithTimeout(
+              gsutil_api.status_queue,
               FileMessage(src_url, component, time.time(), finished=True))
 
       for component in existing_objects_to_delete:
-        gsutil_api.status_queue.put(
+        PutToQueueWithTimeout(
+            gsutil_api.status_queue,
             FileMessage(src_url, component, time.time(), finished=True,
                         message_type=FileMessage.EXISTING_OBJECT_TO_DELETE))
 
@@ -1384,7 +1390,8 @@ def _CopyObjToObjInTheCloud(src_url, src_obj_metadata, dst_url,
   result_url.generation = GenerationFromUrlAndString(result_url,
                                                      dst_obj.generation)
 
-  gsutil_api.status_queue.put(
+  PutToQueueWithTimeout(
+      gsutil_api.status_queue,
       FileMessage(src_url, dst_url, end_time,
                   message_type=FileMessage.FILE_CLOUD_COPY,
                   size=src_obj_metadata.size, finished=True))
@@ -1607,8 +1614,10 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           'need to start over with a new resumable upload ID. Backing off '
           'and retrying.' % src_url.url_string)))
       # Report the retryable error to the global status queue.
-      gsutil_api.status_queue.put(RetryableErrorMessage(
-          exception=e, num_retries=num_startover_attempts))
+      PutToQueueWithTimeout(
+          gsutil_api.status_queue,
+          RetryableErrorMessage(exception=e,
+                                num_retries=num_startover_attempts))
       time.sleep(min(random.random() * (2 ** num_startover_attempts),
                      GetMaxRetryDelay()))
     except ResumableUploadAbortException:
@@ -1734,7 +1743,8 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     zipped_file = True
 
   if not is_component:
-    gsutil_api.status_queue.put(
+    PutToQueueWithTimeout(
+        gsutil_api.status_queue,
         FileMessage(upload_url, dst_url, time.time(),
                     message_type=FileMessage.FILE_UPLOAD, size=upload_size,
                     finished=False))
@@ -1821,7 +1831,8 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       result_url, uploaded_object.generation)
 
   if not is_component:
-    gsutil_api.status_queue.put(
+    PutToQueueWithTimeout(
+        gsutil_api.status_queue,
         FileMessage(upload_url, dst_url, time.time(),
                     message_type=FileMessage.FILE_UPLOAD,
                     size=upload_size, finished=True))
@@ -2225,7 +2236,8 @@ def _DoSlicedDownload(src_url, src_obj_metadata, dst_url, download_file_name,
                                                api_selector,
                                                component.start_byte, size, i)
     bytes_already_downloaded = download_start_byte - component.start_byte
-    status_queue.put(
+    PutToQueueWithTimeout(
+        status_queue,
         FileMessage(src_url, dst_url, time.time(), size=size,
                     finished=False, component_num=i,
                     message_type=FileMessage.COMPONENT_TO_DOWNLOAD,
@@ -2253,7 +2265,8 @@ def _DoSlicedDownload(src_url, src_obj_metadata, dst_url, download_file_name,
   expect_gzip = ObjectIsGzipEncoded(src_obj_metadata)
   # Assign an end FileMessage to each component
   for cp_result in cp_results:
-    status_queue.put(
+    PutToQueueWithTimeout(
+        status_queue,
         FileMessage(src_url, dst_url, time.time(),
                     size=cp_result.component_total_size,
                     finished=True, component_num=cp_result.component_num,
@@ -2566,7 +2579,8 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
   with open_files_lock:
     open_files_map.delete(download_file_name)
 
-  gsutil_api.status_queue.put(
+  PutToQueueWithTimeout(
+      gsutil_api.status_queue,
       FileMessage(src_url, dst_url, time=end_time,
                   message_type=FileMessage.FILE_DOWNLOAD,
                   size=src_obj_metadata.size, finished=True))
@@ -2760,7 +2774,8 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
   start_time = time.time()
   shutil.copyfileobj(src_fp, dst_fp)
   end_time = time.time()
-  status_queue.put(
+  PutToQueueWithTimeout(
+      status_queue,
       FileMessage(src_url, dst_url, end_time,
                   message_type=FileMessage.FILE_LOCAL_COPY,
                   size=src_obj_metadata.size,
@@ -2876,7 +2891,8 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
   result_url.generation = GenerationFromUrlAndString(
       result_url, uploaded_object.generation)
 
-  gsutil_api.status_queue.put(
+  PutToQueueWithTimeout(
+      gsutil_api.status_queue,
       FileMessage(src_url, dst_url, end_time,
                   message_type=FileMessage.FILE_DAISY_COPY,
                   size=src_obj_metadata.size,
@@ -3133,7 +3149,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
 
   if src_url.IsCloudUrl():
     if dst_url.IsFileUrl():
-      gsutil_api.status_queue.put(
+      PutToQueueWithTimeout(
+          gsutil_api.status_queue,
           FileMessage(src_url, dst_url, time.time(),
                       message_type=FileMessage.FILE_DOWNLOAD, size=src_obj_size,
                       finished=False))
@@ -3145,7 +3162,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
                                    is_rsync=is_rsync,
                                    preserve_posix=preserve_posix)
     elif copy_in_the_cloud:
-      gsutil_api.status_queue.put(
+      PutToQueueWithTimeout(
+          gsutil_api.status_queue,
           FileMessage(src_url, dst_url, time.time(),
                       message_type=FileMessage.FILE_CLOUD_COPY,
                       size=src_obj_size, finished=False))
@@ -3153,7 +3171,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
                                      dst_obj_metadata, preconditions,
                                      gsutil_api, decryption_key=decryption_key)
     else:
-      gsutil_api.status_queue.put(
+      PutToQueueWithTimeout(
+          gsutil_api.status_queue,
           FileMessage(src_url, dst_url, time.time(),
                       message_type=FileMessage.FILE_DAISY_COPY,
                       size=src_obj_size, finished=False))
@@ -3172,7 +3191,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
           copy_exception_handler, gzip_exts=gzip_exts,
           allow_splitting=allow_splitting)
     else:  # dst_url.IsFileUrl()
-      gsutil_api.status_queue.put(
+      PutToQueueWithTimeout(
+          gsutil_api.status_queue,
           FileMessage(src_url, dst_url, time.time(),
                       message_type=FileMessage.FILE_LOCAL_COPY,
                       size=src_obj_size, finished=False))

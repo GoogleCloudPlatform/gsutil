@@ -32,6 +32,21 @@ from gslib.util import Retry
 class TestRm(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rm command."""
 
+  def _CleanRmUiOutputBeforeChecking(self, stderr):
+    """Excludes everything coming from the UI to avoid assert errors.
+
+    Args:
+      stderr: The cumulative stderr output.
+    Returns:
+      The cumulative stderr output without the expected UI output.
+    """
+    ui_output_pattern = '[^\n\r]*objects][^\n\r]*[\n\r]'
+    ui_spinner_list = ['\\\r', '|\r', '/\r', '-\r']
+    ui_lines_list = re.findall(ui_output_pattern, stderr) + ui_spinner_list
+    for ui_line in ui_lines_list:
+      stderr = stderr.replace(ui_line, '')
+    return stderr
+
   def _RunRemoveCommandAndCheck(self, command_and_args, objects_to_remove=None,
                                 buckets_to_remove=None, stdin=None):
     """Tests a remove command in the presence of eventual listing consistency.
@@ -67,7 +82,23 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     if not self.multiregional_buckets:
       stderr = self.RunGsUtil(command_and_args, return_stderr=True,
                               expected_status=None, stdin=stdin)
-      self.assertEqual(set(stderr.splitlines()), expected_stderr_lines)
+      num_objects = len(object_strings)
+      # Asserting for operation completion
+      if '-q' not in command_and_args:
+        if '-m' in command_and_args:
+          self.assertIn('[%d/%d objects]' % (num_objects, num_objects),
+                        stderr)
+        else:
+          self.assertIn('[%d objects]' % num_objects,
+                        stderr)
+
+      stderr = self._CleanRmUiOutputBeforeChecking(stderr)
+      stderr_set = set(stderr.splitlines())
+      try:
+        stderr_set.remove('')  # Avoiding groups represented by an empty string.
+      except KeyError:
+        pass
+      self.assertEqual(stderr_set, expected_stderr_lines)
     else:
       cumulative_stderr_lines = set()
 

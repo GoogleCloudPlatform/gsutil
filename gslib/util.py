@@ -790,7 +790,7 @@ def PrettyTime(remaining_time):
           str('%02d' % seconds))
 
 
-def HumanReadableWithDecimalPlaces(number, decimal_places=2):
+def HumanReadableWithDecimalPlaces(number, decimal_places=1):
   """Creates a human readable format for bytes with fixed decimal places.
 
   Args:
@@ -801,20 +801,16 @@ def HumanReadableWithDecimalPlaces(number, decimal_places=2):
      decimal places.
   """
   number_format = MakeHumanReadable(number).split()
-  num = int(round(10**decimal_places * float(number_format[0])))
-  if not num:
-    # 0 is a special case
+  num = str(int(round(10**decimal_places * float(number_format[0]))))
+  if num == '0':
+    number_format[0] = ('0' + (('.' + ('0' * decimal_places)) if decimal_places
+                               else ''))
+  else:
+    num_length = len(num)
     if decimal_places:
-      number_format[0] += '.'
-    for i in range(decimal_places):  # pylint: disable=unused-variable
-      number_format[0] += '0'
-  elif decimal_places and not num % (10**decimal_places):
-    number_format[0] += '.'
-  i = 0
-  while num and not num % 10 and i < decimal_places:
-    number_format[0] += '0'
-    num /= 10
-    i += 1
+      num = (num[:num_length-decimal_places] + '.' +
+             num[num_length-decimal_places:])
+    number_format[0] = num
   return ' '.join(number_format)
 
 

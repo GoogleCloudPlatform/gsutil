@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 
+import time
+
 from gslib.cloud_api import BucketNotFoundException
 from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
@@ -29,7 +31,9 @@ from gslib.exception import NO_URLS_MATCHED_GENERIC
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.storage_url import StorageUrlFromString
+from gslib.thread_message import MetadataMessage
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
@@ -378,4 +382,5 @@ class RmCommand(Command):
         exp_src_url.bucket_name, exp_src_url.object_name,
         preconditions=self.preconditions, generation=exp_src_url.generation,
         provider=exp_src_url.scheme)
-
+    PutToQueueWithTimeout(gsutil_api.status_queue,
+                          MetadataMessage(time=time.time()))

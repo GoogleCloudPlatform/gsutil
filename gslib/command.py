@@ -50,14 +50,12 @@ from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
-from gslib.metrics import LogRetryableError
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import STATUS_QUEUE_OP_TIMEOUT
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
@@ -68,8 +66,8 @@ from gslib.sig_handling import MultithreadedMainSignalHandler
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
-from gslib.thread_message import RetryableErrorMessage
 from gslib.thread_message import StatusMessage
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
@@ -85,14 +83,11 @@ from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
+
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
-
-
-def _DefaultExceptionHandler(cls, e):
-  cls.logger.exception(e)
 
 
 def CreateGsutilLogger(command_name):
@@ -119,6 +114,10 @@ def CreateGsutilLogger(command_name):
   if not log.handlers:
     log.addHandler(log_handler)
   return log
+
+
+def _DefaultExceptionHandler(cls, e):
+  cls.logger.exception(e)
 
 
 def _UrlArgChecker(command_instance, url):
@@ -184,8 +183,6 @@ def _GetTaskEstimationThreshold():
 # an arbitrary limit put in place to prevent developers from accidentally
 # causing problems with infinite recursion, and it can be increased if needed.
 MAX_RECURSIVE_DEPTH = 5
-
-ZERO_TASKS_TO_DO_ARGUMENT = ('There were no', 'tasks to do')
 
 # Map from deprecated aliases to the current command and subcommands that
 # provide the same behavior.
@@ -821,6 +818,8 @@ class Command(HelpProvider):
     else:
       # Normal Cloud API path. acl_arg is a JSON ACL or a canned ACL.
       self._SetAclGsutilApi(url, gsutil_api)
+    PutToQueueWithTimeout(gsutil_api.status_queue,
+                          MetadataMessage(time=time.time()))
 
   def _SetAclXmlPassthrough(self, url, gsutil_api):
     """Sets the ACL for the URL provided using the XML passthrough functions.
@@ -1796,6 +1795,7 @@ class ProducerThread(threading.Thread):
     seek_ahead_thread_considered = False
     args = None
     try:
+      total_size = 0
       args_iterator = iter(self.args_iterator)
       while True:
         try:
@@ -1821,12 +1821,11 @@ class ProducerThread(threading.Thread):
           num_tasks += 1
           if not num_tasks%100:
             # Time to update the total number of tasks.
-            if self.status_queue:
-              if total_size:
-                PutToQueueWithTimeout(
-                    self.status_queue, ProducerThreadMessage(num_tasks,
-                                                             total_size, 
-                                                             time.time()))
+            if self.status_queue and isinstance(args, NameExpansionResult):
+              PutToQueueWithTimeout(
+                  self.status_queue, ProducerThreadMessage(num_tasks,
+                                                           total_size,
+                                                           time.time()))
 
           if self.status_queue and isinstance(args, NameExpansionResult):
             if args.expanded_result:
@@ -1887,7 +1886,6 @@ class ProducerThread(threading.Thread):
         # is overloaded. Because the put uses a timeout, it should never block
         # command termination or signal handling.
         seek_ahead_thread.join(timeout=SEEK_AHEAD_JOIN_TIMEOUT)
-      
       # Final ProducerThread estimation message
       if self.status_queue and isinstance(args, NameExpansionResult):
         PutToQueueWithTimeout(
@@ -2140,3 +2138,4 @@ def ResetFailureCount():
   except NameError:  # If it wasn't initialized, Apply() wasn't called.
     pass
 # pylint: enable=global-variable-not-assigned,global-variable-undefined
+

@@ -92,10 +92,10 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
+from gslib.ui_controller import BytesToFixedWidthString
 from gslib.util import DiscardMessagesQueue
 from gslib.util import EIGHT_MIB
 from gslib.util import HumanReadableToBytes
-from gslib.util import HumanReadableWithDecimalPlaces
 from gslib.util import IS_WINDOWS
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
@@ -1745,7 +1745,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_progress_callbacks(self):
     bucket_uri = self.CreateBucket()
-    final_size_string = HumanReadableWithDecimalPlaces(1024**2)
+    final_size_string = BytesToFixedWidthString(1024**2)
     final_progress_callback = final_size_string+'/'+final_size_string
     fpath = self.CreateTempFile(contents='a'*ONE_MIB, file_name='foo')
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
