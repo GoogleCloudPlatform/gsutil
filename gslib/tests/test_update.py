@@ -172,3 +172,41 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     dst_version_file = os.path.join(tmpdir_dst, 'gsutil', 'VERSION')
     with open(dst_version_file, 'r') as f:
       self.assertEqual(f.read(), expected_version)
+
+
+class UpdateUnitTest(testcase.GsUtilUnitTestCase):
+
+  def test_repo_matches_manifest(self):
+    """Ensure any new top-level files are present in the manifest."""
+    p = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    p.communicate()
+    if p.returncode != 0:
+      unittest.skip('Test only runs from git repository.')
+
+    manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
+
+    with open(os.path.join(GSUTIL_DIR, 'MANIFEST.in'), 'r') as fp:
+      for line in fp:
+        if line.startswith('include '):
+          manifest_lines.append(line.split()[-1])
+
+    p = subprocess.Popen(['git', 'ls-tree', '--name-only', 'HEAD'],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout, _) = p.communicate()
+    git_top_level_files = stdout.splitlines()
+
+    for filename in git_top_level_files:
+      if filename.endswith('.pyc'):
+        # Ignore compiled code.
+        continue
+      if filename in ('.gitmodules', '.gitignore', '.travis.yml'):
+        # We explicitly drop these files when building the gsutil tarball.
+        # If we add any other files to this list, the tarball script must
+        # also be updated or we could break the gsutil update command.
+        continue
+      if filename not in manifest_lines:
+        self.fail('Found file %s not present in MANIFEST.in, which would '
+                  'break gsutil update.' % filename)
+
+  
