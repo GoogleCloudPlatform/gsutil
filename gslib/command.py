@@ -681,7 +681,7 @@ class Command(HelpProvider):
     """
     return CreateWildcardIterator(
         url_string, self.gsutil_api, all_versions=all_versions,
-        debug=self.debug, project_id=self.project_id)
+        debug=self.debug, project_id=self.project_id, logger=self.logger)
 
   def GetSeekAheadGsutilApi(self):
     """Helper to instantiate a Cloud API instance for a seek-ahead iterator.

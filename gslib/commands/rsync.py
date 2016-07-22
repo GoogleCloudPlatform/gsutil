@@ -70,7 +70,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-U] [-x] src_url dst_url
+  gsutil rsync [-c] [-C] [-d] [-e] [-L] [-n] [-p] [-r] [-U] [-x] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -328,6 +328,10 @@ _DETAILED_HELP_TEXT = ("""
   -e            Exclude symlinks. When specified, symbolic links will be
                 ignored.
 
+  -L            Transform symlink into referent file/dir. Cyclic symlinks will
+                get reported but not copied (as it'd result in an infinite list
+                of copied).
+
   -n            Causes rsync to run in "dry run" mode, i.e., just outputting
                 what would be copied or deleted without actually doing any
                 copying/deleting.
@@ -580,8 +584,12 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
     else:
       wildcard = '%s/*' % base_url_str.rstrip('/\\')
     iterator = CreateWildcardIterator(
-        wildcard, gsutil_api, debug=cls.debug,
-        project_id=cls.project_id).IterObjects(
+        wildcard,
+        gsutil_api,
+        copy_links=cls.copy_links,
+        debug=cls.debug,
+        project_id=cls.project_id,
+        logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=['crc32c', 'md5Hash',
                                    'metadata/%s' % MTIME_ATTR, 'name', 'size',
@@ -1292,6 +1300,7 @@ class RsyncCommand(Command):
     # exclude_symlinks is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.exclude_symlinks = False
+    self.copy_links = False
     # continue_on_error is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
@@ -1317,6 +1326,8 @@ class RsyncCommand(Command):
           self.delete_extras = True
         elif o == '-e':
           self.exclude_symlinks = True
+        elif o == '-L':
+          self.copy_links = True
         elif o == '-n':
           self.dryrun = True
         elif o == '-p':
