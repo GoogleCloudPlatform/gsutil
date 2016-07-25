@@ -186,8 +186,7 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
 
     manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
 
-    gsutil_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-    manifest_file = os.path.join(gsutil_dir, 'MANIFEST.in')
+    manifest_file = os.path.join(GSUTIL_DIR, 'MANIFEST.in')
     if not os.path.exists(manifest_file):
       unittest.skip('Test requires manifest file present (not for Travis CI).')
       
