@@ -186,8 +186,8 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
 
     manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
 
-    with open(os.path.join(os.path.realpath(sys.argv[0]), 'MANIFEST.in'),
-              'r') as fp:
+    gsutil_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    with open(os.path.join(gsutil_dir, 'MANIFEST.in'), 'r') as fp:
       for line in fp:
         if line.startswith('include '):
           manifest_lines.append(line.split()[-1])
