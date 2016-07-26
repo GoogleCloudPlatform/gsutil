@@ -187,13 +187,15 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
     manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
 
     manifest_file = os.path.join(GSUTIL_DIR, 'MANIFEST.in')
-    if not os.path.exists(manifest_file):
-      unittest.skip('Test requires manifest file present (not for Travis CI).')
-      
-    with open(manifest_file, 'r') as fp:
-      for line in fp:
-        if line.startswith('include '):
-          manifest_lines.append(line.split()[-1])
+
+    try:      
+      with open(manifest_file, 'r') as fp:
+        for line in fp:
+          if line.startswith('include '):
+            manifest_lines.append(line.split()[-1])
+    except IOError:
+      # If manifest file is not readable (example: Travis CI), skip the test.
+      unittest.skip('Test must be able to read manifest file.')
 
     p = subprocess.Popen(['git', 'ls-tree', '--name-only', 'HEAD'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
