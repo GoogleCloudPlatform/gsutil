@@ -362,11 +362,11 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
                                               status_queue=mock_queue)
     media_retry_func = LogAndHandleRetries(is_data_transfer=True,
                                            status_queue=mock_queue)
-    retry_msg = RetryableErrorMessage(exception=socket_error_retry_args.exc)
-    self.assertEqual(retry_msg.error_type, 'SocketError')
 
-    metrics.LogRetryableError(retry_msg.error_type)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    socket_err = socket.error()
+    self.assertEqual(socket_err.__module__, 'socket')
+    self.assertEqual(socket_err.__class__.__module__, 'socket')
+    self.assertEqual(socket_err.__class__.__name__, 'error')
 
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 1)
@@ -375,16 +375,16 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     metadata_retry_func(socket_error_retry_args)
     exp_retry_errs = defaultdict(int)
     exp_retry_errs['ValueError'] = 2
-    exp_retry_errs['SocketError'] = 2
+    exp_retry_errs['SocketError'] = 1
     self.assertEqual(self.collector.retryable_errors, exp_retry_errs)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
 
     # The media retry function raises an exception after logging because
     # the GcsJsonApi handles retryable errors for media transfers itself.
     _TryExceptAndPass(media_retry_func, value_error_retry_args)
     _TryExceptAndPass(media_retry_func, socket_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 3)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 3)
+    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
 
   def testExceptionCatchingDecorator(self):
     """Tests the exception catching decorator CaptureAndLogException."""
