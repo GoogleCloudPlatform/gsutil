@@ -61,9 +61,8 @@ class RetryableErrorMessage(StatusMessage):
     self.error_type = exception.__class__.__name__
     # The socket module error class names aren't descriptive enough, so we
     # make the error_type more specific.
-    if exception.__class__.__module__ == 'socket':
-      self.error_type = (exception.__module__.capitalize() +
-                         exception.__class__.__name__.capitalize())
+    if exception.__class__.__module__ in ('socket', '_socket'):
+      self.error_type = 'Socket' + exception.__class__.__name__.capitalize()
 
     # The number of retries consumed to display to the user.
     self.num_retries = num_retries

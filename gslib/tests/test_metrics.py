@@ -363,11 +363,6 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     media_retry_func = LogAndHandleRetries(is_data_transfer=True,
                                            status_queue=mock_queue)
 
-    socket_err = socket.error()
-    self.assertEqual(socket_err.__module__, 'socket')
-    self.assertEqual(socket_err.__class__.__module__, 'socket')
-    self.assertEqual(socket_err.__class__.__name__, 'error')
-
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 1)
     metadata_retry_func(value_error_retry_args)
