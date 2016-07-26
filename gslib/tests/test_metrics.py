@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+from collections import defaultdict
 import logging
 import os
 import pickle
@@ -50,7 +51,7 @@ import mock
 # A piece of the URL logged for all of the tests.
 GLOBAL_DIMENSIONS_URL = '&a=b&c=d&cd1=cmd1+action1&cd2=x%2Cy%2Cz&cd3=opta%2Coptb&cd6=CommandException&cm1=0'
 # A list of metrics collected for all tests.
-COMMAND_AND_ERROR_METRICS = [
+COMMAND_AND_ERROR_METRICS = set([
     metrics._Metric(
         'https://example.com', 'POST',
         'ec={0}&ea=cmd1+action1&el={1}&ev=0&cm2=3{2}'.format(
@@ -71,7 +72,7 @@ COMMAND_AND_ERROR_METRICS = [
         'ec={0}&ea=CommandException&el={1}&ev=0{2}'.format(
             metrics._GA_ERRORFATAL_CATEGORY, VERSION, GLOBAL_DIMENSIONS_URL),
         'user-agent-007')
-]
+])
 
 
 def _TryExceptAndPass(func, *args, **kwargs):
@@ -302,7 +303,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # them.
     self.assertEqual([], self.collector._metrics)
     self.collector._CollectCommandAndErrorMetrics()
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, self.collector._metrics)
+    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
 
     metrics.LogPerformanceSummary(True)
     perfsum1_metric = metrics._Metric(
@@ -311,8 +312,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
                                                  VERSION,
                                                  GLOBAL_DIMENSIONS_URL),
         'user-agent-007')
-    self.assertEqual(COMMAND_AND_ERROR_METRICS + [perfsum1_metric],
-                     self.collector._metrics)
+    COMMAND_AND_ERROR_METRICS.add(perfsum1_metric)
+    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
 
     metrics.LogPerformanceSummary(False)
     perfsum2_metric = metrics._Metric(
@@ -321,9 +322,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
                                                    VERSION,
                                                    GLOBAL_DIMENSIONS_URL),
         'user-agent-007')
-    self.assertEqual(
-        COMMAND_AND_ERROR_METRICS + [perfsum1_metric, perfsum2_metric],
-        self.collector._metrics)
+    COMMAND_AND_ERROR_METRICS.add(perfsum2_metric)
+    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
 
   def testCommandCollection(self):
     """Tests the collection of command parameters."""
@@ -368,6 +368,10 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
     metadata_retry_func(socket_error_retry_args)
+    exp_retry_errs = defaultdict(int)
+    exp_retry_errs['ValueError'] = 2
+    exp_retry_errs['SocketError'] = 1
+    self.assertEqual(self.collector.retryable_errors, exp_retry_errs)
     self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
 
     # The media retry function raises an exception after logging because
@@ -566,7 +570,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     # Check that the metrics were correctly dumped into the temp file.
     with open(metrics_file.name, 'rb') as metrics_file:
       reported_metrics = pickle.load(metrics_file)
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, reported_metrics)
+    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(reported_metrics))
 
   def testMetricsPosting(self):
     """Tests the metrics posting process as performed in metrics_reporter.py."""
