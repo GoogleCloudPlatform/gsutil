@@ -109,7 +109,6 @@ class RetryableErrorsQueue(object):
 
   def put(self, status_item):  # pylint: disable=invalid-name
     if isinstance(status_item, RetryableErrorMessage):
-      assert(status_item.error_type == 'SocketError')
       metrics.LogRetryableError(status_item.error_type)
 
 
@@ -353,9 +352,9 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # A DiscardMessagesQueue has the same retryable error-logging code as the
     # UIThread and the MainThreadUIQueue.
     mock_queue = RetryableErrorsQueue()
-    # value_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
-    #                                                          ValueError(), None,
-    #                                                          None, None)
+    value_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
+                                                             ValueError(), None,
+                                                             None, None)
     socket_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
                                                               socket.error(),
                                                               None, None, None)
@@ -363,25 +362,29 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
                                               status_queue=mock_queue)
     media_retry_func = LogAndHandleRetries(is_data_transfer=True,
                                            status_queue=mock_queue)
+    retry_msg = RetryableErrorMessage(exception=socket_error_retry_args.exc)
+    self.assertEqual(retry_msg.error_type, 'SocketError')
 
-    # metadata_retry_func(value_error_retry_args)
-    # self.assertEqual(self.collector.retryable_errors['ValueError'], 1)
-    # metadata_retry_func(value_error_retry_args)
-    # self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
-    metadata_retry_func(socket_error_retry_args)
-    self.assertIsNotNone(socket.error())
-    exp_retry_errs = defaultdict(int)
-    # exp_retry_errs['ValueError'] = 2
-    exp_retry_errs['SocketError'] = 1
-    self.assertEqual(self.collector.retryable_errors, exp_retry_errs)
+    metrics.LogRetryableError(retry_msg.error_type)
     self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+
+    metadata_retry_func(value_error_retry_args)
+    self.assertEqual(self.collector.retryable_errors['ValueError'], 1)
+    metadata_retry_func(value_error_retry_args)
+    self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
+    metadata_retry_func(socket_error_retry_args)
+    exp_retry_errs = defaultdict(int)
+    exp_retry_errs['ValueError'] = 2
+    exp_retry_errs['SocketError'] = 2
+    self.assertEqual(self.collector.retryable_errors, exp_retry_errs)
+    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
 
     # The media retry function raises an exception after logging because
     # the GcsJsonApi handles retryable errors for media transfers itself.
-    # _TryExceptAndPass(media_retry_func, value_error_retry_args)
+    _TryExceptAndPass(media_retry_func, value_error_retry_args)
     _TryExceptAndPass(media_retry_func, socket_error_retry_args)
-    # self.assertEqual(self.collector.retryable_errors['ValueError'], 3)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    self.assertEqual(self.collector.retryable_errors['ValueError'], 3)
+    self.assertEqual(self.collector.retryable_errors['SocketError'], 3)
 
   def testExceptionCatchingDecorator(self):
     """Tests the exception catching decorator CaptureAndLogException."""
