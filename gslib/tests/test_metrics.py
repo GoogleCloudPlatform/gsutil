@@ -368,6 +368,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
     metadata_retry_func(socket_error_retry_args)
+    self.assertIsNotNone(socket.error())
     exp_retry_errs = defaultdict(int)
     exp_retry_errs['ValueError'] = 2
     exp_retry_errs['SocketError'] = 1
