@@ -30,6 +30,7 @@ import sys
 import tarfile
 
 import gslib
+from gslib.commands.update import DisallowUpdataIfDataInGsutilDir
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
@@ -76,7 +77,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # .git*, etc.)
     os.makedirs(gsutil_dst)
     for comp in ('CHANGES.md', 'CHECKSUM', 'COPYING', 'gslib', 'gsutil',
-                 'gsutil.py', 'MANIFEST.in', 'README.md', 'setup.py',
+                 'gsutil.py', 'MANIFEST.in', 'README.md', 'setup.py', 'test',
                  'third_party', 'VERSION'):
       if os.path.isdir(os.path.join(GSUTIL_DIR, comp)):
         func = shutil.copytree
@@ -175,42 +176,26 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
 
 
 class UpdateUnitTest(testcase.GsUtilUnitTestCase):
+  """Tests the functionality of commands/update.py."""
 
   def test_repo_matches_manifest(self):
-    """Ensure any new top-level files are present in the manifest."""
-    p = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    p.communicate()
-    if p.returncode != 0:
-      return unittest.skip('Test only runs from git repository.')
-
-    manifest_lines = ['gslib', 'third_party', 'MANIFEST.in']
-
-    manifest_file = os.path.join(GSUTIL_DIR, 'MANIFEST.in')
-
-    try:
-      with open(manifest_file, 'r') as fp:
-        for line in fp:
-          if line.startswith('include '):
-            manifest_lines.append(line.split()[-1])
-    except IOError:
-      # If manifest file is not readable (example: Travis CI), skip the test.
-      return unittest.skip('Test must be able to read manifest file.')
-
-    p = subprocess.Popen(['git', 'ls-tree', '--name-only', 'HEAD'],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (stdout, _) = p.communicate()
-    git_top_level_files = stdout.splitlines()
-
-    for filename in git_top_level_files:
-      if filename.endswith('.pyc'):
-        # Ignore compiled code.
+    """Ensure that all files/folders match the manifest."""
+    # Create a temp directory and copy specific files to it.
+    tmpdir_src = self.CreateTempDir()
+    gsutil_src = os.path.join(tmpdir_src, 'gsutil')
+    os.makedirs(gsutil_src)
+    copy_files = []
+    for filename in os.listdir(GSUTIL_DIR):
+      if (filename.endswith('.pyc') or filename.startswith('.git')
+          or filename == '__pycache__' or filename == '.settings'
+          or filename == '.project' or filename == '.pydevproject'):
+        # Need to ignore any compiled code or Eclipse project folders.
         continue
-      if filename in ('.gitmodules', '.gitignore', '.travis.yml'):
-        # We explicitly drop these files when building the gsutil tarball.
-        # If we add any other files to this list, the tarball script must
-        # also be updated or we could break the gsutil update command.
-        continue
-      if filename not in manifest_lines:
-        self.fail('Found file %s not present in MANIFEST.in, which would '
-                  'break gsutil update.' % filename)
+      copy_files.append(filename)
+    for comp in copy_files:
+      if os.path.isdir(os.path.join(GSUTIL_DIR, comp)):
+        func = shutil.copytree
+      else:
+        func = shutil.copyfile
+      func(os.path.join(GSUTIL_DIR, comp), os.path.join(gsutil_src, comp))
+    DisallowUpdataIfDataInGsutilDir(directory=gsutil_src)

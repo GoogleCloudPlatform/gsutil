@@ -46,6 +46,11 @@ if not GSUTIL_DIR:
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
 
 
+# Flag for whether or not an import wrapper is used to measure time taken for
+# individual imports.
+MEASURING_TIME_ACTIVE = False
+
+
 # Filter out "module was already imported" warnings that get printed after we
 # add our bundled version of modules to the Python path.
 warnings.filterwarnings('ignore', category=UserWarning,

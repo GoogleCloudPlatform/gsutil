@@ -8,7 +8,7 @@ include gsutil
 include gsutil.py
 include setup.py
 recursive-include gslib *
+recursive-include test *
 global-exclude .git*
 global-exclude *.pyc
 exclude gslib/commands/update.py
-recursive-include scripts *
