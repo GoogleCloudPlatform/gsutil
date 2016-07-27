@@ -437,14 +437,27 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
       key_uri.set_contents_from_string(contents)
-    if mode is not None:
-      key_uri.set_metadata({MODE_ATTR: mode}, {}, True)
-    if mtime is not None:
-      key_uri.set_metadata({MTIME_ATTR: mtime}, {}, True)
-    if uid is not None:
-      key_uri.set_metadata({UID_ATTR: uid}, {}, True)
-    if gid is not None:
-      key_uri.set_metadata({GID_ATTR: gid}, {}, True)
+    custom_metadata_present = (mode is not None or mtime is not None
+                               or uid is not None or gid is not None)
+    if custom_metadata_present:
+      gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue)
+      obj_metadata = apitools_messages.Object()
+      obj_metadata.metadata = apitools_messages.Object.MetadataValue(
+          additionalProperties=[])
+      if mode is not None:
+        CreateCustomMetadata(entries={MODE_ATTR: mode},
+                             custom_metadata=obj_metadata.metadata)
+      if mtime is not None:
+        CreateCustomMetadata(entries={MTIME_ATTR: mtime},
+                             custom_metadata=obj_metadata.metadata)
+      if uid is not None:
+        CreateCustomMetadata(entries={UID_ATTR: uid},
+                             custom_metadata=obj_metadata.metadata)
+      if gid is not None:
+        CreateCustomMetadata(entries={GID_ATTR: gid},
+                             custom_metadata=obj_metadata.metadata)
+      gsutil_api.PatchObjectMetadata(bucket_uri.bucket_name, object_name,
+                                     obj_metadata)
     return key_uri
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
