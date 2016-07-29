@@ -73,7 +73,7 @@ from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import CopyObjectMetadata
+from gslib.translation_helper import CopyCustomMetadata
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.util import CreateCustomMetadata
 from gslib.util import GetCloudApiInstance
@@ -1213,9 +1213,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
             preserve_posix=cls.preserve_posix_attrs)
         tmp_obj_metadata = apitools_messages.Object()
         tmp_obj_metadata.metadata = custom_metadata
-        CopyObjectMetadata(tmp_obj_metadata, src_obj_metadata, override=True)
-        if custom_metadata.additionalProperties:
-          src_obj_metadata.metadata = custom_metadata
+        CopyCustomMetadata(tmp_obj_metadata, src_obj_metadata, override=True)
         copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,
             _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,

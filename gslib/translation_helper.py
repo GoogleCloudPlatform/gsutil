@@ -246,8 +246,8 @@ def CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False):
   """Copies metadata from src_obj_metadata to dst_obj_metadata.
 
   Args:
-    src_obj_metadata: Metadata from source object
-    dst_obj_metadata: Initialized metadata for destination object
+    src_obj_metadata: Metadata from source object.
+    dst_obj_metadata: Initialized metadata for destination object.
     override: If true, will overwrite metadata in destination object.
               If false, only writes metadata for values that don't already
               exist.
@@ -264,7 +264,19 @@ def CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False):
     dst_obj_metadata.contentType = src_obj_metadata.contentType
   if override or not dst_obj_metadata.md5Hash:
     dst_obj_metadata.md5Hash = src_obj_metadata.md5Hash
+  CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=override)
 
+
+def CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=False):
+  """Copies custom metadata from src_obj_metadata to dst_obj_metadata.
+
+  Args:
+    src_obj_metadata: Metadata from source object.
+    dst_obj_metadata: Initialized metadata for destination object.
+    override: If true, will overwrite metadata in destination object.
+              If false, only writes metadata for values that don't already
+              exist.
+  """
   # TODO: Apitools should ideally treat metadata like a real dictionary instead
   # of a list of key/value pairs (with an O(N^2) lookup).  In practice the
   # number of values is typically small enough not to matter.
