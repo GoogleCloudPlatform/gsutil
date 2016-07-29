@@ -81,12 +81,11 @@ def timed_importer(name, *args, **kwargs):
   INITIALIZATION_TIMES[name] = import_end_time - import_start_time
   return import_value
 
+__builtin__.__import__ = timed_importer
 
 
 def initialize():
   """Initializes gsutil."""
-  __builtin__.__import__ = timed_importer
-  sys.stderr.write('\n\n***Importer Initialization***\n\n')
   sys.path.insert(0, os.path.abspath(os.path.join(sys.path[0], '..')))
   import gsutil  # pylint: disable=g-import-not-at-top
   atexit.register(print_sorted_initialization_times)

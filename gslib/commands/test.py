@@ -538,6 +538,7 @@ class TestCommand(Command):
         import traceback
         import sys
         traceback.print_exc(file=sys.stdout)
+        print sys.path
         raise CommandException('Invalid test argument name: %s' % e)
 
     if list_tests:
