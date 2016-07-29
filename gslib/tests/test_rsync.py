@@ -225,7 +225,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Test bucket to bucket rsync with -P flag and verify attributes."""
-      self.RunGsUtil(['rsync', '-P', suri(src_bucket), suri(dst_bucket)])
+      stderr = self.RunGsUtil(['rsync', '-P', suri(src_bucket),
+                               suri(dst_bucket)], return_stderr=True)
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
@@ -234,6 +235,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # dst_bucket should have new content from src_bucket.
       self.assertEquals(listing2, set(['/obj1', '/obj2', '/obj3', '/obj4',
                                        '/obj5']))
+      self.assertIn('Copying POSIX attributes from src to dst for', stderr)
     _Check1()
 
     self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj1',
@@ -258,6 +260,15 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                       GID_ATTR, str(PRIMARY_GID))
     self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
                                       MODE_ATTR, str(DEFAULT_MODE))
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      """Check that we are not patching destination metadata a second time."""
+      stderr = self.RunGsUtil(['rsync', '-P', suri(src_bucket),
+                               suri(dst_bucket)], return_stderr=True)
+      self.assertNotIn('Copying POSIX attributes from src to dst for', stderr)
+    _Check2()
 
   def test_bucket_to_bucket_same_objects_src_mtime(self):
     """Tests bucket to bucket with mtime.

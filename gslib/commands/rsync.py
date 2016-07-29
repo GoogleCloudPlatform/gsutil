@@ -1064,13 +1064,12 @@ class _DiffIterator(object):
           yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
                              _DiffAction.COPY, src_size)
         elif self.preserve_posix:
-          posix_attrs = NeedsPOSIXAttributeUpdate(src_atime, dst_atime,
-                                                  src_mtime, dst_mtime,
-                                                  src_uid, dst_uid,
-                                                  src_gid, dst_gid,
-                                                  src_mode, dst_mode)
-          yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
-                             _DiffAction.POSIX_SRC_TO_DST, src_size)
+          posix_attrs, needs_update = NeedsPOSIXAttributeUpdate(
+              src_atime, dst_atime, src_mtime, dst_mtime, src_uid, dst_uid,
+              src_gid, dst_gid, src_mode, dst_mode)
+          if needs_update:
+            yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
+                               _DiffAction.POSIX_SRC_TO_DST, src_size)
         elif has_src_mtime and not has_dst_mtime:
           # File/object at destination matches source but is missing mtime
           # attribute at destination.

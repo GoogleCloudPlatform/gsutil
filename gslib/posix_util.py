@@ -193,7 +193,24 @@ def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
 def NeedsPOSIXAttributeUpdate(src_atime, dst_atime, src_mtime, dst_mtime,
                               src_uid, dst_uid, src_gid, dst_gid, src_mode,
                               dst_mode):
-  """Checks whether an update for any POSIX attribute is needed."""
+  """Checks whether an update for any POSIX attribute is needed.
+
+  Args:
+    src_atime: The source access time.
+    dst_atime: The destination access time.
+    src_mtime: The source modification time.
+    dst_mtime: The destination modification time.
+    src_uid: The source user ID.
+    dst_uid: The destination user ID.
+    src_gid: The source group ID.
+    dst_gid: The destination group ID.
+    src_mode: The source mode.
+    dst_mode: The destination mode.
+
+  Returns:
+    A tuple containing a POSIXAttribute object and a boolean for whether an
+    update was needed.
+  """
   posix_attrs = POSIXAttributes()
   has_src_atime = src_atime > NA_TIME
   has_dst_atime = dst_atime > NA_TIME
@@ -215,7 +232,11 @@ def NeedsPOSIXAttributeUpdate(src_atime, dst_atime, src_mtime, dst_mtime,
     posix_attrs.gid = src_gid
   if has_src_mode and not has_dst_mode:
     posix_attrs.mode.permissions = src_mode
-  return posix_attrs
+  return posix_attrs, ((has_src_atime and not has_dst_atime)
+                       or (has_src_mtime and not has_dst_mtime)
+                       or (has_src_uid and not has_dst_uid)
+                       or (has_src_gid and not has_dst_gid)
+                       or (has_src_mode and not has_dst_mode))
 
 
 def GetDefaultMode():
