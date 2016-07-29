@@ -30,13 +30,7 @@ import sys
 import tarfile
 
 import gslib
-try:
-  from gslib.commands.update import DisallowUpdataIfDataInGsutilDir
-except:
-  import traceback
-  import sys
-  traceback.print_exc(file=sys.stderr)
-  raise
+from gslib.commands.update import DisallowUpdataIfDataInGsutilDir
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest

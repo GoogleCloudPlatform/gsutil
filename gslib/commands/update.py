@@ -41,6 +41,8 @@ from gslib.util import IS_WINDOWS
 from gslib.util import LookUpGsutilVersion
 from gslib.util import RELEASE_NOTES_URL
 
+print 'Trying to setup update.py'
+
 
 _SYNOPSIS = """
   gsutil update [-f] [-n] [url]
