@@ -535,6 +535,9 @@ class TestCommand(Command):
       try:
         suite = loader.loadTestsFromNames(commands_to_test)
       except (ImportError, AttributeError) as e:
+        import traceback
+        import sys
+        traceback.print_exc(file=sys.stdout)
         raise CommandException('Invalid test argument name: %s' % e)
 
     if list_tests:
