@@ -26,6 +26,7 @@ import textwrap
 import time
 
 import gslib
+import gslib.tests.test_update
 from gslib.cloud_api import ProjectIdException
 from gslib.command import Command
 from gslib.command import ResetFailureCount
