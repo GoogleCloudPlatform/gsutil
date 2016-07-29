@@ -60,20 +60,6 @@ class EstimationSource(object):
   # (larger priorities) rather than having to list those with higher priority.
 
 
-def GetAndUpdateSpinner(manager):
-  """Updates the current spinner character.
-
-  Args:
-    manager: a DataManager or MetadataManager object.
-  Returns:
-    char_to_print: Char to be printed as the spinner
-  """
-  char_to_print = manager.spinner_char_list[manager.current_spinner_index]
-  manager.current_spinner_index = ((manager.current_spinner_index + 1) %
-                                   len(manager.spinner_char_list))
-  return char_to_print
-
-
 def BytesToFixedWidthString(num_bytes, decimal_places=1):
   """Adjusts proper width for printing num_bytes in readable format.
 
@@ -165,8 +151,12 @@ class StatusMessageManager(object):
     self.total_size = 0
 
     # Time at last info update displayed.
-    self.refresh_time = self.custom_time if self.custom_time else time.time()
-    self.start_time = self.refresh_time
+    self.refresh_message_time = (self.custom_time if self.custom_time
+                                 else time.time())
+    self.start_time = self.refresh_message_time
+	# Time at last spinner update.
+    self.refresh_spinner_time = self.refresh_message_time
+
     # Measured in objects/second or bytes/second, depending on the superclass.
     self.throughput = 0.0
     # Deque of _ThroughputInformation to help with throughput calculation.
@@ -183,6 +173,19 @@ class StatusMessageManager(object):
     # important information, such as having finished to process an object.
     self.object_report_change = False
     self.final_message = False
+
+  def GetSpinner(self):
+    """Returns the current spinner character.
+
+    Returns:
+      char_to_print: Char to be printed as the spinner
+    """
+    return self.spinner_char_list[self.current_spinner_index]
+
+  def UpdateSpinner(self):
+    """Updates the current spinner character."""
+    self.current_spinner_index = ((self.current_spinner_index + 1) %
+                                  len(self.spinner_char_list))
 
   def _HandleProducerThreadMessage(self, status_message):
     """Handles a ProducerThreadMessage.
@@ -249,8 +252,8 @@ class StatusMessageManager(object):
     Returns:
       Whether or not we should print the progress.
     """
-    return (cur_time - self.refresh_time >= self.update_message_period or
-            self.object_report_change)
+    return (cur_time - self.refresh_message_time >= self.update_message_period
+            or self.object_report_change)
 
   def ShouldPrintSpinner(self, cur_time):
     """Decides whether or not it is time for updating the spinner character.
@@ -260,8 +263,8 @@ class StatusMessageManager(object):
     Returns:
       Whether or not we should update and print the spinner.
     """
-    return (cur_time - self.refresh_time > self.update_spinner_period and
-            self.total_size)
+    return (cur_time - self.refresh_spinner_time >
+            self.update_spinner_period and self.total_size)
 
   def PrintSpinner(self, stream=sys.stderr):
     """Prints a spinner character.
@@ -270,8 +273,8 @@ class StatusMessageManager(object):
       stream: Stream to print messages. Usually sys.stderr, but customizable
               for testing.
     """
-    char_to_print = GetAndUpdateSpinner(self)
-    stream.write(char_to_print + '\r')
+    self.UpdateSpinner()
+    stream.write(self.GetSpinner() + '\r')
 
   def UpdateThroughput(self, cur_time, cur_progress):
     """Updates throughput if the required period for calculation has passed.
@@ -397,7 +400,7 @@ class MetadataManager(StatusMessageManager):
     else:
       time_remaining = None
 
-    char_to_print = GetAndUpdateSpinner(self)
+    char_to_print = self.GetSpinner()
     if self.num_objects_source <= EstimationSource.SEEK_AHEAD_THREAD:
       # An example of objects_completed here would be ' [2/3 objects]'.
       objects_completed = ('[' + DecimalShort(self.objects_finished) + '/' +
@@ -411,7 +414,8 @@ class MetadataManager(StatusMessageManager):
                            ' objects]')
       percentage_completed = ''
 
-    if self.refresh_time - self.start_time > self.first_throughput_latency:
+    if (self.refresh_message_time - self.start_time >
+        self.first_throughput_latency):
       # Should also include throughput.
       # An example of throughput here would be '2 objects/s'
       throughput = '%.2f objects/s' % self.throughput
@@ -538,8 +542,9 @@ class DataManager(StatusMessageManager):
       # File started.
       if self.first_item and not self.custom_time:
         # Set initial time.
-        self.refresh_time = time.time()
-        self.start_time = self.refresh_time
+        self.refresh_message_time = time.time()
+        self.start_time = self.refresh_message_time
+        self.last_throughput_time = self.refresh_message_time
         self.first_item = False
 
       # Gets file name (from src_url).
@@ -740,7 +745,7 @@ class DataManager(StatusMessageManager):
     else:
       time_remaining = None
 
-    char_to_print = GetAndUpdateSpinner(self)
+    char_to_print = self.GetSpinner()
 
     if self.num_objects_source <= EstimationSource.SEEK_AHEAD_THREAD:
       # An example of objects_completed here would be ' [2/3 files]'.
@@ -762,7 +767,8 @@ class DataManager(StatusMessageManager):
     else:
       percentage_completed = ''
 
-    if self.refresh_time - self.start_time > self.first_throughput_latency:
+    if (self.refresh_message_time - self.start_time >
+        self.first_throughput_latency):
       # Should also include throughput.
       # An example of throughput here would be ' 82.3 MiB/s'
       throughput = BytesToFixedWidthString(self.throughput) + '/s'
@@ -868,9 +874,10 @@ class UIController(object):
       if self.manager.ShouldTrackThroughput(cur_time):
         self.manager.UpdateThroughput(cur_time, self.manager.GetProgress())
       self.manager.PrintProgress(stream)
-      self.manager.refresh_time = cur_time
+      self.manager.refresh_message_time = cur_time
     if self.manager.ShouldPrintSpinner(cur_time):
       self.manager.PrintSpinner(stream)
+      self.manager.refresh_spinner_time = cur_time
 
   def Call(self, status_message, stream, cur_time=None):
     """Coordinates UI manager and calls appropriate function to handle message.
@@ -955,7 +962,6 @@ class UIController(object):
         # No need to handle this message.
         return
     self._HandleMessage(status_message, stream, cur_time)
-    
 
 
 class MainThreadUIQueue(object):

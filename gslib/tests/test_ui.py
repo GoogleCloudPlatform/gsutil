@@ -1063,7 +1063,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # iteration, and in the end of the iteration along with the beginning
       # of the following iteration, on a total of
       # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
-      # on the last iteration). 
+      # on the last iteration).
       # The throughput here will be (file1_progress + file2_progress) / 2.
       average_progress = BytesToFixedWidthString((file1_progress +
                                                   file2_progress) / 2)
@@ -1160,7 +1160,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # iteration, and in the end of the iteration along with the beginning
       # of the following iteration, on a total of
       # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
-      # on the last iteration). 
+      # on the last iteration).
       # The throughput here will be (file1_progress + file2_progress) / 2.
       average_progress = BytesToFixedWidthString((file1_progress +
                                                   file2_progress) / 2)
@@ -1280,3 +1280,55 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
                                                            decimal_places=1))
     self.assertEquals('999.1 MiB', BytesToFixedWidthString(999.1 * 1024 ** 2,
                                                            decimal_places=1))
+
+  def test_ui_spinner(self):
+    stream = StringIO.StringIO()
+    start_time = self.start_time
+    ui_controller = UIController(update_spinner_period=1,
+                                 custom_time=start_time)
+    status_queue = MainThreadUIQueue(stream, ui_controller)
+    PutToQueueWithTimeout(status_queue, ProducerThreadMessage(1, len('foo'),
+                                                              start_time))
+    PutToQueueWithTimeout(status_queue,
+                          FileMessage(StorageUrlFromString('foo'), None,
+                                      start_time,
+                                      message_type=FileMessage.FILE_UPLOAD))
+    current_spinner = ui_controller.manager.GetSpinner()
+    PutToQueueWithTimeout(status_queue,
+                          ProgressMessage(1, len('foo'),
+                                          StorageUrlFromString('foo'),
+                                          start_time + 1.2))
+    old_spinner1 = current_spinner
+    current_spinner = ui_controller.manager.GetSpinner()
+    # Spinner must have changed since more than 1 second has passed.
+    self.assertNotEquals(old_spinner1, current_spinner)
+    PutToQueueWithTimeout(status_queue,
+                          ProgressMessage(2, len('foo'),
+                                          StorageUrlFromString('foo'),
+                                          start_time + 2))
+    old_spinner2 = current_spinner
+    current_spinner = ui_controller.manager.GetSpinner()
+    # Spinner must not have changed since less than 1 second has passed.
+    self.assertEquals(old_spinner2, current_spinner)
+    PutToQueueWithTimeout(status_queue,
+                          ProgressMessage(3, len('foo'),
+                                          StorageUrlFromString('foo'),
+                                          start_time + 2.5))
+    old_spinner3 = current_spinner
+    current_spinner = ui_controller.manager.GetSpinner()
+    # Spinner must have changed since more than 1 second has passed.
+    self.assertNotEquals(old_spinner3, current_spinner)
+    PutToQueueWithTimeout(status_queue,
+                          FileMessage(StorageUrlFromString('foo'), None,
+                                      start_time + 5, finished=True,
+                                      message_type=FileMessage.FILE_UPLOAD))
+    old_spinner4 = current_spinner
+    current_spinner = ui_controller.manager.GetSpinner()
+    # Spinner must have changed since more than 1 second has passed.
+    self.assertNotEquals(old_spinner4, current_spinner)
+    # Moreover, since we have 4 spinner characters and were only supposed to
+    # change it twice, current_spinner must be different from old_spinner1 and
+    # old_spinner3.
+    self.assertNotEquals(old_spinner3, current_spinner)
+    self.assertNotEquals(old_spinner1, current_spinner)
+    
