@@ -16,33 +16,35 @@
 
 from __future__ import absolute_import
 
-import logging
-import os
-import re
-import shutil
-import signal
-import stat
-import sys
-import tarfile
-import tempfile
-import textwrap
+try:
+  import logging
+  import os
+  import re
+  import shutil
+  import signal
+  import stat
+  import sys
+  import tarfile
+  import tempfile
+  import textwrap
 
-import gslib
-from gslib.command import Command
-from gslib.cs_api_map import ApiSelector
-from gslib.exception import CommandException
-from gslib.sig_handling import RegisterSignalHandler
-from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-from gslib.util import CompareVersions
-from gslib.util import GetBotoConfigFileList
-from gslib.util import GSUTIL_PUB_TARBALL
-from gslib.util import IS_CYGWIN
-from gslib.util import IS_WINDOWS
-from gslib.util import LookUpGsutilVersion
-from gslib.util import RELEASE_NOTES_URL
-
-print 'Trying to setup update.py'
-
+  import gslib
+  from gslib.command import Command
+  from gslib.cs_api_map import ApiSelector
+  from gslib.exception import CommandException
+  from gslib.sig_handling import RegisterSignalHandler
+  from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+  from gslib.util import CompareVersions
+  from gslib.util import GetBotoConfigFileList
+  from gslib.util import GSUTIL_PUB_TARBALL
+  from gslib.util import IS_CYGWIN
+  from gslib.util import IS_WINDOWS
+  from gslib.util import LookUpGsutilVersion
+  from gslib.util import RELEASE_NOTES_URL
+except:
+  import traceback, sys
+  traceback.print_exc(file=sys.stderr)
+  raise
 
 _SYNOPSIS = """
   gsutil update [-f] [-n] [url]
