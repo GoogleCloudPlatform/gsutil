@@ -454,20 +454,24 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(gsutil_args, expected_status=1,
                               return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
-      if '-m' in gsutil_args:
-        CheckBrokenUiOutputWithMFlag(self, stderr, 1, total_size=HALT_SIZE)
-      else:
-        CheckBrokenUiOutputWithNoMFlag(self, stderr, 1, total_size=HALT_SIZE)
-
+      if '-q' not in gsutil_flags:
+        if '-m' in gsutil_flags:
+          CheckBrokenUiOutputWithMFlag(self, stderr, 1, total_size=HALT_SIZE)
+        else:
+          CheckBrokenUiOutputWithNoMFlag(self, stderr, 1, total_size=HALT_SIZE)
       tracker_filename = GetTrackerFilePath(
           StorageUrlFromString(fpath), TrackerFileType.DOWNLOAD, self.test_api)
       self.assertTrue(os.path.isfile(tracker_filename))
       gsutil_args = gsutil_flags + ['cp', suri(object_uri), fpath]
       stderr = self.RunGsUtil(gsutil_args, return_stderr=True)
-      self.assertIn('Resuming download', stderr)
+      if '-q' not in gsutil_args:
+        self.assertIn('Resuming download', stderr)
+
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
-    if '-m' in gsutil_flags:
+    if '-q' in gsutil_flags:
+      self.assertEquals('', stderr)
+    elif '-m' in gsutil_flags:
       CheckUiOutputWithMFlag(self, stderr, 1, total_size=HALT_SIZE)
     else:
       CheckUiOutputWithNoMFlag(self, stderr, 1, total_size=HALT_SIZE)
@@ -487,6 +491,25 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     self._test_ui_resumable_download_break_helper(
         [('GSUtil', 'resumable_threshold', str(ONE_KIB))])
+
+  def test_ui_resumable_download_break_with_q_flag(self):
+    """Tests UI on a resumable download break with -q flag but no -m flag.
+
+    This was adapted from test_cp_resumable_download_break, and the UI output
+    should be empty.
+    """
+    self._test_ui_resumable_download_break_helper(
+        [('GSUtil', 'resumable_threshold', str(ONE_KIB))], gsutil_flags=['-q'])
+
+  def test_ui_resumable_download_break_with_q_and_m_flags(self):
+    """Tests UI on a resumable download break with -q and -m flags.
+
+    This was adapted from test_cp_resumable_download_break, and the UI output
+    should be empty.
+    """
+    self._test_ui_resumable_download_break_helper(
+        [('GSUtil', 'resumable_threshold', str(ONE_KIB))],
+        gsutil_flags=['-m', '-q'])
 
   def _test_ui_composite_upload_resume_helper(self, gsutil_flags=None):
     """Helps testing UI on a resumable upload with finished components.

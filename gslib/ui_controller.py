@@ -19,6 +19,7 @@
 from __future__ import absolute_import
 
 from collections import deque
+import logging
 import Queue
 import sys
 import threading
@@ -166,7 +167,6 @@ class StatusMessageManager(object):
     # Time at last info update displayed.
     self.refresh_time = self.custom_time if self.custom_time else time.time()
     self.start_time = self.refresh_time
-    # Time at last throughput calculation.
     # Measured in objects/second or bytes/second, depending on the superclass.
     self.throughput = 0.0
     # Deque of _ThroughputInformation to help with throughput calculation.
@@ -955,6 +955,7 @@ class UIController(object):
         # No need to handle this message.
         return
     self._HandleMessage(status_message, stream, cur_time)
+    
 
 
 class MainThreadUIQueue(object):
@@ -976,7 +977,9 @@ class MainThreadUIQueue(object):
     Args:
       stream: Stream for printing messages.
       ui_controller: UIController to manage messages.
-      logger: Logger to use for this thread.
+      logger: Logger to use for this thread. Currently just used for checking -q
+              flag. If no logger is given, we use None and ignore any
+              restrictions.
     """
 
     super(MainThreadUIQueue, self).__init__()
@@ -987,7 +990,8 @@ class MainThreadUIQueue(object):
 
   # pylint: disable=invalid-name, unused-argument
   def put(self, status_message, timeout=None):
-    self.ui_controller.Call(status_message, self.stream)
+    if not self.logger or self.logger.isEnabledFor(logging.INFO):
+      self.ui_controller.Call(status_message, self.stream)
   # pylint: enable=invalid-name, unused-argument
 
 
@@ -1005,14 +1009,15 @@ class UIThread(threading.Thread):
 
   def __init__(self, status_queue, stream, ui_controller, logger=None,
                timeout=1):
-
     """Instantiates a _UIThread.
 
     Args:
       status_queue: Queue for reporting status updates.
       stream: Stream for printing messages.
       ui_controller: UI controller to manage messages.
-      logger: Logger to use for this thread.
+      logger: Logger to use for this thread. Currently just used for checking -q
+              flag. If no logger is given, we use None and ignore any
+              restrictions.
       timeout: Timeout for getting a message.
     """
 
@@ -1030,8 +1035,8 @@ class UIThread(threading.Thread):
         status_message = self.status_queue.get(timeout=self.timeout)
       except Queue.Empty:
         status_message = None
-
-      self.ui_controller.Call(status_message, self.stream)
+      if not self.logger or self.logger.isEnabledFor(logging.INFO):
+        self.ui_controller.Call(status_message, self.stream)
       if status_message == ZERO_TASKS_TO_DO_ARGUMENT:
         # Item from MainThread to indicate we are done.
         break

@@ -587,8 +587,8 @@ class Command(HelpProvider):
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(
         self.bucket_storage_uri_class, self.gsutil_api_map,
-        self.logger, MainThreadUIQueue(sys.stderr, ui_controller,
-                                       logger=self.logger),
+        self.logger,
+        MainThreadUIQueue(sys.stderr, ui_controller, logger=self.logger),
         debug=self.debug, trace_token=self.trace_token,
         perf_trace_token=self.perf_trace_token)
     # Cross-platform path to run gsutil binary.
