@@ -45,6 +45,7 @@ from gslib.tests.util import HaltingCopyCallbackHandler
 from gslib.tests.util import HaltOneComponentCopyCallbackHandler
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import TailSet
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import unittest
@@ -65,6 +66,7 @@ from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
+from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -102,6 +104,9 @@ def _FindAppropriateDescriptionString(metadata):
   return ' objects' if metadata else ' files'
 
 
+# TODO: migrate CheckUiOutput functions to integration_testcase
+# and call them directly from the adapted tests so we do not have to duplicate
+# code.
 def CheckUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
                            metadata=False):
   """Checks if the UI output works as expected with the -m flag enabled.
@@ -815,6 +820,80 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     self.assertNotEqual(acl_string, acl_string2)
     self.assertEqual(acl_string, acl_string3)
+
+  def _test_ui_rsync_bucket_to_bucket_helper(self, gsutil_flags=None):
+    """Helper class to test UI output for rsync command.
+
+    Args:
+      gsutil_flags: List of flags to run gsutil with, or None.
+
+    Adapted from test_bucket_to_bucket in test_rsync.
+    """
+    if not gsutil_flags:
+      gsutil_flags = []
+    # Create 2 buckets with 1 overlapping object, 1 extra object at root level
+    # in each, and 1 extra object 1 level down in each, where one of the objects
+    # starts with "." to test that we don't skip those objects. Make the
+    # overlapping objects named the same but with different content, to test
+    # that we detect and properly copy in that case.
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
+                      contents='obj1')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
+                      contents='.obj2', mtime=10)
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
+                      contents='subdir/obj3')
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
+                      contents='obj6_', mtime=100)
+    # .obj2 will be replaced and have mtime of 10
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
+                      contents='.OBJ2')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
+                      contents='obj4')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
+                      contents='subdir/obj5')
+    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj6',
+                      contents='obj6', mtime=100)
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Tests rsync works as expected."""
+      gsutil_args = (gsutil_flags +
+                     ['rsync', suri(bucket1_uri), suri(bucket2_uri)])
+      stderr = self.RunGsUtil(gsutil_args, return_stderr=True)
+      num_objects = 3
+      total_size = len('obj1') + len('.obj2') + len('obj6_')
+      CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size)
+      listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
+      listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
+      # First bucket should have un-altered content.
+      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
+                                       '/obj6']))
+      # Second bucket should have new objects added from source bucket (without
+      # removing extraneeous object found in dest bucket), and without the
+      # subdir objects synchronized.
+      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
+                                       '/subdir/obj5', '/obj6']))
+      # Assert that the src/dest objects that had same length but different
+      # content were correctly synchronized (bucket to bucket rsync uses
+      # checksums).
+      self.assertEquals('.obj2', self.RunGsUtil(
+          ['cat', suri(bucket1_uri, '.obj2')], return_stdout=True))
+      self.assertEquals('.obj2', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, '.obj2')], return_stdout=True))
+      self.assertEquals('obj6_', self.RunGsUtil(
+          ['cat', suri(bucket2_uri, 'obj6')], return_stdout=True))
+    _Check1()
+
+  def test_ui_rsync_bucket_to_bucket_with_m_flag(self):
+    """Tests UI output for rsync with -m flag enabled works as expected."""
+    self._test_ui_rsync_bucket_to_bucket_helper(gsutil_flags=['-m'])
+
+  def test_ui_rsync_bucket_to_bucket_with_no_m_flag(self):
+    """Tests UI output for rsync with -m flag not enabled works as expected."""
+    self._test_ui_rsync_bucket_to_bucket_helper()
 
 
 class TestUiUnitTests(testcase.GsUtilUnitTestCase):

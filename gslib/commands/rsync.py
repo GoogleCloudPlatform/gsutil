@@ -81,6 +81,7 @@ from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import ObjectIsGzipEncoded
+from gslib.util import RsyncDiffToApply
 from gslib.util import SECONDS_PER_DAY
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
@@ -453,27 +454,6 @@ def CleanUpTempFiles():
     pass
 
 
-class _DiffToApply(object):
-  """Class that encapsulates info needed to apply diff for one object."""
-
-  def __init__(self, src_url_str, dst_url_str, src_posix_attrs, diff_action,
-               copy_size):
-    """Constructor.
-
-    Args:
-      src_url_str: The source URL string, or None if diff_action is REMOVE.
-      dst_url_str: The destination URL string.
-      src_posix_attrs: The source posix_attributes.
-      diff_action: _DiffAction to be applied.
-      copy_size: The amount of bytes to copy, or None if diff_action is REMOVE.
-    """
-    self.src_url_str = src_url_str
-    self.dst_url_str = dst_url_str
-    self.src_posix_attrs = src_posix_attrs
-    self.diff_action = diff_action
-    self.copy_size = copy_size
-
-
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
   """Arg checker that skips symlinks if -e flag specified."""
   if (diff_to_apply.diff_action == _DiffAction.REMOVE
@@ -800,7 +780,7 @@ def _BatchSort(in_iter, out_file):
 
 
 class _DiffIterator(object):
-  """Iterator yielding sequence of _DiffToApply objects."""
+  """Iterator yielding sequence of RsyncDiffToApply objects."""
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
     self.command_obj = command_obj
@@ -986,10 +966,10 @@ class _DiffIterator(object):
     return False, has_src_mtime, has_dst_mtime
 
   def __iter__(self):
-    """Iterates over src/dst URLs and produces a _DiffToApply sequence.
+    """Iterates over src/dst URLs and produces a RsyncDiffToApply sequence.
 
     Yields:
-      The _DiffToApply.
+      The RsyncDiffToApply.
     """
     # Strip trailing slashes, if any, so we compute tail length against
     # consistent position regardless of whether trailing slashes were included
@@ -1040,7 +1020,7 @@ class _DiffIterator(object):
       if (dst_url_str is None or
           src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
-        yield _DiffToApply(
+        yield RsyncDiffToApply(
             src_url_str, dst_url_str_would_copy_to, posix_attrs,
             _DiffAction.COPY, src_size)
         src_url_str = None
@@ -1048,8 +1028,8 @@ class _DiffIterator(object):
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
-          yield _DiffToApply(None, dst_url_str, POSIXAttributes(),
-                             _DiffAction.REMOVE, None)
+          yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
+                                 _DiffAction.REMOVE, None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -1062,20 +1042,20 @@ class _DiffIterator(object):
             src_url_str, src_size, src_mtime, src_crc32c, src_md5, dst_url_str,
             dst_size, dst_mtime, dst_crc32c, dst_md5))
         if should_replace:
-          yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
-                             _DiffAction.COPY, src_size)
+          yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
+                                 _DiffAction.COPY, src_size)
         elif self.preserve_posix:
           posix_attrs, needs_update = NeedsPOSIXAttributeUpdate(
               src_atime, dst_atime, src_mtime, dst_mtime, src_uid, dst_uid,
               src_gid, dst_gid, src_mode, dst_mode)
           if needs_update:
-            yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
-                               _DiffAction.POSIX_SRC_TO_DST, src_size)
+            yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
+                                   _DiffAction.POSIX_SRC_TO_DST, src_size)
         elif has_src_mtime and not has_dst_mtime:
           # File/object at destination matches source but is missing mtime
           # attribute at destination.
-          yield _DiffToApply(src_url_str, dst_url_str, posix_attrs,
-                             _DiffAction.MTIME_SRC_TO_DST, src_size)
+          yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
+                                 _DiffAction.MTIME_SRC_TO_DST, src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -1087,12 +1067,12 @@ class _DiffIterator(object):
     # If -d option was specified any files/objects left in dst iteration should
     # be removed.
     if dst_url_str:
-      yield _DiffToApply(None, dst_url_str, POSIXAttributes(),
-                         _DiffAction.REMOVE, None)
+      yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
+                             _DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _, _, _, _, _, _, _) = self._ParseTmpFileLine(line)
-      yield _DiffToApply(None, dst_url_str, POSIXAttributes(),
-                         _DiffAction.REMOVE, None)
+      yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
+                             _DiffAction.REMOVE, None)
 
 
 class _SeekAheadDiffIterator(object):
@@ -1109,8 +1089,9 @@ class _SeekAheadDiffIterator(object):
 class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
   """Iterator initialized from an existing _DiffIterator.
 
-  This iterator yields DiffToApply objects used to estimate the total work that
-  will be performed by the DiffIterator, while avoiding expensive computation.
+  This iterator yields RsyncDiffToApply objects used to estimate the total work
+  that will be performed by the DiffIterator, while avoiding expensive
+  computation.
   """
 
   # pylint: disable=super-init-not-called
@@ -1128,13 +1109,6 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.logger = logging.getLogger('dummy')
     self.base_src_url = initialized_diff_iterator.base_src_url
     self.base_dst_url = initialized_diff_iterator.base_dst_url
-    # We'll track data bytes in the seek-ahead thread, and preserving POSIX
-    # attributes doesn't cause data to be copied.
-    # TODO: Properly estimate time remaining for metadata-only rsync operations
-    # where the data matches but the metadata needs to be propagated.
-    # Presently we assume that data transfer dominates the operation, but
-    # that may not be accurate.
-    self.preserve_posix = False
 
     self.sorted_list_src_file = open(
         initialized_diff_iterator.sorted_list_src_file_name, 'r')
@@ -1259,11 +1233,11 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           cls.logger.info('Copying whole file/object for %s instead of patching'
                           ' because you don\'t have owner permission on the '
                           'object.', dst_url.url_string)
-          _RsyncFunc(cls, _DiffToApply(diff_to_apply.src_url_str,
-                                       diff_to_apply.dst_url_str,
-                                       posix_attrs,
-                                       _DiffAction.COPY,
-                                       diff_to_apply.copy_size),
+          _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
+                                           diff_to_apply.dst_url_str,
+                                           posix_attrs,
+                                           _DiffAction.COPY,
+                                           diff_to_apply.copy_size),
                      thread_state=thread_state)
       else:
         ParseAndSetPOSIXAttributes(dst_url.object_name, obj_metadata,
@@ -1300,10 +1274,10 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           cls.logger.info('Copying whole file/object for %s instead of patching'
                           ' because you don\'t have owner permission on the '
                           'object.', dst_url.url_string)
-          _RsyncFunc(cls, _DiffToApply(diff_to_apply.src_url_str,
-                                       diff_to_apply.dst_url_str, posix_attrs,
-                                       _DiffAction.COPY,
-                                       diff_to_apply.copy_size),
+          _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
+                                           diff_to_apply.dst_url_str,
+                                           posix_attrs, _DiffAction.COPY,
+                                           diff_to_apply.copy_size),
                      thread_state=thread_state)
   else:
     raise CommandException('Got unexpected DiffAction (%d)'

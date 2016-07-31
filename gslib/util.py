@@ -1612,3 +1612,26 @@ def ConvertRecursiveToFlatWildcard(url_strs):
   """A generator that adds '**' to each url string in url_strs."""
   for url_str in url_strs:
     yield '%s**' % url_str
+
+
+class RsyncDiffToApply(object):
+  """Class that encapsulates info needed to apply diff for one object."""
+
+  def __init__(self, src_url_str, dst_url_str, src_posix_attrs, diff_action,
+               copy_size):
+    """Constructor.
+
+    Args:
+      src_url_str: The source URL string, or None if diff_action is REMOVE.
+      dst_url_str: The destination URL string.
+      src_posix_attrs: The source posix_attributes.
+      diff_action: _DiffAction to be applied.
+      copy_size: The amount of bytes to copy, or None if diff_action is REMOVE.
+    """
+    self.src_url_str = src_url_str
+    self.dst_url_str = dst_url_str
+    self.src_posix_attrs = src_posix_attrs
+    self.diff_action = diff_action
+    self.copy_size = copy_size
+
+

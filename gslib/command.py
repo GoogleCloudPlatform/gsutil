@@ -80,6 +80,7 @@ from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
+from gslib.util import RsyncDiffToApply
 from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
 
@@ -1832,19 +1833,24 @@ class ProducerThread(threading.Thread):
 
         if self.arg_checker(self.cls, args):
           num_tasks += 1
-          if not num_tasks%100:
-            # Time to update the total number of tasks.
-            if self.status_queue and isinstance(args, NameExpansionResult):
-              PutToQueueWithTimeout(
-                  self.status_queue, ProducerThreadMessage(num_tasks,
-                                                           total_size,
-                                                           time.time()))
+          if self.status_queue:
+            if not num_tasks%100:
+              # Time to update the total number of tasks.
+              if (isinstance(args, NameExpansionResult) or
+                  isinstance(args, RsyncDiffToApply)):
+                PutToQueueWithTimeout(
+                    self.status_queue, ProducerThreadMessage(num_tasks,
+                                                             total_size,
+                                                             time.time()))
+            if isinstance(args, NameExpansionResult):
+              if args.expanded_result:
+                json_expanded_result = json.loads(args.expanded_result)
+                if 'size' in json_expanded_result:
+                  total_size += int(json_expanded_result['size'])
+            elif isinstance(args, RsyncDiffToApply):
+              if args.copy_size:
+                total_size += int(args.copy_size)
 
-          if self.status_queue and isinstance(args, NameExpansionResult):
-            if args.expanded_result:
-              json_expanded_result = json.loads(args.expanded_result)
-              if 'size' in json_expanded_result:
-                total_size += int(json_expanded_result['size'])
           if not seek_ahead_thread_considered:
             if task_estimation_threshold is None:
               task_estimation_threshold = _GetTaskEstimationThreshold()
@@ -1901,7 +1907,8 @@ class ProducerThread(threading.Thread):
         seek_ahead_thread.join(timeout=SEEK_AHEAD_JOIN_TIMEOUT)
       # Send a final ProducerThread message that definitively states
       # the amount of actual work performed.
-      if self.status_queue and isinstance(args, NameExpansionResult):
+      if (self.status_queue and (isinstance(args, NameExpansionResult) or
+                                 isinstance(args, RsyncDiffToApply))):
         PutToQueueWithTimeout(
             self.status_queue, ProducerThreadMessage(num_tasks,
                                                      total_size,
@@ -2152,3 +2159,4 @@ def ResetFailureCount():
   except NameError:  # If it wasn't initialized, Apply() wasn't called.
     pass
 # pylint: enable=global-variable-not-assigned,global-variable-undefined
+
