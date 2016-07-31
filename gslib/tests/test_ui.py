@@ -908,7 +908,10 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # slightly smaller than 2 to ensure messages that are 2 seconds apart from
     # one another will be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(0, 0, 1.99, 0, start_time)
+    ui_controller = UIController(sliding_throughput_period=2,
+                                 update_message_period=1,
+                                 first_throughput_latency=0,
+                                 custom_time=start_time)
     # We use start_time to have a reasonable set of values for the time messages
     # processed by the UIController. However, the start_time does not influence
     # this test, as the throughput is calculated based on the time
@@ -967,7 +970,8 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
         # We will send progress_calls_number ProgressMessages for each
         # component.
         base_start_time = (start_time + 300 +
-                           j * (component_num_file1 + component_num_file2))
+                           (j - 1)*(component_num_file1 + component_num_file2))
+
         for i in range(component_num_file1):
           # Each component has size equal to
           # component_size_file1/progress_calls_number
@@ -1031,12 +1035,17 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # were reported. The throughput here will be file2_progress.
       self.assertIn(BytesToFixedWidthString(file2_progress) + '/s',
                     content)
-      # There were 2-second periods when one progress from each file was
-      # reported. The throughput here will be
-      # (file1_progress + file2_progress) / 2.
-      average_progress = (file1_progress + file2_progress) / 2
-      self.assertIn(BytesToFixedWidthString(average_progress) + '/s',
-                    content)
+      # For each loop iteration, there are two 2-second periods when
+      # one progress from each file is reported: in the middle of the
+      # iteration, and in the end of the iteration along with the beginning
+      # of the following iteration, on a total of
+      # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
+      # on the last iteration). 
+      # The throughput here will be (file1_progress + file2_progress) / 2.
+      average_progress = BytesToFixedWidthString((file1_progress +
+                                                  file2_progress) / 2)
+      self.assertEquals(content.count(average_progress + '/s'),
+                        2 * progress_calls_number - 1)
 
   def test_ui_throughput_calculation_with_no_components(self):
     """Tests throughput calculation in the UI.
@@ -1052,7 +1061,10 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # than 2 to ensure messages that are 2 seconds apart from one another will
     # be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(0, 0, 1.99, 0, start_time)
+    ui_controller = UIController(sliding_throughput_period=2,
+                                 update_message_period=1,
+                                 first_throughput_latency=0,
+                                 custom_time=start_time)
     # We use start_time to have a reasonable set of values for the time messages
     # processed by the UIController. However, the start_time does not influence
     # much this test, as the throughput is calculated based on the time
@@ -1078,13 +1090,12 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # Testing for uploads and downloads
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url1, None, start_time + 100, size=size1,
+          FileMessage(src_url1, None, start_time + 200, size=size1,
                       message_type=file_message_type))
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url2, None, start_time + 150, size=size2,
+          FileMessage(src_url2, None, start_time + 301, size=size2,
                       message_type=file_message_type))
-
       progress_calls_number = 4
       for j in range(1, progress_calls_number + 1):
         # We will send progress_calls_number ProgressMessages for each file.
@@ -1121,12 +1132,17 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       self.assertIn(zero + '/s', content)
       file1_progress = (size1 / progress_calls_number)
       file2_progress = (size2 / progress_calls_number)
-      # There were 2-second periods when one progress from each file was
-      # reported. The throughput here will be
-      # (file1_progress + file2_progress) / 2.
-      average_progress = (file1_progress + file2_progress) / 2
-      self.assertIn(BytesToFixedWidthString(average_progress) + '/s',
-                    content)
+      # For each loop iteration, there are two 2-second periods when
+      # one progress from each file is reported: in the middle of the
+      # iteration, and in the end of the iteration along with the beginning
+      # of the following iteration, on a total of
+      # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
+      # on the last iteration). 
+      # The throughput here will be (file1_progress + file2_progress) / 2.
+      average_progress = BytesToFixedWidthString((file1_progress +
+                                                  file2_progress) / 2)
+      self.assertEquals(content.count(average_progress + '/s'),
+                        2 * progress_calls_number - 1)
 
   def test_ui_metadata_message_passing(self):
     """Tests that MetadataMessages are being correctly received and processed.
@@ -1142,7 +1158,10 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # than 2 to ensure messages that are 2 seconds apart from one another will
     # be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(0, 0, 1.99, 0, start_time)
+    ui_controller = UIController(sliding_throughput_period=2,
+                                 update_message_period=1,
+                                 first_throughput_latency=0,
+                                 custom_time=start_time)
     num_objects = 200
     ui_thread = UIThread(status_queue, stream, ui_controller)
     for i in range(num_objects):
@@ -1154,23 +1173,26 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
           # Sends an estimation message
           PutToQueueWithTimeout(
               status_queue,
-              ProducerThreadMessage(130, 0, start_time + 0.1 * i))
+              ProducerThreadMessage(130, 0, start_time + 0.1 + 0.1 * i))
         PutToQueueWithTimeout(
-            status_queue, MetadataMessage(start_time + 0.2 * i))
+            status_queue, MetadataMessage(start_time + 10 + 0.2 * (i - 100)))
       elif i < 150:
         if i == 130:
           # Sends a SeekAheadMessage
-          PutToQueueWithTimeout(status_queue,
-                                SeekAheadMessage(190, 0, start_time + 0.2 *i))
+          PutToQueueWithTimeout(
+              status_queue,
+              SeekAheadMessage(190, 0, start_time + 10.1 + 0.2 * (i - 100)))
         PutToQueueWithTimeout(
-            status_queue, MetadataMessage(start_time + 0.5 * i))
+            status_queue, MetadataMessage(start_time + 16 + 0.5 * (i - 130)))
       elif i < num_objects:
         if i == 150:
           # Sends a final ProducerThreadMessage
           PutToQueueWithTimeout(
-              status_queue, ProducerThreadMessage(200, 0, start_time + 0.5 * i,
-                                                  finished=True))
-        PutToQueueWithTimeout(status_queue, MetadataMessage(start_time + i))
+              status_queue,
+              ProducerThreadMessage(200, 0, start_time + 16.1 + 0.5 * (i - 130),
+                                    finished=True))
+        PutToQueueWithTimeout(status_queue,
+                              MetadataMessage(start_time + 26 + (i - 150)))
 
     PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
@@ -1182,9 +1204,19 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # We should have estimated the number of objects as 200 in the UI.
     self.assertIn('/200 objects', content)
     # We should have calculated the throughput at all moments.
+    # First 100 elements.
     self.assertIn('10.00 objects/s', content)
+    # At one exact point between first and second round of elements.
+    self.assertEquals(content.count('7.50 objects/s'), 1)
+    # Next 30 elements.
     self.assertIn('5.00 objects/s', content)
+    # At one exact point between second and third round of elements.
+    self.assertEquals(content.count('3.50 objects/s'), 1)
+    # Next 20 elements.
     self.assertIn('2.00 objects/s', content)
+    # At one exact point between third and fourth round of elements.
+    self.assertEquals(content.count('1.50 objects/s'), 1)
+    # Final 50 elements.
     self.assertIn('1.00 objects/s', content)
     CheckUiOutputWithMFlag(self, content, 200, metadata=True)
 

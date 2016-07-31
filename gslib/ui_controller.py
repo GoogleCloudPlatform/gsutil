@@ -18,7 +18,7 @@
 
 from __future__ import absolute_import
 
-
+from collections import deque
 import Queue
 import sys
 import threading
@@ -100,21 +100,41 @@ class StatusMessageManager(object):
   same handler for SeekAheadMessages and ProducerThreadMessages.
   """
 
-  def __init__(self, update_time_period=1, update_spinner_period=0.6,
-               update_throughput_period=5, first_throughput_latency=10,
+  class _ThroughputInformation(object):
+    """Class that contains all information needed for throughput calculation.
+
+    This _ThroughputInformation is used to track progress and time at several
+    points of our operation.
+    """
+
+    def __init__(self, progress, time):
+      """Constructor of _ThroughputInformation.
+
+      Args:
+        progress: The current progress, in bytes/second or objects/second.
+        time: Float representing when progress was reported (seconds since
+              Epoch).
+      """
+      self.progress = progress
+      self.time = time
+
+  def __init__(self, update_message_period=1, update_spinner_period=0.6,
+               sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False, console_width=80):
     """Instantiates a StatusMessageManager.
 
     Args:
-      update_time_period: Minimum period for refreshing and  displaying
-                          new information. A non-positive value will ignore
-                          any time restrictions imposed by this field.
+      update_message_period: Minimum period for refreshing and  displaying
+                             new information. A non-positive value will ignore
+                             any time restrictions imposed by this field, but
+                             it will affect throughput and time remaining
+                             estimations.
       update_spinner_period: Minimum period for refreshing and displaying the
                              spinner. A non-positive value will ignore
                              any time restrictions imposed by this field.
-      update_throughput_period: Minimum period for updating throughput. A
-                                non-positive value will ignore any time
-                                restrictions imposed by this field.
+      sliding_throughput_period: Sliding period for throughput calculation. A
+                                 non-positive value will make it impossible to
+                                 calculate the throughput.
       first_throughput_latency: Minimum waiting time before actually displaying
                                 throughput info. A non-positive value will
                                 ignore any time restrictions imposed by this
@@ -126,9 +146,9 @@ class StatusMessageManager(object):
                      visualization, we recommend setting this field to at least
                      80.
     """
-    self.update_time_period = update_time_period
+    self.update_message_period = update_message_period
     self.update_spinner_period = update_spinner_period
-    self.update_throughput_period = update_throughput_period
+    self.sliding_throughput_period = sliding_throughput_period
     self.first_throughput_latency = first_throughput_latency
     self.custom_time = custom_time
     self.verbose = verbose
@@ -147,9 +167,11 @@ class StatusMessageManager(object):
     self.refresh_time = self.custom_time if self.custom_time else time.time()
     self.start_time = self.refresh_time
     # Time at last throughput calculation.
-    self.last_throughput_time = self.refresh_time
     # Measured in objects/second or bytes/second, depending on the superclass.
     self.throughput = 0.0
+    # Deque of _ThroughputInformation to help with throughput calculation.
+    self.old_progress = deque()
+    self.last_progress_time = 0
 
     self.spinner_char_list = ['/', '-', '\\', '|']
     self.current_spinner_index = 0
@@ -209,6 +231,16 @@ class StatusMessageManager(object):
     estimate_message += '\n'
     stream.write(estimate_message)
 
+  def ShouldTrackThroughput(self, cur_time):
+    """Decides whether enough time has passed to start tracking throughput.
+
+    Args:
+      cur_time: current time.
+    Returns:
+      Whether or not we should track the throughput.
+    """
+    return cur_time - self.start_time >= self.first_throughput_latency
+
   def ShouldPrintProgress(self, cur_time):
     """Decides whether or not it is time for printing a new progress.
 
@@ -217,7 +249,7 @@ class StatusMessageManager(object):
     Returns:
       Whether or not we should print the progress.
     """
-    return (cur_time - self.refresh_time >= self.update_time_period or
+    return (cur_time - self.refresh_time >= self.update_message_period or
             self.object_report_change)
 
   def ShouldPrintSpinner(self, cur_time):
@@ -241,6 +273,44 @@ class StatusMessageManager(object):
     char_to_print = GetAndUpdateSpinner(self)
     stream.write(char_to_print + '\r')
 
+  def UpdateThroughput(self, cur_time, cur_progress):
+    """Updates throughput if the required period for calculation has passed.
+
+    The throughput is calculated by taking all the progress (objects or bytes)
+    processed within the last sliding_throughput_period seconds, and dividing
+    that by the time period between the oldest progress time within that range
+    and the last progress measurement, which are defined by oldest_progress[1]
+    and last_progress_time, respectively. Among the pros of this approach,
+    a connection break or a sudden change in throughput is quickly noticeable.
+    Furthermore, using the last throughput measurement rather than the current
+    time allows us to have a better estimation of the actual throughput.
+
+    Args:
+      cur_time: Current time to check whether or not it is time for a new
+        throughput measurement.
+      cur_progress: The current progress, in number of objects finished or in
+                    bytes.
+    """
+    oldest_progress = None
+    while (len(self.old_progress) > 1 and
+           cur_time - self.old_progress[0].time >
+           self.sliding_throughput_period):
+      self.old_progress.popleft()
+
+    if not self.old_progress:
+      return
+    oldest_progress = self.old_progress[0]
+    if self.last_progress_time == oldest_progress.time:
+      self.throughput = 0
+      return
+    # If old-progress is not empty and the time of oldest_progress does not
+    # match the last_progress_time, we can safely calculate the throughput.
+    self.throughput = ((cur_progress - oldest_progress.progress) /
+                       (self.last_progress_time -
+                        oldest_progress.time))
+    # Just to avoid -0.00 B/s.
+    self.throughput = max(0, self.throughput)
+
 
 class MetadataManager(StatusMessageManager):
   """Manages shared state for metadata operations.
@@ -253,22 +323,27 @@ class MetadataManager(StatusMessageManager):
   to the UI.
   """
 
-  def __init__(self, update_time_period=1, update_spinner_period=0.6,
-               update_throughput_period=5, first_throughput_latency=10,
+  def __init__(self, update_message_period=1, update_spinner_period=0.6,
+               sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False, console_width=80):
     """Instantiates a MetadataManager.
 
     See argument documentation in StatusMessageManager base class.
     """
     super(MetadataManager, self).__init__(
-        update_time_period=update_time_period,
+        update_message_period=update_message_period,
         update_spinner_period=update_spinner_period,
-        update_throughput_period=update_throughput_period,
+        sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
         custom_time=custom_time, verbose=verbose, console_width=console_width)
 
-    self.old_objects_finished = 0  # To help on throughput calculation.
-    self.last_message_time = 0
+  def GetProgress(self):
+    """Gets the progress for a MetadataManager.
+
+    Returns:
+      The number of finished objects.
+    """
+    return self.objects_finished
 
   def _HandleMetadataMessage(self, status_message):
     """Handles a MetadataMessage.
@@ -280,9 +355,9 @@ class MetadataManager(StatusMessageManager):
     if self.num_objects_source >= EstimationSource.INDIVIDUAL_MESSAGES:
       self.num_objects_source = EstimationSource.INDIVIDUAL_MESSAGES
       self.num_objects += 1
-    self.last_message_time = status_message.time
     # Ensures we print periodic progress, and that we send a final message.
     self.object_report_change = True
+    self.last_progress_time = status_message.time
     if (self.objects_finished == self.num_objects and
         self.num_objects_source == EstimationSource.PRODUCER_THREAD_FINAL):
       self.final_message = True
@@ -301,31 +376,8 @@ class MetadataManager(StatusMessageManager):
       self._HandleProducerThreadMessage(status_message)
     elif isinstance(status_message, MetadataMessage):
       self._HandleMetadataMessage(status_message)
-
-  def UpdateThroughput(self, cur_time):
-    """Updates throughput if the required period for calculation has passed.
-
-    The throughput is calculated by taking all the objects processed within the
-    last update_throughput_period seconds, and dividing that by the time period
-    between the last throughput measurement and the last objects processed
-    measurement, which are defined by last_throughput_time and
-    last_message_time, respectively. Among the pros of this approach,
-    a connection break or a sudden change in throughput is quickly noticeable.
-    Furthermore, using the last throughput measurement rather than the current
-    time allows us to have a better estimation of the actual throughput.
-
-    Args:
-      cur_time: Current time to check whether or not it is time for a new
-        throughput measurement.
-    """
-    if cur_time - self.last_throughput_time >= self.update_throughput_period:
-      self.throughput = ((self.objects_finished - self.old_objects_finished) /
-                         (self.last_message_time -
-                          self.last_throughput_time))
-      # Just to avoid -0.00 objects/s.
-      self.throughput = max(0, self.throughput)
-      self.old_objects_finished = self.objects_finished
-      self.last_throughput_time = cur_time
+    self.old_progress.append(
+        self._ThroughputInformation(self.objects_finished, status_message.time))
 
   def PrintProgress(self, stream=sys.stderr):
     """Prints progress and throughput/time estimation.
@@ -440,21 +492,20 @@ class DataManager(StatusMessageManager):
       # The total size for the file
       self.size = size
 
-  def __init__(self, update_time_period=1, update_spinner_period=0.6,
-               update_throughput_period=5, first_throughput_latency=10,
+  def __init__(self, update_message_period=1, update_spinner_period=0.6,
+               sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False, console_width=None):
     """Instantiates a DataManager.
 
     See argument documentation in StatusMessageManager base class.
     """
     super(DataManager, self).__init__(
-        update_time_period=update_time_period,
+        update_message_period=update_message_period,
         update_spinner_period=update_spinner_period,
-        update_throughput_period=update_throughput_period,
+        sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
         custom_time=custom_time, verbose=verbose, console_width=console_width)
 
-    self.old_progress = 0  # To help on throughput calculation.
     self.first_item = True
 
     self.total_progress = 0  # Sum of progress for all threads.
@@ -469,7 +520,13 @@ class DataManager(StatusMessageManager):
     self.finished_components = 0
     self.existing_components = 0
 
-    self.last_progress_message_time = 0
+  def GetProgress(self):
+    """Gets the progress for a DataManager.
+
+    Returns:
+      The number of processed bytes in this operation.
+    """
+    return self.new_progress
 
   def _HandleFileDescription(self, status_message):
     """Handles a FileMessage that describes a file.
@@ -483,7 +540,6 @@ class DataManager(StatusMessageManager):
         # Set initial time.
         self.refresh_time = time.time()
         self.start_time = self.refresh_time
-        self.last_throughput_time = self.refresh_time
         self.first_item = False
 
       # Gets file name (from src_url).
@@ -516,6 +572,7 @@ class DataManager(StatusMessageManager):
       # Ensures total_progress has the right value.
       self.total_progress += file_progress.size - total_bytes_transferred
       self.new_progress += file_progress.size - total_bytes_transferred
+      self.last_progress_time = status_message.time
       # Deleting _ProgressInformation object to save memory.
       del self.individual_file_progress[file_name]
       self.object_report_change = True
@@ -592,6 +649,7 @@ class DataManager(StatusMessageManager):
             file_progress.dict[key] if key in file_progress.dict else (0, 0))
         self.total_progress += status_message.size - sum(last_update)
         self.new_progress += status_message.size - sum(last_update)
+        self.last_progress_time = status_message.time
         file_progress.new_progress_sum += (status_message.size -
                                            sum(last_update))
         file_progress.dict[key] = (status_message.size - last_update[1],
@@ -603,7 +661,6 @@ class DataManager(StatusMessageManager):
     Args:
       status_message: The ProgressMessage to be processed.
     """
-    self.last_progress_message_time = status_message.time
     # Retrieving index and dict for this file.
     file_name = status_message.src_url.url_string
     file_progress = self.individual_file_progress[file_name]
@@ -622,6 +679,7 @@ class DataManager(StatusMessageManager):
     self.new_progress += status_message.processed_bytes - last_update[0]
     # Updates file_progress.dict on component's key.
     file_progress.dict[key] = (status_message.processed_bytes, last_update[1])
+    self.last_progress_time = status_message.time
 
   def ProcessMessage(self, status_message, stream):
     """Processes a message from _MainThreadUIQueue or _UIThread.
@@ -650,37 +708,8 @@ class DataManager(StatusMessageManager):
     elif isinstance(status_message, ProgressMessage):
       # Progress info.
       self._HandleProgressMessage(status_message)
-
-  def UpdateThroughput(self, cur_time):
-    """Updates throughput if the required period for calculation has passed.
-
-    The throughput is calculated by taking all the progress made within the
-    last update_throughput_period seconds, and dividing that by the time period
-    between the last throughput measurement and the last progress measurement,
-    which are defined by last_throughput_time and last_progress_message_time,
-    respectively. Among the pros of this approach, a connection break or a
-    sudden change in throughput is quickly noticeable. Furthermore, using the
-    last throughput measurement rather than the current time allows us to have
-    a better estimation of the actual throughput. It is also important to notice
-    that this model strongly relies on receiving periodic progress messages for
-    each component, which motivated the creation of a timeout field for progress
-    callbacks. If a component does not produce any progress messages within this
-    period, it means that the file has finished but has yet to receive a
-    FileMessage indicating so, or it is on an extremely slow progress.
-    rate, that can be assumed to be 0 for sake of simplicity.
-
-    Args:
-      cur_time: Current time to check whether or not it is time for a new
-        throughput measurement.
-    """
-    if cur_time - self.last_throughput_time >= self.update_throughput_period:
-      self.throughput = ((self.new_progress - self.old_progress) /
-                         (self.last_progress_message_time -
-                          self.last_throughput_time))
-      # Just to avoid -0.00 B/s.
-      self.throughput = max(0, self.throughput)
-      self.old_progress = self.new_progress
-      self.last_throughput_time = cur_time
+    self.old_progress.append(
+        self._ThroughputInformation(self.new_progress, status_message.time))
 
   def PrintProgress(self, stream=sys.stderr):
     """Prints progress and throughput/time estimation.
@@ -788,21 +817,21 @@ class UIController(object):
   them.
   """
 
-  def __init__(self, update_time_period=1, update_spinner_period=0.6,
-               update_throughput_period=5, first_throughput_latency=10,
+  def __init__(self, update_message_period=1, update_spinner_period=0.6,
+               sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False):
     """Instantiates a UIController.
 
     Args:
-      update_time_period: Minimum period for refreshing and  displaying
+      update_message_period: Minimum period for refreshing and  displaying
                           new information. A non-positive value will ignore
                           any time restrictions imposed by this field.
       update_spinner_period: Minimum period for refreshing and displaying the
                              spinner. A non-positive value will ignore
                              any time restrictions imposed by this field.
-      update_throughput_period: Minimum period for updating throughput. A
-                                non-positive value will ignore any time
-                                restrictions imposed by this field.
+      sliding_throughput_period: Sliding period for throughput calculation. A
+                                 non-positive value will make it impossible to
+                                 calculate the throughput.
       first_throughput_latency: Minimum waiting time before actually displaying
                                 throughput info. A non-positive value will
                                 ignore any time restrictions imposed by this
@@ -811,9 +840,9 @@ class UIController(object):
       verbose: Tells whether or not the operation is on verbose mode.
     """
     self.verbose = verbose
-    self.update_time_period = update_time_period
+    self.update_message_period = update_message_period
     self.update_spinner_period = update_spinner_period
-    self.update_throughput_period = update_throughput_period
+    self.sliding_throughput_period = sliding_throughput_period
     self.first_throughput_latency = first_throughput_latency
     self.manager = None
     self.custom_time = custom_time
@@ -835,8 +864,9 @@ class UIController(object):
               output, or calculate throughput.
     """
     self.manager.ProcessMessage(status_message, stream)
-    self.manager.UpdateThroughput(cur_time)
     if self.manager.ShouldPrintProgress(cur_time):
+      if self.manager.ShouldTrackThroughput(cur_time):
+        self.manager.UpdateThroughput(cur_time, self.manager.GetProgress())
       self.manager.PrintProgress(stream)
       self.manager.refresh_time = cur_time
     if self.manager.ShouldPrintSpinner(cur_time):
@@ -858,9 +888,9 @@ class UIController(object):
         # Create a manager to handle early estimation messages before returning.
         self.manager = (
             DataManager(
-                update_time_period=self.update_time_period,
+                update_message_period=self.update_message_period,
                 update_spinner_period=self.update_spinner_period,
-                update_throughput_period=self.update_throughput_period,
+                sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
                 custom_time=self.custom_time, verbose=self.verbose,
                 console_width=self.console_width))
@@ -880,9 +910,9 @@ class UIController(object):
       elif isinstance(status_message, MetadataMessage):
         self.manager = (
             MetadataManager(
-                update_time_period=self.update_time_period,
+                update_message_period=self.update_message_period,
                 update_spinner_period=self.update_spinner_period,
-                update_throughput_period=self.update_throughput_period,
+                sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
                 custom_time=self.custom_time, verbose=self.verbose,
                 console_width=self.console_width))
@@ -891,9 +921,9 @@ class UIController(object):
       else:
         self.manager = (
             DataManager(
-                update_time_period=self.update_time_period,
+                update_message_period=self.update_message_period,
                 update_spinner_period=self.update_spinner_period,
-                update_throughput_period=self.update_throughput_period,
+                sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
                 custom_time=self.custom_time, verbose=self.verbose,
                 console_width=self.console_width))
@@ -913,9 +943,9 @@ class UIController(object):
         # early estimation messages, if those are available.
         self.manager = (
             DataManager(
-                update_time_period=self.update_time_period,
+                update_message_period=self.update_message_period,
                 update_spinner_period=self.update_spinner_period,
-                update_throughput_period=self.update_throughput_period,
+                sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
                 custom_time=self.custom_time, verbose=self.verbose,
                 console_width=self.console_width))
