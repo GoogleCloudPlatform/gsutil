@@ -38,8 +38,6 @@ from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
 import crcmod
 
-from gslib.cloud_api import ResumableDownloadException
-from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.copy_helper import GetTrackerFilePath
@@ -137,7 +135,8 @@ def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
                            error: POSIX_UID_ERROR},
                  'test10': {UID_ATTR: INVALID_UID(), GID_ATTR: PRIMARY_GID,
                             MODE_ATTR: '640', error: POSIX_UID_ERROR},
-                 'test11': {UID_ATTR: INVALID_UID(), GID_ATTR: NON_PRIMARY_GID(),
+                 'test11': {UID_ATTR: INVALID_UID(),
+                            GID_ATTR: NON_PRIMARY_GID(),
                             MODE_ATTR: '640', error: POSIX_UID_ERROR},
                  'test12': {UID_ATTR: USER_ID, GID_ATTR: INVALID_GID(),
                             error: POSIX_GID_ERROR},
@@ -153,8 +152,8 @@ def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     uid = attrs_dict.get(UID_ATTR)
     gid = attrs_dict.get(GID_ATTR)
     mode = attrs_dict.get(MODE_ATTR)
-    cls.SetPOSIXMetadata(bucket_uri.bucket_name, obj.object_name, uid=uid,
-                         gid=gid, mode=mode)
+    cls.SetPOSIXMetadata(cls.default_provider, bucket_uri.bucket_name,
+                         obj.object_name, uid=uid, gid=gid, mode=mode)
     stderr = cls.RunGsUtil(['cp' if is_cp else 'mv', '-P',
                             suri(bucket_uri, obj.object_name), tmpdir],
                            expected_status=1, return_stderr=True)
@@ -224,7 +223,8 @@ def TestCpMvPOSIXNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj9'),
                                   uid=USER_ID, gid=PRIMARY_GID, mode=0o433)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
-                                  uid=USER_ID, gid=NON_PRIMARY_GID(), mode=0o442)
+                                  uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                  mode=0o442)
 
 
 class _JSONForceHTTPErrorCopyCallbackHandler(object):

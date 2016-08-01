@@ -32,6 +32,7 @@ from boto.s3.deletemarker import DeleteMarker
 from boto.storage_uri import BucketStorageUri
 
 import gslib
+from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import CryptoTuple
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.gcs_json_api import GcsJsonApi
@@ -123,6 +124,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # Instantiate a JSON API for use by the current integration test.
     self.json_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
                                DiscardMessagesQueue(), 'gs')
+    self.xml_api = BotoTranslation(BucketStorageUri, logging.getLogger(),
+                                   DiscardMessagesQueue, self.default_provider)
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 
@@ -175,11 +178,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
 
-  def _SetObjectCustomMetadataAttribute(self, bucket_name, object_name,
-                                        attr_name, attr_value):
+  def _SetObjectCustomMetadataAttribute(self, provider, bucket_name,
+                                        object_name, attr_name, attr_value):
     """Sets a custom metadata attribute for an object.
 
     Args:
+      provider: Provider string for the bucket, ex. 'gs' or 's3.
       bucket_name: The name of the bucket the object is in.
       object_name: The name of the object itself.
       attr_name: The name of the custom metadata attribute to set.
@@ -188,31 +192,42 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       None
     """
-    gsutil_api = GcsJsonApi(None, logging.getLogger(),
-                            DiscardMessagesQueue, self.default_provider)
     obj_metadata = apitools_messages.Object()
     obj_metadata.metadata = CreateCustomMetadata({attr_name: attr_value})
-    gsutil_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
-                                   provider=self.default_provider)
+    if provider == 'gs':
+      self.json_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
+                                        provider=provider)
+    else:
+      self.xml_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
+                                       provider=provider)
 
-  def SetPOSIXMetadata(self, bucket_name, object_name, atime=None, mtime=None,
-                       uid=None, gid=None, mode=None):
+  def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
+                       mtime=None, uid=None, gid=None, mode=None):
     """Sets POSIX metadata for the object."""
+    obj_metadata = apitools_messages.Object()
+    obj_metadata.metadata = apitools_messages.Object.MetadataValue(
+        additionalProperties=[])
     if atime is not None:
-      self._SetObjectCustomMetadataAttribute(bucket_name, object_name,
-                                             ATIME_ATTR, atime)
-    if mtime is not None:
-      self._SetObjectCustomMetadataAttribute(bucket_name, object_name,
-                                             MTIME_ATTR, mtime)
-    if uid is not None:
-      self._SetObjectCustomMetadataAttribute(bucket_name, object_name,
-                                             UID_ATTR, uid)
-    if gid is not None:
-      self._SetObjectCustomMetadataAttribute(bucket_name, object_name,
-                                             GID_ATTR, gid)
+      CreateCustomMetadata(entries={ATIME_ATTR: atime},
+                           custom_metadata=obj_metadata.metadata)
     if mode is not None:
-      self._SetObjectCustomMetadataAttribute(bucket_name, object_name,
-                                             MODE_ATTR, mode)
+      CreateCustomMetadata(entries={MODE_ATTR: mode},
+                           custom_metadata=obj_metadata.metadata)
+    if mtime is not None:
+      CreateCustomMetadata(entries={MTIME_ATTR: mtime},
+                           custom_metadata=obj_metadata.metadata)
+    if uid is not None:
+      CreateCustomMetadata(entries={UID_ATTR: uid},
+                           custom_metadata=obj_metadata.metadata)
+    if gid is not None:
+      CreateCustomMetadata(entries={GID_ATTR: gid},
+                           custom_metadata=obj_metadata.metadata)
+    if provider == 'gs':
+      self.json_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
+                                        provider=provider)
+    else:
+      self.xml_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
+                                       provider=provider)
 
   def ClearPOSIXMetadata(self, obj):
     """Uses the setmeta command to clear POSIX attributes from user metadata.
@@ -220,12 +235,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Args:
       obj: The object to clear POSIX metadata for.
     """
+    provider_meta_string = 'goog' if obj.scheme == 'gs' else 'amz'
     self.RunGsUtil(['setmeta',
-                    '-h', 'x-goog-meta-%s' % ATIME_ATTR,
-                    '-h', 'x-goog-meta-%s' % MTIME_ATTR,
-                    '-h', 'x-goog-meta-%s' % UID_ATTR,
-                    '-h', 'x-goog-meta-%s' % GID_ATTR,
-                    '-h', 'x-goog-meta-%s' % MODE_ATTR,
+                    '-h', 'x-%s-meta-%s' % (provider_meta_string, ATIME_ATTR),
+                    '-h', 'x-%s-meta-%s' % (provider_meta_string, MTIME_ATTR),
+                    '-h', 'x-%s-meta-%s' % (provider_meta_string, UID_ATTR),
+                    '-h', 'x-%s-meta-%s' % (provider_meta_string, GID_ATTR),
+                    '-h', 'x-%s-meta-%s' % (provider_meta_string, MODE_ATTR),
                     suri(obj)])
 
   def _ServiceAccountCredentialsPresent(self):
@@ -440,24 +456,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     custom_metadata_present = (mode is not None or mtime is not None
                                or uid is not None or gid is not None)
     if custom_metadata_present:
-      gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue)
-      obj_metadata = apitools_messages.Object()
-      obj_metadata.metadata = apitools_messages.Object.MetadataValue(
-          additionalProperties=[])
-      if mode is not None:
-        CreateCustomMetadata(entries={MODE_ATTR: mode},
-                             custom_metadata=obj_metadata.metadata)
-      if mtime is not None:
-        CreateCustomMetadata(entries={MTIME_ATTR: mtime},
-                             custom_metadata=obj_metadata.metadata)
-      if uid is not None:
-        CreateCustomMetadata(entries={UID_ATTR: uid},
-                             custom_metadata=obj_metadata.metadata)
-      if gid is not None:
-        CreateCustomMetadata(entries={GID_ATTR: gid},
-                             custom_metadata=obj_metadata.metadata)
-      gsutil_api.PatchObjectMetadata(bucket_uri.bucket_name, object_name,
-                                     obj_metadata)
+      self.SetPOSIXMetadata(bucket_uri.scheme, bucket_uri.bucket_name,
+                            object_name, atime=None, mtime=mtime,
+                            uid=uid, gid=gid, mode=mode)
     return key_uri
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,

@@ -14,11 +14,9 @@
 # limitations under the License.
 """Integration tests for rsync command."""
 
-import logging
 import os
 
 import crcmod
-from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
 from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.posix_util import GID_ATTR
@@ -45,7 +43,6 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
 from gslib.tests.util import USER_ID
-from gslib.util import DiscardMessagesQueue
 from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_OSX
 from gslib.util import IS_WINDOWS
@@ -78,8 +75,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       The value at the specified attribute name in the metadata. If not present,
       returns None.
     """
-    gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue,
-                            self.default_provider)
+    gsutil_api = (self.json_api if self.default_provider == 'gs'
+                  else self.xml_api)
     metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
                                             provider=self.default_provider,
                                             fields=[attr_name])
@@ -99,8 +96,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     Returns:
       None
     """
-    gsutil_api = GcsJsonApi(None, logging.getLogger(), DiscardMessagesQueue,
-                            self.default_provider)
+    gsutil_api = (self.json_api if self.default_provider == 'gs'
+                  else self.xml_api)
     metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
                                             provider=self.default_provider,
                                             fields=['metadata/%s' % attr_name])
@@ -655,7 +652,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents='OBJ1')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
                       contents='.obj2')
-    self._SetObjectCustomMetadataAttribute(bucket_uri.bucket_name, '.obj2',
+    self._SetObjectCustomMetadataAttribute(self.default_provider,
+                                           bucket_uri.bucket_name, '.obj2',
                                            'test', 'test')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
                       contents='obj4')
@@ -1409,7 +1407,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     # Set a valid mode for another object.
-    self._SetObjectCustomMetadataAttribute(bucket_uri.bucket_name, '.obj2',
+    self._SetObjectCustomMetadataAttribute(self.default_provider,
+                                           bucket_uri.bucket_name, '.obj2',
                                            MODE_ATTR, '640')
 
     # Use @Retry as hedge against bucket listing eventual consistency.

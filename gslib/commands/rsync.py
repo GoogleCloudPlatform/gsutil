@@ -971,7 +971,7 @@ class _DiffIterator(object):
     (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
         self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
         dst_size, dst_crc32c, dst_md5)
-    if src_md5 != _NA and dst_md5 != _NA and src_mtime == dst_mtime:
+    if src_md5 != _NA and dst_md5 != _NA:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
       return src_md5 != dst_md5, has_src_mtime, has_dst_mtime
     if src_crc32c != _NA and dst_crc32c != _NA:
