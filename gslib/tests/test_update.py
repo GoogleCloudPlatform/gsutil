@@ -30,20 +30,11 @@ import sys
 import tarfile
 
 import gslib
-
-from os import walk, getcwd
-f = []
-for (dirpath, dirnames, filenames) in walk(getcwd()):
-  f.extend(filenames)
-print f
-
-
-
-from gslib.commands.update import DisallowUpdateIfDataInGsutilDir
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.util import DisallowUpdateIfDataInGsutilDir
 
 
 TESTS_DIR = os.path.abspath(os.path.dirname(__file__))
