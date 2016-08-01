@@ -1127,6 +1127,13 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.logger = logging.getLogger('dummy')
     self.base_src_url = initialized_diff_iterator.base_src_url
     self.base_dst_url = initialized_diff_iterator.base_dst_url
+    # We'll track data bytes in the seek-ahead thread, and preserving POSIX
+    # attributes doesn't cause data to be copied.
+    # TODO: Properly estimate time remaining for metadata-only rsync operations
+    # where the data matches but the metadata needs to be propagated.
+    # Presently we assume that data transfer dominates the operation, but
+    # that may not be accurate.
+    self.preserve_posix = False
 
     self.sorted_list_src_file = open(
         initialized_diff_iterator.sorted_list_src_file_name, 'r')
