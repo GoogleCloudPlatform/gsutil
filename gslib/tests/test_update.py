@@ -31,9 +31,11 @@ import tarfile
 
 import gslib
 
-from os import listdir
-from os.path import isfile, join, cwd
-print [f for f in listdir(os.cwd()) if isfile(join(os.cwd(), f))]
+from os import walk, cwd
+f = []
+for (dirpath, dirnames, filenames) in walk(os.cwd()):
+  f.extend(filenames)
+print f
 
 
 
