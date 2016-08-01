@@ -476,7 +476,6 @@ class _ResumableUploadRetryHandler(object):
       raise self._exception_to_raise(*self._exception_args)
 
 
-@mock.patch('time.time', new=mock.MagicMock(return_value=0))
 class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
   """Integration tests for analytics data collection."""
 
@@ -533,6 +532,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.addCleanup(patcher.stop)
     return patcher.start()
 
+  @mock.patch('time.time', new=mock.MagicMock(return_value=0))
   def testMetricsReporting(self):
     """Tests the subprocess creation by Popen in metrics.py."""
     popen_mock = self._StartObjectPatch(subprocess, 'Popen')
@@ -567,6 +567,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       reported_metrics = pickle.load(metrics_file)
     self.assertEqual(COMMAND_AND_ERROR_METRICS, set(reported_metrics))
 
+  @mock.patch('time.time', new=mock.MagicMock(return_value=0))
   def testMetricsPosting(self):
     """Tests the metrics posting process as performed in metrics_reporter.py."""
     # Clear the log file.
