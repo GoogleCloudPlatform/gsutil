@@ -30,11 +30,11 @@ import sys
 import tarfile
 
 import gslib
-from gslib.commands.update import DisallowUpdataIfDataInGsutilDir
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.util import DisallowUpdateIfDataInGsutilDir
 
 
 TESTS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -198,4 +198,4 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
       else:
         func = shutil.copyfile
       func(os.path.join(GSUTIL_DIR, comp), os.path.join(gsutil_src, comp))
-    DisallowUpdataIfDataInGsutilDir(directory=gsutil_src)
+    DisallowUpdateIfDataInGsutilDir(directory=gsutil_src)
