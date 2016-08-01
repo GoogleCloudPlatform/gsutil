@@ -30,7 +30,7 @@ import sys
 import tarfile
 
 import gslib
-from gslib.commands.update import DisallowUpdateIfDataInGsutilDir
+from gslib.commands import update
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
@@ -198,4 +198,4 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
       else:
         func = shutil.copyfile
       func(os.path.join(GSUTIL_DIR, comp), os.path.join(gsutil_src, comp))
-    DisallowUpdataIfDataInGsutilDir(directory=gsutil_src)
+    update.DisallowUpdataIfDataInGsutilDir(directory=gsutil_src)
