@@ -31,9 +31,9 @@ import tarfile
 
 import gslib
 
-from os import walk, cwd
+from os import walk, getcwd
 f = []
-for (dirpath, dirnames, filenames) in walk(os.cwd()):
+for (dirpath, dirnames, filenames) in walk(getcwd()):
   f.extend(filenames)
 print f
 
