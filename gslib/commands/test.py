@@ -26,6 +26,7 @@ import textwrap
 import time
 
 import gslib
+import gslib.tests.test_update
 from gslib.cloud_api import ProjectIdException
 from gslib.command import Command
 from gslib.command import ResetFailureCount
@@ -535,6 +536,10 @@ class TestCommand(Command):
       try:
         suite = loader.loadTestsFromNames(commands_to_test)
       except (ImportError, AttributeError) as e:
+        import traceback
+        import sys
+        traceback.print_exc(file=sys.stdout)
+        print sys.path
         raise CommandException('Invalid test argument name: %s' % e)
 
     if list_tests:
