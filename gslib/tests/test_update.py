@@ -30,7 +30,7 @@ import sys
 import tarfile
 
 import gslib
-from gslib.commands.update import DisallowUpdataIfDataInGsutilDir
+from gslib.commands.update import DisallowUpdateIfDataInGsutilDir
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest

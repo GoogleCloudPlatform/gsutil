@@ -16,35 +16,31 @@
 
 from __future__ import absolute_import
 
-try:
-  import logging
-  import os
-  import re
-  import shutil
-  import signal
-  import stat
-  import sys
-  import tarfile
-  import tempfile
-  import textwrap
+import logging
+import os
+import re
+import shutil
+import signal
+import stat
+import sys
+import tarfile
+import tempfile
+import textwrap
 
-  import gslib
-  from gslib.command import Command
-  from gslib.cs_api_map import ApiSelector
-  from gslib.exception import CommandException
-  from gslib.sig_handling import RegisterSignalHandler
-  from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-  from gslib.util import CompareVersions
-  from gslib.util import GetBotoConfigFileList
-  from gslib.util import GSUTIL_PUB_TARBALL
-  from gslib.util import IS_CYGWIN
-  from gslib.util import IS_WINDOWS
-  from gslib.util import LookUpGsutilVersion
-  from gslib.util import RELEASE_NOTES_URL
-except:
-  import traceback, sys
-  traceback.print_exc(file=sys.stderr)
-  raise
+import gslib
+from gslib.command import Command
+from gslib.cs_api_map import ApiSelector
+from gslib.exception import CommandException
+from gslib.sig_handling import RegisterSignalHandler
+from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.util import CompareVersions
+from gslib.util import GetBotoConfigFileList
+from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import IS_CYGWIN
+from gslib.util import IS_WINDOWS
+from gslib.util import LookUpGsutilVersion
+from gslib.util import RELEASE_NOTES_URL
+
 
 _SYNOPSIS = """
   gsutil update [-f] [-n] [url]
@@ -97,7 +93,7 @@ _DETAILED_HELP_TEXT = ("""
 """ % GSUTIL_PUB_TARBALL)
 
 
-def DisallowUpdataIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
+def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   """Disallows the update command if files not in the gsutil distro are found.
 
   This prevents users from losing data if they are in the habit of running
@@ -299,7 +295,7 @@ class UpdateCommand(Command):
           'Your boto configuration has https_validate_certificates = False.\n'
           'The update command cannot be run this way, for security reasons.')
 
-    DisallowUpdataIfDataInGsutilDir()
+    DisallowUpdateIfDataInGsutilDir()
 
     force_update = False
     no_prompt = False
