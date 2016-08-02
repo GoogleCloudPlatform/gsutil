@@ -79,7 +79,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       object_strings.append('Removing %s...' % object_to_remove)
     expected_stderr_lines = set(object_strings + bucket_strings)
 
-    if not self.multiregional_buckets:
+    if not self.multiregional_buckets and self.default_provider == 'gs':
       stderr = self.RunGsUtil(command_and_args, return_stderr=True,
                               expected_status=None, stdin=stdin)
       num_objects = len(object_strings)
@@ -94,10 +94,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
       stderr = self._CleanRmUiOutputBeforeChecking(stderr)
       stderr_set = set(stderr.splitlines())
-      try:
-        stderr_set.remove('')  # Avoiding groups represented by an empty string.
-      except KeyError:
-        pass
+      if '' in stderr_set:
+        stderr_set.remove('')  # Avoid groups represented by an empty string.
       self.assertEqual(stderr_set, expected_stderr_lines)
     else:
       cumulative_stderr_lines = set()
@@ -107,6 +105,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         """Runs/retries the command updating+checking cumulative output."""
         stderr = self.RunGsUtil(command_and_args, return_stderr=True,
                                 expected_status=None, stdin=stdin)
+        stderr = self._CleanRmUiOutputBeforeChecking(stderr)
         update_lines = True
         # Retry 404's and 409's due to eventual listing consistency, but don't
         # add the output to the set.
