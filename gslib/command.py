@@ -1886,7 +1886,8 @@ class ProducerThread(threading.Thread):
         # is overloaded. Because the put uses a timeout, it should never block
         # command termination or signal handling.
         seek_ahead_thread.join(timeout=SEEK_AHEAD_JOIN_TIMEOUT)
-      # Final ProducerThread estimation message
+      # Send a final ProducerThread message that definitively states
+      # the amount of actual work performed.
       if self.status_queue and isinstance(args, NameExpansionResult):
         PutToQueueWithTimeout(
             self.status_queue, ProducerThreadMessage(num_tasks,
