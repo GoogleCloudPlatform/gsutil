@@ -68,7 +68,6 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
-from gslib.thread_message import StatusMessage
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.ui_controller import MainThreadUIQueue
@@ -541,7 +540,11 @@ class Command(HelpProvider):
     self.all_versions = False
     self.command_alias_used = command_alias_used
     self.seek_ahead_gsutil_api = None
+    # pylint: disable=global-variable-not-assigned
+    # pylint: disable=global-variable-undefined
     global ui_controller
+    # pylint: enable=global-variable-undefined
+    # pylint: enable=global-variable-not-assigned
     ui_controller = UIController()
     # Global instance of a threaded logger object.
     self.logger = CreateGsutilLogger(self.command_name)
@@ -1226,9 +1229,15 @@ class Command(HelpProvider):
     consumer_pool = _ConsumerPool(processes, task_queue)
     consumer_pools.append(consumer_pool)
 
+  class ParallelOverrideReason(object):
+    """Enum class to describe purpose of overriding parallel operations."""
+    SLICE = 'slice'
+    SPEED = 'speed'
+    PERFDIAG = 'perfdiag'
+
   def Apply(self, func, args_iterator, exception_handler,
             shared_attrs=None, arg_checker=_UrlArgChecker,
-            parallel_operations_override=False, process_count=None,
+            parallel_operations_override=None, process_count=None,
             thread_count=None, should_return_results=False,
             fail_on_error=False, seek_ahead_iterator=None):
     """Calls _Parallel/SequentialApply based on multiprocessing availability.
@@ -1242,9 +1251,11 @@ class Command(HelpProvider):
       arg_checker: Used to determine whether we should process the current
                    argument or simply skip it. Also handles any logging that
                    is specific to a particular type of argument.
-      parallel_operations_override: Used to override self.parallel_operations.
-                                    This allows the caller to safely override
-                                    the top-level flag for a single call.
+      parallel_operations_override: A string (see ParallelOverrideReason)
+                                    describing the reason to override
+                                    self.parallel_operations. This allows the
+                                    caller to safely override the top-level flag
+                                    for a single call.
       process_count: The number of processes to use. If not specified, then
                      the configured default will be used.
       thread_count: The number of threads per process. If not speficied, then
@@ -1307,10 +1318,11 @@ class Command(HelpProvider):
     usable_processes_count = (process_count if self.multiprocessing_is_available
                               else 1)
     if thread_count * usable_processes_count > 1:
-      self._ParallelApply(func, args_iterator, exception_handler, caller_id,
-                          arg_checker, usable_processes_count, thread_count,
-                          should_return_results, fail_on_error,
-                          seek_ahead_iterator=seek_ahead_iterator)
+      self._ParallelApply(
+          func, args_iterator, exception_handler, caller_id, arg_checker,
+          usable_processes_count, thread_count, should_return_results,
+          fail_on_error, seek_ahead_iterator=seek_ahead_iterator,
+          parallel_operations_override=parallel_operations_override)
     else:
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
                             arg_checker, should_return_results, fail_on_error)
@@ -1398,7 +1410,8 @@ class Command(HelpProvider):
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
                      arg_checker, process_count, thread_count,
                      should_return_results, fail_on_error,
-                     seek_ahead_iterator=None):
+                     seek_ahead_iterator=None,
+                     parallel_operations_override=None):
     r"""Dispatches input arguments across a thread/process pool.
 
     Pools are composed of parallel OS processes and/or Python threads,
@@ -2139,4 +2152,3 @@ def ResetFailureCount():
   except NameError:  # If it wasn't initialized, Apply() wasn't called.
     pass
 # pylint: enable=global-variable-not-assigned,global-variable-undefined
-

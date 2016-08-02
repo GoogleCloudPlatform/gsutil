@@ -838,10 +838,11 @@ class _DiffIterator(object):
     # Contains error message from non-retryable listing failure.
     command_obj.non_retryable_listing_failures = 0
     shared_attrs = ['non_retryable_listing_failures']
-    command_obj.Apply(_ListUrlRootFunc, args_iter, _RootListingExceptionHandler,
-                      shared_attrs, arg_checker=DummyArgChecker,
-                      parallel_operations_override=True,
-                      fail_on_error=True)
+    command_obj.Apply(
+        _ListUrlRootFunc, args_iter, _RootListingExceptionHandler, shared_attrs,
+        arg_checker=DummyArgChecker,
+        parallel_operations_override=command_obj.ParallelOverrideReason.SPEED,
+        fail_on_error=True)
 
     if command_obj.non_retryable_listing_failures:
       raise CommandException('Caught non-retryable exception - aborting rsync')

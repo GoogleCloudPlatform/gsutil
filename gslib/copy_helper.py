@@ -1057,7 +1057,8 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       _PerformParallelUploadFileToObject, components_to_upload,
       copy_exception_handler, ('op_failure_count', 'total_bytes_transferred'),
       arg_checker=gslib.command.DummyArgChecker,
-      parallel_operations_override=True, should_return_results=True)
+      parallel_operations_override=command_obj.ParallelOverrideReason.SLICE,
+      should_return_results=True)
   uploaded_components = []
   for cp_result in cp_results:
     uploaded_components.append(cp_result[2])
@@ -1092,7 +1093,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       command_obj.Apply(
           _DeleteTempComponentObjectFn, objects_to_delete, _RmExceptionHandler,
           arg_checker=gslib.command.DummyArgChecker,
-          parallel_operations_override=True)
+          parallel_operations_override=command_obj.ParallelOverrideReason.SLICE)
       # Assign an end message to each different component type
       for component in components:
         component_str = component.versionless_url_string
@@ -1113,7 +1114,6 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
             gsutil_api.status_queue,
             FileMessage(src_url, component, time.time(), finished=True,
                         message_type=FileMessage.EXISTING_OBJECT_TO_DELETE))
-
     except Exception:  # pylint: disable=broad-except
       # If some of the delete calls fail, don't cause the whole command to
       # fail. The copy was successful iff the compose call succeeded, so
@@ -2246,7 +2246,8 @@ def _DoSlicedDownload(src_url, src_obj_metadata, dst_url, download_file_name,
   cp_results = command_obj.Apply(
       _PerformSlicedDownloadObjectToFile, components_to_download,
       copy_exception_handler, arg_checker=gslib.command.DummyArgChecker,
-      parallel_operations_override=True, should_return_results=True)
+      parallel_operations_override=command_obj.ParallelOverrideReason.SLICE,
+      should_return_results=True)
 
   if len(cp_results) < num_components:
     raise CommandException(

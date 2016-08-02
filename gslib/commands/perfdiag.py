@@ -609,10 +609,11 @@ class PerfDiagCommand(Command):
 
       if self.threads > 1 or self.processes > 1:
         args = [obj for obj in self.temporary_objects]
-        self.Apply(_DeleteWrapper, args, _PerfdiagExceptionHandler,
-                   arg_checker=DummyArgChecker,
-                   parallel_operations_override=True,
-                   process_count=self.processes, thread_count=self.threads)
+        self.Apply(
+            _DeleteWrapper, args, _PerfdiagExceptionHandler,
+            arg_checker=DummyArgChecker,
+            parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+            process_count=self.processes, thread_count=self.threads)
       else:
         for object_name in self.temporary_objects:
           self.Delete(object_name, self.gsutil_api)
@@ -769,10 +770,11 @@ class PerfDiagCommand(Command):
       args.append(FanDownloadTuple(
           need_to_slice, object_names[i], file_name,
           serialization_data[i]))
-    self.Apply(_DownloadObject, args, _PerfdiagExceptionHandler,
-               ('total_requests', 'request_errors'),
-               arg_checker=DummyArgChecker, parallel_operations_override=True,
-               process_count=self.processes, thread_count=self.threads)
+    self.Apply(
+        _DownloadObject, args, _PerfdiagExceptionHandler,
+        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+        process_count=self.processes, thread_count=self.threads)
 
   def PerformSlicedDownload(self, object_name, file_name, serialization_data):
     """Performs a download of an object using the slice strategy.
@@ -793,10 +795,11 @@ class PerfDiagCommand(Command):
       end_byte = min((i + 1) * (component_size) - 1, self.thru_filesize - 1)
       args.append(SliceDownloadTuple(object_name, file_name, serialization_data,
                                      start_byte, end_byte))
-    self.Apply(_DownloadSlice, args, _PerfdiagExceptionHandler,
-               ('total_requests', 'request_errors'),
-               arg_checker=DummyArgChecker, parallel_operations_override=True,
-               process_count=self.processes, thread_count=self.threads)
+    self.Apply(
+        _DownloadSlice, args, _PerfdiagExceptionHandler,
+        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+        process_count=self.processes, thread_count=self.threads)
 
   def PerformFannedUpload(self, need_to_slice, file_names, object_names,
                           use_file):
@@ -818,10 +821,11 @@ class PerfDiagCommand(Command):
     for i in range(len(file_names)):
       args.append(FanUploadTuple(
           need_to_slice, file_names[i], object_names[i], use_file))
-    self.Apply(_UploadObject, args, _PerfdiagExceptionHandler,
-               ('total_requests', 'request_errors'),
-               arg_checker=DummyArgChecker, parallel_operations_override=True,
-               process_count=self.processes, thread_count=self.threads)
+    self.Apply(
+        _UploadObject, args, _PerfdiagExceptionHandler,
+        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+        process_count=self.processes, thread_count=self.threads)
 
   def PerformSlicedUpload(self, file_name, object_name, use_file, gsutil_api):
     """Performs a parallel upload of a file using the slice strategy.
@@ -851,10 +855,11 @@ class PerfDiagCommand(Command):
 
     # Upload the components in parallel.
     try:
-      self.Apply(_UploadSlice, args, _PerfdiagExceptionHandler,
-                 ('total_requests', 'request_errors'),
-                 arg_checker=DummyArgChecker, parallel_operations_override=True,
-                 process_count=self.processes, thread_count=self.threads)
+      self.Apply(
+          _UploadSlice, args, _PerfdiagExceptionHandler,
+          ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+          parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+          process_count=self.processes, thread_count=self.threads)
 
       # Compose the components into an object.
       request_components = []
@@ -873,11 +878,11 @@ class PerfDiagCommand(Command):
       self._RunOperation(_Compose)
     finally:
       # Delete the temporary components.
-      self.Apply(_DeleteWrapper, component_object_names,
-                 _PerfdiagExceptionHandler,
-                 ('total_requests', 'request_errors'),
-                 arg_checker=DummyArgChecker, parallel_operations_override=True,
-                 process_count=self.processes, thread_count=self.threads)
+      self.Apply(
+          _DeleteWrapper, component_object_names, _PerfdiagExceptionHandler,
+          ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+          parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+          process_count=self.processes, thread_count=self.threads)
 
   def _RunReadThruTests(self, use_file=False):
     """Runs read throughput tests."""
@@ -1221,10 +1226,8 @@ class PerfDiagCommand(Command):
 
     Adapted from the psutil module's psutil._pslinux.disk_io_counters:
       http://code.google.com/p/psutil/source/browse/trunk/psutil/_pslinux.py
-
     Originally distributed under under a BSD license.
     Original Copyright (c) 2009, Jay Loden, Dave Daeschler, Giampaolo Rodola.
-
     Returns:
       A dictionary containing disk names mapped to the disk counters from
       /disk/diskstats.

@@ -163,6 +163,11 @@ class TestTrackerFile(GsUtilUnitTestCase):
     class MockCommandObject(object):
       delete_called = False
 
+      # We call Apply with parallel_operations_override, which expects this enum
+      # class to exist.
+      class ParallelOverrideReason(object):
+        SPEED = 'speed'
+
       def Apply(self, *unused_args, **unused_kwargs):
         self.delete_called = True
 
