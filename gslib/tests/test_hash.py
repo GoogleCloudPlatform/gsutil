@@ -18,23 +18,27 @@ import os
 
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
+from gslib.tests.util import ObjectToURI as suri
+
+_TEST_FILE_CONTENTS = '123456\n'
+_TEST_FILE_B64_CRC = 'nYmSiA=='
+_TEST_FILE_B64_MD5 = '9EeyCn/L9TpdW+AT6gsVrw=='
+_TEST_FILE_HEX_CRC = '9D899288'
+_TEST_FILE_HEX_MD5 = 'f447b20a7fcbf53a5d5be013ea0b15af'
+_TEST_COMPOSITE_ADDED_CONTENTS = 'tmp'
+_TEST_COMPOSITE_B64_CRC = 'M3DYBg=='
+_TEST_COMPOSITE_HEX_CRC = '3370d806'
 
 
-class TestHash(testcase.GsUtilUnitTestCase):
+class TestHashUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for hash command."""
 
-  _TEST_FILE_CONTENTS = '123456\n'
-  _TEST_FILE_B64_CRC = 'nYmSiA=='
-  _TEST_FILE_B64_MD5 = '9EeyCn/L9TpdW+AT6gsVrw=='
-  _TEST_FILE_HEX_CRC = '9D899288'
-  _TEST_FILE_HEX_MD5 = 'f447b20a7fcbf53a5d5be013ea0b15af'
-
   def testHashContents(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
+    tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
     stdout = self.RunCommand('hash', args=[tmp_file], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
-    self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_B64_CRC, stdout)
-    self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_B64_MD5, stdout)
+    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC, stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5, stdout)
 
   def testHashNoMatch(self):
     try:
@@ -44,19 +48,12 @@ class TestHash(testcase.GsUtilUnitTestCase):
       # assertRaisesRegexp causes issues with python 2.6.
       self.assertIn('No files matched', e.reason)
 
-  def testHashCloudObject(self):
-    try:
-      self.RunCommand('hash', args=['gs://bucket/object'])
-      self.fail('Did not get expected CommandException')
-    except CommandException, e:
-      self.assertEquals('"hash" command requires a file URL', e.reason)
-
   def testHashHexFormat(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
+    tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
     stdout = self.RunCommand('hash', args=['-h', tmp_file], return_stdout=True)
     self.assertIn('Hashes [hex]', stdout)
-    self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_HEX_CRC, stdout)
-    self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_HEX_MD5, stdout)
+    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC, stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5, stdout)
 
   def testHashWildcard(self):
     num_test_files = 2
@@ -68,7 +65,7 @@ class TestHash(testcase.GsUtilUnitTestCase):
     self.assertEquals(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
-    tmp_file = self.CreateTempFile(contents=self._TEST_FILE_CONTENTS)
+    tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
     stdout_crc = self.RunCommand('hash', args=['-c', tmp_file],
                                  return_stdout=True)
     stdout_md5 = self.RunCommand('hash', args=['-m', tmp_file],
@@ -76,9 +73,46 @@ class TestHash(testcase.GsUtilUnitTestCase):
     stdout_both = self.RunCommand('hash', args=['-c', '-m', tmp_file],
                                   return_stdout=True)
     for stdout in (stdout_crc, stdout_both):
-      self.assertIn('\tHash (crc32c):\t\t%s' % self._TEST_FILE_B64_CRC, stdout)
+      self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC, stdout)
     for stdout in (stdout_md5, stdout_both):
-      self.assertIn('\tHash (md5):\t\t%s' % self._TEST_FILE_B64_MD5, stdout)
+      self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5, stdout)
     self.assertNotIn('md5', stdout_crc)
     self.assertNotIn('crc32c', stdout_md5)
 
+
+class TestHash(testcase.GsUtilIntegrationTestCase):
+
+  def testHashCloudObject(self):
+    """Test hash command on cloud objects."""
+    # crc32c isn't available instantaneously for cloud objects, so we can't
+    # assume it's present.
+    bucket = self.CreateBucket()
+    obj1 = self.CreateObject(bucket_uri=bucket, object_name='obj1',
+                             contents=_TEST_FILE_CONTENTS)
+
+    # Tests cloud object with -h.
+    stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
+    self.assertIn('Hashes [hex]', stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5, stdout)
+
+    # Tests cloud object as base64.
+    stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
+    self.assertIn('Hashes [base64]', stdout)
+    self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5, stdout)
+
+    tmp = self.CreateObject(bucket_uri=bucket, object_name='tmp',
+                            contents=_TEST_COMPOSITE_ADDED_CONTENTS)
+    self.RunGsUtil(['compose', suri(obj1), suri(tmp), suri(obj1)])
+    self.RunGsUtil(['rm', suri(tmp)])
+
+    # Tests composite objects with -h.
+    stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
+    self.assertIn('Hashes [hex]', stdout)
+    # Making obj1 composite gives it a different crc32c checksum.
+    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC, stdout)
+
+    # Tests composite objects.
+    stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
+    self.assertIn('Hashes [base64]', stdout)
+    # Making obj1 composite gives it a different crc32c checksum.
+    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC, stdout)

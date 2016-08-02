@@ -14,7 +14,10 @@
 # limitations under the License.
 """Implementation of hash command for calculating hashes of local files."""
 
+from __future__ import absolute_import
+
 from hashlib import md5
+import logging
 import os
 import time
 
@@ -25,6 +28,7 @@ from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.hashing_helper import Base64EncodeHash
+from gslib.hashing_helper import Base64ToHexHash
 from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.progress_callback import FileProgressCallbackHandler
@@ -107,11 +111,14 @@ class HashCommand(Command):
       calc_crc32c: Boolean, if True, command should calculate a CRC32c checksum.
       calc_md5: Boolean, if True, command should calculate an MD5 hash.
       format_func: Function used for formatting the hash in the desired format.
+      cloud_format_func: Function used for formatting the hash in the desired
+                         format.
       output_format: String describing the hash output format.
     """
     calc_crc32c = False
     calc_md5 = False
     format_func = lambda digest: Base64EncodeHash(digest.hexdigest())
+    cloud_format_func = lambda digest: digest
     found_hash_option = False
     output_format = 'base64'
 
@@ -123,6 +130,7 @@ class HashCommand(Command):
         elif o == '-h':
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
+          cloud_format_func = lambda digest: Base64ToHexHash(digest)
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True
@@ -134,7 +142,7 @@ class HashCommand(Command):
     if calc_crc32c and not UsingCrcmodExtension(crcmod):
       logger.warn(SLOW_CRCMOD_WARNING)
 
-    return calc_crc32c, calc_md5, format_func, output_format
+    return calc_crc32c, calc_md5, format_func, cloud_format_func, output_format
 
   def _GetHashClassesFromArgs(self, calc_crc32c, calc_md5):
     """Constructs the dictionary of hashes to compute based on the arguments.
@@ -156,39 +164,53 @@ class HashCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the hash command."""
-    (calc_crc32c, calc_md5, format_func, output_format) = (
+    (calc_crc32c, calc_md5, format_func, cloud_format_func, output_format) = (
         self._ParseOpts(self.sub_opts, self.logger))
 
     matched_one = False
     for url_str in self.args:
-      if not StorageUrlFromString(url_str).IsFileUrl():
-        raise CommandException('"hash" command requires a file URL')
-
-      for file_ref in self.WildcardIterator(url_str).IterObjects():
+      for file_ref in self.WildcardIterator(
+          url_str).IterObjects(bucket_listing_fields=['crc32c', 'md5Hash',
+                                                      'customerEncryption',
+                                                      'size']):
         matched_one = True
+        url = StorageUrlFromString(url_str)
         file_name = file_ref.storage_url.object_name
-        file_size = os.path.getsize(file_name)
-        self.gsutil_api.status_queue.put(
-            FileMessage(StorageUrlFromString(url_str), None, time.time(),
-                        size=file_size, finished=False,
-                        message_type=FileMessage.FILE_HASH))
-
-        callback_processor = ProgressCallbackWithTimeout(
-            file_size, FileProgressCallbackHandler(
-                self.gsutil_api.status_queue,
-                src_url=StorageUrlFromString(url_str),
-                operation_name='Hashing').call)
-        hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
-        with open(file_name, 'rb') as fp:
-          CalculateHashesFromContents(fp, hash_dict,
-                                      callback_processor=callback_processor)
+        if StorageUrlFromString(url_str).IsFileUrl():
+          file_size = os.path.getsize(file_name)
+          self.gsutil_api.status_queue.put(
+              FileMessage(url, None, time.time(), size=file_size,
+                          finished=False, message_type=FileMessage.FILE_HASH))
+          callback_processor = ProgressCallbackWithTimeout(
+              file_size, FileProgressCallbackHandler(
+                  self.gsutil_api.status_queue,
+                  src_url=StorageUrlFromString(url_str),
+                  operation_name='Hashing').call)
+          hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
+          with open(file_name, 'rb') as fp:
+            CalculateHashesFromContents(fp, hash_dict,
+                                        callback_processor=callback_processor)
+          self.gsutil_api.status_queue.put(
+              FileMessage(url, None, time.time(), size=file_size, finished=True,
+                          message_type=FileMessage.FILE_HASH))
+        else:
+          hash_dict = {}
+          obj_metadata = file_ref.root_object
+          file_size = obj_metadata.size
+          md5_present = obj_metadata.md5Hash is not None
+          crc32c_present = obj_metadata.crc32c is not None
+          if not md5_present and not crc32c_present:
+            logging.getLogger().warn('No hashes present for %s', url_str)
+            continue
+          if md5_present:
+            hash_dict['md5'] = obj_metadata.md5Hash
+          if crc32c_present:
+            hash_dict['crc32c'] = obj_metadata.crc32c
         print 'Hashes [%s] for %s:' % (output_format, file_name)
         for name, digest in hash_dict.iteritems():
-          print '\tHash (%s):\t\t%s' % (name, format_func(digest))
-        self.gsutil_api.status_queue.put(
-            FileMessage(StorageUrlFromString(url_str), None, time.time(),
-                        size=file_size, finished=True,
-                        message_type=FileMessage.FILE_HASH))
+          print '\tHash (%s):\t\t%s' % (name,
+                                        (format_func(digest) if url.IsFileUrl()
+                                         else cloud_format_func(digest)))
 
     if not matched_one:
       raise CommandException('No files matched')
