@@ -89,8 +89,8 @@ _GET_DESCRIPTION = """
   with a JSON document that looks something like this:
 
     {
-      "logObjectPrefix": "AccessLog",
-      "logBucket": "my_logging_bucket"
+      "logBucket": "my_logging_bucket”,
+      "logObjectPrefix": "AccessLog"
     }
 
   You can download log data from your log bucket using the gsutil cp command.
