@@ -157,8 +157,11 @@ def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     stderr = cls.RunGsUtil(['cp' if is_cp else 'mv', '-P',
                             suri(bucket_uri, obj.object_name), tmpdir],
                            expected_status=1, return_stderr=True)
-    cls.assertIn(ORPHANED_FILE, stderr)
-    cls.assertTrue(BuildErrorRegex(obj, attrs_dict.get(error)).search(stderr))
+    cls.assertIn(ORPHANED_FILE, stderr, '%s not found in stderr\n%s'
+                 % (ORPHANED_FILE, stderr))
+    error_regex = BuildErrorRegex(obj, attrs_dict.get(error))
+    cls.assertTrue(error_regex.search(stderr), 'Could not find a match for %s'
+                   '\n\nin stderr:\n%s' % (error_regex.pattern, stderr))
     listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
     listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
     # Bucket should have un-altered content.
