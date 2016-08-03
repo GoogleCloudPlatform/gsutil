@@ -1700,6 +1700,21 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  def test_rsync_minus_r_minus_e(self):
+    """Tests that rsync -e -r ignores symlinks when recursing."""
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    subdir = os.path.join(tmpdir, 'subdir')
+    os.mkdir(subdir)
+    os.mkdir(os.path.join(tmpdir, 'missing'))
+    # Create a blank directory that is a broken symlink to ensure that we
+    # don't fail recursive enumeration with a bad symlink.
+    os.symlink(os.path.join(tmpdir, 'missing'),
+               os.path.join(subdir, 'missing'))
+    os.rmdir(os.path.join(tmpdir, 'missing'))
+    self.RunGsUtil(['rsync', '-r', '-e', tmpdir, suri(bucket_uri)])
+
+  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_rsync_minus_d_minus_e(self):
     """Tests that rsync -e ignores symlinks."""
     tmpdir = self.CreateTempDir()

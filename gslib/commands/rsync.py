@@ -596,8 +596,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
       fields.extend(['metadata/%s' % ATIME_ATTR, 'metadata/%s' % MODE_ATTR,
                      'metadata/%s' % GID_ATTR, 'metadata/%s' % UID_ATTR])
     iterator = CreateWildcardIterator(
-        wildcard, gsutil_api, debug=cls.debug,
-        project_id=cls.project_id).IterObjects(
+        wildcard, gsutil_api, debug=cls.debug, project_id=cls.project_id,
+        ignore_symlinks=cls.exclude_symlinks).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=fields)
   i = 0
