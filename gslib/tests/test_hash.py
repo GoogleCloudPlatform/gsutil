@@ -18,6 +18,7 @@ import os
 
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 _TEST_FILE_CONTENTS = '123456\n'
@@ -27,7 +28,7 @@ _TEST_FILE_HEX_CRC = '9D899288'
 _TEST_FILE_HEX_MD5 = 'f447b20a7fcbf53a5d5be013ea0b15af'
 _TEST_COMPOSITE_ADDED_CONTENTS = 'tmp'
 _TEST_COMPOSITE_B64_CRC = 'M3DYBg=='
-_TEST_COMPOSITE_HEX_CRC = '3370d806'
+_TEST_COMPOSITE_HEX_CRC = '3370D806'
 
 
 class TestHashUnit(testcase.GsUtilUnitTestCase):
@@ -81,38 +82,47 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
 
 
 class TestHash(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for hash command."""
 
   def testHashCloudObject(self):
-    """Test hash command on cloud objects."""
-    # crc32c isn't available instantaneously for cloud objects, so we can't
-    # assume it's present.
-    bucket = self.CreateBucket()
-    obj1 = self.CreateObject(bucket_uri=bucket, object_name='obj1',
-                             contents=_TEST_FILE_CONTENTS)
+    """Test hash command on a cloud object."""
+    obj1 = self.CreateObject(object_name='obj1', contents=_TEST_FILE_CONTENTS)
 
     # Tests cloud object with -h.
     stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [hex]', stdout)
+
+    if self.default_provider == 'gs':
+      # Hex hashes for cloud objects get converted to lowercase but their
+      # meaning is the same.
+      self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC.lower(),
+                    stdout)
     self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5, stdout)
 
     # Tests cloud object as base64.
     stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
+    if self.default_provider == 'gs':
+      self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC, stdout)
     self.assertIn('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5, stdout)
 
-    tmp = self.CreateObject(bucket_uri=bucket, object_name='tmp',
-                            contents=_TEST_COMPOSITE_ADDED_CONTENTS)
-    self.RunGsUtil(['compose', suri(obj1), suri(tmp), suri(obj1)])
-    self.RunGsUtil(['rm', suri(tmp)])
+  @SkipForS3('No composite object or crc32c support for S3.')
+  def testHashCompositeObject(self):
+    """Test hash command on a composite object (which only has crc32c)."""
+    bucket = self.CreateBucket()
+    obj1 = self.CreateObject(bucket_uri=bucket, object_name='obj1',
+                             contents=_TEST_FILE_CONTENTS)
+    obj2 = self.CreateObject(bucket_uri=bucket, object_name='tmp',
+                             contents=_TEST_COMPOSITE_ADDED_CONTENTS)
+    self.RunGsUtil(['compose', suri(obj1), suri(obj2), suri(obj1)])
 
-    # Tests composite objects with -h.
     stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [hex]', stdout)
-    # Making obj1 composite gives it a different crc32c checksum.
-    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC, stdout)
+    # Hex hashes for cloud objects get converted to lowercase but their
+    # meaning is the same.
+    self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC.lower(),
+                  stdout)
 
-    # Tests composite objects.
     stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
-    # Making obj1 composite gives it a different crc32c checksum.
     self.assertIn('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC, stdout)
