@@ -19,6 +19,7 @@ from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.util import DiscardMessagesQueue
@@ -47,8 +48,10 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
         self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
 
+
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
 
+  @SkipForS3('Tests only uses gs credentials.')
   def testExactlyOneInvalid(self):
     bucket_uri = self.CreateBucket()
     with SetBotoConfigForTest([
