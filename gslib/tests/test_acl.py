@@ -126,7 +126,7 @@ class TestAcl(TestAclBase):
     """Ensures that valid canned and XML ACLs work with get/set."""
     if self._ServiceAccountCredentialsPresent():
       # See comments in _ServiceAccountCredentialsPresent
-      unittest.skip('Canned ACLs orphan service account permissions.')
+      return unittest.skip('Canned ACLs orphan service account permissions.')
     bucket_uri = suri(self.CreateBucket())
     acl_string = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                 return_stdout=True)
