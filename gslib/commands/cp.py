@@ -401,13 +401,14 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   performance and download configuration: If you enable parallel composite
   uploads your uploads will run faster, but someone will need to install a
   compiled crcmod (see "gsutil help crcmod") on every machine where objects are
-  downloaded by gsutil or other Python applications. For some distributions this
-  is easy (e.g., it comes pre-installed on MacOS), but in other cases some users
-  have found it difficult. Because of this, at present parallel composite
-  uploads are disabled by default. Google is actively working with a number of
-  the Linux distributions to get crcmod included with the stock distribution.
-  Once that is done we will re-enable parallel composite uploads by default in
-  gsutil.
+  downloaded by gsutil or other Python applications. Note that for such uploads,
+  crcmod is required for downloading regardless of whether the parallel
+  composite upload option is on or not. For some distributions this is easy
+  (e.g., it comes pre-installed on MacOS), but in other cases some users have
+  found it difficult. Because of this, at present parallel composite uploads are
+  disabled by default. Google is actively working with a number of the Linux
+  distributions to get crcmod included with the stock distribution. Once that is
+  done we will re-enable parallel composite uploads by default in gsutil.
 
   Parallel composite uploads should not be used with NEARLINE storage
   class buckets, because doing this would incur an early deletion charge for
