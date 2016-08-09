@@ -1133,6 +1133,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   if obj.updated:
     print MakeMetadataLine(
         'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+  if obj.storageClass:
+    print MakeMetadataLine('Storage class', obj.storageClass)
   if obj.cacheControl:
     print MakeMetadataLine('Cache-Control', obj.cacheControl)
   if obj.contentDisposition:
@@ -1193,7 +1195,6 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       print MakeMetadataLine('ACL', 'ACCESS DENIED')
       print MakeMetadataLine(
           'Note', 'You need OWNER permission on the object to read its ACL', 2)
-
   return (num_objs, num_bytes)
 
 
@@ -1441,7 +1442,7 @@ def CheckMultiprocessingAvailableAndInit(logger=None):
   if IS_WINDOWS:
     message = """
 Multiple processes are not supported on Windows. Operations requesting
-parallelism will be executed with multiple threads in a single process only.    
+parallelism will be executed with multiple threads in a single process only.
 """
     if logger:
       logger.warn(message)
@@ -1703,6 +1704,31 @@ def ConvertRecursiveToFlatWildcard(url_strs):
     yield '%s**' % url_str
 
 
+def NormalizeStorageClass(sc):
+  """Returns a normalized form of the given storage class name.
+
+  Converts the given string to lowercase and expands valid abbreviations to
+  full storage class names (e.g 'std' would return 'standard'). Note that this
+  method does not check if the given storage class is valid.
+
+  Args:
+    sc: String representing the storage class's full name or abbreviation.
+
+  Returns:
+    A string representing the full name of the given storage class.
+  """
+  shorthand_to_full_name = {
+      'cl': 'coldline',
+      'dra': 'durable_reduced_availability',
+      'nl': 'nearline',
+      's': 'standard',
+      'std': 'standard'}
+  sc = sc.lower()
+  if sc in shorthand_to_full_name:
+    sc = shorthand_to_full_name[sc]
+  return sc
+
+
 class RsyncDiffToApply(object):
   """Class that encapsulates info needed to apply diff for one object."""
 
@@ -1722,5 +1748,3 @@ class RsyncDiffToApply(object):
     self.src_posix_attrs = src_posix_attrs
     self.diff_action = diff_action
     self.copy_size = copy_size
-
-

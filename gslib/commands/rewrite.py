@@ -39,6 +39,7 @@ from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import ConvertRecursiveToFlatWildcard
 from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
+from gslib.util import NormalizeStorageClass
 from gslib.util import StdinIterator
 from gslib.util import UTF8
 
@@ -55,12 +56,13 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil rewrite command performs in-place transformations on cloud objects.
-  The transformation(s) are atomic and applied based on the input
-  transformation flags. Currently, only the "-k" flag is supported to add,
-  rotate, or remove encryption keys on objects.
+  The gsutil rewrite command rewrites cloud objects, applying the specified
+  transformations to the objects. The transformation(s) are atomic and
+  applied based on the input transformation flags. Object metadata values are
+  preserved unless altered by a transformation.
 
-  For example, the command:
+  The -k flag is supported to add, rotate, or remove encryption keys on
+  objects.  For example, the command:
 
     gsutil rewrite -k gs://bucket/**
 
@@ -82,6 +84,13 @@ _DETAILED_HELP_TEXT = ("""
     gsutil cp gs://bucket/object#123 gs://bucket/object
     gsutil rewrite -k gs://bucket/object
 
+  You can use the -s option to specify a new storage class for objects.  For
+  example, the command:
+
+    gsutil rewrite -s nearline gs://bucket/foo
+
+  will rewrite the object, changing its storage class to nearline.
+
   The rewrite command will skip objects that are already in the desired state.
   For example, if you run:
 
@@ -89,7 +98,15 @@ _DETAILED_HELP_TEXT = ("""
 
   and gs://bucket contains objects that already match the encryption
   configuration, gsutil will skip rewriting those objects and only rewrite
-  objects that do not match the encryption configuration.
+  objects that do not match the encryption configuration. If you specify
+  multiple transformations, gsutil will only skip those that would not change
+  the object's state. For example, if you run:
+
+    gsutil rewrite -s nearline -k gs://bucket/**
+
+  and gs://bucket contains objects that already match the encryption
+  configuration but have a storage class of standard, the only transformation
+  applied to those objects would be the change in storage class.
 
   You can pass a list of URLs (one per line) to rewrite on stdin instead of as
   command line arguments by using the -I option. This allows you to use gsutil
@@ -130,6 +147,8 @@ _DETAILED_HELP_TEXT = ("""
 
   -R, -r      The -R and -r options are synonymous. Causes bucket or bucket
               subdirectory contents to be rewritten recursively.
+
+  -s <class>  Rewrite objects using the specified storage class.
 """)
 
 
@@ -156,6 +175,7 @@ def GenerationCheckGenerator(url_strs):
 class _TransformTypes(object):
   """Enum class for valid transforms."""
   CRYPTO_KEY = 'crypto_key'
+  STORAGE_CLASS = 'storage_class'
 
 
 class RewriteCommand(Command):
@@ -168,7 +188,7 @@ class RewriteCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='fkIrRO',
+      supported_sub_args='fkIrROs:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -191,26 +211,27 @@ class RewriteCommand(Command):
   def CheckProvider(self, url):
     if url.scheme != 'gs':
       raise CommandException(
-          '"rewrite" called on URL with unsupported provider (%s).' % str(url))
+          '"rewrite" called on URL with unsupported provider: %s' % str(url))
 
   def RunCommand(self):
     """Command entry point for the rewrite command."""
     self.continue_on_error = self.parallel_operations
-    self.read_args_from_stdin = False
+    self.dest_storage_class = None
     self.no_preserve_acl = False
-    self.supported_transformation_flags = ['-k']
-    self.transform_types = []
+    self.read_args_from_stdin = False
+    self.supported_transformation_flags = ['-k', '-s']
+    self.transform_types = set()
 
     self.op_failure_count = 0
-    self.current_encryption_tuple, self.current_encryption_sha256 = (
+    self.boto_file_encryption_tuple, self.boto_file_encryption_sha256 = (
         GetEncryptionTupleAndSha256Hash())
 
     if self.sub_opts:
-      for o, unused_a in self.sub_opts:
+      for o, a in self.sub_opts:
         if o == '-f':
           self.continue_on_error = True
         elif o == '-k':
-          self.transform_types.append(_TransformTypes.CRYPTO_KEY)
+          self.transform_types.add(_TransformTypes.CRYPTO_KEY)
         elif o == '-I':
           self.read_args_from_stdin = True
         elif o == '-O':
@@ -218,6 +239,9 @@ class RewriteCommand(Command):
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
           self.all_versions = True
+        elif o == '-s':
+          self.transform_types.add(_TransformTypes.STORAGE_CLASS)
+          self.dest_storage_class = NormalizeStorageClass(a)
 
     if self.read_args_from_stdin:
       if self.args:
@@ -280,23 +304,15 @@ class RewriteCommand(Command):
 
   def RewriteFunc(self, name_expansion_result, thread_state=None):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
+    transform_url = name_expansion_result.expanded_storage_url
+    # Make a local copy of the requested transformations for each thread. As
+    # a redundant transformation for one object might not be redundant for
+    # another, we wouldn't want to remove it from the transform_types set that
+    # all threads share.
+    transforms_to_perform = set(self.transform_types)
 
-    self.CheckProvider(name_expansion_result.expanded_storage_url)
+    self.CheckProvider(transform_url)
 
-    # If other transform types are added here, they must ensure that the
-    # encryption key configuration matches the boto configuration, because
-    # gsutil maintains an invariant that all objects it writes use the
-    # encryption_key value (including decrypting if no key is present).
-    if _TransformTypes.CRYPTO_KEY in self.transform_types:
-      self.CryptoRewrite(name_expansion_result.expanded_storage_url, gsutil_api)
-
-  def CryptoRewrite(self, transform_url, gsutil_api):
-    """Make the cloud object at transform_url match encryption configuration.
-
-    Args:
-      transform_url: CloudUrl to rewrite.
-      gsutil_api: gsutil CloudApi instance for making API calls.
-    """
     # Get all fields so that we can ensure that the target metadata is
     # specified correctly.
     src_metadata = gsutil_api.GetObjectMetadata(
@@ -312,72 +328,117 @@ class RewriteCommand(Command):
           'required for rewriting objects, (otherwise their ACLs would be '
           'reset).' % transform_url)
 
+    # Note: If other transform types are added, they must ensure that the
+    # encryption key configuration matches the boto configuration, because
+    # gsutil maintains an invariant that all objects it writes use the
+    # encryption_key value (including decrypting if no key is present).
     src_encryption_sha256 = None
     if (src_metadata.customerEncryption and
         src_metadata.customerEncryption.keySha256):
       src_encryption_sha256 = src_metadata.customerEncryption.keySha256
 
-    if src_encryption_sha256 == self.current_encryption_sha256:
-      if self.current_encryption_sha256 is not None:
-        self.logger.info('Skipping %s, already has current encryption key' %
-                         transform_url)
+    should_encrypt_target = self.boto_file_encryption_sha256 is not None
+    source_was_encrypted = src_encryption_sha256 is not None
+    using_same_encryption_key_value = (
+        src_encryption_sha256 == self.boto_file_encryption_sha256)
+
+    # Prevent accidental key rotation.
+    if (_TransformTypes.CRYPTO_KEY not in transforms_to_perform and
+        not using_same_encryption_key_value):
+      raise EncryptionException(
+          'The "-k" flag was not passed to the rewrite command, but the '
+          'encryption_key value in your boto config file did not match the key '
+          'used to encrypt the object "%s" (hash: %s). To encrypt the object '
+          'using a different key, you must specify the "-k" flag.' %
+          (transform_url, src_encryption_sha256))
+
+    # Remove any redundant changes.
+
+    # STORAGE_CLASS transform should be skipped if the target storage class
+    # matches the existing storage class.
+    if (_TransformTypes.STORAGE_CLASS in transforms_to_perform and
+        self.dest_storage_class == src_metadata.storageClass.lower()):
+      transforms_to_perform.remove(_TransformTypes.STORAGE_CLASS)
+      self.logger.info('Redundant transform: %s already had storage class of '
+                       '%s.' % (transform_url, src_metadata.storageClass))
+
+    # CRYPTO_KEY transform should be skipped if we're using the same encryption
+    # key (if any) that was used to encrypt the source.
+    if (_TransformTypes.CRYPTO_KEY in transforms_to_perform and
+        using_same_encryption_key_value):
+      if self.boto_file_encryption_sha256 is None:
+        log_msg = '%s is already decrypted.' % transform_url
       else:
-        self.logger.info('Skipping %s, already decrypted' % transform_url)
-    else:
-      # Make a deep copy of the source metadata
-      dst_metadata = encoding.PyValueToMessage(
-          apitools_messages.Object, encoding.MessageToPyValue(src_metadata))
+        log_msg = '%s already has current encryption key.' % transform_url
+      transforms_to_perform.remove(_TransformTypes.CRYPTO_KEY)
+      self.logger.info('Redundant transform: %s' % log_msg)
 
-      # Remove some unnecessary/invalid fields.
-      dst_metadata.customerEncryption = None
-      dst_metadata.generation = None
-      # Service has problems if we supply an ID, but it is responsible for
-      # generating one, so it is not necessary to include it here.
-      dst_metadata.id = None
-      decryption_tuple = None
+    if not transforms_to_perform:
+      self.logger.info(
+          'Skipping %s, all transformations were redundant.' % transform_url)
+      return
 
-      if src_encryption_sha256 is None:
+    # Make a deep copy of the source metadata.
+    dst_metadata = encoding.PyValueToMessage(
+        apitools_messages.Object, encoding.MessageToPyValue(src_metadata))
+
+    # Remove some unnecessary/invalid fields.
+    dst_metadata.customerEncryption = None
+    dst_metadata.generation = None
+    # Service has problems if we supply an ID, but it is responsible for
+    # generating one, so it is not necessary to include it here.
+    dst_metadata.id = None
+    decryption_tuple = None
+    # Use a generic operation name by default - this can be altered below for
+    # specific transformations (encryption changes, etc.).
+    operation_name = 'Rewriting'
+
+    if source_was_encrypted:
+      decryption_key = FindMatchingCryptoKey(src_encryption_sha256)
+      if not decryption_key:
+        raise EncryptionException(
+            'Missing decryption key with SHA256 hash %s. No decryption key '
+            'matches object %s' % (src_encryption_sha256, transform_url))
+      decryption_tuple = CryptoTupleFromKey(decryption_key)
+
+    if _TransformTypes.CRYPTO_KEY in transforms_to_perform:
+      if not source_was_encrypted:
         operation_name = 'Encrypting'
+      elif not should_encrypt_target:
+        operation_name = 'Decrypting'
       else:
-        decryption_key = FindMatchingCryptoKey(src_encryption_sha256)
-        if not decryption_key:
-          raise EncryptionException(
-              'Missing decryption key with SHA256 hash %s. No decryption key '
-              'matches object %s' % (src_encryption_sha256, transform_url))
-        decryption_tuple = CryptoTupleFromKey(decryption_key)
+        operation_name = 'Rotating'
 
-        if self.current_encryption_sha256 is None:
-          operation_name = 'Decrypting'
-        else:
-          operation_name = 'Rotating'
+    if _TransformTypes.STORAGE_CLASS in transforms_to_perform:
+      dst_metadata.storageClass = self.dest_storage_class
 
-      # TODO: Remove this call (used to verify tests) and make it processed by
-      # the UIThread.
-      sys.stderr.write(
-          _ConstructAnnounceText(operation_name, transform_url.url_string))
+    # TODO: Remove this call (used to verify tests) and make it processed by
+    # the UIThread.
+    sys.stderr.write(
+        _ConstructAnnounceText(operation_name, transform_url.url_string))
 
-      # Message indicating beginning of operation.
-      gsutil_api.status_queue.put(
-          FileMessage(transform_url, None, time.time(), finished=False,
-                      size=src_metadata.size,
-                      message_type=FileMessage.FILE_REWRITE))
+    # Message indicating beginning of operation.
+    gsutil_api.status_queue.put(
+        FileMessage(transform_url, None, time.time(), finished=False,
+                    size=src_metadata.size,
+                    message_type=FileMessage.FILE_REWRITE))
 
-      progress_callback = FileProgressCallbackHandler(
-          gsutil_api.status_queue, src_url=transform_url,
-          operation_name=operation_name).call
+    progress_callback = FileProgressCallbackHandler(
+        gsutil_api.status_queue, src_url=transform_url,
+        operation_name=operation_name).call
 
-      gsutil_api.CopyObject(
-          src_metadata, dst_metadata, src_generation=transform_url.generation,
-          preconditions=self.preconditions, progress_callback=progress_callback,
-          decryption_tuple=decryption_tuple,
-          encryption_tuple=self.current_encryption_tuple,
-          provider=transform_url.scheme, fields=[])
+    gsutil_api.CopyObject(
+        src_metadata, dst_metadata, src_generation=transform_url.generation,
+        preconditions=self.preconditions, progress_callback=progress_callback,
+        decryption_tuple=decryption_tuple,
+        encryption_tuple=self.boto_file_encryption_tuple,
+        provider=transform_url.scheme, fields=[])
 
-      # Message indicating end of operation.
-      gsutil_api.status_queue.put(
-          FileMessage(transform_url, None, time.time(), finished=True,
-                      size=src_metadata.size,
-                      message_type=FileMessage.FILE_REWRITE))
+    # Message indicating end of operation.
+    gsutil_api.status_queue.put(
+        FileMessage(transform_url, None, time.time(), finished=True,
+                    size=src_metadata.size,
+                    message_type=FileMessage.FILE_REWRITE))
 
 
 def _ConstructAnnounceText(operation_name, url_string):

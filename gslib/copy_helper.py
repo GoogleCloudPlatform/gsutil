@@ -337,7 +337,8 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
     'preserve_acl',
     'canned_acl',
     'skip_unsupported_objects',
-    'test_callback_file'])
+    'test_callback_file',
+    'dest_storage_class'])
 
 
 # pylint: disable=global-variable-undefined
@@ -345,7 +346,7 @@ def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
                          read_args_from_stdin=False, print_ver=False,
                          use_manifest=False, preserve_acl=False,
                          canned_acl=None, skip_unsupported_objects=False,
-                         test_callback_file=None):
+                         test_callback_file=None, dest_storage_class=None):
   """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
@@ -360,7 +361,8 @@ def CreateCopyHelperOpts(perform_mv=False, no_clobber=False, daisy_chain=False,
       preserve_acl=preserve_acl,
       canned_acl=canned_acl,
       skip_unsupported_objects=skip_unsupported_objects,
-      test_callback_file=test_callback_file)
+      test_callback_file=test_callback_file,
+      dest_storage_class=dest_storage_class)
   return global_copy_helper_opts
 
 
@@ -2954,7 +2956,7 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
         'cacheControl', 'componentCount', 'contentDisposition',
         'contentEncoding', 'contentLanguage', 'contentType', 'crc32c',
         'customerEncryption', 'etag', 'generation', 'md5Hash', 'mediaLink',
-        'metadata', 'metageneration', 'size', 'timeCreated'])
+        'metadata', 'metageneration', 'size', 'storageClass', 'timeCreated'])
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
       src_obj_fields_set.update(['acl'])
@@ -3230,6 +3232,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
       _SetContentTypeFromFile(src_url, dst_obj_metadata)
   if src_obj_metadata:
     CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
+
+  if global_copy_helper_opts.dest_storage_class:
+    dst_obj_metadata.storageClass = global_copy_helper_opts.dest_storage_class
 
   _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata)
 

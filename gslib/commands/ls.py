@@ -180,15 +180,15 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/ :
-            Storage class:                STANDARD
+            Storage class:                MULTI_REGIONAL
             Location constraint:          US
             Versioning enabled:           True
             Logging configuration:        None
             Website configuration:        None
             CORS configuration:           Present
             Lifecycle configuration:      None
-            Time created:                 Fri, 02 Mar 2012 19:25:17 GMT
-            Time updated:                 Fri, 02 Mar 2012 21:17:59 GMT
+            Time created:                 Fri, 21 Oct 2016 19:25:17 GMT
+            Time updated:                 Fri, 21 Oct 2016 21:17:59 GMT
     [
       {
         "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",

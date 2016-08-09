@@ -39,7 +39,9 @@ class Bucket(_messages.Message):
     OwnerValue: The owner of the bucket. This is always the project team's
       owner group.
     VersioningValue: The bucket's versioning configuration.
-    WebsiteValue: The bucket's website configuration.
+    WebsiteValue: The bucket's website configuration, controlling how the
+      service behaves when accessing bucket contents as a web site. See the
+      Static Website Examples for more information.
 
   Fields:
     acl: Access controls on the bucket.
@@ -70,7 +72,9 @@ class Bucket(_messages.Message):
     timeCreated: The creation time of the bucket in RFC 3339 format.
     updated: The modification time of the bucket in RFC 3339 format.
     versioning: The bucket's versioning configuration.
-    website: The bucket's website configuration.
+    website: The bucket's website configuration, controlling how the service
+      behaves when accessing bucket contents as a web site. See the Static
+      Website Examples for more information.
   """
 
   class CorsValueListEntry(_messages.Message):
@@ -121,10 +125,14 @@ class Bucket(_messages.Message):
         """The action to take.
 
         Fields:
-          type: Type of the action. Currently, only Delete is supported.
+          storageClass: Target storage class. Required iff the type of the
+            action is SetStorageClass.
+          type: Type of the action. Currently, only Delete and SetStorageClass
+            are supported.
         """
 
-        type = _messages.StringField(1)
+        storageClass = _messages.StringField(1)
+        type = _messages.StringField(2)
 
       class ConditionValue(_messages.Message):
         """The condition(s) under which the action will be taken.
@@ -138,6 +146,10 @@ class Bucket(_messages.Message):
           isLive: Relevant only for versioned objects. If the value is true,
             this condition matches live objects; if the value is false, it
             matches archived objects.
+          matchesStorageClass: Objects having any of the storage classes
+            specified by this condition will be matched. Values include
+            MULTI_REGIONAL, REGIONAL, NEARLINE, COLDLINE, STANDARD, and
+            DURABLE_REDUCED_AVAILABILITY.
           numNewerVersions: Relevant only for versioned objects. If the value
             is N, this condition is satisfied when there are at least N
             versions (including the live version) newer than this version of
@@ -147,7 +159,8 @@ class Bucket(_messages.Message):
         age = _messages.IntegerField(1, variant=_messages.Variant.INT32)
         createdBefore = extra_types.DateField(2)
         isLive = _messages.BooleanField(3)
-        numNewerVersions = _messages.IntegerField(4, variant=_messages.Variant.INT32)
+        matchesStorageClass = _messages.StringField(4, repeated=True)
+        numNewerVersions = _messages.IntegerField(5, variant=_messages.Variant.INT32)
 
       action = _messages.MessageField('ActionValue', 1)
       condition = _messages.MessageField('ConditionValue', 2)
@@ -188,13 +201,19 @@ class Bucket(_messages.Message):
     enabled = _messages.BooleanField(1)
 
   class WebsiteValue(_messages.Message):
-    """The bucket's website configuration.
+    """The bucket's website configuration, controlling how the service behaves
+    when accessing bucket contents as a web site. See the Static Website
+    Examples for more information.
 
     Fields:
-      mainPageSuffix: Behaves as the bucket's directory index where missing
-        objects are treated as potential directories.
-      notFoundPage: The custom object to return when a requested resource is
-        not found.
+      mainPageSuffix: If the requested object path is missing, the service
+        will ensure the path has a trailing '/', append this suffix, and
+        attempt to retrieve the resulting object. This allows the creation of
+        index.html objects to represent directory pages.
+      notFoundPage: If the requested object path is missing, and any
+        mainPageSuffix object is missing, if applicable, the service will
+        return the named object from this bucket as the content for a 404 Not
+        Found result.
     """
 
     mainPageSuffix = _messages.StringField(1)
@@ -244,8 +263,7 @@ class BucketAccessControl(_messages.Message):
     kind: The kind of item this is. For bucket access control entries, this is
       always storage#bucketAccessControl.
     projectTeam: The project team associated with the entity, if any.
-    role: The access permission for the entity. Can be READER, WRITER, or
-      OWNER.
+    role: The access permission for the entity.
     selfLink: The link to this access-control entry.
   """
 
@@ -254,7 +272,7 @@ class BucketAccessControl(_messages.Message):
 
     Fields:
       projectNumber: The project number.
-      team: The team. Can be owners, editors, or viewers.
+      team: The team.
     """
 
     projectNumber = _messages.StringField(1)
@@ -426,7 +444,9 @@ class Object(_messages.Message):
   Fields:
     acl: Access controls on the object.
     bucket: The name of the bucket containing this object.
-    cacheControl: Cache-Control directive for the object data.
+    cacheControl: Cache-Control directive for the object data. If omitted, and
+      the object is accessible to all anonymous users, the default will be
+      public, max-age=3600.
     componentCount: Number of underlying components that make up this object.
       Components are accumulated by compose operations.
     contentDisposition: Content-Disposition of the object data.
@@ -560,13 +580,13 @@ class ObjectAccessControl(_messages.Message):
       for Business domain example.com, the entity would be domain-example.com.
     entityId: The ID for the entity, if any.
     etag: HTTP 1.1 Entity tag for the access-control entry.
-    generation: The content generation of the object.
+    generation: The content generation of the object, if applied to an object.
     id: The ID of the access-control entry.
     kind: The kind of item this is. For object access control entries, this is
       always storage#objectAccessControl.
-    object: The name of the object.
+    object: The name of the object, if applied to an object.
     projectTeam: The project team associated with the entity, if any.
-    role: The access permission for the entity. Can be READER or OWNER.
+    role: The access permission for the entity.
     selfLink: The link to this access-control entry.
   """
 
@@ -575,7 +595,7 @@ class ObjectAccessControl(_messages.Message):
 
     Fields:
       projectNumber: The project number.
-      team: The team. Can be owners, editors, or viewers.
+      team: The team.
     """
 
     projectNumber = _messages.StringField(1)
@@ -605,7 +625,7 @@ class ObjectAccessControls(_messages.Message):
       entries, this is always storage#objectAccessControls.
   """
 
-  items = _messages.MessageField('extra_types.JsonValue', 1, repeated=True)
+  items = _messages.MessageField('ObjectAccessControl', 1, repeated=True)
   kind = _messages.StringField(2, default=u'storage#objectAccessControls')
 
 
@@ -2098,4 +2118,3 @@ class TestIamPermissionsResponse(_messages.Message):
 
   kind = _messages.StringField(1, default=u'storage#testIamPermissionsResponse')
   permissions = _messages.StringField(2, repeated=True)
-

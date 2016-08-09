@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import logging
 import os
+import re
 
 from boto.storage_uri import BucketStorageUri
 
@@ -202,6 +203,29 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
       self.assertIn(
           'Estimated work for this command: objects: 1, total size: 3', stderr)
 
+  def test_rewrite_unintentional_key_rotation_fails(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    encrypted_obj_uri = self.CreateObject(contents='bar',
+                                          encryption_key=TEST_ENCRYPTION_KEY1)
+    unencrypted_obj_uri = self.CreateObject(contents='bar')
+
+    boto_config_for_test = [
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
+    with SetBotoConfigForTest(boto_config_for_test):
+      # Executing rewrite without the -k flag should fail if your boto file has
+      # a different encryption_key than was last used to encrypt the object.
+      stderr = self.RunGsUtil(['rewrite', '-s', 'dra', suri(encrypted_obj_uri)],
+                              return_stderr=True, expected_status=1)
+      self.assertIn('EncryptionException', stderr)
+
+      # Should also fail for a previously unencrypted object.
+      stderr = self.RunGsUtil(
+          ['rewrite', '-s', 'dra', suri(unencrypted_obj_uri)],
+          return_stderr=True, expected_status=1)
+      self.assertIn('EncryptionException', stderr)
+
   def test_rewrite_key_rotation_single_object(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
@@ -293,6 +317,92 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     for object_uri_str in (suri(object_uri2), suri(object_uri3),
                            suri(object_uri4)):
       self.AssertObjectUnencrypted(object_uri_str)
+
+  def test_rewrite_with_nonkey_transform_works_when_key_is_unchanged(self):
+    # Tests that when a valid transformation flag aside from "-k" is supplied,
+    # the "-k" flag is not supplied, and the encryption key previously used to
+    # encrypt the target object matches the encryption_key in the user's boto
+    # config file (via hash comparison), that the rewrite command properly
+    # passes the same tuple for decryption and encryption, in addition to
+    # performing the other desired transformations.
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    object_uri = self.CreateObject(contents='bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
+    boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(
+          ['rewrite', '-s', 'nearline', suri(object_uri)], return_stderr=True)
+      self.assertIn('Rewriting', stderr)
+
+  def test_rewrite_key_rotation_with_storage_class_change(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    object_uri = self.CreateObject(contents='bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
+
+    # Rotate key and change storage class to nearline.
+    boto_config_for_test = [
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(
+          ['rewrite', '-s', 'nearline', '-k', suri(object_uri)],
+          return_stderr=True)
+      self.assertIn('Rotating', stderr)
+
+    self.AssertObjectUsesEncryptionKey(suri(object_uri),
+                                       TEST_ENCRYPTION_KEY2)
+    stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+NEARLINE', flags=re.IGNORECASE,
+        msg=('Storage class appears not to have been changed.'))
+
+  def test_rewrite_with_only_storage_class_change(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    object_uri = self.CreateObject(contents='bar')
+
+    # Change storage class to nearline.
+    stderr = self.RunGsUtil(['rewrite', '-s', 'nearline', suri(object_uri)],
+                            return_stderr=True)
+    self.assertIn('Rewriting', stderr)
+
+    stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+NEARLINE', flags=re.IGNORECASE,
+        msg=('Storage class appears not to have been changed.'))
+
+  def test_rewrite_to_same_storage_class_is_skipped(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    object_uri = self.CreateObject(contents='bar')
+    stderr = self.RunGsUtil(['rewrite', '-s', 'standard', suri(object_uri)],
+                            return_stderr=True)
+    self.assertIn('Skipping %s' % suri(object_uri), stderr)
+
+  def test_rewrite_with_same_key_and_storage_class_is_skipped(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    object_uri = self.CreateObject(contents='foo',
+                                   encryption_key=TEST_ENCRYPTION_KEY1,
+                                   storage_class='standard')
+
+    boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    with SetBotoConfigForTest(boto_config_for_test):
+      stderr = self.RunGsUtil(
+          ['rewrite', '-k', '-s', 'standard', suri(object_uri)],
+          return_stderr=True)
+    self.assertIn('Skipping %s' % suri(object_uri), stderr)
+
+  def test_rewrite_with_no_value_for_minus_s(self):
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('Rewrite API is only supported in JSON.')
+    stderr = self.RunGsUtil(['rewrite', '-s', 'gs://some-random-name'],
+                            return_stderr=True, expected_status=1)
+
+    self.assertIn('CommandException', stderr)
+    self.assertIn('expects at least one URL', stderr)
 
   def test_rewrite_resume(self):
     self._test_rewrite_resume_or_restart(

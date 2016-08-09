@@ -56,6 +56,7 @@ from gslib.util import GetCloudApiInstance
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
+from gslib.util import NormalizeStorageClass
 from gslib.util import RemoveCRLFFromString
 from gslib.util import StdinIterator
 
@@ -125,7 +126,7 @@ _NAME_CONSTRUCTION_TEXT = """
   will create the object gs://my-bucket/dir2/a/b/c.
 
   In contrast, copying individually named files will result in objects named by
-  the final path component of the source files. For example, again assuming 
+  the final path component of the source files. For example, again assuming
   dir1/dir2 contains a/b/c, the command:
 
     gsutil cp dir1/dir2/** gs://my-bucket
@@ -217,7 +218,7 @@ _COPY_IN_CLOUD_TEXT = """
   in the cloud, which may take some time (but still will be faster than
   downloading and re-uploading). Such operations can be resumed with the same
   command if they are interrupted, so long as the command parameters are
-  identical. 
+  identical.
 
   Note that by default, the gsutil cp command does not copy the object
   ACL to the new object, and instead will use the default bucket ACL (see
@@ -656,6 +657,10 @@ _OPTIONS_TEXT = """
                  gsutil to copy any objects at the current bucket directory
                  level, and skip any subdirectories.
 
+  -s <class>     The storage class of the destination object(s), otherwise the
+                 default storage class from the destination bucket will be used.
+                 Not valid for copying to non-cloud destinations.
+
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER
                  storage class.
@@ -727,7 +732,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRtUvz:Z'
+CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Z'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -876,6 +881,10 @@ class CpCommand(Command):
       raise CommandException('%s: a version-specific URL\n(%s)\ncannot be '
                              'the destination for gsutil cp - abort.'
                              % (cmd_name, dst_url))
+
+    if not dst_url.IsCloudUrl() and copy_helper_opts.dest_storage_class:
+      raise CommandException('Cannot specify storage class for a non-cloud '
+                             'destination: %s' % dst_url)
 
     src_obj_metadata = None
     if name_expansion_result.expanded_result:
@@ -1090,6 +1099,7 @@ class CpCommand(Command):
     return 0
 
   def _ParseOpts(self):
+    # TODO: Arrange variables initialized here in alphabetical order.
     perform_mv = False
     # exclude_symlinks is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
@@ -1118,6 +1128,7 @@ class CpCommand(Command):
     gzip_arg_all = None
 
     test_callback_file = None
+    dest_storage_class = None
 
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -1159,6 +1170,8 @@ class CpCommand(Command):
           InitializeUserGroups()
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-s':
+          dest_storage_class = NormalizeStorageClass(a)
         elif o == '-U':
           self.skip_unsupported_objects = True
         elif o == '-v':
@@ -1190,4 +1203,5 @@ class CpCommand(Command):
         preserve_acl=preserve_acl,
         canned_acl=canned_acl,
         skip_unsupported_objects=self.skip_unsupported_objects,
-        test_callback_file=test_callback_file)
+        test_callback_file=test_callback_file,
+        dest_storage_class=dest_storage_class)

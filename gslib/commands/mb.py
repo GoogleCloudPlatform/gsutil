@@ -28,6 +28,7 @@ from gslib.exception import InvalidUrlError
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import NO_MAX
+from gslib.util import NormalizeStorageClass
 
 
 _SYNOPSIS = """
@@ -71,7 +72,9 @@ _DETAILED_HELP_TEXT = ("""
   `SLA <https://cloud.google.com/storage/sla>`_ details.
 
   If you don't specify a -c option, the bucket is created with the
-  default (Standard) storage class.
+  default storage class Standard Storage, which is equivalent to Multi-Regional
+  Storage or Regional Storage, depending on whether the bucket was created in
+  a multi-regional location or regional location, respectively.
 
 <B>BUCKET LOCATIONS</B>
   You can specify one of the 'available locations
@@ -82,7 +85,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil mb -l asia gs://some-bucket
 
-    gsutil mb -c dra -l us-east1 gs://some-bucket
+    gsutil mb -c regional -l us-east1 gs://some-bucket
 
   If you don't specify a -l option, the bucket is created in the default
   location (US).
@@ -97,6 +100,8 @@ _DETAILED_HELP_TEXT = ("""
                     Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
+
+  -s class          Same as -c.
 """)
 
 
@@ -116,7 +121,7 @@ class MbCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='c:l:p:',
+      supported_sub_args='c:l:p:s:',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -149,8 +154,8 @@ class MbCommand(Command):
           location = a
         elif o == '-p':
           self.project_id = a
-        elif o == '-c':
-          storage_class = self._Normalize_Storage_Class(a)
+        elif o == '-c' or o == '-s':
+          storage_class = NormalizeStorageClass(a)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class)
@@ -186,13 +191,3 @@ class MbCommand(Command):
           raise
 
     return 0
-
-  def _Normalize_Storage_Class(self, sc):
-    sc = sc.lower()
-    if sc in ('dra', 'durable_reduced_availability'):
-      return 'durable_reduced_availability'
-    if sc in ('s', 'std', 'standard'):
-      return 'standard'
-    if sc in ('nl', 'nearline'):
-      return 'nearline'
-    return sc

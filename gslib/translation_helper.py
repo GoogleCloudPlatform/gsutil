@@ -165,7 +165,7 @@ def ObjectMetadataFromHeaders(headers):
                 key=header_key, value=value))
       else:
         raise ArgumentException(
-            'Invalid header specifed: %s:%s' % (header, value))
+            'Invalid header specified: %s:%s' % (header, value))
   return obj_metadata
 
 
@@ -174,7 +174,7 @@ def HeadersFromObjectMetadata(dst_obj_metadata, provider):
 
   Args:
     dst_obj_metadata: Object metadata to create the headers from.
-    provider: Provider string ('gs' or 's3')
+    provider: Provider string ('gs' or 's3').
 
   Returns:
     Headers dictionary.
@@ -214,6 +214,15 @@ def HeadersFromObjectMetadata(dst_obj_metadata, provider):
       headers['content-type'] = None
     else:
       headers['content-type'] = dst_obj_metadata.contentType.strip()
+  if dst_obj_metadata.storageClass:
+    header_name = 'storage-class'
+    if provider == 'gs':
+      header_name = 'x-goog-' + header_name
+    elif provider == 's3':
+      header_name = 'x-amz-' + header_name
+    else:
+      raise ArgumentException('Invalid provider specified: %s' % provider)
+    headers[header_name] = dst_obj_metadata.storageClass.strip()
   if (dst_obj_metadata.metadata and
       dst_obj_metadata.metadata.additionalProperties):
     for additional_property in dst_obj_metadata.metadata.additionalProperties:

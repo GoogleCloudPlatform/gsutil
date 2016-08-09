@@ -106,7 +106,12 @@ class LifecycleCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[
+          ApiSelector.JSON,
+          # TODO: Remove preference for JSON with gs buckets once Boto is
+          # updated to support new gs lifecycle fields.
+          # ApiSelector.XML
+      ],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [

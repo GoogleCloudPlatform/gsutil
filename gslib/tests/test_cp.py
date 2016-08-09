@@ -3121,6 +3121,49 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     TestCpMvPOSIXLocalToBucketNoErrors(self, bucket_uri, is_cp=True)
 
+  def test_cp_minus_s_to_non_cloud_dest_fails(self):
+    """Test that cp -s operations to a non-cloud destination are prevented."""
+    local_file = self.CreateTempFile(contents='foo')
+    dest_dir = self.CreateTempDir()
+    stderr = self.RunGsUtil(['cp', '-s', 'standard', local_file, dest_dir],
+                            expected_status=1, return_stderr=True)
+    self.assertIn(
+        'Cannot specify storage class for a non-cloud destination:', stderr)
+
+  def test_cp_sets_correct_dest_storage_class(self):
+    """Tests that object storage class is set correctly with and without -s."""
+    # Use a non-default storage class as the default for the bucket.
+    bucket_uri = self.CreateBucket(storage_class='nearline')
+    # Ensure storage class is set correctly for a local-to-cloud copy.
+    local_fname = 'foo-orig'
+    local_fpath = self.CreateTempFile(contents='foo', file_name=local_fname)
+    foo_cloud_suri = suri(bucket_uri) + '/' + local_fname
+    self.RunGsUtil(['cp', '-s', 'standard', local_fpath, foo_cloud_suri])
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', foo_cloud_suri], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+STANDARD', flags=re.IGNORECASE)
+
+    # Ensure storage class is set correctly for a cloud-to-cloud copy when no
+    # destination storage class is specified.
+    foo_nl_suri = suri(bucket_uri) + '/foo-nl'
+    self.RunGsUtil(['cp', foo_cloud_suri, foo_nl_suri])
+    # TODO: Remove with-clause after adding storage class parsing in Boto.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', foo_nl_suri], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+NEARLINE', flags=re.IGNORECASE)
+
+    # Ensure storage class is set correctly for a cloud-to-cloud copy when a
+    # non-bucket-default storage class is specified.
+    foo_std_suri = suri(bucket_uri) + '/foo-std'
+    self.RunGsUtil(['cp', '-s', 'standard', foo_nl_suri, foo_std_suri])
+    # TODO: Remove with-clause after adding storage class parsing in Boto.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', foo_std_suri], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+STANDARD', flags=re.IGNORECASE)
+
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil cp."""

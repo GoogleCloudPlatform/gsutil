@@ -88,6 +88,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       if self.test_api == ApiSelector.XML:
         self.assertIn('Cache-Control:', stdout)
         self.assertIn('Content-Encoding:', stdout)
+      # TODO: Remove JSON check after adding storage class parsing in Boto.
+      elif self.test_api == ApiSelector.JSON:
+        self.assertIn('Storage class:', stdout)
       self.assertIn('Generation:', stdout)
       self.assertIn('Metageneration:', stdout)
       self.assertIn('Hash (crc32c):', stdout)
