@@ -383,4 +383,4 @@ class RmCommand(Command):
         preconditions=self.preconditions, generation=exp_src_url.generation,
         provider=exp_src_url.scheme)
     PutToQueueWithTimeout(gsutil_api.status_queue,
-                          MetadataMessage(time=time.time()))
+                          MetadataMessage(message_time=time.time()))

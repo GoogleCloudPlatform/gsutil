@@ -1616,7 +1616,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       # Report the retryable error to the global status queue.
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
-          RetryableErrorMessage(exception=e,
+          RetryableErrorMessage(e, time.time(),
                                 num_retries=num_startover_attempts))
       time.sleep(min(random.random() * (2 ** num_startover_attempts),
                      GetMaxRetryDelay()))
@@ -2582,7 +2582,7 @@ def _DownloadObjectToFile(src_url, src_obj_metadata, dst_url,
 
   PutToQueueWithTimeout(
       gsutil_api.status_queue,
-      FileMessage(src_url, dst_url, time=end_time,
+      FileMessage(src_url, dst_url, message_time=end_time,
                   message_type=FileMessage.FILE_DOWNLOAD,
                   size=src_obj_metadata.size, finished=True))
 

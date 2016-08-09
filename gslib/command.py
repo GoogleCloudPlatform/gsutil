@@ -546,7 +546,9 @@ class Command(HelpProvider):
     global ui_controller
     # pylint: enable=global-variable-undefined
     # pylint: enable=global-variable-not-assigned
-    ui_controller = UIController()
+    ui_controller = UIController(
+        dump_status_messages_file=boto.config.get(
+            'GSUtil', 'dump_status_messages_file', None))
     # Global instance of a threaded logger object.
     self.logger = CreateGsutilLogger(self.command_name)
     if logging_filters:
@@ -823,7 +825,7 @@ class Command(HelpProvider):
       # Normal Cloud API path. acl_arg is a JSON ACL or a canned ACL.
       self._SetAclGsutilApi(url, gsutil_api)
     PutToQueueWithTimeout(gsutil_api.status_queue,
-                          MetadataMessage(time=time.time()))
+                          MetadataMessage(message_time=time.time()))
 
   def _SetAclXmlPassthrough(self, url, gsutil_api):
     """Sets the ACL for the URL provided using the XML passthrough functions.

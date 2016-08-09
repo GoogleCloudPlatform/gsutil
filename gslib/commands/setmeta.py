@@ -257,7 +257,7 @@ class SetMetaCommand(Command):
         generation=exp_src_url.generation, preconditions=preconditions,
         provider=exp_src_url.scheme, fields=['id'])
     PutToQueueWithTimeout(gsutil_api.status_queue,
-                          MetadataMessage(time=time.time()))
+                          MetadataMessage(message_time=time.time()))
 
   def _ParseMetadataHeaders(self, headers):
     """Validates and parses metadata changes from the headers argument.

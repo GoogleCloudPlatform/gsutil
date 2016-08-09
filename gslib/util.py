@@ -32,6 +32,7 @@ import sys
 import tempfile
 import textwrap
 import threading
+import time
 import traceback
 import xml.etree.ElementTree as ElementTree
 
@@ -1557,8 +1558,7 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
       logging.info('Retrying request, attempt #%d...', retry_args.num_retries)
     if status_queue:
       status_queue.put(RetryableErrorMessage(
-          exception=retry_args.exc,
-          num_retries=retry_args.num_retries,
+          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
           total_wait_sec=retry_args.total_wait_sec))
     http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
 
@@ -1573,8 +1573,7 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
     """
     if status_queue:
       status_queue.put(RetryableErrorMessage(
-          exception=retry_args.exc,
-          num_retries=retry_args.num_retries,
+          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
           total_wait_sec=retry_args.total_wait_sec))
     http_wrapper.RethrowExceptionHandler(retry_args)
 

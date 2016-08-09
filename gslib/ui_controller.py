@@ -94,16 +94,16 @@ class StatusMessageManager(object):
     points of our operation.
     """
 
-    def __init__(self, progress, time):
+    def __init__(self, progress, report_time):
       """Constructor of _ThroughputInformation.
 
       Args:
         progress: The current progress, in bytes/second or objects/second.
-        time: Float representing when progress was reported (seconds since
-              Epoch).
+        report_time: Float representing when progress was reported (seconds
+            since Epoch).
       """
       self.progress = progress
-      self.time = time
+      self.time = report_time
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
@@ -290,11 +290,10 @@ class StatusMessageManager(object):
 
     Args:
       cur_time: Current time to check whether or not it is time for a new
-        throughput measurement.
+                throughput measurement.
       cur_progress: The current progress, in number of objects finished or in
                     bytes.
     """
-    oldest_progress = None
     while (len(self.old_progress) > 1 and
            cur_time - self.old_progress[0].time >
            self.sliding_throughput_period):
@@ -329,10 +328,12 @@ class MetadataManager(StatusMessageManager):
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False, console_width=80):
+    # pylint: disable=g-doc-args
     """Instantiates a MetadataManager.
 
     See argument documentation in StatusMessageManager base class.
     """
+    # pylint: enable=g-doc-args
     super(MetadataManager, self).__init__(
         update_message_period=update_message_period,
         update_spinner_period=update_spinner_period,
@@ -390,7 +391,7 @@ class MetadataManager(StatusMessageManager):
     (in objects/second) and estimated time remaining.
 
     Args:
-      stream: stream to print messages. Usually sys.stderr, but customizable
+      stream: Stream to print messages. Usually sys.stderr, but customizable
               for testing.
     """
     # Time to update all information
@@ -499,10 +500,12 @@ class DataManager(StatusMessageManager):
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
                custom_time=None, verbose=False, console_width=None):
+    # pylint: disable=g-doc-args
     """Instantiates a DataManager.
 
     See argument documentation in StatusMessageManager base class.
     """
+    # pylint: disable=g-doc-args
     super(DataManager, self).__init__(
         update_message_period=update_message_period,
         update_spinner_period=update_spinner_period,
@@ -825,25 +828,26 @@ class UIController(object):
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
-               custom_time=None, verbose=False):
+               custom_time=None, verbose=False, dump_status_messages_file=None):
     """Instantiates a UIController.
 
     Args:
       update_message_period: Minimum period for refreshing and  displaying
-                          new information. A non-positive value will ignore
-                          any time restrictions imposed by this field.
+          new information. A non-positive value will ignore any time
+          restrictions imposed by this field.
       update_spinner_period: Minimum period for refreshing and displaying the
-                             spinner. A non-positive value will ignore
-                             any time restrictions imposed by this field.
+          spinner. A non-positive value will ignore any time restrictions
+          imposed by this field.
       sliding_throughput_period: Sliding period for throughput calculation. A
-                                 non-positive value will make it impossible to
-                                 calculate the throughput.
+          non-positive value will make it impossible to calculate the
+          throughput.
       first_throughput_latency: Minimum waiting time before actually displaying
-                                throughput info. A non-positive value will
-                                ignore any time restrictions imposed by this
-                                field.
+          throughput info. A non-positive value will ignore any time
+          restrictions imposed by this field.
       custom_time: If a custom start_time is desired. Used for testing.
       verbose: Tells whether or not the operation is on verbose mode.
+      dump_status_messages_file: File path for logging all received status
+          messages, for debugging purposes.
     """
     self.verbose = verbose
     self.update_message_period = update_message_period
@@ -857,6 +861,9 @@ class UIController(object):
     # ProducerThread. This is used when we still do not know which manager to
     # use.
     self.early_estimation_messages = []
+    self.dump_status_message_fp = None
+    if dump_status_messages_file:
+      self.dump_status_message_fp = open(dump_status_messages_file, 'ab')
 
   def _HandleMessage(self, status_message, stream, cur_time=None):
     """Processes a message, updates throughput and prints progress.
@@ -867,7 +874,7 @@ class UIController(object):
       stream: stream to print messages. Usually sys.stderr, but customizable
               for testing.
       cur_time: Message time. Used to determine if it is time to refresh
-              output, or calculate throughput.
+                output, or calculate throughput.
     """
     self.manager.ProcessMessage(status_message, stream)
     if self.manager.ShouldPrintProgress(cur_time):
@@ -885,10 +892,10 @@ class UIController(object):
     Args:
       status_message: Message to be processed. Could be None if UIThread cannot
                       retrieve message from status_queue.
-      stream: stream to print messages. Usually sys.stderr, but customizable
+      stream: Stream to print messages. Usually sys.stderr, but customizable
               for testing.
       cur_time: Message time. Used to determine if it is time to refresh
-              output, or calculate throughput.
+                output, or calculate throughput.
     """
     if not isinstance(status_message, StatusMessage):
       if status_message == ZERO_TASKS_TO_DO_ARGUMENT and not self.manager:
@@ -904,6 +911,12 @@ class UIController(object):
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
       return
+    if self.dump_status_message_fp:
+      # TODO: Add Unicode support to string methods on message classes.
+      # Currently, dump will fail with a UnicodeEncodeErorr if the message
+      # class contains a Unicode attribute.
+      self.dump_status_message_fp.write(str(status_message))
+      self.dump_status_message_fp.write('\n')
     if isinstance(status_message, RetryableErrorMessage):
       LogRetryableError(status_message.error_type)
       return
