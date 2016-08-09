@@ -61,22 +61,17 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import BuildErrorRegex
-from gslib.tests.util import DEFAULT_MODE
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HaltingCopyCallbackHandler
 from gslib.tests.util import HaltOneComponentCopyCallbackHandler
 from gslib.tests.util import HAS_GS_PORT
 from gslib.tests.util import HAS_S3_CREDS
-from gslib.tests.util import INVALID_GID
-from gslib.tests.util import INVALID_UID
-from gslib.tests.util import NON_PRIMARY_GID
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
 from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
 from gslib.tests.util import POSIX_MODE_ERROR
 from gslib.tests.util import POSIX_UID_ERROR
-from gslib.tests.util import PRIMARY_GID
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
@@ -85,7 +80,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY3
 from gslib.tests.util import unittest
-from gslib.tests.util import USER_ID
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
@@ -102,6 +96,17 @@ from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+
+# These POSIX-specific variables aren't defined for Windows.
+# pylint: disable=g-import-not-at-top
+if not IS_WINDOWS:
+  from gslib.tests.util import DEFAULT_MODE
+  from gslib.tests.util import INVALID_GID
+  from gslib.tests.util import INVALID_UID
+  from gslib.tests.util import NON_PRIMARY_GID
+  from gslib.tests.util import PRIMARY_GID
+  from gslib.tests.util import USER_ID
+# pylint: enable=g-import-not-at-top
 
 
 def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):

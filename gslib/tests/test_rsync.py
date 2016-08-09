@@ -27,27 +27,32 @@ from gslib.posix_util import UID_ATTR
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import BuildErrorRegex
-from gslib.tests.util import DEFAULT_MODE
-from gslib.tests.util import INVALID_GID
-from gslib.tests.util import INVALID_UID
-from gslib.tests.util import NON_PRIMARY_GID
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
 from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
 from gslib.tests.util import POSIX_MODE_ERROR
 from gslib.tests.util import POSIX_UID_ERROR
-from gslib.tests.util import PRIMARY_GID
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
-from gslib.tests.util import USER_ID
 from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_OSX
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UsingCrcmodExtension
+
+# These POSIX-specific variables aren't defined for Windows.
+# pylint: disable=g-import-not-at-top
+if not IS_WINDOWS:
+  from gslib.tests.util import DEFAULT_MODE
+  from gslib.tests.util import INVALID_GID
+  from gslib.tests.util import INVALID_UID
+  from gslib.tests.util import NON_PRIMARY_GID
+  from gslib.tests.util import PRIMARY_GID
+  from gslib.tests.util import USER_ID
+# pylint: enable=g-import-not-at-top
 
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization\n'
 if not UsingCrcmodExtension(crcmod):
