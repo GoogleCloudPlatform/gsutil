@@ -178,6 +178,10 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
 class UpdateUnitTest(testcase.GsUtilUnitTestCase):
   """Tests the functionality of commands/update.py."""
 
+  @unittest.skipUnless(
+      not gslib.IS_PACKAGE_INSTALL,
+      'Test is runnable only if gsutil dir is accessible, and update '
+      'command is not valid for package installs.')
   def test_repo_matches_manifest(self):
     """Ensure that all files/folders match the manifest."""
     # Create a temp directory and copy specific files to it.
