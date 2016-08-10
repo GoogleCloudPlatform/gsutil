@@ -162,20 +162,31 @@ class TestAcl(TestAclBase):
     # Change it to authenticated-read.
     self.RunGsUtil(
         self._set_defacl_prefix + ['authenticated-read', suri(bucket_uri)])
-    obj_uri2 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo2'))
-    acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri2],
-                                 return_stdout=True)
+
+    # Default object ACL may take some time to propagate.
+    @Retry(AssertionError, tries=5, timeout_secs=1)
+    def _Check1():
+      obj_uri2 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo2'))
+      acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri2],
+                                   return_stdout=True)
+      self.assertNotEqual(acl_string, acl_string2)
+      self.assertIn('allAuthenticatedUsers', acl_string2)
+
+    _Check1()
 
     # Now change it back to the default via XML.
     inpath = self.CreateTempFile(contents=acl_string)
     self.RunGsUtil(self._set_defacl_prefix + [inpath, suri(bucket_uri)])
-    obj_uri3 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo3'))
-    acl_string3 = self.RunGsUtil(self._get_acl_prefix + [obj_uri3],
-                                 return_stdout=True)
 
-    self.assertNotEqual(acl_string, acl_string2)
-    self.assertIn('allAuthenticatedUsers', acl_string2)
-    self.assertEqual(acl_string, acl_string3)
+    # Default object ACL may take some time to propagate.
+    @Retry(AssertionError, tries=5, timeout_secs=1)
+    def _Check2():
+      obj_uri3 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo3'))
+      acl_string3 = self.RunGsUtil(self._get_acl_prefix + [obj_uri3],
+                                   return_stdout=True)
+      self.assertEqual(acl_string, acl_string3)
+
+    _Check2()
 
   def test_acl_set_version_specific_uri(self):
     """Tests setting an ACL on a specific version of an object."""
