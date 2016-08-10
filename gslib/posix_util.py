@@ -495,5 +495,10 @@ def InitializeUserGroups():
   Should only be called if the flag for preserving POSIX attributes is set.
   """
   global USER_GROUPS
-  USER_GROUPS = set([g.gr_gid for g in grp.getgrall() if
-                     pwd.getpwuid(os.getuid()).pw_name in g.gr_mem])
+  user_id = os.getuid()
+  USER_GROUPS = set(
+      # Primary group
+      [pwd.getpwuid(user_id).pw_gid] +
+      # Secondary groups
+      [g.gr_gid for g in grp.getgrall()
+       if pwd.getpwuid(user_id).pw_name in g.gr_mem])

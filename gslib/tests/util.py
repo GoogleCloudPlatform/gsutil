@@ -53,8 +53,10 @@ if not IS_WINDOWS:
   # Get a list of all groups on the system where the current username is listed
   # as a member of the group in the gr_mem group attribute. Make this a list of
   # all group IDs and cast as a set for more efficient lookup times.
-  USER_GROUPS = LazyWrapper(lambda: set([g.gr_gid for g in grp.getgrall()
-                                         if USER_NAME in g.gr_mem]))
+  USER_GROUPS = LazyWrapper(
+      lambda: set([PRIMARY_GID] +
+                  [g.gr_gid for g in grp.getgrall()
+                   if USER_NAME in g.gr_mem]))
   # Select a group for the current user that is not the user's primary group. If
   # the length of the user's groups is 1, then we must use the primary group.
   # Otherwise put all of the user's groups (except the primary group) in a list,
