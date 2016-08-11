@@ -34,6 +34,7 @@ from gslib.iamhelpers import DeserializeBindingsTuple
 from gslib.iamhelpers import IsEqualBindings
 from gslib.iamhelpers import PatchBindings
 from gslib.iamhelpers import SerializeBindingsTuple
+from gslib.metrics import LogCommandParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
@@ -584,15 +585,21 @@ class IamCommand(Command):
     """Command entry point for the acl command."""
     action_subcommand = self.args.pop(0)
     self.ParseSubOpts(check_args=True)
+    # Commands with both suboptions and subcommands need to reparse for
+    # suboptions, so we log again.
+    LogCommandParams(sub_opts=self.sub_opts)
     self.def_acl = False
     if action_subcommand == 'get':
+      LogCommandParams(subcommands=[action_subcommand])
       policy = self._GetIam(self.args[0])
       bindings = [
           json.loads(protojson.encode_message(b)) for b in policy.bindings]
       print json.dumps(bindings, sort_keys=True, indent=2)
     elif action_subcommand == 'set':
+      LogCommandParams(subcommands=[action_subcommand])
       self._SetIam()
     elif action_subcommand == 'ch':
+      LogCommandParams(subcommands=[action_subcommand])
       self._PatchIam()
     else:
       raise CommandException(

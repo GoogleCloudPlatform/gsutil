@@ -344,6 +344,14 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         'list',
         self.collector.ga_params.get(metrics._GA_LABEL_MAP['Command Alias']))
 
+    self.collector.ga_params.clear()
+    _TryExceptAndPass(
+        self.command_runner.RunNamedCommand,
+        'iam', ['get', 'dummy_bucket'], collect_analytics=True)
+    self.assertEqual(
+        'iam get',
+        self.collector.ga_params.get(metrics._GA_LABEL_MAP['Command Name']))
+
   # We only care about the error logging, not the actual exceptions handling.
   @mock.patch.object(http_wrapper, 'HandleExceptionsAndRebuildHttpConnections')
   def testRetryableErrorCollection(self, mock_default_retry):

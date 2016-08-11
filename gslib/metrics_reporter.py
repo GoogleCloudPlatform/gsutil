@@ -16,7 +16,6 @@
 import logging
 import os
 import pickle
-import sys
 
 from gslib.util import GetNewHttp
 
@@ -52,11 +51,3 @@ def ReportMetrics(metrics_file_path, log_level):
       logger.debug('RESPONSE: %s', response[0]['status'])
     except Exception as e:  # pylint: disable=broad-except
       logger.debug(e)
-
-
-if __name__ == '__main__':
-  try:
-    ReportMetrics(sys.argv[1], int(sys.argv[2]))
-  # pylint: disable=bare-except, Never fail or output a stacktrace here.
-  except:
-    pass

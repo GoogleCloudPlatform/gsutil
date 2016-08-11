@@ -433,12 +433,10 @@ class MetricsCollector(object):
     self._metrics = []
     self.retryable_errors.clear()
 
-    # TODO(from cloud SDK): make this not depend on the file.
-    reporting_script_path = os.path.realpath(os.path.join(
-        os.path.dirname(__file__), 'metrics_reporter.py'))
-
-    execution_args = [sys.executable, reporting_script_path,
-                      temp_metrics_file.name, str(log_level)]
+    reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
+                      'ReportMetrics("{0}", {1})').format(
+                          temp_metrics_file.name, log_level)
+    execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
 
