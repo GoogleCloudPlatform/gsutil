@@ -608,3 +608,26 @@ class HaltOneComponentCopyCallbackHandler(object):
       sys.stderr.write('Halting transfer.\r\n')
       raise ResumableDownloadException('Artifically halting download.')
     self._last_progress_byte = current_progress_byte
+
+
+class TestParams(object):
+  """Allows easier organization of test parameters.
+
+  This class allows grouping of test parameters, which include args and kwargs
+  to be used, as well as the expected result based on those arguments.
+
+  For example, to test an Add function, one might do:
+
+  params = TestParams(args=(1, 2, 3), expected=6)
+  self.assertEqual(Add(*(params.args)), params.expected)
+  """
+
+  def __init__(self, args=None, kwargs=None, expected=None):
+    self.args = tuple() if args is None else args
+    self.kwargs = dict() if kwargs is None else kwargs
+    self.expected = expected
+
+    if not isinstance(args, (tuple, list)):
+      raise TypeError('TestParam args must be a tuple or list.')
+    if not isinstance(self.kwargs, dict):
+      raise TypeError('TestParam kwargs must be a dict.')

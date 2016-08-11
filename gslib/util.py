@@ -1071,26 +1071,27 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
 
   print '%s:' % url_str.encode(UTF8)
   if obj.timeCreated:
-    print '\tCreation time:\t\t%s' % obj.timeCreated.strftime(
-        '%a, %d %b %Y %H:%M:%S GMT')
+    print MakeMetadataLine(
+        'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
   if obj.updated:
-    print '\tUpdate time:\t\t%s' % obj.updated.strftime(
-        '%a, %d %b %Y %H:%M:%S GMT')
+    print MakeMetadataLine(
+        'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
   if obj.cacheControl:
-    print '\tCache-Control:\t\t%s' % obj.cacheControl
+    print MakeMetadataLine('Cache-Control', obj.cacheControl)
   if obj.contentDisposition:
-    print '\tContent-Disposition:\t\t%s' % obj.contentDisposition
+    print MakeMetadataLine('Content-Disposition', obj.contentDisposition)
   if obj.contentEncoding:
-    print '\tContent-Encoding:\t\t%s' % obj.contentEncoding
+    print MakeMetadataLine('Content-Encoding', obj.contentEncoding)
   if obj.contentLanguage:
-    print '\tContent-Language:\t%s' % obj.contentLanguage
-  print '\tContent-Length:\t\t%s' % obj.size
-  print '\tContent-Type:\t\t%s' % obj.contentType
+    print MakeMetadataLine('Content-Language', obj.contentLanguage)
+  print MakeMetadataLine('Content-Length', obj.size)
+  print MakeMetadataLine('Content-Type', obj.contentType)
   if obj.componentCount:
-    print '\tComponent-Count:\t%d' % obj.componentCount
+    print MakeMetadataLine('Component-Count', obj.componentCount)
   if obj.timeDeleted:
-    print '\tArchived time:\t\t%s' % obj.timeDeleted.strftime(
-        '%a, %d %b %Y %H:%M:%S GMT')
+    print MakeMetadataLine(
+        'Archived time',
+        obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT'))
   marker_props = {}
   if obj.metadata and obj.metadata.additionalProperties:
     non_marker_props = []
@@ -1100,36 +1101,66 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       else:
         marker_props[add_prop.key] = add_prop.value
     if non_marker_props:
-      print '\tMetadata:'
+      print MakeMetadataLine('Metadata', '')
       for ap in non_marker_props:
-        meta_string = '\t\t%s:\t\t%s' % (ap.key, ap.value)
-        print meta_string.encode(UTF8)
+        print MakeMetadataLine(
+            ('%s' % ap.key).encode(UTF8), ('%s' % ap.value).encode(UTF8),
+            indent=2)
   if obj.customerEncryption:
-    if not obj.crc32c: print '\tHash (crc32c):\t\tencrypted'
-    if not obj.md5Hash: print '\tHash (md5):\t\tencrypted'
-    print ('\tEncryption algorithm:\t%s' %
-           obj.customerEncryption.encryptionAlgorithm)
-    print '\tEncryption key SHA256:\t%s' % obj.customerEncryption.keySha256
-  if obj.crc32c: print '\tHash (crc32c):\t\t%s' % obj.crc32c
-  if obj.md5Hash: print '\tHash (md5):\t\t%s' % obj.md5Hash
-  print '\tETag:\t\t\t%s' % obj.etag.strip('"\'')
+    if not obj.crc32c:
+      print MakeMetadataLine('Hash (crc32c)', 'encrypted')
+    if not obj.md5Hash:
+      print MakeMetadataLine('Hash (md5)', 'encrypted')
+    print MakeMetadataLine(
+        'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm)
+    print MakeMetadataLine(
+        'Encryption key SHA256', obj.customerEncryption.keySha256)
+  if obj.crc32c:
+    print MakeMetadataLine('Hash (crc32c)', obj.crc32c)
+  if obj.md5Hash:
+    print MakeMetadataLine('Hash (md5)', obj.md5Hash)
+  print MakeMetadataLine('ETag', obj.etag.strip('"\''))
   if obj.generation:
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
-    print '\tGeneration:\t\t%s' % generation_str
+    print MakeMetadataLine('Generation', generation_str)
   if obj.metageneration:
-    print '\tMetageneration:\t\t%s' % obj.metageneration
+    print MakeMetadataLine('Metageneration', obj.metageneration)
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
     if obj.acl:
-      print '\tACL:\t\t%s' % AclTranslation.JsonFromMessage(obj.acl)
+      print MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl))
     elif S3_ACL_MARKER_GUID in marker_props:
-      print '\tACL:\t\t%s' % marker_props[S3_ACL_MARKER_GUID]
+      print MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID])
     else:
-      print ('\tACL:\t\t\tACCESS DENIED. Note: you need OWNER '
-             'permission\n\t\t\t\ton the object to read its ACL.')
+      print MakeMetadataLine('ACL', 'ACCESS DENIED')
+      print MakeMetadataLine(
+          'Note', 'You need OWNER permission on the object to read its ACL', 2)
 
   return (num_objs, num_bytes)
+
+
+def MakeMetadataLine(label, value, indent=1):
+  """Returns a string with a vertically aligned label and value.
+
+  Labels of the same indentation level will start at the same column. Values
+  will all start at the same column (unless the combined left-indent and
+  label length is excessively long). If a value spans multiple lines,
+  indentation will only be applied to the first line. Example output from
+  several calls:
+
+      Label1:            Value (default indent of 1 was used)
+          Sublabel1:     Value (used indent of 2 here)
+      Label2:            Value
+
+  Args:
+    label: The label to print in the first column.
+    value: The value to print in the second column.
+    indent: (4 * indent) spaces will be placed before the label.
+  Returns:
+    A string with a vertically aligned label and value.
+  """
+  return '%s%s' % (((' ' * indent * 4) + label + ':').ljust(28), value)
 
 
 def CompareVersions(first, second):

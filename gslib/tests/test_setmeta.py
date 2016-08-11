@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 
+import re
+
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
@@ -159,7 +161,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
       stdout = stdout.decode(UTF8)
-      self.assertIn(u'dessert:\t\tsoufflé', stdout)
+      self.assertTrue(re.search(ur'dessert:\s+soufflé', stdout))
     _Check1()
 
   def test_disallowed_header(self):

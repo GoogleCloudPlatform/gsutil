@@ -26,6 +26,7 @@ from __future__ import absolute_import
 from gslib import util
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.tests.util import TestParams
 from gslib.util import CompareVersions
 from gslib.util import DecimalShort
 from gslib.util import HumanReadableWithDecimalPlaces
@@ -159,6 +160,21 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(pi1.proxy_rdns, pi2.proxy_rdns)
     self.assertEqual(pi1.proxy_user, pi2.proxy_user)
     self.assertEqual(pi1.proxy_pass, pi2.proxy_pass)
+
+  def testMakeMetadataLine(self):
+    test_params = (
+        TestParams(args=('AFairlyShortKey', 'Value'),
+                   expected='    AFairlyShortKey:        Value'),
+        TestParams(args=('', 'Value'),
+                   expected='    :                       Value'),
+        TestParams(args=('AnotherKey', 'Value'),
+                   kwargs={'indent': 2},
+                   expected='        AnotherKey:         Value'),
+        TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
+                   expected=('    AKeyMuchLongerThanTheLast:Value')))
+    for params in test_params:
+      line = util.MakeMetadataLine(*(params.args), **(params.kwargs))
+      self.assertEqual(line, params.expected)
 
   def test_ProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""
