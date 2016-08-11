@@ -31,10 +31,12 @@ from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import Base64ToHexHash
 from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
+from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import FileMessage
+from gslib.thread_message import FinalMessage
 from gslib.util import NO_MAX
 from gslib.util import UsingCrcmodExtension
 
@@ -214,6 +216,7 @@ class HashCommand(Command):
 
     if not matched_one:
       raise CommandException('No files matched')
-
+    PutToQueueWithTimeout(self.gsutil_api.status_queue,
+                          FinalMessage(time.time()))
     return 0
 

@@ -93,6 +93,22 @@ class RetryableErrorMessage(StatusMessage):
              self.total_wait_sec, self.time, self.process_id, self.thread_id))
 
 
+class FinalMessage(StatusMessage):
+  """Creates a FinalMessage.
+
+  A FinalMessage simply indicates that we have finished our operation.
+  """
+
+  def __init__(self, message_time):
+    """Creates a FinalMessage.
+
+    Args:
+      message_time: Float representing when message was created (seconds since
+          Epoch).
+    """
+    super(FinalMessage, self).__init__(message_time)
+
+
 class MetadataMessage(StatusMessage):
   """Creates a MetadataMessage.
 

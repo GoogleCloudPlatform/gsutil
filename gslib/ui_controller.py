@@ -28,6 +28,7 @@ import time
 from gslib.metrics import LogRetryableError
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.thread_message import FileMessage
+from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.thread_message import ProgressMessage
@@ -252,8 +253,13 @@ class StatusMessageManager(object):
     Returns:
       Whether or not we should print the progress.
     """
-    return (cur_time - self.refresh_message_time >= self.update_message_period
-            or self.object_report_change)
+    sufficient_time_elapsed = (
+        cur_time - self.refresh_message_time >= self.update_message_period)
+    # Don't report if we aren't actually going to do anything (for example,
+    # an rsync that will sync 0 objects).
+    nonzero_report = self.num_objects
+    return (sufficient_time_elapsed or self.object_report_change) and (
+        nonzero_report)
 
   def ShouldPrintSpinner(self, cur_time):
     """Decides whether or not it is time for updating the spinner character.
@@ -312,6 +318,22 @@ class StatusMessageManager(object):
                         oldest_progress.time))
     # Just to avoid -0.00 B/s.
     self.throughput = max(0, self.throughput)
+
+  def PrintFinalSummaryMessage(self, stream=sys.stderr):
+    """Prints a final message to indicate operation succeeded.
+
+    Args:
+      stream: Stream to print messages. Usually sys.stderr, but customizable
+              for testing.
+    """
+    string_to_print = ('Operation completed over %s objects'
+                       % DecimalShort(self.num_objects))
+    if self.total_size:
+      string_to_print += (
+          '/%s' % HumanReadableWithDecimalPlaces(self.total_size))
+    remaining_width = self.console_width - len(string_to_print)
+    stream.write(('\n' + string_to_print + '.' +
+                  (max(remaining_width, 0) * ' ') + '\n'))
 
 
 class MetadataManager(StatusMessageManager):
@@ -406,8 +428,11 @@ class MetadataManager(StatusMessageManager):
       # An example of objects_completed here would be ' [2/3 objects]'.
       objects_completed = ('[' + DecimalShort(self.objects_finished) + '/' +
                            DecimalShort(self.num_objects) + ' objects]')
-      percentage = ('%3d' % int(100 * float(self.objects_finished) /
-                                self.num_objects))
+      if self.num_objects == self.objects_finished:
+        percentage = '100'
+      else:
+        percentage = ('%3d' % min(99, int(100 * float(self.objects_finished) /
+                                          self.num_objects)))
       percentage_completed = percentage + '% Done'
     else:
       # An example of objects_completed here would be ' [2 objects]'.
@@ -438,11 +463,7 @@ class MetadataManager(StatusMessageManager):
         percentage_completed=percentage_completed, throughput=throughput,
         time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
-
-    if self.final_message:
-      stream.write(string_to_print + (max(remaining_width - 1, 0) * ' ') + '\n')
-    else:
-      stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
+    stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
 
   def CanHandleMessage(self, status_message):
     """Determines whether this manager is suitable for handling status_message.
@@ -453,9 +474,8 @@ class MetadataManager(StatusMessageManager):
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if (isinstance(status_message, SeekAheadMessage) or
-        isinstance(status_message, ProducerThreadMessage) or
-        isinstance(status_message, MetadataMessage)):
+    if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
+                                   MetadataMessage, FinalMessage)):
       return True
     return False
 
@@ -545,7 +565,7 @@ class DataManager(StatusMessageManager):
       # File started.
       if self.first_item and not self.custom_time:
         # Set initial time.
-        self.refresh_message_time = time.time()
+        self.refresh_message_time = status_message.time
         self.start_time = self.refresh_message_time
         self.last_throughput_time = self.refresh_message_time
         self.first_item = False
@@ -764,8 +784,11 @@ class DataManager(StatusMessageManager):
                      BytesToFixedWidthString(self.total_size)))
 
     if self.total_size_source <= EstimationSource.SEEK_AHEAD_THREAD:
-      percentage = ('%3d' % (int(100 * float(self.total_progress) /
-                                 self.total_size)))
+      if self.num_objects == self.objects_finished:
+        percentage = '100'
+      else:
+        percentage = ('%3d' % min(99, int(100 * float(self.total_progress) /
+                                          self.total_size)))
       percentage_completed = percentage + '% Done'
     else:
       percentage_completed = ''
@@ -795,11 +818,7 @@ class DataManager(StatusMessageManager):
         percentage_completed=percentage_completed,
         throughput=throughput, time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
-
-    if self.final_message:
-      stream.write(string_to_print + (max(remaining_width - 1, 0) * ' ') + '\n')
-    else:
-      stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
+    stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
 
   def CanHandleMessage(self, status_message):
     """Determines whether this manager is suitable for handling status_message.
@@ -810,10 +829,8 @@ class DataManager(StatusMessageManager):
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if (isinstance(status_message, SeekAheadMessage) or
-        isinstance(status_message, ProducerThreadMessage) or
-        isinstance(status_message, FileMessage) or
-        isinstance(status_message, ProgressMessage)):
+    if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
+                                   FileMessage, ProgressMessage, FinalMessage)):
       return True
     return False
 
@@ -861,6 +878,7 @@ class UIController(object):
     # ProducerThread. This is used when we still do not know which manager to
     # use.
     self.early_estimation_messages = []
+    self.printed_final_message = False
     self.dump_status_message_fp = None
     if dump_status_messages_file:
       self.dump_status_message_fp = open(dump_status_messages_file, 'ab')
@@ -885,6 +903,12 @@ class UIController(object):
     if self.manager.ShouldPrintSpinner(cur_time):
       self.manager.PrintSpinner(stream)
       self.manager.refresh_spinner_time = cur_time
+    if ((isinstance(status_message, FinalMessage) or
+         self.manager.final_message)
+        and self.manager.num_objects
+        and not self.printed_final_message):
+      self.printed_final_message = True
+      self.manager.PrintFinalSummaryMessage(stream)
 
   def Call(self, status_message, stream, cur_time=None):
     """Coordinates UI manager and calls appropriate function to handle message.
@@ -909,7 +933,8 @@ class UIController(object):
                 custom_time=self.custom_time, verbose=self.verbose,
                 console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
-          self._HandleMessage(estimation_message, stream, cur_time)
+          self._HandleMessage(estimation_message, stream,
+                              cur_time=estimation_message.time)
       return
     if self.dump_status_message_fp:
       # TODO: Add Unicode support to string methods on message classes.
@@ -1049,13 +1074,16 @@ class UIThread(threading.Thread):
     self.start()
 
   def run(self):
-    while True:
-      try:
-        status_message = self.status_queue.get(timeout=self.timeout)
-      except Queue.Empty:
-        status_message = None
-      if not self.logger or self.logger.isEnabledFor(logging.INFO):
-        self.ui_controller.Call(status_message, self.stream)
-      if status_message == ZERO_TASKS_TO_DO_ARGUMENT:
-        # Item from MainThread to indicate we are done.
-        break
+    try:
+      while True:
+        try:
+          status_message = self.status_queue.get(timeout=self.timeout)
+        except Queue.Empty:
+          status_message = None
+        if not self.logger or self.logger.isEnabledFor(logging.INFO):
+          self.ui_controller.Call(status_message, self.stream)
+        if status_message == ZERO_TASKS_TO_DO_ARGUMENT:
+          # Item from MainThread to indicate we are done.
+          break
+    except Exception, e:  # pylint:disable=broad-except
+      self.stream.write('Exception in UIThread: %s\n' % e)

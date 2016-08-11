@@ -956,8 +956,10 @@ def LookUpGsutilVersion(gsutil_api, url_str):
 class DiscardMessagesQueue(object):
   """Emulates a Cloud API status queue but drops all messages."""
 
-  def put(self):  # pylint: disable=invalid-name
+  # pylint: disable=invalid-name, unused-argument
+  def put(self, message=None, timeout=None):
     pass
+  # pylint: enable=invalid-name, unused-argument
 
 
 def GetGsutilVersionModifiedTime():

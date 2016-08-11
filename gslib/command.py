@@ -56,6 +56,7 @@ from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.parallelism_framework_util import UI_JOIN_TIMEOUT
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
@@ -66,6 +67,7 @@ from gslib.sig_handling import MultithreadedMainSignalHandler
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.translation_helper import AclTranslation
@@ -1405,6 +1407,9 @@ class Command(HelpProvider):
       # start and it scrolled off-screen.
       self._MaybeSuggestGsutilDashM()
 
+    PutToQueueWithTimeout(self.gsutil_api.status_queue,
+                          FinalMessage(time.time()))
+
     # If the final iterated argument results in an exception, and that
     # exception modifies shared_attrs, we need to publish the results.
     worker_thread.shared_vars_updater.Update(caller_id, self)
@@ -1541,8 +1546,10 @@ class Command(HelpProvider):
 
     # Start the UI thread that is responsible for displaying operation status
     # (aggregated across processes and threads) to the user.
+    ui_thread = None
     if is_main_thread:
-      UIThread(glob_status_queue, sys.stderr, ui_controller, self.logger)
+      ui_thread = UIThread(glob_status_queue, sys.stderr, ui_controller,
+                           self.logger)
 
     if process_count > 1:
       # Wait here until either:
@@ -1580,6 +1587,7 @@ class Command(HelpProvider):
     # terminate.
     if is_main_thread:
       PutToQueueWithTimeout(glob_status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
+      ui_thread.join(timeout=UI_JOIN_TIMEOUT)
 
     # We encountered an exception from the producer thread before any arguments
     # were enqueued, but it wouldn't have been propagated, so we'll now
@@ -1593,6 +1601,8 @@ class Command(HelpProvider):
     if producer_thread.iterator_exception and fail_on_error:
       # pylint: disable=raising-bad-type
       raise producer_thread.iterator_exception
+    if is_main_thread and not parallel_operations_override:
+      PutToQueueWithTimeout(glob_status_queue, FinalMessage(time.time()))
 
   def _ApplyThreads(self, thread_count, process_count, recursive_apply_level,
                     status_queue, is_blocking_call=False, task_queue=None):

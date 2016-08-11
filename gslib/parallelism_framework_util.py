@@ -29,6 +29,11 @@ STATUS_QUEUE_OP_TIMEOUT = 5
 # completes, in seconds.
 SEEK_AHEAD_JOIN_TIMEOUT = 60
 
+# Maximum time to wait (join) on the UIThread after the Apply
+# completes, in seconds.
+UI_JOIN_TIMEOUT = 60
+
+
 class AtomicDict(object):
   """Thread-safe (and optionally process-safe) dictionary protected by a lock.
 

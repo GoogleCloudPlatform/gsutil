@@ -41,8 +41,11 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       The cumulative stderr output without the expected UI output.
     """
     ui_output_pattern = '[^\n\r]*objects][^\n\r]*[\n\r]'
+    final_message_pattern = 'Operation completed over[^\n]*'
     ui_spinner_list = ['\\\r', '|\r', '/\r', '-\r']
-    ui_lines_list = re.findall(ui_output_pattern, stderr) + ui_spinner_list
+    ui_lines_list = (re.findall(ui_output_pattern, stderr) +
+                     re.findall(final_message_pattern, stderr) +
+                     ui_spinner_list)
     for ui_line in ui_lines_list:
       stderr = stderr.replace(ui_line, '')
     return stderr

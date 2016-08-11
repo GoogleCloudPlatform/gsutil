@@ -50,6 +50,7 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import unittest
 from gslib.thread_message import FileMessage
+from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.thread_message import ProgressMessage
@@ -64,6 +65,7 @@ from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import MetadataManager
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
+from gslib.util import HumanReadableWithDecimalPlaces
 from gslib.util import MakeHumanReadable
 from gslib.util import ONE_KIB
 from gslib.util import Retry
@@ -125,10 +127,13 @@ def CheckUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
   # All files should be completed.
   files_completed_string = str(num_objects) + '/' + str(num_objects)
   test_case.assertIn(files_completed_string + description_string, content)
+  final_message = 'Operation completed over %s objects' % num_objects
   if not metadata:
     # The total_size must also been successfully transferred.
     total_size_string = BytesToFixedWidthString(total_size)
     test_case.assertIn(total_size_string + '/' + total_size_string, content)
+    final_message += '/%s' % HumanReadableWithDecimalPlaces(total_size)
+  test_case.assertIn(final_message, content)
 
 
 def CheckUiOutputWithNoMFlag(test_case, content, num_objects, total_size=0,
@@ -147,10 +152,13 @@ def CheckUiOutputWithNoMFlag(test_case, content, num_objects, total_size=0,
   # All files should be completed.
   files_completed_string = str(num_objects)
   test_case.assertIn(files_completed_string + description_string, content)
+  final_message = 'Operation completed over %s objects' % num_objects
   if not metadata:
     # The total_size must also been successfully transferred.
     total_size_string = BytesToFixedWidthString(total_size)
     test_case.assertIn(total_size_string + '/' + total_size_string, content)
+    final_message += '/%s' % HumanReadableWithDecimalPlaces(total_size)
+  test_case.assertIn(final_message, content)
 
 
 def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
@@ -183,6 +191,8 @@ def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
     test_case.assertIn(zero + '/' + total_size_string, content)
     # The total_size must have not been successfully transferred.
     test_case.assertNotIn(total_size_string + '/' + total_size_string, content)
+  final_message_prefix = 'Operation completed over'
+  test_case.assertNotIn(final_message_prefix, content)
 
 
 def CheckBrokenUiOutputWithNoMFlag(test_case, content, num_objects,
@@ -211,6 +221,8 @@ def CheckBrokenUiOutputWithNoMFlag(test_case, content, num_objects,
     test_case.assertIn(zero + '/' + total_size_string, content)
     # The total_size must have not been successfully transferred.
     test_case.assertNotIn(total_size_string + '/' + total_size_string, content)
+  final_message_prefix = 'Operation completed over'
+  test_case.assertNotIn(final_message_prefix, content)
 
 
 class TestUi(testcase.GsUtilIntegrationTestCase):
@@ -694,7 +706,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size)
 
   def test_ui_rewrite_with_m_flag(self):
-    """Tests UI output for rewrite and -m flag enabled.
+    """Tests UI output for rewrite and -m flag.
 
     Adapted from test_rewrite_stdin_args.
     """
@@ -945,6 +957,40 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # obtained by the SeekAheadMessage.
     self.assertNotIn('/' + str(num_objects + 1), content)
 
+  def test_ui_seek_ahead_zero_size(self):
+    """Tests the case where the SeekAheadThread returns total size of 0."""
+    current_time_ms = self.start_time
+    status_queue = Queue.Queue()
+    stream = StringIO.StringIO()
+    ui_controller = UIController(custom_time=current_time_ms)
+    ui_thread = UIThread(status_queue, stream, ui_controller)
+    PutToQueueWithTimeout(status_queue,
+                          SeekAheadMessage(100, 0, current_time_ms))
+    for i in range(100):
+      current_time_ms += 200
+      PutToQueueWithTimeout(
+          status_queue,
+          FileMessage(StorageUrlFromString('gs://foo%s' % i),
+                      StorageUrlFromString('bar%s' % i),
+                      current_time_ms,
+                      message_type=FileMessage.FILE_DOWNLOAD))
+    for i in range(100):
+      current_time_ms += 200
+      PutToQueueWithTimeout(
+          status_queue,
+          FileMessage(StorageUrlFromString('gs://foo%s' % i),
+                      StorageUrlFromString('bar%s' % i),
+                      current_time_ms,
+                      finished=True, message_type=FileMessage.FILE_DOWNLOAD))
+    PutToQueueWithTimeout(
+        status_queue,
+        ProducerThreadMessage(100, 0, current_time_ms, finished=True))
+    PutToQueueWithTimeout(status_queue,
+                          FinalMessage(current_time_ms))
+    PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
+    JoinThreadAndRaiseOnTimeout(ui_thread)
+    self.assertIn('100/100', stream.getvalue())
+
   def test_ui_empty_list(self):
     """Tests if status queue is empty after processed by UIThread."""
     status_queue = Queue.Queue()
@@ -990,7 +1036,8 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
         FileMessage(StorageUrlFromString(suri(fpath)), None, start_time + 20,
                     size=UPLOAD_SIZE, message_type=FileMessage.FILE_UPLOAD,
                     finished=True))
-
+    PutToQueueWithTimeout(ui_thread_status_queue,
+                          FinalMessage(start_time + 50))
     PutToQueueWithTimeout(ui_thread_status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
     content = stream.getvalue()
@@ -1295,7 +1342,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
                                     finished=True))
         PutToQueueWithTimeout(status_queue,
                               MetadataMessage(start_time + 26 + (i - 150)))
-
+    PutToQueueWithTimeout(status_queue, FinalMessage(start_time + 100))
     PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
     content = stream.getvalue()
