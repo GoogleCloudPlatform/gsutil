@@ -312,13 +312,13 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
   if uid_present:
     try:
       pwd.getpwuid(uid)
-    except KeyError:
+    except (KeyError, OverflowError):
       return (False, 'UID for %s doesn\'t exist on current system. uid: %d'
               % (url_str, uid))
   if gid_present:
     try:
       grp.getgrgid(gid)
-    except KeyError:
+    except (KeyError, OverflowError):
       return (False, 'GID for %s doesn\'t exist on current system. gid: %d'
               % (url_str, gid))
 
