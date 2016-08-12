@@ -548,9 +548,6 @@ class Command(HelpProvider):
     global ui_controller
     # pylint: enable=global-variable-undefined
     # pylint: enable=global-variable-not-assigned
-    ui_controller = UIController(
-        dump_status_messages_file=boto.config.get(
-            'GSUtil', 'dump_status_messages_file', None))
     # Global instance of a threaded logger object.
     self.logger = CreateGsutilLogger(self.command_name)
     if logging_filters:
@@ -560,6 +557,12 @@ class Command(HelpProvider):
     if self.command_spec is None:
       raise CommandException('"%s" command implementation is missing a '
                              'command_spec definition.' % self.command_name)
+
+    quiet_mode = not self.logger.isEnabledFor(logging.INFO)
+    ui_controller = UIController(
+        quiet_mode=quiet_mode,
+        dump_status_messages_file=boto.config.get(
+            'GSUtil', 'dump_status_messages_file', None))
 
     # Parse and validate args.
     self.args = self._TranslateDeprecatedAliases(args)
@@ -593,7 +596,7 @@ class Command(HelpProvider):
     self.gsutil_api = CloudApiDelegator(
         self.bucket_storage_uri_class, self.gsutil_api_map,
         self.logger,
-        MainThreadUIQueue(sys.stderr, ui_controller, logger=self.logger),
+        MainThreadUIQueue(sys.stderr, ui_controller),
         debug=self.debug, trace_token=self.trace_token,
         perf_trace_token=self.perf_trace_token)
     # Cross-platform path to run gsutil binary.
@@ -1548,8 +1551,7 @@ class Command(HelpProvider):
     # (aggregated across processes and threads) to the user.
     ui_thread = None
     if is_main_thread:
-      ui_thread = UIThread(glob_status_queue, sys.stderr, ui_controller,
-                           self.logger)
+      ui_thread = UIThread(glob_status_queue, sys.stderr, ui_controller)
 
     if process_count > 1:
       # Wait here until either:

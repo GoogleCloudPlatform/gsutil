@@ -290,7 +290,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     CheckUiOutputWithNoMFlag(self, stderr, 1, total_size=UPLOAD_SIZE)
 
-  def test_ui_download_mutliple_objects_with_m_flag(self):
+  def test_ui_download_multiple_objects_with_m_flag(self):
     """Tests UI for a multiple object download with the -m flag enabled.
 
     This test indirectly tests the correctness of ProducerThreadMessage in the
@@ -316,7 +316,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     CheckUiOutputWithMFlag(self, stderr, num_objects, total_size=total_size)
 
-  def test_ui_download_mutliple_objects_with_no_m_flag(self):
+  def test_ui_download_multiple_objects_with_no_m_flag(self):
     """Tests UI for a multiple object download with the -m flag not enabled.
 
     The UI should behave differently from the -m flag option because in the
@@ -920,7 +920,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     stream = StringIO.StringIO()
     # No time constraints for displaying messages.
     start_time = self.start_time
-    ui_controller = UIController(0, 0, 0, 0, start_time)
+    ui_controller = UIController(0, 0, 0, 0, custom_time=start_time)
     ui_thread = UIThread(status_queue, stream, ui_controller)
     num_objects = 10
     total_size = 1024**3
@@ -1018,7 +1018,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     stream = StringIO.StringIO()
     # No time constraints for displaying messages.
     start_time = self.start_time
-    ui_controller = UIController(0, 0, 0, 0, start_time)
+    ui_controller = UIController(0, 0, 0, 0, custom_time=start_time)
     main_thread_ui_queue = MainThreadUIQueue(stream, ui_controller)
     ui_thread = UIThread(ui_thread_status_queue, stream, ui_controller)
     PutToQueueWithTimeout(

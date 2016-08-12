@@ -19,7 +19,6 @@
 from __future__ import absolute_import
 
 from collections import deque
-import logging
 import Queue
 import sys
 import threading
@@ -108,7 +107,8 @@ class StatusMessageManager(object):
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
-               custom_time=None, verbose=False, console_width=80):
+               quiet_mode=False, custom_time=None, verbose=False,
+               console_width=80):
     """Instantiates a StatusMessageManager.
 
     Args:
@@ -127,6 +127,8 @@ class StatusMessageManager(object):
                                 throughput info. A non-positive value will
                                 ignore any time restrictions imposed by this
                                 field.
+      quiet_mode: If True, do not print status messages (but still process
+                  them for analytics reporting as necessary).
       custom_time: If a custom start_time is desired. Used for testing.
       verbose: Tells whether or not the operation is on verbose mode.
       console_width: Width to display on console. This should not adjust the
@@ -138,6 +140,7 @@ class StatusMessageManager(object):
     self.update_spinner_period = update_spinner_period
     self.sliding_throughput_period = sliding_throughput_period
     self.first_throughput_latency = first_throughput_latency
+    self.quiet_mode = quiet_mode
     self.custom_time = custom_time
     self.verbose = verbose
     self.console_width = console_width
@@ -233,7 +236,8 @@ class StatusMessageManager(object):
       self.num_objects = status_message.num_objects
 
     estimate_message += '\n'
-    stream.write(estimate_message)
+    if not self.quiet_mode:
+      stream.write(estimate_message)
 
   def ShouldTrackThroughput(self, cur_time):
     """Decides whether enough time has passed to start tracking throughput.
@@ -280,7 +284,8 @@ class StatusMessageManager(object):
               for testing.
     """
     self.UpdateSpinner()
-    stream.write(self.GetSpinner() + '\r')
+    if not self.quiet_mode:
+      stream.write(self.GetSpinner() + '\r')
 
   def UpdateThroughput(self, cur_time, cur_progress):
     """Updates throughput if the required period for calculation has passed.
@@ -332,8 +337,9 @@ class StatusMessageManager(object):
       string_to_print += (
           '/%s' % HumanReadableWithDecimalPlaces(self.total_size))
     remaining_width = self.console_width - len(string_to_print)
-    stream.write(('\n' + string_to_print + '.' +
-                  (max(remaining_width, 0) * ' ') + '\n'))
+    if not self.quiet_mode:
+      stream.write(('\n' + string_to_print + '.' +
+                    (max(remaining_width, 0) * ' ') + '\n'))
 
 
 class MetadataManager(StatusMessageManager):
@@ -349,7 +355,8 @@ class MetadataManager(StatusMessageManager):
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
-               custom_time=None, verbose=False, console_width=80):
+               quiet_mode=False, custom_time=None, verbose=False,
+               console_width=80):
     # pylint: disable=g-doc-args
     """Instantiates a MetadataManager.
 
@@ -361,7 +368,8 @@ class MetadataManager(StatusMessageManager):
         update_spinner_period=update_spinner_period,
         sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
-        custom_time=custom_time, verbose=verbose, console_width=console_width)
+        quiet_mode=quiet_mode, custom_time=custom_time, verbose=verbose,
+        console_width=console_width)
 
   def GetProgress(self):
     """Gets the progress for a MetadataManager.
@@ -463,7 +471,8 @@ class MetadataManager(StatusMessageManager):
         percentage_completed=percentage_completed, throughput=throughput,
         time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
-    stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
+    if not self.quiet_mode:
+      stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
 
   def CanHandleMessage(self, status_message):
     """Determines whether this manager is suitable for handling status_message.
@@ -519,7 +528,8 @@ class DataManager(StatusMessageManager):
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
-               custom_time=None, verbose=False, console_width=None):
+               quiet_mode=False, custom_time=None, verbose=False,
+               console_width=None):
     # pylint: disable=g-doc-args
     """Instantiates a DataManager.
 
@@ -531,7 +541,8 @@ class DataManager(StatusMessageManager):
         update_spinner_period=update_spinner_period,
         sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
-        custom_time=custom_time, verbose=verbose, console_width=console_width)
+        quiet_mode=quiet_mode, custom_time=custom_time, verbose=verbose,
+        console_width=console_width)
 
     self.first_item = True
 
@@ -818,7 +829,8 @@ class DataManager(StatusMessageManager):
         percentage_completed=percentage_completed,
         throughput=throughput, time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
-    stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
+    if not self.quiet_mode:
+      stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
 
   def CanHandleMessage(self, status_message):
     """Determines whether this manager is suitable for handling status_message.
@@ -845,7 +857,8 @@ class UIController(object):
 
   def __init__(self, update_message_period=1, update_spinner_period=0.6,
                sliding_throughput_period=5, first_throughput_latency=10,
-               custom_time=None, verbose=False, dump_status_messages_file=None):
+               quiet_mode=False, custom_time=None, verbose=False,
+               dump_status_messages_file=None):
     """Instantiates a UIController.
 
     Args:
@@ -861,6 +874,8 @@ class UIController(object):
       first_throughput_latency: Minimum waiting time before actually displaying
           throughput info. A non-positive value will ignore any time
           restrictions imposed by this field.
+      quiet_mode: If True, do not print status messages (but still process
+          them for analytics reporting as necessary).
       custom_time: If a custom start_time is desired. Used for testing.
       verbose: Tells whether or not the operation is on verbose mode.
       dump_status_messages_file: File path for logging all received status
@@ -872,6 +887,7 @@ class UIController(object):
     self.sliding_throughput_period = sliding_throughput_period
     self.first_throughput_latency = first_throughput_latency
     self.manager = None
+    self.quiet_mode = quiet_mode
     self.custom_time = custom_time
     self.console_width = 80  # Console width. Passed to manager.
     # List storing all estimation messages from SeekAheadThread or
@@ -930,8 +946,8 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                custom_time=self.custom_time, verbose=self.verbose,
-                console_width=self.console_width))
+                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
+                verbose=self.verbose, console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream,
                               cur_time=estimation_message.time)
@@ -959,8 +975,8 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                custom_time=self.custom_time, verbose=self.verbose,
-                console_width=self.console_width))
+                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
+                verbose=self.verbose, console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
       else:
@@ -970,8 +986,8 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                custom_time=self.custom_time, verbose=self.verbose,
-                console_width=self.console_width))
+                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
+                verbose=self.verbose, console_width=self.console_width))
 
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
@@ -1015,27 +1031,21 @@ class MainThreadUIQueue(object):
   decides the correct course of action.
   """
 
-  def __init__(self, stream, ui_controller, logger=None):
+  def __init__(self, stream, ui_controller):
     """Instantiates a _MainThreadUIQueue.
 
     Args:
       stream: Stream for printing messages.
       ui_controller: UIController to manage messages.
-      logger: Logger to use for this thread. Currently just used for checking -q
-              flag. If no logger is given, we use None and ignore any
-              restrictions.
     """
 
     super(MainThreadUIQueue, self).__init__()
-    self.logger = logger
-    self.status_queue = Queue.Queue()
     self.ui_controller = ui_controller
     self.stream = stream
 
   # pylint: disable=invalid-name, unused-argument
   def put(self, status_message, timeout=None):
-    if not self.logger or self.logger.isEnabledFor(logging.INFO):
-      self.ui_controller.Call(status_message, self.stream)
+    self.ui_controller.Call(status_message, self.stream)
   # pylint: enable=invalid-name, unused-argument
 
 
@@ -1051,24 +1061,19 @@ class UIThread(threading.Thread):
   decides the correct course of action.
   """
 
-  def __init__(self, status_queue, stream, ui_controller, logger=None,
-               timeout=1):
+  def __init__(self, status_queue, stream, ui_controller, timeout=1):
     """Instantiates a _UIThread.
 
     Args:
       status_queue: Queue for reporting status updates.
       stream: Stream for printing messages.
       ui_controller: UI controller to manage messages.
-      logger: Logger to use for this thread. Currently just used for checking -q
-              flag. If no logger is given, we use None and ignore any
-              restrictions.
       timeout: Timeout for getting a message.
     """
 
     super(UIThread, self).__init__()
     self.status_queue = status_queue
     self.stream = stream
-    self.logger = logger
     self.timeout = timeout
     self.ui_controller = ui_controller
     self.start()
@@ -1080,8 +1085,8 @@ class UIThread(threading.Thread):
           status_message = self.status_queue.get(timeout=self.timeout)
         except Queue.Empty:
           status_message = None
-        if not self.logger or self.logger.isEnabledFor(logging.INFO):
-          self.ui_controller.Call(status_message, self.stream)
+          continue
+        self.ui_controller.Call(status_message, self.stream)
         if status_message == ZERO_TASKS_TO_DO_ARGUMENT:
           # Item from MainThread to indicate we are done.
           break
