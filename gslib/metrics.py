@@ -435,7 +435,8 @@ class MetricsCollector(object):
 
     reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
                       'ReportMetrics("{0}", {1})').format(
-                          temp_metrics_file.name, log_level)
+                          temp_metrics_file.name,
+                          log_level).encode('string-escape')
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
