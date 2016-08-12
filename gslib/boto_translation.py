@@ -1039,7 +1039,7 @@ class BotoTranslation(CloudApi):
         '%s://%s' % (self.provider, bucket),
         suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
-        debug=self.debug)
+        debug=self.debug, validate=False)
 
   def _StorageUriForObject(self, bucket, object_name, generation=None):
     """Returns a boto storage_uri for the given object.
