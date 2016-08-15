@@ -164,9 +164,25 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # Test when gsutil is not part of the Cloud SDK and there is a UUID file.
     with mock.patch.dict(os.environ, values={'CLOUDSDK_WRAPPER': ''}):
       with mock.patch('os.path.exists', return_value=True):
-        MetricsCollector._CheckAndSetDisabledCache()
-        self.assertFalse(MetricsCollector._disabled_cache)
-        self.assertEqual(self.collector, MetricsCollector.GetCollector())
+        # Mock the contents of the file.
+        with mock.patch('__builtin__.open') as mock_open:
+          mock_open.return_value.__enter__ = lambda s: s
+
+          # Set the file.read() method to return the disabled text.
+          mock_open.return_value.read.return_value = metrics._DISABLED_TEXT
+          MetricsCollector._CheckAndSetDisabledCache()
+          self.assertTrue(MetricsCollector._disabled_cache)
+          self.assertEqual(None, MetricsCollector.GetCollector())
+
+          # Set the file.read() method to return a mock cid (analytics enabled).
+          mock_open.return_value.read.return_value = 'mock_cid'
+          MetricsCollector._CheckAndSetDisabledCache()
+          self.assertFalse(MetricsCollector._disabled_cache)
+          self.assertEqual(self.collector, MetricsCollector.GetCollector())
+
+          # Check that open/read was called twice.
+          self.assertEqual(2, len(mock_open.call_args_list))
+          self.assertEqual(2, len(mock_open.return_value.read.call_args_list))
 
   def testConfigValueValidation(self):
     """Tests the validation of potentially PII config values."""

@@ -183,6 +183,11 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     with open(dst_version_file, 'r') as f:
       self.assertEqual(f.read(), expected_version)
 
+    # If the analytics prompt was given, that means we disabled analytics. We
+    # should reset to the default by deleting the UUID file.
+    if analytics_prompt:
+      os.unlink(_UUID_FILE_PATH)
+
 
 class UpdateUnitTest(testcase.GsUtilUnitTestCase):
   """Tests the functionality of commands/update.py."""

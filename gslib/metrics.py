@@ -50,6 +50,9 @@ _GOOGLE_CORP_HOST_RE = re.compile('.*google.com$')
 
 _UUID_FILE_PATH = os.path.expanduser(os.path.join('~',
                                                   '.gsutil/analytics-uuid'))
+# If this string is written to analytics-uuid, that means that the user said
+# 'no' to analytics, and it should thus be disabled.
+_DISABLED_TEXT = 'DISABLED'
 
 # Analytics collection uses the environment variable 'GSUTIL_TEST_ANALYTICS'.
 # - A value of '1' completely disables analytics collection. This is used during
@@ -277,10 +280,16 @@ class MetricsCollector(object):
     elif os.environ.get('GSUTIL_TEST_ANALYTICS') == '2':
       cls._disabled_cache = False
       cls.StartTestCollector()
+
+    # Non-testing cases involve checking the cloud SDK wrapper and the analytics
+    # uuid file.
     elif os.environ.get('CLOUDSDK_WRAPPER') == '1':
       cls._disabled_cache = not os.environ.get('GA_CID')
+    elif os.path.exists(_UUID_FILE_PATH):
+      with open(_UUID_FILE_PATH) as f:
+        cls._disabled_cache = (f.read() == _DISABLED_TEXT)
     else:
-      cls._disabled_cache = not os.path.exists(_UUID_FILE_PATH)
+      cls._disabled_cache = True
 
   @classmethod
   def StartTestCollector(cls, endpoint='https://example.com',
@@ -594,11 +603,13 @@ def CheckAndMaybePromptForAnalyticsEnabling():
         'gsutil developers rely on user feedback to make improvements to the '
         'tool. Would you like to send anonymous usage statistics to help '
         'improve gsutil? [y/N]') + ' ')
+
+    text_to_write = _DISABLED_TEXT
     if enable_analytics.lower()[0] == 'y':
-      CreateDirIfNeeded(os.path.dirname(_UUID_FILE_PATH))
-      with open(_UUID_FILE_PATH, 'w') as f:
-        cid = uuid.uuid4().hex
-        f.write(cid)
+      text_to_write = uuid.uuid4().hex
+    CreateDirIfNeeded(os.path.dirname(_UUID_FILE_PATH))
+    with open(_UUID_FILE_PATH, 'w') as f:
+      f.write(text_to_write)
 
 
 def _GetTimeInMillis():
