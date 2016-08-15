@@ -1,3 +1,35 @@
+Release 4.21 (release date: 2016-08-16)
+=======================================
+New Features
+------------------
+- The console output for many commands has been improved to display
+  command progress.
+- The cp, mv, and rsync commands now support a -P option that preserves
+  POSIX file attributes from the source. Currently, mode, gid, uid,
+  atime, and mtime attributes are supported for uploads, downloads,
+  and copies.
+- gsutil can now optionally report anonymous usage statistics that help
+  gsutil developers improve the tool. For non-gcloud distributions,
+  prompts have been added to the config and update commands. Prompts can
+  be disabled via the disable_analytics_prompt value in the .boto
+  configuration file.
+- Added the iam commmand, which can be used to set IAM policies on
+  Google Cloud Storage buckets and objects. This feature is currently in
+  alpha and requires a whitelist application to use it - see
+  "gsutil help iam" for  details.
+- The hash command now supports retrieving hashes for cloud objects.
+
+Bug Fixes
+------------------
+- Fixed a bug where rsync -e -r could fail for subdirectories with
+  broken symlinks.
+- Fixed an access error when interacting with S3 user-specific
+  directories.
+
+Other Changes
+------------------
+- Updated boto library dependency to 2.42.0.
+
 Release 4.20 (release date: 2016-07-20)
 =======================================
 New Features
