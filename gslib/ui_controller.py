@@ -1023,9 +1023,11 @@ class MainThreadUIQueue(object):
 
   This class emulates a queue to cover main-thread activity before or after
   Apply, as well as for the single-threaded, single-process case, i.e.,
-  _SequentialApply. When multiple threads or processes are used, during calls
-  to Apply the main thread is waiting for work to complete, and this queue
-  should remain unused until Apply returns.
+  _SequentialApply. When multiple threads or processes are used during calls
+  to Apply, the main thread is waiting for work to complete, and this queue
+  must remain unused until Apply returns. Code producing arguments for
+  Apply (such as the NameExpansionIterator) must not post messages to this
+  queue to avoid race conditions with the UIThread.
 
   This class sends the messages it receives to UIController, which
   decides the correct course of action.
