@@ -29,7 +29,9 @@ import subprocess
 import sys
 import tarfile
 
+import boto
 import gslib
+from gslib.metrics import _UUID_FILE_PATH
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
@@ -157,12 +159,19 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
         'The update command cannot run with user data in the gsutil directory',
         stderr.replace(os.linesep, ' '))
 
+    # Determine whether we'll need to decline the analytics prompt.
+    analytics_prompt = not (
+        os.path.exists(_UUID_FILE_PATH) or
+        boto.config.get_value('GSUtil', 'disable_analytics_prompt'))
+
+    update_input = 'n\r\ny\r\n' if analytics_prompt else 'y\r\n'
+
     # Now do the real update, which should succeed.
     p = subprocess.Popen(prefix + [gsutil_relative_dst, 'update', '-f',
                                    suri(src_tarball)],
                          cwd=tmpdir_dst, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-    (_, stderr) = p.communicate(input='y\r\n')
+    (_, stderr) = p.communicate(input=update_input)
     p.stdout.close()
     p.stderr.close()
     self.assertEqual(p.returncode, 0, msg=(

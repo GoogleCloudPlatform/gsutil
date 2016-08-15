@@ -29,6 +29,7 @@ import gslib
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.util import CompareVersions
@@ -303,6 +304,7 @@ class UpdateCommand(Command):
                                'installed.', informational=True)
 
     if not no_prompt:
+      CheckAndMaybePromptForAnalyticsEnabling()
       if (2, 6) == sys.version_info[:2]:
         print('\n'.join(textwrap.wrap(
             'WARNING: You are using Python 2.6, which gsutil will stop '
