@@ -91,8 +91,8 @@ _DETAILED_HELP_TEXT = ("""
   project ID or the project number from the Google Cloud Platform Console
   dashboard.
 
-  Note that the project name a user-friendly name that you can choose, and it
-  is not the same thing as project ID as required by the gsutil mb and ls
+  Note that the project name is a user-friendly name that you can choose. It is
+  not the same thing as the project ID that is required by the gsutil mb and ls
   commands.
 """)
 
