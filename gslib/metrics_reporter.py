@@ -16,8 +16,13 @@
 import logging
 import os
 import pickle
+import sys
 
-from gslib.util import GetNewHttp
+try:
+  from gslib.util import GetNewHttp  # pylint:disable=g-import-not-at-top
+except Exception:  # pylint: disable=broad-except
+  # Do nothing if we can't import the lib.
+  sys.exit(0)
 
 LOG_FILE_PATH = os.path.expanduser(os.path.join('~', '.gsutil/metrics.log'))
 

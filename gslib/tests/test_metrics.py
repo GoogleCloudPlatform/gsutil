@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+from collections import namedtuple
 import logging
 import os
 import pickle
@@ -24,6 +25,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import urllib
 
 from apitools.base.py import exceptions as apitools_exceptions
 from apitools.base.py import http_wrapper
@@ -49,29 +51,50 @@ import mock
 
 # A piece of the URL logged for all of the tests.
 GLOBAL_DIMENSIONS_URL = '&a=b&c=d&cd1=cmd1+action1&cd2=x%2Cy%2Cz&cd3=opta%2Coptb&cd6=CommandException&cm1=0'
-# A list of metrics collected for all tests.
-COMMAND_AND_ERROR_METRICS = set([
-    metrics._Metric(
+
+# A TestMetric is equivalent to a _Metric, except the body is a frozenset of
+# key=value strings rather than a URL-encoded string. This allows us to compare
+# URLs that might be ordered differently.
+TestMetric = namedtuple('TestMetric',
+                        ['endpoint', 'method', 'body', 'user_agent'])
+
+GLOBAL_PARAMETERS = ['a=b', 'c=d', 'cd1=cmd1 action1', 'cd2=x,y,z',
+                     'cd3=opta,optb', 'cd6=CommandException', 'cm1=0',
+                     'ev=0', 'el={0}'.format(VERSION)]
+COMMAND_AND_ERROR_TEST_METRICS = set([
+    TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=cmd1+action1&el={1}&ev=0&cm2=3{2}'.format(
-            metrics._GA_COMMANDS_CATEGORY, VERSION, GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  ['ec=' + metrics._GA_COMMANDS_CATEGORY,
+                   'ea=cmd1 action1', 'cm2=3']),
         'user-agent-007'),
-    metrics._Metric(
+    TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=retryable_error_type_2&el={1}&ev=0&cm2=1{2}'.format(
-            metrics._GA_ERRORRETRY_CATEGORY, VERSION, GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  ['ec=' + metrics._GA_ERRORRETRY_CATEGORY,
+                   ('ea=retryable_error_type_1'), ('cm2=2')]),
         'user-agent-007'),
-    metrics._Metric(
+    TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=retryable_error_type_1&el={1}&ev=0&cm2=2{2}'.format(
-            metrics._GA_ERRORRETRY_CATEGORY, VERSION, GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  [('ec=' + metrics._GA_ERRORRETRY_CATEGORY),
+                   ('ea=retryable_error_type_2'), ('cm2=1')]),
         'user-agent-007'),
-    metrics._Metric(
+    TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=CommandException&el={1}&ev=0{2}'.format(
-            metrics._GA_ERRORFATAL_CATEGORY, VERSION, GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  [('ec=' + metrics._GA_ERRORFATAL_CATEGORY),
+                   ('ea=CommandException')]),
         'user-agent-007')
 ])
+
+
+def MetricListToTestMetricSet(metric_list):
+  """Convert a list of _Metrics to a set of TestMetrics."""
+  def MetricToTestMetric(metric):
+    body = frozenset(urllib.unquote_plus(metric.body).split('&'))
+    return TestMetric(metric.endpoint, metric.method, body, metric.user_agent)
+  return set([MetricToTestMetric(metric) for metric in metric_list])
 
 
 def _TryExceptAndPass(func, *args, **kwargs):
@@ -318,27 +341,28 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # them.
     self.assertEqual([], self.collector._metrics)
     self.collector._CollectCommandAndErrorMetrics()
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
+    self.assertEqual(COMMAND_AND_ERROR_TEST_METRICS,
+                     MetricListToTestMetricSet(self.collector._metrics))
 
     metrics.LogPerformanceSummary(True)
-    perfsum1_metric = metrics._Metric(
+    perfsum1_metric = TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=Upload&el={1}&ev=0{2}'.format(metrics._GA_PERFSUM_CATEGORY,
-                                                 VERSION,
-                                                 GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  ['ec=' + metrics._GA_PERFSUM_CATEGORY, ('ea=Upload')]),
         'user-agent-007')
-    COMMAND_AND_ERROR_METRICS.add(perfsum1_metric)
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
+    COMMAND_AND_ERROR_TEST_METRICS.add(perfsum1_metric)
+    self.assertEqual(COMMAND_AND_ERROR_TEST_METRICS,
+                     MetricListToTestMetricSet(self.collector._metrics))
 
     metrics.LogPerformanceSummary(False)
-    perfsum2_metric = metrics._Metric(
+    perfsum2_metric = TestMetric(
         'https://example.com', 'POST',
-        'ec={0}&ea=Download&el={1}&ev=0{2}'.format(metrics._GA_PERFSUM_CATEGORY,
-                                                   VERSION,
-                                                   GLOBAL_DIMENSIONS_URL),
+        frozenset(GLOBAL_PARAMETERS +
+                  ['ec=' + metrics._GA_PERFSUM_CATEGORY, ('ea=Download')]),
         'user-agent-007')
-    COMMAND_AND_ERROR_METRICS.add(perfsum2_metric)
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(self.collector._metrics))
+    COMMAND_AND_ERROR_TEST_METRICS.add(perfsum2_metric)
+    self.assertEqual(COMMAND_AND_ERROR_TEST_METRICS,
+                     MetricListToTestMetricSet(self.collector._metrics))
 
   def testCommandCollection(self):
     """Tests the collection of command parameters."""
@@ -589,7 +613,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     # Check that the metrics were correctly dumped into the temp file.
     with open(metrics_file.name, 'rb') as metrics_file:
       reported_metrics = pickle.load(metrics_file)
-    self.assertEqual(COMMAND_AND_ERROR_METRICS, set(reported_metrics))
+    self.assertEqual(COMMAND_AND_ERROR_TEST_METRICS,
+                     MetricListToTestMetricSet(reported_metrics))
 
   @mock.patch('time.time', new=mock.MagicMock(return_value=0))
   def testMetricsPosting(self):
