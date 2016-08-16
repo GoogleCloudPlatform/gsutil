@@ -496,9 +496,10 @@ def InitializeUserGroups():
   """
   global USER_GROUPS
   user_id = os.getuid()
+  user_name = pwd.getpwuid(user_id).pw_name
   USER_GROUPS = set(
       # Primary group
       [pwd.getpwuid(user_id).pw_gid] +
       # Secondary groups
       [g.gr_gid for g in grp.getgrall()
-       if pwd.getpwuid(user_id).pw_name in g.gr_mem])
+       if user_name in g.gr_mem])
