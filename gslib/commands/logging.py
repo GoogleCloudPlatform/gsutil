@@ -89,7 +89,7 @@ _GET_DESCRIPTION = """
   with a JSON document that looks something like this:
 
     {
-      "logBucket": "my_logging_bucket”,
+      "logBucket": "my_logging_bucket",
       "logObjectPrefix": "AccessLog"
     }
 

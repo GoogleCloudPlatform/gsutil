@@ -90,7 +90,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-a] [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-U] [-x] src_url dst_url
+  gsutil rsync [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-U] [-x] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
