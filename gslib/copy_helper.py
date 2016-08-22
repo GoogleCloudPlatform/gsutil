@@ -2771,9 +2771,9 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
   dir_name = os.path.dirname(dst_url.object_name)
   if dir_name and not os.path.exists(dir_name):
     os.makedirs(dir_name)
-  dst_fp = open(dst_url.object_name, 'wb')
-  start_time = time.time()
-  shutil.copyfileobj(src_fp, dst_fp)
+  with open(dst_url.object_name, 'wb') as dst_fp:
+    start_time = time.time()
+    shutil.copyfileobj(src_fp, dst_fp)
   end_time = time.time()
   PutToQueueWithTimeout(
       status_queue,
@@ -3011,6 +3011,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         and the source is an unsupported type.
     CommandException: if other errors encountered.
   """
+  # TODO: Remove elapsed_time as it is currently unused by all callers.
   if headers:
     dst_obj_headers = headers.copy()
   else:

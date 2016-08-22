@@ -56,6 +56,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.util import CheckFreeSpace
 from gslib.util import DivideAndCeil
 from gslib.util import GetCloudApiInstance
+from gslib.util import GetDiskCounters
 from gslib.util import GetFileSize
 from gslib.util import GetMaxRetryDelay
 from gslib.util import HumanReadableToBytes
@@ -1226,8 +1227,10 @@ class PerfDiagCommand(Command):
 
     Adapted from the psutil module's psutil._pslinux.disk_io_counters:
       http://code.google.com/p/psutil/source/browse/trunk/psutil/_pslinux.py
+
     Originally distributed under under a BSD license.
     Original Copyright (c) 2009, Jay Loden, Dave Daeschler, Giampaolo Rodola.
+
     Returns:
       A dictionary containing disk names mapped to the disk counters from
       /disk/diskstats.
@@ -1962,7 +1965,7 @@ class PerfDiagCommand(Command):
       if netstat_output:
         self.results['sysinfo']['netstat_start'] = netstat_output
       if IS_LINUX:
-        self.results['sysinfo']['disk_counters_start'] = self._GetDiskCounters()
+        self.results['sysinfo']['disk_counters_start'] = GetDiskCounters()
       # Record bucket URL.
       self.results['bucket_uri'] = str(self.bucket_url)
       self.results['json_format'] = 'perfdiag'
@@ -1988,7 +1991,7 @@ class PerfDiagCommand(Command):
       if netstat_output:
         self.results['sysinfo']['netstat_end'] = netstat_output
       if IS_LINUX:
-        self.results['sysinfo']['disk_counters_end'] = self._GetDiskCounters()
+        self.results['sysinfo']['disk_counters_end'] = GetDiskCounters()
 
       self.results['total_requests'] = self.total_requests
       self.results['request_errors'] = self.request_errors

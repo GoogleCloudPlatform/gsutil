@@ -31,7 +31,7 @@ SEEK_AHEAD_JOIN_TIMEOUT = 60
 
 # Maximum time to wait (join) on the UIThread after the Apply
 # completes, in seconds.
-UI_JOIN_TIMEOUT = 60
+UI_THREAD_JOIN_TIMEOUT = 60
 
 
 class AtomicDict(object):
@@ -70,6 +70,10 @@ class AtomicDict(object):
   def delete(self, key):
     with self.lock:
       del self.dict[key]
+
+  def values(self):
+    with self.lock:
+      return self.dict.values()
 
   def Increment(self, key, inc, default_value=0):
     """Atomically updates the stored value associated with the given key.

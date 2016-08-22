@@ -596,3 +596,59 @@ class _ImplicitBucketSubdirIterator(object):
       else:
         raise CommandException(
             '_ImplicitBucketSubdirIterator got a bucket reference %s' % blr)
+
+
+class SourceUrlTypeIterator(object):
+  """Iterator wrapper for keeping track of source URL types.
+
+  This is used in the cp command for collecting analytics PerformanceSummary
+  info, because there may be multiple source URLs and we want to know if any of
+  them are file URLs, if any of them are cloud URLs, if any of them require
+  daisy chain operations, and if any use different providers. The source URL
+  type information will be aggregated at the end of _SequentialApply or
+  _ParallelApply.
+  """
+
+  def __init__(self, name_expansion_iterator, is_daisy_chain, dst_url):
+    """Instantiates the iterator.
+
+    Args:
+      name_expansion_iterator: The NameExpansionIterator to wrap.
+      is_daisy_chain: The -D option in cp might have already been specified, in
+          which case we do not need to check again for daisy chain operations.
+      dst_url: The destination URL.
+    """
+    self.orig_iterator = name_expansion_iterator
+    self.is_daisy_chain = is_daisy_chain
+    if dst_url.IsCloudUrl():
+      self.dst_url_scheme = dst_url.scheme
+    else:
+      self.dst_url_scheme = None
+    self.has_file_src = False
+    self.has_cloud_src = False
+    self.provider_types = []
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    """Keeps track of URL types as the command iterates over arguments."""
+    elt = self.orig_iterator.next()
+
+    # Check if we've seen a file source.
+    if not self.has_file_src and elt.source_storage_url.IsFileUrl():
+      self.has_file_src = True
+    # Check if we've seen a cloud source.
+    if not self.has_cloud_src and elt.source_storage_url.IsCloudUrl():
+      self.has_cloud_src = True
+    # Check if we've seen a daisy-chain condition.
+    if (not self.is_daisy_chain and
+        self.dst_url_scheme is not None and
+        elt.source_storage_url.IsCloudUrl() and
+        elt.source_storage_url.scheme != self.dst_url_scheme):
+      self.is_daisy_chain = True
+    # Check if we've seen a new provider type.
+    if elt.source_storage_url.scheme not in self.provider_types:
+      self.provider_types.append(elt.source_storage_url.scheme)
+
+    return elt

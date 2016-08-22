@@ -35,8 +35,11 @@ import uuid
 import boto
 
 from gslib import VERSION
+from gslib.util import CalculateThroughput
 from gslib.util import CreateDirIfNeeded
+from gslib.util import GetDiskCounters
 from gslib.util import HumanReadableToBytes
+from gslib.util import IS_LINUX
 
 _GA_ENDPOINT = 'https://ssl.google-analytics.com/collect'
 
@@ -46,7 +49,10 @@ _GA_COMMANDS_CATEGORY = 'Command'
 _GA_ERRORRETRY_CATEGORY = 'RetryableError'
 _GA_ERRORFATAL_CATEGORY = 'FatalError'
 _GA_PERFSUM_CATEGORY = 'PerformanceSummary'
-_GOOGLE_CORP_HOST_RE = re.compile('.*google.com$')
+# This approximates whether the host is on a Google corporate network,
+# but since users choose their own hostnames, it is not guaranteed to be
+# accurate.
+_GOOGLE_CORP_HOST_RE = re.compile(r'.*google\.com$')
 
 _UUID_FILE_PATH = os.path.expanduser(os.path.join('~',
                                                   '.gsutil/analytics-uuid'))
@@ -82,15 +88,34 @@ _Metric = namedtuple('_Metric', [
 ])
 
 # Map from descriptive labels to the key labels that GA recognizes.
-_GA_LABEL_MAP = {'Command Name': 'cd1',
+_GA_LABEL_MAP = {'Event Category': 'ec',
+                 'Event Action': 'ea',
+                 'Event Label': 'el',
+                 'Event Value': 'ev',
+                 'Command Name': 'cd1',
                  'Global Options': 'cd2',
                  'Command-Level Options': 'cd3',
                  'Config': 'cd4',
                  'Command Alias': 'cd5',
                  'Fatal Error': 'cd6',
+                 'Parallelism Strategy': 'cd7',
+                 'Source URL Type': 'cd8',
+                 'Provider Types': 'cd9',
+                 'Timestamp': 'cd10',
                  'Execution Time': 'cm1',
                  'Retryable Errors': 'cm2',
-                 'Is Google Corp User': 'cm3'}
+                 'Is Google Corp User': 'cm3',
+                 'Num Processes': 'cm4',
+                 'Num Threads': 'cm5',
+                 'Number of Files/Objects Transferred': 'cm6',
+                 'Size of Files/Objects Transferred': 'cm7',
+                 'Average Overall Throughput': 'cm8',
+                 'Num Retryable Service Errors': 'cm9',
+                 'Num Retryable Network Errors': 'cm10',
+                 'Thread Idle Time Percent': 'cm11',
+                 'Slowest Thread Throughput': 'cm12',
+                 'Fastest Thread Throughput': 'cm13',
+                 'Disk I/O Time': 'cm14'}
 
 
 class MetricsCollector(object):
@@ -108,20 +133,14 @@ class MetricsCollector(object):
 
     Args:
       ga_tid: The Google Analytics tracking ID to use for metrics collection.
-              Defaults to _GA_TID.
-      endpoint: The URL to send requests to. Defaults to _GA_ENDPOINT.
+      endpoint: The URL to send requests to.
     """
     self.start_time = _GetTimeInMillis()
-    cid = MetricsCollector._GetCID()
     self.endpoint = endpoint
     self.logger = logging.getLogger()
 
-    # Used by Google Analytics to track user OS.
-    self.user_agent = '{system}/{release}'.format(system=platform.system(),
-                                                  release=platform.release())
-
-    # A string of non-PII config values.
-    config_values = self._ValidateAndGetConfigValues()
+    # Calculate parameters to send with every GA event, stored as ga_params.
+    cid = MetricsCollector._GetCID()
 
     # gsutil developers should set this config value to true in order to hit the
     # testing GA property rather than the production property.
@@ -129,14 +148,21 @@ class MetricsCollector(object):
     if use_test_property:
       ga_tid = _GA_TID_TESTING
 
+    # A string of non-PII config values.
+    config_values = self._ValidateAndGetConfigValues()
+
     # Approximate if this is a Google corporate user.
     is_corp_user = 0
     if _GOOGLE_CORP_HOST_RE.match(socket.gethostname()):
       is_corp_user = 1
-    # Parameters to send with every GA event.
+
     self.ga_params = {'v': '1', 'tid': ga_tid, 'cid': cid, 't': 'event',
                       _GA_LABEL_MAP['Config']: config_values,
                       _GA_LABEL_MAP['Is Google Corp User']: is_corp_user}
+
+    # Used by Google Analytics to track user OS.
+    self.user_agent = '{system}/{release}'.format(system=platform.system(),
+                                                  release=platform.release())
 
     # A list of collected, unsent _Metrics. This list is currently bounded by
     # the number of retryable error types, and should not grow too large so that
@@ -145,6 +171,10 @@ class MetricsCollector(object):
 
     # Store a count of the number of each type of retryable error.
     self.retryable_errors = defaultdict(int)
+
+    # This will be set to keep track of information necessary for a
+    # PerformanceSummary if the cp or rsync commands are run.
+    self.perf_sum_params = None
 
   _instance = None
   # Whether analytics collection is disabled or not.
@@ -313,7 +343,8 @@ class MetricsCollector(object):
       ga_params = {'a': 'b', 'c': 'd'}
     cls._instance.ga_params = ga_params
     cls._instance.user_agent = user_agent
-    cls._instance.start_time = 0
+    if os.environ['GSUTIL_TEST_ANALYTICS'] != '2':
+      cls._instance.start_time = 0
 
   @classmethod
   def StopTestCollector(cls, original_instance=None):
@@ -367,8 +398,8 @@ class MetricsCollector(object):
     """
     return self.ga_params.get(_GA_LABEL_MAP[param_name])
 
-  def CollectGAMetric(self, category, action,
-                      label=VERSION, value=0, **custom_params):
+  def CollectGAMetric(self, category, action, label=VERSION, value=0,
+                      execution_time=None, **custom_params):
     """Adds a GA metric with the given parameters to the metrics queue.
 
     Args:
@@ -376,24 +407,192 @@ class MetricsCollector(object):
       action: str, the GA Event action.
       label: str, the GA Event label.
       value: int, the GA Event value.
+      execution_time: int, the execution time to record in ms.
       **custom_params: A dictionary of key, value pairs containing custom
-        metrics and dimensions to send with the GA Event.
+          metrics and dimensions to send with the GA Event.
     """
-    params = [('ec', category), ('ea', action), ('el', label), ('ev', value)]
+    params = [('ec', category), ('ea', action), ('el', label), ('ev', value),
+              (_GA_LABEL_MAP['Timestamp'], _GetTimeInMillis())]
     params.extend([(k, v) for k, v in custom_params.iteritems()
                    if v is not None])
     params.extend([(k, v) for k, v in self.ga_params.iteritems()
                    if v is not None])
 
     # Log how long after the start of the program this event happened.
-    params.append((_GA_LABEL_MAP['Execution Time'],
-                   _GetTimeInMillis() - self.start_time))
+    if execution_time is None:
+      execution_time = _GetTimeInMillis() - self.start_time
+    params.append((_GA_LABEL_MAP['Execution Time'], execution_time))
 
-    data = urllib.urlencode(params)
-    self._metrics.append(_Metric(endpoint=self.endpoint,
-                                 method='POST',
-                                 body=data,
-                                 user_agent=self.user_agent))
+    data = urllib.urlencode(sorted(params))
+    self._metrics.append(_Metric(endpoint=self.endpoint, method='POST',
+                                 body=data, user_agent=self.user_agent))
+
+  # TODO: Collect CPU usage (Linux-only), latency to first byte, and slowest
+  # thread process.
+  class _PeformanceSummaryParams(object):
+    """This class contains information to create a PerformanceSummary event."""
+
+    def __init__(self):
+      self.num_processes = 0
+      self.num_threads = 0
+      self.num_retryable_service_errors = 0
+      self.num_retryable_network_errors = 0
+      self.provider_types = set()
+
+      # Store the disk stats at the beginning of the command so we can calculate
+      # time spent on disk I/O.
+      if IS_LINUX:
+        self.disk_counters_start = GetDiskCounters()
+
+      # True if using fan parallelism, when the user specifies the -m option.
+      self.uses_fan = False
+      # True if the command uses slice parallelism.
+      self.uses_slice = False
+
+      # The total times in seconds spent idle and executing by threads.
+      self.thread_idle_time = 0
+      self.thread_execution_time = 0
+
+      # This maps (process id, thread id) to a _ThreadThroughputInfo object,
+      # keeping track of elapsed time and bytes processed.
+      self.thread_throughputs = defaultdict(self._ThreadThroughputInformation)
+
+      # Data transfer statistics.
+      self.avg_throughput = None
+      # This is the amount of time spent on the Apply call of cp and rsync.
+      self.total_elapsed_time = None
+      self.total_bytes_transferred = None
+      self.num_objects_transferred = 0
+
+      # Information to determine the type of transfer.
+      self.is_daisy_chain = False
+      self.has_file_dst = False
+      self.has_cloud_dst = False
+      self.has_file_src = False
+      self.has_cloud_src = False
+
+    class _ThreadThroughputInformation(object):
+      """A class to keep track of throughput information for a single thread."""
+
+      def __init__(self):
+        self.total_bytes_transferred = 0
+        self.total_elapsed_time = 0
+        # Start time in seconds of the current task. None if the thread is not
+        # currently executing a task.
+        self.task_start_time = None
+        # The size of the current task, if any. A FileMessage gives us size at
+        # the beginning of a transfer, but we don't want to count these bytes
+        # until the transfer is complete.
+        self.task_size = None
+
+      def LogTaskStart(self, start_time, bytes_to_transfer):
+        self.task_start_time = start_time
+        self.task_size = bytes_to_transfer
+
+      def LogTaskEnd(self, end_time):
+        self.total_elapsed_time += end_time - self.task_start_time
+        self.total_bytes_transferred += self.task_size
+        self.task_start_time = None
+        self.task_size = None
+
+      def GetThroughput(self):
+        return CalculateThroughput(self.total_bytes_transferred,
+                                   self.total_elapsed_time)
+
+  def UpdatePerformanceSummaryParams(self, params):
+    """Updates the _PeformanceSummaryParams object.
+
+    Args:
+      params: A dictionary of keyword arguments.
+        - uses_fan: True if the command uses fan parallelism.
+        - uses_slice: True if the command uses slice parallelism.
+        - avg_throughput: The average throughput of the data transfer.
+        - is_daisy_chain: True if the transfer uses the daisy-chain method.
+        - has_file_dst: True if the transfer's destination is a file URL.
+        - has_cloud_dst: True if the transfer's destination is in the cloud.
+        - has_file_src: True if the transfer has a file URL as a source.
+        - has_cloud_src: True if the transfer has a cloud URL as a source.
+        - total_elapsed_time: The total amount of time spent on Apply.
+        - total_bytes_transferred: The total number of bytes transferred.
+        - thread_idle_time: The additional amount of time that threads spent
+                            idle in Apply.
+        - thread_execution_time: The additional amount of time that threads
+                                 spent executing in Apply.
+        - num_retryable_service_errors: The additional number of retryable
+                                        service errors that occurred.
+        - num_retryable_network_errors: The additional number of retryable
+                                        network errors that occurred.
+        - num_processes: The number of processes used in a call to Apply.
+        - num_threads: The number of threads used in a call to Apply.
+        - num_objects_transferred: The total number of objects transferred, as
+                                   specified by a ProducerThreadMessage.
+        - provider_types: A list of additional provider types used.
+        - file_message: A FileMessage used to calculate thread throughput and
+                        number of objects transferred in the non-parallel case.
+    """
+    if self.GetGAParam('Command Name') not in ('cp', 'rsync'):
+      return
+    if self.perf_sum_params is None:
+      self.perf_sum_params = self._PeformanceSummaryParams()
+
+    # Most of the parameters are logged only one time, but FileMessages are much
+    # more common, with a minimum of 2 per file copied. Since FileMessages are
+    # logged on their own, we can avoid performing the other checks.
+    if 'file_message' in params:
+      self._ProcessFileMessage(file_message=params['file_message'])
+      return
+
+    for param_name, param in params.iteritems():
+      # These parameters start in 0 or False state and can be updated to a
+      # non-zero value or True.
+      if param_name in ('uses_fan', 'uses_slice', 'avg_throughput',
+                        'is_daisy_chain', 'has_file_dst', 'has_cloud_dst',
+                        'has_file_src', 'has_cloud_src', 'total_elapsed_time',
+                        'total_bytes_transferred', 'num_objects_transferred'):
+        cur_value = getattr(self.perf_sum_params, param_name)
+        if not cur_value:
+          setattr(self.perf_sum_params, param_name, param)
+
+      # These parameters need to be incremented.
+      if param_name in ('thread_idle_time', 'thread_execution_time',
+                        'num_retryable_service_errors',
+                        'num_retryable_network_errors'):
+        cur_value = getattr(self.perf_sum_params, param_name)
+        setattr(self.perf_sum_params, param_name, cur_value + param)
+
+      # Different calls to Apply might use different numbers of processes and
+      # threads; we want the maximum of these.
+      if param_name in ('num_processes', 'num_threads'):
+        cur_value = getattr(self.perf_sum_params, param_name)
+        if cur_value < param:
+          setattr(self.perf_sum_params, param_name, param)
+
+      # If we have new provider types, add them to our set.
+      if param_name == 'provider_types':
+        self.perf_sum_params.provider_types.update(param)
+
+  def _ProcessFileMessage(self, file_message):
+    """Processes FileMessages for thread throughput calculations.
+
+    Update a thread's throughput based on the FileMessage, which marks the start
+    or end of a file or component transfer. The FileMessage provides the number
+    of bytes transferred as well as start and end time.
+
+    Args:
+      file_message: The FileMessage to process.
+    """
+    thread_info = (self.perf_sum_params.thread_throughputs[(
+        file_message.process_id, file_message.thread_id)])
+    if file_message.finished:
+      # If this operation doesn't use parallelism, we manually update the
+      # number of objects transferred rather than relying on
+      # ProducerThreadMessages.
+      if not (self.perf_sum_params.uses_slice or
+              self.perf_sum_params.uses_fan):
+        self.perf_sum_params.num_objects_transferred += 1
+      thread_info.LogTaskEnd(file_message.time)
+    else:
+      thread_info.LogTaskStart(file_message.time, file_message.size)
 
   def _CollectCommandAndErrorMetrics(self):
     """Aggregates command and error info and adds them to the metrics list."""
@@ -416,6 +615,95 @@ class MetricsCollector(object):
       self.CollectGAMetric(category=_GA_ERRORFATAL_CATEGORY,
                            action=fatal_error_type)
 
+  def _CollectPerformanceSummaryMetric(self):
+    """Aggregates PerformanceSummary info and adds the metric to the list."""
+    if self.perf_sum_params is None:
+      return
+
+    custom_params = {}
+
+    # These parameters need no further processing.
+    for attr_name, label in (
+        ('num_processes', 'Num Processes'), ('num_threads', 'Num Threads'),
+        ('num_retryable_service_errors', 'Num Retryable Service Errors'),
+        ('num_retryable_network_errors', 'Num Retryable Network Errors'),
+        ('avg_throughput', 'Average Overall Throughput'),
+        ('num_objects_transferred', 'Number of Files/Objects Transferred'),
+        ('total_bytes_transferred', 'Size of Files/Objects Transferred')):
+      custom_params[_GA_LABEL_MAP[label]] = getattr(self.perf_sum_params,
+                                                    attr_name)
+
+    # Calculate the disk stats again to calculate deltas of time spent on I/O.
+    if IS_LINUX:
+      disk_start = self.perf_sum_params.disk_counters_start
+      disk_end = GetDiskCounters()
+      # Read and write time are the 5th and 6th elements of the stat tuple.
+      custom_params[_GA_LABEL_MAP['Disk I/O Time']] = (
+          sum([stat[4] + stat[5] for stat in disk_end.values()]) -
+          sum([stat[4] + stat[5] for stat in disk_start.values()]))
+
+    # Determine source URL type(s).
+    if self.perf_sum_params.has_cloud_src:
+      src_url_type = 'both' if self.perf_sum_params.has_file_src else 'cloud'
+    else:
+      src_url_type = 'file'
+    custom_params[_GA_LABEL_MAP['Source URL Type']] = src_url_type
+
+    # Determine the type of parallelism used, if any.
+    if self.perf_sum_params.uses_fan:
+      strategy = 'both' if self.perf_sum_params.uses_slice else 'fan'
+    else:
+      strategy = 'slice' if self.perf_sum_params.uses_slice else 'none'
+    custom_params[_GA_LABEL_MAP['Parallelism Strategy']] = strategy
+
+    # Determine the percentage of time that threads spent idle.
+    total_time = (self.perf_sum_params.thread_idle_time +
+                  self.perf_sum_params.thread_execution_time)
+    if total_time:
+      custom_params[_GA_LABEL_MAP['Thread Idle Time Percent']] = (
+          float(self.perf_sum_params.thread_idle_time) / float(total_time))
+
+    # Determine the slowest and fastest thread throughputs.
+    if self.perf_sum_params.thread_throughputs:
+      throughputs = [thread.GetThroughput() for thread in
+                     self.perf_sum_params.thread_throughputs.values()]
+      custom_params[_GA_LABEL_MAP['Slowest Thread Throughput']] = min(
+          throughputs)
+      custom_params[_GA_LABEL_MAP['Fastest Thread Throughput']] = max(
+          throughputs)
+
+    # Determine the provider(s) used.
+    custom_params[_GA_LABEL_MAP['Provider Types']] = ','.join(
+        sorted(self.perf_sum_params.provider_types))
+
+    # Determine the transfer types.
+    # This maps a transfer type to whether the condition has been met for it.
+    transfer_types = {'CloudToCloud': self.perf_sum_params.has_cloud_src and
+                                      self.perf_sum_params.has_cloud_dst,
+                      'CloudToFile': self.perf_sum_params.has_cloud_src and
+                                     self.perf_sum_params.has_file_dst,
+                      'DaisyChain': self.perf_sum_params.is_daisy_chain,
+                      'FileToCloud': self.perf_sum_params.has_file_src and
+                                     self.perf_sum_params.has_cloud_dst,
+                      'FileToFile': self.perf_sum_params.has_file_src and
+                                    self.perf_sum_params.has_file_dst}
+    action = ','.join(
+        sorted([transfer_type
+                for transfer_type, cond in transfer_types.iteritems() if cond]))
+
+    # Use the time spent on Apply rather than the total command execution time
+    # for the execution time metric. This aligns more closely with throughput
+    # and bytes transferred, and the corresponding Command event already tells
+    # us the total time. If PerformanceSummary events are expanded, this may not
+    # reflect one Apply call as commands like rm may call Apply twice. Currently
+    # Apply is timed directly in the RunCommand methods of cp and rsync.
+    apply_execution_time = _GetTimeInMillis(
+        self.perf_sum_params.total_elapsed_time)
+
+    self.CollectGAMetric(
+        category=_GA_PERFSUM_CATEGORY, action=action,
+        execution_time=apply_execution_time, **custom_params)
+
   def ReportMetrics(self, wait_for_report=False, log_level=None):
     """Reports the collected metrics using a separate async process.
 
@@ -426,6 +714,7 @@ class MetricsCollector(object):
         purposes.
     """
     self._CollectCommandAndErrorMetrics()
+    self._CollectPerformanceSummaryMetric()
     if not self._metrics:
       return
 
@@ -440,7 +729,6 @@ class MetricsCollector(object):
       pickle.dump(self._metrics, temp_metrics_file)
     logging.debug(self._metrics)
     self._metrics = []
-    self.retryable_errors.clear()
 
     reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
                       'ReportMetrics("{0}", {1})').format(
@@ -481,9 +769,32 @@ def CaptureAndLogException(func):
   def Wrapper(*args, **kwds):
     try:
       return func(*args, **kwds)
+    except Exception, e:  # pylint:disable=broad-except
+      logging.debug('Exception captured in %s during metrics collection: %s',
+                    func.__name__, e)
+  return Wrapper
+
+
+def CaptureThreadStatException(func):
+  """Function decorator to ignore an exception on collecting thread stats.
+
+  An exception can happen if the thread_stats dictionary's manager gets shutdown
+  before the thread's process is successfully killed. See
+  _ThreadStat.AggregateStat for how we handle that case.
+
+  Args:
+    func: The function to wrap.
+
+  Returns:
+    The wrapped function.
+  """
+  @wraps(func)
+  def Wrapper(*args, **kwds):
+    try:
+      return func(*args, **kwds)
     except:  # pylint:disable=bare-except
-      logging.debug('Exception captured in %s during metrics collection',
-                    func.__name__)
+      # Don't surface the exception to the user.
+      pass
   return Wrapper
 
 
@@ -544,16 +855,21 @@ def LogCommandParams(command_name=None, subcommands=None, global_opts=None,
 
 
 @CaptureAndLogException
-def LogRetryableError(error_type):
+def LogRetryableError(message):
   """Logs that a retryable error was caught for a gsutil command.
 
   Args:
-    error_type: str, The error type, e.g. ServiceException, SocketError, etc.
+    message: The RetryableErrorMessage posted to the global status queue.
   """
   collector = MetricsCollector.GetCollector()
   if collector:
     # Update the retryable_errors defaultdict.
-    collector.retryable_errors[error_type] += 1
+    collector.retryable_errors[message.error_type] += 1
+    # Update the service error or network error count.
+    if message.is_service_error:
+      LogPerformanceSummaryParams(num_retryable_service_errors=1)
+    else:
+      LogPerformanceSummaryParams(num_retryable_network_errors=1)
 
 
 @CaptureAndLogException
@@ -569,24 +885,22 @@ def LogFatalError(exception):
         {_GA_LABEL_MAP['Fatal Error']: exception.__class__.__name__})
 
 
-# TODO: Add all custom dimensions and metrics for performance summaries.
 @CaptureAndLogException
-def LogPerformanceSummary(is_upload):
-  """Logs a performance summary.
+def LogPerformanceSummaryParams(**params_to_update):
+  """Logs parameters necessary for a PerformanceSummary.
 
   gsutil periodically monitors its own threads; at the end of the execution of
   each cp/rsync command, it will present a performance summary of the command
   run.
 
   Args:
-    is_upload: bool, True if the transfer was an upload, false if download.
+    **params_to_update: A dictionary. See UpdatePerformanceSummaryParams for
+        details. The argument ambiguity at this level allows for flexibility in
+        dealing with arguments that are processed similarly.
   """
-  action = 'Download'
-  if is_upload:
-    action = 'Upload'
   collector = MetricsCollector.GetCollector()
   if collector:
-    collector.CollectGAMetric(category=_GA_PERFSUM_CATEGORY, action=action)
+    collector.UpdatePerformanceSummaryParams(params_to_update)
 
 
 @CaptureAndLogException
@@ -612,5 +926,7 @@ def CheckAndMaybePromptForAnalyticsEnabling():
       f.write(text_to_write)
 
 
-def _GetTimeInMillis():
-  return int(time.time() * 1000)
+def _GetTimeInMillis(time_in_sec=None):
+  if time_in_sec is None:
+    time_in_sec = time.time()
+  return int(time_in_sec * 1000)

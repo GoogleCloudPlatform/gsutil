@@ -20,6 +20,9 @@ Messages are added to the status queue.
 import os
 import threading
 
+from apitools.base.py.exceptions import Error as apitools_service_error
+from six.moves.http_client import error as six_service_error
+
 
 class StatusMessage(object):
   """General StatusMessage class.
@@ -78,6 +81,12 @@ class RetryableErrorMessage(StatusMessage):
     # 'socket' while PyPy uses '_socket' instead.
     if exception.__class__.__module__ in ('socket', '_socket'):
       self.error_type = 'Socket' + exception.__class__.__name__.capitalize()
+
+    if (isinstance(exception, apitools_service_error) or
+        isinstance(exception, six_service_error)):
+      self.is_service_error = True
+    else:
+      self.is_service_error = False
 
     # The number of retries consumed to display to the user.
     self.num_retries = num_retries
@@ -305,6 +314,32 @@ class ProducerThreadMessage(StatusMessage):
 
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
-    return ('%s(%s, %s, %s, finished=%s, process_id=%s, thread_id=%s)' %
+    return ('%s(%s, %s, %s, finished=%s)' %
             (self.__class__.__name__, self.num_objects, self.size,
-             self.time, self.finished, self.process_id, self.thread_id))
+             self.time, self.finished))
+
+
+class PerformanceSummaryMessage(StatusMessage):
+  """Message class to log PerformanceSummary parameters.
+
+  This class acts as a relay between a multiprocess/multithread situation and
+  the global status queue, from which the PerformanceSummary info gets consumed.
+  """
+
+  def __init__(self, message_time, uses_slice):
+    """Creates a PerformanceSummaryMessage.
+
+    Args:
+      message_time: Float representing when message was created (seconds since
+          Epoch).
+      uses_slice: True if the command uses slice parallelism.
+    """
+    super(PerformanceSummaryMessage, self).__init__(message_time,
+                                                    process_id=None,
+                                                    thread_id=None)
+    self.uses_slice = uses_slice
+
+  def __str__(self):
+    """Returns a string with a valid constructor for this message."""
+    return ('%s(%s, %s)' %
+            (self.__class__.__name__, self.time, self.uses_slice))

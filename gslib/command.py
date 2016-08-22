@@ -50,13 +50,16 @@ from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
+from gslib.metrics import CaptureThreadStatException
+from gslib.metrics import LogPerformanceSummaryParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
+from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import UI_JOIN_TIMEOUT
+from gslib.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
@@ -69,6 +72,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
+from gslib.thread_message import PerformanceSummaryMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
@@ -214,7 +218,7 @@ global manager, consumer_pools, task_queues, caller_id_lock, caller_id_counter
 global total_tasks, call_completed_map, global_return_values_map
 global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
 global current_max_recursive_level, shared_vars_map, shared_vars_list_map
-global class_map, worker_checking_level_lock, failure_count
+global class_map, worker_checking_level_lock, failure_count, thread_stats
 global glob_status_queue, ui_controller
 
 
@@ -285,7 +289,7 @@ def InitializeMultiprocessingVariables():
   # declarations.
   # pylint: disable=global-variable-undefined
   global manager, consumer_pools, task_queues, caller_id_lock, caller_id_counter
-  global total_tasks, call_completed_map, global_return_values_map
+  global total_tasks, call_completed_map, global_return_values_map, thread_stats
   global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
   global current_max_recursive_level, shared_vars_map, shared_vars_list_map
   global class_map, worker_checking_level_lock, failure_count, glob_status_queue
@@ -334,6 +338,10 @@ def InitializeMultiprocessingVariables():
   shared_vars_map = AtomicDict(manager=manager)
   shared_vars_list_map = AtomicDict(manager=manager)
 
+  # Map from (process id, thread id) to a _ThreadStat object (see WorkerThread).
+  # Used to keep track of thread idle time and execution time.
+  thread_stats = AtomicDict(manager=manager)
+
   # Map from caller_id to calling class.
   class_map = manager.dict()
 
@@ -380,7 +388,7 @@ def InitializeThreadingVariables():
   # pylint: disable=global-variable-undefined
   global global_return_values_map, shared_vars_map, failure_count
   global caller_id_finished_count, shared_vars_list_map, total_tasks
-  global need_pool_or_done_cond, call_completed_map, class_map
+  global need_pool_or_done_cond, call_completed_map, class_map, thread_stats
   global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
   caller_id_counter = 0
   caller_id_finished_count = AtomicDict()
@@ -392,6 +400,7 @@ def InitializeThreadingVariables():
   need_pool_or_done_cond = threading.Condition()
   shared_vars_list_map = AtomicDict()
   shared_vars_map = AtomicDict()
+  thread_stats = AtomicDict()
   task_queues = []
   total_tasks = AtomicDict()
   glob_status_queue = Queue.Queue(MAX_QUEUE_SIZE)
@@ -1239,8 +1248,12 @@ class Command(HelpProvider):
 
   class ParallelOverrideReason(object):
     """Enum class to describe purpose of overriding parallel operations."""
+    # For the case when we use slice parallelism.
     SLICE = 'slice'
+    # For the case when we run a helper Apply call (such as in the _DiffIterator
+    # of rsync) and override to make the command go faster.
     SPEED = 'speed'
+    # For when we run Apply calls in perfdiag.
     PERFDIAG = 'perfdiag'
 
   def Apply(self, func, args_iterator, exception_handler,
@@ -1281,6 +1294,12 @@ class Command(HelpProvider):
     Returns:
       Results from spawned threads.
     """
+    # This is initialized in Initialize(Multiprocessing|Threading)Variables
+    # pylint: disable=global-variable-not-assigned
+    # pylint: disable=global-variable-undefined
+    global thread_stats
+    # pylint: enable=global-variable-not-assigned
+    # pylint: enable=global-variable-undefined
     if shared_attrs:
       original_shared_vars_values = {}  # We'll add these back in at the end.
       for name in shared_attrs:
@@ -1294,6 +1313,11 @@ class Command(HelpProvider):
 
     is_main_thread = (self.recursive_apply_level == 0
                       and self.sequential_caller_id == -1)
+
+    if is_main_thread:
+      # This initializes the initial performance summary parameters.
+      LogPerformanceSummaryParams(
+          num_processes=process_count, num_threads=thread_count)
 
     # We don't honor the fail_on_error flag in the case of multiple threads
     # or processes.
@@ -1331,6 +1355,8 @@ class Command(HelpProvider):
           usable_processes_count, thread_count, should_return_results,
           fail_on_error, seek_ahead_iterator=seek_ahead_iterator,
           parallel_operations_override=parallel_operations_override)
+      if is_main_thread:
+        _AggregateThreadStats()
     else:
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
                             arg_checker, should_return_results, fail_on_error)
@@ -1405,6 +1431,7 @@ class Command(HelpProvider):
         task = Task(func, args, caller_id, exception_handler,
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
+
     if sequential_call_count >= gslib.util.GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
@@ -1416,6 +1443,9 @@ class Command(HelpProvider):
     # If the final iterated argument results in an exception, and that
     # exception modifies shared_attrs, we need to publish the results.
     worker_thread.shared_vars_updater.Update(caller_id, self)
+
+    # Now that all the work is done, log the types of source URLs encountered.
+    self._ProcessSourceUrlTypes(args_iterator)
 
   # pylint: disable=g-doc-args
   def _ParallelApply(self, func, args_iterator, exception_handler, caller_id,
@@ -1470,6 +1500,12 @@ class Command(HelpProvider):
     # pylint: enable=global-variable-not-assigned
     # pylint: enable=global-variable-undefined
     is_main_thread = self.recursive_apply_level == 0
+
+    if (parallel_operations_override == self.ParallelOverrideReason.SLICE
+        and self.recursive_apply_level <= 1):
+      # The operation uses slice parallelism if the recursive apply level > 0 or
+      # if we're executing _ParallelApply without the -m option.
+      glob_status_queue.put(PerformanceSummaryMessage(time.time(), True))
 
     if not IS_WINDOWS and is_main_thread:
       # For multi-thread or multi-process scenarios, the main process must
@@ -1589,7 +1625,9 @@ class Command(HelpProvider):
     # terminate.
     if is_main_thread:
       PutToQueueWithTimeout(glob_status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
-      ui_thread.join(timeout=UI_JOIN_TIMEOUT)
+      ui_thread.join(timeout=UI_THREAD_JOIN_TIMEOUT)
+      # Now that all the work is done, log the types of source URLs encountered.
+      self._ProcessSourceUrlTypes(producer_thread.args_iterator)
 
     # We encountered an exception from the producer thread before any arguments
     # were enqueued, but it wouldn't have been propagated, so we'll now
@@ -1605,6 +1643,16 @@ class Command(HelpProvider):
       raise producer_thread.iterator_exception
     if is_main_thread and not parallel_operations_override:
       PutToQueueWithTimeout(glob_status_queue, FinalMessage(time.time()))
+
+  def _ProcessSourceUrlTypes(self, args_iterator):
+    """Logs the URL type information to analytics collection."""
+    if not isinstance(args_iterator, SourceUrlTypeIterator):
+      return
+    LogPerformanceSummaryParams(
+        is_daisy_chain=args_iterator.is_daisy_chain,
+        has_file_src=args_iterator.has_file_src,
+        has_cloud_src=args_iterator.has_cloud_src,
+        provider_types=args_iterator.provider_types)
 
   def _ApplyThreads(self, thread_count, process_count, recursive_apply_level,
                     status_queue, is_blocking_call=False, task_queue=None):
@@ -1824,10 +1872,10 @@ class ProducerThread(threading.Thread):
     args = None
     try:
       total_size = 0
-      args_iterator = iter(self.args_iterator)
+      self.args_iterator = iter(self.args_iterator)
       while True:
         try:
-          args = args_iterator.next()
+          args = self.args_iterator.next()
         except StopIteration, e:
           break
         except Exception, e:  # pylint: disable=broad-except
@@ -1964,6 +2012,12 @@ class WorkerThread(threading.Thread):
   Note that this thread is NOT started upon instantiation because the function-
   calling logic is also used in the single-threaded case.
   """
+  # This is initialized in Initialize(Multiprocessing|Threading)Variables
+  # pylint: disable=global-variable-not-assigned
+  # pylint: disable=global-variable-undefined
+  global thread_stats
+  # pylint: enable=global-variable-not-assigned
+  # pylint: enable=global-variable-undefined
 
   def __init__(self, task_queue, logger, worker_semaphore=None,
                bucket_storage_uri_class=None, gsutil_api_map=None, debug=0,
@@ -1985,6 +2039,9 @@ class WorkerThread(threading.Thread):
       status_queue: Queue for reporting status updates.
     """
     super(WorkerThread, self).__init__()
+
+    self.pid = os.getpid()
+    self.init_time = time.time()
     self.task_queue = task_queue
     self.worker_semaphore = worker_semaphore
     self.daemon = True
@@ -1999,6 +2056,25 @@ class WorkerThread(threading.Thread):
       self.thread_gsutil_api = CloudApiDelegator(
           bucket_storage_uri_class, gsutil_api_map, logger, status_queue,
           debug=debug)
+
+  @CaptureThreadStatException
+  def _StartBlockedTime(self):
+    """Update the thread_stats AtomicDict before task_queue.get() is called."""
+    if thread_stats.get((self.pid, self.ident)) is None:
+      thread_stats[(self.pid, self.ident)] = _ThreadStat(self.init_time)
+    # While this read/modify/write is not an atomic operation on the dict,
+    # we are protected since the (process ID, thread ID) tuple is unique
+    # to this thread, making this thread the only reader/writer for this key.
+    thread_stat = thread_stats[(self.pid, self.ident)]
+    thread_stat.StartBlockedTime()
+    thread_stats[(self.pid, self.ident)] = thread_stat
+
+  @CaptureThreadStatException
+  def _EndBlockedTime(self):
+    """Update the thread_stats AtomicDict after task_queue.get() is called."""
+    thread_stat = thread_stats[(self.pid, self.ident)]
+    thread_stat.EndBlockedTime()
+    thread_stats[(self.pid, self.ident)] = thread_stat
 
   def PerformTask(self, task, cls):
     """Makes the function call for a task.
@@ -2040,7 +2116,9 @@ class WorkerThread(threading.Thread):
 
   def run(self):
     while True:
+      self._StartBlockedTime()
       task = self.task_queue.get()
+      self._EndBlockedTime()
       caller_id = task.caller_id
 
       # Get the instance of the command with the appropriate context.
@@ -2051,6 +2129,62 @@ class WorkerThread(threading.Thread):
         self.cached_classes[caller_id] = cls
 
       self.PerformTask(task, cls)
+
+
+class _ThreadStat(object):
+  """Stores thread idle and execution time statistics."""
+
+  def __init__(self, init_time):
+    self.total_idle_time = 0
+    # The last time EndBlockedTime was called, which is the last time a
+    # task_queue.get() completed or when we initialized the thread.
+    self.end_block_time = init_time
+    # The last time StartBlockedTime was called, which is the last time a
+    # task_queue.get() call started.
+    self.start_block_time = time.time()
+    # Between now and thread initialization, we were not blocked.
+    self.total_execution_time = 0
+
+  def StartBlockedTime(self):
+    self.start_block_time = time.time()
+    exec_time = self.start_block_time - self.end_block_time
+    self.total_execution_time += exec_time
+
+  def EndBlockedTime(self):
+    self.end_block_time = time.time()
+    idle_time = self.end_block_time - self.start_block_time
+    self.total_idle_time += idle_time
+
+  def AggregateStat(self, end_time):
+    """Decide final stats upon Apply completion."""
+    if self.end_block_time > self.start_block_time:
+      # Apply ended before we blocked on task_queue.get(), or there was an
+      # exception during StartBlockedTime. In both of these cases, we were not
+      # blocked on task_queue.get() and so can add this time to execution time.
+      self.total_execution_time += end_time - self.end_block_time
+    else:
+      # Apply ended while we were blocked on task_queue.get(), or there was an
+      # exception during EndBlockedTime. In both of these cases, we were in the
+      # midst of or just finishing a task_queue.get() call, and so can add this
+      # time to idle time.
+      self.total_idle_time += end_time - self.start_block_time
+
+
+def _AggregateThreadStats():
+  """At the end of the top-level Apply call, aggregate the thread stats dict.
+
+  This should only be called in the main process and thread because it logs to
+  the MetricsCollector.
+  """
+  cur_time = time.time()
+  total_idle_time = total_execution_time = 0
+  for thread_stat in thread_stats.values():
+    thread_stat.AggregateStat(cur_time)
+    total_idle_time += thread_stat.total_idle_time
+    total_execution_time += thread_stat.total_execution_time
+  LogPerformanceSummaryParams(
+      thread_idle_time=total_idle_time,
+      thread_execution_time=total_execution_time)
 
 
 class _SharedVariablesUpdater(object):

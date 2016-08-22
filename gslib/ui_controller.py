@@ -24,11 +24,13 @@ import sys
 import threading
 import time
 
+from gslib.metrics import LogPerformanceSummaryParams
 from gslib.metrics import LogRetryableError
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.thread_message import FileMessage
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
+from gslib.thread_message import PerformanceSummaryMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.thread_message import ProgressMessage
 from gslib.thread_message import RetryableErrorMessage
@@ -239,6 +241,14 @@ class StatusMessageManager(object):
     if not self.quiet_mode:
       stream.write(estimate_message)
 
+  def _HandlePerformanceSummaryMessage(self, status_message):
+    """Handles a PerformanceSummaryMessage.
+
+    Args:
+      status_message: The PerformanceSummaryMessage to be processed.
+    """
+    LogPerformanceSummaryParams(uses_slice=status_message.uses_slice)
+
   def ShouldTrackThroughput(self, cur_time):
     """Decides whether enough time has passed to start tracking throughput.
 
@@ -410,6 +420,10 @@ class MetadataManager(StatusMessageManager):
       self._HandleProducerThreadMessage(status_message)
     elif isinstance(status_message, MetadataMessage):
       self._HandleMetadataMessage(status_message)
+    elif isinstance(status_message, RetryableErrorMessage):
+      LogRetryableError(status_message)
+    elif isinstance(status_message, PerformanceSummaryMessage):
+      self._HandlePerformanceSummaryMessage(status_message)
     self.old_progress.append(
         self._ThroughputInformation(self.objects_finished, status_message.time))
 
@@ -484,7 +498,9 @@ class MetadataManager(StatusMessageManager):
       False otherwise.
     """
     if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
-                                   MetadataMessage, FinalMessage)):
+                                   MetadataMessage, FinalMessage,
+                                   RetryableErrorMessage,
+                                   PerformanceSummaryMessage)):
       return True
     return False
 
@@ -743,10 +759,18 @@ class DataManager(StatusMessageManager):
       else:
         # Component info.
         self._HandleComponentDescription(status_message)
+      LogPerformanceSummaryParams(file_message=status_message)
 
     elif isinstance(status_message, ProgressMessage):
       # Progress info.
       self._HandleProgressMessage(status_message)
+
+    elif isinstance(status_message, RetryableErrorMessage):
+      LogRetryableError(status_message)
+
+    elif isinstance(status_message, PerformanceSummaryMessage):
+      self._HandlePerformanceSummaryMessage(status_message)
+
     self.old_progress.append(
         self._ThroughputInformation(self.new_progress, status_message.time))
 
@@ -842,7 +866,9 @@ class DataManager(StatusMessageManager):
       False otherwise.
     """
     if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
-                                   FileMessage, ProgressMessage, FinalMessage)):
+                                   FileMessage, ProgressMessage, FinalMessage,
+                                   RetryableErrorMessage,
+                                   PerformanceSummaryMessage)):
       return True
     return False
 
@@ -924,6 +950,8 @@ class UIController(object):
         and self.manager.num_objects
         and not self.printed_final_message):
       self.printed_final_message = True
+      LogPerformanceSummaryParams(
+          num_objects_transferred=self.manager.num_objects)
       self.manager.PrintFinalSummaryMessage(stream)
 
   def Call(self, status_message, stream, cur_time=None):
@@ -958,9 +986,6 @@ class UIController(object):
       # class contains a Unicode attribute.
       self.dump_status_message_fp.write(str(status_message))
       self.dump_status_message_fp.write('\n')
-    if isinstance(status_message, RetryableErrorMessage):
-      LogRetryableError(status_message.error_type)
-      return
     if not cur_time:
       cur_time = status_message.time
     if not self.manager:

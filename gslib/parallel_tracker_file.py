@@ -172,7 +172,7 @@ def ValidateParallelCompositeTrackerData(
       command_obj.Apply(
           delete_func, components_to_delete,
           delete_exc_handler, arg_checker=gslib.command.DummyArgChecker,
-          parallel_operations_override=True)
+          parallel_operations_override=command_obj.ParallelOverrideReason.SPEED)
     except:  # pylint: disable=bare-except
       # Regardless of why we can't clean up old components, need to proceed
       # with the user's original intent to upload the file, so merely warn.

@@ -48,6 +48,7 @@ from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
 from gslib.hashing_helper import SLOW_CRCMOD_WARNING
+from gslib.metrics import LogPerformanceSummaryParams
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.posix_util import ATIME_ATTR
 from gslib.posix_util import ConvertDatetimeToPOSIX
@@ -75,7 +76,9 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyCustomMetadata
 from gslib.translation_helper import GenerationFromUrlAndString
+from gslib.util import CalculateThroughput
 from gslib.util import CreateCustomMetadata
+from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_WINDOWS
@@ -1195,11 +1198,15 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         tmp_obj_metadata = apitools_messages.Object()
         tmp_obj_metadata.metadata = custom_metadata
         CopyCustomMetadata(tmp_obj_metadata, src_obj_metadata, override=True)
-        copy_helper.PerformCopy(
+        copy_result = copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,
             _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
             headers=cls.headers, is_rsync=True,
             preserve_posix=cls.preserve_posix_attrs)
+        if copy_result is not None:
+          (_, bytes_transferred, _, _) = copy_result
+          with cls.stats_lock:
+            cls.total_bytes_transferred += bytes_transferred
       except SkipUnsupportedObjectError, e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
@@ -1326,7 +1333,6 @@ class RsyncCommand(Command):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
-  total_bytes_transferred = 0
 
   def _InsistContainer(self, url_str, treat_nonexistent_object_as_subdir):
     """Sanity checks that URL names an existing container.
@@ -1355,6 +1361,11 @@ class RsyncCommand(Command):
   def RunCommand(self):
     """Command entry point for the rsync command."""
     self._ParseOpts()
+
+    self.total_bytes_transferred = 0
+    # Use a lock to ensure accurate statistics in the face of
+    # multi-threading/multi-processing.
+    self.stats_lock = CreateLock()
     if not UsingCrcmodExtension(crcmod):
       if self.compute_file_checksums:
         self.logger.warn(SLOW_CRCMOD_WARNING)
@@ -1363,6 +1374,13 @@ class RsyncCommand(Command):
 
     src_url = self._InsistContainer(self.args[0], False)
     dst_url = self._InsistContainer(self.args[1], True)
+    is_daisy_chain = (src_url.IsCloudUrl() and dst_url.IsCloudUrl() and
+                      src_url.scheme != dst_url.scheme)
+    LogPerformanceSummaryParams(
+        has_file_src=src_url.IsFileUrl(), has_cloud_src=src_url.IsCloudUrl(),
+        has_file_dst=dst_url.IsFileUrl(), has_cloud_dst=dst_url.IsCloudUrl(),
+        is_daisy_chain=is_daisy_chain, uses_fan=self.parallel_operations,
+        provider_types=[src_url.scheme, dst_url.scheme])
 
     self.source_metadata_fields = GetSourceFieldsNeededForCopy(
         dst_url.IsCloudUrl(), self.skip_unsupported_objects, self.preserve_acl,
@@ -1371,9 +1389,9 @@ class RsyncCommand(Command):
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0
 
-    # List of attributes to share/manage across multiple processes in
+    # Tuple of attributes to share/manage across multiple processes in
     # parallel (-m) mode.
-    shared_attrs = ['op_failure_count']
+    shared_attrs = ('op_failure_count', 'total_bytes_transferred')
 
     for signal_num in GetCaughtSignals():
       RegisterSignalHandler(signal_num, _HandleSignals)
@@ -1390,12 +1408,22 @@ class RsyncCommand(Command):
         _AvoidChecksumAndListingDiffIterator(diff_iterator))
 
     self.logger.info('Starting synchronization')
+    start_time = time.time()
     try:
       self.Apply(_RsyncFunc, diff_iterator, _RsyncExceptionHandler,
                  shared_attrs, arg_checker=_DiffToApplyArgChecker,
                  fail_on_error=True, seek_ahead_iterator=seek_ahead_iterator)
     finally:
       CleanUpTempFiles()
+
+    end_time = time.time()
+    self.total_elapsed_time = end_time - start_time
+    self.total_bytes_per_second = CalculateThroughput(
+        self.total_bytes_transferred, self.total_elapsed_time)
+    LogPerformanceSummaryParams(
+        avg_throughput=self.total_bytes_per_second,
+        total_elapsed_time=self.total_elapsed_time,
+        total_bytes_transferred=self.total_bytes_transferred)
 
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''

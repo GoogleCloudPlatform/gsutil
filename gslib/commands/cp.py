@@ -37,8 +37,10 @@ from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.metrics import LogPerformanceSummaryParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
+from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.posix_util import InitializeUserGroups
 from gslib.posix_util import POSIXAttributes
@@ -46,6 +48,7 @@ from gslib.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.util import CalculateThroughput
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import GetCloudApiInstance
@@ -903,12 +906,12 @@ class CpCommand(Command):
         raise CommandException('This sync will orphan file(s), please fix their'
                                ' permissions before trying again.')
 
-    elapsed_time = bytes_transferred = 0
+    bytes_transferred = 0
     try:
       if copy_helper_opts.use_manifest:
         self.manifest.Initialize(
             exp_src_url.url_string, dst_url.url_string)
-      (elapsed_time, bytes_transferred, result_url, md5) = (
+      (_, bytes_transferred, result_url, md5) = (
           copy_helper.PerformCopy(
               self.logger, exp_src_url, dst_url, gsutil_api,
               self, _CopyExceptionHandler, src_obj_metadata=src_obj_metadata,
@@ -973,14 +976,15 @@ class CpCommand(Command):
           os.unlink(exp_src_url.object_name)
 
     with self.stats_lock:
-      self.total_elapsed_time += elapsed_time
+      # TODO: Remove stats_lock; we should be able to calculate bytes
+      # transferred from StatusMessages posted by operations within PerformCopy.
       self.total_bytes_transferred += bytes_transferred
 
   # Command entry point.
   def RunCommand(self):
     copy_helper_opts = self._ParseOpts()
 
-    self.total_elapsed_time = self.total_bytes_transferred = 0
+    self.total_bytes_transferred = 0
     if self.args[-1] == '-' or self.args[-1] == 'file://-':
       if self.preserve_posix_attrs:
         raise CommandException('Cannot preserve POSIX attributes with a '
@@ -1011,6 +1015,12 @@ class CpCommand(Command):
             copy_helper_opts.skip_unsupported_objects,
             copy_helper_opts.preserve_acl,
             preserve_posix=self.preserve_posix_attrs))
+    # Because cp may have multiple source URLs, we wrap the name expansion
+    # iterator in order to collect analytics.
+    name_expansion_iterator = SourceUrlTypeIterator(
+        name_expansion_iterator=name_expansion_iterator,
+        is_daisy_chain=copy_helper_opts.daisy_chain,
+        dst_url=self.exp_dst_url)
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
@@ -1047,17 +1057,17 @@ class CpCommand(Command):
 
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time
-
-    # Sometimes, particularly when running unit tests, the total elapsed time
-    # is really small. On Windows, the timer resolution is too small and
-    # causes total_elapsed_time to be zero.
-    try:
-      float(self.total_bytes_transferred) / float(self.total_elapsed_time)
-    except ZeroDivisionError:
-      self.total_elapsed_time = 0.01
-
-    self.total_bytes_per_second = (float(self.total_bytes_transferred) /
-                                   float(self.total_elapsed_time))
+    self.total_bytes_per_second = CalculateThroughput(
+        self.total_bytes_transferred, self.total_elapsed_time)
+    LogPerformanceSummaryParams(
+        has_file_dst=self.exp_dst_url.IsFileUrl(),
+        has_cloud_dst=self.exp_dst_url.IsCloudUrl(),
+        avg_throughput=self.total_bytes_per_second,
+        total_bytes_transferred=self.total_bytes_transferred,
+        total_elapsed_time=self.total_elapsed_time,
+        uses_fan=self.parallel_operations,
+        is_daisy_chain=copy_helper_opts.daisy_chain,
+        provider_types=[self.exp_dst_url.scheme])
 
     if self.debug >= DEBUGLEVEL_DUMP_REQUESTS:
       # Note that this only counts the actual GET and PUT bytes for the copy
