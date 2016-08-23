@@ -70,13 +70,14 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetBucket must be overloaded')
 
-  def GetBucketIamPolicy(self, bucket_name, provider=None):
+  def GetBucketIamPolicy(self, bucket_name, provider=None, fields=None):
     """Returns an IAM policy for the specified Bucket.
 
     Args:
       bucket_name: Name of the bucket.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
+      fields: If present, return only the IAM policy fields specified.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -243,7 +244,7 @@ class CloudApi(object):
     raise NotImplementedError('ListObjects must be overloaded')
 
   def GetObjectIamPolicy(self, bucket_name, object_name, generation=None,
-                         provider=None):
+                         provider=None, fields=None):
     """Gets IAM policy for specified Object.
 
     Args:
@@ -252,6 +253,7 @@ class CloudApi(object):
       generation: Generation of the object to retrieve.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
+      fields: If present, return only the IAM policy fields specified.
 
     Raises:
       ArgumentException for errors during input validation.

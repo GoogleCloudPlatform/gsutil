@@ -201,8 +201,8 @@ class CloudApiDelegator(CloudApi):
   def GetBucket(self, bucket_name, provider=None, fields=None):
     return self._GetApi(provider).GetBucket(bucket_name, fields=fields)
 
-  def GetBucketIamPolicy(self, bucket_name, provider=None):
-    return self._GetApi(provider).GetBucketIamPolicy(bucket_name)
+  def GetBucketIamPolicy(self, bucket_name, provider=None, fields=None):
+    return self._GetApi(provider).GetBucketIamPolicy(bucket_name, fields=fields)
 
   def SetBucketIamPolicy(self, bucket_name, policy, provider=None):
     return self._GetApi(provider).SetBucketIamPolicy(bucket_name, policy)
@@ -229,9 +229,9 @@ class CloudApiDelegator(CloudApi):
                                                preconditions=preconditions)
 
   def GetObjectIamPolicy(self, bucket_name, object_name,
-                         generation=None, provider=None):
+                         generation=None, provider=None, fields=None):
     return self._GetApi(provider).GetObjectIamPolicy(
-        bucket_name, object_name, generation)
+        bucket_name, object_name, generation, fields=fields)
 
   def SetObjectIamPolicy(self, bucket_name, object_name, policy,
                          generation=None, provider=None):

@@ -300,10 +300,12 @@ class GcsJsonApi(CloudApi):
           'gsutil client error: customerEncryption must be included when '
           'requesting potentially encrypted fields %s' % _ENCRYPTED_HASHES_SET)
 
-  def GetBucketIamPolicy(self, bucket_name, provider=None):
+  def GetBucketIamPolicy(self, bucket_name, provider=None, fields=None):
     apitools_request = apitools_messages.StorageBucketsGetIamPolicyRequest(
         bucket=bucket_name)
     global_params = apitools_messages.StandardQueryParameters()
+    if fields:
+      global_params.fields = ','.join(set(fields))
     try:
       return self.api_client.buckets.GetIamPolicy(
           apitools_request,
@@ -312,12 +314,14 @@ class GcsJsonApi(CloudApi):
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def GetObjectIamPolicy(self, bucket_name, object_name,
-                         generation, provider=None):
+                         generation, provider=None, fields=None):
     if generation is not None:
       generation = long(generation)
     apitools_request = apitools_messages.StorageObjectsGetIamPolicyRequest(
         bucket=bucket_name, object=object_name, generation=generation)
     global_params = apitools_messages.StandardQueryParameters()
+    if fields:
+      global_params.fields = ','.join(set(fields))
     try:
       return self.api_client.objects.GetIamPolicy(
           apitools_request,
