@@ -53,12 +53,14 @@ _DETAILED_HELP_TEXT = ("""
               into separate arguments.
 
               The following headers are supported:
-              Cache-Control
-              Content-Disposition
-              Content-Encoding
-              Content-Language
-              Content-MD5
-              Content-Type
+
+                Cache-Control
+                Content-Disposition
+                Content-Encoding
+                Content-Language
+                Content-MD5
+                Content-Type
+
               Custom metadata headers with a matching Cloud Storage Provider
               prefix, such as:
 
