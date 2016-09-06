@@ -46,7 +46,7 @@ _DETAILED_HELP_TEXT = ("""
   More details about specific pieces of metadata are discussed below.
 
 
-<B>CONTENT TYPE</B>
+<B>CONTENT-TYPE</B>
   The most commonly set metadata is Content-Type (also known as MIME type),
   which allows browsers to render the object properly. gsutil sets the
   Content-Type automatically at upload time, based on each filename extension.
