@@ -35,7 +35,7 @@ _DETAILED_HELP_TEXT = ("""
   have "/" characters in its name. There are no "abc" or "abc/def" directories;
   just a single object with the given name. This diagram:
 
-  .. image::  https://cloud.google.com/storage/images/gsutil-subdirectories-thumb.png
+  .. image::  https://cloud.google.com/storage/images/gsutil-subdirectories.svg
 
   illustrates how gsutil provides a hierarchical view of objects in a bucket.
 
