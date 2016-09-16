@@ -29,6 +29,7 @@ from gslib.translation_helper import PreconditionsFromHeaders
 
 MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32
+MAX_COMPONENT_RATE = 200
 
 _SYNOPSIS = """
   gsutil compose gs://bucket/obj1 [gs://bucket/obj2 ...] gs://bucket/composite
@@ -67,10 +68,15 @@ _DETAILED_HELP_TEXT = ("""
   Note that there is a limit (currently %d) to the number of components that can
   be composed in a single operation.
 
-  In addition, there is a limit (currently %d) to the total number of components
+  There is a limit (currently %d) to the total number of components
   for a given composite object. This means you can append to each object at most
   %d times.
-""" % (MAX_COMPOSE_ARITY, MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1))
+  
+  There is a per-project rate limit (currently %d) to the number of components
+  you can compose per second. This rate counts both the components being
+  appended to a composite object as well as the components being copied when
+  the composite object of which they are a part is copied.
+""" % (MAX_COMPOSE_ARITY, MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1, MAX_COMPONENT_RATE))
 
 
 class ComposeCommand(Command):
