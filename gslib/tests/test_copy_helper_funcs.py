@@ -14,6 +14,8 @@
 # limitations under the License.
 """Unit tests for parallel upload functions in copy_helper."""
 
+import os
+
 from apitools.base.py import exceptions as apitools_exceptions
 
 from gslib.cloud_api import ResumableUploadAbortException
@@ -22,6 +24,7 @@ from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.command import CreateGsutilLogger
 from gslib.copy_helper import _GetPartitionInfo
+from gslib.copy_helper import _SetContentTypeFromFile
 from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
 from gslib.gcs_json_api import GcsJsonApi
@@ -31,9 +34,13 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.tests.util import GSMockBucketStorageUri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
 from gslib.util import DiscardMessagesQueue
+from gslib.util import IS_WINDOWS
+import mock
 
 
 class TestCpFuncs(GsUtilUnitTestCase):
@@ -322,3 +329,33 @@ class TestCpFuncs(GsUtilUnitTestCase):
     exc = apitools_exceptions.TransferError('Aborting transfer')
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
+
+  def test_SetContentTypeFromFile(self):
+    """Tests that content type is correctly determined for symlinks."""
+    if IS_WINDOWS:
+      return unittest.skip('use_magicfile features not available on Windows')
+
+    surprise_html = '<html><body>And you thought I was just text!</body></html>'
+    temp_dir_path = self.CreateTempDir()
+    txt_file_path = self.CreateTempFile(
+        tmpdir=temp_dir_path, contents=surprise_html,
+        file_name='html_in_disguise.txt')
+    link_name = 'link_to_realfile'  # Notice no file extension was supplied.
+    os.symlink(txt_file_path, temp_dir_path + os.path.sep + link_name)
+    # Content-type of a symlink should be obtained from the link's target.
+    dst_obj_metadata_mock = mock.MagicMock(contentType=None)
+    src_url_stub = mock.MagicMock(
+        object_name=temp_dir_path + os.path.sep + link_name,
+        **{'IsFileUrl.return_value': True,
+           'IsStream.return_value': False})
+
+    # The file command should detect HTML in the real file.
+    with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
+      _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
+    self.assertEqual('text/html', dst_obj_metadata_mock.contentType)
+
+    dst_obj_metadata_mock = mock.MagicMock(contentType=None)
+    # The mimetypes module should guess based on the real file's extension.
+    with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'False')]):
+      _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
+    self.assertEqual('text/plain', dst_obj_metadata_mock.contentType)

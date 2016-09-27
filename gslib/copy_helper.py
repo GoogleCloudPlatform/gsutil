@@ -1419,8 +1419,9 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
     # Streams (denoted by '-') are expected to be 'application/octet-stream'
     # and 'file' would partially consume them.
     if object_name != '-':
-      if config.getbool('GSUtil', 'use_magicfile', False):
-        p = subprocess.Popen(['file', '--mime-type', object_name],
+      real_file_path = os.path.realpath(object_name)
+      if config.getbool('GSUtil', 'use_magicfile', False) and not IS_WINDOWS:
+        p = subprocess.Popen(['file', '--mime-type', real_file_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = p.communicate()
         p.stdout.close()
@@ -1428,11 +1429,11 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
         if p.returncode != 0 or error:
           raise CommandException(
               'Encountered error running "file --mime-type %s" '
-              '(returncode=%d).\n%s' % (object_name, p.returncode, error))
+              '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
         # Parse output by removing line delimiter and splitting on last ":
         content_type = output.rstrip().rpartition(': ')[2]
       else:
-        content_type = mimetypes.guess_type(object_name)[0]
+        content_type = mimetypes.guess_type(real_file_path)[0]
     if not content_type:
       content_type = DEFAULT_CONTENT_TYPE
     dst_obj_metadata.contentType = content_type
