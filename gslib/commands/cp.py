@@ -1014,7 +1014,8 @@ class CpCommand(Command):
             self.exp_dst_url.IsCloudUrl(),
             copy_helper_opts.skip_unsupported_objects,
             copy_helper_opts.preserve_acl,
-            preserve_posix=self.preserve_posix_attrs))
+            preserve_posix=self.preserve_posix_attrs,
+            delete_source=copy_helper_opts.perform_mv))
     # Because cp may have multiple source URLs, we wrap the name expansion
     # iterator in order to collect analytics.
     name_expansion_iterator = SourceUrlTypeIterator(

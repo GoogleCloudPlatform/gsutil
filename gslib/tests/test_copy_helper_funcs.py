@@ -14,6 +14,8 @@
 # limitations under the License.
 """Unit tests for parallel upload functions in copy_helper."""
 
+import datetime
+import logging
 import os
 
 from apitools.base.py import exceptions as apitools_exceptions
@@ -27,9 +29,11 @@ from gslib.copy_helper import _GetPartitionInfo
 from gslib.copy_helper import _SetContentTypeFromFile
 from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
+from gslib.copy_helper import WarnIfMvEarlyDeletionChargeApplies
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
+from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
@@ -40,13 +44,14 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.util import CreateLock
 from gslib.util import DiscardMessagesQueue
 from gslib.util import IS_WINDOWS
+
 import mock
 
 
 class TestCpFuncs(GsUtilUnitTestCase):
   """Unit tests for parallel upload functions in cp command."""
 
-  def test_GetPartitionInfo(self):
+  def testGetPartitionInfo(self):
     """Tests the _GetPartitionInfo function."""
     # Simplest case - threshold divides file_size.
     (num_components, component_size) = _GetPartitionInfo(300, 200, 10)
@@ -87,7 +92,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEquals(2, num_components)
     self.assertEqual(50, component_size)
 
-  def test_FilterExistingComponentsNonVersioned(self):
+  def testFilterExistingComponentsNonVersioned(self):
     """Tests upload with a variety of component states."""
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
@@ -192,7 +197,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(no_longer_used_url.url_string,
                      existing_objects_to_delete[0].url_string)
 
-  def test_FilterExistingComponentsVersioned(self):
+  def testFilterExistingComponentsVersioned(self):
     """Tests upload with versionined parallel components."""
 
     mock_api = MockCloudApi()
@@ -290,7 +295,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
 
   # pylint: disable=protected-access
-  def test_TranslateApitoolsResumableUploadException(self):
+  def testTranslateApitoolsResumableUploadException(self):
     """Tests that _TranslateApitoolsResumableUploadException works correctly."""
     gsutil_api = GcsJsonApi(
         GSMockBucketStorageUri,
@@ -330,7 +335,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
 
-  def test_SetContentTypeFromFile(self):
+  def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
     if IS_WINDOWS:
       return unittest.skip('use_magicfile features not available on Windows')
@@ -359,3 +364,45 @@ class TestCpFuncs(GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'False')]):
       _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
     self.assertEqual('text/plain', dst_obj_metadata_mock.contentType)
+
+  _PI_DAY = datetime.datetime(2016, 3, 14, 15, 9, 26)
+
+  @mock.patch('time.time',
+              new=mock.MagicMock(return_value=ConvertDatetimeToPOSIX(_PI_DAY)))
+  def testWarnIfMvEarlyDeletionChargeApplies(self):
+    """Tests that WarnIfEarlyDeletionChargeApplies warns when appropriate."""
+    test_logger = logging.Logger('test')
+    src_url = StorageUrlFromString('gs://bucket/object')
+
+    # Recent objects should generate a warning.
+    for object_time_created in (
+        self._PI_DAY, self._PI_DAY - datetime.timedelta(days=29, hours=23)):
+      recent_nearline_obj = apitools_messages.Object(
+          storageClass='NEARLINE',
+          timeCreated=object_time_created)
+
+      with mock.patch.object(test_logger, 'warn') as mocked_warn:
+        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_nearline_obj,
+                                           test_logger)
+        mocked_warn.assert_called_with(
+            'Warning: moving %s object %s may incur an early deletion '
+            'charge, because the original object is less than %s days old '
+            'according to the local system time.', 'nearline',
+            src_url.url_string, 30)
+
+    # Sufficiently old object should not generate a warning.
+    with mock.patch.object(test_logger, 'warn') as mocked_warn:
+      old_nearline_obj = apitools_messages.Object(
+          storageClass='NEARLINE',
+          timeCreated=self._PI_DAY - datetime.timedelta(days=30, seconds=1))
+      WarnIfMvEarlyDeletionChargeApplies(src_url, old_nearline_obj, test_logger)
+      mocked_warn.assert_not_called()
+
+    # Recent standard storage class object should not generate a warning.
+    with mock.patch.object(test_logger, 'warn') as mocked_warn:
+      not_old_enough_nearline_obj = apitools_messages.Object(
+          storageClass='STANDARD',
+          timeCreated=self._PI_DAY)
+      WarnIfMvEarlyDeletionChargeApplies(src_url, not_old_enough_nearline_obj,
+                                         test_logger)
+      mocked_warn.assert_not_called()

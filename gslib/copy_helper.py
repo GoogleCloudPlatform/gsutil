@@ -89,6 +89,7 @@ from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.posix_util import ATIME_ATTR
+from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.posix_util import GID_ATTR
 from gslib.posix_util import MODE_ATTR
 from gslib.posix_util import MTIME_ATTR
@@ -138,6 +139,7 @@ from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ObjectIsGzipEncoded
 from gslib.util import ResumableThreshold
+from gslib.util import SECONDS_PER_DAY
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -2906,7 +2908,7 @@ def _CopyObjToObjDaisyChainMode(src_url, src_obj_metadata, dst_url,
 
 def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
                                  preserve_acl, is_rsync=False,
-                                 preserve_posix=False):
+                                 preserve_posix=False, delete_source=False):
   """Determines the metadata fields needed for a copy operation.
 
   This function returns the fields we will need to successfully copy any
@@ -2931,11 +2933,15 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     is_rsync: if true, the calling function is rsync. Determines if metadata is
               needed to verify download.
     preserve_posix: if true, retrieves POSIX attributes into user metadata.
+    delete_source: if true, source object will be deleted after the copy
+                   (mv command).
 
   Returns:
     List of necessary field metadata field names.
 
   """
+  src_obj_fields_set = set()
+
   if dst_is_cloud:
     # For cloud or daisy chain copy, we need every copyable field.
     # If we're not modifying or overriding any of the fields, we can get
@@ -2944,32 +2950,117 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
     # name. But if we are sending any metadata, the JSON API will expect a
     # complete object resource. Since we want metadata like the object size for
     # our own tracking, we just get all of the metadata here.
-    src_obj_fields = ['cacheControl', 'componentCount',
-                      'contentDisposition', 'contentEncoding',
-                      'contentLanguage', 'contentType', 'crc32c',
-                      'customerEncryption', 'etag', 'generation', 'md5Hash',
-                      'mediaLink', 'metadata', 'metageneration', 'size',
-                      'timeCreated']
+    src_obj_fields_set.update([
+        'cacheControl', 'componentCount', 'contentDisposition',
+        'contentEncoding', 'contentLanguage', 'contentType', 'crc32c',
+        'customerEncryption', 'etag', 'generation', 'md5Hash', 'mediaLink',
+        'metadata', 'metageneration', 'size', 'timeCreated'])
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
-      src_obj_fields.append('acl')
+      src_obj_fields_set.update(['acl'])
 
   else:
     # Just get the fields needed to perform and validate the download.
-    src_obj_fields = ['crc32c', 'contentEncoding', 'contentType',
-                      'customerEncryption', 'etag', 'mediaLink', 'md5Hash',
-                      'size', 'generation']
+    src_obj_fields_set.update([
+        'crc32c', 'contentEncoding', 'contentType', 'customerEncryption',
+        'etag', 'mediaLink', 'md5Hash', 'size', 'generation'])
     if is_rsync:
-      src_obj_fields.extend(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
+      src_obj_fields_set.update(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
     if preserve_posix:
       posix_fields = ['metadata/%s' % ATIME_ATTR, 'metadata/%s' % MTIME_ATTR,
                       'metadata/%s' % GID_ATTR, 'metadata/%s' % MODE_ATTR,
                       'metadata/%s' % UID_ATTR]
-      src_obj_fields = list(set(src_obj_fields) | set(posix_fields))
-  if skip_unsupported_objects:
-    src_obj_fields.append('storageClass')
+      src_obj_fields_set.update(posix_fields)
 
-  return src_obj_fields
+  if delete_source:
+    src_obj_fields_set.update(['storageClass', 'timeCreated'])
+
+  if skip_unsupported_objects:
+    src_obj_fields_set.update(['storageClass'])
+
+  return list(src_obj_fields_set)
+
+
+# Map of (lowercase) storage classes with early deletion charges to their
+# minimum lifetime in seconds.
+EARLY_DELETION_MINIMUM_LIFETIME = {
+    'nearline': 30 * SECONDS_PER_DAY
+}
+
+
+def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
+  """Warns when deleting a gs:// object could incur an early deletion charge.
+
+  This function inspects metadata for Google Cloud Storage objects that are
+  subject to early deletion charges (such as Nearline), and warns when
+  performing operations like mv that would delete them.
+
+  Args:
+    src_url: CloudUrl for the source object.
+    src_obj_metadata: source object metadata with necessary fields
+        (per GetSourceFieldsNeededForCopy).
+    logger: logging.Logger for outputting warning.
+  """
+  if (src_url.scheme == 'gs'
+      and src_obj_metadata and src_obj_metadata.timeCreated
+      and src_obj_metadata.storageClass):
+    object_storage_class = src_obj_metadata.storageClass.lower()
+    early_deletion_cutoff_seconds = EARLY_DELETION_MINIMUM_LIFETIME.get(
+        object_storage_class, None)
+    if early_deletion_cutoff_seconds:
+      minimum_delete_age = (
+          early_deletion_cutoff_seconds +
+          ConvertDatetimeToPOSIX(src_obj_metadata.timeCreated))
+      if time.time() < minimum_delete_age:
+        logger.warn(
+            'Warning: moving %s object %s may incur an early deletion '
+            'charge, because the original object is less than %s '
+            'days old according to the local system time.',
+            object_storage_class,
+            src_url.url_string, early_deletion_cutoff_seconds / SECONDS_PER_DAY)
+
+
+def MaybeSkipUnsupportedObject(src_url, src_obj_metadata):
+  """Skips unsupported object types if requested.
+
+  Args:
+    src_url: CloudUrl for the source object.
+    src_obj_metadata: source object metadata with storageClass field
+        (per GetSourceFieldsNeededForCopy).
+
+  Raises:
+    SkipGlacierError: if skipping a s3 Glacier object.
+  """
+  if (src_url.scheme == 's3' and
+      global_copy_helper_opts.skip_unsupported_objects and
+      src_obj_metadata.storageClass == 'GLACIER'):
+    raise SkipGlacierError()
+
+
+def GetDecryptionKey(src_url, src_obj_metadata):
+  """Ensures a matching decryption key is available for the source object.
+
+  Args:
+    src_url: CloudUrl for the source object.
+    src_obj_metadata: source object metadata with optional customerEncryption
+        field.
+
+  Raises:
+    EncryptionException if the object is encrypted and no matching key is found.
+
+  Returns:
+    Base64-encoded decryption key string if the object is encrypted and a
+    matching key is found, or None if object is not encrypted.
+  """
+  if src_obj_metadata.customerEncryption:
+    decryption_key = FindMatchingCryptoKey(
+        src_obj_metadata.customerEncryption.keySha256)
+    if not decryption_key:
+      raise EncryptionException(
+          'Missing decryption key with SHA256 hash %s. No decryption key '
+          'matches object %s' % (
+              src_obj_metadata.customerEncryption.keySha256, src_url))
+    return decryption_key
 
 
 # pylint: disable=undefined-variable
@@ -3037,19 +3128,11 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         not global_copy_helper_opts.daisy_chain):
       copy_in_the_cloud = True
 
-    if (src_url.scheme == 's3' and
-        global_copy_helper_opts.skip_unsupported_objects and
-        src_obj_metadata.storageClass == 'GLACIER'):
-      raise SkipGlacierError()
+    if global_copy_helper_opts.perform_mv:
+      WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger)
+    MaybeSkipUnsupportedObject(src_url, src_obj_metadata)
+    decryption_key = GetDecryptionKey(src_url, src_obj_metadata)
 
-    if src_obj_metadata.customerEncryption:
-      decryption_key = FindMatchingCryptoKey(
-          src_obj_metadata.customerEncryption.keySha256)
-      if not decryption_key:
-        raise EncryptionException(
-            'Missing decryption key with SHA256 hash %s. No decryption key '
-            'matches object %s' % (
-                src_obj_metadata.customerEncryption.keySha256, src_url))
     src_obj_size = src_obj_metadata.size
     dst_obj_metadata.contentType = src_obj_metadata.contentType
     if global_copy_helper_opts.preserve_acl:
