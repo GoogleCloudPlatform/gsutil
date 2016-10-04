@@ -72,7 +72,7 @@ _DETAILED_HELP_TEXT = ("""
 
   To compile and install crcmod:
 
-    sudo yum install gcc python-devel python-setuptools
+    sudo yum install gcc python-devel python-setuptools redhat-rpm-config
     sudo easy_install -U pip
     sudo pip uninstall crcmod
     sudo pip install -U crcmod
