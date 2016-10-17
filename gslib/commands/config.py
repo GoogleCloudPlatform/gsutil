@@ -294,11 +294,19 @@ CONFIG_PRELUDE_CONTENT = """
 # processes on a typical multi-core Linux computer, to avoid being too
 # aggressive with resources, the default number of threads is reduced from
 # the previous value of 24 to 5.
+#
+# We also cap the maximum number of default processes at 32. Since each level
+# of recursion depth gets its own process pool, this means a maximum of
+# 64 processes with the current maximum recursion depth of 2.  We limit this
+# number because testing with more than 200 processes showed fatal locking
+# exceptions in Python's multiprocessing.Manager. More processes are
+# probably not needed to saturate most networks.
+#
 # On Windows and Mac systems parallel multi-processing and multi-threading
 # in Python presents various challenges so we retain compatibility with
 # the established parallel mode operation, i.e. one process and 24 threads.
 if platform.system() == 'Linux':
-  DEFAULT_PARALLEL_PROCESS_COUNT = multiprocessing.cpu_count()
+  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
   DEFAULT_PARALLEL_THREAD_COUNT = 5
 else:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
