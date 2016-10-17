@@ -155,8 +155,9 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
                             error: POSIX_INSUFFICIENT_ACCESS_ERROR}}
   # The first variable below can be used to help debug the test if there is a
   # problem.
-  for _, attrs_dict in test_params.iteritems():
+  for test_name, attrs_dict in test_params.iteritems():
     cls.ClearPOSIXMetadata(obj)
+
     # Attributes default to None if they are not in attrs_dict.
     uid = attrs_dict.get(UID_ATTR)
     gid = attrs_dict.get(GID_ATTR)
@@ -169,8 +170,10 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     cls.assertIn(ORPHANED_FILE, stderr, '%s not found in stderr\n%s'
                  % (ORPHANED_FILE, stderr))
     error_regex = BuildErrorRegex(obj, attrs_dict.get(error))
-    cls.assertTrue(error_regex.search(stderr), 'Could not find a match for %s'
-                   '\n\nin stderr:\n%s' % (error_regex.pattern, stderr))
+    cls.assertTrue(
+        error_regex.search(stderr),
+        'Test %s did not match expected error; could not find a match for '
+        '%s\n\nin stderr:\n%s' % (test_name, error_regex.pattern, stderr))
     listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
     listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
     # Bucket should have un-altered content.
