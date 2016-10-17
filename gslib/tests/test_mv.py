@@ -20,8 +20,9 @@ import os
 
 import crcmod
 from gslib.cs_api_map import ApiSelector
-from gslib.tests.test_cp import TestCpMvPOSIXErrors
-from gslib.tests.test_cp import TestCpMvPOSIXNoErrors
+from gslib.tests.test_cp import TestCpMvPOSIXBucketToLocalErrors
+from gslib.tests.test_cp import TestCpMvPOSIXBucketToLocalNoErrors
+from gslib.tests.test_cp import TestCpMvPOSIXLocalToBucketNoErrors
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
@@ -134,19 +135,19 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
-  def test_mv_preserve_posix_no_errors(self):
-    """Tests use of the -P flag with mv.
+  def test_mv_preserve_posix_bucket_to_dir_no_errors(self):
+    """Tests use of the -P flag with mv from a bucket to a local dir.
 
     Specifically tests combinations of POSIX attributes in metadata that will
     pass validation.
     """
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
-    TestCpMvPOSIXNoErrors(self, bucket_uri, tmpdir, is_cp=False)
+    TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  def test_mv_preserve_posix_errors(self):
-    """Tests use of the -P flag with mv.
+  def test_mv_preserve_posix_bucket_to_dir_errors(self):
+    """Tests use of the -P flag with mv from a bucket to a local dir.
 
     Specifically, combinations of POSIX attributes in metadata that will fail
     validation.
@@ -156,7 +157,13 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
                             contents='obj')
-    TestCpMvPOSIXErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
+    TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
+
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  def test_mv_preseve_posix_dir_to_bucket_no_errors(self):
+    """Tests use of the -P flag with mv from a local dir to a bucket."""
+    bucket_uri = self.CreateBucket()
+    TestCpMvPOSIXLocalToBucketNoErrors(self, bucket_uri, is_cp=False)
 
   @SkipForS3('Test is only relevant for gs storage classes.')
   def test_mv_early_deletion_warning(self):

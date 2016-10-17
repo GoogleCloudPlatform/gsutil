@@ -504,6 +504,8 @@ def _GetFileObject(filepath):
   Returns:
     apitools Object that with file name and size attributes filled-in.
   """
+  # TODO: If we are preserving POSIX attributes, we could instead call
+  # os.stat() here.
   return apitools_messages.Object(size=os.path.getsize(filepath))
 
 

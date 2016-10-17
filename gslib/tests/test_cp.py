@@ -52,7 +52,11 @@ from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
 from gslib.posix_util import GID_ATTR
 from gslib.posix_util import MODE_ATTR
+from gslib.posix_util import NA_ID
+from gslib.posix_util import NA_MODE
 from gslib.posix_util import UID_ATTR
+from gslib.posix_util import ValidateFilePermissionAccess
+from gslib.posix_util import ValidatePOSIXMode
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.rewrite_helper import EnsureRewriteResumeCallbackHandler
 from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
@@ -109,7 +113,7 @@ if not IS_WINDOWS:
 # pylint: enable=g-import-not-at-top
 
 
-def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
+def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
   """Helper function for preserve_posix_errors tests in test_cp and test_mv.
 
   Args:
@@ -175,8 +179,8 @@ def TestCpMvPOSIXErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     cls.assertEquals(listing2, set(['']))
 
 
-def TestCpMvPOSIXNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
-  """Helper function for preserve_posix_no_erros tests in test_cp and text_mv.
+def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
+  """Helper function for preserve_posix_no_errors tests in test_cp and test_mv.
 
   Args:
     cls: An instance of either TestCp or TestMv.
@@ -233,6 +237,41 @@ def TestCpMvPOSIXNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
                                   uid=USER_ID, gid=NON_PRIMARY_GID(),
                                   mode=0o442)
+
+
+def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
+  """Helper function for testing local to bucket POSIX preservation."""
+  test_params = {'obj1': {GID_ATTR: PRIMARY_GID},
+                 'obj2': {GID_ATTR: NON_PRIMARY_GID()},
+                 'obj3': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '440'},
+                 'obj4': {GID_ATTR: NON_PRIMARY_GID(), MODE_ATTR: '444'},
+                 'obj5': {UID_ATTR: USER_ID},
+                 'obj6': {UID_ATTR: USER_ID, MODE_ATTR: '420'},
+                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID},
+                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID()},
+                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID,
+                          MODE_ATTR: '433'},
+                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID(),
+                           MODE_ATTR: '442'}}
+  for obj_name, attrs_dict in test_params.iteritems():
+    uid = attrs_dict.get(UID_ATTR, NA_ID)
+    gid = attrs_dict.get(GID_ATTR, NA_ID)
+    mode = attrs_dict.get(MODE_ATTR, NA_MODE)
+    if mode != NA_MODE:
+      ValidatePOSIXMode(int(mode, 8))
+    ValidateFilePermissionAccess(obj_name, uid=uid, gid=gid, mode=mode)
+    fpath = cls.CreateTempFile(contents='foo', uid=uid, gid=gid, mode=mode)
+    cls.RunGsUtil(['cp' if is_cp else 'mv', '-P', fpath,
+                   suri(bucket_uri, obj_name)])
+    if uid != NA_ID:
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
+                                      UID_ATTR, str(uid))
+    if gid != NA_ID:
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
+                                      GID_ATTR, str(gid))
+    if mode != NA_MODE:
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
+                                      MODE_ATTR, str(mode))
 
 
 class _JSONForceHTTPErrorCopyCallbackHandler(object):
@@ -3045,6 +3084,39 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     finally:
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
+
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
+  def test_cp_preserve_posix_bucket_to_dir_no_errors(self):
+    """Tests use of the -P flag with cp from a bucket to a local dir.
+
+    Specifically tests combinations of POSIX attributes in metadata that will
+    pass validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=True)
+
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  def test_cp_preserve_posix_bucket_to_dir_errors(self):
+    """Tests use of the -P flag with cp from a bucket to a local dir.
+
+    Specifically, combinations of POSIX attributes in metadata that will fail
+    validation.
+    """
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+
+    obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
+                            contents='obj')
+    TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=True)
+
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  def test_cp_preseve_posix_dir_to_bucket_no_errors(self):
+    """Tests use of the -P flag with cp from a local dir to a bucket."""
+    bucket_uri = self.CreateBucket()
+    TestCpMvPOSIXLocalToBucketNoErrors(self, bucket_uri, is_cp=True)
 
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):

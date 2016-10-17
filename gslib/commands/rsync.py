@@ -52,6 +52,7 @@ from gslib.metrics import LogPerformanceSummaryParams
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.posix_util import ATIME_ATTR
 from gslib.posix_util import ConvertDatetimeToPOSIX
+from gslib.posix_util import ConvertModeToBase8
 from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.posix_util import GID_ATTR
 from gslib.posix_util import InitializeUserGroups
@@ -660,9 +661,7 @@ def _BuildTmpOutputLine(blr):
     # atime/mtime can be a float, so it needs to be converted to a long.
     atime = long(atime)
     mtime = long(mtime)
-    # Strip out unnecessary bits in the mode. Mode is given as a base-10
-    # integer. It must be converted to base-8.
-    mode = int(oct(mode)[-3:])
+    mode = ConvertModeToBase8(mode)
     # Don't use atime / mtime with times older than 1970-01-01 UTC.
     if atime < 0:
       atime = NA_TIME

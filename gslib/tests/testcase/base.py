@@ -23,6 +23,8 @@ import shutil
 import tempfile
 
 import boto
+from gslib.posix_util import NA_ID
+from gslib.posix_util import NA_MODE
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.util import UTF8
@@ -121,8 +123,12 @@ class GsUtilTestCase(unittest.TestCase):
     return tmpdir
 
   def CreateTempFile(self, tmpdir=None, contents=None, file_name=None,
-                     mtime=None):
+                     mtime=None, mode=NA_MODE, uid=NA_ID, gid=NA_ID):
     """Creates a temporary file on disk.
+
+    Note: if mode, uid, or gid are present, they must be validated by
+    ValidateFilePermissionAccess and ValidatePOSIXMode before calling this
+    function.
 
     Args:
       tmpdir: The temporary directory to place the file in. If not specified, a
@@ -136,6 +142,10 @@ class GsUtilTestCase(unittest.TestCase):
       mtime: The modification time of the file in POSIX time (seconds since
              UTC 1970-01-01). If not specified, this defaults to the current
              system time.
+      mode: The POSIX mode for the file. Must be a base-8 3-digit integer
+            represented as a string.
+      uid: A POSIX user ID.
+      gid: A POSIX group ID.
 
     Returns:
       The path to the new temporary file.
@@ -156,4 +166,8 @@ class GsUtilTestCase(unittest.TestCase):
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
+    if uid != NA_ID or gid != NA_ID:
+      os.chown(fpath, uid, gid)
+    if mode != NA_MODE:
+      os.chmod(fpath, int(mode, 8))
     return fpath

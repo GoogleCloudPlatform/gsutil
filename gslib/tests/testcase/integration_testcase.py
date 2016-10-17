@@ -55,6 +55,7 @@ from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import CreateCustomMetadata
 from gslib.util import DiscardMessagesQueue
+from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import UTF8
@@ -535,6 +536,31 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return self.json_api.UploadObject(cStringIO.StringIO(contents),
                                       object_metadata, provider='gs',
                                       encryption_tuple=encryption_tuple)
+
+  def VerifyObjectCustomAttribute(self, bucket_name, object_name, attr_name,
+                                  expected_value, expected_present=True):
+    """Retrieves and verifies an object's custom metadata attribute.
+
+    Args:
+      bucket_name: The name of the bucket the object is in.
+      object_name: The name of the object itself.
+      attr_name: The name of the custom metadata attribute.
+      expected_value: The expected retrieved value for the attribute.
+      expected_present: True if the attribute must be present in the
+          object metadata, False if it must not be present.
+
+    Returns:
+      None
+    """
+    gsutil_api = (self.json_api if self.default_provider == 'gs'
+                  else self.xml_api)
+    metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
+                                            provider=self.default_provider,
+                                            fields=['metadata/%s' % attr_name])
+    attr_present, value = GetValueFromObjectCustomMetadata(
+        metadata, attr_name, default_value=expected_value)
+    self.assertEqual(expected_present, attr_present)
+    self.assertEqual(expected_value, value)
 
   def RunGsUtil(self, cmd, return_status=False,
                 return_stdout=False, return_stderr=False,

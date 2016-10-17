@@ -41,6 +41,7 @@ from gslib.metrics import LogPerformanceSummaryParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.name_expansion import SourceUrlTypeIterator
+from gslib.posix_util import ConvertModeToBase8
 from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.posix_util import InitializeUserGroups
 from gslib.posix_util import POSIXAttributes
@@ -876,22 +877,24 @@ class CpCommand(Command):
                              'the destination for gsutil cp - abort.'
                              % (cmd_name, dst_url))
 
+    src_obj_metadata = None
     if name_expansion_result.expanded_result:
       src_obj_metadata = encoding.JsonToMessage(
           apitools_messages.Object, name_expansion_result.expanded_result)
-    elif src_url.IsFileUrl() and not src_url.IsStream():
+
+    if src_url.IsFileUrl() and preserve_posix:
+      if not src_obj_metadata:
+        src_obj_metadata = apitools_messages.Object()
       mode, _, _, _, uid, gid, _, atime, mtime, _ = os.stat(
-          exp_src_url.url_string)
+          exp_src_url.object_name)
+      mode = ConvertModeToBase8(mode)
       posix_attrs = POSIXAttributes(atime=atime, mtime=mtime, uid=uid, gid=gid,
                                     mode=mode)
-      src_obj_metadata = apitools_messages.Object()
       custom_metadata = apitools_messages.Object.MetadataValue(
           additionalProperties=[])
       SerializeFileAttributesToObjectMetadata(posix_attrs, custom_metadata,
                                               preserve_posix=preserve_posix)
       src_obj_metadata.metadata = custom_metadata
-    else:
-      src_obj_metadata = None
 
     if src_obj_metadata and dst_url.IsFileUrl():
       posix_attrs = DeserializeFileAttributesFromObjectMetadata(

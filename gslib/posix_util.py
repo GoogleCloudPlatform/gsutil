@@ -96,6 +96,13 @@ class POSIXMode(object):
     self.permissions = permissions
 
 
+def ConvertModeToBase8(mode):
+  """Converts a base-10 mode integer from os.stat to base-8."""
+  # Strip out unnecessary bits in the mode. Mode is given as a base-10
+  # integer. It must be converted to base-8.
+  return int(oct(mode)[-3:])
+
+
 def DeserializeFileAttributesFromObjectMetadata(obj_metadata, url_str):
   """Parses the POSIX attributes from the supplied metadata.
 
@@ -427,10 +434,10 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
     if uid > NA_ID and gid > NA_ID:
       # Set both uid and gid.
       os.chown(path, uid, gid)
-    elif uid > NA_TIME and gid <= NA_ID:
+    elif uid > NA_ID and gid <= NA_ID:
       # uid is valid but gid isn't.
       os.chown(path, uid, -1)
-    elif uid <= NA_TIME and gid > NA_ID:
+    elif uid <= NA_ID and gid > NA_ID:
       # gid is valid but uid isn't.
       os.chown(path, -1, gid)
     if found_mode:

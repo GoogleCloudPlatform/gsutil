@@ -37,7 +37,6 @@ from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
-from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_OSX
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
@@ -87,47 +86,24 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                             fields=[attr_name])
     return getattr(metadata, attr_name, None)
 
-  def _VerifyObjectCustomAttribute(self, bucket_name, object_name, attr_name,
-                                   expected_value, not_equal=False):
-    """Retrieves and verifies an object's custom metadata attribute.
-
-    Args:
-      bucket_name: The name of the bucket the object is in.
-      object_name: The name of the object itself.
-      attr_name: The name of the custom metadata attribute.
-      expected_value: The expected retrieved value for the attribute.
-      not_equal: Whether or not to assertEqual or assertNotEqual
-
-    Returns:
-      None
-    """
-    gsutil_api = (self.json_api if self.default_provider == 'gs'
-                  else self.xml_api)
-    metadata = gsutil_api.GetObjectMetadata(bucket_name, object_name,
-                                            provider=self.default_provider,
-                                            fields=['metadata/%s' % attr_name])
-    _, value = GetValueFromObjectCustomMetadata(metadata, attr_name,
-                                                default_value=expected_value)
-    if not_equal:
-      self.assertNotEqual(expected_value, value)
-    else:
-      self.assertEqual(expected_value, value)
-
   def _VerifyObjectMtime(self, bucket_name, object_name, expected_mtime,
-                         not_equal=False):
+                         expected_present=True):
     """Retrieves the object's mtime.
 
     Args:
       bucket_name: The name of the bucket the object is in.
       object_name: The name of the object itself.
       expected_mtime: The expected retrieved mtime.
-      not_equal: Whether or not to assertEqual or assertNotEqual
+      expected_present: True if the mtime must be present in the
+          object metadata, False if it must not be present.
+
 
     Returns:
       None
     """
-    self._VerifyObjectCustomAttribute(bucket_name, object_name, MTIME_ATTR,
-                                      expected_mtime, not_equal=not_equal)
+    self.VerifyObjectCustomAttribute(
+        bucket_name, object_name, MTIME_ATTR, expected_mtime,
+        expected_present=expected_present)
 
   def test_invalid_args(self):
     """Tests various invalid argument cases."""
@@ -240,28 +216,28 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Copying POSIX attributes from src to dst for', stderr)
     _Check1()
 
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj1',
-                                      MODE_ATTR, '444')
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj2',
-                                      GID_ATTR, str(PRIMARY_GID))
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj3',
-                                      GID_ATTR, str(NON_PRIMARY_GID()))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj1',
+                                     MODE_ATTR, '444')
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj2',
+                                     GID_ATTR, str(PRIMARY_GID))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj3',
+                                     GID_ATTR, str(NON_PRIMARY_GID()))
     # Verify all of the attributes for obj4. Even though these are all 'invalid'
     # values, the file was copied to the destination because bucket to bucket
     # with preserve POSIX enabled will blindly copy the object metadata.
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
-                                      GID_ATTR, str(INVALID_GID()))
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
-                                      UID_ATTR, str(INVALID_UID()))
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
-                                      MODE_ATTR, '222')
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
+                                     GID_ATTR, str(INVALID_GID()))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
+                                     UID_ATTR, str(INVALID_UID()))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj4',
+                                     MODE_ATTR, '222')
     # Verify obj5 attributes were copied.
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
-                                      UID_ATTR, str(USER_ID))
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
-                                      GID_ATTR, str(PRIMARY_GID))
-    self._VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
-                                      MODE_ATTR, str(DEFAULT_MODE))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
+                                     UID_ATTR, str(USER_ID))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
+                                     GID_ATTR, str(PRIMARY_GID))
+    self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
+                                     MODE_ATTR, str(DEFAULT_MODE))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -391,9 +367,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     # Get and verify the metadata for the objects at the destination.
-    self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj1', NA_TIME)
+    self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj1', NA_TIME,
+                            expected_present=False)
     self._VerifyObjectMtime(dst_bucket.bucket_name, 'subdir/obj2', '10')
-    self._VerifyObjectMtime(dst_bucket.bucket_name, 'subdir/obj4', NA_TIME)
+    self._VerifyObjectMtime(dst_bucket.bucket_name, 'subdir/obj4', NA_TIME,
+                            expected_present=False)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -706,8 +684,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self._VerifyObjectMtime(bucket_uri.bucket_name, 'subdir/obj5', '15')
     self._VerifyObjectMtime(bucket_uri.bucket_name, 'obj6', '100')
     # Make sure test attribute wasn't blown away when mtime was updated.
-    self._VerifyObjectCustomAttribute(bucket_uri.bucket_name, '.obj2', 'test',
-                                      'test')
+    self.VerifyObjectCustomAttribute(bucket_uri.bucket_name, '.obj2', 'test',
+                                     'test')
 
     # Now rerun the rsync with the -c option.
     # Use @Retry as hedge against bucket listing eventual consistency.
