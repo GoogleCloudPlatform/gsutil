@@ -46,6 +46,8 @@ from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
 from gslib.thread_message import RetryableErrorMessage
+from gslib.util import IS_LINUX
+from gslib.util import IS_WINDOWS
 from gslib.util import LogAndHandleRetries
 from gslib.util import ONE_KIB
 from gslib.util import START_CALLBACK_PER_BYTES
@@ -380,7 +382,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     # Check for all the expected parameters.
     metric_body = self.collector._metrics[0].body
-    for label, exp_value in (
+    label_and_value_pairs = [
         ('Event Category', metrics._GA_PERFSUM_CATEGORY),
         ('Event Action', 'CloudToCloud%2CDaisyChain'), ('Execution Time', '10'),
         ('Parallelism Strategy', 'both'), ('Source URL Type', 'cloud'),
@@ -392,7 +394,11 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         ('Num Retryable Network Errors', '2'),
         ('Thread Idle Time Percent', '0.8'),
         ('Slowest Thread Throughput', '10'),
-        ('Fastest Thread Throughput', '10'), ('Disk I/O Time', '20')):
+        ('Fastest Thread Throughput', '10'),
+    ]
+    if IS_LINUX:  # Disk I/O time is only available on Linux.
+      label_and_value_pairs.append(('Disk I/O Time', '20'))
+    for label, exp_value in label_and_value_pairs:
       self.assertIn('{0}={1}'.format(metrics._GA_LABEL_MAP[label], exp_value),
                     metric_body)
 
@@ -892,8 +898,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.assertGreater(slowest_throughput, 0)
     self.assertGreater(fastest_throughput, 0)
 
-    io_time = _ExtractNumberMetric('Disk I/O Time')
-    self.assertGreaterEqual(io_time, 0)
+    io_time = None
+    if IS_LINUX:
+      io_time = _ExtractNumberMetric('Disk I/O Time')
+      self.assertGreaterEqual(io_time, 0)
 
     # Return some metrics to run tests in more specific scenarios.
     return (slowest_throughput, fastest_throughput, io_time)
@@ -907,8 +915,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     # Run an rsync file-to-file command with fan parallelism, without slice
     # parallelism.
+    process_count = 1 if IS_WINDOWS else 6
     with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_process_count', '6'),
+        ('GSUtil', 'parallel_process_count', str(process_count)),
         ('GSUtil', 'parallel_thread_count', '7')]):
       metrics_list = self._RunGsUtilWithAnalyticsOutput(
           ['-m', 'rsync', tmpdir1, tmpdir2])
@@ -917,7 +926,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       self._CheckParameterValue('Event Action', 'FileToFile', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'fan', metrics_list)
       self._CheckParameterValue('Source URL Type', 'file', metrics_list)
-      self._CheckParameterValue('Num Processes', '6', metrics_list)
+      self._CheckParameterValue('Num Processes', str(process_count),
+                                metrics_list)
       self._CheckParameterValue('Num Threads', '7', metrics_list)
       self._CheckParameterValue('Provider Types', 'file', metrics_list)
       self._CheckParameterValue('Size of Files/Objects Transferred', file_size,
@@ -936,9 +946,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmpdir, contents='a' * file_size)
     self.CreateTempFile(tmpdir=tmpdir, contents='b' * file_size)
 
+    process_count = 1 if IS_WINDOWS else 2
     # Run a parallel composite upload without fan parallelism.
     with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_process_count', '2'),
+        ('GSUtil', 'parallel_process_count', str(process_count)),
         ('GSUtil', 'parallel_thread_count', '3'),
         ('GSUtil', 'parallel_composite_upload_threshold', '1')]):
       metrics_list = self._RunGsUtilWithAnalyticsOutput(
@@ -947,7 +958,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                 metrics_list)
       self._CheckParameterValue('Event Action', 'FileToCloud', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'slice', metrics_list)
-      self._CheckParameterValue('Num Processes', '2', metrics_list)
+      self._CheckParameterValue('Num Processes', str(process_count),
+                                metrics_list)
       self._CheckParameterValue('Num Threads', '3', metrics_list)
       self._CheckParameterValue('Provider Types', 'file%2C' + bucket_uri.scheme,
                                 metrics_list)
@@ -956,7 +968,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       self._CheckParameterValue('Number of Files/Objects Transferred', 2,
                                 metrics_list)
       (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
-      self.assertGreater(io_time, 0)
+      if IS_LINUX:  # io_time will be None on other platforms.
+        self.assertGreater(io_time, 0)
 
   @SkipForS3('No slice parallelism support for S3.')
   def testPerformanceSummaryCloudToFile(self):
@@ -968,8 +981,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     fpath = self.CreateTempFile()
     # Run a sliced object download with fan parallelism.
+    process_count = 1 if IS_WINDOWS else 4
     with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_process_count', '4'),
+        ('GSUtil', 'parallel_process_count', str(process_count)),
         ('GSUtil', 'parallel_thread_count', '5'),
         ('GSUtil', 'sliced_object_download_threshold', '1'),
         ('GSUtil', 'test_assume_fast_crcmod', 'True')]):
@@ -979,7 +993,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                 metrics_list)
       self._CheckParameterValue('Event Action', 'CloudToFile', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'both', metrics_list)
-      self._CheckParameterValue('Num Processes', '4', metrics_list)
+      self._CheckParameterValue('Num Processes', str(process_count),
+                                metrics_list)
       self._CheckParameterValue('Num Threads', '5', metrics_list)
       self._CheckParameterValue('Provider Types', 'file%2C' + bucket_uri.scheme,
                                 metrics_list)

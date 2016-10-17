@@ -49,10 +49,18 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     cmd = (['-m', 'mv'] + objs + [suri(bucket2_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
-    self.assertGreaterEqual(stderr.count('Copying'), 2)
-    self.assertLessEqual(stderr.count('Copying'), 4)
-    self.assertEqual(stderr.count('Copying') % 2, 0)
-    self.assertEqual(stderr.count('Removing'), 2)
+    self.assertGreaterEqual(
+        stderr.count('Copying'), 2,
+        'stderr did not contain 2 "Copying" lines:\n%s' % stderr)
+    self.assertLessEqual(
+        stderr.count('Copying'), 4,
+        'stderr did not contain <= 4 "Copying" lines:\n%s' % stderr)
+    self.assertEqual(
+        stderr.count('Copying') % 2, 0,
+        'stderr did not contain even number of "Copying" lines:\n%s' % stderr)
+    self.assertEqual(
+        stderr.count('Removing'), 2,
+        'stderr did not contain 2 "Removing" lines:\n%s' % stderr)
 
     self.AssertNObjectsInBucket(bucket1_uri, 0)
     self.AssertNObjectsInBucket(bucket2_uri, 2)
@@ -72,8 +80,12 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     cmd = (['-m', 'mv'] + objs + [suri(bucket1_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
-    self.assertGreaterEqual(stderr.count('Copying'), 1)
-    self.assertLessEqual(stderr.count('Copying'), 2)
+    self.assertGreaterEqual(
+        stderr.count('Copying'), 1,
+        'stderr did not contain >= 1 "Copying" lines:\n%s' % stderr)
+    self.assertLessEqual(
+        stderr.count('Copying'), 2,
+        'stderr did not contain <= 2 "Copying" lines:\n%s' % stderr)
     self.assertEqual(stderr.count('Removing'), 1)
 
     self.AssertNObjectsInBucket(bucket1_uri, 1)
