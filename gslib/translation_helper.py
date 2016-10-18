@@ -298,7 +298,7 @@ def CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=False):
             dst_metadata_dict[src_prop.key] = None
           else:
             dst_metadata_dict[src_prop.key] = src_prop.value
-      elif src_prop.value != '':  # pylint: disable=explicit-bool-comparison 
+      elif src_prop.value != '':  # pylint: disable=g-explicit-bool-comparison
         # Don't propagate '' value since that means to remove the header.
         dst_metadata_dict[src_prop.key] = src_prop.value
     # Rewrite the list with our updated dict.
