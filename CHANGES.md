@@ -1,3 +1,38 @@
+Release 4.22 (release date: 2016-10-20)
+=======================================
+New features
+------------------
+- Added per-object storage class functionality to gsutil. For more details, see
+  https://cloud.google.com/storage/docs/per-object-storage-class.
+- Added the defstorageclass command, which can be used to get and set an
+  existing bucket's default storage class.
+- The cp, mv, and rewrite commands now support the "-s" option, allowing users
+  to specify the storage class for destination object(s). When no storage class
+  is specified, the object's storage class will be assigned from either its
+  bucket's default storage class (cp/mv commands) or the source object's
+  storage class (rewrite command).
+
+Bug Fixes
+------------------
+- Fixed a bug in POSIX preservation for the cp and mv commands where POSIX
+  attributes were not propagated to cloud objects, even when the -P flag was
+  present.
+- Fixed a bug in setmeta where removing custom metadata would add an
+  empty-string value if the key did not already exist.
+- Content-Type is now obtained from symlink targets, rather than symlinks
+  themselves, when the use_magicfile option is set in the .boto configuration
+  file.
+
+Other Changes
+------------------
+- Analytics reporting now includes performance metrics such as average
+  throughput and thread idle time.
+- The iam set command now supports a -e option to specify an etag precondition
+  check. The IAM policy file returned by iam get and used by iam set has also
+  been altered to include this field.
+- Default limit for max number of processes changed to 64.
+- Several documentation updates and clarifications.
+
 Release 4.21 (release date: 2016-08-16)
 =======================================
 New Features

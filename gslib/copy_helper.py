@@ -3231,6 +3231,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
     else:
       _SetContentTypeFromFile(src_url, dst_obj_metadata)
   if src_obj_metadata:
+    # Note that CopyObjectMetadata only copies specific fields. We intentionally
+    # do not copy storageClass, as the bucket's default storage class should be
+    # used (when copying to a gs:// bucket) unless explicitly overridden.
     CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False)
 
   if global_copy_helper_opts.dest_storage_class:
