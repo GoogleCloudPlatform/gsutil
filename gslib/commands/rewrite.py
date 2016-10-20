@@ -57,7 +57,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The gsutil rewrite command rewrites cloud objects, applying the specified
-  transformations to the objects. The transformation(s) are atomic and
+  transformations to them. The transformation(s) are atomic and
   applied based on the input transformation flags. Object metadata values are
   preserved unless altered by a transformation.
 

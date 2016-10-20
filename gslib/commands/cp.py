@@ -657,9 +657,9 @@ _OPTIONS_TEXT = """
                  gsutil to copy any objects at the current bucket directory
                  level, and skip any subdirectories.
 
-  -s <class>     The storage class of the destination object(s), otherwise the
-                 default storage class from the destination bucket will be used.
-                 Not valid for copying to non-cloud destinations.
+  -s <class>     The storage class of the destination object(s). If not
+                 specified, the default storage class of the destination bucket
+                 is used. Not valid for copying to non-cloud destinations.
 
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER

@@ -147,8 +147,8 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/obj1:
-            Creation time:      Fri, 02 Mar 2012 19:25:17 GMT
-            Update time:        Fri, 04 Mar 2012 11:39:24 GMT
+            Creation time:      Fri, 21 Oct 2016 19:25:17 GMT
+            Update time:        Fri, 21 Oct 2016 21:17:59 GMT
             Size:               2276224
             Cache-Control:      private, max-age=0
             Content-Type:       application/x-executable

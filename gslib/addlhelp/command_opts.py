@@ -40,7 +40,7 @@ _DETAILED_HELP_TEXT = ("""
               posting support requests, including exception stack traces.
 
   -DD         Shows HTTP requests/headers, additional debug info,
-              execption stack traces, plus HTTP upstream payload.
+              exception stack traces, plus HTTP upstream payload.
 
   -h          Allows you to specify certain HTTP headers, for example:
 
@@ -94,8 +94,9 @@ _DETAILED_HELP_TEXT = ("""
               are using a slower network, such as the typical network speeds
               offered by non-business home network plans. It can also make
               your performance worse for cases that perform all operations
-              locally (e.g., gsutil rsync, where both source and desination URLs
-              are on the local disk), because it can "thrash" your local disk.
+              locally (e.g., gsutil rsync, where both source and destination
+              URLs are on the local disk), because it can "thrash" your local
+              disk.
 
               If a download or upload operation using parallel transfer fails
               before the entire transfer is complete (e.g. failing after 300 of
