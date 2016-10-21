@@ -2986,7 +2986,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud, skip_unsupported_objects,
 # Map of (lowercase) storage classes with early deletion charges to their
 # minimum lifetime in seconds.
 EARLY_DELETION_MINIMUM_LIFETIME = {
-    'nearline': 30 * SECONDS_PER_DAY
+    'nearline': 30 * SECONDS_PER_DAY,
+    'coldline': 90 * SECONDS_PER_DAY
 }
 
 
