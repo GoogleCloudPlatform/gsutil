@@ -145,10 +145,12 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>ADDITIONAL CONFIGURATION-CONTROLLABLE FEATURES</B>
-  With the exception of setting up gsutil to work through a proxy (see
-  below), most users won't need to edit values in the boto configuration file;
-  values found in there tend to be of more specialized use than command line
-  option-controllable features.
+  With the exception of setting up gsutil to work through a proxy, most users
+  won't need to edit values in the boto configuration file; values found in
+  the file tend to be of more specialized use than command line
+  option-controllable features. For information on setting up gsutil to work
+  through a proxy, see the comments preceding the proxy settings in your
+  .boto file.
 
   The following are the currently defined configuration settings, broken
   down by section. Their use is documented in comments preceding each, in
