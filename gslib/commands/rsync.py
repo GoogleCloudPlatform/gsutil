@@ -1085,7 +1085,16 @@ class _SeekAheadDiffIterator(object):
 
   def __iter__(self):
     for diff_to_apply in self.cloned_diff_iterator:
-      yield SeekAheadResult(data_bytes=diff_to_apply.copy_size or 0)
+      bytes_to_copy = diff_to_apply.copy_size or 0
+      if (diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST or
+          diff_to_apply.diff_action == _DiffAction.POSIX_SRC_TO_DST):
+        # Assume MTIME_SRC_TO_DST and POSIX_SRC_TO_DST are metadata-only
+        # copies. However, if the user does not have OWNER permission on
+        # an object, the data must be re-sent, and this function will
+        # underestimate the amount of bytes that rsync must copy.
+        bytes_to_copy = 0
+
+      yield SeekAheadResult(data_bytes=bytes_to_copy)
 
 
 class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
@@ -1107,6 +1116,9 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.compute_file_checksums = False
     self.delete_extras = initialized_diff_iterator.delete_extras
     self.recursion_requested = initialized_diff_iterator.delete_extras
+    # TODO: Add a test that mocks the appropriate values in RsyncFunc and
+    # ensure that running this iterator succeeds.
+    self.preserve_posix = False
     # This iterator shouldn't output any log messages.
     self.logger = logging.getLogger('dummy')
     self.base_src_url = initialized_diff_iterator.base_src_url
