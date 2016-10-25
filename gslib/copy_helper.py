@@ -2031,6 +2031,7 @@ def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
                                          TrackerFileType.SLICED_DOWNLOAD,
                                          api_selector)
 
+  fp = None
   # Check to see if we should attempt resuming the download.
   try:
     fp = open(download_file_name, 'rb')
@@ -2458,6 +2459,7 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
     server_encoding: Content-encoding string if it was detected that the server
                      sent encoded bytes during transfer, None otherwise.
   """
+  fp = None
   try:
     fp = open(download_file_name, 'w')
 
