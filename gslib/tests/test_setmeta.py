@@ -18,10 +18,12 @@ from __future__ import absolute_import
 
 import re
 
+from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.util import Retry
 from gslib.util import UTF8
 
@@ -163,6 +165,18 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
       stdout = stdout.decode(UTF8)
       self.assertTrue(re.search(ur'dessert:\s+soufflé', stdout))
     _Check1()
+
+  @SkipForS3('XML header keys are case-insensitive')
+  def test_uppercase_header(self):
+    """Tests setting custom metadata with an uppercase value."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip('XML header keys are case-insensitive.')
+    objuri = self.CreateObject(contents='foo')
+    self.RunGsUtil([
+        'setmeta', '-h', 'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
+        suri(objuri)])
+    stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, ur'CaSe:\s+SeNsItIvE')
 
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(

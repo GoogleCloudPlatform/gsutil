@@ -290,11 +290,25 @@ class SetMetaCommand(Command):
       else:
         (header, value) = (parts[0], None)
       _InsistAsciiHeader(header)
+
       # Translate headers to lowercase to match the casing assumed by our
       # sanity-checking operations.
-      header = header.lower()
+      lowercase_header = header.lower()
+      # This check is overly simple; it would be stronger to check, for each
+      # URL argument, whether the header starts with the provider
+      # metadata_prefix, but here we just parse the spec once, before
+      # processing any of the URLs. This means we will not detect if the user
+      # tries to set an x-goog-meta- field on an another provider's object,
+      # for example.
+      is_custom_meta = _IsCustomMeta(lowercase_header)
+      if not is_custom_meta and lowercase_header not in SETTABLE_FIELDS:
+        raise CommandException(
+            'Invalid or disallowed header (%s).\nOnly these fields (plus '
+            'x-goog-meta-* fields) can be set or unset:\n%s' % (
+                header, sorted(list(SETTABLE_FIELDS))))
+
       if value:
-        if _IsCustomMeta(header):
+        if is_custom_meta:
           # Allow non-ASCII data for custom metadata fields.
           cust_metadata_plus[header] = value
           num_cust_metadata_plus_elems += 1
@@ -304,14 +318,14 @@ class SetMetaCommand(Command):
           # value).
           _InsistAsciiHeaderValue(header, value)
           value = str(value)
-          metadata_plus[header] = value
+          metadata_plus[lowercase_header] = value
           num_metadata_plus_elems += 1
       else:
-        if _IsCustomMeta(header):
+        if is_custom_meta:
           cust_metadata_minus.add(header)
           num_cust_metadata_minus_elems += 1
         else:
-          metadata_minus.add(header)
+          metadata_minus.add(lowercase_header)
           num_metadata_minus_elems += 1
 
     if (num_metadata_plus_elems != len(metadata_plus)
@@ -320,22 +334,7 @@ class SetMetaCommand(Command):
         or num_cust_metadata_minus_elems != len(cust_metadata_minus)
         or metadata_minus.intersection(set(metadata_plus.keys()))):
       raise CommandException('Each header must appear at most once.')
-    other_than_base_fields = (set(metadata_plus.keys())
-                              .difference(SETTABLE_FIELDS))
-    other_than_base_fields.update(
-        metadata_minus.difference(SETTABLE_FIELDS))
-    for f in other_than_base_fields:
-      # This check is overly simple; it would be stronger to check, for each
-      # URL argument, whether f.startswith the
-      # provider metadata_prefix, but here we just parse the spec
-      # once, before processing any of the URLs. This means we will not
-      # detect if the user tries to set an x-goog-meta- field on an another
-      # provider's object, for example.
-      if not _IsCustomMeta(f):
-        raise CommandException(
-            'Invalid or disallowed header (%s).\nOnly these fields (plus '
-            'x-goog-meta-* fields) can be set or unset:\n%s' % (
-                f, sorted(list(SETTABLE_FIELDS))))
+
     metadata_plus.update(cust_metadata_plus)
     metadata_minus.update(cust_metadata_minus)
     return (metadata_minus, metadata_plus)
@@ -357,4 +356,5 @@ def _InsistAsciiHeaderValue(header, value):
 
 
 def _IsCustomMeta(header):
+  """Returns true if header (which must be lowercase) is a custom header."""
   return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
