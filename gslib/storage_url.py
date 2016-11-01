@@ -190,6 +190,8 @@ class _CloudUrl(StorageUrl):
         self.scheme = object_match.group('provider')
         self.bucket_name = object_match.group('bucket')
         self.object_name = object_match.group('object')
+        if self.object_name == '.' or self.object_name == '..':
+          raise InvalidUrlError('%s is an invalid root-level object name.')
         if self.scheme == 'gs':
           generation_match = GS_GENERATION_REGEX.match(self.object_name)
           if generation_match:
