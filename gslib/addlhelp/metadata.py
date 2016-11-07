@@ -29,10 +29,10 @@ _DETAILED_HELP_TEXT = ("""
 
   There are two ways to set metadata on objects:
 
-  - at upload time you can specify one or more headers to associate with
-    objects, using the gsutil -h option.  For example, the following command
-    would cause gsutil to set the Content-Type and Cache-Control for each
-    of the files being uploaded:
+  - At upload time you can specify one or more metadata properties to
+    associate with objects, using the gsutil -h option.  For example, the
+    following command would cause gsutil to set the Content-Type and
+    Cache-Control for each of the files being uploaded:
 
       gsutil -h "Content-Type:text/html" \\
              -h "Cache-Control:public, max-age=3600" cp -r images \\
@@ -57,7 +57,7 @@ _DETAILED_HELP_TEXT = ("""
   also "gsutil help config"). In general, using use_magicfile is more robust
   and configurable, but is not available on Windows.
 
-  If you specify a Content-Type header with -h when uploading content (like the
+  If you specify Content-Type with -h when uploading content (like the
   example gsutil command given in the previous section), it overrides the
   Content-Type that would have been set based on filename extension or content.
   This can be useful if the Content-Type detection algorithm doesn't work as
@@ -89,7 +89,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil -h Cache-Control:private cp -a public-read file.png gs://your-bucket
 
-  Another use of the Cache-Control header is through the "no-transform" value,
+  Another use of Cache-Control is through the "no-transform" value,
   which instructs Google Cloud Storage to not apply any content transformations
   based on specifics of a download request, such as removing gzip
   content-encoding for incompatible clients.  Note that this parameter is only
@@ -144,8 +144,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>CUSTOM METADATA</B>
   You can add your own custom metadata (e.g,. for use by your application)
-  to a Google Cloud Storage object by setting a header that starts with
-  "x-goog-meta", for example:
+  to a Google Cloud Storage object by using "x-goog-meta" with -h. For example:
 
     gsutil -h x-goog-meta-reviewer:jane cp mycode.java gs://bucket/reviews
 
@@ -162,10 +161,9 @@ _DETAILED_HELP_TEXT = ("""
   - Content-Language
   - Content-MD5
   - Content-Type
-  - Any field starting with a matching Cloud Storage Provider
-    prefix, such as x-goog-meta- (i.e., custom metadata).
+  - Custom metadata
 
-  Header names are case-insensitive.
+  Field names are case-insensitive.
 
   x-goog-meta- fields can have data set to arbitrary Unicode values. All
   other fields must have ASCII values.
