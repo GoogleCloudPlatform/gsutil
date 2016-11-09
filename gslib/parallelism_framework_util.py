@@ -95,6 +95,27 @@ class AtomicDict(object):
       return val
 
 
+class ThreadingIntValue(object):
+  """Multiprocessing.Value('i', 0) equivalent for threaded case.
+
+  The sole purpose of this class is to simplify the calling pattern for
+  global variables that could be a Multiprocessing.Value or an integer.
+  Without this class, callers need to write code like this:
+
+  global variable_name
+  if isinstance(variable_name, int):
+    return variable_name
+  else:
+    return variable_name.value
+
+  This class uses no locks and relies on the atomicity of operators like
+  += and -= to increment the value.
+  """
+
+  def __init__(self):
+    self.value = 0
+
+
 # Pylint gets confused by the mixed lower and upper-case method names in
 # AtomicDict.
 # pylint: disable=invalid-name

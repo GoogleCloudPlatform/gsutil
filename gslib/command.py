@@ -59,6 +59,7 @@ from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.parallelism_framework_util import ThreadingIntValue
 from gslib.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
@@ -296,6 +297,7 @@ def InitializeMultiprocessingVariables():
 
   manager = multiprocessing.Manager()
 
+  # List of ConsumerPools - used during shutdown to clean up child processes.
   consumer_pools = []
 
   # List of all existing task queues - used by all pools to find the queue
@@ -390,12 +392,15 @@ def InitializeThreadingVariables():
   global caller_id_finished_count, shared_vars_list_map, total_tasks
   global need_pool_or_done_cond, call_completed_map, class_map, thread_stats
   global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
-  caller_id_counter = 0
+  global worker_checking_level_lock, current_max_recursive_level
+  caller_id_counter = ThreadingIntValue()
   caller_id_finished_count = AtomicDict()
   caller_id_lock = threading.Lock()
   call_completed_map = AtomicDict()
   class_map = AtomicDict()
-  failure_count = 0
+  current_max_recursive_level = ThreadingIntValue()
+  failure_count = ThreadingIntValue()
+  glob_status_queue = Queue.Queue(MAX_QUEUE_SIZE)
   global_return_values_map = AtomicDict()
   need_pool_or_done_cond = threading.Condition()
   shared_vars_list_map = AtomicDict()
@@ -403,7 +408,7 @@ def InitializeThreadingVariables():
   thread_stats = AtomicDict()
   task_queues = []
   total_tasks = AtomicDict()
-  glob_status_queue = Queue.Queue(MAX_QUEUE_SIZE)
+  worker_checking_level_lock = threading.Lock()
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -1195,12 +1200,8 @@ class Command(HelpProvider):
     global task_queues, caller_id_lock, caller_id_counter
     # Get a new caller ID.
     with caller_id_lock:
-      if isinstance(caller_id_counter, int):
-        caller_id_counter += 1
-        caller_id = caller_id_counter
-      else:
-        caller_id_counter.value += 1
-        caller_id = caller_id_counter.value
+      caller_id_counter.value += 1
+      caller_id = caller_id_counter.value
 
     # Create a copy of self with an incremented recursive level. This allows
     # the class to report its level correctly if the function called from it
@@ -1528,7 +1529,15 @@ class Command(HelpProvider):
       if process_count > 1:
         task_queues.append(_NewMultiprocessingQueue())
       else:
-        task_queues.append(_NewThreadsafeQueue())
+        task_queue = _NewThreadsafeQueue()
+        task_queues.append(task_queue)
+        # Create a top-level worker pool since this is the first execution
+        # of ParallelApply on the main thread.
+        WorkerPool(
+            thread_count, self.logger, task_queue=task_queue,
+            bucket_storage_uri_class=self.bucket_storage_uri_class,
+            gsutil_api_map=self.gsutil_api_map, debug=self.debug,
+            status_queue=glob_status_queue)
 
     if process_count > 1:  # Handle process pool creation.
       # Check whether this call will need a new set of workers.
@@ -1555,16 +1564,25 @@ class Command(HelpProvider):
       finally:
         if not is_main_thread:
           worker_checking_level_lock.release()
+    else:  # Handle new worker thread pool creation.
+      if not is_main_thread:
+        try:
+          worker_checking_level_lock.acquire()
+          if self.recursive_apply_level > _GetCurrentMaxRecursiveLevel():
+            # We don't have a thread pool for this level of recursive apply
+            # calls, so create a pool and corresponding task queue.
+            _IncrementCurrentMaxRecursiveLevel()
+            task_queue = _NewThreadsafeQueue()
+            task_queues.append(task_queue)
+            WorkerPool(
+                thread_count, self.logger, task_queue=task_queue,
+                bucket_storage_uri_class=self.bucket_storage_uri_class,
+                gsutil_api_map=self.gsutil_api_map, debug=self.debug,
+                status_queue=glob_status_queue)
+        finally:
+          worker_checking_level_lock.release()
 
-    # If we're running in this process, create a separate task queue. Otherwise,
-    # if Apply has already been called with process_count > 1, then there will
-    # be consumer pools trying to use our processes.
-    if process_count > 1:
-      task_queue = task_queues[self.recursive_apply_level]
-    elif self.multiprocessing_is_available:
-      task_queue = _NewMultiprocessingQueue()
-    else:
-      task_queue = _NewThreadsafeQueue()
+    task_queue = task_queues[self.recursive_apply_level]
 
     # Only use the seek-ahead iterator in the main thread to provide an
     # overall estimate of operations.
@@ -1589,37 +1607,30 @@ class Command(HelpProvider):
     if is_main_thread:
       ui_thread = UIThread(glob_status_queue, sys.stderr, ui_controller)
 
-    if process_count > 1:
-      # Wait here until either:
-      #   1. We're the main thread and someone needs a new consumer pool - in
-      #      which case we create one and continue waiting.
-      #   2. Someone notifies us that all of the work we requested is done, in
-      #      which case we retrieve the results (if applicable) and stop
-      #      waiting.
-      while True:
-        with need_pool_or_done_cond:
-          # Either our call is done, or someone needs a new level of consumer
-          # pools, or we the wakeup call was meant for someone else. It's
-          # impossible for both conditions to be true, since the main thread is
-          # blocked on any other ongoing calls to Apply, and a thread would not
-          # ask for a new consumer pool unless it had more work to do.
-          if call_completed_map[caller_id]:
-            break
-          elif is_main_thread and new_pool_needed.value:
-            new_pool_needed.value = 0
-            self._CreateNewConsumerPool(process_count, thread_count,
-                                        glob_status_queue)
-            need_pool_or_done_cond.notify_all()
+    # Wait here until either:
+    #   1. We're the main thread in the multi-process case, and someone needs
+    #      a new consumer pool - in which case we create one and continue
+    #      waiting.
+    #   2. Someone notifies us that all of the work we requested is done, in
+    #      which case we retrieve the results (if applicable) and stop
+    #      waiting.
+    # At most one of these can be true, because the main thread is blocked on
+    # its call to Apply, and a thread will not ask for a new consumer pool
+    # unless it had more work to do.
+    while True:
+      with need_pool_or_done_cond:
+        if call_completed_map[caller_id]:
+          break
+        elif process_count > 1 and is_main_thread and new_pool_needed.value:
+          new_pool_needed.value = 0
+          self._CreateNewConsumerPool(process_count, thread_count,
+                                      glob_status_queue)
+          need_pool_or_done_cond.notify_all()
 
-          # Note that we must check the above conditions before the wait() call;
-          # otherwise, the notification can happen before we start waiting, in
-          # which case we'll block forever.
-          need_pool_or_done_cond.wait()
-    else:  # Using a single process.
-      self._ApplyThreads(thread_count, process_count,
-                         self.recursive_apply_level,
-                         glob_status_queue,
-                         is_blocking_call=True, task_queue=task_queue)
+        # Note that we must check the above conditions before the wait() call;
+        # otherwise, the notification can happen before we start waiting, in
+        # which case we'll block forever.
+        need_pool_or_done_cond.wait()
 
     # We've completed all tasks (or excepted), so signal the UI thread to
     # terminate.
@@ -1655,7 +1666,7 @@ class Command(HelpProvider):
         provider_types=args_iterator.provider_types)
 
   def _ApplyThreads(self, thread_count, process_count, recursive_apply_level,
-                    status_queue, is_blocking_call=False, task_queue=None):
+                    status_queue):
     """Assigns the work from the multi-process global task queue.
 
     Work is assigned to an individual process for later consumption either by
@@ -1669,38 +1680,32 @@ class Command(HelpProvider):
                              of this thread.
       status_queue: Multiprocessing/threading queue for progress reporting and
           performance aggregation.
-      is_blocking_call: True iff the call to Apply is blocked on this call
-                        (which is true iff process_count == 1), implying that
-                        _ApplyThreads must behave as a blocking call.
     """
-    # _ApplyThreads is called in two situations: as the main process when
-    # process_count == 1, and as a separate multiprocessing.Process when
-    # process_count > 1. Separate processes should exit on a terminating signal,
+    assert process_count > 1, (
+        'Invalid state, calling command._ApplyThreads with only one process.')
+
+    # Separate processes should exit on a terminating signal,
     # but to avoid race conditions only the main process should handle
     # multiprocessing cleanup. Override child processes to use a single signal
     # handler.
-    if process_count > 1:
-      for catch_signal in GetCaughtSignals():
-        signal.signal(catch_signal, ChildProcessSignalHandler)
+    for catch_signal in GetCaughtSignals():
+      signal.signal(catch_signal, ChildProcessSignalHandler)
 
     self._ResetConnectionPool()
     self.recursive_apply_level = recursive_apply_level
 
-    task_queue = task_queue or task_queues[recursive_apply_level]
+    task_queue = task_queues[recursive_apply_level]
 
-    # Ensure fairness across processes by filling our WorkerPool only with
-    # as many tasks as it has WorkerThreads. This semaphore is acquired each
-    # time that a task is retrieved from the queue and released each time
-    # a task is completed by a WorkerThread.
+    # Ensure fairness across processes by filling our WorkerPool
+    # only with as many tasks as it has WorkerThreads. This semaphore is
+    # acquired each time that a task is retrieved from the queue and released
+    # each time a task is completed by a WorkerThread.
     worker_semaphore = threading.BoundedSemaphore(thread_count)
 
-    assert thread_count * process_count > 1, (
-        'Invalid state, calling command._ApplyThreads with only one thread '
-        'and process.')
     # TODO: Presently, this pool gets recreated with each call to Apply. We
     # should be able to do it just once, at process creation time.
     worker_pool = WorkerPool(
-        thread_count, self.logger, worker_semaphore,
+        thread_count, self.logger, worker_semaphore=worker_semaphore,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         gsutil_api_map=self.gsutil_api_map, debug=self.debug,
         status_queue=status_queue)
@@ -1716,6 +1721,7 @@ class Command(HelpProvider):
         # efficiency and user responsiveness.
         time.sleep(0.01)
       task = task_queue.get()
+
       if task.args != ZERO_TASKS_TO_DO_ARGUMENT:
         # If we have no tasks to do and we're performing a blocking call, we
         # need a special signal to tell us to stop - otherwise, we block on
@@ -1723,25 +1729,9 @@ class Command(HelpProvider):
         worker_pool.AddTask(task)
         num_enqueued += 1
       else:
-        # No tasks remain; don't block the semaphore on WorkerThread completion.
+        # No tasks remain; since no work was dispatched to a thread, don't
+        # block the semaphore on a WorkerThread completion.
         worker_semaphore.release()
-
-      if is_blocking_call:
-        num_to_do = total_tasks[task.caller_id]
-        # The producer thread won't enqueue the last task until after it has
-        # updated total_tasks[caller_id], so we know that num_to_do < 0 implies
-        # we will do this check again.
-        if num_to_do >= 0 and num_enqueued == num_to_do:
-          if thread_count == 1:
-            return
-          else:
-            while True:
-              with need_pool_or_done_cond:
-                if call_completed_map[task.caller_id]:
-                  # We need to check this first, in case the condition was
-                  # notified before we grabbed the lock.
-                  return
-                need_pool_or_done_cond.wait()
 
 
 # Below here lie classes and functions related to controlling the flow of tasks
@@ -1986,10 +1976,21 @@ class ProducerThread(threading.Thread):
 class WorkerPool(object):
   """Pool of worker threads to which tasks can be added."""
 
-  def __init__(self, thread_count, logger, worker_semaphore,
-               bucket_storage_uri_class=None, gsutil_api_map=None, debug=0,
-               status_queue=None):
-    self.task_queue = _NewThreadsafeQueue()
+  def __init__(self, thread_count, logger, worker_semaphore=None,
+               task_queue=None, bucket_storage_uri_class=None,
+               gsutil_api_map=None, debug=0, status_queue=None):
+    # In the multi-process case, a worker sempahore is required to ensure
+    # even work distribution.
+    #
+    # In the single process case, the input task queue directly feeds worker
+    # threads from the ProducerThread. Since worker threads will consume only
+    # one task at a time from the queue, there is no need for a semaphore to
+    # ensure even work distribution.
+    #
+    # Thus, exactly one of task_queue or worker_semaphore must be provided.
+    assert (worker_semaphore is None) != (task_queue is None)
+
+    self.task_queue = task_queue or _NewThreadsafeQueue()
     self.threads = []
     for _ in range(thread_count):
       worker_thread = WorkerThread(
@@ -2000,6 +2001,7 @@ class WorkerPool(object):
       worker_thread.start()
 
   def AddTask(self, task):
+    """Adds a task to the task queue; used only in the multi-process case."""
     self.task_queue.put(task)
 
 
@@ -2119,6 +2121,10 @@ class WorkerThread(threading.Thread):
       self._StartBlockedTime()
       task = self.task_queue.get()
       self._EndBlockedTime()
+      if task.args == ZERO_TASKS_TO_DO_ARGUMENT:
+        # This can happen in the single-process case because worker threads
+        # consume ProducerThread tasks directly.
+        continue
       caller_id = task.caller_id
 
       # Get the instance of the command with the appropriate context.
@@ -2272,42 +2278,34 @@ def ShutDownGsutil():
     pass
 
 
+def _GetCurrentMaxRecursiveLevel():
+  global current_max_recursive_level
+  return current_max_recursive_level.value
+
+
+def _IncrementCurrentMaxRecursiveLevel():
+  global current_max_recursive_level
+  current_max_recursive_level.value += 1
+
+
 def _IncrementFailureCount():
   global failure_count
-  if isinstance(failure_count, int):
-    failure_count += 1
-  else:  # Otherwise it's a multiprocessing.Value() of type 'i'.
-    failure_count.value += 1
+  failure_count.value += 1
 
 
 def DecrementFailureCount():
   global failure_count
-  if isinstance(failure_count, int):
-    failure_count -= 1
-  else:  # Otherwise it's a multiprocessing.Value() of type 'i'.
-    failure_count.value -= 1
+  failure_count.value -= 1
 
 
 def GetFailureCount():
   """Returns the number of failures processed during calls to Apply()."""
-  try:
-    if isinstance(failure_count, int):
-      return failure_count
-    else:  # It's a multiprocessing.Value() of type 'i'.
-      return failure_count.value
-  except NameError:  # If it wasn't initialized, Apply() wasn't called.
-    return 0
+  global failure_count
+  return failure_count.value
 
 
 def ResetFailureCount():
   """Resets the failure_count variable to 0 - useful if error is expected."""
-  try:
-    global failure_count
-    if isinstance(failure_count, int):
-      failure_count = 0
-    else:  # It's a multiprocessing.Value() of type 'i'.
-      failure_count = multiprocessing.Value('i', 0)
-  except NameError:  # If it wasn't initialized, Apply() wasn't called.
-    pass
-# pylint: enable=global-variable-not-assigned,global-variable-undefined
+  global failure_count
+  failure_count.value = 0
 
