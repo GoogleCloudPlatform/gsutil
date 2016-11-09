@@ -20,10 +20,6 @@ bucket, and bucket subdir implicit wildcarding). This class encapsulates
 the various rules for determining how these expansions are done.
 """
 
-# Disable warnings for NameExpansionIteratorQueue functions; they implement
-# an interface which does not follow lint guidelines.
-# pylint: disable=invalid-name
-
 from __future__ import absolute_import
 
 import logging
@@ -404,73 +400,6 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
   if name_expansion_iterator.IsEmpty():
     raise CommandException(NO_URLS_MATCHED_GENERIC)
   return name_expansion_iterator
-
-
-class NameExpansionIteratorQueue(object):
-  """Wrapper around NameExpansionIterator with Multiprocessing.Queue interface.
-
-  Only a blocking get() function can be called, and the block and timeout
-  params on that function are ignored. All other class functions raise
-  NotImplementedError.
-
-  This class is thread safe.
-  """
-
-  def __init__(self, name_expansion_iterator, final_value):
-    self.name_expansion_iterator = name_expansion_iterator
-    self.final_value = final_value
-    self.lock = gslib.util.manager.Lock()
-
-  def qsize(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.qsize() not implemented')
-
-  def empty(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.empty() not implemented')
-
-  def full(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.full() not implemented')
-
-  # pylint: disable=unused-argument
-  def put(self, obj=None, block=None, timeout=None):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.put() not implemented')
-
-  def put_nowait(self, obj):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.put_nowait() not implemented')
-
-  # pylint: disable=unused-argument
-  def get(self, block=None, timeout=None):
-    self.lock.acquire()
-    try:
-      if self.name_expansion_iterator.IsEmpty():
-        return self.final_value
-      return self.name_expansion_iterator.next()
-    finally:
-      self.lock.release()
-
-  def get_nowait(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.get_nowait() not implemented')
-
-  def get_no_wait(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.get_no_wait() not implemented')
-
-  def close(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.close() not implemented')
-
-  def join_thread(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.join_thread() not implemented')
-
-  def cancel_join_thread(self):
-    raise NotImplementedError(
-        'NameExpansionIteratorQueue.cancel_join_thread() not implemented')
 
 
 class _NonContainerTuplifyIterator(object):
