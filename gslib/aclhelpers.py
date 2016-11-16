@@ -149,7 +149,7 @@ class AclChange(object):
       _ThrowError('{0} requires domain'.format(self.scope_type))
 
     if self.perm not in self.permission_shorthand_mapping.values():
-      perms = ', '.join(self.permission_shorthand_mapping.values())
+      perms = ', '.join(set(self.permission_shorthand_mapping.values()))
       _ThrowError('Allowed permissions are {0}'.format(perms))
 
   def _YieldMatchingEntries(self, current_acl):
