@@ -57,9 +57,9 @@ from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.parallelism_framework_util import AtomicDict
+from gslib.parallelism_framework_util import ProcessAndThreadSafeInt
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import ThreadingIntValue
 from gslib.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
@@ -306,7 +306,7 @@ def InitializeMultiprocessingVariables():
 
   # Used to assign a globally unique caller ID to each Apply call.
   caller_id_lock = manager.Lock()
-  caller_id_counter = multiprocessing.Value('i', 0)
+  caller_id_counter = ProcessAndThreadSafeInt(True)
 
   # Map from caller_id to total number of tasks to be completed for that ID.
   total_tasks = AtomicDict(manager=manager)
@@ -332,9 +332,9 @@ def InitializeMultiprocessingVariables():
   # Used as a way for the main thread to distinguish between being woken up
   # by another call finishing and being woken up by a call that needs a new set
   # of consumer processes.
-  new_pool_needed = multiprocessing.Value('i', 0)
+  new_pool_needed = ProcessAndThreadSafeInt(True)
 
-  current_max_recursive_level = multiprocessing.Value('i', 0)
+  current_max_recursive_level = ProcessAndThreadSafeInt(True)
 
   # Map from (caller_id, name) to the value of that shared variable.
   shared_vars_map = AtomicDict(manager=manager)
@@ -348,7 +348,7 @@ def InitializeMultiprocessingVariables():
   class_map = manager.dict()
 
   # Number of tasks that resulted in an exception in calls to Apply().
-  failure_count = multiprocessing.Value('i', 0)
+  failure_count = ProcessAndThreadSafeInt(True)
 
   # Central queue for status reporting across multiple processes and threads.
   # It's possible that if many processes and threads are executing small file
@@ -393,13 +393,13 @@ def InitializeThreadingVariables():
   global need_pool_or_done_cond, call_completed_map, class_map, thread_stats
   global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
   global worker_checking_level_lock, current_max_recursive_level
-  caller_id_counter = ThreadingIntValue()
+  caller_id_counter = ProcessAndThreadSafeInt(False)
   caller_id_finished_count = AtomicDict()
   caller_id_lock = threading.Lock()
   call_completed_map = AtomicDict()
   class_map = AtomicDict()
-  current_max_recursive_level = ThreadingIntValue()
-  failure_count = ThreadingIntValue()
+  current_max_recursive_level = ProcessAndThreadSafeInt(False)
+  failure_count = ProcessAndThreadSafeInt(False)
   glob_status_queue = Queue.Queue(MAX_QUEUE_SIZE)
   global_return_values_map = AtomicDict()
   need_pool_or_done_cond = threading.Condition()
@@ -1200,8 +1200,8 @@ class Command(HelpProvider):
     global task_queues, caller_id_lock, caller_id_counter
     # Get a new caller ID.
     with caller_id_lock:
-      caller_id_counter.value += 1
-      caller_id = caller_id_counter.value
+      caller_id_counter.Increment()
+      caller_id = caller_id_counter.GetValue()
 
     # Create a copy of self with an incremented recursive level. This allows
     # the class to report its level correctly if the function called from it
@@ -1232,8 +1232,8 @@ class Command(HelpProvider):
     task_queue = _NewMultiprocessingQueue()
     task_queues.append(task_queue)
 
-    current_max_recursive_level.value += 1
-    if current_max_recursive_level.value > MAX_RECURSIVE_DEPTH:
+    current_max_recursive_level.Increment()
+    if current_max_recursive_level.GetValue() > MAX_RECURSIVE_DEPTH:
       raise CommandException('Recursion depth of Apply calls is too great.')
     for _ in range(num_processes):
       recursive_apply_level = len(consumer_pools)
@@ -1548,7 +1548,7 @@ class Command(HelpProvider):
       try:
         if not is_main_thread:
           worker_checking_level_lock.acquire()
-        if self.recursive_apply_level >= current_max_recursive_level.value:
+        if self.recursive_apply_level >= current_max_recursive_level.GetValue():
           with need_pool_or_done_cond:
             # Only the main thread is allowed to create new processes -
             # otherwise, we will run into some Python bugs.
@@ -1557,7 +1557,7 @@ class Command(HelpProvider):
                                           glob_status_queue)
             else:
               # Notify the main thread that we need a new consumer pool.
-              new_pool_needed.value = 1
+              new_pool_needed.Reset(reset_value=1)
               need_pool_or_done_cond.notify_all()
               # The main thread will notify us when it finishes.
               need_pool_or_done_cond.wait()
@@ -1621,8 +1621,9 @@ class Command(HelpProvider):
       with need_pool_or_done_cond:
         if call_completed_map[caller_id]:
           break
-        elif process_count > 1 and is_main_thread and new_pool_needed.value:
-          new_pool_needed.value = 0
+        elif (process_count > 1 and is_main_thread
+              and new_pool_needed.GetValue()):
+          new_pool_needed.Reset()
           self._CreateNewConsumerPool(process_count, thread_count,
                                       glob_status_queue)
           need_pool_or_done_cond.notify_all()
@@ -2280,32 +2281,32 @@ def ShutDownGsutil():
 
 def _GetCurrentMaxRecursiveLevel():
   global current_max_recursive_level
-  return current_max_recursive_level.value
+  return current_max_recursive_level.GetValue()
 
 
 def _IncrementCurrentMaxRecursiveLevel():
   global current_max_recursive_level
-  current_max_recursive_level.value += 1
+  current_max_recursive_level.Increment()
 
 
 def _IncrementFailureCount():
   global failure_count
-  failure_count.value += 1
+  failure_count.Increment()
 
 
 def DecrementFailureCount():
   global failure_count
-  failure_count.value -= 1
+  failure_count.Decrement()
 
 
 def GetFailureCount():
   """Returns the number of failures processed during calls to Apply()."""
   global failure_count
-  return failure_count.value
+  return failure_count.GetValue()
 
 
 def ResetFailureCount():
   """Resets the failure_count variable to 0 - useful if error is expected."""
   global failure_count
-  failure_count.value = 0
+  failure_count.Reset()
 

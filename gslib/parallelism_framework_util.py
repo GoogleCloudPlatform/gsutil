@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import multiprocessing
 import Queue
 import threading
 
@@ -95,10 +96,11 @@ class AtomicDict(object):
       return val
 
 
-class ThreadingIntValue(object):
-  """Multiprocessing.Value('i', 0) equivalent for threaded case.
+class ProcessAndThreadSafeInt(object):
+  """This class implements a process and thread-safe integer.
 
-  The sole purpose of this class is to simplify the calling pattern for
+  It is backed either by a multiprocessing Value of type 'i' or an internal
+  threading lock.  This simplifies the calling pattern for
   global variables that could be a Multiprocessing.Value or an integer.
   Without this class, callers need to write code like this:
 
@@ -107,13 +109,44 @@ class ThreadingIntValue(object):
     return variable_name
   else:
     return variable_name.value
-
-  This class uses no locks and relies on the atomicity of operators like
-  += and -= to increment the value.
   """
 
-  def __init__(self):
-    self.value = 0
+  def __init__(self, multiprocessing_is_available):
+    self.multiprocessing_is_available = multiprocessing_is_available
+    if self.multiprocessing_is_available:
+      # Lock is implicit in multiprocessing.Value
+      self.value = multiprocessing.Value('i', 0)
+    else:
+      self.lock = threading.Lock()
+      self.value = 0
+
+  def Reset(self, reset_value=0):
+    if self.multiprocessing_is_available:
+      self.value.value = reset_value
+    else:
+      with self.lock:
+        self.value = reset_value
+
+  def Increment(self):
+    if self.multiprocessing_is_available:
+      self.value.value += 1
+    else:
+      with self.lock:
+        self.value += 1
+
+  def Decrement(self):
+    if self.multiprocessing_is_available:
+      self.value.value -= 1
+    else:
+      with self.lock:
+        self.value -= 1
+
+  def GetValue(self):
+    if self.multiprocessing_is_available:
+      return self.value.value
+    else:
+      with self.lock:
+        return self.value
 
 
 # Pylint gets confused by the mixed lower and upper-case method names in
