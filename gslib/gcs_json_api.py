@@ -1587,6 +1587,25 @@ class GcsJsonApi(CloudApi):
           # If we couldn't decode anything, just leave the message as None.
           pass
 
+  def _GetAcceptableScopesFromHttpError(self, http_error):
+    try:
+      www_authenticate = http_error.response['www-authenticate']
+      # In the event of a scope error, the www-authenticate field of the HTTP
+      # response should contain text of the form
+      #
+      # 'Bearer realm="https://accounts.google.com/", error=insufficient_scope,
+      # scope="${space separated list of acceptable scopes}"'
+      #
+      # Here we use a quick string search to find the scope list, just looking
+      # for a substring with the form 'scope="${scopes}"'.
+      scope_idx = www_authenticate.find('scope="')
+      if scope_idx >= 0:
+        scopes = www_authenticate[scope_idx:].split('"')[1]
+        return 'Acceptable scopes: %s' % scopes
+    except Exception:  # pylint: disable=broad-except
+      # Return None if we have any trouble parsing out the acceptable scopes.
+      pass
+
   def _TranslateApitoolsResumableUploadException(self, e):
     if isinstance(e, apitools_exceptions.HttpError):
       message = self._GetMessageFromHttpError(e)
@@ -1644,8 +1663,9 @@ class GcsJsonApi(CloudApi):
         elif 'insufficient_scope' in str(e):
           # If the service includes insufficient scope error detail in the
           # response body, this check can be removed.
-          return AccessDeniedException(_INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
-                                       status=e.status_code)
+          return AccessDeniedException(
+              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE, status=e.status_code,
+              body=self._GetAcceptableScopesFromHttpError(e))
       elif e.status_code == 403:
         if 'The account for the specified project has been disabled' in str(e):
           return AccessDeniedException(message or 'Account disabled.',
@@ -1678,8 +1698,9 @@ class GcsJsonApi(CloudApi):
         elif 'insufficient_scope' in str(e):
           # If the service includes insufficient scope error detail in the
           # response body, this check can be removed.
-          return AccessDeniedException(_INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
-                                       status=e.status_code)
+          return AccessDeniedException(
+              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE, status=e.status_code,
+              body=self._GetAcceptableScopesFromHttpError(e))
         else:
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)
