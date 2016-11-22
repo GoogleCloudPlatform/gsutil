@@ -31,9 +31,9 @@ _DETAILED_HELP_TEXT = ("""
 
   gsutil provides the illusion of a hierarchical file tree atop the "flat"
   name space supported by the Google Cloud Storage service. To the service,
-  the object gs://your-bucket/abc/def/ghi.txt is just an object that happens to
-  have "/" characters in its name. There are no "abc" or "abc/def" directories;
-  just a single object with the given name. This diagram:
+  the object gs://your-bucket/abc/def.txt is just an object that happens to
+  have "/" characters in its name. There is no "abc" directory; just a single
+  object with the given name. This diagram:
 
   .. image::  https://cloud.google.com/storage/images/gsutil-subdirectories.svg
 
