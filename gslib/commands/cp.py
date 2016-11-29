@@ -415,7 +415,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Parallel composite uploads should not be used with NEARLINE storage
+  Warning: Parallel composite uploads should not be used with NEARLINE storage
   class buckets, because doing this would incur an early deletion charge for
   each component object.
 
