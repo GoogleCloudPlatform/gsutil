@@ -37,6 +37,7 @@ import gslib.exception
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.metrics import MetricsCollector
 from gslib.metrics_reporter import LOG_FILE_PATH
+from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import HAS_S3_CREDS
@@ -145,6 +146,12 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     MetricsCollector.StartTestCollector('https://example.com', 'user-agent-007',
                                         {'a': 'b', 'c': 'd'})
     self.collector = MetricsCollector.GetCollector()
+
+    self.log_handler = MockLoggingHandler()
+    # Use metrics logger to avoid impacting the root logger which may
+    # interfere with other tests.
+    logging.getLogger('metrics').setLevel(logging.DEBUG)
+    logging.getLogger('metrics').addHandler(self.log_handler)
 
   def tearDown(self):
     super(TestMetricsUnitTests, self).tearDown()
@@ -465,29 +472,30 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
   def testExceptionCatchingDecorator(self):
     """Tests the exception catching decorator CaptureAndLogException."""
-    original_log_level = self.root_logger.getEffectiveLevel()
-    self.root_logger.setLevel(logging.DEBUG)
 
-    # Test that a wrapped function with an exception doesn't stop the process.
+    # A wrapped function with an exception should not stop the process.
     mock_exc_fn = mock.MagicMock(__name__='mock_exc_fn',
                                  side_effect=Exception())
     wrapped_fn = metrics.CaptureAndLogException(mock_exc_fn)
     wrapped_fn()
+
+    debug_messages = self.log_handler.messages['debug']
+    self.assertIn('Exception captured in mock_exc_fn during metrics collection',
+                  debug_messages[0])
+    self.log_handler.reset()
+
     self.assertEqual(1, mock_exc_fn.call_count)
-    with open(self.log_handler_file) as f:
-      log_output = f.read()
-      self.assertIn('Exception captured in mock_exc_fn during metrics '
-                    'collection', log_output)
 
     mock_err_fn = mock.MagicMock(__name__='mock_err_fn',
                                  side_effect=TypeError())
     wrapped_fn = metrics.CaptureAndLogException(mock_err_fn)
     wrapped_fn()
     self.assertEqual(1, mock_err_fn.call_count)
-    with open(self.log_handler_file) as f:
-      log_output = f.read()
-      self.assertIn('Exception captured in mock_err_fn during metrics '
-                    'collection', log_output)
+
+    debug_messages = self.log_handler.messages['debug']
+    self.assertIn('Exception captured in mock_err_fn during metrics collection',
+                  debug_messages[0])
+    self.log_handler.reset()
 
     # Test that exceptions in the unprotected metrics functions are caught.
     with mock.patch.object(MetricsCollector, 'GetCollector',
@@ -499,27 +507,18 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
       metrics.LogFatalError()
       metrics.LogPerformanceSummaryParams()
       metrics.CheckAndMaybePromptForAnalyticsEnabling('invalid argument')
-      with open(self.log_handler_file) as f:
-        log_output = f.read()
+
+      debug_messages = self.log_handler.messages['debug']
+      message_index = 0
+      for func_name in ('Shutdown', 'LogCommandParams', 'LogRetryableError',
+                        'LogFatalError', 'LogPerformanceSummaryParams',
+                        'CheckAndMaybePromptForAnalyticsEnabling'):
         self.assertIn(
-            'Exception captured in Shutdown during metrics collection',
-            log_output)
-        self.assertIn(
-            'Exception captured in LogCommandParams during metrics collection',
-            log_output)
-        self.assertIn(
-            'Exception captured in LogRetryableError during metrics collection',
-            log_output)
-        self.assertIn(
-            'Exception captured in LogFatalError during metrics collection',
-            log_output)
-        self.assertIn(
-            'Exception captured in LogPerformanceSummaryParams during metrics '
-            'collection', log_output)
-        self.assertIn(
-            'Exception captured in CheckAndMaybePromptForAnalyticsEnabling '
-            'during metrics collection', log_output)
-    self.root_logger.setLevel(original_log_level)
+            'Exception captured in %s during metrics collection' % func_name,
+            debug_messages[message_index])
+        message_index += 1
+
+      self.log_handler.reset()
 
 
 # Mock callback handlers to throw errors in integration tests, based on handlers
