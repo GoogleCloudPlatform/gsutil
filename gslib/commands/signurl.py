@@ -341,12 +341,15 @@ class UrlSignCommand(Command):
       response = MakeRequest(h, req)
 
       if response.status_code not in [200, 403, 404]:
-        raise HttpError(response)
+        raise HttpError.FromResponse(response)
 
       return response.status_code
-    except HttpError as e:
-      raise CommandException('Unexpected response code while querying'
-                             'object readability ({0})'.format(e.message))
+    except HttpError:
+      error_string = ('Unexpected HTTP response code %s while querying '
+                      'object readability.' % response.status_code)
+      if response.content:
+        error_string += ' Content: %s' % response.content
+      raise CommandException(error_string)
 
   def _EnumerateStorageUrls(self, in_urls):
     ret = []
