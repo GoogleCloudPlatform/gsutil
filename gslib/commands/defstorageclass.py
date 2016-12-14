@@ -39,8 +39,9 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  The "defstorageclass set" command sets the default storage class for the
-  specified bucket(s). If you specify a default storage class for a certain
+  The "defstorageclass set" command sets the default
+  `storage class <https://cloud.google.com/storage/docs/storage-classes>`_ for
+  the specified bucket(s). If you specify a default storage class for a certain
   bucket, Google Cloud Storage applies the default storage class to all new
   objects uploaded to that bucket, except when the storage class is overridden
   by individual upload requests.
