@@ -367,9 +367,23 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # reasonably can.
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
-      bucket_uri.create_bucket(storage_class=storage_class,
-                               location=location or '',
-                               headers=headers)
+      try:
+        bucket_uri.create_bucket(storage_class=storage_class,
+                                 location=location or '',
+                                 headers=headers)
+      except StorageResponseError, e:
+        # If the service returns a transient error or a connection breaks,
+        # it's possible the request succeeded. If that happens, the service
+        # will return 409s for all future calls even though our intent
+        # succeeded. If the error message says we already own the bucket,
+        # assume success to reduce test flakiness. This depends on
+        # randomness of test naming buckets to prevent name collisions for
+        # test buckets created concurrently in the same project, which is
+        # acceptable because this is far less likely than service errors.
+        if e.status == 409 and e.body and 'already own' in e.body:
+          pass
+        else:
+          raise
 
     _CreateBucketWithExponentialBackoff()
     self.bucket_uris.append(bucket_uri)
