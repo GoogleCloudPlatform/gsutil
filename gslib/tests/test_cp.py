@@ -694,9 +694,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket3_uri = self.CreateVersionedBucket()
 
     # Write two versions of an object to the bucket1.
-    self.CreateObject(bucket_uri=bucket1_uri, object_name='k', contents='data0')
+    v1_uri = self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
+                               contents='data0')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='k',
-                      contents='longer_data1')
+                      contents='longer_data1',
+                      gs_idempotent_generation=urigen(v1_uri))
 
     self.AssertNObjectsInBucket(bucket1_uri, 2, versioned=True)
     self.AssertNObjectsInBucket(bucket2_uri, 0, versioned=True)
@@ -2243,8 +2245,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Artifically halting download.', stderr)
       # Create a new object with different contents - it should have a
       # different ETag since the content has changed.
-      object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                     contents='b' * self.halt_size)
+      object_uri = self.CreateObject(
+          bucket_uri=bucket_uri, object_name='foo',
+          contents='b' * self.halt_size,
+          gs_idempotent_generation=object_uri.generation)
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)

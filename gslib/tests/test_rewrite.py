@@ -31,6 +31,7 @@ from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
 from gslib.tests.rewrite_helper import RewriteHaltException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
@@ -486,10 +487,11 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
       if new_dec_key:
         # Recreate the object with a different encryption key.
-        object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                       contents=('12'*ONE_MIB) + 'bar',
-                                       prefer_json_api=True,
-                                       encryption_key=new_dec_key)
+        self.CreateObject(
+            bucket_uri=bucket_uri, object_name='foo',
+            contents=('12'*ONE_MIB) + 'bar', prefer_json_api=True,
+            encryption_key=new_dec_key,
+            gs_idempotent_generation=urigen(object_uri))
 
       with SetBotoConfigForTest([
           ('GSUtil', 'decryption_key1', new_dec_key or initial_dec_key)]):

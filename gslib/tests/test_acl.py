@@ -25,6 +25,7 @@ from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
@@ -588,11 +589,12 @@ class TestAcl(TestAclBase):
     """Tests changing ACLs on multiple object versions."""
     bucket = self.CreateVersionedBucket()
     object_name = self.MakeTempName('obj')
-    self.CreateObject(
+    obj1_uri = self.CreateObject(
         bucket_uri=bucket, object_name=object_name, contents='One thing')
     # Create another on the same URI, giving us a second version.
     self.CreateObject(
-        bucket_uri=bucket, object_name=object_name, contents='Another thing')
+        bucket_uri=bucket, object_name=object_name, contents='Another thing',
+        gs_idempotent_generation=urigen(obj1_uri))
 
     lines = self.AssertNObjectsInBucket(bucket, 2, versioned=True)
 

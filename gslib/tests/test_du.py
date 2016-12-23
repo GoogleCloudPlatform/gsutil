@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.util import Retry
 
@@ -160,7 +161,8 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     object_uri1 = self.CreateObject(
         bucket_uri=bucket_uri, object_name='foo', contents='foo')
     object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents='foo2')
+        bucket_uri=bucket_uri, object_name='foo', contents='foo2',
+        gs_idempotent_generation=urigen(object_uri1))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)

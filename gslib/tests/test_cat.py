@@ -20,6 +20,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
@@ -65,9 +66,11 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     """Tests cat command on versioned objects."""
     bucket_uri = self.CreateVersionedBucket()
     # Create 2 versions of an object.
-    uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='data1',
+                             gs_idempotent_generation=0)
     uri2 = self.CreateObject(bucket_uri=bucket_uri,
-                             object_name=uri1.object_name, contents='data2')
+                             object_name=uri1.object_name, contents='data2',
+                             gs_idempotent_generation=urigen(uri1))
     stdout = self.RunGsUtil(['cat', suri(uri1)], return_stdout=True)
     # Last version written should be live.
     self.assertEqual('data2', stdout)

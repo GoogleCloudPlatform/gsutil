@@ -34,6 +34,8 @@ from boto.storage_uri import BucketStorageUri
 import gslib
 from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import CryptoTuple
+from gslib.cloud_api import PreconditionException
+from gslib.cloud_api import Preconditions
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import Base64ToHexHash
@@ -414,7 +416,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None,
                    prefer_json_api=False, encryption_key=None, mode=None,
-                   mtime=None, uid=None, gid=None, storage_class=None):
+                   mtime=None, uid=None, gid=None, storage_class=None,
+                   gs_idempotent_generation=0):
     """Creates a test object.
 
     Args:
@@ -437,6 +440,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       gid: A POSIX group ID.
       storage_class: String representing the storage class to use for the
           object.
+      gs_idempotent_generation: For use when overwriting an object for which
+          you know the previously uploaded generation. Create GCS object
+          idempotently by supplying this generation number as a precondition
+          and assuming the current object is correct on precondition failure.
+          Defaults to 0 (new object); to disable, set to None.
 
     Returns:
       A StorageUri for the created object.
@@ -446,12 +454,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if contents and bucket_uri.scheme == 'gs' and (prefer_json_api or
                                                    encryption_key):
       object_name = object_name or self.MakeTempName('obj')
-      json_object = self.CreateObjectJson(contents=contents,
-                                          bucket_name=bucket_uri.bucket_name,
-                                          object_name=object_name,
-                                          encryption_key=encryption_key,
-                                          mtime=mtime,
-                                          storage_class=storage_class)
+      json_object = self.CreateObjectJson(
+          contents=contents, bucket_name=bucket_uri.bucket_name,
+          object_name=object_name, encryption_key=encryption_key,
+          mtime=mtime, storage_class=storage_class,
+          gs_idempotent_generation=gs_idempotent_generation)
       object_uri = bucket_uri.clone_replace_name(object_name)
       # pylint: disable=protected-access
       # Need to update the StorageUri with the correct values while
@@ -470,7 +477,18 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     object_name = object_name or self.MakeTempName('obj')
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
-      key_uri.set_contents_from_string(contents)
+      if bucket_uri.scheme == 'gs' and gs_idempotent_generation is not None:
+        try:
+          key_uri.set_contents_from_string(
+              contents, headers={
+                  'x-goog-if-generation-match': str(gs_idempotent_generation)})
+        except StorageResponseError, e:
+          if e.status == 412:
+            pass
+          else:
+            raise
+      else:
+        key_uri.set_contents_from_string(contents)
     custom_metadata_present = (mode is not None or mtime is not None
                                or uid is not None or gid is not None)
     if custom_metadata_present:
@@ -518,7 +536,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return bucket
 
   def CreateObjectJson(self, contents, bucket_name=None, object_name=None,
-                       encryption_key=None, mtime=None, storage_class=None):
+                       encryption_key=None, mtime=None, storage_class=None,
+                       gs_idempotent_generation=None):
     """Creates a test object (GCS provider only) using the JSON API.
 
     Args:
@@ -534,12 +553,18 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           system time.
       storage_class: String representing the storage class to use for the
           object.
+      gs_idempotent_generation: For use when overwriting an object for which
+          you know the previously uploaded generation. Create GCS object
+          idempotently by supplying this generation number as a precondition
+          and assuming the current object is correct on precondition failure.
+          Defaults to 0 (new object); to disable, set to None.
 
     Returns:
       An apitools Object for the created object.
     """
     bucket_name = bucket_name or self.CreateBucketJson().name
     object_name = object_name or self.MakeTempName('obj')
+    preconditions = Preconditions(gen_match=gs_idempotent_generation)
     custom_metadata = apitools_messages.Object.MetadataValue(
         additionalProperties=[])
     if mtime is not None:
@@ -553,9 +578,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     encryption_tuple = None
     if encryption_key:
       encryption_tuple = CryptoTuple(encryption_key)
-    return self.json_api.UploadObject(cStringIO.StringIO(contents),
-                                      object_metadata, provider='gs',
-                                      encryption_tuple=encryption_tuple)
+    try:
+      return self.json_api.UploadObject(cStringIO.StringIO(contents),
+                                        object_metadata, provider='gs',
+                                        encryption_tuple=encryption_tuple,
+                                        preconditions=preconditions)
+    except PreconditionException:
+      if gs_idempotent_generation is None:
+        raise
+      with SetBotoConfigForTest([('GSUtil', 'decryption_key1',
+                                  encryption_key)]):
+        return self.json_api.GetObjectMetadata(bucket_name, object_name)
 
   def VerifyObjectCustomAttribute(self, bucket_name, object_name, attr_name,
                                   expected_value, expected_present=True):
