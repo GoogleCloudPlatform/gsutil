@@ -89,7 +89,8 @@ class _NameExpansionIterator(object):
   def __init__(self, command_name, debug, logger, gsutil_api, url_strs,
                recursion_requested, all_versions=False,
                cmd_supports_recursion=True, project_id=None,
-               continue_on_error=False, bucket_listing_fields=None):
+               ignore_symlinks=False, continue_on_error=False,
+               bucket_listing_fields=None):
     """Creates a NameExpansionIterator.
 
     Args:
@@ -105,6 +106,7 @@ class _NameExpansionIterator(object):
       cmd_supports_recursion: Bool indicating whether this command supports a
           '-r' flag. Useful for printing helpful error messages.
       project_id: Project id to use for bucket retrieval.
+      ignore_symlinks: If True, ignore symlinks during iteration.
       continue_on_error: If true, yield no-match exceptions encountered during
                          iteration instead of raising them.
       bucket_listing_fields: Iterable fields to include in expanded results.
@@ -153,6 +155,7 @@ class _NameExpansionIterator(object):
     self.url_strs.has_plurality = self.url_strs.HasPlurality()
     self.cmd_supports_recursion = cmd_supports_recursion
     self.project_id = project_id
+    self.ignore_symlinks = ignore_symlinks
     self.continue_on_error = continue_on_error
     self.bucket_listing_fields = (set(['name']) if not bucket_listing_fields
                                   else bucket_listing_fields)
@@ -309,7 +312,8 @@ class _NameExpansionIterator(object):
     return gslib.wildcard_iterator.CreateWildcardIterator(
         url_string, self.gsutil_api, debug=self.debug,
         all_versions=self.all_versions,
-        project_id=self.project_id)
+        project_id=self.project_id, ignore_symlinks=self.ignore_symlinks,
+        logger=self.logger)
 
 
 class SeekAheadNameExpansionIterator(object):
@@ -322,7 +326,8 @@ class SeekAheadNameExpansionIterator(object):
 
   def __init__(
       self, command_name, debug, gsutil_api, url_strs, recursion_requested,
-      all_versions=False, cmd_supports_recursion=True, project_id=None):
+      all_versions=False, cmd_supports_recursion=True, project_id=None,
+      ignore_symlinks=False):
     """Initializes a _NameExpansionIterator with the inputs."""
 
     # Count data bytes only will be transferred/rewritten.
@@ -339,7 +344,8 @@ class SeekAheadNameExpansionIterator(object):
         PluralityCheckableIterator(url_strs),
         recursion_requested, all_versions=all_versions,
         cmd_supports_recursion=cmd_supports_recursion, project_id=project_id,
-        continue_on_error=True, bucket_listing_fields=bucket_listing_fields)
+        ignore_symlinks=ignore_symlinks, continue_on_error=True,
+        bucket_listing_fields=bucket_listing_fields)
 
   def __iter__(self):
     for name_expansion_result in self.name_expansion_iterator:
@@ -355,7 +361,8 @@ class SeekAheadNameExpansionIterator(object):
 def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
                           recursion_requested, all_versions=False,
                           cmd_supports_recursion=True, project_id=None,
-                          continue_on_error=False, bucket_listing_fields=None):
+                          ignore_symlinks=False, continue_on_error=False,
+                          bucket_listing_fields=None):
   """Static factory function for instantiating _NameExpansionIterator.
 
   This wraps the resulting iterator in a PluralityCheckableIterator and checks
@@ -375,6 +382,7 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
     cmd_supports_recursion: Bool indicating whether this command supports a '-r'
         flag. Useful for printing helpful error messages.
     project_id: Project id to use for the current command.
+    ignore_symlinks: If True, ignore symlinks during iteration.
     continue_on_error: If true, yield no-match exceptions encountered during
                        iteration instead of raising them.
     bucket_listing_fields: Iterable fields to include in expanded results.
@@ -394,7 +402,8 @@ def NameExpansionIterator(command_name, debug, logger, gsutil_api, url_strs,
   name_expansion_iterator = _NameExpansionIterator(
       command_name, debug, logger, gsutil_api, url_strs, recursion_requested,
       all_versions=all_versions, cmd_supports_recursion=cmd_supports_recursion,
-      project_id=project_id, continue_on_error=continue_on_error,
+      project_id=project_id, ignore_symlinks=ignore_symlinks,
+      continue_on_error=continue_on_error,
       bucket_listing_fields=bucket_listing_fields)
   name_expansion_iterator = PluralityCheckableIterator(name_expansion_iterator)
   if name_expansion_iterator.IsEmpty():

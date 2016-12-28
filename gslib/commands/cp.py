@@ -1021,6 +1021,7 @@ class CpCommand(Command):
         self.logger, self.gsutil_api, url_strs,
         self.recursion_requested or copy_helper_opts.perform_mv,
         project_id=self.project_id, all_versions=self.all_versions,
+        ignore_symlinks=self.exclude_symlinks,
         continue_on_error=self.continue_on_error or self.parallel_operations,
         bucket_listing_fields=GetSourceFieldsNeededForCopy(
             self.exp_dst_url.IsCloudUrl(),
@@ -1042,7 +1043,8 @@ class CpCommand(Command):
       seek_ahead_iterator = SeekAheadNameExpansionIterator(
           self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
           url_strs, self.recursion_requested or copy_helper_opts.perform_mv,
-          all_versions=self.all_versions, project_id=self.project_id)
+          all_versions=self.all_versions, project_id=self.project_id,
+          ignore_symlinks=self.exclude_symlinks)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.

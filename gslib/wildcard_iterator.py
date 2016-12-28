@@ -519,17 +519,20 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_url, debug=0, ignore_symlinks=False):
+  def __init__(self, wildcard_url, debug=0, ignore_symlinks=False,
+               logger=None):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
       debug: Debug level (range 0..3).
       ignore_symlinks: If True, ignore symlinks during iteration.
+      logger: logging.Logger for outputting messages during iteration.
     """
     self.wildcard_url = wildcard_url
     self.debug = debug
     self.ignore_symlinks = ignore_symlinks
+    self.logger = logger
 
   def __iter__(self, bucket_listing_fields=None):
     """Iterator that gets called when iterating over the file wildcard.
@@ -579,6 +582,8 @@ class FileWildcardIterator(WildcardIterator):
       expanded_url = StorageUrlFromString(filepath)
       try:
         if self.ignore_symlinks and os.path.islink(filepath):
+          if self.logger:
+            self.logger.info('Skipping symbolic link %s...', filepath)
           continue
         if os.path.isdir(filepath):
           yield BucketListingPrefix(expanded_url)
@@ -696,7 +701,8 @@ class WildcardException(StandardError):
 
 
 def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
-                           project_id=None, ignore_symlinks=False):
+                           project_id=None, ignore_symlinks=False,
+                           logger=None):
   """Instantiate a WildcardIterator for the given URL string.
 
   Args:
@@ -709,6 +715,7 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
     debug: Debug level to control debug output for iterator.
     project_id: Project id to use for bucket listings.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
+    logger: For outputting debug messages during iteration.
 
   Returns:
     A WildcardIterator that handles the requested iteration.
@@ -717,7 +724,7 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
   url = StorageUrlFromString(url_str)
   if url.IsFileUrl():
     return FileWildcardIterator(url, debug=debug,
-                                ignore_symlinks=ignore_symlinks)
+                                ignore_symlinks=ignore_symlinks, logger=logger)
   else:  # Cloud URL
     return CloudWildcardIterator(
         url, gsutil_api, all_versions=all_versions, debug=debug,

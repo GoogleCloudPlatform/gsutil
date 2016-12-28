@@ -1492,6 +1492,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('AccessDenied', stderr)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  def test_cp_minus_r_minus_e(self):
+    """Tests that cp -e -r ignores symlinks when recursing."""
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    # Create a valid file, since cp expects to copy at least one source URL
+    # successfully.
+    self.CreateTempFile(tmpdir=tmpdir, contents='foo')
+    subdir = os.path.join(tmpdir, 'subdir')
+    os.mkdir(subdir)
+    os.mkdir(os.path.join(tmpdir, 'missing'))
+    # Create a blank directory that is a broken symlink to ensure that we
+    # don't fail recursive enumeration with a bad symlink.
+    os.symlink(os.path.join(tmpdir, 'missing'),
+               os.path.join(subdir, 'missing'))
+    os.rmdir(os.path.join(tmpdir, 'missing'))
+    self.RunGsUtil(['cp', '-r', '-e', tmpdir, suri(bucket_uri)])
+
+  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_cp_minus_e(self):
     fpath_dir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=fpath_dir)
@@ -1503,7 +1521,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri, 'files')],
         return_stderr=True)
     self.assertIn('Copying file', stderr)
-    self.assertIn('Skipping symbolic link file', stderr)
+    self.assertIn('Skipping symbolic link', stderr)
+
+    # Ensure that top-level arguments are ignored if they are symlinks.
+    stderr = self.RunGsUtil(
+        ['cp', '-e', fpath1, fpath2, suri(bucket_uri, 'files')],
+        return_stderr=True, expected_status=1)
+    self.assertIn('Copying file', stderr)
+    self.assertIn('Skipping symbolic link', stderr)
+    self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
 
   def test_cp_multithreaded_wildcard(self):
     """Tests that cp -m works with a wildcard."""
