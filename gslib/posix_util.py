@@ -502,6 +502,8 @@ def InitializeUserGroups():
   Should only be called if the flag for preserving POSIX attributes is set.
   """
   global USER_GROUPS
+  if IS_WINDOWS:
+    return
   user_id = os.getuid()
   user_name = pwd.getpwuid(user_id).pw_name
   USER_GROUPS = set(
