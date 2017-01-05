@@ -46,6 +46,8 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetDummyProjectForUnitTest
+from gslib.tests.util import unittest
+from gslib.util import IS_WINDOWS
 from gslib.util import UTF8
 
 
@@ -340,6 +342,33 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     expected = set([suri(dst_dir, src_bucket_uri.bucket_name, 'foo'),
                     suri(dst_dir, src_bucket_uri.bucket_name, 'dir', 'foo2')])
     self.assertEqual(expected, actual)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  def testCopyingSymlinkDirectory(self):
+    """Tests that cp warns when copying a symlink directory."""
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    tmpdir2 = self.CreateTempDir()
+    # Create a valid file, since cp expects to copy at least one source URL
+    # successfully.
+    subdir = os.path.join(tmpdir, 'subdir')
+    os.mkdir(subdir)
+    fpath1 = self.CreateTempFile(tmpdir=subdir, contents='foo')
+    self.CreateTempFile(tmpdir=tmpdir2, contents='foo')
+    os.mkdir(os.path.join(tmpdir, 'symlinkdir'))
+    # Create a symlink to a directory to ensure we warn when encountering it.
+    os.symlink(tmpdir2, os.path.join(subdir, 'symlinkdir'))
+    mock_log_handler = self.RunCommand('cp', ['-r', tmpdir, suri(bucket_uri)],
+                                       return_log_handler=True)
+    actual = set(str(u) for u in self._test_wildcard_iterator(
+        suri(bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+    expected_object_path = suri(bucket_uri, os.path.basename(tmpdir),
+                                'subdir', os.path.basename(fpath1))
+    expected = set([expected_object_path])
+    self.assertEqual(expected, actual)
+    self.assertIn('Skipping symlink directory "%s"' %
+                  os.path.join(subdir, 'symlinkdir'),
+                  mock_log_handler.messages['info'])
 
   def testCopyingBucketToBucket(self):
     """Tests copying from a bucket-only URI to a bucket."""

@@ -601,7 +601,12 @@ class FileWildcardIterator(WildcardIterator):
     # originated on Windows) os.walk() will not attempt to decode and then die
     # with a "codec can't decode byte" error, and instead we can catch the error
     # at yield time and print a more informative error message.
-    for dirpath, unused_dirnames, filenames in os.walk(directory.encode(UTF8)):
+    for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
+      if self.logger:
+        for dirname in dirnames:
+          full_dir_path = os.path.join(dirpath, dirname)
+          if os.path.islink(full_dir_path):
+            self.logger.info('Skipping symlink directory "%s"', full_dir_path)
       for f in fnmatch.filter(filenames, wildcard):
         try:
           yield os.path.join(dirpath,
