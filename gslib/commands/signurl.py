@@ -332,8 +332,10 @@ class UrlSignCommand(Command):
   def _ProbeObjectAccessWithClient(self, key, client_email, gcs_path, logger):
     """Performs a head request against a signed url to check for read access."""
 
+    # Choose a reasonable time in the future; if the user's system clock is
+    # 60 or more seconds behind the server's this will generate an error.
     signed_url = _GenSignedUrl(key, client_email, 'HEAD', '', '',
-                               int(time.time()) + 10, gcs_path, logger)
+                               int(time.time()) + 60, gcs_path, logger)
 
     try:
       h = GetNewHttp()
@@ -346,7 +348,8 @@ class UrlSignCommand(Command):
       return response.status_code
     except HttpError:
       error_string = ('Unexpected HTTP response code %s while querying '
-                      'object readability.' % response.status_code)
+                      'object readability. Is your system clock accurate?'
+                      % response.status_code)
       if response.content:
         error_string += ' Content: %s' % response.content
       raise CommandException(error_string)
