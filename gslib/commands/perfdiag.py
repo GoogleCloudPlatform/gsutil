@@ -1032,14 +1032,17 @@ class PerfDiagCommand(Command):
     self.results['listing'] = {'num_files': self.num_objects}
 
     # Generate N random objects to put into the bucket.
-    list_prefix = 'gsutil-perfdiag-list-'
-    list_fpaths = []
     list_objects = []
     args = []
+    # Differentiate objects created by each perfdiag execution so that leftovers
+    # from a previous run (if perfdiag could not exit gracefully and delete
+    # them) do not affect this run.
+    random_id = ''.join([random.choice(string.lowercase) for _ in range(10)])
+    list_prefix = 'gsutil-perfdiag-list-' + random_id + '-'
+
     for _ in xrange(self.num_objects):
       fpath = self._MakeTempFile(0, mem_data=True, mem_metadata=True,
                                  prefix=list_prefix)
-      list_fpaths.append(fpath)
       object_name = os.path.basename(fpath)
       list_objects.append(object_name)
       args.append(FanUploadTuple(False, fpath, object_name, False))
@@ -1062,20 +1065,25 @@ class PerfDiagCommand(Command):
       """Lists and returns objects in the bucket. Also records latency."""
       t0 = time.time()
       objects = list(self.gsutil_api.ListObjects(
-          self.bucket_url.bucket_name, delimiter='/',
+          self.bucket_url.bucket_name, prefix=list_prefix, delimiter='/',
           provider=self.provider, fields=['items/name']))
+      if len(objects) > self.num_objects:
+        self.logger.warning(
+            'Listing produced more than the expected %d object(s).',
+            self.num_objects)
       t1 = time.time()
       list_latencies.append(t1 - t0)
       return set([obj.data.name for obj in objects])
+
+    def _ListAfterUpload():
+      names = _List()
+      found_objects.update(names & expected_objects)
+      files_seen.append(len(found_objects))
 
     self.logger.info(
         'Listing bucket %s waiting for %s objects to appear...',
         self.bucket_url.bucket_name, self.num_objects)
     while expected_objects - found_objects:
-      def _ListAfterUpload():
-        names = _List()
-        found_objects.update(names & expected_objects)
-        files_seen.append(len(found_objects))
       self._RunOperation(_ListAfterUpload)
       if expected_objects - found_objects:
         if time.time() - total_start_time > self.MAX_LISTING_WAIT_TIME:

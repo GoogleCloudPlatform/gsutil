@@ -165,3 +165,20 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
         return_stdout=True)
     self.assertIn('Number of listing calls made:', stdout)
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
+
+
+class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
+  """Unit tests for perfdiag command."""
+
+  def test_listing_does_not_list_preexisting_objects(self):
+    test_objects = 1
+    bucket_uri = self.CreateBucket()
+    # Create two objects in the bucket before executing perfdiag.
+    self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, contents='bar')
+    mock_log_handler = self.RunCommand(
+        'perfdiag', ['-n', str(test_objects), '-t', 'list', suri(bucket_uri)],
+        return_log_handler=True)
+    self.assertNotIn(
+        'Listing produced more than the expected %d object(s).' % test_objects,
+        mock_log_handler.messages['warning'])
