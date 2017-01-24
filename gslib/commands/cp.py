@@ -397,10 +397,15 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   gsutil can automatically use
   `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to Google
-  Cloud Storage. If enabled (see next paragraph), a large file will be split
-  into component pieces that are uploaded in parallel and then composed in the
-  cloud (and the temporary components finally deleted). No additional local disk
-  space is required for this operation.
+  Cloud Storage. If enabled (see below), a large file will be split into
+  component pieces that are uploaded in parallel and then composed in the cloud
+  (and the temporary components finally deleted). A file can be broken into as
+  many as 32 component pieces; until this piece limit is reached, the maximum
+  size of each component piece is determined by the variable
+  "parallel_composite_upload_component_size," specified in the [GSUtil] section
+  of your .boto configuration file (for files that are otherwise too big,
+  components are as large as needed to fit into 32 pieces). No additional local
+  disk space is required for this operation.
 
   Using parallel composite uploads presents a tradeoff between upload
   performance and download configuration: If you enable parallel composite
@@ -415,9 +420,9 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Warning: Parallel composite uploads should not be used with NEARLINE storage
-  class buckets, because doing this would incur an early deletion charge for
-  each component object.
+  Warning: Parallel composite uploads should not be used with NEARLINE or
+  COLDLINE storage class buckets, because doing so incurs an early deletion
+  charge for each component object.
 
   To try parallel composite uploads you can run the command:
 
