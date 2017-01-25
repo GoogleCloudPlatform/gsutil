@@ -176,7 +176,8 @@ def _DurationToTimeDelta(duration):
 
 
 def _GenSignedUrl(key, client_id, method, md5,
-                  content_type, expiration, gcs_path, logger):
+                  content_type, expiration, gcs_path, logger,
+                  string_to_sign_debug=False):
   """Construct a string to sign with the provided key.
 
   Args:
@@ -191,6 +192,9 @@ def _GenSignedUrl(key, client_id, method, md5,
     gcs_path: String path to the bucket of object for signing, in the form
         'bucket' or 'bucket/object'.
     logger: logging.Logger for warning and debug output.
+    string_to_sign_debug: If true AND logger is enabled for debug level,
+        print string to sign to debug. Used to differentiate user's
+        signed URL from the probing permissions-check signed URL.
 
   Returns:
     The complete url (string).
@@ -210,6 +214,10 @@ def _GenSignedUrl(key, client_id, method, md5,
   tosign = ('{0}\n{1}\n{2}\n{3}\n{4}'
             .format(method, md5, content_type,
                     expiration, canonicalized_resource))
+  if string_to_sign_debug and logger:
+    logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
+                 % tosign)
+
   signature = base64.b64encode(sign(key, tosign, 'RSA-SHA256'))
 
   final_url = ('https://storage.googleapis.com/{0}?'
@@ -408,7 +416,8 @@ class UrlSignCommand(Command):
 
       final_url = _GenSignedUrl(key, client_email,
                                 method, '', content_type, expiration,
-                                gcs_path, self.logger)
+                                gcs_path, self.logger,
+                                string_to_sign_debug=True)
 
       expiration_dt = datetime.fromtimestamp(expiration)
 
