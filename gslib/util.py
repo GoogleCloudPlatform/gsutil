@@ -680,6 +680,12 @@ def GetCertsFile():
     string filename of the certs file to use.
   """
   certs_file = boto.config.get('Boto', 'ca_certificates_file', None)
+  # The 'system' keyword indicates to use the system installed certs. Some
+  # Linux distributions patch the stack such that the Python SSL
+  # infrastructure picks up the system installed certs by default, thus no
+  #  action necessary on our part
+  if certs_file == 'system':
+    return None
   if not certs_file:
     with certs_file_lock:
       if configured_certs_files:
