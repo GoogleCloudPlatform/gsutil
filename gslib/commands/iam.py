@@ -106,7 +106,7 @@ _SET_DESCRIPTION = """
 
   If you wish to set an IAM policy on a large number of objects, you may want
   to use the gsutil -m option for concurrent processing. The following command
-  will apply iam.text to all objects in the "cats" bucket.
+  will apply iam.txt to all objects in the "cats" bucket.
 
     gsutil -m iam set -r iam.txt gs://cats
 
