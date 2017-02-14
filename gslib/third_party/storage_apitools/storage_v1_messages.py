@@ -52,6 +52,7 @@ class Bucket(_messages.Message):
     id: The ID of the bucket.
     kind: The kind of item this is. For buckets, this is always
       storage#bucket.
+    labels: User-provided labels, in key/value pairs.
     lifecycle: The bucket's lifecycle configuration. See lifecycle management
       for more information.
     location: The location of the bucket. Object data for objects in the
@@ -65,10 +66,13 @@ class Bucket(_messages.Message):
       group.
     projectNumber: The project number of the project the bucket belongs to.
     selfLink: The URI of this bucket.
-    storageClass: The bucket's storage class. This defines how objects in the
-      bucket are stored and determines the SLA and the cost of storage. Values
-      include STANDARD, NEARLINE and DURABLE_REDUCED_AVAILABILITY. Defaults to
-      STANDARD. For more information, see storage classes.
+    storageClass: The bucket's default storage class, used whenever no
+      storageClass is specified for a newly-created object. This defines how
+      objects in the bucket are stored and determines the SLA and the cost of
+      storage. Values include MULTI_REGIONAL, REGIONAL, STANDARD, NEARLINE,
+      COLDLINE, and DURABLE_REDUCED_AVAILABILITY. If this value is not
+      specified when the bucket is created, it will default to STANDARD. For
+      more information, see storage classes.
     timeCreated: The creation time of the bucket in RFC 3339 format.
     updated: The modification time of the bucket in RFC 3339 format.
     versioning: The bucket's versioning configuration.
@@ -96,6 +100,30 @@ class Bucket(_messages.Message):
     method = _messages.StringField(2, repeated=True)
     origin = _messages.StringField(3, repeated=True)
     responseHeader = _messages.StringField(4, repeated=True)
+
+  @encoding.MapUnrecognizedFields('additionalProperties')
+  class LabelsValue(_messages.Message):
+    """User-provided labels, in key/value pairs.
+
+    Messages:
+      AdditionalProperty: An additional property for a LabelsValue object.
+
+    Fields:
+      additionalProperties: An individual label entry.
+    """
+
+    class AdditionalProperty(_messages.Message):
+      """An additional property for a LabelsValue object.
+
+      Fields:
+        key: Name of the additional property.
+        value: A string attribute.
+      """
+
+      key = _messages.StringField(1)
+      value = _messages.StringField(2)
+
+    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
 
   class LifecycleValue(_messages.Message):
     """The bucket's lifecycle configuration. See lifecycle management for more
@@ -225,19 +253,20 @@ class Bucket(_messages.Message):
   etag = _messages.StringField(4)
   id = _messages.StringField(5)
   kind = _messages.StringField(6, default=u'storage#bucket')
-  lifecycle = _messages.MessageField('LifecycleValue', 7)
-  location = _messages.StringField(8)
-  logging = _messages.MessageField('LoggingValue', 9)
-  metageneration = _messages.IntegerField(10)
-  name = _messages.StringField(11)
-  owner = _messages.MessageField('OwnerValue', 12)
-  projectNumber = _messages.IntegerField(13, variant=_messages.Variant.UINT64)
-  selfLink = _messages.StringField(14)
-  storageClass = _messages.StringField(15)
-  timeCreated = _message_types.DateTimeField(16)
-  updated = _message_types.DateTimeField(17)
-  versioning = _messages.MessageField('VersioningValue', 18)
-  website = _messages.MessageField('WebsiteValue', 19)
+  labels = _messages.MessageField('LabelsValue', 7)
+  lifecycle = _messages.MessageField('LifecycleValue', 8)
+  location = _messages.StringField(9)
+  logging = _messages.MessageField('LoggingValue', 10)
+  metageneration = _messages.IntegerField(11)
+  name = _messages.StringField(12)
+  owner = _messages.MessageField('OwnerValue', 13)
+  projectNumber = _messages.IntegerField(14, variant=_messages.Variant.UINT64)
+  selfLink = _messages.StringField(15)
+  storageClass = _messages.StringField(16)
+  timeCreated = _message_types.DateTimeField(17)
+  updated = _message_types.DateTimeField(18)
+  versioning = _messages.MessageField('VersioningValue', 19)
+  website = _messages.MessageField('WebsiteValue', 20)
 
 
 class BucketAccessControl(_messages.Message):
@@ -559,6 +588,9 @@ class Object(_messages.Message):
     timeCreated: The creation time of the object in RFC 3339 format.
     timeDeleted: The deletion time of the object in RFC 3339 format. Will be
       returned if and only if this version of the object has been deleted.
+    timeStorageClassUpdated: The time at which the object's storage class was
+      last changed. When the object is initially created, it will be set to
+      timeCreated.
     updated: The modification time of the object metadata in RFC 3339 format.
   """
 
@@ -635,7 +667,8 @@ class Object(_messages.Message):
   storageClass = _messages.StringField(23)
   timeCreated = _message_types.DateTimeField(24)
   timeDeleted = _message_types.DateTimeField(25)
-  updated = _message_types.DateTimeField(26)
+  timeStorageClassUpdated = _message_types.DateTimeField(26)
+  updated = _message_types.DateTimeField(27)
 
 
 class ObjectAccessControl(_messages.Message):

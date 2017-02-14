@@ -515,11 +515,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       Apitools Bucket for the created bucket.
     """
     bucket_name = bucket_name or self.MakeTempName('bucket')
-    bucket_metadata = None
+    bucket_metadata = apitools_messages.Bucket(name=bucket_name.lower())
     if storage_class:
-      bucket_metadata = apitools_messages.Bucket(
-          name=bucket_name.lower(),
-          storageClass=storage_class)
+      bucket_metadata.storageClass = storage_class
+    if location:
+      bucket_metadata.location = location
 
     # TODO: Add retry and exponential backoff.
     bucket = self.json_api.CreateBucket(bucket_name.lower(),

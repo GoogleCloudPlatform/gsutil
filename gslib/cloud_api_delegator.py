@@ -447,7 +447,7 @@ class CloudApiDelegator(CloudApi):
 
   def XmlPassThroughSetLifecycle(self, lifecycle_text, storage_url,
                                  provider=None):
-    """XML compatibility function for setting CORS configuration on a bucket.
+    """XML compatibility function for setting lifecycle config on a bucket.
 
     Args:
       lifecycle_text: Raw lifecycle configuration XML string.
@@ -481,6 +481,45 @@ class CloudApiDelegator(CloudApi):
       Logging configuration XML for the bucket specified by storage_url.
     """
     return self._GetApi(provider).XmlPassThroughGetLogging(storage_url)
+
+  def XmlPassThroughSetTagging(self, tags_text, storage_url, provider=None):
+    """XML compatibility function for setting tagging configuration on a bucket.
+
+    This passthrough provides support for setting a tagging configuration
+    (equivalent to a label configuration) on a cloud bucket.
+
+    Args:
+      tags_text: Raw tagging configuration XML string.
+      storage_url: StorageUrl object.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None.
+    """
+    return self._GetApi(provider).XmlPassThroughSetTagging(
+        tags_text, storage_url)
+
+  def XmlPassThroughGetTagging(self, storage_url, provider=None):
+    """XML compatibility function for getting tagging configuration on a bucket.
+
+    Args:
+      storage_url: StorageUrl object.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      Tagging configuration XML for the bucket specified by storage_url.
+    """
+    return self._GetApi(provider).XmlPassThroughGetTagging(storage_url)
 
   def XmlPassThroughGetWebsite(self, storage_url, provider=None):
     """XML compatibility function for getting website configuration on a bucket.

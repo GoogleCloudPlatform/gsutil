@@ -448,8 +448,12 @@ class Command(HelpProvider):
   # Each subclass must override this with an instance of CommandSpec.
   command_spec = None
 
-  _commands_with_subcommands_and_subopts = ['acl', 'defacl', 'logging', 'web',
-                                            'notification']
+  _commands_with_subcommands_and_subopts = ('acl',
+                                            'defacl',
+                                            'label',
+                                            'logging',
+                                            'notification',
+                                            'web')
 
   # This keeps track of the recursive depth of the current call to Apply.
   recursive_apply_level = 0

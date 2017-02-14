@@ -30,6 +30,7 @@ from gslib.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
+from gslib.translation_helper import LabelTranslation
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
@@ -187,8 +188,10 @@ _DETAILED_HELP_TEXT = ("""
             Website configuration:        None
             CORS configuration:           Present
             Lifecycle configuration:      None
+            Labels:                       None
             Time created:                 Fri, 21 Oct 2016 19:25:17 GMT
             Time updated:                 Fri, 21 Oct 2016 21:17:59 GMT
+            ACL:
     [
       {
         "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
@@ -300,6 +303,11 @@ class LsCommand(Command):
     fields['logging_config'] = 'Present' if bucket.logging else 'None'
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
+    if bucket.labels:
+      fields['labels'] = LabelTranslation.JsonFromMessage(
+          bucket.labels, pretty_print=True)
+    else:
+      fields['labels'] = 'None'
     if bucket.timeCreated:
       fields['time_created'] = bucket.timeCreated.strftime(
           '%a, %d %b %Y %H:%M:%S GMT')
@@ -334,7 +342,8 @@ class LsCommand(Command):
            '\tLogging configuration:\t\t{logging_config}\n'
            '\tWebsite configuration:\t\t{website_config}\n'
            '\tCORS configuration: \t\t{cors_config}\n'
-           '\tLifecycle configuration:\t{lifecycle_config}\n' +
+           '\tLifecycle configuration:\t{lifecycle_config}\n'
+           '\tLabels:\t\t\t\t{labels}\n' +
            time_created_line +
            time_updated_line +
            '\tACL:\t\t\t\t{acl}\n'
@@ -436,9 +445,18 @@ class LsCommand(Command):
           listing_style == ListingStyle.LONG):
         bucket_fields = ['id']
       elif listing_style == ListingStyle.LONG_LONG:
-        bucket_fields = ['location', 'storageClass', 'versioning', 'acl',
-                         'defaultObjectAcl', 'website', 'logging', 'cors',
-                         'lifecycle', 'timeCreated', 'updated']
+        bucket_fields = ['acl',
+                         'cors',
+                         'defaultObjectAcl',
+                         'labels',
+                         'location',
+                         'logging',
+                         'lifecycle',
+                         'storageClass',
+                         'timeCreated',
+                         'updated',
+                         'versioning',
+                         'website']
       if storage_url.IsProvider():
         # Provider URL: use bucket wildcard to list buckets.
         for blr in self.WildcardIterator(

@@ -34,6 +34,9 @@ from boto.gs.acl import GROUP_BY_EMAIL
 from boto.gs.acl import GROUP_BY_ID
 from boto.gs.acl import USER_BY_EMAIL
 from boto.gs.acl import USER_BY_ID
+from boto.s3.tagging import Tag
+from boto.s3.tagging import Tags
+from boto.s3.tagging import TagSet
 
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import BucketNotFoundException
@@ -679,6 +682,46 @@ def AddS3MarkerAclToObjectMetadata(object_metadata, acl_text):
       apitools_messages.Object.MetadataValue.AdditionalProperty(
           key=S3_ACL_MARKER_GUID, value=acl_text))
 
+
+class LabelTranslation(object):
+  """Functions for converting between various Label(JSON)/Tags(XML) formats.
+
+  This class handles conversion to and from Boto Tags objects, JSON text, and
+  apitools LabelsValue message objects.
+  """
+
+  @classmethod
+  def BotoTagsToMessage(cls, tags):
+    label_dict = {}
+    for tag_set in tags:
+      label_dict.update(dict((i.key, i.value) for i in tag_set))
+    return cls.DictToMessage(label_dict)
+
+  @classmethod
+  def BotoTagsFromMessage(cls, message):
+    label_dict = json.loads(cls.JsonFromMessage(message))
+    tag_set = TagSet()
+    for key, value in label_dict.iteritems():
+      if value:  # Skip values which may be set to None.
+        tag_set.add_tag(key, value)
+    tags = Tags()
+    tags.add_tag_set(tag_set)
+    return tags
+
+  @classmethod
+  def JsonFromMessage(cls, message, pretty_print=False):
+    json_str = encoding.MessageToJson(message)
+    if pretty_print:
+      return json.dumps(json.loads(json_str),
+                        sort_keys=True,
+                        indent=2,
+                        separators=(',', ': '))
+    return json_str
+
+  @classmethod
+  def DictToMessage(cls, label_dict):
+    return encoding.DictToMessage(
+        label_dict, apitools_messages.Bucket.LabelsValue)
 
 class AclTranslation(object):
   """Functions for converting between various ACL formats.

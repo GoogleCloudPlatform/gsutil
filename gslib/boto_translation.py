@@ -46,6 +46,7 @@ from boto.s3.cors import CORSConfiguration as S3Cors
 from boto.s3.deletemarker import DeleteMarker
 from boto.s3.lifecycle import Lifecycle as S3Lifecycle
 from boto.s3.prefix import Prefix
+from boto.s3.tagging import Tags
 
 from gslib.boto_resumable_upload import BotoResumableUpload
 from gslib.cloud_api import AccessDeniedException
@@ -82,6 +83,7 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import EncodeStringAsLong
 from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import HeadersFromObjectMetadata
+from gslib.translation_helper import LabelTranslation
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
@@ -260,6 +262,19 @@ class BotoTranslation(CloudApi):
         boto_acl = AclTranslation.BotoAclFromMessage(
             metadata.defaultObjectAcl)
         bucket_uri.set_def_xml_acl(boto_acl.to_xml(), headers=headers)
+      if metadata.labels:
+        boto_tags = LabelTranslation.BotoTagsFromMessage(metadata.labels)
+        # TODO: Define tags-related methods on storage_uri objects. The set_tags
+        # method raises an exception if the response differs from the style of
+        # S3, which uses a 204 response code upon success. That method
+        # should be okay with a 200 instead of a 204 for GS responses. In the
+        # meantime, we invoke the underlying bucket's methods directly and
+        # bypass manually raised exceptions from 200 responses.
+        try:
+          bucket_uri.get_bucket().set_tags(boto_tags, headers=headers)
+        except boto.exception.GSResponseError, e:
+          if e.status != 200:
+            raise
       if metadata.lifecycle:
         boto_lifecycle = LifecycleTranslation.BotoLifecycleFromMessage(
             metadata.lifecycle)
@@ -1188,6 +1203,24 @@ class BotoTranslation(CloudApi):
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'location' in fields:
         cloud_api_bucket.location = bucket_uri.get_location(headers=headers)
+      # End gs-specific field checks.
+    if not fields or 'labels' in fields:
+      try:
+        # TODO: Define tags-related methods on storage_uri objects. In the
+        # meantime, we invoke the underlying bucket's methods directly.
+        try:
+          boto_tags = bucket_uri.get_bucket().get_tags()
+          cloud_api_bucket.labels = (
+              LabelTranslation.BotoTagsToMessage(boto_tags))
+        except boto.exception.StorageResponseError, e:
+          # If no tagging config exists, the S3 API returns a 404 (the GS API
+          # returns a 200 with an empty TagSet). If the bucket didn't exist,
+          # we would have failed much earlier in this method, so we know that
+          # it's the tagging config that doesn't exist.
+          if not (self.provider == 's3' and e.status == 404):
+            raise
+      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
     if not fields or 'versioning' in fields:
       versioning = bucket_uri.get_versioning_config(headers=headers)
       if versioning:
@@ -1644,6 +1677,45 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(logging_config_xml).toprettyxml()
+
+  def XmlPassThroughGetTagging(self, storage_url):
+    """See CloudApiDelegator class for function doc strings."""
+    headers = self._CreateBaseHeaders()
+    try:
+      uri = boto.storage_uri(
+          storage_url.url_string, suppress_consec_slashes=False,
+          bucket_storage_uri_class=self.bucket_storage_uri_class,
+          debug=self.debug)
+      # TODO: Define tags-related methods on storage_uri objects. In the
+      # meantime, we invoke the underlying bucket's methods directly.
+      tagging_config_xml = uri.get_bucket().get_xml_tags()
+    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
+
+    return XmlParseString(tagging_config_xml).toprettyxml()
+
+  def XmlPassThroughSetTagging(self, tagging_text, storage_url):
+    """See CloudApiDelegator class for function doc strings."""
+    headers = self._CreateBaseHeaders()
+    tags_obj = Tags()
+    h = handler.XmlHandler(tags_obj, None)
+    try:
+      xml.sax.parseString(tagging_text, h)
+    except SaxExceptions.SAXParseException, e:
+      raise CommandException(
+          'Requested labels/tagging config is invalid: %s at line %s, column '
+          '%s' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
+
+    try:
+      uri = boto.storage_uri(
+          storage_url.url_string, suppress_consec_slashes=False,
+          bucket_storage_uri_class=self.bucket_storage_uri_class,
+          debug=self.debug)
+      # TODO: Define tags-related methods on storage_uri objects. In the
+      # meantime, we invoke the underlying bucket's methods directly.
+      uri.get_bucket().set_tags(tags_obj, headers=headers)
+    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
 
   def XmlPassThroughGetWebsite(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
