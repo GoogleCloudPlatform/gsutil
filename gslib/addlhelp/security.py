@@ -160,10 +160,10 @@ _DETAILED_HELP_TEXT = ("""
 <B>ENCRYPTION AT REST</B>
   All Google Cloud Storage data are stored encrypted. For more information see
   `Server-Side Encryption
-  <https://cloud.google.com/storage/docs/concepts-techniques#encryption>`_.
+  <https://cloud.google.com/storage/docs/encryption#server-side>`_.
 
   You can also provide your own encryption keys. For more information, see
-  `gsutil help encryption`.
+  "gsutil help encryption".
 
 
 <B>DATA PRIVACY FROM GOOGLE EMPLOYEES</B>
