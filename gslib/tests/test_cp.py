@@ -1488,10 +1488,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     self.AssertNObjectsInBucket(bucket_uri, 1)
 
+    if self.default_provider == 's3':
+      expected_error_regex = r'AccessDenied'
+    else:
+      expected_error_regex = r'Anonymous user(s)? do(es)? not have'
+
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
                               return_stderr=True, expected_status=1)
-      self.assertIn('AccessDenied', stderr)
+      self.assertRegexpMatches(stderr, expected_error_regex)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_cp_minus_r_minus_e(self):
