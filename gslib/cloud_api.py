@@ -618,6 +618,94 @@ class CloudApi(object):
     """
     raise NotImplementedError('StopChannel must be overloaded')
 
+  def GetProjectServiceAccount(self, project_number, provider=None):
+    """Get the GCS-owned service account representing this project.
+
+    Args:
+      project_number: the project in question.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      Service account object (with email_address string field)
+    """
+    raise NotImplementedError('GetProjectServiceAccount must be overloaded')
+
+  def CreateNotificationConfig(
+      self,
+      bucket_name,
+      pubsub_topic,
+      payload_format,
+      event_types=None,
+      custom_attributes=None,
+      object_name_prefix=None,
+      provider=None):
+    """Creates a new notification with the specified parameters.
+
+    Args:
+      bucket_name: (Required) Name of the bucket.
+      pubsub_topic: (Required) Cloud Pub/Sub topic to which to publish.
+      payload_format: (Required) payload format, must be 'JSON' or 'NONE'.
+      event_types: (Opt) List of event type filters, e.g. 'OBJECT_FINALIZE'.
+      custom_attributes: (Opt) Dictionary of custom attributes.
+      object_name_prefix: (Opt) Filter on object name.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      Notification object describing new notificationConfig
+    """
+    raise NotImplementedError('CreateNotificationConfig must be overloaded')
+
+  def DeleteNotificationConfig(
+      self,
+      bucket_name,
+      notification,
+      provider=None):
+    """Deletes a notification.
+
+    Args:
+      bucket_name: (Required) Name of the bucket.
+      notification: (Required) Integer name of the notification.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None
+    """
+    raise NotImplementedError('DeleteNotificationConfig must be overloaded')
+
+  def ListNotificationConfigs(
+      self,
+      bucket_name,
+      provider=None):
+    """Lists notification configs in a bucket.
+
+    Args:
+      bucket_name: Name of the bucket.
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Yields:
+      List of notification objects.
+    """
+    raise NotImplementedError('ListNotificationConfig must be overloaded')
+
 
 class CryptoTuple(object):
   """Class describing an encryption/decryption key for cloud API requests."""
@@ -759,4 +847,12 @@ class AccessDeniedException(ServiceException):
     authenticated user does not have access rights to the requested resource.
   """
 
+
+class PublishPermissionDeniedException(ServiceException):
+  """Exception raised when bucket does not have publish permission to a topic.
+
+    This is raised when a custom attempts to set up a notification config to a
+    Cloud Pub/Sub topic, but their GCS bucket does not have permission to
+    publish to the specified topic.
+  """
 

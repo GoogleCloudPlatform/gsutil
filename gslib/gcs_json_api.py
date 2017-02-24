@@ -43,6 +43,7 @@ from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
+from gslib.cloud_api import PublishPermissionDeniedException
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
@@ -89,10 +90,17 @@ from gslib.util import JsonResumableChunkSizeDefined
 from gslib.util import LogAndHandleRetries
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
-
 import httplib2
 import oauth2client
 from oauth2client.contrib import multistore_file
+
+
+# pylint: disable=invalid-name
+Notification = apitools_messages.Notification
+NotificationCustomAttributesValue = Notification.CustomAttributesValue
+NotificationAdditionalProperty = (NotificationCustomAttributesValue
+                                  .AdditionalProperty)
+
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
@@ -1496,6 +1504,70 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
+  def GetProjectServiceAccount(self, project_number):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsServiceAccountGetRequest(
+          projectId=unicode(project_number))
+      return self.api_client.projects_serviceAccount.Get(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
+
+  def CreateNotificationConfig(
+      self,
+      bucket_name,
+      pubsub_topic,
+      payload_format,
+      event_types=None,
+      custom_attributes=None,
+      object_name_prefix=None):
+    """See CloudApi class for function doc strings."""
+    try:
+      notification = apitools_messages.Notification(
+          topic=pubsub_topic,
+          payload_format=payload_format)
+      if event_types:
+        notification.event_types = event_types
+      if custom_attributes:
+        additional_properties = [
+            NotificationAdditionalProperty(key=key, value=value)
+            for key, value in custom_attributes.items()]
+        notification.custom_attributes = NotificationCustomAttributesValue(
+            additionalProperties=additional_properties)
+      if object_name_prefix:
+        notification.object_name_prefix = object_name_prefix
+
+      request = apitools_messages.StorageNotificationsInsertRequest(
+          bucket=bucket_name,
+          notification=notification)
+      return self.api_client.notifications.Insert(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
+
+  def DeleteNotificationConfig(
+      self,
+      bucket_name,
+      notification):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageNotificationsDeleteRequest(
+          bucket=bucket_name,
+          notification=notification)
+      return self.api_client.notifications.Delete(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
+
+  def ListNotificationConfigs(self, bucket_name):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageNotificationsListRequest(
+          bucket=bucket_name)
+      response = self.api_client.notifications.List(request)
+      for notification in response.items:
+        yield notification
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e)
+
   def _BucketCannedAclToPredefinedAcl(self, canned_acl_string):
     """Translates the input string to a bucket PredefinedAcl string.
 
@@ -1701,6 +1773,8 @@ class GcsJsonApi(CloudApi):
           return AccessDeniedException(
               _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE, status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
+        elif 'does not have permission to publish messages' in str(e):
+          return PublishPermissionDeniedException(message, status=e.status_code)
         else:
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)

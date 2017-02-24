@@ -69,9 +69,11 @@ class StorageV1(base_api.BaseApiClient):
     self.buckets = self.BucketsService(self)
     self.channels = self.ChannelsService(self)
     self.defaultObjectAccessControls = self.DefaultObjectAccessControlsService(self)
+    self.notifications = self.NotificationsService(self)
     self.objectAccessControls = self.ObjectAccessControlsService(self)
     self.objects = self.ObjectsService(self)
-
+    self.projects_serviceAccount = self.ProjectsServiceAccountService(self)
+    self.projects = self.ProjectsService(self)
 
   class BucketAccessControlsService(base_api.BaseApiService):
     """Service class for the bucketAccessControls resource."""
@@ -675,6 +677,118 @@ class StorageV1(base_api.BaseApiClient):
       return self._RunMethod(
           config, request, global_params=global_params)
 
+  class NotificationsService(base_api.BaseApiService):
+    """Service class for the notifications resource."""
+
+    _NAME = u'notifications'
+
+    def __init__(self, client):
+      super(StorageV1.NotificationsService, self).__init__(client)
+      self._upload_configs = {
+          }
+      self._method_configs = {
+          'Delete': base_api.ApiMethodInfo(
+               http_method=u'DELETE',
+               method_id=u'storage.notifications.delete',
+               ordered_params=[u'bucket', u'notification'],
+               path_params=[u'bucket', u'notification'],
+               query_params=[u'requesterPaysBillingProjectId'],
+               relative_path=u'b/{bucket}/notificationConfigs/{notification}',
+               request_field='',
+               request_type_name=u'StorageNotificationsDeleteRequest',
+               response_type_name=u'StorageNotificationsDeleteResponse',
+               supports_download=False,
+          ),
+          'Get': base_api.ApiMethodInfo(
+             http_method=u'GET',
+             method_id=u'storage.notifications.get',
+             ordered_params=[u'bucket', u'notification'],
+             path_params=[u'bucket', u'notification'],
+             query_params=[u'requesterPaysBillingProjectId'],
+             relative_path=u'b/{bucket}/notificationConfigs/{notification}',
+             request_field='',
+             request_type_name=u'StorageNotificationsGetRequest',
+             response_type_name=u'Notification',
+             supports_download=False,
+          ),
+          'Insert': base_api.ApiMethodInfo(
+             http_method=u'POST',
+             method_id=u'storage.notifications.insert',
+             ordered_params=[u'bucket'],
+             path_params=[u'bucket'],
+             query_params=[u'requesterPaysBillingProjectId'],
+             relative_path=u'b/{bucket}/notificationConfigs',
+             request_field=u'notification',
+             request_type_name=u'StorageNotificationsInsertRequest',
+             response_type_name=u'Notification',
+             supports_download=False,
+         ),
+         'List': base_api.ApiMethodInfo(
+             http_method=u'GET',
+             method_id=u'storage.notifications.list',
+             ordered_params=[u'bucket'],
+             path_params=[u'bucket'],
+             query_params=[u'requesterPaysBillingProjectId'],
+             relative_path=u'b/{bucket}/notificationConfigs',
+             request_field='',
+             request_type_name=u'StorageNotificationsListRequest',
+             response_type_name=u'Notifications',
+             supports_download=False,
+         )}
+
+    def Delete(self, request, global_params=None):
+      """Permanently deletes a notification subscription.
+
+      Args:
+        request: (StorageNotificationsDeleteRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (StorageNotificationsDeleteResponse) The response message.
+      """
+      config = self.GetMethodConfig('Delete')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def Get(self, request, global_params=None):
+      """View a notification configuration.
+
+      Args:
+        request: (StorageNotificationsGetRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Notification) The response message.
+      """
+      config = self.GetMethodConfig('Get')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def Insert(self, request, global_params=None):
+      """Creates a notification subscription for a given bucket.
+
+      Args:
+        request: (StorageNotificationsInsertRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Notification) The response message.
+      """
+      config = self.GetMethodConfig('Insert')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    def List(self, request, global_params=None):
+      """Retrieves a list of notification subscriptions for a given bucket.
+
+      Args:
+        request: (StorageNotificationsListRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Notifications) The response message.
+      """
+      config = self.GetMethodConfig('List')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+
   class ObjectAccessControlsService(base_api.BaseApiService):
     """Service class for the objectAccessControls resource."""
 
@@ -1203,3 +1317,50 @@ class StorageV1(base_api.BaseApiClient):
       config = self.GetMethodConfig('WatchAll')
       return self._RunMethod(
           config, request, global_params=global_params)
+
+  class ProjectsServiceAccountService(base_api.BaseApiService):
+    """Service class for the projects_serviceAccount resource."""
+
+    _NAME = u'projects_serviceAccount'
+
+    def __init__(self, client):
+      super(StorageV1.ProjectsServiceAccountService, self).__init__(client)
+      self._method_configs = {
+          'Get': base_api.ApiMethodInfo(
+              http_method=u'GET',
+              method_id=u'storage.projects.serviceAccount.get',
+              ordered_params=[u'projectId'],
+              path_params=[u'projectId'],
+              query_params=[],
+              relative_path=u'projects/{projectId}/serviceAccount',
+              request_field='',
+              request_type_name=u'StorageProjectsServiceAccountGetRequest',
+              response_type_name=u'ServiceAccount',
+              supports_download=False,
+          ),
+      }
+      self._upload_configs = {
+          }
+
+    def Get(self, request, global_params=None):
+      """Get the email address of this project's GCS service account.
+
+      Args:
+        request: (StorageProjectsServiceAccountGetRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (ServiceAccount) The response message.
+      """
+      config = self.GetMethodConfig('Get')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+  class ProjectsService(base_api.BaseApiService):
+    """Service class for the projects resource."""
+
+    _NAME = u'projects'
+
+    def __init__(self, client):
+      super(StorageV1.ProjectsService, self).__init__(client)
+      self._upload_configs = {
+          }
