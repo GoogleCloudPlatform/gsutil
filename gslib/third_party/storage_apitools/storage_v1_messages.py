@@ -431,6 +431,83 @@ class ComposeRequest(_messages.Message):
   sourceObjects = _messages.MessageField('SourceObjectsValueListEntry', 3, repeated=True)
 
 
+class Notification(_messages.Message):
+  """A subscription to receive Google PubSub notifications.
+
+  Messages:
+    CustomAttributesValue: An optional list of additional attributes to attach
+      to each Cloud PubSub message published for this notification
+      subscription.
+
+  Fields:
+    custom_attributes: An optional list of additional attributes to attach to
+      each Cloud PubSub message published for this notification subscription.
+    etag: HTTP 1.1 Entity tag for this subscription notification.
+    event_types: If present, only send notifications about listed event types.
+      If empty, sent notifications for all event types.
+    id: The ID of the notification.
+    kind: The kind of item this is. For notifications, this is always
+      storage#notification.
+    object_name_prefix: If present, only apply this notification configuration
+      to object names that begin with this prefix.
+    payload_format: The desired payload format for incoming notifications.
+    selfLink: The canonical URL of this notification.
+    topic: The Cloud PubSub topic to which this subscription publishes.
+      Formatted as: '//pubsub.googleapis.com/projects/{project-
+      identifier}/topics/{my-topic}'
+  """
+
+  @encoding.MapUnrecognizedFields('additionalProperties')
+  class CustomAttributesValue(_messages.Message):
+    """An optional list of additional attributes to attach to each Cloud
+    PubSub message published for this notification subscription.
+
+    Messages:
+      AdditionalProperty: An additional property for a CustomAttributesValue
+        object.
+
+    Fields:
+      additionalProperties: Additional properties of type
+        CustomAttributesValue
+    """
+
+    class AdditionalProperty(_messages.Message):
+      """An additional property for a CustomAttributesValue object.
+
+      Fields:
+        key: Name of the additional property.
+        value: A string attribute.
+      """
+
+      key = _messages.StringField(1)
+      value = _messages.StringField(2)
+
+    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+
+  custom_attributes = _messages.MessageField('CustomAttributesValue', 1)
+  etag = _messages.StringField(2)
+  event_types = _messages.StringField(3, repeated=True)
+  id = _messages.StringField(4)
+  kind = _messages.StringField(5, default=u'storage#notification')
+  object_name_prefix = _messages.StringField(6)
+  payload_format = _messages.StringField(7, default=u'JSON_API_V1')
+  selfLink = _messages.StringField(8)
+  topic = _messages.StringField(9)
+
+
+class Notifications(_messages.Message):
+  """A list of notification subscriptions.
+
+  Fields:
+    items: The list of items.
+    kind: The kind of item this is. For lists of notifications, this is always
+      storage#notifications.
+  """
+
+  items = _messages.MessageField('Notification', 1, repeated=True)
+  kind = _messages.StringField(2, default=u'storage#notifications')
+
+
 class Object(_messages.Message):
   """An object.
 
@@ -750,6 +827,19 @@ class RewriteResponse(_messages.Message):
   resource = _messages.MessageField('Object', 4)
   rewriteToken = _messages.StringField(5)
   totalBytesRewritten = _messages.IntegerField(6, variant=_messages.Variant.UINT64)
+
+
+class ServiceAccount(_messages.Message):
+  """A subscription to receive Google PubSub notifications.
+
+  Fields:
+    email_address: The ID of the notification.
+    kind: The kind of item this is. For notifications, this is always
+      storage#notification.
+  """
+
+  email_address = _messages.StringField(1)
+  kind = _messages.StringField(2, default=u'storage#serviceAccount')
 
 
 class StandardQueryParameters(_messages.Message):
@@ -1262,6 +1352,68 @@ class StorageDefaultObjectAccessControlsListRequest(_messages.Message):
   bucket = _messages.StringField(1, required=True)
   ifMetagenerationMatch = _messages.IntegerField(2)
   ifMetagenerationNotMatch = _messages.IntegerField(3)
+
+
+class StorageNotificationsDeleteRequest(_messages.Message):
+  """A StorageNotificationsDeleteRequest object.
+
+  Fields:
+    bucket: The parent bucket of the notification.
+    notification: ID of the notification to delete.
+    requesterPaysBillingProjectId: The project number to be billed for this
+      request, for Requester Pays buckets.
+  """
+
+  bucket = _messages.StringField(1, required=True)
+  notification = _messages.StringField(2, required=True)
+  requesterPaysBillingProjectId = _messages.StringField(3)
+
+
+class StorageNotificationsDeleteResponse(_messages.Message):
+  """An empty StorageNotificationsDelete response."""
+
+
+class StorageNotificationsGetRequest(_messages.Message):
+  """A StorageNotificationsGetRequest object.
+
+  Fields:
+    bucket: The parent bucket of the notification.
+    notification: Notification ID
+    requesterPaysBillingProjectId: The project number to be billed for this
+      request, for Requester Pays buckets.
+  """
+
+  bucket = _messages.StringField(1, required=True)
+  notification = _messages.StringField(2, required=True)
+  requesterPaysBillingProjectId = _messages.StringField(3)
+
+
+class StorageNotificationsInsertRequest(_messages.Message):
+  """A StorageNotificationsInsertRequest object.
+
+  Fields:
+    bucket: The parent bucket of the notification.
+    notification: A Notification resource to be passed as the request body.
+    requesterPaysBillingProjectId: The project number to be billed for this
+      request, for Requester Pays buckets.
+  """
+
+  bucket = _messages.StringField(1, required=True)
+  notification = _messages.MessageField('Notification', 2)
+  requesterPaysBillingProjectId = _messages.StringField(3)
+
+
+class StorageNotificationsListRequest(_messages.Message):
+  """A StorageNotificationsListRequest object.
+
+  Fields:
+    bucket: Name of a GCS bucket.
+    requesterPaysBillingProjectId: The project number to be billed for this
+      request, for Requester Pays buckets.
+  """
+
+  bucket = _messages.StringField(1, required=True)
+  requesterPaysBillingProjectId = _messages.StringField(2)
 
 
 class StorageObjectAccessControlsDeleteRequest(_messages.Message):
@@ -2118,3 +2270,15 @@ class TestIamPermissionsResponse(_messages.Message):
 
   kind = _messages.StringField(1, default=u'storage#testIamPermissionsResponse')
   permissions = _messages.StringField(2, repeated=True)
+
+
+class StorageProjectsServiceAccountGetRequest(_messages.Message):
+  """A StorageProjectsServiceAccountGetRequest object.
+
+  Fields:
+    projectId: Project ID
+  """
+
+  projectId = _messages.StringField(1, required=True)
+
+
