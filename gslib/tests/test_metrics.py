@@ -51,6 +51,7 @@ from gslib.util import IS_LINUX
 from gslib.util import IS_WINDOWS
 from gslib.util import LogAndHandleRetries
 from gslib.util import ONE_KIB
+from gslib.util import ONE_MIB
 from gslib.util import START_CALLBACK_PER_BYTES
 import mock
 
@@ -909,7 +910,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     """Tests PerformanceSummary collection in a file-to-file transfer."""
     tmpdir1 = self.CreateTempDir()
     tmpdir2 = self.CreateTempDir()
-    file_size = 6
+    file_size = ONE_MIB
     self.CreateTempFile(tmpdir=tmpdir1, contents='a' * file_size)
 
     # Run an rsync file-to-file command with fan parallelism, without slice
@@ -934,7 +935,11 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       self._CheckParameterValue('Number of Files/Objects Transferred', 1,
                                 metrics_list)
 
-      self._GetAndCheckAllNumberMetrics(metrics_list)
+      (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
+      if IS_LINUX:  # io_time will be None on other platforms.
+        # We can't guarantee that the file read/write will consume a
+        # reportable amount of disk I/O, but it should be reported as >= 0.
+        self.assertGreaterEqual(io_time, 0)
 
   @SkipForS3('No slice parallelism support for S3.')
   def testPerformanceSummaryFileToCloud(self):
@@ -968,7 +973,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                 metrics_list)
       (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
       if IS_LINUX:  # io_time will be None on other platforms.
-        self.assertGreater(io_time, 0)
+        # We can't guarantee that the file read will consume a
+        # reportable amount of disk I/O, but it should be reported as >= 0.
+        self.assertGreaterEqual(io_time, 0)
 
   @SkipForS3('No slice parallelism support for S3.')
   def testPerformanceSummaryCloudToFile(self):
@@ -1001,7 +1008,11 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                 metrics_list)
       self._CheckParameterValue('Size of Files/Objects Transferred', file_size,
                                 metrics_list)
-      self._GetAndCheckAllNumberMetrics(metrics_list)
+      (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
+      if IS_LINUX:  # io_time will be None on other platforms.
+        # We can't guarantee that the file write will consume a
+        # reportable amount of disk I/O, but it should be reported as >= 0.
+        self.assertGreaterEqual(io_time, 0)
 
   def testPerformanceSummaryCloudToCloud(self):
     """Tests PerformanceSummary collection in a cloud-to-cloud transfer."""
