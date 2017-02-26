@@ -558,7 +558,7 @@ def _RunNamedCommandAndHandleExceptions(
     trace_token=None, parallel_operations=False, perf_trace_token=None):
   """Runs the command and handles common exceptions."""
   # pylint: disable=g-import-not-at-top
-  from gslib.util import GetConfigFilePath
+  from gslib.util import GetConfigFilePaths
   from gslib.util import IS_WINDOWS
   from gslib.util import IsRunningInteractively
   try:
@@ -668,6 +668,10 @@ def _RunNamedCommandAndHandleExceptions(
     else:
       _HandleUnknownFailure(e)
   except Exception as e:  # pylint: disable=broad-except
+    if GetConfigFilePaths():
+      config_paths = ', '.join(GetConfigFilePaths())
+    else:
+      config_paths = 'no config found'
     # Check for two types of errors related to service accounts. These errors
     # appear to be the same except for their messages, but they are caused by
     # different problems and both have unhelpful error messages. Moreover,
@@ -676,15 +680,15 @@ def _RunNamedCommandAndHandleExceptions(
       _OutputAndExit(
           'Encountered an error while refreshing access token. '
           'If you are using a service account,\nplease verify that the '
-          'gs_service_key_file_password field in your config file,'
-          '\n%s, is correct.' % GetConfigFilePath(),
+          'gs_service_key_file_password field in your config file(s),'
+          '\n%s, is correct.' % config_paths,
           exception=e)
     elif 'asn1 encoding routines' in str(e):
       _OutputAndExit(
           'Encountered an error while refreshing access token. '
           'If you are using a service account,\nplease verify that the '
-          'gs_service_key_file field in your config file,\n%s, is correct.' %
-          GetConfigFilePath(),
+          'gs_service_key_file field in your config file(s),\n%s, is correct.' %
+          config_paths,
           exception=e)
     _HandleUnknownFailure(e)
 

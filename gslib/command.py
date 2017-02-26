@@ -81,7 +81,7 @@ from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import GetConfigFilePath
+from gslib.util import GetConfigFilePaths
 from gslib.util import GsutilStreamHandler
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
@@ -1181,9 +1181,9 @@ class Command(HelpProvider):
     if IS_WINDOWS and process_count > 1:
       raise CommandException('\n'.join(textwrap.wrap(
           ('It is not possible to set process_count > 1 on Windows. Please '
-           'update your config file (located at %s) and set '
+           'update your config file(s) (located at %s) and set '
            '"parallel_process_count = 1".') %
-          GetConfigFilePath())))
+          ', '.join(GetConfigFilePaths()))))
     self.logger.debug('process count: %d', process_count)
     self.logger.debug('thread count: %d', thread_count)
 

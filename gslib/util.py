@@ -643,16 +643,26 @@ def ConfigureNoOpAuthIfNeeded():
       from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
 
 
-def GetConfigFilePath():
-  config_path = 'no config found'
+def GetConfigFilePaths():
+  """Returns a list of the path(s) to the boto config file(s) to be loaded."""
+  config_paths = []
+  # The only case in which we load multiple boto configurations is
+  # when the BOTO_CONFIG environment variable is not set and the
+  # BOTO_PATH environment variable is set with multiple path values.
+  # Otherwise, we stop when we find the first readable config file.
+  # This predicate was taken from the boto.pyami.config module.
+  should_look_for_multiple_configs = (
+      'BOTO_CONFIG' not in os.environ and
+      'BOTO_PATH' in os.environ)
   for path in BotoConfigLocations:
     try:
       with open(path, 'r'):
-        config_path = path
-      break
+        config_paths.append(path)
+        if not should_look_for_multiple_configs:
+          break
     except IOError:
       pass
-  return config_path
+  return config_paths
 
 
 def GetBotoConfigFileList():
