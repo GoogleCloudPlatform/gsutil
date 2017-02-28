@@ -134,7 +134,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                 return
 
         if update_lines:
-          cumulative_stderr_lines.update(set(stderr.splitlines()))
+          cumulative_stderr_lines.update(
+              set([s for s in stderr.splitlines() if s]))
 
         # Ensure all of the expected strings are present.
         self.assertEqual(cumulative_stderr_lines, expected_stderr_lines)

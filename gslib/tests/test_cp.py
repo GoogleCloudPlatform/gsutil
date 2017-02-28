@@ -64,6 +64,7 @@ from gslib.tests.rewrite_helper import RewriteHaltException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HaltingCopyCallbackHandler
@@ -3165,6 +3166,28 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'Cannot specify storage class for a non-cloud destination:', stderr)
 
+  # TODO: Remove @skip annotation from this test once we upgrade to the Boto
+  # version that parses the storage class header for HEAD Object responses.
+  @SkipForXML('Need Boto version > 2.46.1')
+  def test_cp_specify_nondefault_storage_class(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='foo', contents='foo')
+    object2_suri = suri(object_uri) + 'bar'
+    # Specify storage class name as mixed case here to ensure that it
+    # gets normalized to uppercase (S3 would return an error otherwise), and
+    # that using the normalized case is accepted by each API.
+    nondefault_storage_class = {
+        's3': 'Standard_iA',
+        'gs':'durable_REDUCED_availability'
+    }
+    storage_class = nondefault_storage_class[self.default_provider]
+    self.RunGsUtil(['cp', '-s', storage_class, suri(object_uri), object2_suri])
+    stdout = self.RunGsUtil(['stat', object2_suri], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(
+        stdout, r'Storage class:\s+%s' % storage_class, flags=re.IGNORECASE)
+
+  @SkipForS3('Test uses gs-specific storage classes.')
   def test_cp_sets_correct_dest_storage_class(self):
     """Tests that object storage class is set correctly with and without -s."""
     # Use a non-default storage class as the default for the bucket.

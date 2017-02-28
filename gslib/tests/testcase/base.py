@@ -194,5 +194,5 @@ class GsUtilTestCase(unittest.TestCase):
     if not pattern.search(text):
       failure_msg = msg or 'Regex didn\'t match'
       failure_msg = '%s: %r not found in %r' % (
-          failure_msg, text, pattern.pattern)
+          failure_msg, pattern.pattern, text)
       raise self.failureException(failure_msg)

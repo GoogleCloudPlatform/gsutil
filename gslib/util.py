@@ -1723,8 +1723,8 @@ def ConvertRecursiveToFlatWildcard(url_strs):
 def NormalizeStorageClass(sc):
   """Returns a normalized form of the given storage class name.
 
-  Converts the given string to lowercase and expands valid abbreviations to
-  full storage class names (e.g 'std' would return 'standard'). Note that this
+  Converts the given string to uppercase and expands valid abbreviations to
+  full storage class names (e.g 'std' would return 'STANDARD'). Note that this
   method does not check if the given storage class is valid.
 
   Args:
@@ -1734,12 +1734,14 @@ def NormalizeStorageClass(sc):
     A string representing the full name of the given storage class.
   """
   shorthand_to_full_name = {
-      'cl': 'coldline',
-      'dra': 'durable_reduced_availability',
-      'nl': 'nearline',
-      's': 'standard',
-      'std': 'standard'}
-  sc = sc.lower()
+      'CL': 'COLDLINE',
+      'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+      'NL': 'NEARLINE',
+      'S': 'STANDARD',
+      'STD': 'STANDARD'}
+  # Use uppercase; storage class argument for the S3 API must be uppercase,
+  # and it's case-insensitive for GS APIs.
+  sc = sc.upper()
   if sc in shorthand_to_full_name:
     sc = shorthand_to_full_name[sc]
   return sc

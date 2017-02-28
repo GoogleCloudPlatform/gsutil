@@ -647,11 +647,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
                       contents='obj7', mtime=100)
 
+    cumulative_stderr = set()
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', '-r', '-d', tmpdir, suri(bucket_uri)])
+      stderr = self.RunGsUtil(
+          ['rsync', '-r', '-d', tmpdir, suri(bucket_uri)], return_stderr=True)
+      cumulative_stderr.update([s for s in stderr.splitlines() if s])
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -683,9 +686,15 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self._VerifyObjectMtime(bucket_uri.bucket_name, 'subdir/obj3', '10')
     self._VerifyObjectMtime(bucket_uri.bucket_name, 'subdir/obj5', '15')
     self._VerifyObjectMtime(bucket_uri.bucket_name, 'obj6', '100')
-    # Make sure test attribute wasn't blown away when mtime was updated.
-    self.VerifyObjectCustomAttribute(bucket_uri.bucket_name, '.obj2', 'test',
-                                     'test')
+    # Rsync using S3 without object owner permission will copy over old objects.
+    copied_over_object_notice = (
+        'Copying whole file/object for %s instead of patching because you '
+        'don\'t have owner permission on the object.' %
+        suri(bucket_uri, '.obj2'))
+    if copied_over_object_notice not in cumulative_stderr:
+      # Make sure test attribute wasn't blown away when mtime was updated.
+      self.VerifyObjectCustomAttribute(
+          bucket_uri.bucket_name, '.obj2', 'test', 'test')
 
     # Now rerun the rsync with the -c option.
     # Use @Retry as hedge against bucket listing eventual consistency.

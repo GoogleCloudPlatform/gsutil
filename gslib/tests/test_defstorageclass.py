@@ -19,10 +19,11 @@ from __future__ import absolute_import
 import re
 
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 
-
+@SkipForS3('S3 does not support storage class at bucket level.')
 class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
   """Integration tests for defstorageclass command."""
 
