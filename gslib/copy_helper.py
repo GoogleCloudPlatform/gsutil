@@ -1426,23 +1426,27 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
     if object_name != '-':
       real_file_path = os.path.realpath(object_name)
       if config.getbool('GSUtil', 'use_magicfile', False) and not IS_WINDOWS:
-        p = subprocess.Popen(['file', '--mime-type', real_file_path],
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = p.communicate()
-        p.stdout.close()
-        p.stderr.close()
-        if p.returncode != 0 or error:
+        try:
+          p = subprocess.Popen(['file', '--mime-type', real_file_path],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          output, error = p.communicate()
+          p.stdout.close()
+          p.stderr.close()
+          if p.returncode != 0 or error:
+            raise CommandException(
+                'Encountered error running "file --mime-type %s" '
+                '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
+          # Parse output by removing line delimiter and splitting on last ":
+          content_type = output.rstrip().rpartition(': ')[2]
+        except OSError as e:  # 'file' executable may not always be present.
           raise CommandException(
-              'Encountered error running "file --mime-type %s" '
-              '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
-        # Parse output by removing line delimiter and splitting on last ":
-        content_type = output.rstrip().rpartition(': ')[2]
+              'Encountered OSError running "file --mime-type %s"\n%s' % (
+                  real_file_path, e))
       else:
         content_type = mimetypes.guess_type(real_file_path)[0]
     if not content_type:
       content_type = DEFAULT_CONTENT_TYPE
     dst_obj_metadata.contentType = content_type
-
 
 # pylint: disable=undefined-variable
 def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,

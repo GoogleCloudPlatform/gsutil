@@ -357,7 +357,8 @@ class RewriteCommand(Command):
     # STORAGE_CLASS transform should be skipped if the target storage class
     # matches the existing storage class.
     if (_TransformTypes.STORAGE_CLASS in transforms_to_perform and
-        self.dest_storage_class == src_metadata.storageClass.lower()):
+        self.dest_storage_class == NormalizeStorageClass(
+            src_metadata.storageClass)):
       transforms_to_perform.remove(_TransformTypes.STORAGE_CLASS)
       self.logger.info('Redundant transform: %s already had storage class of '
                        '%s.' % (transform_url, src_metadata.storageClass))
