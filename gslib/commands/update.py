@@ -145,7 +145,7 @@ class UpdateCommand(Command):
     # having a config file.
     config_file_list = GetBotoConfigFileList()
     config_files = ' '.join(config_file_list)
-    self._CleanUpUpdateCommand(tf, dirs_to_remove)
+    self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
 
     # Pick current protection of each boto config file for command that restores
     # protection (rather than fixing at 600) to support use cases like how GCE
@@ -196,13 +196,17 @@ class UpdateCommand(Command):
         raise CommandException('EnsureDirsSafeForUpdate: encountered unsafe '
                                'directory (%s); aborting update' % d)
 
-  def _CleanUpUpdateCommand(self, tf, dirs_to_remove):
+  def _CleanUpUpdateCommand(self, tf, dirs_to_remove, old_cwd):
     """Cleans up temp files etc. from running update command.
 
     Args:
       tf: Opened TarFile, or None if none currently open.
       dirs_to_remove: List of directories to remove.
-
+      old_cwd: Path to the working directory we should chdir back to. It's
+          possible that we've chdir'd to a temp directory that's been deleted,
+          which can cause odd behavior (e.g. OSErrors when opening the metrics
+          subprocess). If this is not truthy, we won't attempt to chdir back
+          to this value.
     """
     if tf:
       tf.close()
@@ -217,6 +221,11 @@ class UpdateCommand(Command):
         # user's temp dir.
         if not IS_WINDOWS:
           raise
+    if old_cwd:
+      try:
+        os.chdir(old_cwd)
+      except OSError:
+        pass
 
   def RunCommand(self):
     """Command entry point for the update command."""
@@ -256,6 +265,7 @@ class UpdateCommand(Command):
     dirs_to_remove = []
     tmp_dir = tempfile.mkdtemp()
     dirs_to_remove.append(tmp_dir)
+    old_cwd = os.getcwd()
     os.chdir(tmp_dir)
 
     if not no_prompt:
@@ -295,7 +305,7 @@ class UpdateCommand(Command):
         tarball_version = ver_file.read().strip()
 
     if not force_update and gslib.VERSION == tarball_version:
-      self._CleanUpUpdateCommand(tf, dirs_to_remove)
+      self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       if self.args:
         raise CommandException('You already have %s installed.' %
                                update_from_url_str, informational=True)
@@ -331,7 +341,7 @@ class UpdateCommand(Command):
     else:
       answer = raw_input('Proceed? [y/N] ')
     if not answer or answer.lower()[0] != 'y':
-      self._CleanUpUpdateCommand(tf, dirs_to_remove)
+      self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       raise CommandException('Not running update.', informational=True)
 
     if not tf:
@@ -357,7 +367,7 @@ class UpdateCommand(Command):
     try:
       tf.extractall(path=new_dir)
     except Exception, e:
-      self._CleanUpUpdateCommand(tf, dirs_to_remove)
+      self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       raise CommandException('Update failed: %s.' % e)
 
     # For enterprise mode (shared/central) installation, users with
@@ -390,7 +400,7 @@ class UpdateCommand(Command):
     # Move old installation aside and new into place.
     os.rename(gslib.GSUTIL_DIR, os.path.join(old_dir, 'old'))
     os.rename(os.path.join(new_dir, 'gsutil'), gslib.GSUTIL_DIR)
-    self._CleanUpUpdateCommand(tf, dirs_to_remove)
+    self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
     RegisterSignalHandler(signal.SIGINT, signal.SIG_DFL)
     self.logger.info('Update complete.')
     return 0
