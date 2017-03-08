@@ -1,3 +1,40 @@
+Release 4.23 (release date: 2017-03-09)
+=======================================
+Bug Fixes
+------------------
+- Fixed "referenced before assignment" error in some copy_helper exceptions for
+  resumable uploads and non-resumable cloud-to-local downloads.
+- The setmeta command now properly supports case sensitivity in custom metadata
+  keys when using the JSON API.
+- Fixed a resource leak affecting Windows in cases where single-process,
+  multithreaded parallelism is used that would result in an OSError with the
+  message "Too many open files".
+- Fixed HTTPError initialization failure in signurl command.
+- Fixed signurl issue where attempting to validate short-lived URLs on a slow
+  connection would fail because of URL expiration.
+- Fixed a bug where cp -r would not properly resolve wildcards for
+  cloud-to-cloud copies.
+- Fixed a bug where cp -e -r would copy symlinks.
+- Fixed a bug where cp -P would fail on Windows.
+- Fixed a bug where version -l might not show all boto configuration files.
+- Running perfdiag now only lists the objects that were created by that run of
+  perfdiag. This fixes an issue where running perfdiag against an existing
+  bucket with many objects in it could take a long time.
+
+
+Other Changes
+------------------
+- Simplified parallelism when using a single process with multiple threads.
+  With this change, gsutil will spawn a new thread pool per level of
+  parallelism. As an example, if you specify that you want a
+  parellel_thread_count of 24, this will result in 24 worker threads, except
+  when you're using parallel composite uploads or sliced downloads, in which
+  case 48 (24 * 2) worker threads will be used.
+- Extended the early deletion warning threshold when moving Coldline objects
+  to 90 days after object creation.
+- Improved several error messages and warnings.
+- Several documentation updates and clarifications.
+
 Release 4.22 (release date: 2016-10-20)
 =======================================
 New features
