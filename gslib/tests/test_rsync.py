@@ -1907,6 +1907,33 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  def test_rsync_canned_acl(self):
+    """Tests that rsync -a applies ACLs."""
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
+                      contents='obj1')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      """Tests rsync -a works as expected."""
+      self.RunGsUtil(['rsync', '-d', '-a', 'public-read', suri(bucket1_uri),
+                      suri(bucket2_uri)])
+      listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
+      listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
+      self.assertEquals(listing1, set(['/obj1']))
+      self.assertEquals(listing2, set(['/obj1']))
+      # Set public-read on the original key after the rsync so we can compare
+      # the ACLs.
+      self.RunGsUtil(['acl', 'set', 'public-read', suri(bucket1_uri, 'obj1')])
+      acl1_json = self.RunGsUtil(['acl', 'get', suri(bucket1_uri, 'obj1')],
+                                 return_stdout=True)
+      acl2_json = self.RunGsUtil(['acl', 'get', suri(bucket2_uri, 'obj1')],
+                                 return_stdout=True)
+      self.assertEquals(acl1_json, acl2_json)
+    _Check()
+
   def test_rsync_to_nonexistent_bucket_subdir(self):
     """Tests that rsync to non-existent bucket subdir works."""
     # Create dir with some objects and empty bucket.
