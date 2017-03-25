@@ -1,3 +1,15 @@
+Release 4.25 (release date: 2017-04-06)
+=======================================
+New features
+------------------
+- Added bucket label support to gsutil. For more details, see
+  https://cloud.google.com/compute/docs/label-or-tag-resources.
+- Added the label command, which can be used to get, set, and change the labels
+  for an existing bucket (known as "tags" for S3 buckets).
+- Listing a bucket via "gsutil ls -Lb" now also displays the labels, if any
+  exist, that are currently set on it.
+
+
 Release 4.24 (release date: 2017-03-27)
 =======================================
 New Features
