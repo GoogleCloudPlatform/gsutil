@@ -30,6 +30,7 @@ class Bucket(_messages.Message):
   """A bucket.
 
   Messages:
+    BillingValue: The bucket's billing configuration.
     CorsValueListEntry: A CorsValueListEntry object.
     LifecycleValue: The bucket's lifecycle configuration. See lifecycle
       management for more information.
@@ -45,6 +46,7 @@ class Bucket(_messages.Message):
 
   Fields:
     acl: Access controls on the bucket.
+    billing: The bucket's billing configuration.
     cors: The bucket's Cross-Origin Resource Sharing (CORS) configuration.
     defaultObjectAcl: Default access controls to apply to new objects when no
       ACL is provided.
@@ -76,6 +78,15 @@ class Bucket(_messages.Message):
       behaves when accessing bucket contents as a web site. See the Static
       Website Examples for more information.
   """
+
+  class BillingValue(_messages.Message):
+    """The bucket's billing configuration.
+
+    Fields:
+      requesterPays: When set to true, bucket is requester pays.
+    """
+
+    requesterPays = _messages.BooleanField(1)
 
   class CorsValueListEntry(_messages.Message):
     """A CorsValueListEntry object.
@@ -220,24 +231,25 @@ class Bucket(_messages.Message):
     notFoundPage = _messages.StringField(2)
 
   acl = _messages.MessageField('BucketAccessControl', 1, repeated=True)
-  cors = _messages.MessageField('CorsValueListEntry', 2, repeated=True)
-  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 3, repeated=True)
-  etag = _messages.StringField(4)
-  id = _messages.StringField(5)
-  kind = _messages.StringField(6, default=u'storage#bucket')
-  lifecycle = _messages.MessageField('LifecycleValue', 7)
-  location = _messages.StringField(8)
-  logging = _messages.MessageField('LoggingValue', 9)
-  metageneration = _messages.IntegerField(10)
-  name = _messages.StringField(11)
-  owner = _messages.MessageField('OwnerValue', 12)
-  projectNumber = _messages.IntegerField(13, variant=_messages.Variant.UINT64)
-  selfLink = _messages.StringField(14)
-  storageClass = _messages.StringField(15)
-  timeCreated = _message_types.DateTimeField(16)
-  updated = _message_types.DateTimeField(17)
-  versioning = _messages.MessageField('VersioningValue', 18)
-  website = _messages.MessageField('WebsiteValue', 19)
+  billing = _messages.MessageField('BillingValue', 2)
+  cors = _messages.MessageField('CorsValueListEntry', 3, repeated=True)
+  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 4, repeated=True)
+  etag = _messages.StringField(5)
+  id = _messages.StringField(6)
+  kind = _messages.StringField(7, default=u'storage#bucket')
+  lifecycle = _messages.MessageField('LifecycleValue', 8)
+  location = _messages.StringField(9)
+  logging = _messages.MessageField('LoggingValue', 10)
+  metageneration = _messages.IntegerField(11)
+  name = _messages.StringField(12)
+  owner = _messages.MessageField('OwnerValue', 13)
+  projectNumber = _messages.IntegerField(14, variant=_messages.Variant.UINT64)
+  selfLink = _messages.StringField(15)
+  storageClass = _messages.StringField(16)
+  timeCreated = _message_types.DateTimeField(17)
+  updated = _message_types.DateTimeField(18)
+  versioning = _messages.MessageField('VersioningValue', 19)
+  website = _messages.MessageField('WebsiteValue', 20)
 
 
 class BucketAccessControl(_messages.Message):
