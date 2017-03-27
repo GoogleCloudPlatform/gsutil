@@ -3,7 +3,7 @@ Release 4.24 (release date: 2017-03-27)
 New Features
 ------------------
 - Added support for configuring GCS Cloud Pub/Sub notifications. For more
-details, see https://cloud.google.com/storage/docs/pubsub-notifications.
+  details, see https://cloud.google.com/storage/docs/pubsub-notifications.
 - Added support for specifying canned ACLs when using the rsync command.
 
 Bug Fixes
