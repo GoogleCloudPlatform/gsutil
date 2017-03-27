@@ -334,6 +334,24 @@ class CloudApiDelegator(CloudApi):
   def StopChannel(self, channel_id, resource_id, provider=None):
     return self._GetApi(provider).StopChannel(channel_id, resource_id)
 
+  def GetProjectServiceAccount(self, project_number, provider=None):
+    return self._GetApi(provider).GetProjectServiceAccount(project_number)
+
+  def CreateNotificationConfig(
+      self, bucket_name, pubsub_topic, payload_format, event_types=None,
+      custom_attributes=None, object_name_prefix=None, provider=None):
+    return self._GetApi(provider).CreateNotificationConfig(
+        bucket_name, pubsub_topic, payload_format, event_types,
+        custom_attributes, object_name_prefix)
+
+  def DeleteNotificationConfig(
+      self, bucket_name, notification, provider=None):
+    return self._GetApi(provider).DeleteNotificationConfig(
+        bucket_name, notification)
+
+  def ListNotificationConfigs(self, bucket_name, provider=None):
+    return self._GetApi(provider).ListNotificationConfigs(bucket_name)
+
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
 

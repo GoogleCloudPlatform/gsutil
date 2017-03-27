@@ -277,6 +277,7 @@ except ImportError:
 
 GOOG_CLOUD_CONSOLE_URI = 'https://cloud.google.com/console#/project'
 
+SCOPE_CLOUD_PLATFORM = 'https://www.googleapis.com/auth/cloud-platform'
 SCOPE_FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
 SCOPE_READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
 SCOPE_READ_ONLY = 'https://www.googleapis.com/auth/devstorage.read_only'
@@ -814,7 +815,7 @@ class ConfigCommand(Command):
 
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
-                           oauth2_scopes=[SCOPE_FULL_CONTROL],
+                           oauth2_scopes=[SCOPE_CLOUD_PLATFORM],
                            cred_type=CredTypes.OAUTH2_USER_ACCOUNT,
                            configure_auth=True):
     """Creates a boto config file interactively.
@@ -1142,7 +1143,7 @@ class ConfigCommand(Command):
           'pass_credentials_to_gsutil false".')) + '\n\n')
 
     if not scopes:
-      scopes.append(SCOPE_FULL_CONTROL)
+      scopes.append(SCOPE_CLOUD_PLATFORM)
 
     default_config_path_bak = None
     if not output_file_name:
