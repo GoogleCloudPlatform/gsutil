@@ -187,7 +187,6 @@ _DETAILED_HELP_TEXT = ("""
             Website configuration:        None
             CORS configuration:           Present
             Lifecycle configuration:      None
-            Requester Pays enabled:       True
             Time created:                 Fri, 21 Oct 2016 19:25:17 GMT
             Time updated:                 Fri, 21 Oct 2016 21:17:59 GMT
     [
@@ -301,7 +300,6 @@ class LsCommand(Command):
     fields['logging_config'] = 'Present' if bucket.logging else 'None'
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
-    fields['requester_pays'] = bucket.billing and bucket.billing.requesterPays
     if bucket.timeCreated:
       fields['time_created'] = bucket.timeCreated.strftime(
           '%a, %d %b %Y %H:%M:%S GMT')
@@ -337,7 +335,6 @@ class LsCommand(Command):
            '\tWebsite configuration:\t\t{website_config}\n'
            '\tCORS configuration: \t\t{cors_config}\n'
            '\tLifecycle configuration:\t{lifecycle_config}\n' +
-           '\tRequester Pays enabled:\t\t{requester_pays}\n' +
            time_created_line +
            time_updated_line +
            '\tACL:\t\t\t\t{acl}\n'
@@ -441,7 +438,7 @@ class LsCommand(Command):
       elif listing_style == ListingStyle.LONG_LONG:
         bucket_fields = ['location', 'storageClass', 'versioning', 'acl',
                          'defaultObjectAcl', 'website', 'logging', 'cors',
-                         'lifecycle', 'billing', 'timeCreated', 'updated']
+                         'lifecycle', 'timeCreated', 'updated']
       if storage_url.IsProvider():
         # Provider URL: use bucket wildcard to list buckets.
         for blr in self.WildcardIterator(

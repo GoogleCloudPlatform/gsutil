@@ -407,7 +407,7 @@ class GcsJsonApi(CloudApi):
     # them out to apitools so it will send/erase them.
     apitools_include_fields = []
     for metadata_field in ('metadata', 'lifecycle', 'logging', 'versioning',
-                           'website', 'billing'):
+                           'website'):
       attr = getattr(bucket_metadata, metadata_field, None)
       if attr and not encoding.MessageToDict(attr):
         setattr(bucket_metadata, metadata_field, None)
