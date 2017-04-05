@@ -1,4 +1,4 @@
-Release 4.25 (release date: 2017-04-06)
+Release 4.25 (release date: 2017-04-05)
 =======================================
 New features
 ------------------
