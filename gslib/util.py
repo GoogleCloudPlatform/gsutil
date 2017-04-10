@@ -304,6 +304,34 @@ class LazyWrapper(object):
     """
     self._func = func
 
+  def __int__(self):
+    try:
+      return int(self._value)
+    except AttributeError:
+      self._value = self._func()
+      return int(self._value)
+
+  def __eq__(self, other):
+    try:
+      return self._value == other
+    except AttributeError:
+      self._value = self._func()
+      return self._value == other
+
+  def __repr__(self):
+    try:
+      return str(self._value)
+    except AttributeError:
+      self._value = self._func()
+      return str(self._value)
+
+  def __str__(self):
+    try:
+      return str(self._value)
+    except AttributeError:
+      self._value = self._func()
+      return str(self._value)
+
   def __call__(self):
     """The call method for a LazyWrapper object."""
     try:
