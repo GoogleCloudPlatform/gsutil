@@ -51,7 +51,6 @@ from gslib.util import RESUMABLE_THRESHOLD_B
 
 from httplib2 import ServerNotFoundError
 from oauth2client.client import HAS_CRYPTO
-from oauth2client.client import FlowExchangeError
 
 
 _SYNOPSIS = """
@@ -478,7 +477,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'sliced_object_download_threshold' and
 # 'sliced_object_download_component_size' have analogous functionality to
 # their respective parallel_composite_upload config values.
-# 'sliced_object_download_max_components' specifies the maximum number of
+# 'sliced_object_download_max_components' specifies the maximum number of 
 # slices to be used when performing a sliced object download. It is not
 # restricted by MAX_COMPONENT_COUNT.
 #sliced_object_download_threshold = %(sliced_object_download_threshold)s
@@ -898,18 +897,6 @@ class ConfigCommand(Command):
                                                                    cred_type)
           oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
               oauth2_client, oauth2_scopes, launch_browser)
-        except FlowExchangeError:
-          # Offer some assistance instead of just 'invalid_grant'.
-          sys.stdout.write('\n%s\n\n' % '\n'.join(
-              textwrap.wrap(
-                  'Failed to retrieve valid credentials. '
-                  "Make sure you've selected and pasted the ENTIRE "
-                  'authorization code (including any numeric prefix '
-                  "e.g. '4/'). "
-                  "You can also try running 'gcloud auth login' to "
-                  "refresh your credentials and 'gcloud components update' "
-                  'to make sure you have the latest tools.')))
-          raise
       elif cred_type == CredTypes.HMAC:
         got_creds = False
         for provider in provider_map:
