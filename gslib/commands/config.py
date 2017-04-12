@@ -899,6 +899,7 @@ class ConfigCommand(Command):
           oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
               oauth2_client, oauth2_scopes, launch_browser)
         except FlowExchangeError:
+          # Offer some assistance instead of just 'invalid_grant'.
           sys.stdout.write('\n%s\n\n' % '\n'.join(
               textwrap.wrap(
                   'Failed to retrieve valid credentials. '
