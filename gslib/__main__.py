@@ -667,6 +667,11 @@ def _RunNamedCommandAndHandleExceptions(
                      exception=e)
     else:
       _HandleUnknownFailure(e)
+  except oauth2client.client.FlowExchangeError as e:
+    _OutputAndExit('\n%s\n\n' % '\n'.join(textwrap.wrap(
+        'Failed to retrieve valid credentials (%s). Make sure you selected and '
+        'pasted the ENTIRE authorization code (including any numeric prefix '
+        "e.g. '4/')." % e)), exception=e)
   except Exception as e:  # pylint: disable=broad-except
     if GetConfigFilePaths():
       config_paths = ', '.join(GetConfigFilePaths())
