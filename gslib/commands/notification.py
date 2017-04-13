@@ -50,7 +50,7 @@ _DELETE_SYNOPSIS = """
 
 _CREATE_SYNOPSIS = """
   gsutil notification create -f (json|none) [-p prefix] [-t topic] \\
-      [-m key:value]... [-t eventType]... bucket_url
+      [-m key:value]... [-e eventType]... bucket_url
 """
 
 # Object Change Notification commands
@@ -79,7 +79,7 @@ _LIST_DESCRIPTION = """
   No object change notifications will be listed. Only Cloud Pub/Sub notification
   subscription configs will be listed.
 
-  <B>Example</B>
+<B>LIST EXAMPLES</B>
 
   Fetch the list of notification configs for the bucket example-bucket:
 
@@ -108,7 +108,7 @@ _DELETE_DESCRIPTION = """
   Object Change Notification subscriptions cannot be deleted with this command.
   For that, see the command `gsutil notification stopchannel`.
 
-  <B>Examples</B>
+<B>DELETE EXAMPLES</B>
 
   Delete a single notification config (with ID 3) in the bucket example-bucket:
 
@@ -140,7 +140,7 @@ _CREATE_DESCRIPTION = """
   command will check to see if that permission exists and, if not, will
   attempt to grant it.
 
-  <B>Examples</B>
+<B>CREATE EXAMPLES</B>
 
   Begin sending notifications of all changes to the bucket example-bucket
   to the Cloud Pub/Sub topic projects/default-project/topics/example-bucket:
@@ -167,7 +167,7 @@ _CREATE_DESCRIPTION = """
   Create a topic and notification config that will only send an event when
   an object beginning with "photos/" is affected:
 
-    gsutil notification create -o photos/ gs://example-bucket
+    gsutil notification create -p photos/ gs://example-bucket
 
   List all of the notificationConfigs in bucket example-bucket:
 
@@ -182,9 +182,8 @@ _CREATE_DESCRIPTION = """
     gsutil notification delete \\
       projects/_/buckets/example-bucket/notificationConfigs/1
 
-
-<B>Options</B>
-  The create sub-command has the following options:
+<B>OPTIONS</B>
+  The create sub-command has the following options
 
   -e        Specify an event type filter for this notification config. GCS
             will only send notifications of this type. You may specify this
@@ -207,7 +206,7 @@ _CREATE_DESCRIPTION = """
             this notification config. You may specify this parameter multiple
             times to set multiple attributes.
 
-  -o        Specifies a prefix path filter for this notification config. GCS
+  -p        Specifies a prefix path filter for this notification config. GCS
             will only send notifications for objects in this bucket whose names
             begin with the specified prefix.
 
@@ -218,7 +217,8 @@ _CREATE_DESCRIPTION = """
 
   -t        The Cloud Pub/Sub topic to which notifications should be sent. If
             not specified, this command will choose a topic whose project is
-            controlled by -p and whose ID is the same as the GCS bucket name.
+            your default project and whose ID is the same as the GCS bucket
+            name.
 """
 
 _WATCHBUCKET_DESCRIPTION = """
@@ -240,7 +240,7 @@ _WATCHBUCKET_DESCRIPTION = """
   To do this, set this custom token and store it to later verify that
   notification events contain the client token you expect.
 
-  <B>Examples</B>
+<B>WATCHBUCKET EXAMPLES</B>
 
   Watch the bucket example-bucket for changes and send notifications to an
   application server running at example.com:
@@ -267,7 +267,7 @@ _STOPCHANNEL_DESCRIPTION = """
   The channel_id and resource_id parameters should match the values from the
   response of a bucket watch request.
 
-  <B>Example</B>
+<B>STOPCHANNEL EXAMPLES</B>
 
   Stop the notification event channel with channel identifier channel1 and
   resource identifier SoGqan08XDIFWr1Fv_nGpRJBHh8:
@@ -282,24 +282,17 @@ _DESCRIPTION = """
 
 <B>CLOUD PUB/SUB</B>
 
-  These notification sub-commands deal with configuring GCS's integration with
-  Google Cloud Pub/Sub.
-
-""" + (_CREATE_SYNOPSIS +
-       _LIST_SYNOPSIS.lstrip('\n') +
-       _DELETE_SYNOPSIS.lstrip('\n')) + """
-
+  The "create", "list", and "delete" sub-commands deal with configuring GCS's
+  integration with Google Cloud Pub/Sub.
+""" + _CREATE_DESCRIPTION + _LIST_DESCRIPTION + _DELETE_DESCRIPTION + """
 <B>OBJECT CHANGE NOTIFICATIONS</B>
 
-  For more information on the Object
-  Change Notification feature, please see:
+  For more information on the Object Change Notification feature, please see:
   https://cloud.google.com/storage/docs/object-change-notification
 
-  The following sub-commands enable and disable Object Change Notifications:
-""" + _WATCHBUCKET_SYNOPSIS + _STOPCHANNEL_SYNOPSIS.lstrip('\n') + """
-  For more information on Object Change Notifications, see the help for
-  these two specific sub-commands.
-
+  The "watchbucket" and "stopchannel" sub-commands enable and disable Object
+  Change Notifications.
+""" + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
 <B>NOTIFICATIONS AND PARALLEL COMPOSITE UPLOADS</B>
 
   By default, gsutil enables parallel composite uploads for large files (see
@@ -502,14 +495,12 @@ class NotificationCommand(Command):
                 'key:value')
           key, value = a.split(':')
           custom_attributes[key] = value
-        elif o == '-o':
-          object_name_prefix = a
-        elif o == '-t':
-          pubsub_topic = a
-        elif o == '-s':
-          should_setup_topic = False
         elif o == '-p':
           object_name_prefix = a
+        elif o == '-s':
+          should_setup_topic = False
+        elif o == '-t':
+          pubsub_topic = a
 
     if payload_format not in PAYLOAD_FORMAT_MAP:
       raise CommandException(

@@ -183,11 +183,10 @@ _CH_DESCRIPTION = """
                 set when invoking the gsutil -m option.
 """
 
-_SYNOPSIS = (_ALPHA_DISCLAIMER + '\n' +
-             _SET_SYNOPSIS.lstrip('\n') + _GET_SYNOPSIS.lstrip('\n') +
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
              _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
-_DESCRIPTION = ("""
+_DESCRIPTION = _ALPHA_DISCLAIMER + ("""
   The iam command has three sub-commands:
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
 

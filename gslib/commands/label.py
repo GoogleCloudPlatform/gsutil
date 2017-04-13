@@ -44,7 +44,7 @@ _GET_SYNOPSIS = """
 """
 
 _CH_SYNOPSIS = """
-  gsutil label ch <label_modifier>... url
+  gsutil label ch <label_modifier>... url...
 
   where each <label_modifier> is one of the following forms:
 
@@ -105,24 +105,25 @@ _CH_DESCRIPTION = """
   The "ch" sub-command has the following options
 
     -l          Add or update a label with the specified key and value.
+
     -d          Remove the label with the specified key.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
              _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
-_DESCRIPTION = ("""
+_DESCRIPTION = """
   Gets, sets, or changes the label configuration (also called the tagging
   configuration by other storage providers) of one or more buckets. An example
   label JSON document looks like the following:
 
-  {
-    "your_label_key": "your_label_value",
-    "your_other_label_key": "your_other_label_value"
-  }
+    {
+      "your_label_key": "your_label_value",
+      "your_other_label_key": "your_other_label_value"
+    }
 
   The label command has three sub-commands:
-""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
+""" + _GET_DESCRIPTION + _SET_DESCRIPTION + _CH_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
