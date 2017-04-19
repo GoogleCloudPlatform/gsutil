@@ -35,11 +35,14 @@ management tasks, including:
 """
 
 requires = [
+    'argcomplete>=1.8.2',
     'boto==2.42.0',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.14',
     'google-apitools==0.5.3',
     'httplib2>=0.8',
+    # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
+    'mock==2.0.0',
     'oauth2client==2.2.0',
     'pyOpenSSL>=0.13',
     'python-gflags>=2.0',
@@ -48,8 +51,6 @@ requires = [
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',
-    # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
-    'mock==2.0.0',
 ]
 
 dependency_links = [
