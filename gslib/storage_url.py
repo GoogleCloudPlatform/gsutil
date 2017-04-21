@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import os
 import re
+import stat
 
 from gslib.exception import InvalidUrlError
 
@@ -50,8 +51,11 @@ class StorageUrl(object):
   def IsCloudUrl(self):
     raise NotImplementedError('IsCloudUrl not overridden')
 
-  def IsStream(self):
+  def IsStream():
     raise NotImplementedError('IsStream not overridden')
+
+  def IsFifo(self):
+    raise NotImplementedError('IsFifo not overridden')
 
   def CreatePrefixUrl(self, wildcard_suffix=None):
     """Returns a prefix of this URL that can be used for iterating.
@@ -118,7 +122,7 @@ class _FileUrl(StorageUrl):
     and object_name contains the file/directory path.
   """
 
-  def __init__(self, url_string, is_stream=False):
+  def __init__(self, url_string, is_stream=False, is_fifo=False):
     self.scheme = 'file'
     self.bucket_name = ''
     match = FILE_OBJECT_REGEX.match(url_string)
@@ -128,6 +132,7 @@ class _FileUrl(StorageUrl):
       self.object_name = url_string
     self.generation = None
     self.is_stream = is_stream
+    self.is_fifo = is_fifo
     self.delim = os.sep
 
   def Clone(self):
@@ -142,8 +147,13 @@ class _FileUrl(StorageUrl):
   def IsStream(self):
     return self.is_stream
 
+  def IsFifo(self):
+    return self.is_fifo
+
   def IsDirectory(self):
-    return not self.IsStream() and os.path.isdir(self.object_name)
+    return (not self.IsStream() and
+            not self.IsFifo() and
+            os.path.isdir(self.object_name))
 
   def CreatePrefixUrl(self, wildcard_suffix=None):
     return self.url_string
@@ -218,6 +228,9 @@ class _CloudUrl(StorageUrl):
 
   def IsStream(self):
     raise NotImplementedError('IsStream not supported on CloudUrl')
+
+  def IsFifo(self):
+    raise NotImplementedError('IsFifo not supported on CloudUrl')
 
   def IsBucket(self):
     return bool(self.bucket_name and not self.object_name)
@@ -297,7 +310,12 @@ def StorageUrlFromString(url_str):
   if scheme == 'file':
     path = _GetPathFromUrlString(url_str)
     is_stream = (path == '-')
-    return _FileUrl(url_str, is_stream=is_stream)
+    is_fifo = False
+    try:
+      is_fifo = stat.S_ISFIFO(os.stat(path).st_mode)
+    except OSError:
+      pass
+    return _FileUrl(url_str, is_stream=is_stream, is_fifo=is_fifo)
   return _CloudUrl(url_str)
 
 

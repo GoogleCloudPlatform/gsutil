@@ -1386,11 +1386,11 @@ def GetFileSize(fp, position_to_eof=False):
   return cur_file_size
 
 
-def GetStreamFromFileUrl(storage_url):
+def GetStreamFromFileUrl(storage_url, mode='rb'):
   if storage_url.IsStream():
     return sys.stdin
   else:
-    return open(storage_url.object_name, 'rb')
+    return open(storage_url.object_name, mode)
 
 
 def UrlsAreForSingleProvider(url_args):

@@ -35,6 +35,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import textwrap
 import time
@@ -539,7 +540,9 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     CommandException if destination object name not specified for
     source and source is a stream.
   """
-  if exp_dst_url.IsFileUrl() and exp_dst_url.IsStream() and preserve_posix:
+  if (exp_dst_url.IsFileUrl() and
+      exp_dst_url.IsStream() and
+      preserve_posix):
     raise CommandException('Cannot preserve POSIX attributes with a stream.')
 
   if _ShouldTreatDstUrlAsSingleton(
@@ -548,7 +551,8 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
     # We're copying one file or object to one file or object.
     return exp_dst_url
 
-  if exp_src_url.IsFileUrl() and exp_src_url.IsStream():
+  if exp_src_url.IsFileUrl() and (exp_src_url.IsStream() or
+                                  exp_src_url.IsFifo()):
     if have_existing_dest_subdir:
       raise CommandException('Destination object name needed when '
                              'source is a stream')
@@ -1163,6 +1167,7 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
   all_factors_but_size = (
       allow_splitting  # Don't split the pieces multiple times.
       and not src_url.IsStream()  # We can't partition streams.
+      and not src_url.IsFifo()  # We can't partition fifos.
       and dst_url.scheme == 'gs'  # Compose is only for gs.
       and not canned_acl)  # TODO: Implement canned ACL support for compose.
 
@@ -1342,8 +1347,9 @@ def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
     content_type_msg = ' [Content-Type=%s]' % dst_obj_metadata.contentType
   else:
     content_type_msg = ''
-  if src_url.IsFileUrl() and src_url.IsStream():
-    logger.info('Copying from <STDIN>%s...', content_type_msg)
+  if src_url.IsFileUrl() and (src_url.IsStream() or src_url.IsFifo()):
+    src_text = "<STDIN>" if src_url.IsStream() else "named pipe"
+    logger.info('Copying from %s%s...', src_text, content_type_msg)
   else:
     logger.info('Copying %s%s...', src_url.url_string, content_type_msg)
 
@@ -1415,7 +1421,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
   """
   # contentType == '' if user requested default type.
   if (dst_obj_metadata.contentType is None and src_url.IsFileUrl()
-      and not src_url.IsStream()):
+      and not src_url.IsStream() and not src_url.IsFifo()):
     # Only do content type recognition if src_url is a file. Object-to-object
     # copies with no -h Content-Type specified re-use the content type of the
     # source object.
@@ -1480,7 +1486,7 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
 
   encryption_tuple = GetEncryptionTuple()
 
-  if src_url.IsStream():
+  if src_url.IsStream() or src_url.IsFifo():
     # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
     uploaded_object = gsutil_api.UploadObjectStreaming(
         src_obj_filestream, object_metadata=dst_obj_metadata,
@@ -1666,7 +1672,7 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
     # Check for temp space. Assume the compressed object is at most 2x
     # the size of the object (normally should compress to smaller than
     # the object)
-    if src_url.IsStream():
+    if src_url.IsStream() or src_url.IsFifo():
       # TODO: Support streaming gzip uploads.
       # https://github.com/GoogleCloudPlatform/gsutil/issues/364
       raise CommandException(
@@ -1767,7 +1773,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
       logger, allow_splitting, upload_url, dst_url, src_obj_size,
       canned_acl=global_copy_helper_opts.canned_acl)
 
-  if (src_url.IsStream() and
+  if ((src_url.IsStream() or src_url.IsFifo()) and
       gsutil_api.GetApiSelector(provider=dst_url.scheme) == ApiSelector.JSON):
     orig_stream = upload_stream
     # Add limited seekable properties to the stream via buffering.
@@ -1789,7 +1795,9 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
           upload_stream, upload_url, dst_url, dst_obj_metadata,
           global_copy_helper_opts.canned_acl, upload_size, preconditions,
           gsutil_api, command_obj, copy_exception_handler, logger)
-    elif upload_size < ResumableThreshold() or src_url.IsStream():
+    elif (upload_size < ResumableThreshold() or
+          src_url.IsStream() or
+          src_url.IsFifo()):
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,
           dst_obj_metadata, preconditions, gsutil_api)
@@ -2786,12 +2794,14 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
   with open(dst_url.object_name, 'wb') as dst_fp:
     start_time = time.time()
     shutil.copyfileobj(src_fp, dst_fp)
+  if not src_url.IsStream():
+    src_fp.close()  # Explicitly close the src fp - necessary if it is a fifo.
   end_time = time.time()
   PutToQueueWithTimeout(
       status_queue,
       FileMessage(src_url, dst_url, end_time,
                   message_type=FileMessage.FILE_LOCAL_COPY,
-                  size=src_obj_metadata.size,
+                  size=src_obj_metadata.size if src_obj_metadata else None,
                   finished=True))
 
   return (end_time - start_time, os.path.getsize(dst_url.object_name),
@@ -3170,7 +3180,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         return
       else:
         raise CommandException(message)
-    if src_url.IsStream():
+    if src_url.IsStream() or src_url.IsFifo():
       src_obj_size = None
     elif src_obj_metadata and src_obj_metadata.size:
       # Iterator retrieved the file's size, no need to stat it again.
@@ -3302,9 +3312,10 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
                                status_queue=gsutil_api.status_queue,
                                src_obj_metadata=src_obj_metadata)
       # Need to let _CopyFileToFile return before setting the POSIX attributes.
-      ParseAndSetPOSIXAttributes(dst_url.object_name, src_obj_metadata,
-                                 is_rsync=is_rsync,
-                                 preserve_posix=preserve_posix)
+      if not src_url.IsStream() and not dst_url.IsStream():
+        ParseAndSetPOSIXAttributes(dst_url.object_name, src_obj_metadata,
+                                   is_rsync=is_rsync,
+                                   preserve_posix=preserve_posix)
       return result
 
 

@@ -184,10 +184,11 @@ class _NameExpansionIterator(object):
     for url_str in self.url_strs:
       storage_url = StorageUrlFromString(url_str)
 
-      if storage_url.IsFileUrl() and storage_url.IsStream():
+      if (storage_url.IsFileUrl() and
+          (storage_url.IsStream() or storage_url.IsFifo())):
         if self.url_strs.has_plurality:
           raise CommandException('Multiple URL strings are not supported '
-                                 'with streaming ("-") URLs.')
+                                 'with streaming ("-") URLs or named pipes.')
         yield NameExpansionResult(storage_url, False, False, storage_url, None)
         continue
 

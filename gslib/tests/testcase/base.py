@@ -124,6 +124,29 @@ class GsUtilTestCase(unittest.TestCase):
       self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents='test %d' % i)
     return tmpdir
 
+  def CreateTempFifo(self, tmpdir=None, file_name=None):
+    """Creates a temporary fifo file on disk. Should not be used on Windows.
+
+    Args:
+      tmpdir: The temporary directory to place the file in. If not specified, a
+          new temporary directory is created.
+      file_name: The name to use for the file. If not specified, a temporary
+          test file name is constructed. This can also be a tuple, where
+          ('dir', 'foo') means to create a file named 'foo' inside a
+          subdirectory named 'dir'.
+
+    Returns:
+      The path to the new temporary fifo.
+    """
+    tmpdir = tmpdir or self.CreateTempDir()
+    file_name = file_name or self.MakeTempName('fifo')
+    if isinstance(file_name, basestring):
+      fpath = os.path.join(tmpdir, file_name)
+    else:
+      fpath = os.path.join(tmpdir, *file_name)
+    os.mkfifo(fpath)
+    return fpath
+
   def CreateTempFile(self, tmpdir=None, contents=None, file_name=None,
                      mtime=None, mode=NA_MODE, uid=NA_ID, gid=NA_ID):
     """Creates a temporary file on disk.

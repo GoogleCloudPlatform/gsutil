@@ -29,6 +29,7 @@ import random
 import re
 import string
 import sys
+import threading
 
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
@@ -278,6 +279,16 @@ def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
                                       MODE_ATTR, str(mode))
 
 
+def _ReadContentsFromFifo(fifo_path, list_for_output):
+  with open(fifo_path, 'rb') as f:
+    list_for_output.append(f.read())
+
+
+def _WriteContentsToFifo(contents, fifo_path):
+  with open(fifo_path, 'wb') as f:
+    f.write(contents)
+
+
 class _JSONForceHTTPErrorCopyCallbackHandler(object):
   """Test callback handler that raises an arbitrary HTTP error exception."""
 
@@ -394,6 +405,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % name)
     return self.CreateTempFile(file_name=name, contents=contents)
 
+  def _CpWithFifoViaGsUtilAndAppendOutputToList(
+      self, src_path_tuple, dst_path, list_for_return_value, **kwargs):
+    arg_list = ['cp']
+    arg_list.extend(src_path_tuple)
+    arg_list.append(dst_path)
+    # Append stderr, stdout, or return status (if specified in kwargs) to the
+    # given list.
+    list_for_return_value.append(
+        self.RunGsUtil(arg_list, **kwargs))
+
   @SequentialAndParallelTransfer
   def test_noclobber(self):
     key_uri = self.CreateObject(contents='foo')
@@ -430,6 +451,77 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping existing item: %s' %
                   suri(bucket2_uri, key_uri.object_name), stderr)
 
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_cp_from_local_file_to_fifo(self):
+    contents = 'bar'
+    fifo_path = self.CreateTempFifo()
+    file_path = self.CreateTempFile(contents=contents)
+    list_for_output = []
+
+    read_thread = threading.Thread(
+        target=_ReadContentsFromFifo,
+        args=(fifo_path, list_for_output))
+    read_thread.start()
+    write_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=((file_path,), fifo_path, []))
+    write_thread.start()
+    write_thread.join(120)
+    read_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertEqual(list_for_output[0].strip(), contents)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_cp_from_one_object_to_fifo(self):
+    fifo_path = self.CreateTempFifo()
+    bucket_uri = self.CreateBucket()
+    contents = 'bar'
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents)
+    list_for_output = []
+
+    read_thread = threading.Thread(
+        target=_ReadContentsFromFifo,
+        args=(fifo_path, list_for_output))
+    read_thread.start()
+    write_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=((suri(obj_uri),), fifo_path, []))
+    write_thread.start()
+    write_thread.join(120)
+    read_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertEqual(list_for_output[0].strip(), contents)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_cp_from_multiple_objects_to_fifo(self):
+    fifo_path = self.CreateTempFifo()
+    bucket_uri = self.CreateBucket()
+    contents1 = 'foo and bar'
+    contents2 = 'baz and qux'
+    obj1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents1)
+    obj2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents2)
+    list_for_output = []
+
+    read_thread = threading.Thread(
+        target=_ReadContentsFromFifo,
+        args=(fifo_path, list_for_output))
+    read_thread.start()
+    write_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=((suri(obj1_uri), suri(obj2_uri)), fifo_path, []))
+    write_thread.start()
+    write_thread.join(120)
+    read_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertIn(contents1, list_for_output[0])
+    self.assertIn(contents2, list_for_output[0])
+
   @SequentialAndParallelTransfer
   def test_streaming(self):
     bucket_uri = self.CreateBucket()
@@ -438,6 +530,86 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Copying from <STDIN>', stderr)
     key_uri = bucket_uri.clone_replace_name('foo')
     self.assertEqual(key_uri.get_contents_as_string(), 'bar')
+
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_streaming_from_fifo_to_object(self):
+    bucket_uri = self.CreateBucket()
+    fifo_path = self.CreateTempFifo()
+    object_name = 'foo'
+    object_contents = 'bar'
+    list_for_output = []
+
+    # Start writer in the background, which won't finish until a corresponding
+    # read operation is performed on the fifo.
+    write_thread = threading.Thread(
+        target=_WriteContentsToFifo,
+        args=(object_contents, fifo_path))
+    write_thread.start()
+    # The fifo requires both a pending read and write before either operation
+    # will complete. Regardless of which operation occurs first, the
+    # corresponding subsequent operation will unblock the first one.
+    # We run gsutil in a thread so that it can timeout rather than hang forever
+    # if the write thread fails.
+    read_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=((fifo_path,), suri(bucket_uri, object_name), list_for_output),
+        kwargs={'return_stderr': True})
+    read_thread.start()
+
+    read_thread.join(120)
+    write_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertIn('Copying from named pipe', list_for_output[0])
+
+    key_uri = bucket_uri.clone_replace_name(object_name)
+    self.assertEqual(key_uri.get_contents_as_string(), object_contents)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_streaming_from_fifo_to_stdout(self):
+    fifo_path = self.CreateTempFifo()
+    contents = 'bar'
+    list_for_output = []
+
+    write_thread = threading.Thread(
+        target=_WriteContentsToFifo,
+        args=(contents, fifo_path))
+    write_thread.start()
+    read_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=((fifo_path,), '-', list_for_output),
+        kwargs={'return_stdout': True})
+    read_thread.start()
+    read_thread.join(120)
+    write_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertEqual(list_for_output[0].strip(), contents)
+
+  @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
+  @SequentialAndParallelTransfer
+  def test_streaming_from_stdout_to_fifo(self):
+    fifo_path = self.CreateTempFifo()
+    contents = 'bar'
+    list_for_output = []
+    list_for_gsutil_output = []
+
+    read_thread = threading.Thread(
+        target=_ReadContentsFromFifo,
+        args=(fifo_path, list_for_output))
+    read_thread.start()
+    write_thread = threading.Thread(
+        target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
+        args=(('-',), fifo_path, list_for_gsutil_output),
+        kwargs={'return_stderr': True, 'stdin': contents})
+    write_thread.start()
+    write_thread.join(120)
+    read_thread.join(120)
+    if not list_for_output:
+      self.fail('Reading/writing to the fifo timed out.')
+    self.assertEqual(list_for_output[0].strip(), contents)
 
   def test_streaming_multiple_arguments(self):
     bucket_uri = self.CreateBucket()

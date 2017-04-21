@@ -53,6 +53,7 @@ from gslib.util import CalculateThroughput
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import GetCloudApiInstance
+from gslib.util import GetStreamFromFileUrl
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
@@ -1020,6 +1021,14 @@ class CpCommand(Command):
     (self.exp_dst_url, self.have_existing_dst_container) = (
         copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api,
                                          self.debug, self.project_id))
+
+    if self.exp_dst_url.IsFileUrl() and self.exp_dst_url.IsFifo():
+      if self.preserve_posix_attrs:
+        raise CommandException('Cannot preserve POSIX attributes with a '
+                               'named pipe.')
+      return CatHelper(self).CatUrlStrings(
+          self.args[:-1],
+          cat_out_fd=GetStreamFromFileUrl(self.exp_dst_url, mode='wb'))
 
     name_expansion_iterator = NameExpansionIterator(
         self.command_name, self.debug,

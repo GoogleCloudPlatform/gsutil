@@ -352,7 +352,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
     src_url_stub = mock.MagicMock(
         object_name=temp_dir_path + os.path.sep + link_name,
         **{'IsFileUrl.return_value': True,
-           'IsStream.return_value': False})
+           'IsStream.return_value': False,
+           'IsFifo.return_value': False})
 
     # The file command should detect HTML in the real file.
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
