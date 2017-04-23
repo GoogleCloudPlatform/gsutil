@@ -36,7 +36,7 @@ management tasks, including:
 
 requires = [
     'argcomplete>=1.8.2',
-    'boto==2.42.0',
+    'boto==2.46.1',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.14',
     'google-apitools==0.5.3',
@@ -57,7 +57,7 @@ dependency_links = [
     # Note: this commit ID should be kept in sync with the 'third_party/boto'
     # entry in 'git submodule status'.
     # pylint: disable=line-too-long
-    'https://github.com/boto/boto/archive/62fa79abea1f281bb15cd27ff8081fd6c5492c31.tar.gz#egg=boto-2.42.0',
+    'https://github.com/boto/boto/archive/de61c302917cfa4f30baf22699fcf6eacf65faf3.tar.gz#egg=boto-2.46.1',
     # pylint: enable=line-too-long
 ]
 

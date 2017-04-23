@@ -695,7 +695,7 @@ class LabelTranslation(object):
     label_dict = {}
     for tag_set in tags:
       label_dict.update(dict((i.key, i.value) for i in tag_set))
-    return cls.DictToMessage(label_dict)
+    return cls.DictToMessage(label_dict) if label_dict else None
 
   @classmethod
   def BotoTagsFromMessage(cls, message):
