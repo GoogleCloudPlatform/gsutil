@@ -52,10 +52,11 @@ from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.metrics import CaptureThreadStatException
 from gslib.metrics import LogPerformanceSummaryParams
+from gslib.name_expansion import CopyObjectInfo
+from gslib.name_expansion import CopyObjectsIterator
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.parallelism_framework_util import AtomicDict
 from gslib.parallelism_framework_util import ProcessAndThreadSafeInt
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
@@ -1662,7 +1663,7 @@ class Command(HelpProvider):
 
   def _ProcessSourceUrlTypes(self, args_iterator):
     """Logs the URL type information to analytics collection."""
-    if not isinstance(args_iterator, SourceUrlTypeIterator):
+    if not isinstance(args_iterator, CopyObjectsIterator):
       return
     LogPerformanceSummaryParams(
         is_daisy_chain=args_iterator.is_daisy_chain,
@@ -1894,12 +1895,14 @@ class ProducerThread(threading.Thread):
             if not num_tasks%100:
               # Time to update the total number of tasks.
               if (isinstance(args, NameExpansionResult) or
+                  isinstance(args, CopyObjectInfo) or
                   isinstance(args, RsyncDiffToApply)):
                 PutToQueueWithTimeout(
                     self.status_queue, ProducerThreadMessage(num_tasks,
                                                              total_size,
                                                              time.time()))
-            if isinstance(args, NameExpansionResult):
+            if (isinstance(args, NameExpansionResult) or
+                isinstance(args, CopyObjectInfo)):
               if args.expanded_result:
                 json_expanded_result = json.loads(args.expanded_result)
                 if 'size' in json_expanded_result:
@@ -1965,6 +1968,7 @@ class ProducerThread(threading.Thread):
       # Send a final ProducerThread message that definitively states
       # the amount of actual work performed.
       if (self.status_queue and (isinstance(args, NameExpansionResult) or
+                                 isinstance(args, CopyObjectInfo) or
                                  isinstance(args, RsyncDiffToApply))):
         PutToQueueWithTimeout(
             self.status_queue, ProducerThreadMessage(num_tasks,

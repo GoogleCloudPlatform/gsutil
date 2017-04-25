@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+import itertools
 import logging
 import os
 import time
@@ -38,9 +39,11 @@ from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import LogPerformanceSummaryParams
+from gslib.name_expansion import CopyObjectsIterator
+from gslib.name_expansion import DestinationInfo
 from gslib.name_expansion import NameExpansionIterator
+from gslib.name_expansion import NameExpansionIteratorDestinationTuple
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.name_expansion import SourceUrlTypeIterator
 from gslib.posix_util import ConvertModeToBase8
 from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.posix_util import InitializeUserGroups
@@ -48,6 +51,7 @@ from gslib.posix_util import POSIXAttributes
 from gslib.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CalculateThroughput
 from gslib.util import CreateLock
@@ -809,7 +813,7 @@ class CpCommand(Command):
   )
 
   # pylint: disable=too-many-statements
-  def CopyFunc(self, name_expansion_result, thread_state=None,
+  def CopyFunc(self, copy_object_info, thread_state=None,
                preserve_posix=False):
     """Worker function for performing the actual copy (and rm, for mv)."""
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
@@ -819,10 +823,10 @@ class CpCommand(Command):
       cmd_name = 'mv'
     else:
       cmd_name = self.command_name
-    src_url = name_expansion_result.source_storage_url
-    exp_src_url = name_expansion_result.expanded_storage_url
-    src_url_names_container = name_expansion_result.names_container
-    have_multiple_srcs = name_expansion_result.is_multi_source_request
+    src_url = copy_object_info.source_storage_url
+    exp_src_url = copy_object_info.expanded_storage_url
+    src_url_names_container = copy_object_info.names_container
+    have_multiple_srcs = copy_object_info.is_multi_source_request
 
     if src_url.IsCloudUrl() and src_url.IsProvider():
       raise CommandException(
@@ -832,7 +836,8 @@ class CpCommand(Command):
       raise CommandException('Cannot preserve POSIX attributes with a stream.')
     if have_multiple_srcs:
       copy_helper.InsistDstUrlNamesContainer(
-          self.exp_dst_url, self.have_existing_dst_container, cmd_name)
+          copy_object_info.exp_dst_url,
+          copy_object_info.have_existing_dst_container, cmd_name)
 
     # Various GUI tools (like the GCS web console) create placeholder objects
     # ending with '/' when the user creates an empty directory. Normally these
@@ -852,7 +857,7 @@ class CpCommand(Command):
       return
 
     if copy_helper_opts.perform_mv:
-      if name_expansion_result.names_container:
+      if copy_object_info.names_container:
         # Use recursion_requested when performing name expansion for the
         # directory mv case so we can determine if any of the source URLs are
         # directories (and then use cp -r and rm -r to perform the move, to
@@ -867,14 +872,15 @@ class CpCommand(Command):
           raise CommandException('The mv command disallows naming source '
                                  'directories using wildcards')
 
-    if (self.exp_dst_url.IsFileUrl()
-        and not os.path.exists(self.exp_dst_url.object_name)
+    if (copy_object_info.exp_dst_url.IsFileUrl()
+        and not os.path.exists(copy_object_info.exp_dst_url.object_name)
         and have_multiple_srcs):
-      os.makedirs(self.exp_dst_url.object_name)
+      os.makedirs(copy_object_info.exp_dst_url.object_name)
 
     dst_url = copy_helper.ConstructDstUrl(
         src_url, exp_src_url, src_url_names_container, have_multiple_srcs,
-        self.exp_dst_url, self.have_existing_dst_container,
+        copy_object_info.exp_dst_url,
+        copy_object_info.have_existing_dst_container,
         self.recursion_requested, preserve_posix=preserve_posix)
     dst_url = copy_helper.FixWindowsNaming(src_url, dst_url)
 
@@ -893,9 +899,9 @@ class CpCommand(Command):
                              'destination: %s' % dst_url)
 
     src_obj_metadata = None
-    if name_expansion_result.expanded_result:
+    if copy_object_info.expanded_result:
       src_obj_metadata = encoding.JsonToMessage(
-          apitools_messages.Object, name_expansion_result.expanded_result)
+          apitools_messages.Object, copy_object_info.expanded_result)
 
     if src_url.IsFileUrl() and preserve_posix:
       if not src_obj_metadata:
@@ -998,57 +1004,103 @@ class CpCommand(Command):
       # transferred from StatusMessages posted by operations within PerformCopy.
       self.total_bytes_transferred += bytes_transferred
 
+  def _ConstructNameExpansionIteratorDstTupleIterator(self, src_url_strs_iter,
+                                                      dst_url_strs):
+    copy_helper_opts = copy_helper.GetCopyHelperOpts()
+    for src_url_str, dst_url_str in zip(src_url_strs_iter, dst_url_strs):
+      # Getting the destination information for each (sources, destination)
+      # tuple. This assumes that the same destination is never provided in
+      # multiple tuples, and doing so may result in an inconsistent behavior
+      # especially when using the -m multi-threading option.
+      #
+      # Example for the inconsistent behavior, the following commands will
+      # behave differently:
+      #
+      # gsutil cp -r dir1 dir2 gs://bucket/non-existent-dir
+      # gsutil cp -r [
+      #            (dir1, gs://bucket/non-existent-dir),
+      #            (dir2, gs://bucket/non-existent-dir)
+      #        ]
+      #
+      # When multiple threads execute on a non existing destination directory.
+      # These threads might encounter different states of the destination
+      # directory. The first thread to execute the command finds that the
+      # destination directory does not exist, it will create the destination
+      # directory and copies the files inside the source directories to the
+      # destination directory. The following threads find that the destination
+      # directory already exists and copy the source directories in the
+      # destination directory. In another scenario, all the threads might find
+      # that the destination directory does not exist and copy the source
+      # directories to the destination directory.
+      (exp_dst_url, have_existing_dst_container) = (
+          copy_helper.ExpandUrlToSingleBlr(dst_url_str, self.gsutil_api,
+                                           self.debug, self.project_id))
+      name_expansion_iterator_dst_tuple = NameExpansionIteratorDestinationTuple(
+          NameExpansionIterator(
+              self.command_name, self.debug,
+              self.logger, self.gsutil_api, src_url_str,
+              self.recursion_requested or copy_helper_opts.perform_mv,
+              project_id=self.project_id, all_versions=self.all_versions,
+              ignore_symlinks=self.exclude_symlinks,
+              continue_on_error=(self.continue_on_error or
+                                 self.parallel_operations),
+              bucket_listing_fields=GetSourceFieldsNeededForCopy(
+                  exp_dst_url.IsCloudUrl(),
+                  copy_helper_opts.skip_unsupported_objects,
+                  copy_helper_opts.preserve_acl,
+                  preserve_posix=self.preserve_posix_attrs,
+                  delete_source=copy_helper_opts.perform_mv)),
+          DestinationInfo(exp_dst_url,
+                          have_existing_dst_container))
+
+      self.has_file_dst = self.has_file_dst or exp_dst_url.IsFileUrl()
+      self.has_cloud_dst = self.has_cloud_dst or exp_dst_url.IsCloudUrl()
+      self.provider_types.add(exp_dst_url.scheme)
+      self.combined_src_urls = itertools.chain(self.combined_src_urls,
+                                               src_url_str)
+
+      yield name_expansion_iterator_dst_tuple
+
   # Command entry point.
   def RunCommand(self):
     copy_helper_opts = self._ParseOpts()
 
     self.total_bytes_transferred = 0
-    if self.args[-1] == '-' or self.args[-1] == 'file://-':
+
+    dst_url = StorageUrlFromString(self.args[-1])
+    if dst_url.IsFileUrl() and (dst_url.object_name == '-' or
+                                dst_url.IsFifo()):
       if self.preserve_posix_attrs:
         raise CommandException('Cannot preserve POSIX attributes with a '
-                               'stream.')
-      return CatHelper(self).CatUrlStrings(self.args[:-1])
+                               'stream or a named pipe.')
+      cat_out_fd = (GetStreamFromFileUrl(dst_url, mode='wb')
+                    if dst_url.IsFifo() else None)
+      return CatHelper(self).CatUrlStrings(
+          self.args[:-1],
+          cat_out_fd=cat_out_fd)
 
     if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
         raise CommandException('Source URLs cannot be specified with -I option')
-      url_strs = StdinIterator()
+      src_url_strs = [StdinIterator()]
     else:
       if len(self.args) < 2:
         raise CommandException('Wrong number of arguments for "cp" command.')
-      url_strs = self.args[:-1]
+      src_url_strs = [self.args[:-1]]
 
-    (self.exp_dst_url, self.have_existing_dst_container) = (
-        copy_helper.ExpandUrlToSingleBlr(self.args[-1], self.gsutil_api,
-                                         self.debug, self.project_id))
+    dst_url_strs = [self.args[-1]]
 
-    if self.exp_dst_url.IsFileUrl() and self.exp_dst_url.IsFifo():
-      if self.preserve_posix_attrs:
-        raise CommandException('Cannot preserve POSIX attributes with a '
-                               'named pipe.')
-      return CatHelper(self).CatUrlStrings(
-          self.args[:-1],
-          cat_out_fd=GetStreamFromFileUrl(self.exp_dst_url, mode='wb'))
+    self.combined_src_urls = []
+    self.has_file_dst = False
+    self.has_cloud_dst = False
+    self.provider_types = set()
 
-    name_expansion_iterator = NameExpansionIterator(
-        self.command_name, self.debug,
-        self.logger, self.gsutil_api, url_strs,
-        self.recursion_requested or copy_helper_opts.perform_mv,
-        project_id=self.project_id, all_versions=self.all_versions,
-        ignore_symlinks=self.exclude_symlinks,
-        continue_on_error=self.continue_on_error or self.parallel_operations,
-        bucket_listing_fields=GetSourceFieldsNeededForCopy(
-            self.exp_dst_url.IsCloudUrl(),
-            copy_helper_opts.skip_unsupported_objects,
-            copy_helper_opts.preserve_acl,
-            preserve_posix=self.preserve_posix_attrs,
-            delete_source=copy_helper_opts.perform_mv))
-    # Because cp may have multiple source URLs, we wrap the name expansion
-    # iterator in order to collect analytics.
-    name_expansion_iterator = SourceUrlTypeIterator(
-        name_expansion_iterator=name_expansion_iterator,
-        is_daisy_chain=copy_helper_opts.daisy_chain,
-        dst_url=self.exp_dst_url)
+    # Because cp may have multiple source URLs and multiple destinations, we
+    # wrap the name expansion iterator in order to collect analytics.
+    name_expansion_iterator = CopyObjectsIterator(
+        self._ConstructNameExpansionIteratorDstTupleIterator(src_url_strs,
+                                                             dst_url_strs),
+        copy_helper_opts.daisy_chain)
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
@@ -1056,7 +1108,8 @@ class CpCommand(Command):
     if not copy_helper_opts.read_args_from_stdin:
       seek_ahead_iterator = SeekAheadNameExpansionIterator(
           self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
-          url_strs, self.recursion_requested or copy_helper_opts.perform_mv,
+          self.combined_src_urls,
+          self.recursion_requested or copy_helper_opts.perform_mv,
           all_versions=self.all_versions, project_id=self.project_id,
           ignore_symlinks=self.exclude_symlinks)
 
@@ -1089,14 +1142,14 @@ class CpCommand(Command):
     self.total_bytes_per_second = CalculateThroughput(
         self.total_bytes_transferred, self.total_elapsed_time)
     LogPerformanceSummaryParams(
-        has_file_dst=self.exp_dst_url.IsFileUrl(),
-        has_cloud_dst=self.exp_dst_url.IsCloudUrl(),
+        has_file_dst=self.has_file_dst,
+        has_cloud_dst=self.has_cloud_dst,
         avg_throughput=self.total_bytes_per_second,
         total_bytes_transferred=self.total_bytes_transferred,
         total_elapsed_time=self.total_elapsed_time,
         uses_fan=self.parallel_operations,
         is_daisy_chain=copy_helper_opts.daisy_chain,
-        provider_types=[self.exp_dst_url.scheme])
+        provider_types=list(self.provider_types))
 
     if self.debug >= DEBUGLEVEL_DUMP_REQUESTS:
       # Note that this only counts the actual GET and PUT bytes for the copy
