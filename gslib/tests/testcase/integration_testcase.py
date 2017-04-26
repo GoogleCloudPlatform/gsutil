@@ -697,6 +697,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
             cmd_str, tab_complete_result_file.name)
         env = os.environ.copy()
         env['_ARGCOMPLETE'] = '1'
+        # Use a sane default for COMP_WORDBREAKS.
+        env['_ARGCOMPLETE_COMP_WORDBREAKS'] = '''"'@><=;|&(:'''
         if 'COMP_WORDBREAKS' in env:
           env['_ARGCOMPLETE_COMP_WORDBREAKS'] = env['COMP_WORDBREAKS']
         env['COMP_LINE'] = cmd_str
