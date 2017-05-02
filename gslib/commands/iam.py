@@ -45,16 +45,6 @@ from gslib.util import GetCloudApiInstance
 from gslib.util import NO_MAX
 from gslib.util import Retry
 
-_WHITELIST_URL = 'https://docs.google.com/a/google.com/forms/d/1OyFkWmWXY08XNHO8qHNvJxcjVXtsNmGYYxpibq7M_Xs/viewform'
-
-_ALPHA_DISCLAIMER = """
-  Note: As of 2016 May 15, Identity and Access Management (IAM) support is
-  in alpha, and is not covered by any SLA or deprecation policy and may be
-  subject to backward-incompatible changes. These commands are only usable
-  by whitelisted projects. You may apply to be on the whitelist by visiting
-  %s
-""" % _WHITELIST_URL
-
 _SET_SYNOPSIS = """
   gsutil iam set [-afRr] [-e <etag>] file url ...
 """
@@ -186,18 +176,15 @@ _CH_DESCRIPTION = """
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
              _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
-_DESCRIPTION = _ALPHA_DISCLAIMER + ("""
+_DESCRIPTION = """
   The iam command has three sub-commands:
-""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
+""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION])
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
-_get_help_text = CreateHelpText(
-    _ALPHA_DISCLAIMER + _GET_SYNOPSIS, _GET_DESCRIPTION)
-_set_help_text = CreateHelpText(
-    _ALPHA_DISCLAIMER + _SET_SYNOPSIS, _SET_DESCRIPTION)
-_ch_help_text = CreateHelpText(
-    _ALPHA_DISCLAIMER + _CH_SYNOPSIS, _CH_DESCRIPTION)
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
+_ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 
 def _PatchIamWrapper(cls, iter_result, thread_state):
