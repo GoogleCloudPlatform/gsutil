@@ -1,3 +1,25 @@
+Release 4.26 (release date: 2017-05-03)
+=======================================
+New features
+------------------
+- The cp command now supports reading from and writing to named pipes.
+
+Bug Fixes
+------------------
+- Fixed issue where tab completion wasn't working.
+- Fixed issue when using the XML API where gsutil would fail to parse bucket
+  metadata for buckets using Lifecycle rules containing the SetStorageClass
+  action or MatchesStorageClass condition.
+
+Other Changes
+------------------
+- Removed -o flag from "notification create" command. The same functionality is
+  available with the -p flag; the -o flag had been mistakenly added in a
+  previous change.
+- Removed the alpha disclaimer from the iam command help text.
+- Several documentation updates and clarifications.
+
+
 Release 4.25 (release date: 2017-04-05)
 =======================================
 New features
