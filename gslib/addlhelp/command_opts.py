@@ -19,10 +19,6 @@ from __future__ import absolute_import
 from gslib.help_provider import HelpProvider
 
 _DETAILED_HELP_TEXT = ("""
-<B>SYNOPSIS</B>
-  Top-level gsutil Options
-
-
 <B>DESCRIPTION</B>
   gsutil supports separate options for the top-level gsutil command and
   the individual sub-commands (like cp, rm, etc.) The top-level options

@@ -125,7 +125,6 @@ _DETAILED_HELP_TEXT = ("""
   -p          Specify the keystore password instead of prompting.
 
 <B>USAGE</B>
-
   Create a signed url for downloading an object valid for 10 minutes:
 
     gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>

@@ -80,7 +80,6 @@ _LIST_DESCRIPTION = """
   subscription configs will be listed.
 
 <B>LIST EXAMPLES</B>
-
   Fetch the list of notification configs for the bucket example-bucket:
 
     gsutil notification list gs://example-bucket
@@ -109,7 +108,6 @@ _DELETE_DESCRIPTION = """
   For that, see the command `gsutil notification stopchannel`.
 
 <B>DELETE EXAMPLES</B>
-
   Delete a single notification config (with ID 3) in the bucket example-bucket:
 
     gsutil notification delete projects/_/buckets/example-bucket/notificationConfigs/3
@@ -122,26 +120,25 @@ _DELETE_DESCRIPTION = """
 _CREATE_DESCRIPTION = """
 <B>CREATE</B>
   The create sub-command creates a notification config on a bucket, establishing
-  a flow of event notifications from GCS to a Cloud Pub/Sub topic. As part of
-  creating this flow, the create command also verifies that the destination
-  Cloud Pub/Sub topic exists, creating it if necessary, and verifies that the
-  GCS bucket has permission to publish events to that topic, granting the
-  permission if necessary.
+  a flow of event notifications from Cloud Storage to a Cloud Pub/Sub topic. As
+  part of creating this flow, the create command also verifies that the
+  destination Cloud Pub/Sub topic exists, creating it if necessary, and verifies
+  that the Cloud Storage bucket has permission to publish events to that topic,
+  granting the permission if necessary.
 
-  If a destination Cloud Pub/Sub topic is not specified with the -t flag, GCS
-  will by default choose a topic name in the default project whose ID is
+  If a destination Cloud Pub/Sub topic is not specified with the -t flag, Cloud
+  Storage will by default choose a topic name in the default project whose ID is
   the same the bucket name. For example, if the default project ID specified is
-  'default-project' and the bucket being configured is gs://example-bucket,
-  the create command will use the Cloud Pub/Sub topic
+  'default-project' and the bucket being configured is gs://example-bucket, the
+  create command will use the Cloud Pub/Sub topic
   "projects/default-project/topics/example-bucket".
 
-  In order to enable notifications, a special GCS service account unique to
-  each project must have the IAM permission "projects.topics.publish". This
-  command will check to see if that permission exists and, if not, will
+  In order to enable notifications, a special Cloud Storage service account
+  unique to each project must have the IAM permission "projects.topics.publish".
+  This command will check to see if that permission exists and, if not, will
   attempt to grant it.
 
 <B>CREATE EXAMPLES</B>
-
   Begin sending notifications of all changes to the bucket example-bucket
   to the Cloud Pub/Sub topic projects/default-project/topics/example-bucket:
 
@@ -185,16 +182,16 @@ _CREATE_DESCRIPTION = """
 <B>OPTIONS</B>
   The create sub-command has the following options
 
-  -e        Specify an event type filter for this notification config. GCS
-            will only send notifications of this type. You may specify this
-            parameter multiple times to allow multiple event types. If not
-            specified, GCS will send notifications for all event types. The
-            valid types are:
+  -e        Specify an event type filter for this notification config. Cloud
+            Storage will only send notifications of this type. You may specify
+            this parameter multiple times to allow multiple event types. If not
+            specified, Cloud Storage will send notifications for all event
+            types. The valid types are:
 
               OBJECT_FINALIZE - An object has been created.
               OBJECT_METADATA_UPDATE - The metadata of an object has changed.
               OBJECT_DELETE - An object has been permanently deleted.
-              OBJECT_ARCHIVE - A live GCS object has been archived.
+              OBJECT_ARCHIVE - A live Cloud Storage object has been archived.
 
   -f        Specifies the payload format of notification messages. Must be
             either "json" for a payload matches the object metadata for the
@@ -206,9 +203,9 @@ _CREATE_DESCRIPTION = """
             this notification config. You may specify this parameter multiple
             times to set multiple attributes.
 
-  -p        Specifies a prefix path filter for this notification config. GCS
-            will only send notifications for objects in this bucket whose names
-            begin with the specified prefix.
+  -p        Specifies a prefix path filter for this notification config. Cloud
+            Storage will only send notifications for objects in this bucket
+            whose names begin with the specified prefix.
 
   -s        Skips creation and permission assignment of the Cloud Pub/Sub topic.
             This is useful if the caller does not have permission to access
@@ -217,8 +214,8 @@ _CREATE_DESCRIPTION = """
 
   -t        The Cloud Pub/Sub topic to which notifications should be sent. If
             not specified, this command will choose a topic whose project is
-            your default project and whose ID is the same as the GCS bucket
-            name.
+            your default project and whose ID is the same as the Cloud Storage
+            bucket name.
 """
 
 _WATCHBUCKET_DESCRIPTION = """
@@ -241,7 +238,6 @@ _WATCHBUCKET_DESCRIPTION = """
   notification events contain the client token you expect.
 
 <B>WATCHBUCKET EXAMPLES</B>
-
   Watch the bucket example-bucket for changes and send notifications to an
   application server running at example.com:
 
@@ -268,7 +264,6 @@ _STOPCHANNEL_DESCRIPTION = """
   response of a bucket watch request.
 
 <B>STOPCHANNEL EXAMPLES</B>
-
   Stop the notification event channel with channel identifier channel1 and
   resource identifier SoGqan08XDIFWr1Fv_nGpRJBHh8:
 
@@ -276,17 +271,15 @@ _STOPCHANNEL_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  The notification command is used to configure GCS's support for sending
-  notifications to Cloud Pub/Sub as well as to configure the object change
-  notification feature.
+  The notification command is used to configure Google Cloud Storage support for
+  sending notifications to Cloud Pub/Sub as well as to configure the object
+  change notification feature.
 
 <B>CLOUD PUB/SUB</B>
-
-  The "create", "list", and "delete" sub-commands deal with configuring GCS's
-  integration with Google Cloud Pub/Sub.
+  The "create", "list", and "delete" sub-commands deal with configuring Cloud
+  Storage integration with Google Cloud Pub/Sub.
 """ + _CREATE_DESCRIPTION + _LIST_DESCRIPTION + _DELETE_DESCRIPTION + """
 <B>OBJECT CHANGE NOTIFICATIONS</B>
-
   For more information on the Object Change Notification feature, please see:
   https://cloud.google.com/storage/docs/object-change-notification
 
@@ -294,7 +287,6 @@ _DESCRIPTION = """
   Change Notifications.
 """ + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
 <B>NOTIFICATIONS AND PARALLEL COMPOSITE UPLOADS</B>
-
   By default, gsutil enables parallel composite uploads for large files (see
   "gsutil help cp"), which means that an upload of a large object can result
   in multiple temporary component objects being uploaded before the actual

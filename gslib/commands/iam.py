@@ -81,7 +81,6 @@ _GET_DESCRIPTION = """
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-
   The "iam set" command sets the IAM policy for one or more buckets and / or
   objects. It overwrites the current IAM policy that exists on a bucket (or
   object) with the policy specified in the input file. The "iam set" command

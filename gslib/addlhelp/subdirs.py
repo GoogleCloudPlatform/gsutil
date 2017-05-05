@@ -101,7 +101,6 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>POTENTIAL FOR SURPRISING DESTINATION SUBDIRECTORY NAMING</B>
-
   The above rules-based approach for determining how destination paths are
   constructed can lead to the following surprise: Suppose you start by trying to
   upload everything under a local directory to a bucket "subdirectory" that

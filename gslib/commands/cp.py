@@ -529,12 +529,11 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
 
 _COPYING_SPECIAL_FILES_TEXT = """
 <B>COPYING SPECIAL FILES</B>
-
-gsutil cp does not support copying special file types such as sockets, device
-files, named pipes, or any other non-standard files intended to represent an
-operating system resource. You should not run gsutil cp with sources that
-include such files (for example, recursively copying the root directory on
-Linux that includes /dev ). If you do, gsutil cp may fail or hang.
+  gsutil cp does not support copying special file types such as sockets, device
+  files, named pipes, or any other non-standard files intended to represent an
+  operating system resource. You should not run gsutil cp with sources that
+  include such files (for example, recursively copying the root directory on
+  Linux that includes /dev ). If you do, gsutil cp may fail or hang.
 """
 
 _OPTIONS_TEXT = """
