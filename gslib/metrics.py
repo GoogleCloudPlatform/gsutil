@@ -35,6 +35,7 @@ import uuid
 import boto
 
 from gslib import VERSION
+from gslib.metrics_tuple import Metric
 from gslib.util import CalculateThroughput
 from gslib.util import CreateDirIfNeeded
 from gslib.util import GetDiskCounters
@@ -71,21 +72,6 @@ _DISABLED_TEXT = 'DISABLED'
 #   process’s root logger is enabled for debug output, so we still want
 #   collection to occur so we can read metrics log messages from stderr.
 # - Any other value sets default behavior.
-
-# A Metric contains all of the information required to post a GA event. It is
-# not a custom metric, which is a GA term for a specific number to track on the
-# Analytics dashboard. This is not nested within MetricsCollector to allow
-# pickle to dump a list of Metrics.
-_Metric = namedtuple('_Metric', [
-    # The URL of the request endpoint.
-    'endpoint',
-    # The HTTP method of request.
-    'method',
-    # The URL-encoded body to send with the request.
-    'body',
-    # The user-agent string to send as a header.
-    'user_agent'
-])
 
 # Map from descriptive labels to the key labels that GA recognizes.
 _GA_LABEL_MAP = {'Event Category': 'ec',
@@ -164,7 +150,7 @@ class MetricsCollector(object):
     self.user_agent = '{system}/{release}'.format(system=platform.system(),
                                                   release=platform.release())
 
-    # A list of collected, unsent _Metrics. This list is currently bounded by
+    # A list of collected, unsent Metrics. This list is currently bounded by
     # the number of retryable error types, and should not grow too large so that
     # we stay well within memory constraints.
     self._metrics = []
@@ -424,7 +410,7 @@ class MetricsCollector(object):
     params.append((_GA_LABEL_MAP['Execution Time'], execution_time))
 
     data = urllib.urlencode(sorted(params))
-    self._metrics.append(_Metric(endpoint=self.endpoint, method='POST',
+    self._metrics.append(Metric(endpoint=self.endpoint, method='POST',
                                  body=data, user_agent=self.user_agent))
 
   # TODO: Collect CPU usage (Linux-only), latency to first byte, and slowest

@@ -20,9 +20,31 @@ import sys
 
 try:
   from gslib.util import GetNewHttp  # pylint:disable=g-import-not-at-top
-except Exception:  # pylint: disable=broad-except
-  # Do nothing if we can't import the lib.
-  sys.exit(0)
+except:  # pylint: disable=broad-except
+  # Some environments import their own version of standard Python libraries
+  # which might cause the import of gslib.util to fail.  Try this alternative
+  # import in such cases.
+  try:
+    # Fall back to httplib (no proxy) if we can't import libraries normally.
+    import httplib
+    def GetNewHttp():
+      class HttplibReporter(object):
+        def __init__(self):
+          pass
+
+        def request(self, endpoint, method=None, body=None,
+                    headers=None):
+          # Strip 'https://'
+          https_con = httplib.HTTPSConnection(endpoint[8:].split('/')[0])
+          https_con.request(method, endpoint, body=body,
+                            headers=headers)
+          response = https_con.getresponse()
+          # Return status like an httplib2 response.
+          return ( {'status': response.status}, )
+
+      return HttplibReporter()
+  except:
+    sys.exit(0)
 
 LOG_FILE_PATH = os.path.expanduser(os.path.join('~', '.gsutil/metrics.log'))
 

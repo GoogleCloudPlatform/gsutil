@@ -37,6 +37,7 @@ import gslib.exception
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.metrics import MetricsCollector
 from gslib.metrics_reporter import LOG_FILE_PATH
+from gslib.metrics_tuple import Metric
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -64,25 +65,25 @@ GLOBAL_PARAMETERS = ['a=b', 'c=d', 'cd1=cmd1 action1', 'cd2=x,y,z',
                      'cd3=opta,optb', 'cd6=CommandException', 'cm1=0',
                      'ev=0', 'el={0}'.format(VERSION)]
 COMMAND_AND_ERROR_TEST_METRICS = set([
-    metrics._Metric(
+    Metric(
         'https://example.com', 'POST',
         '{0}&cm2=3&ea=cmd1+action1&ec={1}&el={2}&ev=0'.format(
             GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_COMMANDS_CATEGORY,
             VERSION),
         'user-agent-007'),
-    metrics._Metric(
+    Metric(
         'https://example.com', 'POST',
         '{0}&cm2=2&ea=Exception&ec={1}&el={2}&ev=0'.format(
             GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
             VERSION),
         'user-agent-007'),
-    metrics._Metric(
+    Metric(
         'https://example.com', 'POST',
         '{0}&cm2=1&ea=ValueError&ec={1}&el={2}&ev=0'.format(
             GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
             VERSION),
         'user-agent-007'),
-    metrics._Metric(
+    Metric(
         'https://example.com', 'POST',
         '{0}&ea=CommandException&ec={1}&el={2}&ev=0'.format(
             GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORFATAL_CATEGORY,
@@ -91,7 +92,7 @@ COMMAND_AND_ERROR_TEST_METRICS = set([
 ])
 
 # A regex to find the list of metrics in log output.
-METRICS_LOG_RE = re.compile(r'(\[_Metric.*\])')
+METRICS_LOG_RE = re.compile(r'(\[Metric.*\])')
 
 
 def _TryExceptAndPass(func, *args, **kwargs):
@@ -685,7 +686,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     with open(LOG_FILE_PATH, 'rb') as metrics_log:
       log_text = metrics_log.read()
     expected_response = (
-        '_Metric(endpoint=\'https://example.com\', method=\'POST\', '
+        'Metric(endpoint=\'https://example.com\', method=\'POST\', '
         'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
         'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
                                                 metrics._GA_COMMANDS_CATEGORY,
