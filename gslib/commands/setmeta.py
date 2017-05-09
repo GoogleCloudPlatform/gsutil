@@ -280,15 +280,10 @@ class SetMetaCommand(Command):
     num_cust_metadata_minus_elems = 0
 
     for md_arg in headers:
-      parts = md_arg.split(':')
-      if len(parts) not in (1, 2):
-        raise CommandException(
-            'Invalid argument: must be either header or header:value (%s)' %
-            md_arg)
-      if len(parts) == 2:
-        (header, value) = parts
-      else:
-        (header, value) = (parts[0], None)
+      # Use partition rather than split, as we should treat all characters past
+      # the initial : as part of the header's value.
+      parts = md_arg.partition(':')
+      (header, _, value) = parts
       _InsistAsciiHeader(header)
 
       # Translate headers to lowercase to match the casing assumed by our
