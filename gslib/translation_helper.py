@@ -542,8 +542,9 @@ class LifecycleTranslation(object):
       # {'rule': ...
       if 'lifecycle' in deserialized_lifecycle:
         deserialized_lifecycle = deserialized_lifecycle['lifecycle']
+
       lifecycle = encoding.DictToMessage(
-          deserialized_lifecycle, apitools_messages.Bucket.LifecycleValue)
+          deserialized_lifecycle or {}, apitools_messages.Bucket.LifecycleValue)
       return lifecycle
     except ValueError:
       CheckForXmlConfigurationAndRaise('lifecycle', json_txt)
