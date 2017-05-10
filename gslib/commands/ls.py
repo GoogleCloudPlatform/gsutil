@@ -31,6 +31,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import LabelTranslation
+from gslib.util import InsistAscii
 from gslib.util import ListingStyle
 from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
@@ -417,6 +418,8 @@ class LsCommand(Command):
         elif o == '-L':
           listing_style = ListingStyle.LONG_LONG
         elif o == '-p':
+          # Project IDs are sent as header values when using gs and s3 XML APIs.
+          InsistAscii(a, 'Invalid non-ASCII character found in project ID')
           self.project_id = a
         elif o == '-r' or o == '-R':
           self.recursion_requested = True

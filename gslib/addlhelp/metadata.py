@@ -34,8 +34,8 @@ _DETAILED_HELP_TEXT = ("""
     following command would cause gsutil to set the Content-Type and
     Cache-Control for each of the files being uploaded:
 
-      gsutil -h "Content-Type:text/html" \\
-             -h "Cache-Control:public, max-age=3600" cp -r images \\
+      gsutil -h "Content-Type:text/html" \
+             -h "Cache-Control:public, max-age=3600" cp -r images \
              gs://bucket/images
 
     Note that -h is an option on the gsutil command, not the cp sub-command.
@@ -72,7 +72,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Here's an example of uploading a set of objects to allow caching:
 
-    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \\
+    gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \
            -r html gs://bucket/html
 
   This command would upload all files in the html directory (and subdirectories)
@@ -108,8 +108,9 @@ _DETAILED_HELP_TEXT = ("""
   following example for Linux:
 
     echo "Highly compressible text" | gzip > foo.txt
-    gsutil -h "Content-Encoding:gzip" -h "Content-Type:text/plain" \\
-      cp foo.txt gs://bucket/compressed
+    gsutil -h "Content-Encoding:gzip" \
+           -h "Content-Type:text/plain" \
+           cp foo.txt gs://bucket/compressed
 
   Note that this is different from uploading a gzipped object foo.txt.gz with
   Content-Type: application/x-gzip because most browsers are able to
@@ -132,8 +133,8 @@ _DETAILED_HELP_TEXT = ("""
   You can set Content-Disposition on your objects, to specify presentation
   information about the data being transmitted. Here's an example:
 
-    gsutil -h 'Content-Disposition:attachment; filename=filename.ext' \\
-      cp -r attachments gs://bucket/attachments
+    gsutil -h 'Content-Disposition:attachment; filename=filename.ext' \
+           cp -r attachments gs://bucket/attachments
 
   Setting the Content-Disposition allows you to control presentation style
   of the content, for example determining whether an attachment should be
@@ -165,8 +166,18 @@ _DETAILED_HELP_TEXT = ("""
 
   Field names are case-insensitive.
 
-  x-goog-meta- fields can have data set to arbitrary Unicode values. All
-  other fields must have ASCII values.
+  All fields and their values must consist only of ASCII characters, with the
+  exception of values for x-goog-meta- fields, which may contain arbitrary
+  Unicode values. Note that when setting metadata using the XML API, which sends
+  custom metadata as HTTP headers, Unicode characters will be encoded using
+  UTF-8, then url-encoded to ASCII. For example:
+
+    gsutil setmeta -h "x-goog-meta-foo: ã" gs://bucket/object
+
+  would store the custom metadata key-value pair of "foo" and "%C3%A3".
+  Subsequently, running "ls -L" using the JSON API to list the object's metadata
+  would print "%C3%A3", while "ls -L" using the XML API would url-decode this
+  value automatically, printing the character "ã".
 
 
 <B>VIEWING CURRENTLY SET METADATA</B>

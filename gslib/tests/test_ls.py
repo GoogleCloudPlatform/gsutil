@@ -691,3 +691,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         self.assertIn(TEST_ENCRYPTION_CONTENT5_CRC32C, stdout)
 
       _ListExpectMixed()
+
+  def test_non_ascii_project_fails(self):
+    stderr = self.RunGsUtil(['ls', '-p', 'ã', 'gs://fobarbaz'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid non-ASCII', stderr)
+

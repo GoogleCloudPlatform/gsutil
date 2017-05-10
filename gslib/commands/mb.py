@@ -27,6 +27,7 @@ from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.util import InsistAscii
 from gslib.util import NO_MAX
 from gslib.util import NormalizeStorageClass
 
@@ -152,6 +153,8 @@ class MbCommand(Command):
         if o == '-l':
           location = a
         elif o == '-p':
+          # Project IDs are sent as header values when using gs and s3 XML APIs.
+          InsistAscii(a, 'Invalid non-ASCII character found in project ID')
           self.project_id = a
         elif o == '-c' or o == '-s':
           storage_class = NormalizeStorageClass(a)

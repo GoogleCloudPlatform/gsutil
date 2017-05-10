@@ -191,11 +191,13 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)], expected_status=1, return_stderr=True)
     self.assertIn('must name an object', stderr)
 
-  def test_setmeta_invalid_arg(self):
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'foo:bar:baz', 'gs://foo/bar'], expected_status=1,
-        return_stderr=True)
-    self.assertIn('must be either header or header:value', stderr)
+  def test_setmeta_valid_with_multiple_colons_in_value(self):
+    obj_uri = self.CreateObject(contents='foo')
+    self.RunGsUtil([
+        'setmeta', '-h', 'x-%s-meta-foo:bar:baz' % self.provider_custom_meta,
+        suri(obj_uri)])
+    stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'foo:\s+bar:baz')
 
   def test_setmeta_with_canned_acl(self):
     stderr = self.RunGsUtil(
@@ -209,4 +211,4 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
         expected_status=1, return_stderr=True)
-    self.assertIn('Invalid non-ASCII header', stderr)
+    self.assertIn('Invalid non-ASCII value', stderr)

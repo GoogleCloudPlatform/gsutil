@@ -47,6 +47,9 @@ from gslib.util import CompareVersions
 from gslib.util import DiscardMessagesQueue
 from gslib.util import GetGsutilVersionModifiedTime
 from gslib.util import GSUTIL_PUB_TARBALL
+from gslib.util import InsistAsciiHeader
+from gslib.util import InsistAsciiHeaderValue
+from gslib.util import IsCustomMetadataHeader
 from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
@@ -55,55 +58,69 @@ from gslib.util import SECONDS_PER_DAY
 from gslib.util import UTF8
 
 
-def HandleArgCoding(args):
-  """Handles coding of command-line args.
+def HandleHeaderCoding(headers):
+  """Handles coding of headers and their values. Alters the dict in-place.
+
+  Converts a dict of headers and their values to their appropriate types. We
+  ensure that all headers and their values will contain only ASCII characters,
+  with the exception of custom metadata header values; these values may contain
+  Unicode characters, and thus if they are not already unicode-type objects,
+  we attempt to decode them to Unicode using UTF-8 encoding.
 
   Args:
-    args: array of command-line args.
+    headers: A dict mapping headers to their values. All keys and values must
+        be either str or unicode objects.
 
-  Returns:
-    array of command-line args.
+  Raises:
+    CommandException: If a header or its value cannot be encoded in the
+        required encoding.
+  """
+  if not headers:
+    return
+
+  for key in headers:
+    InsistAsciiHeader(key)
+    if IsCustomMetadataHeader(key):
+      if not isinstance(headers[key], unicode):
+        try:
+          headers[key] = headers[key].decode(UTF8)
+        except UnicodeDecodeError:
+          raise CommandException('\n'.join(textwrap.wrap(
+              'Invalid encoding for header value (%s). Values must be '
+              'decodable as Unicode. NOTE: the value printed above '
+              'replaces the problematic characters with a hex-encoded '
+              'printable representation. For more details (including how to '
+              'convert to a gsutil-compatible encoding) see `gsutil help '
+              'encoding`.' % repr(arg))))
+    else:
+      # Non-custom-metadata headers and their values must be ASCII characters.
+      InsistAsciiHeaderValue(key, headers[key])
+
+
+def HandleArgCoding(args):
+  """Handles coding of command-line args. Alters the list in-place.
+
+  Args:
+    args: A list of command-line args.
 
   Raises:
     CommandException: if errors encountered.
   """
   # Python passes arguments from the command line as byte strings. To
-  # correctly interpret them, we decode ones other than -h and -p args (which
-  # will be passed as headers, and thus per HTTP spec should not be encoded) as
-  # utf-8. The exception is x-goog-meta-* headers, which are allowed to contain
-  # non-ASCII content (and hence, should be decoded), per
-  # https://cloud.google.com/storage/docs/gsutil/addlhelp/WorkingWithObjectMetadata
-  processing_header = False
+  # correctly interpret them, we decode them as utf-8.
   for i in range(len(args)):
     arg = args[i]
-    # Commands like mv can run this function twice; don't decode twice.
-    try:
-      decoded = arg if isinstance(arg, unicode) else arg.decode(UTF8)
-    except UnicodeDecodeError:
-      raise CommandException('\n'.join(textwrap.wrap(
-          'Invalid encoding for argument (%s). Arguments must be decodable as '
-          'Unicode. NOTE: the argument printed above replaces the problematic '
-          'characters with a hex-encoded printable representation. For more '
-          'details (including how to convert to a gsutil-compatible encoding) '
-          'see `gsutil help encoding`.' % repr(arg))))
-    if processing_header:
-      if arg.lower().startswith('x-goog-meta'):
-        args[i] = decoded
-      else:
-        try:
-          # Try to encode as ASCII to check for invalid header values (which
-          # can't be sent over HTTP).
-          decoded.encode('ascii')
-        except UnicodeEncodeError:
-          # Raise the CommandException using the decoded value because
-          # _OutputAndExit function re-encodes at the end.
-          raise CommandException(
-              'Invalid non-ASCII header value (%s).\nOnly ASCII characters are '
-              'allowed in headers other than x-goog-meta- headers' % decoded)
-    else:
-      args[i] = decoded
-    processing_header = (arg in ('-h', '-p'))
-  return args
+    if not isinstance(arg, unicode):
+      try:
+        args[i] = arg.decode(UTF8)
+      except UnicodeDecodeError:
+        raise CommandException('\n'.join(textwrap.wrap(
+            'Invalid encoding for argument (%s). Arguments must be decodable '
+            'as Unicode. NOTE: the argument printed above replaces the '
+            'problematic characters with a hex-encoded printable '
+            'representation. For more details (including how to convert to a '
+            'gsutil-compatible encoding) see `gsutil help encoding`.' %
+            repr(arg))))
 
 
 class CommandRunner(object):
@@ -278,7 +295,8 @@ class CommandRunner(object):
       args = new_args
       command_name = 'help'
 
-    args = HandleArgCoding(args)
+    HandleArgCoding(args)
+    HandleHeaderCoding(headers)
 
     command_class = self.command_map[command_name]
     command_inst = command_class(

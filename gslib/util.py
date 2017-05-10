@@ -1141,6 +1141,28 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     return False, default_value
 
 
+def InsistAscii(string, message):
+  if not all(ord(c) < 128 for c in string):
+    raise CommandException(message)
+
+
+def InsistAsciiHeader(header):
+  InsistAscii(header, 'Invalid non-ASCII header (%s).' % header)
+
+
+def InsistAsciiHeaderValue(header, value):
+  InsistAscii(
+      value,
+      'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
+      'characters are allowed in headers other than x-goog-meta- and '
+      'x-amz-meta- headers' % (value, header))
+
+
+def IsCustomMetadataHeader(header):
+  """Returns true if header (which must be lowercase) is a custom header."""
+  return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
+
+
 # pylint: disable=too-many-statements
 def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   """Print full info for given object (like what displays for gsutil ls -L).
