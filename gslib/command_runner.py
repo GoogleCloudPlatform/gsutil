@@ -86,12 +86,12 @@ def HandleHeaderCoding(headers):
           headers[key] = headers[key].decode(UTF8)
         except UnicodeDecodeError:
           raise CommandException('\n'.join(textwrap.wrap(
-              'Invalid encoding for header value (%s). Values must be '
+              'Invalid encoding for header value (%s: %s). Values must be '
               'decodable as Unicode. NOTE: the value printed above '
               'replaces the problematic characters with a hex-encoded '
               'printable representation. For more details (including how to '
               'convert to a gsutil-compatible encoding) see `gsutil help '
-              'encoding`.' % repr(arg))))
+              'encoding`.' % (repr(key), repr(headers[key])))))
     else:
       # Non-custom-metadata headers and their values must be ASCII characters.
       InsistAsciiHeaderValue(key, headers[key])
