@@ -358,7 +358,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     Returns:
       A StorageUri for the created object.
     """
-    bucket_uri = bucket_uri or self.CreateBucket()
+    bucket_uri = bucket_uri or self.CreateBucket(provider=self.default_provider)
     object_name = object_name or self.MakeTempName('obj')
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:

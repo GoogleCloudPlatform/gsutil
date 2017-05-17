@@ -27,6 +27,15 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.util import ObjectIsGzipEncoded
 from gslib.wildcard_iterator import StorageUrlFromString
 
+_CAT_BUCKET_LISTING_FIELDS = ['bucket',
+                              'contentEncoding',
+                              'crc32c',
+                              'customerEncryption',
+                              'generation',
+                              'md5Hash',
+                              'name',
+                              'size']
+
 
 class CatHelper(object):
 
@@ -92,8 +101,8 @@ class CatHelper(object):
         for url_str in url_strings:
           did_some_work = False
           # TODO: Get only the needed fields here.
-          for blr in self.command_obj.WildcardIterator(url_str).IterObjects():
-
+          for blr in self.command_obj.WildcardIterator(url_str).IterObjects(
+              bucket_listing_fields=_CAT_BUCKET_LISTING_FIELDS):
             decryption_tuple = None
             if (blr.root_object and
                 blr.root_object.customerEncryption and
