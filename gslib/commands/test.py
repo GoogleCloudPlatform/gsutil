@@ -352,7 +352,8 @@ class TestCommand(Command):
       help_name='test',
       help_name_aliases=[],
       help_type='command_help',
-      help_one_line_summary='Run gsutil tests',
+      help_one_line_summary=(
+          'Run gsutil unit/integration tests (for developers)'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
