@@ -233,7 +233,12 @@ _DETAILED_HELP_TEXT = ("""
 
   -p proj_id  Specifies the project ID to use for listing buckets.
 
-  -R, -r      Requests a recursive listing.
+  -R, -r      Requests a recursive listing, performing at least one listing
+              operation per subdirectory. If you have a large number of
+              subdirectories and do not require recursive-style output ordering,
+              you may be able to instead use wildcards to perform a flat
+              listing, e.g.  `gsutil ls gs://mybucket/**`, which will generally
+              perform fewer listing operations.
 
   -a          Includes non-current object versions / generations in the listing
               (only useful with a versioning-enabled bucket). If combined with
