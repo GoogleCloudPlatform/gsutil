@@ -160,7 +160,6 @@ _DETAILED_HELP_TEXT = ("""
   - Content-Disposition
   - Content-Encoding
   - Content-Language
-  - Content-MD5
   - Content-Type
   - Custom metadata
 

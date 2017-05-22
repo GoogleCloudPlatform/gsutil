@@ -115,7 +115,7 @@ _DETAILED_HELP_TEXT = ("""
 # gsutil3 at the time gsutil4 was released.
 SETTABLE_FIELDS = ['cache-control', 'content-disposition',
                    'content-encoding', 'content-language',
-                   'content-md5', 'content-type']
+                   'content-type']
 
 
 def _SetMetadataExceptionHandler(cls, e):
