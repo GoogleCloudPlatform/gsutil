@@ -34,7 +34,6 @@ from boto.gs.acl import GROUP_BY_EMAIL
 from boto.gs.acl import GROUP_BY_ID
 from boto.gs.acl import USER_BY_EMAIL
 from boto.gs.acl import USER_BY_ID
-from boto.s3.tagging import Tag
 from boto.s3.tagging import Tags
 from boto.s3.tagging import TagSet
 
@@ -476,9 +475,12 @@ class LifecycleTranslation(object):
     if lifecycle_message:
       for rule_message in lifecycle_message.rule:
         boto_rule = boto.gs.lifecycle.Rule()
-        if (rule_message.action and rule_message.action.type and
-            rule_message.action.type.lower() == 'delete'):
-          boto_rule.action = boto.gs.lifecycle.DELETE
+        if rule_message.action and rule_message.action.type:
+          if rule_message.action.type.lower() == 'delete':
+            boto_rule.action = boto.gs.lifecycle.DELETE
+          elif rule_message.action.type.lower() == 'setstorageclass':
+            boto_rule.action = boto.gs.lifecycle.SET_STORAGE_CLASS
+            boto_rule.action_text = rule_message.action.storageClass
         if rule_message.condition:
           if rule_message.condition.age:
             boto_rule.conditions[boto.gs.lifecycle.AGE] = (
@@ -489,6 +491,9 @@ class LifecycleTranslation(object):
           if rule_message.condition.isLive:
             boto_rule.conditions[boto.gs.lifecycle.IS_LIVE] = (
                 str(rule_message.condition.isLive))
+          if rule_message.condition.matchesStorageClass:
+            boto_rule.conditions[boto.gs.lifecycle.MATCHES_STORAGE_CLASS] = [
+                str(sc) for sc in rule_message.condition.matchesStorageClass]
           if rule_message.condition.numNewerVersions:
             boto_rule.conditions[boto.gs.lifecycle.NUM_NEWER_VERSIONS] = (
                 str(rule_message.condition.numNewerVersions))
@@ -506,10 +511,16 @@ class LifecycleTranslation(object):
             apitools_messages.Bucket.LifecycleValue.RuleValueListEntry())
         lifecycle_rule.condition = (apitools_messages.Bucket.LifecycleValue.
                                     RuleValueListEntry.ConditionValue())
-        if boto_rule.action and boto_rule.action == boto.gs.lifecycle.DELETE:
-          lifecycle_rule.action = (apitools_messages.Bucket.LifecycleValue.
-                                   RuleValueListEntry.ActionValue(
-                                       type='Delete'))
+        if boto_rule.action:
+          if boto_rule.action == boto.gs.lifecycle.DELETE:
+            lifecycle_rule.action = (apitools_messages.Bucket.LifecycleValue.
+                                     RuleValueListEntry.ActionValue(
+                                         type='Delete'))
+          elif boto_rule.action == boto.gs.lifecycle.SET_STORAGE_CLASS:
+            lifecycle_rule.action = (apitools_messages.Bucket.LifecycleValue.
+                                     RuleValueListEntry.ActionValue(
+                                         type='SetStorageClass',
+                                         storageClass=boto_rule.action_text))
         if boto.gs.lifecycle.AGE in boto_rule.conditions:
           lifecycle_rule.condition.age = int(
               boto_rule.conditions[boto.gs.lifecycle.AGE])
@@ -520,6 +531,10 @@ class LifecycleTranslation(object):
         if boto.gs.lifecycle.IS_LIVE in boto_rule.conditions:
           lifecycle_rule.condition.isLive = bool(
               boto_rule.conditions[boto.gs.lifecycle.IS_LIVE])
+        if boto.gs.lifecycle.MATCHES_STORAGE_CLASS in boto_rule.conditions:
+          for storage_class in (
+              boto_rule.conditions[boto.gs.lifecycle.MATCHES_STORAGE_CLASS]):
+            lifecycle_rule.condition.matchesStorageClass.append(storage_class)
         if boto.gs.lifecycle.NUM_NEWER_VERSIONS in boto_rule.conditions:
           lifecycle_rule.condition.numNewerVersions = int(
               boto_rule.conditions[boto.gs.lifecycle.NUM_NEWER_VERSIONS])
@@ -723,6 +738,7 @@ class LabelTranslation(object):
   def DictToMessage(cls, label_dict):
     return encoding.DictToMessage(
         label_dict, apitools_messages.Bucket.LabelsValue)
+
 
 class AclTranslation(object):
   """Functions for converting between various ACL formats.
