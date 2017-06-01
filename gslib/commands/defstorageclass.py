@@ -80,7 +80,7 @@ class DefStorageClassCommand(Command):
       provider_url_ok=False,
       urls_start_arg=2,
       gs_api_support=[
-          # ApiSelector.XML,  # TODO: Uncomment once boto changes are added.
+          ApiSelector.XML,  # TODO: Uncomment once boto changes are added.
           ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
