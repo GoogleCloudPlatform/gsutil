@@ -30,7 +30,6 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
   _set_dsc_cmd = ['defstorageclass', 'set']
   _get_dsc_cmd = ['defstorageclass', 'get']
 
-  @SkipForXML('TODO: XML support pending changes in Boto.')
   def test_set_and_get_for_one_bucket(self):
     bucket_uri = self.CreateBucket()
     # Set the storage class to nearline.
@@ -50,7 +49,6 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
         stdout, r'%s:\s+%s' % (suri(bucket_uri), new_storage_class),
         flags=re.IGNORECASE)
 
-  @SkipForXML('TODO: XML support pending changes in Boto.')
   def test_set_and_get_for_multiple_buckets(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -75,7 +73,6 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
           stdout, r'%s:\s+%s' % (bucket_uri, new_storage_class),
           flags=re.IGNORECASE)
 
-  @SkipForXML('TODO: XML support pending changes in Boto.')
   def test_set_invalid_storage_class_fails(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(
@@ -99,7 +96,6 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
         self._get_dsc_cmd, return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
-  @SkipForXML('TODO: XML support for pending changes in Boto.')
   def test_helpful_failure_with_s3_urls(self):
     s3_bucket_url = 's3://somebucket'
     failure_msg = 'does not support the URL "%s"' % s3_bucket_url

@@ -287,11 +287,7 @@ class BotoTranslation(CloudApi):
         else:  # Logging field is present and empty.  Disable logging.
           bucket_uri.disable_logging(False, headers=headers)
       if metadata.storageClass:
-        try:
-          bucket_uri.set_storage_class(metadata.storageClass, headers=headers)
-        except boto.exception.BotoServerError, e:
-          if e.status == 400:
-            raise BadRequestException(e.message, e.status)
+        bucket_uri.set_storage_class(metadata.storageClass, headers=headers)
       if metadata.versioning:
         bucket_uri.configure_versioning(metadata.versioning.enabled,
                                         headers=headers)
@@ -1686,7 +1682,7 @@ class BotoTranslation(CloudApi):
 
   def XmlPassThroughGetTagging(self, storage_url):
     """See CloudApiDelegator class for function doc strings."""
-    # headers = self._CreateBaseHeaders()
+    headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
           storage_url.url_string, suppress_consec_slashes=False,
