@@ -268,7 +268,7 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  gslib.util.certs_file_lock = CreateLock()
+  gslib.util.configured_certs_file = gslib.util.ConfigureCertsFile()
   for signal_num in GetCaughtSignals():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
   GetCertsFile()

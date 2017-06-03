@@ -161,8 +161,10 @@ LONG_RETRY_WARN_SEC = 10
 SECONDS_PER_DAY = 86400L
 
 global manager  # pylint: disable=global-at-module-level
-certs_file_lock = threading.Lock()
-configured_certs_files = []
+# Single certs file for use across all processes.
+configured_certs_file = None
+# Temporary certs file for cleanup upon exit.
+temp_certs_file = None
 
 
 def _GenerateSuffixRegex():
@@ -709,10 +711,14 @@ def GetBotoConfigFileList():
 
 
 def GetCertsFile():
+  return configured_certs_file
+
+
+def ConfigureCertsFile():
   """Configures and returns the CA Certificates file.
 
-  If one is already configured, use it. Otherwise, amend the configuration
-  (in boto.config) to use the cert roots distributed with gsutil.
+  If one is already configured, use it. Otherwise, use the cert roots
+  distributed with gsutil.
 
   Returns:
     string filename of the certs file to use.
@@ -725,38 +731,33 @@ def GetCertsFile():
   if certs_file == 'system':
     return None
   if not certs_file:
-    with certs_file_lock:
-      if configured_certs_files:
-        disk_certs_file = configured_certs_files[0]
-      else:
-        disk_certs_file = os.path.abspath(
-            os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
-        if not os.path.exists(disk_certs_file):
-          # If the file is not present on disk, this means the gslib module
-          # doesn't actually exist on disk anywhere. This can happen if it's
-          # being imported from a zip file. Unfortunately, we have to copy the
-          # certs file to a local temp file on disk because the underlying SSL
-          # socket requires it to be a filesystem path.
-          certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
-          if not certs_data:
-            raise CommandException('Certificates file not found. Please '
-                                   'reinstall gsutil from scratch')
-          fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
-          f = os.fdopen(fd, 'w')
-          f.write(certs_data)
-          f.close()
-          configured_certs_files.append(fname)
-          disk_certs_file = fname
-      certs_file = disk_certs_file
+    global configured_certs_file, temp_certs_file
+    if not configured_certs_file:
+      configured_certs_file = os.path.abspath(
+          os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
+      if not os.path.exists(configured_certs_file):
+        # If the file is not present on disk, this means the gslib module
+        # doesn't actually exist on disk anywhere. This can happen if it's
+        # being imported from a zip file. Unfortunately, we have to copy the
+        # certs file to a local temp file on disk because the underlying SSL
+        # socket requires it to be a filesystem path.
+        certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
+        if not certs_data:
+          raise CommandException('Certificates file not found. Please '
+                                 'reinstall gsutil from scratch')
+        fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
+        f = os.fdopen(fd, 'w')
+        f.write(certs_data)
+        f.close()
+        temp_certs_file = fname
+        configured_certs_file = temp_certs_file
+    certs_file = configured_certs_file
   return certs_file
 
 
 def GetCleanupFiles():
   """Returns a list of temp files to delete (if possible) when program exits."""
-  cleanup_files = []
-  if configured_certs_files:
-    cleanup_files += configured_certs_files
-  return cleanup_files
+  return [temp_certs_file] if temp_certs_file else []
 
 
 def ProxyInfoFromEnvironmentVar(proxy_env_var):
