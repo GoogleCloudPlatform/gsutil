@@ -958,10 +958,17 @@ class BotoTranslation(CloudApi):
       if s3_acl:
         preserve_acl = True
 
+    # If no destination storage class was specified, we want to not specify a
+    # storage class in our copy request, resulting in the bucket's default
+    # storage class being used. Boto uses a default storage class of STANDARD
+    # for copy_key() calls, so we explicitly use None if no storage class was
+    # specified, which will omit the storage class header in our request.
+    dst_storage_class = dst_obj_metadata.storageClass or None
     try:
       new_key = dst_uri.copy_key(
           src_obj_metadata.bucket, src_obj_metadata.name,
           preserve_acl=preserve_acl, headers=headers,
+          storage_class=dst_storage_class,
           src_version_id=src_version_id, src_generation=src_generation)
 
       return self._BotoKeyToObject(new_key, fields=fields)
