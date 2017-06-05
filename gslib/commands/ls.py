@@ -192,6 +192,7 @@ _DETAILED_HELP_TEXT = ("""
             Labels:                       None
             Time created:                 Fri, 21 Oct 2016 19:25:17 GMT
             Time updated:                 Fri, 21 Oct 2016 21:17:59 GMT
+            Metageneration:               1
             ACL:
     [
       {
@@ -209,8 +210,8 @@ _DETAILED_HELP_TEXT = ("""
       }
     ]
 
-  Note that the Time created and Time updated fields above are not available
-  with the (non-default) XML API.
+  Note that some fields above (time created, time updated, metageneration) are
+  not available with the (non-default) XML API.
 
 
 <B>OPTIONS</B>
@@ -314,6 +315,9 @@ class LsCommand(Command):
           bucket.labels, pretty_print=True)
     else:
       fields['labels'] = 'None'
+    # Fields not available in all APIs (e.g. the XML API)
+    if bucket.metageneration:
+      fields['metageneration'] = bucket.metageneration
     if bucket.timeCreated:
       fields['time_created'] = bucket.timeCreated.strftime(
           '%a, %d %b %Y %H:%M:%S GMT')
@@ -333,9 +337,13 @@ class LsCommand(Command):
         new_value = '\n\t  ' + new_value
       fields[key] = new_value
 
-    # Only display time-related properties if the given API returned them.
+    # Only display certain properties if the given API returned them (JSON API
+    # returns many fields that the XML API does not).
+    metageneration_line = ''
     time_created_line = ''
     time_updated_line = ''
+    if 'metageneration' in fields:
+      metageneration_line = '\tMetageneration:\t\t\t{metageneration}\n'
     if 'time_created' in fields:
       time_created_line = '\tTime created:\t\t\t{time_created}\n'
     if 'updated' in fields:
@@ -352,6 +360,7 @@ class LsCommand(Command):
            '\tLabels:\t\t\t\t{labels}\n' +
            time_created_line +
            time_updated_line +
+           metageneration_line +
            '\tACL:\t\t\t\t{acl}\n'
            '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
@@ -460,6 +469,7 @@ class LsCommand(Command):
                          'location',
                          'logging',
                          'lifecycle',
+                         'metageneration',
                          'storageClass',
                          'timeCreated',
                          'updated',

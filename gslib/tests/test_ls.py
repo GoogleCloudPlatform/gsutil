@@ -94,18 +94,23 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['versioning', 'set', 'off', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                             return_stdout=True)
+    find_metageneration_re = re.compile(
+        r'^\s*Metageneration:\s+(?P<metageneration_val>.+)$', re.MULTILINE)
     find_time_created_re = re.compile(
         r'^\s*Time created:\s+(?P<time_created_val>.+)$', re.MULTILINE)
     find_time_updated_re = re.compile(
         r'^\s*Time updated:\s+(?P<time_updated_val>.+)$', re.MULTILINE)
+    metageneration_match = re.search(find_metageneration_re, stdout)
     time_created_match = re.search(find_time_created_re, stdout)
     time_updated_match = re.search(find_time_updated_re, stdout)
     if self.test_api == ApiSelector.XML:
-      # Check that time created/updated lines are not displayed.
+      # Check that lines for JSON-specific fields are not displayed.
+      self.assertIsNone(metageneration_match)
       self.assertIsNone(time_created_match)
       self.assertIsNone(time_updated_match)
     elif self.test_api == ApiSelector.JSON:
       # Check that time created/updated lines are displayed.
+      self.assertIsNotNone(metageneration_match)
       self.assertIsNotNone(time_created_match)
       self.assertIsNotNone(time_updated_match)
       # Check that updated time > created time.
