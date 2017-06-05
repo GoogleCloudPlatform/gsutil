@@ -149,14 +149,15 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/obj1:
-            Creation time:      Fri, 21 Oct 2016 19:25:17 GMT
-            Update time:        Fri, 21 Oct 2016 21:17:59 GMT
-            Size:               2276224
-            Cache-Control:      private, max-age=0
-            Content-Type:       application/x-executable
-            ETag:               5ca6796417570a586723b7344afffc81
-            Generation:         1378862725952000
-            Metageneration:     1
+            Creation time:                    Fri, 21 Oct 2016 19:25:17 GMT
+            Update time:                      Fri, 21 Oct 2016 21:17:59 GMT
+            Storage class update time:        Fri, 21 Oct 2016 22:12:32 GMT
+            Size:                             2276224
+            Cache-Control:                    private, max-age=0
+            Content-Type:                     application/x-executable
+            ETag:                             5ca6796417570a586723b7344afffc81
+            Generation:                       1378862725952000
+            Metageneration:                   1
             ACL:
     [
       {
@@ -167,8 +168,11 @@ _DETAILED_HELP_TEXT = ("""
     ]
     TOTAL: 1 objects, 2276224 bytes (2.17 MiB)
 
-  Note that the Update time field above is not available with the (non-default)
-  XML API.
+  Note that some fields above (time updated, storage class update time) are
+  not available with the (non-default) XML API.
+
+  Also note that the Storage class update time field does not display unless it
+  differs from Creation time.
 
   See also "gsutil help acl" for getting a more readable version of the ACL.
 

@@ -15,7 +15,7 @@
 """Tests for ls command."""
 
 from __future__ import absolute_import
-
+from datetime import datetime
 import posixpath
 import re
 import subprocess
@@ -26,6 +26,7 @@ import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import CaptureStdout
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
@@ -52,9 +53,83 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY3_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY4
 from gslib.tests.util import TEST_ENCRYPTION_KEY4_SHA256_B64
 from gslib.tests.util import unittest
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import IS_WINDOWS
+from gslib.util import PrintFullInfoAboutObject
 from gslib.util import Retry
 from gslib.util import UTF8
+import mock
+
+
+class TestLsUnit(testcase.GsUtilUnitTestCase):
+  """Unit tests for ls command."""
+
+  def test_one_object_with_L_storage_class_update(self):
+    """Tests the JSON storage class update time field."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'XML API has no concept of storage class update time')
+    # Case 1: Create an object message where Storage class update time is the
+    # same as Creation time.
+    current_time = datetime(2017, 1, 2, 3, 4, 5, 6, tzinfo=None)
+    obj_metadata = apitools_messages.Object(
+        name='foo', bucket='bar', timeCreated=current_time,
+        updated=current_time, timeStorageClassUpdated=current_time,
+        etag='12345')
+    # Create mock object to point to obj_metadata.
+    obj_ref = mock.Mock()
+    obj_ref.root_object = obj_metadata
+    obj_ref.url_string = 'foo'
+
+    # Print out attributes of object message.
+    with CaptureStdout() as output:
+      PrintFullInfoAboutObject(obj_ref)
+    output = "\n".join(output)
+
+    # Verify that no Storage class update time field displays since it's the
+    # same as Creation time.
+    find_stor_update_re = re.compile(
+        r'^\s*Storage class update time:+(?P<stor_update_time_val>.+)$',
+        re.MULTILINE)
+    stor_update_time_match = re.search(find_stor_update_re, output)
+    self.assertIsNone(stor_update_time_match)
+
+    # Case 2: Create an object message where Storage class update time differs
+    # from Creation time.
+    new_update_time = datetime(2017, 2, 3, 4, 5, 6, 7, tzinfo=None)
+    obj_metadata2 = apitools_messages.Object(
+        name='foo2', bucket='bar2', timeCreated=current_time,
+        updated=current_time,
+        timeStorageClassUpdated=new_update_time,
+        etag='12345')
+    # Create mock object to point to obj_metadata2.
+    obj_ref2 = mock.Mock()
+    obj_ref2.root_object = obj_metadata2
+    obj_ref2.url_string = 'foo2'
+
+    # Print out attributes of object message.
+    with CaptureStdout() as output2:
+      PrintFullInfoAboutObject(obj_ref2)
+    output2 = "\n".join(output2)
+
+    # Verify that Creation time and Storage class update time fields display and
+    # are the same as the times set in the object message.
+    find_time_created_re = re.compile(
+        r'^\s*Creation time:\s+(?P<time_created_val>.+)$',
+        re.MULTILINE)
+    time_created_match = re.search(find_time_created_re, output2)
+    self.assertIsNotNone(time_created_match)
+    time_created = time_created_match.group('time_created_val')
+    self.assertEqual(time_created, datetime.strftime(
+        current_time, '%a, %d %b %Y %H:%M:%S GMT'))
+    find_stor_update_re_2 = re.compile(
+        r'^\s*Storage class update time:+(?P<stor_update_time_val_2>.+)$',
+        re.MULTILINE)
+    stor_update_time_match_2 = re.search(find_stor_update_re_2, output2)
+    self.assertIsNotNone(stor_update_time_match_2)
+    stor_update_time = stor_update_time_match_2.group('stor_update_time_val_2')
+    self.assertEqual(stor_update_time, datetime.strftime(
+        new_update_time, '%a, %d %b %Y %H:%M:%S GMT'))
 
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
@@ -215,6 +290,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     find_time_updated_re = re.compile(
         r'^\s*Update time:\s+(?P<time_updated_val>.+)$', re.MULTILINE)
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
+
     time_created_match = re.search(find_time_created_re, stdout)
     time_updated_match = re.search(find_time_updated_re, stdout)
     time_created = time_created_match.group('time_created_val')

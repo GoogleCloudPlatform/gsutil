@@ -32,7 +32,7 @@ UNENCRYPTED_FULL_LISTING_FIELDS = [
     'contentEncoding', 'contentLanguage', 'contentType',
     'customerEncryption', 'etag', 'generation', 'metadata',
     'metageneration', 'size', 'storageClass', 'timeCreated', 'timeDeleted',
-    'updated']
+    'updated', 'timeStorageClassUpdated']
 
 
 def PrintNewLine():

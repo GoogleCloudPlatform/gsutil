@@ -1200,6 +1200,11 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   if obj.updated:
     print MakeMetadataLine(
         'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+  if (obj.timeStorageClassUpdated and
+      obj.timeStorageClassUpdated != obj.timeCreated):
+    print MakeMetadataLine(
+        'Storage class update time',
+        obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
   if obj.storageClass:
     print MakeMetadataLine('Storage class', obj.storageClass)
   if obj.cacheControl:

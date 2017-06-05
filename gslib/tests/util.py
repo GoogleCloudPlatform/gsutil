@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+from cStringIO import StringIO
 import functools
 import os
 import pkgutil
@@ -633,3 +634,24 @@ class TestParams(object):
       raise TypeError('TestParam args must be a tuple or list.')
     if not isinstance(self.kwargs, dict):
       raise TypeError('TestParam kwargs must be a dict.')
+
+
+class CaptureStdout(list):
+  """Context manager.
+
+  For example, this function has the lines printed by the function call
+  stored as a list in output:
+
+  with CaptureStdout() as output:
+    function(input_to_function)
+  """
+
+  def __enter__(self):
+    self._stdout = sys.stdout
+    sys.stdout = self._stringio = StringIO()
+    return self
+
+  def __exit__(self, *args):
+    self.extend(self._stringio.getvalue().splitlines())
+    del self._stringio
+    sys.stdout = self._stdout
