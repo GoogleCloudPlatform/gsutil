@@ -555,8 +555,8 @@ def GetGsutilClientIdAndSecret():
   Returns:
     Tuple of strings (client ID, secret).
   """
-
-  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
+      os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'):
     # Cloud SDK installs have a separate client ID / secret.
     return ('32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
             'ZmssLNjJy2998hD4CTg2ejr2')                # Cloud SDK secret
