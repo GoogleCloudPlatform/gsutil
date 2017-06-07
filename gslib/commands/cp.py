@@ -681,11 +681,11 @@ _OPTIONS_TEXT = """
                  object version doesn't match the version-specific URL. See
                  "gsutil help versions" for more details.
 
-  -z <ext,...>   Applies gzip content-encoding to file uploads with the given
-                 extensions. This is useful when uploading files with
-                 compressible content (such as .js, .css, or .html files)
-                 because it saves network bandwidth and space in Google Cloud
-                 Storage, which in turn reduces storage costs.
+  -z <ext,...>   Applies gzip content-encoding to any file upload whose
+                 extension matches the -z extension list. This is useful when
+                 uploading files with compressible content (such as .js, .css,
+                 or .html files) because it saves network bandwidth and space
+                 in Google Cloud Storage, which in turn reduces storage costs.
 
                  When you specify the -z option, the data from your files is
                  compressed before it is uploaded, but your actual files are
@@ -697,18 +697,22 @@ _OPTIONS_TEXT = """
 
                  For example, the following command:
 
-                   gsutil cp -z html -a public-read cattypes.html gs://mycats
+                   gsutil cp -z html -a public-read \\
+                     cattypes.html tabby.jpeg gs://mycats
 
                  will do all of the following:
 
-                 - Upload as the object gs://mycats/cattypes.html (cp command)
-                 - Set the Content-Type to text/html (based on file extension)
+                 - Upload the files cattypes.html and tabby.jpeg to the bucket
+                   gs://mycats (cp command)
+                 - Set the Content-Type of cattypes.html to text/html and
+                   tabby.jpeg to image/jpeg (based on file extensions)
                  - Compress the data in the file cattypes.html (-z option)
-                 - Set the Content-Encoding to gzip (-z option)
-                 - Set the ACL to public-read (-a option)
+                 - Set the Content-Encoding for cattypes.html to gzip
+                   (-z option)
+                 - Set the ACL for both files to public-read (-a option)
                  - If a user tries to view cattypes.html in a browser, the
                    browser will know to uncompress the data based on the
-                   Content-Encoding header, and to render it as HTML based on
+                   Content-Encoding header and to render it as HTML based on
                    the Content-Type header.
 
                  Note that if you download an object with Content-Encoding:gzip
