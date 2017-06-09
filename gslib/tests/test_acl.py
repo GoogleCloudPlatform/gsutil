@@ -578,8 +578,10 @@ class TestAcl(TestAclBase):
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
     def _DeleteAcl():
+      # Make sure we treat grant addresses case insensitively.
+      delete_grant = self.GROUP_TEST_ADDRESS.upper()
       self.RunGsUtil(self._ch_acl_prefix +
-                     ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
+                     ['-d', delete_grant, suri(obj)])
       json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                  return_stdout=True)
       self.assertNotRegexpMatches(json_text, test_regex)

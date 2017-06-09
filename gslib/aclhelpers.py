@@ -293,15 +293,15 @@ class AclDel(object):
       An apitools_messages.BucketAccessControl or ObjectAccessControl.
     """
     for entry in current_acl:
-      if entry.entityId and self.identifier == entry.entityId:
+      if entry.entityId and self.identifier.lower() == entry.entityId.lower():
         yield entry
-      elif entry.email and self.identifier == entry.email:
+      elif entry.email and self.identifier.lower() == entry.email.lower():
         yield entry
-      elif entry.domain and self.identifier == entry.domain:
+      elif entry.domain and self.identifier.lower() == entry.domain.lower():
         yield entry
       elif (entry.projectTeam and
-            self.identifier == '%s-%s' % (entry.projectTeam.team,
-                                          entry.projectTeam.projectNumber)):
+            self.identifier.lower() == '%s-%s'.lower() % (
+                entry.projectTeam.team, entry.projectTeam.projectNumber)):
         yield entry
       elif entry.entity.lower() == 'allusers' and self.identifier == 'AllUsers':
         yield entry
