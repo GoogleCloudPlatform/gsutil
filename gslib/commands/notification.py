@@ -138,6 +138,11 @@ _CREATE_DESCRIPTION = """
   This command will check to see if that permission exists and, if not, will
   attempt to grant it.
 
+  You can create multiple notification configurations for a bucket, but their
+  triggers cannot overlap such that a single event could send multiple
+  notifications. Attempting to create a notification configuration that
+  overlaps with an exisitng notification configuration results in an error.
+
 <B>CREATE EXAMPLES</B>
   Begin sending notifications of all changes to the bucket example-bucket
   to the Cloud Pub/Sub topic projects/default-project/topics/example-bucket:
