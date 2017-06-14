@@ -548,10 +548,13 @@ content_language = en
 # storage service developers.
 #json_api_version = v1
 
-# Specifies the API to use when interacting with cloud storage providers.  If
-# the gsutil command supports this API for the provider, it will be used
-# instead of the default.
-# Commands typically default to XML for S3 and JSON for GCS.
+# Specifies the API to use when interacting with cloud storage providers. If the
+# gsutil command supports this API for the provider, it will be used instead of
+# the default API. Commands typically default to XML for S3 and JSON for GCS.
+# Note that if any encryption configuration options are set (see above), the
+# JSON API will be used for interacting with Google Cloud Storage buckets even
+# if XML is preferred, as gsutil does not currently support this functionality
+# when using the XML API.
 #prefer_api = json
 #prefer_api = xml
 
