@@ -120,6 +120,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     self.assertIn('OS: ', stdout)
     self.assertIn('multiprocessing available: ', stdout)
     self.assertIn('using cloud sdk: ', stdout)
+    self.assertIn('pass cloud sdk credentials to gsutil: ', stdout)
     self.assertIn('config path(s): ', stdout)
     self.assertIn('gsutil path: ', stdout)
     self.assertIn('compiled crcmod: ', stdout)

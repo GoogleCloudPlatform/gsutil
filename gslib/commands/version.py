@@ -110,6 +110,7 @@ class VersionCommand(Command):
           'OS: {os_version}\n'
           'multiprocessing available: {multiprocessing_available}\n'
           'using cloud sdk: {cloud_sdk}\n'
+          'pass cloud sdk credentials to gsutil: {cloud_sdk_credentials}\n'
           'config path(s): {config_paths}\n'
           'gsutil path: {gsutil_path}\n'
           'compiled crcmod: {compiled_crcmod}\n'
@@ -126,6 +127,9 @@ class VersionCommand(Command):
           multiprocessing_available=(
               CheckMultiprocessingAvailableAndInit().is_available),
           cloud_sdk=(os.environ.get('CLOUDSDK_WRAPPER') == '1'),
+          cloud_sdk_credentials=(
+              os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'
+          ),
           config_paths=config_paths,
           gsutil_path=gslib.GSUTIL_PATH,
           compiled_crcmod=UsingCrcmodExtension(crcmod),
