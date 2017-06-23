@@ -128,7 +128,8 @@ class VersionCommand(Command):
               CheckMultiprocessingAvailableAndInit().is_available),
           cloud_sdk=(os.environ.get('CLOUDSDK_WRAPPER') == '1'),
           cloud_sdk_credentials=(
-              os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'
+              os.environ.get(
+                  'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == 'True'
           ),
           config_paths=config_paths,
           gsutil_path=gslib.GSUTIL_PATH,

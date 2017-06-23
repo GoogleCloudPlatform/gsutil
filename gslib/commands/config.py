@@ -1131,7 +1131,7 @@ class ConfigCommand(Command):
     # when running in the Cloud SDK, unless they have the Cloud SDK configured
     # not to pass credentials to gsutil.
     if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
-        os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1' and
+        os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == 'True' and
         not has_a and configure_auth):
       raise CommandException('\n'.join([
           'OAuth2 is the preferred authentication mechanism with the Cloud '
