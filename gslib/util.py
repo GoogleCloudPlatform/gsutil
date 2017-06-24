@@ -700,14 +700,7 @@ def GetBotoConfigFileList():
   config_paths = boto.pyami.config.BotoConfigLocations
   if 'AWS_CREDENTIAL_FILE' in os.environ:
     config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
-  config_files = {}
-  for config_path in config_paths:
-    if os.path.exists(config_path):
-      config_files[config_path] = 1
-  cf_list = []
-  for config_file in config_files:
-    cf_list.append(config_file)
-  return cf_list
+  return [cfg_path for cfg_path in config_paths if os.path.exists(cfg_path)]
 
 
 def GetCertsFile():
