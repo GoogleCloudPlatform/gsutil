@@ -1,3 +1,35 @@
+Release 4.27 (release date: 2017-06-29)
+=======================================
+New features
+------------------
+- When using the JSON API, the "ls -L" and "stat" commands now print an object's
+  storage class update time if it differs from the object's creation time; this
+  occurs when the storage class has been changed due to the bucket's lifecycle
+  management configuration.
+- Listing a bucket's metadata via "ls -Lb" now prints its metageneration.
+
+Bug Fixes
+------------------
+- When specifying custom metadata values using the top-level -h option, such
+  values may now include unicode characters as well as multiple ":" characters.
+- For Cloud SDK (gcloud) distributions of gsutil, if you have configured the
+  Cloud SDK to not pass credentials to gsutil (by running "gcloud config set
+  pass_credentials_to_gsutil false"), gsutil will now correctly work with
+  credentials obtained via "gsutil config". This would previously result in an
+  error with a message to run "gcloud auth login". Additionally, the "gsutil
+  config" command no longer prompts users to run "gcloud auth login" if this
+  option is set to false. This should allow switching between stand-alone
+  gsutil installations and gcloud-packaged gsutil installations more easily.
+- The config_file_list section in debug output now displays files in the order
+  that they are loaded.
+
+Other Changes
+------------------
+- Added XML support for some commands which previously only worked via the JSON
+  API ("lifecycle" and "defstorageclass").
+- Several documentation updates and clarifications.
+
+
 Release 4.26 (release date: 2017-05-03)
 =======================================
 New features
