@@ -70,14 +70,13 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The signurl command will generate signed urls that can be used to access
-  the specified objects without authentication for a specific period of time.
-
-  Please see the `Signed URLs documentation
+  The signurl command will generate a signed URL that embeds authentication data
+  so the URL can be used by someone who does not have a Google account. Please
+  see the `Signed URLs documentation
   <https://cloud.google.com/storage/docs/access-control/signed-urls>`_ for
   background about signed URLs.
 
-  Multiple gs:// urls may be provided and may contain wildcards.  A signed url
+  Multiple gs:// urls may be provided and may contain wildcards. A signed url
   will be produced for each provided url, authorized
   for the specified HTTP method and valid for the given duration.
 
@@ -86,12 +85,12 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil signurl <private-key-file> gs://some-bucket/some-object/
 
-  The signurl command uses the private key for a  service account (the
+  The signurl command uses the private key for a service account (the
   '<private-key-file>' argument) to generate the cryptographic
   signature for the generated URL. The private key file must be in PKCS12
   or JSON format. If the private key is encrypted the signed url command will
   prompt for the passphrase used to protect the private key file
-  (default 'notasecret').  For more information regarding generating a private
+  (default 'notasecret'). For more information regarding generating a private
   key for use with the signurl command please see the `Authentication
   documentation.
   <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_
