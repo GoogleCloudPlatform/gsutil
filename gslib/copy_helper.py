@@ -35,7 +35,6 @@ import re
 import shutil
 import stat
 import subprocess
-import sys
 import tempfile
 import textwrap
 import time
@@ -1348,7 +1347,7 @@ def _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata):
   else:
     content_type_msg = ''
   if src_url.IsFileUrl() and (src_url.IsStream() or src_url.IsFifo()):
-    src_text = "<STDIN>" if src_url.IsStream() else "named pipe"
+    src_text = '<STDIN>' if src_url.IsStream() else 'named pipe'
     logger.info('Copying from %s%s...', src_text, content_type_msg)
   else:
     logger.info('Copying %s%s...', src_url.url_string, content_type_msg)
@@ -1453,6 +1452,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
     if not content_type:
       content_type = DEFAULT_CONTENT_TYPE
     dst_obj_metadata.contentType = content_type
+
 
 # pylint: disable=undefined-variable
 def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
@@ -3155,7 +3155,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
 
     src_obj_size = src_obj_metadata.size
     dst_obj_metadata.contentType = src_obj_metadata.contentType
-    if global_copy_helper_opts.preserve_acl:
+    if global_copy_helper_opts.preserve_acl and dst_url.IsCloudUrl():
       if src_url.scheme == 'gs' and not src_obj_metadata.acl:
         raise CommandException(
             'No OWNER permission found for object %s. OWNER permission is '
