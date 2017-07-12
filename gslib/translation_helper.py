@@ -635,19 +635,29 @@ class CorsTranslation(object):
     Args:
       json_cors: JSON string representing CORS configuration.
 
+    Raises:
+      ArgumentException on invalid CORS JSON data.
+
     Returns:
       List of apitools Bucket.CorsValueListEntry. An empty list represents
       no CORS configuration.
     """
+    deserialized_cors = None
     try:
       deserialized_cors = json.loads(json_cors)
-      cors = []
-      for cors_entry in deserialized_cors:
-        cors.append(encoding.DictToMessage(
-            cors_entry, apitools_messages.Bucket.CorsValueListEntry))
-      return cors
     except ValueError:
       CheckForXmlConfigurationAndRaise('CORS', json_cors)
+
+    if not isinstance(deserialized_cors, list):
+      raise ArgumentException(
+          'CORS JSON should be formatted as a list containing one or more JSON '
+          'objects.\nSee "gsutil help cors".')
+
+    cors = []
+    for cors_entry in deserialized_cors:
+      cors.append(encoding.DictToMessage(
+          cors_entry, apitools_messages.Bucket.CorsValueListEntry))
+    return cors
 
   @classmethod
   def MessageEntriesToJson(cls, cors_message):
