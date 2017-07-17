@@ -34,7 +34,6 @@ import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
 from gslib.util import DiscardMessagesQueue
-from gslib.util import GsutilStreamHandler
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -93,7 +92,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.log_handlers_save = self.root_logger.handlers
     fd, self.log_handler_file = tempfile.mkstemp()
     self.log_handler_stream = os.fdopen(fd, 'w+')
-    self.temp_log_handler = GsutilStreamHandler(self.log_handler_stream)
+    self.temp_log_handler = logging.StreamHandler(self.log_handler_stream)
     self.root_logger.handlers = [self.temp_log_handler]
 
   def tearDown(self):

@@ -476,10 +476,6 @@ class IamCommand(Command):
           threaded_wildcards, self.recursion_requested,
           all_versions=self.all_versions)
 
-      # N.B.: Python2.6 support means we can't use a partial function here to
-      # curry the bindings tuples into the wrapper function. We instead pass
-      # the bindings along by zipping them with each name_expansion_iterator
-      # result. See http://bugs.python.org/issue5228.
       serialized_bindings_tuples_it = itertools.repeat(
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
       self.Apply(
@@ -582,8 +578,6 @@ class IamCommand(Command):
           threaded_wildcards, self.recursion_requested,
           all_versions=self.all_versions)
 
-      # We cannot curry policy along due to a Python2.6 bug; see comments in
-      # IamCommand._PatchIam for more information.
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
           _SetIamWrapper,

@@ -146,7 +146,6 @@ class DaisyChainWrapper(object):
     self.download_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
-    # Python 2.6 will return None on timeout.
     if self.download_started.wait(60) == False:
       raise Exception('Could not start download thread after 60 seconds.')
 

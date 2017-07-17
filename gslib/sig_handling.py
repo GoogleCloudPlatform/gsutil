@@ -119,9 +119,8 @@ def KillProcess(pid):
     pid: The process ID.
   """
   try:
-    # os.kill doesn't work in 2.X or 3.Y on Windows for any X < 7 or Y < 2.
-    if IS_WINDOWS and ((2, 6) <= sys.version_info[:3] < (2, 7) or
-                       (3, 0) <= sys.version_info[:3] < (3, 2)):
+    # os.kill doesn't work in Python3 versions before 3.2.
+    if IS_WINDOWS and ((3, 0) <= sys.version_info[:3] < (3, 2)):
       kernel32 = ctypes.windll.kernel32
       handle = kernel32.OpenProcess(1, 0, pid)
       kernel32.TerminateProcess(handle, 0)

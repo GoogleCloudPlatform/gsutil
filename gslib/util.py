@@ -1738,24 +1738,6 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
   return WarnAfterManyRetriesHandler
 
 
-class GsutilStreamHandler(logging.StreamHandler):
-  """A subclass of StreamHandler for use in gsutil."""
-
-  def flush(self):
-    # Note: we override the flush method here due to a python 2.6 bug. The
-    # python logging module will try to flush all stream handlers at exit.
-    # If the StreamHandler is pointing to a file that is already closed, the
-    # method throws an exception. Our unit tests temporarily redirect stderr,
-    # which causes the default StreamHandler to open its stream against a
-    # temporary file. By the time the process shuts down, the underlying file
-    # is closed, causing an exception. This was fixed in Python 2.7, but to
-    # remove the flake from Python 2.6, we maintain this here.
-    try:
-      logging.StreamHandler.flush(self)
-    except ValueError:
-      pass
-
-
 def StdinIterator():
   """A generator function that returns lines from stdin."""
   for line in sys.stdin:

@@ -39,10 +39,6 @@ from gslib.util import LazyWrapper
 from gslib.util import MakeHumanReadable
 from gslib.util import UsingCrcmodExtension
 
-if not hasattr(unittest.TestCase, 'assertIsNone'):
-  # external dependency unittest2 required for Python <= 2.6
-  import unittest2 as unittest  # pylint: disable=g-import-not-at-top
-
 # pylint: disable=g-import-not-at-top, g-long-lambda
 if not IS_WINDOWS:
   import grp

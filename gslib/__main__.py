@@ -75,7 +75,6 @@ from gslib.util import GetBotoConfigFileList
 from gslib.util import GetCertsFile
 from gslib.util import GetCleanupFiles
 from gslib.util import GetGsutilClientIdAndSecret
-from gslib.util import GsutilStreamHandler
 from gslib.util import ProxyInfoFromEnvironmentVar
 from gslib.util import UTF8
 from gslib.sig_handling import GetCaughtSignals
@@ -188,7 +187,7 @@ def _ConfigureLogging(level=logging.INFO):
   log_format = '%(levelname)s %(asctime)s %(filename)s] %(message)s'
   date_format = '%m%d %H:%M:%S.%f'
   formatter = GsutilFormatter(fmt=log_format, datefmt=date_format)
-  handler = GsutilStreamHandler()
+  handler = logging.StreamHandler()
   handler.setFormatter(formatter)
   root_logger = logging.getLogger()
   root_logger.addHandler(handler)
@@ -234,8 +233,8 @@ def main():
   global debug
   global test_exception_traces
 
-  if not (2, 6) <= sys.version_info[:3] < (3,):
-    raise CommandException('gsutil requires python 2.6 or 2.7.')
+  if not (2, 7) <= sys.version_info[:3] < (3,):
+    raise CommandException('gsutil requires python 2.7.')
 
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
@@ -369,10 +368,6 @@ def main():
 
     _CheckAndWarnForProxyDifferences()
 
-    if not test_exception_traces:
-      # Disable warning for tests, as it interferes with test stderr parsing.
-      _CheckAndWarnForPython26()
-
     if os.environ.get('_ARGCOMPLETE', '0') == '1':
       return _PerformTabCompletion(command_runner)
 
@@ -383,16 +378,6 @@ def main():
         perf_trace_token=perf_trace_token)
   finally:
     _Cleanup()
-
-
-def _CheckAndWarnForPython26():
-  if (2, 6) == sys.version_info[:2]:
-    sys.stderr.write('\n'.join(textwrap.wrap(
-        'Warning: You are running Python 2.6, which stopped receiving '
-        'security patches as of October 2013. gsutil will stop supporting '
-        'Python 2.6 on September 1, 2016. Please update your Python '
-        'installation to 2.7 to ensure compatibility with future gsutil '
-        'versions.\n')))
 
 
 def _CheckAndWarnForProxyDifferences():

@@ -109,7 +109,7 @@ _DETAILED_HELP_TEXT = ("""
 
   https://pypi.python.org/pypi/crcmod/1.7
 
-  MSI installers are available for the 32-bit versions of Python 2.6 and 2.7.
+  MSI installers are available for the 32-bit versions of Python 2.7.
   Make sure to install to a 32-bit Python directory. If you're using 64-bit
   Python it won't work with 32-bit crcmod, and instead you'll need to install
   32-bit Python in order to use crcmod.

@@ -46,7 +46,6 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
       self.RunCommand('hash', args=['non-existent-file'])
       self.fail('Did not get expected CommandException')
     except CommandException, e:
-      # assertRaisesRegexp causes issues with python 2.6.
       self.assertIn('No files matched', e.reason)
 
   def testHashHexFormat(self):

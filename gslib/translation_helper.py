@@ -21,6 +21,7 @@ import json
 import re
 import textwrap
 import xml.etree.ElementTree
+from xml.etree.ElementTree import ParseError as XmlParseError
 
 from apitools.base.py import encoding
 import boto
@@ -43,13 +44,6 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import Preconditions
 from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-
-# In Python 2.6, ElementTree raises ExpatError instead of ParseError.
-# pylint: disable=g-import-not-at-top
-try:
-  from xml.etree.ElementTree import ParseError as XmlParseError
-except ImportError:
-  from xml.parsers.expat import ExpatError as XmlParseError
 
 CACHE_CONTROL_REGEX = re.compile(r'^cache-control', re.I)
 CONTENT_DISPOSITION_REGEX = re.compile(r'^content-disposition', re.I)
