@@ -1698,11 +1698,14 @@ class GcsJsonApi(CloudApi):
             message or 'Bad Request', status=e.status_code)
     if isinstance(e, apitools_exceptions.StreamExhausted):
       return ResumableUploadAbortException(e.message)
-    if (isinstance(e, apitools_exceptions.TransferError) and
-        ('Aborting transfer' in e.message or
-         'Not enough bytes in stream' in e.message or
-         'additional bytes left in stream' in e.message)):
-      return ResumableUploadAbortException(e.message)
+    if isinstance(e, apitools_exceptions.TransferError):
+      if ('Aborting transfer' in e.message or
+          'Not enough bytes in stream' in e.message):
+        return ResumableUploadAbortException(e.message)
+      elif 'additional bytes left in stream' in e.message:
+        return ResumableUploadAbortException(
+            '%s; this can happen if a file changes size while being uploaded' %
+            e.message)
 
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
                                   generation=None, not_found_exception=None):

@@ -333,7 +333,12 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
     exc = apitools_exceptions.TransferError('Aborting transfer')
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException)) 
+    exc = apitools_exceptions.TransferError('additional bytes left in stream')
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
+    self.assertIn('this can happen if a file changes size',
+                  translated_exc.reason)
 
   def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
