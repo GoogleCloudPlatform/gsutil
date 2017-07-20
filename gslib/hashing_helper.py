@@ -18,6 +18,7 @@ import base64
 import binascii
 from hashlib import md5
 import os
+import sys
 
 from boto import config
 import crcmod
@@ -415,6 +416,7 @@ class HashingFileUploadWrapper(object):
       self._digesters_previous[alg] = self._digesters[alg].copy()
       self._digesters[alg].update(data)
     self._digesters_current_mark += len(data)
+    # sys.stderr.write('DEBUG: data received %s of size %d\n' % (data, len(data)))
     return data
 
   def tell(self):  # pylint: disable=invalid-name

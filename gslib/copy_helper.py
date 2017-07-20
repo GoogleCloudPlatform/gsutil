@@ -143,7 +143,11 @@ from gslib.util import SECONDS_PER_DAY
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+from gslib.util import GetRunningInParallel
+from gslib.util import GetMaxSystemMemory
 from gslib.wildcard_iterator import CreateWildcardIterator
+
+from gslib.disk_read_object import DiskReadFileWrapperObject
 
 # pylint: disable=g-import-not-at-top
 if IS_WINDOWS:
@@ -260,7 +264,6 @@ suggested_sliced_transfers = (
     AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
     else AtomicDict(manager=gslib.util.manager))
 suggested_sliced_transfers_lock = CreateLock()
-
 
 class FileConcurrencySkipError(Exception):
   """Raised when skipping a file due to a concurrent, duplicate copy."""
@@ -1488,6 +1491,7 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
 
   if src_url.IsStream() or src_url.IsFifo():
     # TODO: gsutil-beta: Provide progress callbacks for streaming uploads.
+    # print('upload object streaming')
     uploaded_object = gsutil_api.UploadObjectStreaming(
         src_obj_filestream, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl,
@@ -1495,12 +1499,14 @@ def _UploadFileToObjectNonResumable(src_url, src_obj_filestream,
         encryption_tuple=encryption_tuple, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS)
   else:
+    # print('gsutil api upload object')
     uploaded_object = gsutil_api.UploadObject(
         src_obj_filestream, object_metadata=dst_obj_metadata,
         canned_acl=global_copy_helper_opts.canned_acl, size=src_obj_size,
         preconditions=preconditions, progress_callback=progress_callback,
         encryption_tuple=encryption_tuple, provider=dst_url.scheme,
         fields=UPLOAD_RETURN_FIELDS)
+    # print('done uploading %s' % src_url.object_name)
   end_time = time.time()
   elapsed_time = end_time - start_time
 
@@ -1529,6 +1535,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
     Elapsed upload time, uploaded Object with generation, md5, and size fields
     populated.
   """
+  print 'in upload file to object resumable'
   tracker_file_name = GetTrackerFilePath(
       dst_url, TrackerFileType.UPLOAD,
       gsutil_api.GetApiSelector(provider=dst_url.scheme))
@@ -1589,6 +1596,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
   # the next time the user runs gsutil and attempts the same upload).
   while retryable:
     try:
+      print 'retrying'
       uploaded_object = gsutil_api.UploadObjectResumable(
           src_obj_filestream, object_metadata=dst_obj_metadata,
           canned_acl=global_copy_helper_opts.canned_acl,
@@ -1605,11 +1613,14 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       num_startover_attempts += 1
       retryable = (num_startover_attempts < GetNumRetries())
       if not retryable:
+        logger.info('reached retryable attempts')
+        print 'DEBUG: reached retryable attempts'
         raise
 
       # If the server sends a 404 response code, then the upload should only
       # be restarted if it was the object (and not the bucket) that was missing.
       try:
+        print 'DEBUG: GOT 404 RESPONSE CODE'
         gsutil_api.GetBucket(dst_obj_metadata.bucket, provider=dst_url.scheme)
       except NotFoundException:
         raise
@@ -1617,6 +1628,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       logger.info('Restarting upload from scratch after exception %s', e)
       DeleteTrackerFile(tracker_file_name)
       tracker_data = None
+      print 'DEBUG: SEEK STREAM'
       src_obj_filestream.seek(0)
       # Reset the progress callback handler.
       component_num = _GetComponentNumber(dst_url) if is_component else None
@@ -1646,6 +1658,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
   end_time = time.time()
   elapsed_time = end_time - start_time
 
+  print 'DEBUG: END OF RETRY\n'
   return (elapsed_time, uploaded_object)
 
 
@@ -1662,6 +1675,7 @@ def _CompressFileForUpload(src_url, src_obj_filestream, src_obj_size, logger):
   Returns:
     StorageUrl path to compressed file, compressed file size.
   """
+  print 'beginning of compress file for upload'
   # TODO: Compress using a streaming model as opposed to all at once here.
   if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
     logger.info(
@@ -1728,6 +1742,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   Raises:
     CommandException: if errors encountered.
   """
+  # print('in upload file to object')
   if not dst_obj_metadata or not dst_obj_metadata.contentLanguage:
     content_language = config.get_value('GSUtil', 'content_language')
     if content_language:
@@ -1776,6 +1791,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
   if ((src_url.IsStream() or src_url.IsFifo()) and
       gsutil_api.GetApiSelector(provider=dst_url.scheme) == ApiSelector.JSON):
     orig_stream = upload_stream
+    # print 'resumable streaming'
     # Add limited seekable properties to the stream via buffering.
     upload_stream = ResumableStreamingJsonUploadWrapper(
         orig_stream, GetJsonResumableChunkSize())
@@ -1784,6 +1800,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     # Parallel composite uploads calculate hashes per-component in subsequent
     # calls to this function, but the composition of the final object is a
     # cloud-only operation.
+    # print 'hashing file upload wrapper'
     wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
                                                   hash_algs, upload_url, logger)
   else:
@@ -1791,6 +1808,7 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
 
   try:
     if parallel_composite_upload:
+      # print('parallel composite upload')
       elapsed_time, uploaded_object = _DoParallelCompositeUpload(
           upload_stream, upload_url, dst_url, dst_obj_metadata,
           global_copy_helper_opts.canned_acl, upload_size, preconditions,
@@ -1798,14 +1816,17 @@ def _UploadFileToObject(src_url, src_obj_filestream, src_obj_size,
     elif (upload_size < ResumableThreshold() or
           src_url.IsStream() or
           src_url.IsFifo()):
+      # print('nonresumable')
       elapsed_time, uploaded_object = _UploadFileToObjectNonResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,
           dst_obj_metadata, preconditions, gsutil_api)
     else:
+      # print('resumable')
       elapsed_time, uploaded_object = _UploadFileToObjectResumable(
           upload_url, wrapped_filestream, upload_size, dst_url,
           dst_obj_metadata, preconditions, gsutil_api, logger,
           is_component=is_component)
+      print 'after upload file to object resumable'
 
   finally:
     if zipped_file:
@@ -3123,6 +3144,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         and the source is an unsupported type.
     CommandException: if other errors encountered.
   """
+  print('PERFORM COPY')
   # TODO: Remove elapsed_time as it is currently unused by all callers.
   if headers:
     dst_obj_headers = headers.copy()
@@ -3171,7 +3193,21 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
           AddS3MarkerAclToObjectMetadata(dst_obj_metadata, acl_text)
   else:  # src_url.IsFileUrl()
     try:
-      src_obj_filestream = GetStreamFromFileUrl(src_url)
+      print 'running_in_parallel %d' % GetRunningInParallel()
+      if(config.getbool('GSUtil', 'parallel_disk_optimization', False) and
+         GetRunningInParallel()):
+        """If the parallel_disk_optimization feature is turned on, then the
+        src_obj_filestream is created and maintained by the
+        DiskReadFileWrapperObject
+        """
+        sys.stderr.write('CREATING A DISK WRAPPER OBJECT')
+        max_buffer_size = GetMaxSystemMemory()/10
+        src_obj = DiskReadFileWrapperObject(src_url, src_obj_metadata.size,
+                                            max_buffer_size)
+        src_obj_filestream = src_obj.open()
+      else:
+        print 'normal stream'
+        src_obj_filestream = GetStreamFromFileUrl(src_url)
     except Exception, e:  # pylint: disable=broad-except
       message = 'Error opening file "%s": %s.' % (src_url, e.message)
       if command_obj.continue_on_error:

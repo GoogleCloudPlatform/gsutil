@@ -160,6 +160,9 @@ LONG_RETRY_WARN_SEC = 10
 
 SECONDS_PER_DAY = 86400L
 
+running_in_parallel = False
+DEFAULT_MAX_SYSTEM_MEMORY = 5120
+
 global manager  # pylint: disable=global-at-module-level
 # Single certs file for use across all processes.
 configured_certs_file = None
@@ -706,6 +709,12 @@ def GetBotoConfigFileList():
 def GetCertsFile():
   return configured_certs_file
 
+def GetRunningInParallel():
+  return running_in_parallel
+
+def GetMaxSystemMemory():
+  return boto.config.getint('GSUtil', 'max_system_memory',
+                            DEFAULT_MAX_SYSTEM_MEMORY)
 
 def ConfigureCertsFile():
   """Configures and returns the CA Certificates file.

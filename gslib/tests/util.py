@@ -389,6 +389,33 @@ def SequentialAndParallelTransfer(func):
   return Wrapper
 
 
+def ParallelDiskOptimizationOnOff(func):
+  """Decorator for tests that perform file to object transfers, or vice versa.
+
+  This forces the test to run once normally, and again with special boto
+  config settings that will ensure that the tests return the same results
+  with and without the parallel optimization feature turned on.
+
+  Args:
+    func: Function to wrap.
+
+  Returns:
+    Wrapped function.
+  """
+  @functools.wraps(func)
+  def Wrapper(*args, **kwargs):
+    # Run the test normally once.
+    func(*args, **kwargs)
+
+    if not RUN_S3_TESTS and UsingCrcmodExtension(crcmod):
+      # Try again, forcing parallel upload and sliced download.
+      with SetBotoConfigForTest([
+          ('GSUtil', 'parallel_disk_optimization', '1')]):
+        func(*args, **kwargs)
+
+  return Wrapper
+
+
 def _SectionDictFromConfigList(boto_config_list):
   """Converts the input config list to a dict that is easy to write to a file.
 
