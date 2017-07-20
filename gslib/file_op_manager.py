@@ -32,7 +32,7 @@ class FileOpManager(object):
 
     self.max_memory = max_memory
 
-  def requestMemory(self, size):
+  def RequestMemory(self, size):
     """Receives an input size and determines whether file wrapper object
     should have permission to allocate a memory buffer of that size to store
     bytes from the disk read."""
@@ -49,7 +49,7 @@ class FileOpManager(object):
         else:
           return False
 
-  def incMemory(self, size):
+  def IncMemory(self, size):
     if self.multiprocessing_is_available:
       with self.lock:
         self.memory_used.value += size
@@ -57,7 +57,7 @@ class FileOpManager(object):
       with self.lock:
         self.memory_used += size
 
-  def decMemory(self, size):
+  def DecMemory(self, size):
     self.available.acquire()
 
     if self.multiprocessing_is_available:
@@ -77,7 +77,7 @@ class FileOpManager(object):
         self.available.notifyAll()
         self.available.release()
 
-  def getUsedMemory(self):
+  def GetUsedMemory(self):
     if self.multiprocessing_is_available:
       with self.lock:
         return self.memory_used.value
