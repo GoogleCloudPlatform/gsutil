@@ -24,12 +24,11 @@ import time
 from gslib.exception import CommandException
 
 WriteRequest = collections.namedtuple('WriteRequest', (
-    'success',         # whether the read operator succeeded or not
-    'position',        # the position where the read operator started
-    'data',            # the chunk read from disk
-    'data_len',        # length of the chunk read
-    'last',            # boolean whether it's the last read of the file
-    'err_msg'))        # error message if success is false
+    'success',         # Whether the read operator succeeded or not.
+    'position',        # The position where the read operator started.
+    'data',            # The data read.
+    'data_len',        # The length of the data read.
+    'err_msg'))        # Error message if success is False.
 
 
 class DiskReadFileWrapperObject(object):
@@ -43,13 +42,14 @@ class DiskReadFileWrapperObject(object):
     """Initializes the wrapper.
 
     Args:
-      source_file_url: source file that represents the file to be read
+      source_file_url: Source file that represents the file to be read
           from the disk.
-      source_file_size: size of the source file in bytes.
-      max_buffer_size: maximum buffer size for data read from disk.
+      source_file_size: Size of the source file in bytes.
+      max_buffer_size: Maximum buffer size that the file wrapper object
+        can request for a data read from disk at a time.
     """
 
-    # Local file information
+    # Local file information.
     self._source_url = source_file_url
     self.name = source_file_url.object_name
     self._size = source_file_size
@@ -64,18 +64,21 @@ class DiskReadFileWrapperObject(object):
     self._buffer_end = 0
     self._buffer_nonempty = threading.Condition()
     self._position = 0
-    # Most recently popped request from the buffer
-    self._current_request = WriteRequest(True, 0, b'', 0, False, None)
+    # Most recently popped request from the buffer.
+    self._current_request = WriteRequest(True, 0, b'', 0, None)
 
-    import gslib.command as command
+    # command is imported here so that the manager and file_obj_queue can
+    # be instantiated first in command.py.
+    import gslib.command as command   # pylint: disable=g-import-not-at-top
     self._global_manager = command.file_op_manager
 
     self._read_queue = command.file_obj_queue
 
     # Push first request for buffer of size max_buffer_size onto file operation
     # thread request queue.
-    last = (self._max_buffer_size >= self._size)
-    self._read_queue.put((self, self._max_buffer_size, last))
+    self._read_queue.put((self, self._max_buffer_size))
+
+    self.open()
 
   def open(self):
     """Opens the local file."""
@@ -85,10 +88,9 @@ class DiskReadFileWrapperObject(object):
       else:
         self._stream = open(self._source_url.object_name, 'rb')
       return self
-    except IOError as e:
+    except IOError:
       self.close()
       return False
-    return True
 
   def close(self):
     """Closes the local file, if necessary."""
@@ -98,38 +100,12 @@ class DiskReadFileWrapperObject(object):
         self._stream.close()
         self._stream = None
 
-  def _RequestRead(self, blocks=1):
+  def _RequestRead(self, blocks=1):  # pylint: disable=invalid-name
     """Queues a read for this file."""
     if not self._done:
       # Send "blocks" number of requests for max_buffer_size bytes to read.
-      # Also indicate whether this request is the last for the file.
       for _ in xrange(blocks):
-        last = (self._position + self._max_buffer_size >= self._size)
-        self._read_queue.put((self, self._max_buffer_size, last))
-
-  def _ReadFromBufferQueue(self):
-    """Blocks until data comes from the read thread and returns it."""
-    start_time = time.time()
-    complain_after = 60 * 5
-    complain_at = start_time + complain_after
-    complained = False
-    while True:
-      try:
-        # Pop from the left end of the buffer queue.
-        ret = self._buffer.popleft()
-        if complained:
-          now = time.time()
-          logging.warning('Got next chunk of %s after %d sec.',
-                          self._source_url, round(now - start_time))
-        return ret
-      except IndexError:
-        now = time.time()
-        if now >= complain_at:
-          logging.warning('Waiting for next chunk of %s. (%d sec so far)',
-                          self._source_url, round(now - start_time))
-          complain_after *= 2
-          complain_at = start_time + complain_after
-          complained = True
+        self._read_queue.put((self, self._max_buffer_size))
 
   def read(self, size=-1):
     """Reads "size" bytes from the file wrapper object stream.
@@ -138,10 +114,11 @@ class DiskReadFileWrapperObject(object):
       size: The size is the number of bytes that are to be read from the file.
           Default size is -1, which means read EOF.
 
-    Returns: "size" number of bytes from the file, and the rest of the file if
-        size=-1.
+    Returns:
+      "size" number of bytes from the file, and the rest of the file if
+          size=-1.
     """
-    read_all_bytes = size is None or size < 0
+    read_all_bytes = size == None or size < 0
     if read_all_bytes:
       bytes_remaining = self._size
     else:
@@ -160,8 +137,8 @@ class DiskReadFileWrapperObject(object):
         new_curr_req_data_len = self._current_request.data_len - read_size
         self._position += read_size
         self._current_request = WriteRequest(
-            True, self._position, read_from_curr_req, new_curr_req_data_len,
-            self._current_request.last, None)
+            True, self._position, read_from_curr_req,
+            new_curr_req_data_len, None)
         bytes_remaining -= read_size
       else:
         # Get data from buffer queue.
@@ -170,7 +147,7 @@ class DiskReadFileWrapperObject(object):
           # Block until the buffer queue has bytes to read.
           self._buffer_nonempty.wait()
 
-        self._current_request = self._ReadFromBufferQueue()
+        self._current_request = self._buffer.popleft()
         data_len = self._current_request.data_len
         self._buffer_start += data_len
 
@@ -181,7 +158,7 @@ class DiskReadFileWrapperObject(object):
         self._global_manager.available.notify()
         self._global_manager.available.release()
 
-        if(not self._current_request.last):
+        if self._position < self._size:
           self._RequestRead()
 
         self._buffer_nonempty.release()
@@ -205,11 +182,6 @@ class DiskReadFileWrapperObject(object):
       return
 
     with self._file_lock:
-      if self._stream is None:
-        if not self.open():
-          # Fail to open. open() already notified of the error.
-          return
-
       stream_position = self._stream.tell()
       try:
         data = []
@@ -217,9 +189,9 @@ class DiskReadFileWrapperObject(object):
         while True:
           data.append(self._stream.read(size))
           data_len += len(data[-1])
-          if(data_len == size or self._stream.tell() == self._size):
+          if data_len == size or self._stream.tell() == self._size:
             break
-      except IOError as e:
+      except IOError:
         self.close()
         return
 
@@ -228,8 +200,8 @@ class DiskReadFileWrapperObject(object):
 
       # Append new disk read onto local file operation buffer queue
       self._buffer_nonempty.acquire()
-      self._buffer.append(WriteRequest(True, stream_position, data, len(data),
-                                       self._done, None))
+      self._buffer.append(WriteRequest(True, stream_position, data,
+                                       len(data), None))
       self._buffer_nonempty.notify()
       self._buffer_nonempty.release()
       self._buffer_end += len(data)
@@ -254,7 +226,7 @@ class DiskReadFileWrapperObject(object):
 
   def closed(self):
     """Returns if the file is closed."""
-    return self._stream == None
+    return self._stream is None
 
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
     """Seeks on the buffered stream.
@@ -274,7 +246,7 @@ class DiskReadFileWrapperObject(object):
       # and os.SEEK_SET can be handled in the same way.
       offset = self._size - offset
 
-    if(offset == self._position):
+    if offset == self._position:
       return
     elif offset < self._position:
       # If need to seek to bytes before the buffer, invalidate buffer bytes.
@@ -285,7 +257,7 @@ class DiskReadFileWrapperObject(object):
       self._position = 0
       self._done = False
       self._stream.seek(0)
-      self._current_request = WriteRequest(True, 0, b'', 0, False, None)
+      self._current_request = WriteRequest(True, 0, b'', 0, None)
       self._buffer_nonempty = threading.Condition()
 
       self._global_manager.available.acquire()
@@ -293,12 +265,11 @@ class DiskReadFileWrapperObject(object):
       self._global_manager.available.notify()
       self._global_manager.available.release()
 
-      self._RequestRead()
       self.read(offset)
     elif self._offset < self._size:
       # Offset is greater than position and offset is within file size bounds.
       self._RequestRead()
       self.read(offset - self._position)
     else:
-      raise CommandException('Invalid seek mode on streaming upload. '
+      raise CommandException('Invalid seek mode, outside scope of file. '
                              '(mode %s, offset %s)' % (whence, offset))

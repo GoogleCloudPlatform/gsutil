@@ -19,14 +19,11 @@ from __future__ import absolute_import
 from functools import partial
 import os
 import pkgutil
-import mock
 
 from gslib.disk_read_object import DiskReadFileWrapperObject
 from gslib.storage_url import StorageUrlFromString
-from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
-from gslib.util import GetJsonResumableChunkSize
-from gslib.util import GetStreamFromFileUrl
+import mock
 
 _TEST_FILE = 'test.txt'
 TEST_MAX_BUFFER_SIZE = 512
@@ -52,16 +49,30 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     return self._temp_test_file
 
   def _mock_read(self, size=-1, wrapper_object_stream=None):
-    """Mock out the read operation for the file wrapper objects so that it
-    explicitly populates the buffer queue (mocking the File Operation
+    """Mock out the read operation for the file wrapper objects.
+
+    The mock explicitly populates the buffer queue (mocking the File Operation
     Thread's job of enqueuing the buffer queue) so that when seek is called,
-    there is data to read."""
+    there is data to read.
+
+    Args:
+      size: Size of memory to read from the disk. Default of -1 indicates
+        from the whole file.
+      wrapper_object_stream: Wrapper object stream that is to be read from.
+
+    Returns:
+      The bytes read from the disk and passed through the network by
+        the file wrapper object.
+    """
     wrapper_object_stream.ReadFromDisk(size)
     return wrapper_object_stream.original_read(size)
 
   def _GenerateMockObject(self):
-    """Generates a file wrapper object that wraps the test file and
-    includes _mock_read as the mocked read function."""
+    """Generates a file wrapper object.
+
+    The object wraps the test file and includes _mock_read as
+    the mocked read function.
+    """
     tmp_file = self._GetTestFile()
     self._test_wrapper = DiskReadFileWrapperObject(
         StorageUrlFromString(tmp_file), self._temp_test_file_len,
@@ -75,8 +86,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
                             wrapper_object_stream=self._test_wrapper_stream))
 
   def testInit(self):
-    """Creates a file wrapper object and confirms that the starting file
-    pointer is at the beginning of the file."""
+    """Confirms the starting file pointer is at the beginning of the file."""
     tmp_file = self._GetTestFile()
     self._test_wrapper = DiskReadFileWrapperObject(
         StorageUrlFromString(tmp_file), self._temp_test_file_len,
@@ -85,8 +95,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     self.assertEqual(0, self._test_wrapper_stream.tell())
 
   def testReadMaxBufferSizeAndTell(self):
-    """Reads from the disk TEST_MAX_BUFFER_SIZE and asserts that the file
-    stream reads the write amount."""
+    """Reads from disk and asserts that the stream reads the right amount."""
     self._GenerateMockObject()
 
     self._test_wrapper_buffer_data = self._test_wrapper_stream.read(
@@ -109,8 +118,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
                        self._temp_test_file_contents[old_position:new_position])
 
   def testClosed(self):
-    """Reads the whole file from wrapper object and tests that the file is
-    closed afterwards."""
+    """Reads the whole file and tests that the file is closed afterwards."""
     self._GenerateMockObject()
 
     self._test_wrapper_buffer_data = self._test_wrapper_stream.read(
@@ -118,7 +126,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     self.assertEqual(self._test_wrapper_stream.closed(), True)
 
   def testReadThenSeekToBeginning(self):
-    """Reads one buffer and seeks back to the beginning."""
+    """Reads two buffers and seeks back to the beginning."""
     self._GenerateMockObject()
 
     self._test_wrapper_buffer_data = self._test_wrapper_stream.read(
@@ -287,12 +295,10 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
       for seek_back in (TEST_MAX_BUFFER_SIZE - 1,
                         TEST_MAX_BUFFER_SIZE,
                         TEST_MAX_BUFFER_SIZE + 1):
-        expect_exception = seek_back > buffer_size
-
         self._GenerateMockObject()
 
         # Read to the end.
-        while self._test_wrapper_stream.read(TEST_MAX_BUFFER_SIZE):
+        while self._test_wrapper_stream.read(buffer_size):
           pass
         self._test_wrapper_stream.seek(seek_back, whence=os.SEEK_END)
         self.assertEqual(self._temp_test_file_len - seek_back,

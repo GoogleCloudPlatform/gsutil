@@ -34,6 +34,10 @@ SEEK_AHEAD_JOIN_TIMEOUT = 60
 # completes, in seconds.
 UI_THREAD_JOIN_TIMEOUT = 60
 
+# Maximum time to wait (join) on the FileOperationThread after the Apply
+# completes, in seconds.
+FILE_OP_THREAD_JOIN_TIMEOUT = 60
+
 
 class AtomicDict(object):
   """Thread-safe (and optionally process-safe) dictionary protected by a lock.

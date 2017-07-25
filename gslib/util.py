@@ -160,7 +160,11 @@ LONG_RETRY_WARN_SEC = 10
 
 SECONDS_PER_DAY = 86400L
 
-running_in_parallel = False
+# Note that running_in_parallel should only be set within Command.Apply()
+# to indicate whether SequentialApply or ParallelApply is called. Attempts
+# to retrieve this value should be done via GetRunningInParallel().
+running_in_parallel = None
+# Default max system memory is in KiB.
 DEFAULT_MAX_SYSTEM_MEMORY = 5120
 
 global manager  # pylint: disable=global-at-module-level
@@ -709,12 +713,27 @@ def GetBotoConfigFileList():
 def GetCertsFile():
   return configured_certs_file
 
+
 def GetRunningInParallel():
+  """Returns whether Apply is run in parallel.
+
+  Note that this function should only be called before Command.Apply() has
+  been called because running_in_parallel is set within Command.Apply() to
+  indicate whether SequentialApply or ParallelApply is called. Default value
+  is None.
+
+  Returns:
+    Whether the command within Command.Apply() is run sequentially or
+    in parallel.
+  """
   return running_in_parallel
 
+
 def GetMaxSystemMemory():
+  """Returns either boto configured max_system_memory or default."""
   return boto.config.getint('GSUtil', 'max_system_memory',
                             DEFAULT_MAX_SYSTEM_MEMORY)
+
 
 def ConfigureCertsFile():
   """Configures and returns the CA Certificates file.

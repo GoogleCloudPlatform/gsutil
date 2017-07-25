@@ -50,7 +50,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
 from gslib.file_op_manager import FileOpManager
-# from gslib.file_op_thread import FileOperationThread
+from gslib.file_op_thread import FileOperationThread
 from gslib.help_provider import HelpProvider
 from gslib.metrics import CaptureThreadStatException
 from gslib.metrics import LogPerformanceSummaryParams
@@ -60,6 +60,7 @@ from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.parallelism_framework_util import AtomicDict
+from gslib.parallelism_framework_util import FILE_OP_THREAD_JOIN_TIMEOUT
 from gslib.parallelism_framework_util import ProcessAndThreadSafeInt
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
@@ -99,8 +100,6 @@ from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
 
 from gslib.wildcard_iterator import CreateWildcardIterator
-
-FILE_OP_THREAD_JOIN_TIMEOUT = 60
 
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
 
@@ -189,6 +188,7 @@ MAX_QUEUE_SIZE = 32500
 # estimate the total work necessary for the command.
 DEFAULT_TASK_ESTIMATION_THRESHOLD = 30000
 
+
 def _GetTaskEstimationThreshold():
   return boto.config.getint('GSUtil', 'task_estimation_threshold',
                             DEFAULT_TASK_ESTIMATION_THRESHOLD)
@@ -228,9 +228,8 @@ global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
 global current_max_recursive_level, shared_vars_map, shared_vars_list_map
 global class_map, worker_checking_level_lock, failure_count, thread_stats
 global glob_status_queue, ui_controller
-global file_op_manager, disk_lock
-global file_obj_queue
-global file_op_threads
+global file_op_manager, disk_lock, file_obj_queue, file_op_threads
+
 
 def InitializeMultiprocessingVariables():
   """Initializes module-level variables that will be inherited by subprocesses.
@@ -303,9 +302,7 @@ def InitializeMultiprocessingVariables():
   global need_pool_or_done_cond, caller_id_finished_count, new_pool_needed
   global current_max_recursive_level, shared_vars_map, shared_vars_list_map
   global class_map, worker_checking_level_lock, failure_count, glob_status_queue
-  global file_op_manager, disk_lock
-  global file_obj_queue
-  global file_op_threads
+  global file_op_manager, disk_lock, file_obj_queue, file_op_threads
 
   manager = multiprocessing.Manager()
 
@@ -379,14 +376,17 @@ def InitializeMultiprocessingVariables():
   glob_status_queue = manager.Queue(MAX_QUEUE_SIZE)
 
   # Create a file operation manager for the parallel_disk_optimization feature.
-  file_op_manager = FileOpManager(True, GetMaxSystemMemory(), manager=manager)
+  file_op_manager = FileOpManager(GetMaxSystemMemory(), manager=manager)
 
-  # Global disk read lock so that only one file operation
-  # thread may read from the disk at a time
+  # Global disk read lock to maintain that only one file operation thread may
+  # read from the disk at a time.
   disk_lock = manager.Lock()
 
+  # File object queue per process that manages disk read requests from file
+  # wrapper objects.
   file_obj_queue = Queue.Queue()
 
+  # A list of file operation threads.
   file_op_threads = []
 
 
@@ -416,9 +416,7 @@ def InitializeThreadingVariables():
   global need_pool_or_done_cond, call_completed_map, class_map, thread_stats
   global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
   global worker_checking_level_lock, current_max_recursive_level
-  global file_op_manager, disk_lock
-  global file_obj_queue
-  global file_op_threads
+  global file_op_manager, disk_lock, file_obj_queue, file_op_threads
   caller_id_counter = ProcessAndThreadSafeInt(False)
   caller_id_finished_count = AtomicDict()
   caller_id_lock = threading.Lock()
@@ -435,8 +433,7 @@ def InitializeThreadingVariables():
   task_queues = []
   total_tasks = AtomicDict()
   worker_checking_level_lock = threading.Lock()
-  file_op_manager = FileOpManager(False, MAX_MEMORY)
-  # file_op_manager = ProcessAndThreadSafeInt(False)
+  file_op_manager = FileOpManager(GetMaxSystemMemory())
   disk_lock = threading.Lock()
   file_obj_queue = _NewThreadsafeQueue()
   file_op_threads = []
@@ -1071,7 +1068,8 @@ class Command(HelpProvider):
       print AclTranslation.JsonFromMessage(acl)
 
   def GetAclCommandBucketListingReference(self, url_str):
-    """Gets a single bucket listing reference for an acl get comman
+    """Gets a single bucket listing reference for an acl get command.
+
     Args:
       url_str: URL string to get the bucket listing reference for.
 
@@ -1330,12 +1328,11 @@ class Command(HelpProvider):
       Results from spawned threads.
     """
 
-    # sys.stdout = open('/usr/local/google/home/ptai/output.txt', 'w')
-    print 'in apply'
     # This is initialized in Initialize(Multiprocessing|Threading)Variables
     # pylint: disable=global-variable-not-assigned
     # pylint: disable=global-variable-undefined
     global thread_stats
+    global file_op_threads
     # pylint: enable=global-variable-not-assigned
     # pylint: enable=global-variable-undefined
     if shared_attrs:
@@ -1388,7 +1385,6 @@ class Command(HelpProvider):
     usable_processes_count = (process_count if self.multiprocessing_is_available
                               else 1)
     if thread_count * usable_processes_count > 1:
-      print 'parallel apply'
       gslib.util.running_in_parallel = True
       self._ParallelApply(
           func, args_iterator, exception_handler, caller_id, arg_checker,
@@ -1398,7 +1394,6 @@ class Command(HelpProvider):
       if is_main_thread:
         _AggregateThreadStats()
     else:
-      print 'sequential apply'
       gslib.util.running_in_parallel = False
       self._SequentialApply(func, args_iterator, exception_handler, caller_id,
                             arg_checker, should_return_results, fail_on_error)
@@ -1412,8 +1407,7 @@ class Command(HelpProvider):
                        shared_vars_map.get((caller_id, name)))
         setattr(self, name, final_value)
 
-    # DELETE FILE OPERATION THREADS
-    global file_op_threads
+    # Delete file operation threads.
     for file_op_thread in file_op_threads:
       file_op_thread.cancel_event.set()
       file_op_thread.join(timeout=FILE_OP_THREAD_JOIN_TIMEOUT)
@@ -2046,10 +2040,9 @@ class WorkerPool(object):
     self.task_queue = task_queue or _NewThreadsafeQueue()
     self.threads = []
 
-    # If parallel_disk_optimization is set to true, create a file operation
-    # thread to manage disk reads
-    if(boto.config.getbool('GSUtil', 'parallel_disk_optimization', False)):
-      print('creating file operation thread')
+    if boto.config.getbool('GSUtil', 'parallel_disk_optimization', False):
+      # If parallel_disk_optimization is set to true, create and start a
+      # file operation thread to manage disk reads.
       global file_obj_queue
       global file_op_threads
       file_obj_queue = _NewThreadsafeQueue()
@@ -2073,47 +2066,6 @@ class WorkerPool(object):
   def AddTask(self, task):
     """Adds a task to the task queue; used only in the multi-process case."""
     self.task_queue.put(task)
-
-
-class FileOperationThread(threading.Thread):
-   """Manages the read request queue."""
-
-   global file_op_manager
-   global disk_lock
-
-   def __init__(self, read_queue, timeout=None):
-     super(FileOperationThread, self).__init__()
-     self.daemon = True
-     self._read_queue = read_queue
-     self._timeout = 0.1
-     self.cancel_event = threading.Event()
-
-   def run(self):
-     while True:
-       """Processes items from the read queue until it is empty."""
-       if self.cancel_event.isSet():
-         break
-       try:
-         # Attempt to get the next read request from the read request queue
-         if self._timeout is None:
-           (file_object, size, _) = self._read_queue.get_nowait()
-         else:
-           (file_object, size, _) = self._read_queue.get(timeout=self._timeout)
-         # Ask file operation manager for permission to allocate memory buffer
-         # of size size for the next disk read and waits until permission is
-         # granted.
-         file_op_manager.available.acquire()
-         while not file_op_manager.requestMemory(size):
-           file_op_manager.available.wait()
-         # Reads from the disk a block of size
-         with disk_lock:
-           file_object.ReadFromDisk(size)
-
-         file_op_manager.available.release()
-       except Queue.Empty:
-         pass
-     print 'done file operation thread'
-     return
 
 
 class WorkerThread(threading.Thread):
