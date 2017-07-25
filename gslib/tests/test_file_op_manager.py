@@ -43,87 +43,88 @@ class TestFileOpManager(testcase.GsUtilUnitTestCase):
     self._test_threading_manager = FileOpManager(self._test_max_memory)
     self.assertEqual(self._test_threading_manager.GetUsedMemory(), 0)
 
-  def testSetValueAtMaxAndTestMultiprocessingRequestMemory(self):
+  def testSetValueAtMaxAndTestMultiprocessingAllocMemory(self):
     self._test_multiprocessing_manager = FileOpManager(
         self._test_max_memory, self._manager)
     first_value = self._test_multiprocessing_manager.GetUsedMemory()
     self.assertEqual(first_value, 0)
-    self.assertEqual(self._test_multiprocessing_manager.RequestMemory(
-        self._test_request_size), True)
-    self._test_multiprocessing_manager.IncMemory(self._test_max_memory + 1)
+    self.assertEqual(self._test_multiprocessing_manager.AllocMemory(
+        self._test_max_memory), True)
     second_value = self._test_multiprocessing_manager.GetUsedMemory()
-    self.assertEqual(second_value, 8388609)
-    self.assertEqual(self._test_multiprocessing_manager.RequestMemory(
+    self.assertEqual(second_value, 8388608)
+    self.assertEqual(self._test_multiprocessing_manager.AllocMemory(
         self._test_request_size), False)
+    self.assertEqual(self._test_multiprocessing_manager.AllocMemory(1), False)
 
-  def testSetValueAtMaxAndTestThreadingRequestMemory(self):
+  def testSetValueAtMaxAndTestThreadingAllocMemory(self):
     self._test_threading_manager = FileOpManager(self._test_max_memory)
     first_value = self._test_threading_manager.GetUsedMemory()
     self.assertEqual(first_value, 0)
-    self.assertEqual(self._test_threading_manager.RequestMemory(
-        self._test_request_size), True)
-    self._test_threading_manager.IncMemory(self._test_max_memory + 1)
+    self.assertEqual(self._test_threading_manager.AllocMemory(
+        self._test_max_memory), True)
     second_value = self._test_threading_manager.GetUsedMemory()
-    self.assertEqual(second_value, 8388609)
-    self.assertEqual(self._test_threading_manager.RequestMemory(
+    self.assertEqual(second_value, 8388608)
+    self.assertEqual(self._test_threading_manager.AllocMemory(
         self._test_request_size), False)
+    self.assertEqual(self._test_threading_manager.AllocMemory(1), False)
 
-  def testMultiprocessingIncDecMemoryInOneProcess(self):
+  def testMultiprocessingIncFreeMemoryInOneProcess(self):
     self._test_multiprocessing_manager = FileOpManager(
         self._test_max_memory, self._manager)
-    self._test_multiprocessing_manager.IncMemory(1024)
-    self._test_multiprocessing_manager.DecMemory(512)
+    self.assertEqual(self._test_multiprocessing_manager.AllocMemory(1024),
+                     True)
+    self._test_multiprocessing_manager.FreeMemory(512)
     self.assertEqual(self._test_multiprocessing_manager.GetUsedMemory(), 512)
 
-  def testMultiprocessingDecIncMemoryIntoNegativeExceptRaise(self):
+  def testMultiprocessingDecAllocMemoryIntoNegativeExceptRaise(self):
     self._test_multiprocessing_manager = FileOpManager(
         self._test_max_memory, self._manager)
     with self.assertRaises(CommandException):
-      self._test_multiprocessing_manager.IncMemory(512)
-      self._test_multiprocessing_manager.DecMemory(1024)
+      self._test_multiprocessing_manager.AllocMemory(512)
+      self._test_multiprocessing_manager.FreeMemory(1024)
 
-  def _ProcessIncMemory(self):
-    self._test_multiprocessing_manager.IncMemory(1024)
+  def _ProcessAllocMemory(self):
+    self._test_multiprocessing_manager.AllocMemory(1024)
 
-  def _ProcessDecMemory(self):
+  def _ProcessFreeMemory(self):
     time.sleep(0.5)
-    self._test_multiprocessing_manager.DecMemory(512)
+    self._test_multiprocessing_manager.FreeMemory(512)
 
-  def testMultiprocessingIncDecMemoryInTwoProcesses(self):
+  def testMultiprocessingIncFreeMemoryInTwoProcesses(self):
     self._test_multiprocessing_manager = FileOpManager(
         self._test_max_memory, self._manager)
-    p1 = multiprocessing.Process(target=self._ProcessIncMemory())
+    p1 = multiprocessing.Process(target=self._ProcessAllocMemory())
     p1.start()
-    p2 = multiprocessing.Process(target=self._ProcessDecMemory())
+    p2 = multiprocessing.Process(target=self._ProcessFreeMemory())
     p2.start()
     p1.join()
     p2.join()
     self.assertEqual(self._test_multiprocessing_manager.GetUsedMemory(), 512)
 
-  def testThreadingIncDecMemoryInOneThread(self):
+  def testThreadingIncFreeMemoryInOneThread(self):
     self._test_threading_manager = FileOpManager(self._test_max_memory)
-    self._test_threading_manager.IncMemory(1024)
-    self._test_threading_manager.DecMemory(512)
+    self._test_threading_manager.AllocMemory(1024)
+    self._test_threading_manager.FreeMemory(512)
     self.assertEqual(self._test_threading_manager.GetUsedMemory(), 512)
 
-  def testThreadingIncDecMemoryIntoNegativeExpectRaise(self):
+  def testThreadingIncFreeMemoryIntoNegativeExpectRaise(self):
     self._test_threading_manager = FileOpManager(self._test_max_memory)
     with self.assertRaises(CommandException):
-      self._test_threading_manager.IncMemory(512)
-      self._test_threading_manager.DecMemory(1024)
+      self._test_threading_manager.AllocMemory(512)
+      self._test_threading_manager.FreeMemory(1024)
 
-  def _ThreadIncMemory(self):
-    self._test_threading_manager.IncMemory(1024)
+  def _ThreadAllocMemory(self):
+    self._test_threading_manager.AllocMemory(1024)
 
-  def _ThreadDecMemory(self):
+  def _ThreadFreeMemory(self):
     time.sleep(0.5)
-    self._test_threading_manager.DecMemory(512)
+    self._test_threading_manager.FreeMemory(512)
 
-  def testThreadingIncDecMemoryInTwoThreads(self):
+  def testThreadingIncFreeMemoryInTwoThreads(self):
     self._test_threading_manager = FileOpManager(self._test_max_memory)
-    t1 = threading.Thread(target=self._ThreadIncMemory())
+    t1 = threading.Thread(target=self._ThreadAllocMemory())
     t1.start()
-    t2 = threading.Thread(target=self._ThreadDecMemory())
+    t2 = threading.Thread(target=self._ThreadFreeMemory())
     t2.start()
     t1.join()
     t2.join()

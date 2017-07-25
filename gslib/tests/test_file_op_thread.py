@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 import Queue
 import threading
-import time
 
 from gslib.file_op_thread import FileOperationThread
 import gslib.tests.testcase as testcase
@@ -39,6 +38,7 @@ class TestFileOperationThread(testcase.GsUtilUnitTestCase):
   _temp_test_file_len = None
   _test_file_op_queue = None
   _test_file_op_thread = None
+  _test_timeout = 0.01
   _mock_file_op_manager = mock.Mock(return_value=True)
   _mock_disk_lock = threading.Lock()
 
@@ -47,7 +47,7 @@ class TestFileOperationThread(testcase.GsUtilUnitTestCase):
     self._test_file_op_queue = Queue.Queue()
     self._test_file_op_thread = FileOperationThread(
         self._test_file_op_queue, self._mock_file_op_manager,
-        self._mock_disk_lock)
+        self._mock_disk_lock, self._test_timeout)
     self._test_file_op_thread.start()
 
     self._test_file_op_thread.cancel_event.set()
@@ -59,17 +59,16 @@ class TestFileOperationThread(testcase.GsUtilUnitTestCase):
     self._test_file_op_queue = Queue.Queue()
     self._test_file_op_thread = FileOperationThread(
         self._test_file_op_queue, self._mock_file_op_manager,
-        self._mock_disk_lock)
+        self._mock_disk_lock, self._test_timeout)
     self._test_file_op_thread.start()
 
     # Mock a file wrapper object and submit it onto the file read request
     # queue associated with the FileOperationThread
     mock_disk_read_object = mock.Mock()
-    self._test_file_op_queue.put((mock_disk_read_object, 1, True))
+    self._test_file_op_queue.put((mock_disk_read_object, 1))
 
-    time.sleep(1)
-    self._test_file_op_thread.cancel_event.set()
     self._test_file_op_thread.join(self.thread_wait_time)
+    self._test_file_op_thread.cancel_event.set()
     # Assert that ReadFromDisk was called for the mock disk read object
     # from the FileOperationThread
     mock_disk_read_object.ReadFromDisk.assert_called_with(1)
@@ -80,7 +79,7 @@ class TestFileOperationThread(testcase.GsUtilUnitTestCase):
     self._test_file_op_queue = Queue.Queue()
     self._test_file_op_thread = FileOperationThread(
         self._test_file_op_queue, self._mock_file_op_manager,
-        self._mock_disk_lock)
+        self._mock_disk_lock, self._test_timeout)
     self._test_file_op_thread.start()
 
     # Add one file wrapper objects and size requests to the file object
@@ -88,15 +87,14 @@ class TestFileOperationThread(testcase.GsUtilUnitTestCase):
     mock_disk_read_object = mock.Mock()
     mock_disk_read_object2 = mock.Mock()
 
-    self._test_file_op_queue.put((mock_disk_read_object, 0, False))
-    self._test_file_op_queue.put((mock_disk_read_object2, 1, False))
-    self._test_file_op_queue.put((mock_disk_read_object, 2, False))
-    self._test_file_op_queue.put((mock_disk_read_object2, 3, True))
+    self._test_file_op_queue.put((mock_disk_read_object, 0))
+    self._test_file_op_queue.put((mock_disk_read_object2, 1))
+    self._test_file_op_queue.put((mock_disk_read_object, 2))
+    self._test_file_op_queue.put((mock_disk_read_object2, 3))
 
-    time.sleep(1)
     # Assert that request enqueued to file read request queue was made
-    self._test_file_op_thread.cancel_event.set()
     self._test_file_op_thread.join(self.thread_wait_time)
+    self._test_file_op_thread.cancel_event.set()
 
     # Ensures ReadFromDisk is called correctly
     mock_disk_read_object.ReadFromDisk.assert_has_calls(

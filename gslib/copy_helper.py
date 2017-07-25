@@ -1608,7 +1608,6 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       num_startover_attempts += 1
       retryable = (num_startover_attempts < GetNumRetries())
       if not retryable:
-        logger.info('reached retryable attempts')
         raise
 
       # If the server sends a 404 response code, then the upload should only
@@ -1618,7 +1617,6 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       except NotFoundException:
         raise
 
-      logger.info('Restarting upload from scratch after exception %s', e)
       DeleteTrackerFile(tracker_file_name)
       tracker_data = None
       src_obj_filestream.seek(0)
@@ -3176,14 +3174,14 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
   else:  # src_url.IsFileUrl()
     try:
       if(config.getbool('GSUtil', 'parallel_disk_optimization', False) and
-         GetRunningInParallel()):
-        """If the parallel_disk_optimization feature is turned on, then the
-        src_obj_filestream is created and maintained by the
-        DiskReadFileWrapperObject.
-        """
-        max_buffer_size = GetMaxSystemMemory()/10
+         GetRunningInParallel() and not src_url.IsStream()):
+        # If the parallel_disk_optimization feature is turned on, the function
+        # is to be run in parallel, and the src_url is not a stream, then the
+        # src_obj_filestream is created and maintained by the
+        # DiskReadFileWrapperObject.
+        buffer_size = GetMaxSystemMemory() / 10
         src_obj = DiskReadFileWrapperObject(src_url, src_obj_metadata.size,
-                                            max_buffer_size)
+                                            buffer_size)
         src_obj_filestream = src_obj.open()
       else:
         src_obj_filestream = GetStreamFromFileUrl(src_url)

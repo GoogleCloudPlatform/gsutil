@@ -33,8 +33,8 @@ class FileOpManager(object):
     """Initializes the FileOperationManager.
 
     Args:
-      max_memory: The maximum memory that the manager is allowing the system to
-        use.
+      max_memory: The maximum memory in bytes that the manager is allowing the
+        system to use.
       manager: The manager is used to maintain atomicity throughout processes.
         A manager argument is passed in when multiprocessing is available, and
         in the threading case, no manager argument is passed in and is by
@@ -50,54 +50,42 @@ class FileOpManager(object):
       self.memory_used = 0
       self.available = threading.Condition()
 
-  def RequestMemory(self, size):
+  def AllocMemory(self, size):
     """Handles requests for memory allocation from disk reads.
 
     Receives an input size and determines whether file wrapper object
     should have permission to allocate a memory buffer of that size to store
-    bytes from the disk read. Note that this function is called by the
-    FileOperationThread as when the FileOperationThread dequeues a read
-    request, it calls RequestMemory and blocks until memory is available.
+    bytes from the disk read. If there is available memory to allocate, the
+    memory used value in the manager is incremented to reflect the memory
+    allocation and returns True, else returns False. Note that this function
+    is called by the FileOperationThread as when the FileOperationThread
+    dequeues a read request, it calls AllocMemory and blocks until AllocMemory
+    return True.
 
     Args:
-      size: Size of the memory request.
+      size: Size of the memory request in bytes.
 
     Returns:
-      True if request for memory is granted, False otherwise.
+      True if memory has been allocated for a disk read request,
+        False otherwise.
     """
-
     with self.lock:
       if self.memory_used + size <= self.max_memory:
+        self.memory_used += size
         return True
       else:
         return False
 
-  def IncMemory(self, size):
-    """Increments the used system memory value within the manager.
-
-    This function is called by the file wrapper objects. When the
-    FileOperationThread calls the file wrapper object's read function,
-    the file wrapper object reads from the disk, appends the data read to its
-    buffer queue, and (by calling this function) increments the memory
-    in the global manager.
-
-    Args:
-      size: The size of memory that is read from the disk and stored in system
-         memory.
-    """
-    with self.lock:
-      self.memory_used += size
-
-  def DecMemory(self, size):
+  def FreeMemory(self, size):
     """Decrements the used system memory value within the manager.
 
     This function is called by the file wrapper objects. When the file wrapper
     object dequeues from its buffer queue to send data over the network, it
-    calls DecMemory so that more data reads can be performed.
+    calls FreeMemory so that more data reads can be performed.
 
     Args:
-      size: The size of memory that is read from the file wrapper object's
-      buffer queue and to be sent over the network.
+      size: The size of memory in bytes that is read from the file wrapper
+        object's buffer queue and to be sent over the network.
     """
     self.available.acquire()
     with self.lock:

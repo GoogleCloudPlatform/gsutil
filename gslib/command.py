@@ -2050,8 +2050,9 @@ class WorkerPool(object):
 
       global file_op_manager
       global disk_lock
+      file_op_queue_timeout = 0.1
       file_op_thread = FileOperationThread(
-          file_obj_queue, file_op_manager, disk_lock)
+          file_obj_queue, file_op_manager, disk_lock, file_op_queue_timeout)
       file_op_threads.append(file_op_thread)
       file_op_thread.start()
 
