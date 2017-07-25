@@ -737,6 +737,11 @@ class MetricsCollector(object):
       # This can happen specifically if the Python executable moves between the
       # start of this process and now.
       self.logger.debug('Metrics reporting process failed to start.')
+      # Delete the tempfile that would normally be cleaned up in the subprocess.
+      try:
+        os.unlink(temp_metrics_file.name)
+      except:  # pylint: disable=bare-except
+        pass
 
 
 def CaptureAndLogException(func):
