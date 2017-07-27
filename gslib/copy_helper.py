@@ -1617,6 +1617,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       except NotFoundException:
         raise
 
+      logger.info('Restarting upload from scratch after exception %s', e)
       DeleteTrackerFile(tracker_file_name)
       tracker_data = None
       src_obj_filestream.seek(0)
@@ -3180,9 +3181,8 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         # src_obj_filestream is created and maintained by the
         # DiskReadFileWrapperObject.
         buffer_size = GetMaxSystemMemory() / 10
-        src_obj = DiskReadFileWrapperObject(src_url, src_obj_metadata.size,
-                                            buffer_size)
-        src_obj_filestream = src_obj.open()
+        src_obj_filestream = DiskReadFileWrapperObject(
+            src_url, src_obj_metadata.size, buffer_size)
       else:
         src_obj_filestream = GetStreamFromFileUrl(src_url)
     except Exception, e:  # pylint: disable=broad-except

@@ -74,6 +74,7 @@ from gslib.tests.util import HAS_GS_PORT
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
+from gslib.tests.util import ParallelDiskOptimizationOnOff
 from gslib.tests.util import POSIX_GID_ERROR
 from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
 from gslib.tests.util import POSIX_MODE_ERROR
@@ -416,6 +417,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.RunGsUtil(arg_list, **kwargs))
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_noclobber(self):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='bar')
@@ -429,6 +431,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'bar')
 
+  @ParallelDiskOptimizationOnOff
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents='foo')
     invalid_bucket_uri = (
@@ -437,6 +440,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1, return_stderr=True)
     self.assertIn('does not exist', stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_copy_in_cloud_noclobber(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -453,6 +457,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_from_local_file_to_fifo(self):
     contents = 'bar'
     fifo_path = self.CreateTempFifo()
@@ -475,6 +480,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_from_one_object_to_fifo(self):
     fifo_path = self.CreateTempFifo()
     bucket_uri = self.CreateBucket()
@@ -498,6 +504,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_from_multiple_objects_to_fifo(self):
     fifo_path = self.CreateTempFifo()
     bucket_uri = self.CreateBucket()
@@ -523,6 +530,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(contents2, list_for_output[0])
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_streaming(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['cp', '-', '%s' % suri(bucket_uri, 'foo')],
@@ -533,6 +541,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_streaming_from_fifo_to_object(self):
     bucket_uri = self.CreateBucket()
     fifo_path = self.CreateTempFifo()
@@ -568,6 +577,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_streaming_from_fifo_to_stdout(self):
     fifo_path = self.CreateTempFifo()
     contents = 'bar'
@@ -590,6 +600,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_streaming_from_stdout_to_fifo(self):
     fifo_path = self.CreateTempFifo()
     contents = 'bar'
@@ -611,6 +622,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.fail('Reading/writing to the fifo timed out.')
     self.assertEqual(list_for_output[0].strip(), contents)
 
+  @ParallelDiskOptimizationOnOff
   def test_streaming_multiple_arguments(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['cp', '-', '-', suri(bucket_uri)],
@@ -621,6 +633,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # TODO: Implement a way to test both with and without using magic file.
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_detect_content_type(self):
     """Tests local detection of content type."""
     bucket_uri = self.CreateBucket()
@@ -649,6 +662,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_content_type_override_default(self):
     """Tests overriding content type with the default value."""
     bucket_uri = self.CreateBucket()
@@ -676,6 +690,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                r'Content-Type:\s+application/octet-stream')
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_content_type_override(self):
     """Tests overriding content type with a value."""
     bucket_uri = self.CreateBucket()
@@ -703,6 +718,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS, 'magicfile is not available on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_magicfile_override(self):
     """Tests content type override with magicfile value."""
     bucket_uri = self.CreateBucket()
@@ -721,6 +737,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_content_type_mismatches(self):
     """Tests overriding content type when it does not match the file type."""
     bucket_uri = self.CreateBucket()
@@ -757,6 +774,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check3()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_content_type_header_case_insensitive(self):
     """Tests that content type header is treated with case insensitivity."""
     bucket_uri = self.CreateBucket()
@@ -787,6 +805,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_other_headers(self):
     """Tests that non-content-type headers are applied successfully on copy."""
     bucket_uri = self.CreateBucket()
@@ -809,6 +828,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_versioning(self):
     """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
@@ -851,6 +871,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
     stderr = self.RunGsUtil(
@@ -860,6 +881,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('-m option is not supported with the cp -A flag', stderr)
 
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
+  @ParallelDiskOptimizationOnOff
   def test_recursive_copying_versioned_bucket(self):
     """Tests cp -R with versioned buckets."""
     bucket1_uri = self.CreateVersionedBucket()
@@ -936,6 +958,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check3()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   @SkipForS3('Preconditions not supported for S3.')
   def test_cp_generation_zero_match(self):
     """Tests that cp handles an object-not-exists precondition header."""
@@ -957,6 +980,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('PreconditionException', stderr)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   @SkipForS3('Preconditions not supported for S3.')
   def test_cp_v_generation_match(self):
     """Tests that cp -v option handles the if-generation-match header."""
@@ -989,6 +1013,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                   'with cp -n', stderr)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_nv(self):
     """Tests that cp -nv works when skipping existing file."""
     bucket_uri = self.CreateVersionedBucket()
@@ -1006,6 +1031,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping existing item:', stderr)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_cp_v_option(self):
     """"Tests that cp -v returns the created object's version-specific URI."""
@@ -1048,6 +1074,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Case 6: Copy object to object in-the-cloud.
     self._run_cp_minus_v_test('-v', k1_uri.uri, k2_uri.uri)
 
+  @ParallelDiskOptimizationOnOff
   def _run_cp_minus_v_test(self, opt, src_str, dst_str):
     """Runs cp -v with the options and validates the results."""
     stderr = self.RunGsUtil(['cp', opt, src_str, dst_str], return_stderr=True)
@@ -1067,6 +1094,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_stdin_args(self):
     """Tests cp with the -I option."""
     tmpdir = self.CreateTempDir()
@@ -1085,6 +1113,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNumLines(stdout, 2)
     _Check1()
 
+  @ParallelDiskOptimizationOnOff
   def test_cross_storage_class_cloud_cp(self):
     bucket1_uri = self.CreateBucket(storage_class='standard')
     bucket2_uri = self.CreateBucket(
@@ -1094,6 +1123,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)])
 
   @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  @ParallelDiskOptimizationOnOff
   def test_cross_provider_cp(self):
     s3_bucket = self.CreateBucket(provider='s3')
     gs_bucket = self.CreateBucket(provider='gs')
@@ -1105,6 +1135,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
   @unittest.skip('This test performs a large copy but remains here for '
                  'debugging purposes.')
+  @ParallelDiskOptimizationOnOff
   def test_cross_provider_large_cp(self):
     s3_bucket = self.CreateBucket(provider='s3')
     gs_bucket = self.CreateBucket(provider='gs')
@@ -1120,6 +1151,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')
+  @ParallelDiskOptimizationOnOff
   def test_daisy_chain_cp_file_sizes(self):
     """Ensure daisy chain cp works with a wide of file sizes."""
     bucket_uri = self.CreateBucket()
@@ -1139,6 +1171,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.AssertNObjectsInBucket(bucket2_uri, exponent_cap*3)
 
+  @ParallelDiskOptimizationOnOff
   def test_daisy_chain_cp(self):
     """Tests cp with the -D option."""
     bucket1_uri = self.CreateBucket(storage_class='standard')
@@ -1176,6 +1209,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(
       not HAS_GS_PORT, 'gs_port is defined in config which can cause '
       'problems when uploading and downloading to the same local host port')
+  @ParallelDiskOptimizationOnOff
   def test_daisy_chain_cp_download_failure(self):
     """Tests cp with the -D option when the download thread dies."""
     bucket1_uri = self.CreateBucket()
@@ -1195,6 +1229,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(stderr.count(
           'ResumableDownloadException: Artifically halting download'), 3)
 
+  @ParallelDiskOptimizationOnOff
   def test_streaming_gzip_upload(self):
     """Tests error when compression flag is requested on a streaming source."""
     bucket_uri = self.CreateBucket()
@@ -1205,6 +1240,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         'gzip compression is not currently supported on streaming uploads',
         stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_seek_ahead_upload_cp(self):
     """Tests that the seek-ahead iterator estimates total upload work."""
     tmpdir = self.CreateTempDir(test_files=3)
@@ -1224,6 +1260,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
       self.assertNotIn('Estimated work', stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_seek_ahead_download_cp(self):
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket(test_objects=3)
@@ -1243,6 +1280,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
       self.assertNotIn('Estimated work', stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_canned_acl_cp(self):
     """Tests copying with a canned ACL."""
     bucket1_uri = self.CreateBucket()
@@ -1264,6 +1302,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_canned_acl_upload(self):
     """Tests uploading a file with a canned ACL."""
     bucket1_uri = self.CreateBucket()
@@ -1295,6 +1334,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           return_stdout=True)
       self.assertEqual(public_read_acl, new_resumable_acl_json)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_key_to_local_stream(self):
     bucket_uri = self.CreateBucket()
     contents = 'foo'
@@ -1302,6 +1342,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['cp', suri(key_uri), '-'], return_stdout=True)
     self.assertIn(contents, stdout)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_local_file_to_local_stream(self):
     contents = 'content'
     fpath = self.CreateTempFile(contents=contents)
@@ -1309,6 +1350,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(contents, stdout)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_zero_byte_file(self):
     dst_bucket_uri = self.CreateBucket()
     src_dir = self.CreateTempDir()
@@ -1327,6 +1369,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(dst_bucket_uri, 'zero_byte'), download_path])
     self.assertTrue(os.stat(download_path))
 
+  @ParallelDiskOptimizationOnOff
   def test_copy_bucket_to_bucket(self):
     """Tests recursively copying from bucket to bucket.
 
@@ -1353,6 +1396,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                      src_bucket_uri.bucket_name), stdout)
     _CopyAndCheck()
 
+  @ParallelDiskOptimizationOnOff
   def test_copy_bucket_to_dir(self):
     """Tests recursively copying from bucket to a directory.
 
@@ -1383,6 +1427,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                     'obj1'), dir_list[1])
     _CopyAndCheck()
 
+  @ParallelDiskOptimizationOnOff
   def test_recursive_download_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders."""
     src_bucket_uri = self.CreateBucket()
@@ -1409,6 +1454,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name,
                                   'obj1'), dir_list[1])
 
+  @ParallelDiskOptimizationOnOff
   def test_copy_quiet(self):
     bucket_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
@@ -1417,6 +1463,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_md5_match(self):
     """Tests that the uploaded object has the expected MD5.
 
@@ -1443,15 +1490,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS,
                    'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_manifest_upload_unicode(self):
     return self._ManifestUpload('foo-unicöde', 'bar-unicöde',
                                 'manifest-unicöde')
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_manifest_upload(self):
     """Tests uploading with a mnifest file."""
     return self._ManifestUpload('foo', 'bar', 'manifest')
 
+  @ParallelDiskOptimizationOnOff
   def _ManifestUpload(self, file_name, object_name, manifest_name):
     """Tests uploading with a manifest file."""
     bucket_uri = self.CreateBucket()
@@ -1489,6 +1539,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(results[8], 'OK')  # Result
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_manifest_download(self):
     """Tests downloading with a manifest file."""
     key_uri = self.CreateObject(contents='foo')
@@ -1521,6 +1572,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(results[8], 'OK')  # Result
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_copy_unicode_non_ascii_filename(self):
     key_uri = self.CreateObject()
     # Try with and without resumable upload threshold, to ensure that each
@@ -1548,6 +1600,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # test.
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_gzip_upload_and_download(self):
     bucket_uri = self.CreateBucket()
     contents = 'x' * 10000
@@ -1576,6 +1629,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_gzip_all_upload_and_download(self):
     bucket_uri = self.CreateBucket()
     contents = 'x' * 10000
@@ -1606,6 +1660,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath4, 'r') as f:
         self.assertEqual(f.read(), contents)
 
+  @ParallelDiskOptimizationOnOff
   def test_both_gzip_options_error(self):
     # Test with -Z and -z
     stderr = self.RunGsUtil(['cp', '-Z', '-z', 'html, js', 'a.js', 'b.js'],
@@ -1623,6 +1678,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Specifying both the -z and -Z options together is invalid.',
                   stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_upload_with_subdir_and_unexpanded_wildcard(self):
     fpath1 = self.CreateTempFile(file_name=('tmp', 'x', 'y', 'z'))
     bucket_uri = self.CreateBucket()
@@ -1633,6 +1689,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, 1)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_object_ending_with_slash(self):
     """Tests that cp works with object names ending with slash."""
     tmpdir = self.CreateTempDir()
@@ -1650,6 +1707,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(os.path.join(tmpdir, bucket_uri.bucket_name, 'abc', 'def')) as f:
       self.assertEquals('def', '\n'.join(f.readlines()))
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_without_read_access(self):
     """Tests that cp fails without read access to the object."""
     # TODO: With 401's triggering retries in apitools, this test will take
@@ -1672,6 +1730,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatches(stderr, expected_error_regex)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_minus_r_minus_e(self):
     """Tests that cp -e -r ignores symlinks when recursing."""
     bucket_uri = self.CreateBucket()
@@ -1690,6 +1749,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-r', '-e', tmpdir, suri(bucket_uri)])
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_minus_e(self):
     fpath_dir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=fpath_dir)
@@ -1711,6 +1771,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Skipping symbolic link', stderr)
     self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_multithreaded_wildcard(self):
     """Tests that cp -m works with a wildcard."""
     num_test_files = 5
@@ -1721,6 +1782,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, num_test_files)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_duplicate_source_args(self):
     """Tests that cp -m works when a source argument is provided twice."""
     object_contents = 'edge'
@@ -1734,6 +1796,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_download_encrypted_object(self):
     """Tests downloading an encrypted object."""
     if self.test_api == ApiSelector.XML:
@@ -1764,6 +1827,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_download_encrypted_object_without_key(self):
     """Tests downloading an encrypted object without the necessary key."""
     if self.test_api == ApiSelector.XML:
@@ -1781,6 +1845,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_upload_encrypted_object(self):
     """Tests uploading an encrypted object."""
     if self.test_api == ApiSelector.XML:
@@ -1807,6 +1872,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), file_contents)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_encrypted_object_break(self):
     """Tests that an encrypted upload resumes after a connection break."""
     if self.test_api == ApiSelector.XML:
@@ -1837,6 +1903,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                        TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_encrypted_object_different_key(self):
     """Tests that an encrypted upload resume uses original encryption key."""
     if self.test_api == ApiSelector.XML:
@@ -1874,6 +1941,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                        TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_encrypted_object_missing_key(self):
     """Tests that an encrypted upload does not resume without original key."""
     if self.test_api == ApiSelector.XML:
@@ -1911,12 +1979,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.AssertObjectUsesEncryptionKey(object_uri_str,
                                          TEST_ENCRYPTION_KEY2)
 
+  @ParallelDiskOptimizationOnOff
   def _ensure_object_unencrypted(self, object_uri_str):
     """Strongly consistent check that the object is unencrypted."""
     stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertNotIn('Encryption Key', stdout)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_break(self):
     """Tests that an upload can be resumed after a connection break."""
     bucket_uri = self.CreateBucket()
@@ -1935,6 +2005,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Resuming upload', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_retry(self):
     """Tests that a resumable upload completes with one retry."""
     bucket_uri = self.CreateBucket()
@@ -1962,6 +2033,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertIn('Retrying', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_streaming_upload_retry(self):
     """Tests that a streaming resumable upload completes with one retry."""
     if self.test_api == ApiSelector.XML:
@@ -1999,6 +2071,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('OWNER permission is required for preserving ACLs', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_progress_callbacks(self):
     bucket_uri = self.CreateBucket()
     final_size_string = BytesToFixedWidthString(1024**2)
@@ -2019,6 +2092,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEquals(1, stderr.count(final_progress_callback))
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload(self):
     """Tests that a basic resumable upload completes successfully."""
     bucket_uri = self.CreateBucket()
@@ -2028,6 +2102,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['cp', fpath, suri(bucket_uri)])
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_resumable_upload_break_leaves_tracker(self):
     """Tests that a tracker file is created with a resumable upload."""
     bucket_uri = self.CreateBucket()
@@ -2051,6 +2126,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         DeleteTrackerFile(tracker_filename)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_break_file_size_change(self):
     """Tests a resumable upload where the uploaded file changes size.
 
@@ -2075,44 +2151,45 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1, return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
 
-#  @SkipForS3('No resumable upload support for S3.')
-#  def test_cp_resumable_upload_break_file_content_change(self):
-#    """Tests a resumable upload where the uploaded file changes content."""
-#    if self.test_api == ApiSelector.XML:
-#      return unittest.skip(
-#          'XML doesn\'t make separate HTTP calls at fixed-size boundaries for '
-#          'resumable uploads, so we can\'t guarantee that the server saves a '
-#          'specific part of the upload.')
-#    bucket_uri = self.CreateBucket()
-#    tmp_dir = self.CreateTempDir()
-#    fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-#                                contents='a' * ONE_KIB * 512)
-#    test_callback_file = self.CreateTempFile(
-#        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
-#                                                         int(ONE_KIB) * 384)))
-#    resumable_threshold_for_test = (
-#        'GSUtil', 'resumable_threshold', str(ONE_KIB))
-#    resumable_chunk_size_for_test = (
-#        'GSUtil', 'json_resumable_chunk_size', str(ONE_KIB * 256))
-#    max_system_memory_small_for_test = (
-#        'GSUtil', 'max_system_memory', '10')
-#    with SetBotoConfigForTest([resumable_threshold_for_test,
-#                               resumable_chunk_size_for_test,
-#                               max_system_memory_small_for_test]):
-#      stderr = self.RunGsUtil(['-D', 'cp', '--testcallbackfile', test_callback_file,
-#                               fpath, suri(bucket_uri)],
-#                              expected_status=1, return_stderr=True)
-#      self.assertIn('Artifically halting upload', stderr)
-#      fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
-#                                  contents='b' * ONE_KIB * 512)
-#      stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
-#                              expected_status=1, return_stderr=True)
-#      with open('/usr/local/google/home/ptai/output2.txt', 'w') as f:
-#        f.write(stderr)
+# @SkipForS3('No resumable upload support for S3.')
+# def test_cp_resumable_upload_break_file_content_change(self):
+#   """Tests a resumable upload where the uploaded file changes content."""
+#   if self.test_api == ApiSelector.XML:
+#     return unittest.skip(
+#         'XML doesn\'t make separate HTTP calls at fixed-size boundaries for '
+#         'resumable uploads, so we can\'t guarantee that the server saves a '
+#         'specific part of the upload.')
+#   bucket_uri = self.CreateBucket()
+#   tmp_dir = self.CreateTempDir()
+#   fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
+#                               contents='a' * ONE_KIB * 512)
+#   test_callback_file = self.CreateTempFile(
+#       contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+#                                                        int(ONE_KIB) * 384)))
+#   resumable_threshold_for_test = (
+#       'GSUtil', 'resumable_threshold', str(ONE_KIB))
+#   resumable_chunk_size_for_test = (
+#       'GSUtil', 'json_resumable_chunk_size', str(ONE_KIB * 256))
+#   max_system_memory_small_for_test = (
+#       'GSUtil', 'max_system_memory', '10')
+#   with SetBotoConfigForTest([resumable_threshold_for_test,
+#                              resumable_chunk_size_for_test,
+#                              max_system_memory_small_for_test]):
+#     stderr = self.RunGsUtil(['-D', 'cp', '--testcallbackfile', test_callback_file,
+#                              fpath, suri(bucket_uri)],
+#                             expected_status=1, return_stderr=True)
+#     self.assertIn('Artifically halting upload', stderr)
+#     fpath = self.CreateTempFile(file_name='foo', tmpdir=tmp_dir,
+#                                 contents='b' * ONE_KIB * 512)
+#     stderr = self.RunGsUtil(['-D', 'cp', fpath, suri(bucket_uri)],
+#                             expected_status=1, return_stderr=True)
+#     with open('/usr/local/google/home/ptai/output2.txt', 'w') as f:
+#       f.write(stderr)
 #
-#      self.assertIn('doesn\'t match cloud-supplied digest', stderr)
+#     self.assertIn('doesn\'t match cloud-supplied digest', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_break_file_smaller_size(self):
     """Tests a resumable upload where the uploaded file changes content.
 
@@ -2142,6 +2219,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('ResumableUploadAbortException', stderr)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_composite_encrypted_upload_resume(self):
     """Tests that an encrypted composite upload resumes successfully."""
     if self.test_api == ApiSelector.XML:
@@ -2205,6 +2283,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       DeleteTrackerFile(tracker_file_name)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_composite_encrypted_upload_restart(self):
     """Tests that encrypted composite upload restarts given a different key."""
     if self.test_api == ApiSelector.XML:
@@ -2259,6 +2338,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('No resumable upload support for S3.')
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_unwritable_tracker_file(self):
     """Tests a resumable upload with an unwritable tracker file."""
     bucket_uri = self.CreateBucket()
@@ -2286,6 +2366,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @NotParallelizable
   @unittest.skipIf(IS_WINDOWS, 'chmod on dir unsupported on Windows.')
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_unwritable_tracker_file_download(self):
     """Tests downloads with an unwritable tracker file."""
     object_uri = self.CreateObject(contents='foo' * ONE_KIB)
@@ -2344,12 +2425,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(fpath, 'r') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_break(self):
     """Tests that a download can be resumed after a connection break."""
     self._test_cp_resumable_download_break_helper(
         [('GSUtil', 'resumable_threshold', str(ONE_KIB))])
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_encrypted_download_break(self):
     """Tests that an encrypted download resumes after a connection break."""
     if self.test_api == ApiSelector.XML:
@@ -2361,6 +2444,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         encryption_key=TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_encrypted_download_key_rotation(self):
     """Tests that a download restarts with a rotated encryption key."""
     if self.test_api == ApiSelector.XML:
@@ -2409,6 +2493,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(f.read(), file_contents, 'File contents differ')
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_etag_differs(self):
     """Tests that download restarts the file when the source object changes.
 
@@ -2442,6 +2527,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_generation_differs(self):
     """Tests that a resumable download restarts if the generation differs."""
     bucket_uri = self.CreateBucket()
@@ -2475,6 +2561,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath, 'r') as f:
         self.assertEqual(f.read(), file_contents, 'File contents differ')
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_file_larger(self):
     """Tests download deletes the tracker file when existing file is larger."""
     bucket_uri = self.CreateBucket()
@@ -2497,6 +2584,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn('Resuming download', stderr)
       self.assertIn('Deleting tracker file', stderr)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_content_differs(self):
     """Tests that we do not re-download when tracker file matches existing file.
 
@@ -2541,6 +2629,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_content_matches(self):
     """Tests download no-ops when tracker file matches existing file."""
     bucket_uri = self.CreateBucket()
@@ -2575,6 +2664,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_tracker_file_not_matches(self):
     """Tests that download overwrites when tracker file etag does not match."""
     bucket_uri = self.CreateBucket()
@@ -2610,6 +2700,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       if os.path.exists(tracker_filename):
         os.unlink(tracker_filename)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_double_gzip(self):
     """Tests that upload and download of a doubly-gzipped file succeeds."""
     bucket_uri = self.CreateBucket()
@@ -2619,6 +2710,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_gzip(self):
     """Tests that download can be resumed successfully with a gzipped file."""
     # Generate some reasonably incompressible data.  This compresses to a bit
@@ -2689,6 +2781,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_download_check_hashes_never(self):
     """Tests that resumble downloads work with check_hashes = never."""
     bucket_uri = self.CreateBucket()
@@ -2714,6 +2807,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents, 'File contents did not match.')
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_bucket_deleted(self):
     """Tests that a not found exception is raised if bucket no longer exists."""
     bucket_uri = self.CreateBucket()
@@ -2731,6 +2825,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('bucket does not exist', stderr)
 
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download(self):
     """Tests that sliced object download works in the general case."""
     bucket_uri = self.CreateBucket()
@@ -2761,6 +2856,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_unresumable_sliced_download(self):
     """Tests sliced download works when resumability is disabled."""
     bucket_uri = self.CreateBucket()
@@ -2803,6 +2899,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download_resume(self):
     """Tests that sliced object download is resumable."""
     bucket_uri = self.CreateBucket()
@@ -2846,6 +2943,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download_partial_resume(self):
     """Test sliced download resumability when some components are finished."""
     bucket_uri = self.CreateBucket()
@@ -2890,6 +2988,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download_resume_content_differs(self):
     """Tests differing file contents are detected by sliced downloads."""
     bucket_uri = self.CreateBucket()
@@ -2942,6 +3041,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download_component_size_changed(self):
     """Tests sliced download doesn't break when the boto config changes.
 
@@ -2985,6 +3085,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sliced_download_disabled_cross_process(self):
     """Tests temporary files are not orphaned if sliced download is disabled.
 
@@ -3037,6 +3138,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), 'abcd' * self.halt_size)
 
   @SkipForS3('No resumable upload support for S3.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_resumable_upload_start_over_http_error(self):
     for start_over_error in (404, 410):
       self.start_over_error_test_helper(start_over_error)
@@ -3068,6 +3170,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])
 
+  @ParallelDiskOptimizationOnOff
   def test_rewrite_cp(self):
     """Tests the JSON Rewrite API."""
     if self.test_api == ApiSelector.XML:
@@ -3096,6 +3199,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                              'md5Hash']).md5Hash,
         'Error: Rewritten object\'s hash doesn\'t match source object.')
 
+  @ParallelDiskOptimizationOnOff
   def test_rewrite_cp_resume(self):
     """Tests the JSON Rewrite API, breaking and resuming via a tracker file."""
     if self.test_api == ApiSelector.XML:
@@ -3161,6 +3265,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
 
+  @ParallelDiskOptimizationOnOff
   def test_rewrite_cp_resume_source_changed(self):
     """Tests that Rewrite starts over when the source object has changed."""
     if self.test_api == ApiSelector.XML:
@@ -3231,6 +3336,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
 
+  @ParallelDiskOptimizationOnOff
   def test_rewrite_cp_resume_command_changed(self):
     """Tests that Rewrite starts over when the arguments changed."""
     if self.test_api == ApiSelector.XML:
@@ -3305,6 +3411,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 
@@ -3316,6 +3423,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=True)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_preserve_posix_bucket_to_dir_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 
@@ -3330,11 +3438,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=True)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_preseve_posix_dir_to_bucket_no_errors(self):
     """Tests use of the -P flag with cp from a local dir to a bucket."""
     bucket_uri = self.CreateBucket()
     TestCpMvPOSIXLocalToBucketNoErrors(self, bucket_uri, is_cp=True)
 
+  @ParallelDiskOptimizationOnOff
   def test_cp_minus_s_to_non_cloud_dest_fails(self):
     """Test that cp -s operations to a non-cloud destination are prevented."""
     local_file = self.CreateTempFile(contents='foo')
@@ -3347,6 +3457,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   # TODO: Remove @skip annotation from this test once we upgrade to the Boto
   # version that parses the storage class header for HEAD Object responses.
   @SkipForXML('Need Boto version > 2.46.1')
+  @ParallelDiskOptimizationOnOff
   def test_cp_specify_nondefault_storage_class(self):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(
@@ -3357,7 +3468,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # that using the normalized case is accepted by each API.
     nondefault_storage_class = {
         's3': 'Standard_iA',
-        'gs':'durable_REDUCED_availability'
+        'gs': 'durable_REDUCED_availability'
     }
     storage_class = nondefault_storage_class[self.default_provider]
     self.RunGsUtil(['cp', '-s', storage_class, suri(object_uri), object2_suri])
@@ -3366,6 +3477,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stdout, r'Storage class:\s+%s' % storage_class, flags=re.IGNORECASE)
 
   @SkipForS3('Test uses gs-specific storage classes.')
+  @ParallelDiskOptimizationOnOff
   def test_cp_sets_correct_dest_storage_class(self):
     """Tests that object storage class is set correctly with and without -s."""
     # Use a non-default storage class as the default for the bucket.

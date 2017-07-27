@@ -193,6 +193,11 @@ def _GetTaskEstimationThreshold():
   return boto.config.getint('GSUtil', 'task_estimation_threshold',
                             DEFAULT_TASK_ESTIMATION_THRESHOLD)
 
+
+def _GetParallelDiskOptimizationFeature():
+  return boto.config.getbool('GSUtil', 'parallel_disk_optimization',
+                             False)
+
 # That maximum depth of the tree of recursive calls to command.Apply. This is
 # an arbitrary limit put in place to prevent developers from accidentally
 # causing problems with infinite recursion, and it can be increased if needed.
@@ -375,19 +380,23 @@ def InitializeMultiprocessingVariables():
   # undefined behavior when trying to interact with a non-existent queue.
   glob_status_queue = manager.Queue(MAX_QUEUE_SIZE)
 
-  # Create a file operation manager for the parallel_disk_optimization feature.
-  file_op_manager = FileOpManager(GetMaxSystemMemory(), manager=manager)
+  # Check if the parallel disk optimization feature is turned on before
+  # initializing the necessary infrastructure.
+  if _GetParallelDiskOptimizationFeature():
+    # Create a file operation manager for the parallel disk optimization
+    # feature.
+    file_op_manager = FileOpManager(GetMaxSystemMemory(), manager=manager)
 
-  # Global disk read lock to maintain that only one file operation thread may
-  # read from the disk at a time.
-  disk_lock = manager.Lock()
+    # Global disk read lock to maintain that only one file operation thread may
+    # read from the disk at a time.
+    disk_lock = manager.Lock()
 
-  # File object queue per process that manages disk read requests from file
-  # wrapper objects.
-  file_obj_queue = Queue.Queue()
+    # File object queue per process that manages disk read requests from file
+    # wrapper objects.
+    file_obj_queue = Queue.Queue()
 
-  # A list of file operation threads.
-  file_op_threads = []
+    # A list of file operation threads.
+    file_op_threads = []
 
 
 def TeardownMultiprocessingProcesses():
@@ -416,6 +425,7 @@ def InitializeThreadingVariables():
   global need_pool_or_done_cond, call_completed_map, class_map, thread_stats
   global task_queues, caller_id_lock, caller_id_counter, glob_status_queue
   global worker_checking_level_lock, current_max_recursive_level
+  # pylint: disable=global-variable-undefined
   global file_op_manager, disk_lock, file_obj_queue, file_op_threads
   caller_id_counter = ProcessAndThreadSafeInt(False)
   caller_id_finished_count = AtomicDict()
@@ -433,10 +443,11 @@ def InitializeThreadingVariables():
   task_queues = []
   total_tasks = AtomicDict()
   worker_checking_level_lock = threading.Lock()
-  file_op_manager = FileOpManager(GetMaxSystemMemory())
-  disk_lock = threading.Lock()
-  file_obj_queue = _NewThreadsafeQueue()
-  file_op_threads = []
+  if _GetParallelDiskOptimizationFeature():
+    file_op_manager = FileOpManager(GetMaxSystemMemory())
+    disk_lock = threading.Lock()
+    file_obj_queue = _NewThreadsafeQueue()
+    file_op_threads = []
 
 
 # Each subclass of Command must define a property named 'command_spec' that is
@@ -1407,10 +1418,12 @@ class Command(HelpProvider):
                        shared_vars_map.get((caller_id, name)))
         setattr(self, name, final_value)
 
-    # Delete file operation threads.
-    for file_op_thread in file_op_threads:
-      file_op_thread.cancel_event.set()
-      file_op_thread.join(timeout=FILE_OP_THREAD_JOIN_TIMEOUT)
+    # If parallel disk optimization feature is turned on, perform clean up and
+    # delete file operation threads.
+    if _GetParallelDiskOptimizationFeature():
+      for file_op_thread in file_op_threads:
+        file_op_thread.cancel_event.set()
+        file_op_thread.join(timeout=FILE_OP_THREAD_JOIN_TIMEOUT)
 
     if should_return_results:
       return global_return_values_map.get(caller_id)
@@ -2040,16 +2053,20 @@ class WorkerPool(object):
     self.task_queue = task_queue or _NewThreadsafeQueue()
     self.threads = []
 
-    if boto.config.getbool('GSUtil', 'parallel_disk_optimization', False):
-      # If parallel_disk_optimization is set to true, create and start a
-      # file operation thread to manage disk reads.
-      global file_obj_queue
-      global file_op_threads
+    if (_GetParallelDiskOptimizationFeature() and
+        self.command_name in ('cp', 'mv', 'rsync')):
+      # TODO: Update the feature to work for the command 'perfdiag'.
+      # If the parallel disk optimization feature is turned on and the
+      # command is 'cp', 'mv', or 'rsync', create and start a file
+      # operation thread to manage disk reads.
+      # pylint: disable=global-variable-not-assigned
+      # pylint: disable=global-variable-undefined
+      global file_obj_queue, file_op_threads, file_op_manager, disk_lock
+      # pylint: enable=global-variable-not-assigned
+      # pylint: enable=global-variable-undefined
       file_obj_queue = _NewThreadsafeQueue()
       queues.append(file_obj_queue)
 
-      global file_op_manager
-      global disk_lock
       file_op_queue_timeout = 0.1
       file_op_thread = FileOperationThread(
           file_obj_queue, file_op_manager, disk_lock, file_op_queue_timeout)
@@ -2337,9 +2354,10 @@ def ShutDownGsutil():
       pass
   for consumer_pool in consumer_pools:
     consumer_pool.ShutDown()
-  for file_op_thread in file_op_threads:
-    file_op_thread.cancel_event.set()
-    file_op_thread.join(timeout=FILE_OP_THREAD_JOIN_TIMEOUT)
+  if _GetParallelDiskOptimizationFeature():
+    for file_op_thread in file_op_threads:
+      file_op_thread.cancel_event.set()
+      file_op_thread.join(timeout=FILE_OP_THREAD_JOIN_TIMEOUT)
   try:
     glob_status_queue.cancel_join_thread()
   except:  # pylint: disable=bare-except

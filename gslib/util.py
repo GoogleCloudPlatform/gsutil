@@ -164,8 +164,8 @@ SECONDS_PER_DAY = 86400L
 # to indicate whether SequentialApply or ParallelApply is called. Attempts
 # to retrieve this value should be done via GetRunningInParallel().
 running_in_parallel = None
-# Default max system memory is in KiB.
-DEFAULT_MAX_SYSTEM_MEMORY = 5120
+# Default max system memory is in bytes.
+DEFAULT_MAX_SYSTEM_MEMORY = 8388608
 
 global manager  # pylint: disable=global-at-module-level
 # Single certs file for use across all processes.

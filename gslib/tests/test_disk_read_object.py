@@ -17,9 +17,12 @@
 from __future__ import absolute_import
 
 from functools import partial
+import os
 import pkgutil
+import Queue
 
 from gslib.disk_read_object import DiskReadFileWrapperObject
+from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 import mock
@@ -34,7 +37,6 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
   _temp_test_file = None
   _temp_test_file_contents = None
   _temp_test_file_len = None
-  _test_wrapper = None
   _test_wrapper_stream = None
   _test_wrapper_buffer_data = None
 
@@ -73,14 +75,15 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     the mocked read function.
     """
     tmp_file = self._GetTestFile()
-    self._test_wrapper = DiskReadFileWrapperObject(
+    # Create a mock for the manager that always allows allocation of memory.
+    test_manager = mock.Mock()
+    test_manager.AllocMemory = mock.Mock(return_value=True)
+    test_manager.FreeMemory = mock.Mock()
+    test_file_obj_queue = Queue.Queue()
+    self._test_wrapper_stream = DiskReadFileWrapperObject(
         StorageUrlFromString(tmp_file), self._temp_test_file_len,
-        TEST_MAX_BUFFER_SIZE)
-    self._test_wrapper_stream = self._test_wrapper.open()
-    # Create a mock for the manager that always allows allocation of memory
-    self._test_wrapper.global_manager.AllocMemory = mock.Mock(return_value=True)
-    self._test_wrapper.global_manager.FreeMemory = mock.Mock()
-    # Create a mock for the file read function
+        TEST_MAX_BUFFER_SIZE, test_manager, test_file_obj_queue)
+    # Create a mock for the file read function.
     self._test_wrapper_stream.original_read = mock.Mock(
         side_effect=self._test_wrapper_stream.read)
     self._test_wrapper_stream.read = mock.Mock(
@@ -89,12 +92,17 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
 
   def testInit(self):
     """Confirms the starting file pointer is at the beginning of the file."""
-    tmp_file = self._GetTestFile()
-    self._test_wrapper = DiskReadFileWrapperObject(
-        StorageUrlFromString(tmp_file), self._temp_test_file_len,
-        TEST_MAX_BUFFER_SIZE)
-    self._test_wrapper_stream = self._test_wrapper.open()
+    self._GenerateMockObject()
     self.assertEqual(0, self._test_wrapper_stream.tell())
+
+  def testClosed(self):
+    """Tests closing the wrapper object results in underlying closed stream."""
+    self._GenerateMockObject()
+
+    self._test_wrapper_stream.close()
+    # pylint: disable=protected-access
+    self.assertEqual(self._test_wrapper_stream._stream.closed, True)
+    # pylint: enable=protected-access
 
   def testReadMaxBufferSizeAndTell(self):
     """Reads from disk and asserts that the stream reads the right amount."""
@@ -110,12 +118,12 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     """Reads the whole file and asserts accurate data from file is read."""
     self._GenerateMockObject()
 
-    # Check that each chunk read is as expected
+    # Check that each chunk read is as expected.
     while self._test_wrapper_stream.tell() != self._temp_test_file_len:
-      old_position = self._test_wrapper.tell()
+      old_position = self._test_wrapper_stream.tell()
       self._test_wrapper_buffer_data = self._test_wrapper_stream.read(
           TEST_MAX_BUFFER_SIZE)
-      new_position = self._test_wrapper.tell()
+      new_position = self._test_wrapper_stream.tell()
       self.assertEqual(self._test_wrapper_buffer_data,
                        self._temp_test_file_contents[old_position:new_position])
 
@@ -280,4 +288,30 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
         self._temp_test_file_contents[-len(data):], data,
         'Data from position %s to EOF did not match file contents.' %
         position)
+
+  def testSeekEnd(self):
+    """Tests seeking from the end of the file."""
+    for seek_back in (-TEST_MAX_BUFFER_SIZE - 1,
+                      -TEST_MAX_BUFFER_SIZE,
+                      -TEST_MAX_BUFFER_SIZE + 1):
+      self._GenerateMockObject()
+
+      self._test_wrapper_stream.seek(seek_back, whence=os.SEEK_END)
+      self.assertEqual(self._temp_test_file_len + seek_back,
+                       self._test_wrapper_stream.tell())
+
+  def testIOError(self):
+    """Tests that WriteRequest with IOError raises Exception."""
+    self._GenerateMockObject()
+    # pylint: disable=protected-access
+    self._test_wrapper_stream._stream = mock.Mock(return_value=True)
+    self._test_wrapper_stream._stream.tell = mock.Mock(return_value=0)
+    self._test_wrapper_stream._stream.read = mock.Mock(side_effect=IOError(
+        'Could not read from stream.'))
+    # pylint: enable=protected-access
+
+    try:
+      self._test_wrapper_stream.read(TEST_MAX_BUFFER_SIZE)
+    except CommandException, e:
+      self.assertEqual('CommandException: Could not read from stream.', str(e))
 

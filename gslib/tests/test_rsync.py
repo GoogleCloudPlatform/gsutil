@@ -29,6 +29,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
+from gslib.tests.util import ParallelDiskOptimizationOnOff
 from gslib.tests.util import POSIX_GID_ERROR
 from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
 from gslib.tests.util import POSIX_MODE_ERROR
@@ -105,6 +106,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         bucket_name, object_name, MTIME_ATTR, expected_mtime,
         expected_present=expected_present)
 
+  @ParallelDiskOptimizationOnOff
   def test_invalid_args(self):
     """Tests various invalid argument cases."""
     bucket_uri = self.CreateBucket()
@@ -133,6 +135,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   # reasonable test coverage because the -d handling it src/dest URI-type
   # independent, and keeps the test case combinations more manageable.
 
+  @ParallelDiskOptimizationOnOff
   def test_invalid_src_mtime(self):
     """Tests that an exception is thrown if mtime cannot be cast as a long."""
     # Create 1 bucket with 1 file present with mtime set as a string of
@@ -171,6 +174,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_preserve_posix(self):
     """Tests that rsync -P works with bucket to bucket."""
     # Note that unlike bucket to dir tests POSIX attributes cannot be verified
@@ -248,6 +252,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn('Copying POSIX attributes from src to dst for', stderr)
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_same_objects_src_mtime(self):
     """Tests bucket to bucket with mtime.
 
@@ -290,6 +295,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj1', '0')
     self._VerifyObjectMtime(dst_bucket.bucket_name, 'subdir/obj2', '1')
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_src_mtime(self):
     """Tests bucket to bucket where source has mtime in files."""
     # Create 2 buckets where the source has 2 objects one at root level and the
@@ -321,6 +327,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj1', '0')
     self._VerifyObjectMtime(dst_bucket.bucket_name, 'subdir/obj2', '1')
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_dst_mtime(self):
     """Tests bucket to bucket where destination has mtime in objects."""
     # Create 2 buckets where the source has files without mtime and the
@@ -421,6 +428,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj6', '100')
     _Check5()
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket(self):
     """Tests that flat and recursive rsync between 2 buckets works correctly."""
     # Create 2 buckets with 1 overlapping object, 1 extra object at root level
@@ -518,6 +526,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check4()
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_minus_d(self):
     """Tests that flat and recursive rsync between 2 buckets works correctly."""
     # Create 2 buckets with 1 overlapping object, 1 extra object at root level
@@ -605,6 +614,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_mtime(self):
     """Tests dir to bucket with mtime.
 
@@ -721,6 +731,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_seek_ahead(self):
     """Tests that rsync seek-ahead iterator works correctly."""
     # Unfortunately, we have to retry the entire operation in the case of
@@ -783,6 +794,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_minus_d(self):
     """Tests that flat and recursive rsync dir to bucket works correctly."""
     # Create dir and bucket with 1 overlapping object, 1 extra object at root
@@ -896,6 +908,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_dir_mtime(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
@@ -1005,6 +1018,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_dir_minus_d(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
@@ -1126,6 +1140,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           ['rsync', '-d', tmpdir1, tmpdir2], return_stderr=True))
     _Check4()
 
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_dir_minus_d_more_files_than_bufsize(self):
     """Tests concurrently building listing from multiple tmp file ranges."""
     # Create 2 dirs, where each dir has 1000 objects and differing names.
@@ -1179,6 +1194,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_mtime(self):
     """Tests bucket to dir with mtime at the source."""
     # Create bucket and dir with overlapping content and other combinations of
@@ -1311,6 +1327,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check3()
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_preserve_posix_errors(self):
     """Tests that rsync -P works properly with files that would be orphaned."""
     bucket_uri = self.CreateBucket()
@@ -1427,6 +1444,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_preserve_posix_no_errors(self):
     """Tests that rsync -P works properly with default file attributes."""
     bucket_uri = self.CreateBucket()
@@ -1514,6 +1532,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_minus_d(self):
     """Tests that flat and recursive rsync bucket to dir works correctly."""
     # Create bucket and dir with 1 overlapping object, 1 extra object at root
@@ -1625,6 +1644,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_minus_d_with_fname_case_change(self):
     """Tests that name case changes work correctly.
 
@@ -1664,6 +1684,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_dir_minus_d_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders.
 
@@ -1692,6 +1713,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_rsync_minus_r_minus_e(self):
     """Tests that rsync -e -r ignores symlinks when recursing."""
     bucket_uri = self.CreateBucket()
@@ -1707,6 +1729,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rsync', '-r', '-e', tmpdir, suri(bucket_uri)])
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_rsync_minus_d_minus_e(self):
     """Tests that rsync -e ignores symlinks."""
     tmpdir = self.CreateTempDir()
@@ -1776,6 +1799,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check3()
 
   @SkipForS3('S3 does not support composite objects')
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_minus_d_with_composites(self):
     """Tests that rsync works with composite objects (which don't have MD5s)."""
     bucket1_uri = self.CreateBucket()
@@ -1814,6 +1838,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_minus_d_empty_dest(self):
     """Tests working with empty dest bucket (iter runs out before src iter)."""
     bucket1_uri = self.CreateBucket()
@@ -1842,6 +1867,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_minus_d_empty_src(self):
     """Tests working with empty src bucket (iter runs out before dst iter)."""
     bucket1_uri = self.CreateBucket()
@@ -1872,6 +1898,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_rsync_minus_d_minus_p(self):
     """Tests that rsync -p preserves ACLs."""
     bucket1_uri = self.CreateBucket()
@@ -1907,6 +1934,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_rsync_canned_acl(self):
     """Tests that rsync -a applies ACLs."""
     bucket1_uri = self.CreateBucket()
@@ -1934,6 +1962,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(acl1_json, acl2_json)
     _Check()
 
+  @ParallelDiskOptimizationOnOff
   def test_rsync_to_nonexistent_bucket_subdir(self):
     """Tests that rsync to non-existent bucket subdir works."""
     # Create dir with some objects and empty bucket.
@@ -1969,6 +1998,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_rsync_from_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
@@ -1983,6 +2013,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Dir should have un-altered content.
     self.assertEquals(listing, set(['/obj1', '/.obj2']))
 
+  @ParallelDiskOptimizationOnOff
   def test_rsync_to_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
@@ -1997,6 +2028,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Dir should have un-altered content.
     self.assertEquals(listing, set(['/obj1', '/.obj2']))
 
+  @ParallelDiskOptimizationOnOff
   def test_bucket_to_bucket_minus_d_with_overwrite_and_punc_chars(self):
     """Tests that punc chars in filenames don't confuse sort order."""
     bucket1_uri = self.CreateBucket()
@@ -2043,6 +2075,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           return_stderr=True))
     _Check2()
 
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_minus_x(self):
     """Tests that rsync -x option works correctly."""
     # Create dir and bucket with 1 overlapping and 2 extra objects in each.
@@ -2087,6 +2120,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS,
                    "os.chmod() won't make file unreadable on Windows.")
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_minus_C(self):
     """Tests that rsync -C option works correctly."""
     # Create dir with 3 objects, the middle of which is unreadable.
@@ -2114,6 +2148,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @unittest.skipIf(IS_WINDOWS,
                    'Windows Unicode support is problematic in Python 2.x.')
+  @ParallelDiskOptimizationOnOff
   def test_dir_to_bucket_with_unicode_chars(self):
     """Tests that rsync -r works correctly with unicode filenames."""
 

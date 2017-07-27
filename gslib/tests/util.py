@@ -408,9 +408,9 @@ def ParallelDiskOptimizationOnOff(func):
     func(*args, **kwargs)
 
     if not RUN_S3_TESTS and UsingCrcmodExtension(crcmod):
-      # Try again, forcing parallel upload and sliced download.
+      # Try again, force using parallel disk optimization feature.
       with SetBotoConfigForTest([
-          ('GSUtil', 'parallel_disk_optimization', '1')]):
+          ('GSUtil', 'parallel_disk_optimization', 'True')]):
         func(*args, **kwargs)
 
   return Wrapper

@@ -36,7 +36,7 @@ UI_THREAD_JOIN_TIMEOUT = 60
 
 # Maximum time to wait (join) on the FileOperationThread after the Apply
 # completes, in seconds.
-FILE_OP_THREAD_JOIN_TIMEOUT = 60
+FILE_OP_THREAD_JOIN_TIMEOUT = 0.2
 
 
 class AtomicDict(object):

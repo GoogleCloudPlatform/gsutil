@@ -46,6 +46,7 @@ from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.util import DEFAULT_MAX_SYSTEM_MEMORY
 from gslib.util import IS_WINDOWS
 from gslib.util import RESUMABLE_THRESHOLD_B
 
@@ -199,6 +200,8 @@ _DETAILED_HELP_TEXT = ("""
       json_api_version
       parallel_composite_upload_component_size
       parallel_composite_upload_threshold
+      parallel_disk_optimization
+      max_system_memory
       sliced_object_download_component_size
       sliced_object_download_max_components
       sliced_object_download_threshold
@@ -561,6 +564,15 @@ content_language = en
 # Disables the prompt asking for opt-in to data collection for analytics.
 #disable_analytics_prompt = True
 
+# Enables and disables the gsutil Dynamic I/O Optimization feature. The feature
+# is an optimization using file operation threads, file disk read wrapper
+# objects, and a file operation manager, and should be used with commands 'cp',
+# 'mv', and 'rsync' for uploading files to objects.
+parallel_disk_optimization = False
+
+# Maximum memory that is allowed to be allocated for disk file read buffers.
+max_system_memory = %(max_system_memory)s
+
 """ % {'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
        'hash_always': CHECK_HASH_ALWAYS,
@@ -579,7 +591,8 @@ content_language = en
        'sliced_object_download_max_components': (
            DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
        'max_component_count': MAX_COMPONENT_COUNT,
-       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD}
+       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
+       'max_system_memory': DEFAULT_MAX_SYSTEM_MEMORY}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]

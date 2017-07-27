@@ -26,6 +26,7 @@ from gslib.tests.test_cp import TestCpMvPOSIXLocalToBucketNoErrors
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import ParallelDiskOptimizationOnOff
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
@@ -36,6 +37,7 @@ from gslib.util import UsingCrcmodExtension
 class TestMv(testcase.GsUtilIntegrationTestCase):
   """Integration tests for mv command."""
 
+  @ParallelDiskOptimizationOnOff
   def test_moving(self):
     """Tests moving two buckets, one with 2 objects and one with 0 objects."""
     bucket1_uri = self.CreateBucket(test_objects=2)
@@ -91,6 +93,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket1_uri, 1)
     self.AssertNObjectsInBucket(bucket2_uri, 0)
 
+  @ParallelDiskOptimizationOnOff
   def test_move_bucket_to_dir(self):
     """Tests moving a local directory to a bucket."""
     bucket_uri = self.CreateBucket(test_objects=2)
@@ -104,6 +107,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(dir_list), 2)
     self.AssertNObjectsInBucket(bucket_uri, 0)
 
+  @ParallelDiskOptimizationOnOff
   def test_move_dir_to_bucket(self):
     """Tests moving a local directory to a bucket."""
     bucket_uri = self.CreateBucket()
@@ -112,6 +116,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, 2)
 
   @SequentialAndParallelTransfer
+  @ParallelDiskOptimizationOnOff
   def test_stdin_args(self):
     """Tests mv with the -I option."""
     tmpdir = self.CreateTempDir()
@@ -130,6 +135,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
       self.assertNumLines(stdout, 2)
     _Check1()
 
+  @ParallelDiskOptimizationOnOff
   def test_mv_no_clobber(self):
     """Tests mv with the -n option."""
     fpath1 = self.CreateTempFile(contents='data1')
@@ -147,6 +153,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @ParallelDiskOptimizationOnOff
   def test_mv_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with mv from a bucket to a local dir.
 
@@ -158,6 +165,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_mv_preserve_posix_bucket_to_dir_errors(self):
     """Tests use of the -P flag with mv from a bucket to a local dir.
 
@@ -172,12 +180,14 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @ParallelDiskOptimizationOnOff
   def test_mv_preseve_posix_dir_to_bucket_no_errors(self):
     """Tests use of the -P flag with mv from a local dir to a bucket."""
     bucket_uri = self.CreateBucket()
     TestCpMvPOSIXLocalToBucketNoErrors(self, bucket_uri, is_cp=False)
 
   @SkipForS3('Test is only relevant for gs storage classes.')
+  @ParallelDiskOptimizationOnOff
   def test_mv_early_deletion_warning(self):
     """Tests that mv on a recent nearline object warns about early deletion."""
     if self.test_api == ApiSelector.XML:
