@@ -2053,12 +2053,13 @@ class WorkerPool(object):
     self.task_queue = task_queue or _NewThreadsafeQueue()
     self.threads = []
 
-    if (_GetParallelDiskOptimizationFeature() and
-        self.command_name in ('cp', 'mv', 'rsync')):
+    if _GetParallelDiskOptimizationFeature():
+      # TODO: Update so that the file operation thread is only created when
+      # both the feature is turned on and the commands run include 'cp', 'mv',
+      # and/or 'rsync.'
       # TODO: Update the feature to work for the command 'perfdiag'.
-      # If the parallel disk optimization feature is turned on and the
-      # command is 'cp', 'mv', or 'rsync', create and start a file
-      # operation thread to manage disk reads.
+      # If the parallel disk optimization feature is turned on, create and
+      # start a file operation thread to manage disk reads.
       # pylint: disable=global-variable-not-assigned
       # pylint: disable=global-variable-undefined
       global file_obj_queue, file_op_threads, file_op_manager, disk_lock

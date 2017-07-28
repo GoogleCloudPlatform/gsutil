@@ -100,7 +100,9 @@ class DiskReadFileWrapperObject(object):
   def _RequestRead(self, blocks=1):  # pylint: disable=invalid-name
     """Queues a read for this file."""
     if not self._done:
-      # Send "blocks" number of requests for max_buffer_size bytes to read.
+      # Send <blocks> number of requests for max_buffer_size bytes to read.
+      # Note: For future optimizations, can dynamically change the number
+      # of blocks and request size.
       for _ in xrange(blocks):
         self._read_queue.put((self, self._buffer_size))
 
@@ -116,8 +118,8 @@ class DiskReadFileWrapperObject(object):
           size=-1.
 
     Raises:
-      CommandException if get from buffer queue that there was an
-          unsuccessful disk read.
+      CommandException: We fetched a WriteRequest from the buffer queue
+          indicating that a disk read was unsuccessful.
     """
     read_all_bytes = size is None or size < 0
     if read_all_bytes:
@@ -130,8 +132,9 @@ class DiskReadFileWrapperObject(object):
       # There are still bytes to read.
       if(self._current_request is not None and
          self._current_request.data_len > 0):
-        # Check if there's remainder buffer to read from before going to the
-        # queue.
+        # Check if there's remainder bytes in the current_request buffer to
+        # read from and process before dequeuing the next buffer read
+        # from the buffer queue.
         read_size = min(bytes_remaining, self._current_request.data_len)
         read_from_curr_req = self._current_request.data[:read_size]
         buffered_data.append(read_from_curr_req)
@@ -143,40 +146,54 @@ class DiskReadFileWrapperObject(object):
             new_curr_req_data_len, None)
         bytes_remaining -= read_size
       else:
-        # Get data from buffer queue.
+        # No more bytes in the current_request buffer, so dequeue next read
+        # buffer from buffer queue.
         self._buffer_queue_nonempty.acquire()
+        # Since seek and read cannot be called simultaneously, we will
+        # never remove items from the queue asynchronously. However, a seek
+        # could invalidate the buffer queue, but outstanding requests to the
+        # file operation thread could signal the condition after the queue was
+        # cleared. Therefore, now that the nonempty Condition has been signaled,
+        # ensure that the queue is nonempty before proceeding or else wait
+        # again.
         while not self._buffer_queue:
           # Block until the buffer queue has bytes to read.
           self._buffer_queue_nonempty.wait()
 
-        # Now that the nonempty Condition has been signaled, confirm once again
-        # that there is an element in the queue before proceeding or else wait
-        # again (because there could have been a seek that occurred that
-        # invalidated the buffer queue while there were still outstanding
-        # requests that signaled the Condition).
-        if not self._buffer_queue:
-          self._buffer_queue_nonempty.wait()
-
         self._current_request = self._buffer_queue.popleft()
-        # If the read from the disk was not a success, then raise IOError.
+        self._buffer_queue_nonempty.release()
+        # If the read from the disk was not a success, then raise
+        # CommandException.
         if not self._current_request.success:
           raise CommandException(self._current_request.err_msg)
-        data_len = self._current_request.data_len
-        self._buffer_queue_start += data_len
 
-        # Update the global file operation manager to decrement the system
-        # memory used and then check if there are still bytes to read. If there
-        # are, then send a new request to the read request queue and increment
-        # the buffer end to represent the to-be allocated buffer space.
+        # Update the buffer_queue_start and global file operation manager to
+        # reflect the system memory used since the request has been completed.
+        # In the current implementation, the request size is always
+        # <buffer_size> and the file operation thread asks the file operation
+        # manager to allocate enough for the full buffer size. Therefore, we
+        # update the buffer_queue_start and manager by <buffer_size> every time
+        # even if it may be EOF and there are less than <buffer_size> bytes in
+        # the most recently popped buffer queue element.
+        self._buffer_queue_start += self._buffer_size
         self._global_manager.available.acquire()
-        self._global_manager.FreeMemory(data_len)
-        if self._buffer_queue_end + self._buffer_size < self._size:
+        self._global_manager.FreeMemory(self._buffer_size)
+        # Check if there are still bytes in the file to be read. If there are,
+        # then send a new request to the read request queue and increment the
+        # buffer end to represent the to-be allocated buffer space. Similar
+        # to the file operation manager's memory value, buffer_queue_end
+        # represents the amount of buffer space that is reserved to be allowed
+        # to be allocated and at the EOF may be an overestimate of the actual
+        # buffer queue size.
+        # Note: if/when request sizes other than
+        # <buffer_size> are sent, this decrement in memory in the file
+        # operation manager and this increment in the buffer_queue_end will
+        # need to be modified to reflect the updated request sizes.
+        if self._buffer_queue_end < self._size:
           self._RequestRead()
           self._buffer_queue_end += self._buffer_size
         self._global_manager.available.notify()
         self._global_manager.available.release()
-
-        self._buffer_queue_nonempty.release()
 
     data = b''.join(buffered_data)
     return data
@@ -264,6 +281,11 @@ class DiskReadFileWrapperObject(object):
       self._current_request = None
 
       self._global_manager.available.acquire()
+      # Note that self._buffer_queue_end - self._buffer_queue_start may be an
+      # overestimate of the actual size of the buffer queue. (end - start)
+      # represents the amount of bytes reserved for this wrapper object's
+      # buffers. These reservations will eventually be allocated by the
+      # FileOperationManager.
       self._global_manager.FreeMemory(
           self._buffer_queue_end - self._buffer_queue_start)
       self._buffer_queue_start = 0
@@ -273,7 +295,6 @@ class DiskReadFileWrapperObject(object):
       self._global_manager.available.notify()
       self._global_manager.available.release()
 
-      self._RequestRead()
       self.read(offset)
     elif offset < self._size:
       # Offset is greater than position and offset is within file size bounds.
