@@ -86,11 +86,7 @@ from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import GetConfigFilePaths
-<<<<<<< HEAD
-=======
 from gslib.util import GetMaxSystemMemory
-from gslib.util import GsutilStreamHandler
->>>>>>> File Operation Manager for Parallel Disk Optimization Feature
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
