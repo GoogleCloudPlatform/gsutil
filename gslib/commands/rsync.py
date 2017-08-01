@@ -201,10 +201,15 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>EVENTUAL CONSISTENCY WITH NON-GOOGLE CLOUD PROVIDERS</B>
-  The rsync command is strongly consistent within Google Cloud Storage,
-  because Google Cloud Storage is itself strongly consistent. If you use
-  gsutil with other storage providers there is no guarantee of consistency,
-  because those providers may only be eventually consistent.
+  While Google Cloud Storage is strongly consistent, some cloud providers
+  only support eventual consistency. You may encounter scenarios where rsync
+  synchronizes using stale listing data when working with these other cloud
+  providers. For example, if you run rsync immediately after uploading an
+  object to an eventually consistent cloud provider, the added object may not
+  yet appear in the provider’s listing. Consequently, rsync will miss adding
+  the object to the destination. If this happens you can rerun the rsync
+  operation again later (after the object listing has "caught up").
+
 
 
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
