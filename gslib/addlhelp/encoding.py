@@ -20,12 +20,12 @@ from gslib.help_provider import HelpProvider
 
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
-  To minimize the chance for `filename encoding interoperability problems
+  To reduce the chance for `filename encoding interoperability problems
   <https://en.wikipedia.org/wiki/Filename#Encoding_indication_interoperability>`_ 
-  gsutil requires use of the `UTF-8 <https://en.wikipedia.org/wiki/UTF-8>`_
-  character encoding when uploading and downloading files. Because UTF-8 is in
-  widespread (and growing) use, for most users nothing needs to be done to use
-  UTF-8. Users with files stored in other encodings (such as
+  gsutil uses `UTF-8 <https://en.wikipedia.org/wiki/UTF-8>`_ character encoding
+  when uploading and downloading files. Because UTF-8 is in widespread (and
+  growing) use, for most users nothing needs to be done to use UTF-8. Users with
+  files stored in other encodings (such as
   `Latin 1 <https://en.wikipedia.org/wiki/ISO/IEC_8859-1>`_) must convert those
   filenames to UTF-8 before attempting to upload the files. 
 
@@ -87,6 +87,25 @@ _DETAILED_HELP_TEXT = ("""
   using cygwin (on Windows) or Linux or MacOS - all of which support Unicode.
 
 
+<B>USING UNICODE FILENAMES ON MAC OS</B>
+  MacOS stores filenames in decomposed form (also known as
+  `NFD normalization <https://en.wikipedia.org/wiki/Unicode_equivalence>`_).
+  For example, if a filename contains an accented "e" character, that character
+  will be converted to an "e" followed by an accent before being saved to the
+  filesystem. As a consequence, it's possible to have different name strings
+  for files uploaded from an operating system that doesn't enforce decomposed
+  form (like Ubuntu) from one that does (like MacOS).
+
+  The following example shows how this behavior could lead to unexpected
+  results. Say you create a file with non-ASCII characters on Ubuntu. Ubuntu
+  stores that filename in its composed form. When you upload the file to the
+  cloud, it is stored as named. But if you use gsutil rysnc to bring the file to
+  a MacOS machine and edit the file, then when you use gsutil rsync to bring
+  this version back to the cloud, you end up with two different objects, instead
+  of overwriting the original. This is because MacOS converted the filename to
+  a decomposed form, and Cloud Storage sees this as a different object name.
+
+
 <B>CROSS-PLATFORM ENCODING PROBLEMS OF WHICH TO BE AWARE</B>
   Using UTF-8 for all object names and filenames will ensure that gsutil doesn't
   encounter character encoding errors while operating on the files.
@@ -96,7 +115,7 @@ _DETAILED_HELP_TEXT = ("""
 
   - Windows filenames are case-insensitive, while Google Cloud Storage, Linux,
     and MacOS are not. Thus, for example, if you have two filenames on Linux
-    differing only in case and upload both to Google Cloud Storage and then 
+    differing only in case and upload both to Google Cloud Storage and then
     subsequently download them to Windows, you will end up with just one file
     whose contents came from the last of these files to be written to the
     filesystem.
