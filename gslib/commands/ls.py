@@ -208,16 +208,22 @@ _DETAILED_HELP_TEXT = ("""
             ACL:
     [
       {
-        "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-        "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "entity": "project-owners-867489160491",
+        "projectTeam": {
+          "projectNumber": "867489160491",
+          "team": "owners"
+        },
         "role": "OWNER"
       }
     ]
             Default ACL:
     [
       {
-        "entity": "group-00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
-        "entityId": "00b4903a97163d99003117abe64d292561d2b4074fc90ce5c0e35ac45f66ad70",
+        "entity": "project-owners-867489160491",
+        "projectTeam": {
+          "projectNumber": "867489160491",
+          "team": "owners"
+        },
         "role": "OWNER"
       }
     ]
