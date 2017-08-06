@@ -164,7 +164,7 @@ _CREATE_DESCRIPTION = """
   Create a notification config that will only send an event when a new object
   has been created:
 
-    gsutil notification create -f json -t OBJECT_FINALIZE gs://example-bucket
+    gsutil notification create -f json -t files-to-process -e OBJECT_FINALIZE gs://example-bucket
 
   Create a topic and notification config that will only send an event when
   an object beginning with "photos/" is affected:
