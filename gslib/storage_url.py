@@ -202,7 +202,7 @@ class _CloudUrl(StorageUrl):
         self.object_name = object_match.group('object')
         if self.object_name == '.' or self.object_name == '..':
           raise InvalidUrlError(
-              '%s is an invalid root-level object name.' % self.object_name)
+              '%s is an invalid root-level object name' % self.object_name)
         if self.scheme == 'gs':
           generation_match = GS_GENERATION_REGEX.match(self.object_name)
           if generation_match:
