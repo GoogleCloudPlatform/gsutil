@@ -1641,7 +1641,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
                      GetMaxRetryDelay()))
     except ResumableUploadAbortException:
       retryable = False
-      # raise
+      raise
     finally:
       if not retryable:
         DeleteTrackerFile(tracker_file_name)
