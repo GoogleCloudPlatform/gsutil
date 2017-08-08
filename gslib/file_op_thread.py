@@ -76,7 +76,8 @@ class FileOperationThread(threading.Thread):
         (file_object, size) = self._read_queue.get(timeout=self._timeout)
 
         self._file_op_manager.available.acquire()
-        while not self._file_op_manager.AllocMemory(size):
+        while(not self._file_op_manager.AllocMemory(size) and
+              not file_object.closed):
           self._file_op_manager.available.wait()
 
         with self._disk_lock:
@@ -86,5 +87,8 @@ class FileOperationThread(threading.Thread):
 
       except Queue.Empty:
         pass
+
+      except socket.error, ex:
+        break
 
     return

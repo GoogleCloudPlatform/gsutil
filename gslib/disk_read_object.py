@@ -139,10 +139,11 @@ class DiskReadFileWrapperObject(object):
         read_from_curr_req = self._current_request.data[:read_size]
         buffered_data.append(read_from_curr_req)
 
-        new_curr_req_data_len = self._current_request.data_len - read_size
         self._position += read_size
+        new_curr_req_data = self._current_request.data[read_size:]
+        new_curr_req_data_len = self._current_request.data_len - read_size
         self._current_request = WriteRequest(
-            True, self._position, read_from_curr_req,
+            True, self._position, new_curr_req_data,
             new_curr_req_data_len, None)
         bytes_remaining -= read_size
       else:
@@ -209,7 +210,7 @@ class DiskReadFileWrapperObject(object):
       size: The amount of bytes to read. If omitted or negative, the entire
           contents of the stream will be read and returned.
     """
-    if self._done:
+    if self._done or self._stream is None:
       return
 
     stream_position = self._stream.tell()
@@ -296,7 +297,7 @@ class DiskReadFileWrapperObject(object):
       self._global_manager.available.release()
 
       self.read(offset)
-    elif offset < self._size:
+    elif offset <= self._size:
       # Offset is greater than position and offset is within file size bounds.
       self.read(offset - self._position)
     else:

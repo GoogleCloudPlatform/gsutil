@@ -1641,7 +1641,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
                      GetMaxRetryDelay()))
     except ResumableUploadAbortException:
       retryable = False
-      raise
+      # raise
     finally:
       if not retryable:
         DeleteTrackerFile(tracker_file_name)
@@ -3180,7 +3180,9 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         # is to be run in parallel, and the src_url is not a stream, then the
         # src_obj_filestream is created and maintained by the
         # DiskReadFileWrapperObject.
-        buffer_size = GetMaxSystemMemory() / 10
+        # Default: 5 MB
+        # buffer_size = 5242880
+        buffer_size = 8192
         src_obj_filestream = DiskReadFileWrapperObject(
             src_url, src_obj_metadata.size, buffer_size)
       else:
