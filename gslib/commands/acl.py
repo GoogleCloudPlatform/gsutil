@@ -221,6 +221,10 @@ _CH_DESCRIPTION = """
     W: WRITE
     O: OWNER
 
+  For more information on these roles and the access they grant, see the
+  permissions section of the `Access Control Lists page
+  <https://cloud.google.com/storage/docs/access-control/lists#permissions>`_.
+
 <B>CH ENTITIES</B>
   There are four different entity types: Users, Groups, All Authenticated Users,
   and All Users.

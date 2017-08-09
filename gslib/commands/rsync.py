@@ -416,9 +416,8 @@ _DETAILED_HELP_TEXT = ("""
 
                   gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
 
-                NOTE: While it will work to surround the regular expression with
-                either single or double quotes on Linux and MacOS, on Windows
-                you need to use double quotes.
+                NOTE: When using this on the Windows command line, use ^ as an
+                escape character instead of \ and escape the | character.
 """)
 
 _NA = '-'
