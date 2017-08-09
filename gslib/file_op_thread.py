@@ -15,6 +15,7 @@
 """FileOperationThread implementation for handling disk read requests."""
 
 import Queue
+import socket
 import threading
 
 
@@ -76,7 +77,7 @@ class FileOperationThread(threading.Thread):
         (file_object, size) = self._read_queue.get(timeout=self._timeout)
 
         self._file_op_manager.available.acquire()
-        while(not self._file_op_manager.AllocMemory(size)):
+        while not self._file_op_manager.AllocMemory(size):
           self._file_op_manager.available.wait()
 
         with self._disk_lock:

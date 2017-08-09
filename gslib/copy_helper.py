@@ -131,7 +131,6 @@ from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
 from gslib.util import GetJsonResumableChunkSize
 from gslib.util import GetMaxRetryDelay
-from gslib.util import GetMaxSystemMemory
 from gslib.util import GetNumRetries
 from gslib.util import GetRunningInParallel
 from gslib.util import GetStreamFromFileUrl
@@ -141,9 +140,9 @@ from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ObjectIsGzipEncoded
+from gslib.util import ONE_MIB
 from gslib.util import ResumableThreshold
 from gslib.util import SECONDS_PER_DAY
-from gslib.util import ONE_MIB
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8

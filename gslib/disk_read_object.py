@@ -137,9 +137,10 @@ class DiskReadFileWrapperObject(object):
         # read from and process before dequeuing the next buffer read
         # from the buffer queue.
         read_size = min(bytes_remaining, self._current_request.data_len)
-        buffered_data.append(
-            self._current_request.data[self._current_request.data_position:
-                                       self._current_request.data_position + read_size])
+        read_from_curr_req = self._current_request.data[
+            self._current_request.data_position:
+            self._current_request.data_position + read_size]
+        buffered_data.append(read_from_curr_req)
         new_data_position = self._current_request.data_position + read_size
 
         self._position += read_size
