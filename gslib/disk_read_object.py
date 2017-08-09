@@ -24,6 +24,7 @@ WriteRequest = collections.namedtuple('WriteRequest', (
     'success',         # Whether the read operation succeeded.
     'position',        # The position where the read operator started.
     'data',            # The data read.
+    'data_position',   # The position of data read currently.
     'data_len',        # The length of the data read.
     'err_msg'))        # Error message if success is False.
 
@@ -131,20 +132,20 @@ class DiskReadFileWrapperObject(object):
     while bytes_remaining > 0 and self._position != self._size:
       # There are still bytes to read.
       if(self._current_request is not None and
-         self._current_request.data_len > 0):
+         self._current_request.data_len != self._current_request.data_position):
         # Check if there's remainder bytes in the current_request buffer to
         # read from and process before dequeuing the next buffer read
         # from the buffer queue.
         read_size = min(bytes_remaining, self._current_request.data_len)
-        read_from_curr_req = self._current_request.data[:read_size]
-        buffered_data.append(read_from_curr_req)
+        buffered_data.append(
+            self._current_request.data[self._current_request.data_position:
+                                       self._current_request.data_position + read_size])
+        new_data_position = self._current_request.data_position + read_size
 
         self._position += read_size
-        new_curr_req_data = self._current_request.data[read_size:]
-        new_curr_req_data_len = self._current_request.data_len - read_size
         self._current_request = WriteRequest(
-            True, self._position, new_curr_req_data,
-            new_curr_req_data_len, None)
+            True, self._position, self._current_request.data, new_data_position,
+            self._current_request.data_len, None)
         bytes_remaining -= read_size
       else:
         # No more bytes in the current_request buffer, so dequeue next read
@@ -224,7 +225,7 @@ class DiskReadFileWrapperObject(object):
           break
     except IOError as e:
       self._buffer_queue.append(WriteRequest(
-          False, stream_position, None, None, str(e)))
+          False, stream_position, None, None, None, str(e)))
       return
 
     data = ''.join(data)
@@ -233,7 +234,7 @@ class DiskReadFileWrapperObject(object):
     # Append new disk read onto local file operation buffer queue.
     self._buffer_queue_nonempty.acquire()
     self._buffer_queue.append(WriteRequest(
-        True, stream_position, data, len(data), None))
+        True, stream_position, data, 0, len(data), None))
     self._buffer_queue_nonempty.notify()
     self._buffer_queue_nonempty.release()
 

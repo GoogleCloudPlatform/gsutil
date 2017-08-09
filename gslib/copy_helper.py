@@ -143,6 +143,7 @@ from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ObjectIsGzipEncoded
 from gslib.util import ResumableThreshold
 from gslib.util import SECONDS_PER_DAY
+from gslib.util import ONE_MIB
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
@@ -3181,8 +3182,7 @@ def PerformCopy(logger, src_url, dst_url, gsutil_api,
         # src_obj_filestream is created and maintained by the
         # DiskReadFileWrapperObject.
         # Default: 5 MB
-        # buffer_size = 5242880
-        buffer_size = 8192
+        buffer_size = ONE_MIB * 5
         src_obj_filestream = DiskReadFileWrapperObject(
             src_url, src_obj_metadata.size, buffer_size)
       else:

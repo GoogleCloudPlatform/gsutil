@@ -114,6 +114,21 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
     self.assertEqual(self._temp_test_file_contents[:TEST_MAX_BUFFER_SIZE],
                      self._test_wrapper_buffer_data)
 
+  def testReadSmallerThanBufferSize(self):
+    """Reads from disk and asserts that the stream reads the right amount."""
+    self._GenerateMockObject()
+
+    read_size = TEST_MAX_BUFFER_SIZE/4
+    self._test_wrapper_buffer_data = self._test_wrapper_stream.read(read_size)
+    self.assertEqual(read_size, self._test_wrapper_stream.tell())
+    self.assertEqual(self._temp_test_file_contents[:read_size],
+                     self._test_wrapper_buffer_data)
+    # Perform a second read that would utilize current_request
+    self._test_wrapper_buffer_data = self._test_wrapper_stream.read(read_size)
+    self.assertEqual(read_size * 2, self._test_wrapper_stream.tell())
+    self.assertEqual(self._temp_test_file_contents[read_size:read_size*2],
+                     self._test_wrapper_buffer_data)
+
   def testReadWholeFile(self):
     """Reads the whole file and asserts accurate data from file is read."""
     self._GenerateMockObject()
@@ -298,6 +313,32 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
 
       self._test_wrapper_stream.seek(seek_back, whence=os.SEEK_END)
       self.assertEqual(self._temp_test_file_len + seek_back,
+                       self._test_wrapper_stream.tell())
+
+  def testSeekAheadWithSeekCur(self):
+    """Tests seeking greater than file position but less than file size."""
+    for seek_ahead in (TEST_MAX_BUFFER_SIZE - 1,
+                       TEST_MAX_BUFFER_SIZE,
+                       TEST_MAX_BUFFER_SIZE + 1):
+      self._GenerateMockObject()
+
+      self._test_wrapper_stream.read(TEST_MAX_BUFFER_SIZE)
+      orig_position = self._test_wrapper_stream.tell()
+
+      self._test_wrapper_stream.seek(seek_ahead, whence=os.SEEK_CUR)
+      self.assertEqual(orig_position + seek_ahead,
+                       self._test_wrapper_stream.tell())
+
+  def testSeekAheadWithSeekSet(self):
+    """Tests seeking greater than file position but less than file size."""
+    for seek_ahead in (2 * TEST_MAX_BUFFER_SIZE - 1,
+                       2 * TEST_MAX_BUFFER_SIZE,
+                       2 * TEST_MAX_BUFFER_SIZE + 1):
+      self._GenerateMockObject()
+
+      self._test_wrapper_stream.read(TEST_MAX_BUFFER_SIZE)
+      self._test_wrapper_stream.seek(seek_ahead, whence=os.SEEK_SET)
+      self.assertEqual(seek_ahead,
                        self._test_wrapper_stream.tell())
 
   def testIOError(self):
