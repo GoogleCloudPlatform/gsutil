@@ -115,10 +115,10 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
                      self._test_wrapper_buffer_data)
 
   def testReadSmallerThanBufferSize(self):
-    """Reads from disk and asserts that the stream reads the right amount."""
+    """Reads from disk a buffer size smaller than max buffer size."""
     self._GenerateMockObject()
 
-    read_size = TEST_MAX_BUFFER_SIZE/4
+    read_size = TEST_MAX_BUFFER_SIZE / 4
     self._test_wrapper_buffer_data = self._test_wrapper_stream.read(read_size)
     self.assertEqual(read_size, self._test_wrapper_stream.tell())
     self.assertEqual(self._temp_test_file_contents[:read_size],
@@ -316,7 +316,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
                        self._test_wrapper_stream.tell())
 
   def testSeekAheadWithSeekCur(self):
-    """Tests seeking greater than file position but less than file size."""
+    """Tests seeking ahead with offset with respect to current file position."""
     for seek_ahead in (TEST_MAX_BUFFER_SIZE - 1,
                        TEST_MAX_BUFFER_SIZE,
                        TEST_MAX_BUFFER_SIZE + 1):
@@ -330,7 +330,7 @@ class TestDiskReadFileWrapperObject(testcase.GsUtilUnitTestCase):
                        self._test_wrapper_stream.tell())
 
   def testSeekAheadWithSeekSet(self):
-    """Tests seeking greater than file position but less than file size."""
+    """Tests seeking ahead with offset with respect to beginning of file."""
     for seek_ahead in (2 * TEST_MAX_BUFFER_SIZE - 1,
                        2 * TEST_MAX_BUFFER_SIZE,
                        2 * TEST_MAX_BUFFER_SIZE + 1):
