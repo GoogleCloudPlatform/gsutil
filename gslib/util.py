@@ -783,13 +783,16 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   Returns:
     An initialized httplib2.Http instance.
   """
+  proxy_host = boto.config.get('Boto', 'proxy', None)
   proxy_info = httplib2.ProxyInfo(
       proxy_type=3,
-      proxy_host=boto.config.get('Boto', 'proxy', None),
+      proxy_host=proxy_host,
       proxy_port=boto.config.getint('Boto', 'proxy_port', 0),
       proxy_user=boto.config.get('Boto', 'proxy_user', None),
       proxy_pass=boto.config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=boto.config.get('Boto', 'proxy_rdns', False))
+      proxy_rdns=boto.config.get('Boto',
+                                 'proxy_rdns',
+                                 True if proxy_host else False))
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
     # Fall back to using the environment variable.

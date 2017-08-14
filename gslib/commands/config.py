@@ -793,7 +793,7 @@ class ConfigCommand(Command):
         '# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n'
         '# If you need a user/password with this proxy, edit and uncomment\n'
         '# those lines as well. If your organization also disallows DNS\n'
-        '# lookups by client machines set proxy_rdns = True\n'
+        '# lookups by client machines, set proxy_rdns to True (the default).\n'
         '# If proxy_host and proxy_port are not specified in this file and\n'
         '# one of the OS environment variables http_proxy, https_proxy, or\n'
         '# HTTPS_PROXY is defined, gsutil will use the proxy server specified\n'

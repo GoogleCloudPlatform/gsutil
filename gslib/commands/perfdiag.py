@@ -1343,9 +1343,11 @@ class PerfDiagCommand(Command):
     proxy_port = boto.config.getint('Boto', 'proxy_port', 0)
     sysinfo['using_proxy'] = bool(proxy_host)
 
-    if boto.config.get('Boto', 'proxy_rdns', False):
-      self.logger.info('DNS lookups are disallowed in this environment, so '
-                       'some information is not included in this perfdiag run.')
+    if boto.config.get('Boto', 'proxy_rdns', True if proxy_host else False):
+      self.logger.info(
+          'DNS lookups are disallowed in this environment, so some information '
+          'is not included in this perfdiag run. To allow local DNS lookups '
+          'while using a proxy, set proxy_rdns to False in your boto file.')
 
     # Get the local IP address from socket lib.
     try:
