@@ -6,3 +6,4 @@ gsutil.egg-info/*
 .pydevproject
 .settings/*
 .coverage*
+.metadata/*
