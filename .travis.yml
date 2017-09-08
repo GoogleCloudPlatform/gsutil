@@ -8,4 +8,4 @@ before_install:
 install:
   - pip install .
 # command to run tests
-script: gsutil test -u
+script: gsutil version -l && gsutil test -u
