@@ -23,6 +23,7 @@ from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
 
@@ -194,15 +195,17 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                 'og-expires=3600&x-goog-signedheaders=host%3Bx-goog-resumable')
 
     duration = timedelta(seconds=3600)
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        self.key,
-        client_id=self.client_email,
-        method='RESUMABLE',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=self.logger,
-        region='us-east',
-        content_type='')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          client_id=self.client_email,
+          method='RESUMABLE',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=self.logger,
+          region='us-east',
+          content_type='')
     self.assertEquals(expected, signed_url)
 
   def testSignResumable(self):
@@ -231,29 +234,33 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
     mock_logger = MockLogger()
     duration = timedelta(seconds=3600)
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        self.key,
-        client_id=self.client_email,
-        method='RESUMABLE',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=mock_logger,
-        region='us-east',
-        content_type='')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          client_id=self.client_email,
+          method='RESUMABLE',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=mock_logger,
+          region='us-east',
+          content_type='')
     self.assertEquals(expected, signed_url)
     # Resumable uploads with no content-type should issue a warning.
     self.assertTrue(mock_logger.warning_issued)
 
     mock_logger2 = MockLogger()
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        self.key,
-        client_id=self.client_email,
-        method='RESUMABLE',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=mock_logger2,
-        region='us-east',
-        content_type='image/jpeg')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          client_id=self.client_email,
+          method='RESUMABLE',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=mock_logger2,
+          region='us-east',
+          content_type='image/jpeg')
     # No warning, since content type was included.
     self.assertFalse(mock_logger2.warning_issued)
 
@@ -274,15 +281,17 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                 'pires=3600&x-goog-signedheaders=content-type%3Bhost')
 
     duration = timedelta(seconds=3600)
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        self.key,
-        client_id=self.client_email,
-        method='PUT',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=self.logger,
-        region='eu',
-        content_type='text/plain')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          client_id=self.client_email,
+          method='PUT',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=self.logger,
+          region='eu',
+          content_type='text/plain')
     self.assertEquals(expected, signed_url)
 
   def testSignurlGet(self):
@@ -302,15 +311,17 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                 'expires=0&x-goog-signedheaders=host')
 
     duration = timedelta(seconds=0)
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        self.key,
-        client_id=self.client_email,
-        method='GET',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=self.logger,
-        region='asia',
-        content_type='')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          client_id=self.client_email,
+          method='GET',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=self.logger,
+          region='asia',
+          content_type='')
     self.assertEquals(expected, signed_url)
 
   def testSignurlGetWithJSONKey(self):
@@ -334,13 +345,15 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
         json_contents)
 
     duration = timedelta(seconds=0)
-    signed_url = gslib.commands.signurl._GenSignedUrl(
-        key,
-        client_id=client_email,
-        method='GET',
-        gcs_path='test/test.txt',
-        duration=duration,
-        logger=self.logger,
-        region='asia',
-        content_type='')
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          key,
+          client_id=client_email,
+          method='GET',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=self.logger,
+          region='asia',
+          content_type='')
     self.assertEquals(expected, signed_url)
