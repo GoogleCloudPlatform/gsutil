@@ -23,6 +23,7 @@ import time
 import uuid
 
 from gslib import metrics
+from gslib import copy_helper
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PublishPermissionDeniedException
@@ -299,9 +300,12 @@ _DESCRIPTION = """
   will then see a notification for each of these components being created and
   deleted. If this is a concern for you, note that parallel composite uploads
   can be disabled by setting "parallel_composite_upload_threshold = 0" in your
-  boto config file.
+  boto config file. Alternately, your subscriber code can filter out gsutil's
+  parallel composite uploads by ignoring any notification about objects whose
+  names contain (but do not start with) the following string:
+    "{composite_namespace}".
 
-"""
+""".format(composite_namespace=copy_helper.PARALLEL_UPLOAD_TEMP_NAMESPACE)
 
 
 NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE = """
