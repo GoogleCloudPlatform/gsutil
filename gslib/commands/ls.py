@@ -201,6 +201,7 @@ _DETAILED_HELP_TEXT = ("""
             Website configuration:        None
             CORS configuration:           None
             Lifecycle configuration:      None
+            Requester Pays enabled:       True
             Labels:                       None
             Time created:                 Thu, 14 Jan 2016 19:25:17 GMT
             Time updated:                 Thu, 08 Jun 2017 21:17:59 GMT
@@ -328,6 +329,7 @@ class LsCommand(Command):
     fields['logging_config'] = 'Present' if bucket.logging else 'None'
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
+    fields['requester_pays'] = bucket.billing and bucket.billing.requesterPays
     if bucket.labels:
       fields['labels'] = LabelTranslation.JsonFromMessage(
           bucket.labels, pretty_print=True)
@@ -375,6 +377,7 @@ class LsCommand(Command):
            '\tWebsite configuration:\t\t{website_config}\n'
            '\tCORS configuration: \t\t{cors_config}\n'
            '\tLifecycle configuration:\t{lifecycle_config}\n'
+           '\tRequester Pays enabled:\t\t{requester_pays}\n'
            '\tLabels:\t\t\t\t{labels}\n' +
            time_created_line +
            time_updated_line +
@@ -481,6 +484,7 @@ class LsCommand(Command):
         bucket_fields = ['id']
       elif listing_style == ListingStyle.LONG_LONG:
         bucket_fields = ['acl',
+                         'billing',
                          'cors',
                          'defaultObjectAcl',
                          'labels',

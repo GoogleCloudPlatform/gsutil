@@ -234,6 +234,7 @@ class FakeCommand(Command):
     self.multiprocessing_is_available = (
         CheckMultiprocessingAvailableAndInit().is_available)
     self.debug = 0
+    self.user_project = None
 
 
 class FakeCommandWithoutMultiprocessingModule(FakeCommand):

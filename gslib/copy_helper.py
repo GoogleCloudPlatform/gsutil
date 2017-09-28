@@ -2377,7 +2377,8 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
     # and size into the download for new downloads so that we can avoid
     # making an extra HTTP call.
     serialization_data = GetDownloadSerializationData(
-        src_obj_metadata, progress=download_start_byte)
+        src_obj_metadata, progress=download_start_byte,
+        user_project=gsutil_api.user_project)
 
     if resuming or download_complete:
       # Catch up our digester with the hash data.
@@ -2478,7 +2479,8 @@ def _DownloadObjectToFileNonResumable(src_url, src_obj_metadata, dst_url,
 
     # This is used to pass the mediaLink and the size into the download so that
     # we can avoid making an extra HTTP call.
-    serialization_data = GetDownloadSerializationData(src_obj_metadata)
+    serialization_data = GetDownloadSerializationData(
+        src_obj_metadata, 0, user_project=gsutil_api.user_project)
 
     progress_callback = FileProgressCallbackHandler(
         gsutil_api.status_queue, src_url=src_url, dst_url=dst_url,

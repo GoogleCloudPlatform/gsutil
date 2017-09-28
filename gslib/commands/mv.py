@@ -155,7 +155,7 @@ class MvCommand(Command):
     unparsed_args.extend(self.unparsed_args)
     self.command_runner.RunNamedCommand(
         'cp', args=unparsed_args, headers=self.headers, debug=self.debug,
-        trace_token=self.trace_token,
+        trace_token=self.trace_token, user_project=self.user_project,
         parallel_operations=self.parallel_operations)
 
     return 0

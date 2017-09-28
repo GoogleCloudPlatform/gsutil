@@ -119,6 +119,11 @@ _DETAILED_HELP_TEXT = ("""
               etc. Errors are still reported. This option can be useful for
               running gsutil from a cron job that logs its output to a file, for
               which the only information desired in the log is failures.
+
+  -u          Allows you to specify a user project to be billed for the request.
+              For example:
+
+                gsutil -u "bill-this-project" cp ...
 """)
 
 

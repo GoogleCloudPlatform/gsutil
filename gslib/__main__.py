@@ -255,6 +255,7 @@ def main():
   trace_token = None
   perf_trace_token = None
   test_exception_traces = False
+  user_project = None
 
   # If user enters no commands just print the usage info.
   if len(sys.argv) == 1:
@@ -274,7 +275,7 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:mq',
+      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:u:mq',
                                  ['debug', 'detailedDebug', 'version', 'option',
                                   'help', 'header', 'multithreaded', 'quiet',
                                   'testexceptiontraces', 'trace-token=',
@@ -305,6 +306,8 @@ def main():
         parallel_operations = True
       elif o in ('-q', '--quiet'):
         quiet = True
+      elif o == '-u':
+        user_project = a
       elif o in ('-v', '--version'):
         version = True
       elif o == '--perf-trace-token':
@@ -375,7 +378,7 @@ def main():
         command_runner, command_name, args=args[1:], headers=headers,
         debug_level=debug, trace_token=trace_token,
         parallel_operations=parallel_operations,
-        perf_trace_token=perf_trace_token)
+        perf_trace_token=perf_trace_token, user_project=user_project)
   finally:
     _Cleanup()
 
@@ -540,7 +543,8 @@ def _CheckAndHandleCredentialException(e, args):
 
 def _RunNamedCommandAndHandleExceptions(
     command_runner, command_name, args=None, headers=None, debug_level=0,
-    trace_token=None, parallel_operations=False, perf_trace_token=None):
+    trace_token=None, parallel_operations=False, perf_trace_token=None,
+    user_project=None):
   """Runs the command and handles common exceptions."""
   # pylint: disable=g-import-not-at-top
   from gslib.util import GetConfigFilePaths
@@ -559,7 +563,8 @@ def _RunNamedCommandAndHandleExceptions(
                                           debug_level, trace_token,
                                           parallel_operations,
                                           perf_trace_token=perf_trace_token,
-                                          collect_analytics=True)
+                                          collect_analytics=True,
+                                          user_project=user_project)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit(

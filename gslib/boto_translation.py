@@ -158,11 +158,15 @@ class BotoTranslation(CloudApi):
   This class does not support encryption and ignores encryption and decryption
   parameters. Behavior when encountering encrypted objects is undefined.
   TODO: Implement support.
+
+  This class does not support handling a Requester Pays user project for
+  billing, and any given user project will be ignored.
+  TODO: Support user_project.
   """
 
   def __init__(self, bucket_storage_uri_class, logger, status_queue,
                provider=None, credentials=None, debug=0, trace_token=None,
-               perf_trace_token=None):
+               perf_trace_token=None, user_project=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
@@ -178,6 +182,7 @@ class BotoTranslation(CloudApi):
       trace_token: Unused in this subclass.
       perf_trace_token: Performance trace token to use when making API calls
           ('gs' provider only).
+      user_project: Unused in this subclass
     """
     super(BotoTranslation, self).__init__(
         bucket_storage_uri_class, logger, status_queue, provider=provider,

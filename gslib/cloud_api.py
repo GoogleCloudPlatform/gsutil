@@ -28,7 +28,7 @@ class CloudApi(object):
 
   def __init__(self, bucket_storage_uri_class, logger, status_queue,
                provider=None, debug=0, trace_token=None,
-               perf_trace_token=None):
+               perf_trace_token=None, user_project=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
@@ -42,6 +42,7 @@ class CloudApi(object):
       trace_token: Google internal trace token to pass to the API
                    implementation (string).
       perf_trace_token: Performance trace token to use when making API calls.
+      user_project: Project to be billed for this request.
     """
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.logger = logger
@@ -50,6 +51,7 @@ class CloudApi(object):
     self.debug = debug
     self.trace_token = trace_token
     self.perf_trace_token = perf_trace_token
+    self.user_project = user_project
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """Gets Bucket metadata.

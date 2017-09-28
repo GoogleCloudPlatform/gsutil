@@ -26,6 +26,7 @@ import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import CaptureStdout
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
@@ -499,6 +500,35 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertIn('Website configuration:\t\tNone', stdout)
 
+  @SkipForS3('S3 bucket configuration values are not supported via ls.')
+  @SkipForXML('Requester Pays is not supported for the XML API.')
+  def test_requesterpays(self):
+    """Tests listing a bucket with requester pays (billing) config."""
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+
+    # No requester pays configuration
+    stdout = self.RunGsUtil(['ls', '-lb', bucket_suri],
+                            return_stdout=True)
+    self.assertNotIn('Requester Pays enabled', stdout)
+
+    # Requester Pays configuration is absent by default
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Requester Pays enabled:\t\tNone', stdout)
+
+    # Initialize and check
+    self.RunGsUtil(['requesterpays', 'set', 'on', bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Requester Pays enabled:\t\tTrue', stdout)
+
+    # Clear and check
+    self.RunGsUtil(['requesterpays', 'set', 'off', bucket_suri])
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
+                            return_stdout=True)
+    self.assertIn('Requester Pays enabled:\t\tFalse', stdout)
+
   def test_list_sizes(self):
     """Tests various size listing options."""
     bucket_uri = self.CreateBucket()
@@ -778,4 +808,3 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Invalid non-ASCII', stderr)
-
