@@ -296,3 +296,35 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual('0 B', HumanReadableWithDecimalPlaces(0, 0))
     self.assertEqual('0.00 B', HumanReadableWithDecimalPlaces(0, 2))
     self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))
+
+  def DoTestAddQueryParamToUrl(self, url, param_name, param_val, expected_url):
+    new_url = util.AddQueryParamToUrl(url, param_name, param_val)
+    self.assertEqual(new_url, expected_url)
+
+  def testAddQueryParamToUrlWorksForASCIIValues(self):
+    # Note that the params here contain empty values and duplicates.
+    old_url = 'http://foo.bar/path/endpoint?a=1&a=2&b=3&c='
+    param_name = 'newparam'
+    param_val = 'nevalue'
+    expected_url = '{}&{}={}'.format(old_url, param_name, param_val)
+
+    self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
+
+  def testAddQueryParamToUrlWorksForUTF8Values(self):
+    old_url = u'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='.encode('utf-8')
+    param_name = u'nêwparam'.encode('utf-8')
+    param_val = u'nêwvalue'.encode('utf-8')
+    # Expected return value is a UTF-8 encoded `str`.
+    expected_url = '{}&{}={}'.format(old_url, param_name, param_val)
+
+    self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
+
+  def testAddQueryParamToUrlWorksForRawUnicodeValues(self):
+    old_url = u'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='
+    param_name = u'nêwparam'
+    param_val = u'nêwvalue'
+    # Since the original URL was a `unicode`, the returned URL should also be.
+    expected_url = u'{}&{}={}'.format(old_url, param_name, param_val)
+
+    self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
+

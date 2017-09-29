@@ -34,6 +34,7 @@ import textwrap
 import threading
 import time
 import traceback
+import urlparse
 import xml.etree.ElementTree as ElementTree
 
 from apitools.base.py import http_wrapper
@@ -1779,6 +1780,49 @@ def NormalizeStorageClass(sc):
   if sc in shorthand_to_full_name:
     sc = shorthand_to_full_name[sc]
   return sc
+
+
+def AddQueryParamToUrl(url_str, param_name, param_value):
+  """Adds a query parameter to a URL string.
+
+  Appends a query parameter to the query string portion of a url. If a parameter
+  with the given name was already present, it is not removed; the new name/value
+  pair will be appended to the end of the query string. It is assumed that all
+  arguments will be of type `str` (either ASCII or UTF-8 encoded) or `unicode`.
+
+  Note that this method performs no URL-encoding. It is the caller's
+  responsibility to ensure proper URL encoding of the entire URL; i.e. if the
+  URL is already URL-encoded, you should pass in URL-encoded values for
+  param_name and param_value. If the URL is not URL-encoded, you should not pass
+  in URL-encoded parameters; instead, you could perform URL-encoding using the
+  URL string returned from this function.
+
+  Args:
+    url_str: String representing the URL.
+    param_name: String key of the query parameter.
+    param_value: String value of the query parameter.
+
+  Returns:
+    A string representing the modified url, of type `unicode` if the url_str
+    argument was a `unicode`, otherwise a `str` encoded in UTF-8.
+  """
+  url_was_unicode = isinstance(url_str, unicode)
+  if isinstance(url_str, unicode):
+    url_str = url_str.encode('utf-8')
+  if isinstance(param_name, unicode):
+    param_name = param_name.encode('utf-8')
+  if isinstance(param_value, unicode):
+    param_value = param_value.encode('utf-8')
+  scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
+
+  query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
+  query_params.append((param_name, param_value))
+  new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
+
+  new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
+  if url_was_unicode:
+    new_url = new_url.decode('utf-8')
+  return new_url
 
 
 class RsyncDiffToApply(object):
