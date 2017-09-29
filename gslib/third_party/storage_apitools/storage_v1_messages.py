@@ -772,17 +772,19 @@ class Policy(_messages.Message):
     kind: The kind of item this is. For policies, this is always
       storage#policy. This field is ignored on input.
     resourceId: The ID of the resource to which this policy belongs. Will be
-      of the form buckets/bucket for buckets, and
-      buckets/bucket/objects/object for objects. A specific generation may be
-      specified by appending #generationNumber to the end of the object name,
-      e.g. buckets/my-bucket/objects/data.txt#17. The current generation can
-      be denoted with #0. This field is ignored on input.
+      of the form projects/_/buckets/bucket for buckets, and
+      projects/_/buckets/bucket/objects/object for objects. A specific
+      generation may be specified by appending #generationNumber to the end of
+      the object name, e.g. projects/_/buckets/my-bucket/objects/data.txt#17.
+      The current generation can be denoted with #0. This field is ignored on
+      input.
   """
 
   class BindingsValueListEntry(_messages.Message):
     """A BindingsValueListEntry object.
 
     Fields:
+      condition: A extra_types.JsonValue attribute.
       members: A collection of identifiers for members who may assume the
         provided role. Recognized identifiers are as follows:   - allUsers \u2014 A
         special identifier that represents anyone on the internet; with or
@@ -826,8 +828,9 @@ class Policy(_messages.Message):
         entry on a bucket with the OWNER role.
     """
 
-    members = _messages.StringField(1, repeated=True)
-    role = _messages.StringField(2)
+    condition = _messages.MessageField('extra_types.JsonValue', 1)
+    members = _messages.StringField(2, repeated=True)
+    role = _messages.StringField(3)
 
   bindings = _messages.MessageField('BindingsValueListEntry', 1, repeated=True)
   etag = _messages.BytesField(2)
