@@ -45,7 +45,7 @@
 	url = https://github.com/gsutil-mirrors/pyasn1-modules.git
 [submodule "third_party/mock"]
 	path = third_party/mock
-	url = git://github.com/houglum/mock.git
+	url = git://github.com/gsutil-mirrors/mock.git
 [submodule "third_party/funcsigs"]
 	path = third_party/funcsigs
 	url = git://github.com/testing-cabal/funcsigs.git
