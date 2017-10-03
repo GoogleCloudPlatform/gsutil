@@ -3,7 +3,7 @@
 	url = git://github.com/boto/boto.git
 [submodule "third_party/httplib2"]
 	path = third_party/httplib2
-	url = git://github.com/jcgregorio/httplib2.git
+	url = git://github.com/httplib2/httplib2.git
 [submodule "third_party/python-gflags"]
 	path = third_party/python-gflags
 	url = git://github.com/gsutil-mirrors/python-gflags.git
