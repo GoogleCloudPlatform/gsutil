@@ -306,10 +306,12 @@ def WrapDownloadHttpRequest(download_http):
     Wrapped / overridden httplib2.Http object.
   """
 
-  # httplib2 has a bug https://code.google.com/p/httplib2/issues/detail?id=305
-  # where custom connection_type is not respected after redirects.  This
-  # function is copied from httplib2 and overrides the request function so that
-  # the connection_type is properly passed through.
+  # httplib2 has a bug (https://github.com/httplib2/httplib2/issues/75) where
+  # custom connection_type is not respected after redirects.  This function is
+  # copied from httplib2 and overrides the request function so that the
+  # connection_type is properly passed through (everything here should be
+  # identical to the _request method in httplib2, with the exception of the line
+  # below marked by the "BUGFIX" comment).
   # pylint: disable=protected-access,g-inconsistent-quotes,unused-variable
   # pylint: disable=g-equals-none,g-doc-return-or-yield
   # pylint: disable=g-short-docstring-punctuation,g-doc-args
@@ -390,6 +392,7 @@ def WrapDownloadHttpRequest(download_http):
             (response, content) = self.request(
                 location, redirect_method, body=body, headers=headers,
                 redirections=redirections-1,
+                # BUGFIX (see comments at the top of this function):
                 connection_type=conn.__class__)
             response.previous = old_response
         else:
