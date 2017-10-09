@@ -1,3 +1,33 @@
+Release 4.28 (release date: 2017-10-11)
+=======================================
+New features
+------------------
+- Added newest version of the Boto library, which includes support for using
+  Signature Version 4 to connect to S3 buckets via the "use-sigv4 = True" and
+  "host = s3.<region>.amazonaws.com" Boto options under the "[s3]" section.
+- Added support for Requester Pays functionality when making requests to GCS
+  buckets with this feature enabled. For example usage, see the entry for "-u"
+  in "gsutil help options". Requester Pays is currently only supported for
+  requests using the GCS JSON API; XML API support will be added in a later
+  version.
+
+Bug Fixes
+------------------
+- Fixed issue where attempting to preserve ACLs by using "-p" with cp/mv/rsync
+  would fail when the destination is a local file.
+- Improved quality of several ambiguous error messages.
+
+Other Changes
+------------------
+- The proxy_rdns option is now True by default when a proxy is set. Also added
+  Boto config file comments explaining that gcloud proxy options, if present,
+  take precedence over corresponding Boto settings and environment variable
+  settings.
+- Following the deprecation of Python 2.6 support for gsutil, code sections that
+  were only present to support Python 2.6 have been removed.
+- Several documentation updates and clarifications.
+
+
 Release 4.27 (release date: 2017-06-29)
 =======================================
 New features
