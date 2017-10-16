@@ -333,7 +333,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
     exc = apitools_exceptions.TransferError('Aborting transfer')
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
-    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException)) 
+    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
     exc = apitools_exceptions.TransferError('additional bytes left in stream')
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
@@ -363,7 +363,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # The file command should detect HTML in the real file.
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
       _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
-    self.assertEqual('text/html', dst_obj_metadata_mock.contentType)
+    self.assertEqual('text/html; charset=us-ascii', dst_obj_metadata_mock.contentType)
 
     dst_obj_metadata_mock = mock.MagicMock(contentType=None)
     # The mimetypes module should guess based on the real file's extension.
