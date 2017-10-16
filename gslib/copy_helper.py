@@ -1432,20 +1432,20 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
       real_file_path = os.path.realpath(object_name)
       if config.getbool('GSUtil', 'use_magicfile', False) and not IS_WINDOWS:
         try:
-          p = subprocess.Popen(['file', '--mime', real_file_path],
+          p = subprocess.Popen(['file', '-b', '--mime', real_file_path],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
           output, error = p.communicate()
           p.stdout.close()
           p.stderr.close()
           if p.returncode != 0 or error:
             raise CommandException(
-                'Encountered error running "file --mime %s" '
+                'Encountered error running "file -b --mime %s" '
                 '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
-          # Parse output by removing line delimiter and splitting on last ":
-          content_type = output.rstrip().rpartition(': ')[2]
+          # Parse output by removing line delimiter
+          content_type = output.rstrip()
         except OSError as e:  # 'file' executable may not always be present.
           raise CommandException(
-              'Encountered OSError running "file --mime %s"\n%s' % (
+              'Encountered OSError running "file -b --mime %s"\n%s' % (
                   real_file_path, e))
       else:
         content_type = mimetypes.guess_type(real_file_path)[0]
