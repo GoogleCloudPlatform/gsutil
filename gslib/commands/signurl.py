@@ -352,12 +352,18 @@ class UrlSignCommand(Command):
         raise HttpError.FromResponse(response)
 
       return response.status_code
-    except HttpError:
-      error_string = ('Unexpected HTTP response code %s while querying '
-                      'object readability. Is your system clock accurate?'
-                      % response.status_code)
-      if response.content:
-        error_string += ' Content: %s' % response.content
+    except HttpError as http_error:
+      if http_error.has_attr('response'):
+        error_response = http_error.response
+        error_string = ('Unexpected HTTP response code %s while querying '
+                        'object readability. Is your system clock accurate?'
+                        % error_response.status_code)
+        if error_response.content:
+          error_string += ' Content: %s' % error_response.content
+      else:
+        error_string = ('Expected an HTTP response code of '
+                        '200 while querying object readability, but received '
+                        'an error: %s' % http_error)
       raise CommandException(error_string)
 
   def _EnumerateStorageUrls(self, in_urls):
