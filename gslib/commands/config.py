@@ -477,7 +477,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'sliced_object_download_threshold' and
 # 'sliced_object_download_component_size' have analogous functionality to
 # their respective parallel_composite_upload config values.
-# 'sliced_object_download_max_components' specifies the maximum number of 
+# 'sliced_object_download_max_components' specifies the maximum number of
 # slices to be used when performing a sliced object download. It is not
 # restricted by MAX_COMPONENT_COUNT.
 #sliced_object_download_threshold = %(sliced_object_download_threshold)s
@@ -492,8 +492,8 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # listing calls; to disable it entirely, set this value to 0.
 #task_estimation_threshold=%(task_estimation_threshold)s
 
-# 'use_magicfile' specifies if the 'file --mime-type <filename>' command should
-# be used to guess content types instead of the default filename extension-based
+# 'use_magicfile' specifies if the 'file --mime <filename>' command should be
+# used to guess content types instead of the default filename extension-based
 # mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
 # running Cygwin or some other package that provides implementations of
 # UNIX-like commands). When available and enabled use_magicfile should be more
