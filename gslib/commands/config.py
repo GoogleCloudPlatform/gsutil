@@ -102,10 +102,13 @@ _DETAILED_HELP_TEXT = ("""
   option. Service accounts are useful for authenticating on behalf of a service
   or application (as opposed to a user).
 
-  When you run gsutil config -e, you will be prompted for your service account
-  email address and the path to your private key file. To get this data,
-  follow the instructions on
-  `Service Accounts <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_.
+  When you run gsutil config -e, you will be prompted for the path to your
+  private key file and, if not using a JSON key file, your service account
+  email address and key file password. To get this data, follow the instructions
+  on `Service Accounts <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_.
+  Using this information, gsutil populates the "gs_service_key_file" attribute,
+  along with "gs_service_client_id" and "gs_service_key_file_password" if not
+  using a JSON key file.
 
   Note that your service account will NOT be considered an Owner for the
   purposes of API access (see "gsutil help creds" for more information about
@@ -170,6 +173,9 @@ _DETAILED_HELP_TEXT = ("""
       gs_oauth2_refresh_token
       gs_port
       gs_secret_access_key
+      gs_service_client_id
+      gs_service_key_file
+      gs_service_key_file_password
       s3_host
       s3_port
 
