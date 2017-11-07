@@ -1138,21 +1138,21 @@ class BotoTranslation(CloudApi):
         if hasattr(bucket, 'get_storage_class'):
           cloud_api_bucket.storageClass = bucket.get_storage_class()
       if not fields or 'acl' in fields:
-        for acl in AclTranslation.BotoBucketAclToMessage(
-            bucket.get_acl(headers=headers)):
-          try:
+        try:
+          for acl in AclTranslation.BotoBucketAclToMessage(
+              bucket.get_acl(headers=headers)):
             cloud_api_bucket.acl.append(acl)
-          except TRANSLATABLE_BOTO_EXCEPTIONS, e:
-            translated_exception = self._TranslateBotoException(
-                e, bucket_name=bucket.name)
-            if (translated_exception and
-                isinstance(translated_exception,
-                           AccessDeniedException)):
-              # JSON API doesn't differentiate between a blank ACL list
-              # and an access denied, so this is intentionally left blank.
-              pass
-            else:
-              self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
+        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+          translated_exception = self._TranslateBotoException(
+              e, bucket_name=bucket.name)
+          if (translated_exception and
+              isinstance(translated_exception,
+                         AccessDeniedException)):
+            # JSON API doesn't differentiate between a blank ACL list
+            # and an access denied, so this is intentionally left blank.
+            pass
+          else:
+            self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'cors' in fields:
         try:
           boto_cors = bucket_uri.get_cors(headers=headers)
@@ -1160,21 +1160,21 @@ class BotoTranslation(CloudApi):
         except TRANSLATABLE_BOTO_EXCEPTIONS, e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'defaultObjectAcl' in fields:
-        for acl in AclTranslation.BotoObjectAclToMessage(
-            bucket.get_def_acl(headers=headers)):
-          try:
+        try:
+          for acl in AclTranslation.BotoObjectAclToMessage(
+              bucket.get_def_acl(headers=headers)):
             cloud_api_bucket.defaultObjectAcl.append(acl)
-          except TRANSLATABLE_BOTO_EXCEPTIONS, e:
-            translated_exception = self._TranslateBotoException(
-                e, bucket_name=bucket.name)
-            if (translated_exception and
-                isinstance(translated_exception,
-                           AccessDeniedException)):
-              # JSON API doesn't differentiate between a blank ACL list
-              # and an access denied, so this is intentionally left blank.
-              pass
-            else:
-              self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
+        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+          translated_exception = self._TranslateBotoException(
+              e, bucket_name=bucket.name)
+          if (translated_exception and
+              isinstance(translated_exception,
+                         AccessDeniedException)):
+            # JSON API doesn't differentiate between a blank ACL list
+            # and an access denied, so this is intentionally left blank.
+            pass
+          else:
+            self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'lifecycle' in fields:
         try:
           boto_lifecycle = bucket_uri.get_lifecycle_config(headers=headers)
