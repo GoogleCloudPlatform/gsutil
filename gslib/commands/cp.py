@@ -580,6 +580,26 @@ _OPTIONS_TEXT = """
                  stdin. This allows you to run a program that generates the list
                  of files to upload/download.
 
+  -j <ext,...>   Applies gzip transport encoding to any file upload whose
+                 extension matches the -j extension list. This is useful when
+                 uploading files with compressible content (such as .js, .css,
+                 or .html files) because it saves network bandwidth while
+                 also leaving the data uncompressed in Google Cloud Storage.
+
+                 When you specify the -j option, files being uploaded are
+                 compressed in-memory and on-the-wire only. Both the local
+                 files and GCS objects remain uncompressed. The uploaded
+                 objects retain the Content-Type and name of the original
+                 files.
+
+  -J             Applies gzip transport encoding to file uploads. This option
+                 works like the -j option described above, but it applies to
+                 all uploaded files, regardless of extension.
+
+                 Warning: If you use this option and some of the source files
+                 don't compress well (e.g., that's often true of binary data),
+                 this option may result in longer uploads.
+
   -L <file>      Outputs a manifest log file with detailed information about
                  each item that was copied. This manifest contains the following
                  information for each item:
@@ -745,7 +765,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _OPTIONS_TEXT])
 
 
-CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Z'
+CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -943,8 +963,8 @@ class CpCommand(Command):
               self.logger, exp_src_url, dst_url, gsutil_api,
               self, _CopyExceptionHandler, src_obj_metadata=src_obj_metadata,
               allow_splitting=True, headers=self.headers,
-              manifest=self.manifest, gzip_exts=self.gzip_exts,
-              preserve_posix=preserve_posix))
+              manifest=self.manifest, gzip_encoded=self.gzip_encoded,
+              gzip_exts=self.gzip_exts, preserve_posix=preserve_posix))
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1195,7 +1215,14 @@ class CpCommand(Command):
 
     self.skip_unsupported_objects = False
 
-    # Files matching these extensions should be gzipped before uploading.
+    # Files matching these extensions should be compressed.
+    # The gzip_encoded flag marks if the files should be compressed during
+    # the upload. The gzip_local flag marks if the files should be compressed
+    # before uploading. Files compressed prior to uploaded are stored
+    # compressed, while files compressed during the upload are stored
+    # uncompressed. These flags cannot be mixed.
+    gzip_encoded = False
+    gzip_local = False
     gzip_arg_exts = None
     gzip_arg_all = None
 
@@ -1224,6 +1251,12 @@ class CpCommand(Command):
           test_callback_file = a
         elif o == '-I':
           read_args_from_stdin = True
+        elif o == '-j':
+          gzip_encoded = True
+          gzip_arg_exts = [x.strip() for x in a.split(',')]
+        elif o == '-J':
+          gzip_encoded = True
+          gzip_arg_all = GZIP_ALL_FILES
         elif o == '-L':
           use_manifest = True
           self.manifest = Manifest(a)
@@ -1249,8 +1282,10 @@ class CpCommand(Command):
         elif o == '-v':
           print_ver = True
         elif o == '-z':
+          gzip_local = True
           gzip_arg_exts = [x.strip() for x in a.split(',')]
         elif o == '-Z':
+          gzip_local = True
           gzip_arg_all = GZIP_ALL_FILES
     if preserve_acl and canned_acl:
       raise CommandException(
@@ -1260,10 +1295,18 @@ class CpCommand(Command):
           'The gsutil -m option is not supported with the cp -A flag, to '
           'ensure that object version ordering is preserved. Please re-run '
           'the command without the -m option.')
-    if gzip_arg_exts and gzip_arg_all:
+    if gzip_encoded and gzip_local:
       raise CommandException(
-          'Specifying both the -z and -Z options together is invalid.')
+          'Specifying both the -j/-J and -z/-Z options together is invalid.')
+    if gzip_arg_exts and gzip_arg_all:
+      if gzip_encoded:
+        raise CommandException(
+            'Specifying both the -j and -J options together is invalid.')
+      else:
+        raise CommandException(
+            'Specifying both the -z and -Z options together is invalid.')
     self.gzip_exts = gzip_arg_exts or gzip_arg_all
+    self.gzip_encoded = gzip_encoded
 
     return CreateCopyHelperOpts(
         perform_mv=perform_mv,

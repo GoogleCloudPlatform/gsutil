@@ -161,6 +161,12 @@ LONG_RETRY_WARN_SEC = 10
 
 SECONDS_PER_DAY = 86400L
 
+# Compressed transport encoded uploads buffer chunks of compressed data. When
+# running many uploads in parallel, compression may consume more memory than
+# available. This restricts the number of compressed transport encoded uploads
+# running in parallel such that they don't consume more memory than set here.
+MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2*1024*1024*1024  # 2 GiB
+
 global manager  # pylint: disable=global-at-module-level
 # Single certs file for use across all processes.
 configured_certs_file = None
@@ -842,6 +848,32 @@ def JsonResumableChunkSizeDefined():
   chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size',
                                   None)
   return chunk_size_defined is not None
+
+
+def GetMaxUploadCompressionBufferSize():
+  """Get the max amount of memory compressed transport uploads may buffer."""
+  return HumanReadableToBytes(
+      config.get('GSUtil', 'max_upload_compression_buffer_size', '2GiB'))
+
+
+def GetMaxConcurrentCompressedUploads():
+  """Gets the max concurrent transport compressed uploads allowed in parallel.
+
+  Returns:
+    The max number of concurrent transport compressed uploads allowed in
+    parallel without exceeding the max_upload_compression_buffer_size.
+  """
+  upload_chunk_size = GetJsonResumableChunkSize()
+  # From apitools compression.py.
+  compression_chunk_size = 16777216  # 16MiB
+  total_upload_size = (
+      upload_chunk_size + compression_chunk_size + 17 +
+      5 * (((compression_chunk_size - 1) / 16383) + 1))
+  max_concurrent_uploads = (
+      GetMaxUploadCompressionBufferSize() / total_upload_size)
+  if max_concurrent_uploads <= 0:
+    max_concurrent_uploads = 1
+  return max_concurrent_uploads
 
 
 def _RoundToNearestExponent(num):

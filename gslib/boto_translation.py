@@ -838,8 +838,10 @@ class BotoTranslation(CloudApi):
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
       size=None, serialization_data=None, tracker_callback=None,
       progress_callback=None, encryption_tuple=None, provider=None,
-      fields=None):
+      fields=None, gzip_encoded=False):
     """See CloudApi class for function doc strings."""
+    if gzip_encoded:
+      raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
     if self.provider == 's3':
       # Resumable uploads are not supported for s3.
       return self.UploadObject(
@@ -869,8 +871,10 @@ class BotoTranslation(CloudApi):
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, progress_callback=None,
                             preconditions=None, encryption_tuple=None,
-                            provider=None, fields=None):
+                            provider=None, fields=None, gzip_encoded=False):
     """See CloudApi class for function doc strings."""
+    if gzip_encoded:
+      raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 
@@ -889,8 +893,12 @@ class BotoTranslation(CloudApi):
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    preconditions=None, size=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None):
+                   encryption_tuple=None, provider=None, fields=None,
+                   gzip_encoded=False):
     """See CloudApi class for function doc strings."""
+    if gzip_encoded:
+      raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
+
     headers, dst_uri = self._UploadSetup(object_metadata,
                                          preconditions=preconditions)
 

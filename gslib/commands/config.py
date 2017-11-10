@@ -203,6 +203,7 @@ _DETAILED_HELP_TEXT = ("""
       disable_analytics_prompt
       encryption_key
       json_api_version
+      max_upload_compression_buffer_size
       parallel_composite_upload_component_size
       parallel_composite_upload_threshold
       sliced_object_download_component_size
@@ -328,6 +329,12 @@ DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
 DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD = '150M'
 DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE = '200M'
 DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS = 4
+
+# Compressed transport encoded uploads buffer chunks of compressed data. When
+# running many uploads in parallel, compression may consume more memory than
+# available. This restricts the number of compressed transport encoded uploads
+# running in parallel such that they don't consume more memory than set here.
+DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = '2G'
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
@@ -490,6 +497,15 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #sliced_object_download_component_size = %(sliced_object_download_component_size)s
 #sliced_object_download_max_components = %(sliced_object_download_max_components)s
 
+# Compressed transport encoded uploads buffer chunks of compressed data. When
+# running a composite upload and/or many uploads in parallel, compression may
+# consume more memory than available. This setting restricts the number of
+# compressed transport encoded uploads running in parallel such that they
+# don't consume more memory than set here. This is 2GiB by default.
+# Values can be provided either in bytes or as human-readable values
+# (e.g., "2G" to represent 2 gibibytes)
+#max_upload_compression_buffer_size = %(max_upload_compression_buffer_size)s
+
 # 'task_estimation_threshold' controls how many files or objects gsutil
 # processes before it attempts to estimate the total work that will be
 # performed by the command. Estimation makes extra directory listing or API
@@ -585,7 +601,9 @@ content_language = en
        'sliced_object_download_max_components': (
            DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
        'max_component_count': MAX_COMPONENT_COUNT,
-       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD}
+       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
+       'max_upload_compression_buffer_size': (
+           DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE)}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]
