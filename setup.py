@@ -39,7 +39,7 @@ requires = [
     'boto==2.48.0',
     'crcmod>=1.7',
     'gcs-oauth2-boto-plugin>=1.14',
-    'google-apitools==0.5.16',
+    'google-apitools==0.5.17',
     'httplib2>=0.10.3',
     # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
     'mock==2.0.0',
