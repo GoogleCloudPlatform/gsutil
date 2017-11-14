@@ -158,6 +158,23 @@ class CloudApi(object):
     """
     raise NotImplementedError('PatchBucket must be overloaded')
 
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    """Locks the Retention Policy on the bucket.
+
+    Args:
+      bucket_name: Name of bucket to update.
+      metageneration: Bucket metageneration to use as a precondition.
+      provider: Cloud storage provider to connect to. If not present,
+                class-wide default is used.
+
+    Raises:
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None
+    """
+    raise NotImplementedError('LockRetentionPolicy must be overloaded')
+
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
     """Creates a new bucket with the specified metadata.

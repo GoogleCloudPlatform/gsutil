@@ -721,8 +721,7 @@ def _PerformTabCompletion(command_runner):
         ' not found.\nCause: %s' % e,
         exception=e)
   parser = argparse.ArgumentParser(add_help=False)
-  subparsers = parser.add_subparsers()
-  command_runner.ConfigureCommandArgumentParsers(subparsers)
+  command_runner.ConfigureCommandArgumentParsers(parser)
   argcomplete.autocomplete(parser, exit_method=sys.exit)
 
   return 0

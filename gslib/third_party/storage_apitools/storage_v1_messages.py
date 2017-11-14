@@ -42,6 +42,15 @@ class Bucket(_messages.Message):
       logs.
     OwnerValue: The owner of the bucket. This is always the project team's
       owner group.
+    RetentionPolicyValue: Defines the retention policy for a bucket. The
+      Retention policy enforces a minimum retention time for all objects
+      contained in the bucket, based on their creation time. Any attempt to
+      overwrite or delete objects younger than the retention period will
+      result in a PERMISSION_DENIED error. An unlocked retention policy can be
+      modified or removed from the bucket via the UpdateBucketMetadata RPC. A
+      locked retention policy cannot be removed or shortened in duration for
+      the lifetime of the bucket. Attempting to remove or decrease period of a
+      locked retention policy will result in a PERMISSION_DENIED error.
     VersioningValue: The bucket's versioning configuration.
     WebsiteValue: The bucket's website configuration, controlling how the
       service behaves when accessing bucket contents as a web site. See the
@@ -51,6 +60,17 @@ class Bucket(_messages.Message):
     acl: Access controls on the bucket.
     billing: The bucket's billing configuration.
     cors: The bucket's Cross-Origin Resource Sharing (CORS) configuration.
+    defaultEventBasedHold: Defines the default value for Event-Based hold on
+      newly created objects in this bucket. Event-Based hold is a way to
+      retain objects indefinitely until an event occurs, signified by the
+      hold's release. After being released, such objects will be subject to
+      bucket-level retention (if any). One sample use case of this flag is for
+      banks to hold loan documents for at least 3 years after loan is paid in
+      full. Here bucket-level retention is 3 years and the event is loan being
+      paid in full. In this example these objects will be held intact for any
+      number of years until the event has occurred (hold is released) and then
+      3 more years after that. Objects under Event-Based hold cannot be
+      deleted, overwritten or archived until the hold is removed.
     defaultObjectAcl: Default access controls to apply to new objects when no
       ACL is provided.
     encryption: Encryption configuration used by default for newly inserted
@@ -73,6 +93,15 @@ class Bucket(_messages.Message):
     owner: The owner of the bucket. This is always the project team's owner
       group.
     projectNumber: The project number of the project the bucket belongs to.
+    retentionPolicy: Defines the retention policy for a bucket. The Retention
+      policy enforces a minimum retention time for all objects contained in
+      the bucket, based on their creation time. Any attempt to overwrite or
+      delete objects younger than the retention period will result in a
+      PERMISSION_DENIED error. An unlocked retention policy can be modified or
+      removed from the bucket via the UpdateBucketMetadata RPC. A locked
+      retention policy cannot be removed or shortened in duration for the
+      lifetime of the bucket. Attempting to remove or decrease period of a
+      locked retention policy will result in a PERMISSION_DENIED error.
     selfLink: The URI of this bucket.
     storageClass: The bucket's default storage class, used whenever no
       storageClass is specified for a newly-created object. This defines how
@@ -246,6 +275,32 @@ class Bucket(_messages.Message):
     entity = _messages.StringField(1)
     entityId = _messages.StringField(2)
 
+  class RetentionPolicyValue(_messages.Message):
+    """Defines the retention policy for a bucket. The Retention policy
+    enforces a minimum retention time for all objects contained in the bucket,
+    based on their creation time. Any attempt to overwrite or delete objects
+    younger than the retention period will result in a PERMISSION_DENIED
+    error. An unlocked retention policy can be modified or removed from the
+    bucket via the UpdateBucketMetadata RPC. A locked retention policy cannot
+    be removed or shortened in duration for the lifetime of the bucket.
+    Attempting to remove or decrease period of a locked retention policy will
+    result in a PERMISSION_DENIED error.
+
+    Fields:
+      effectiveTime: The time from which policy was enforced and effective.
+        RFC 3339 format.
+      isLocked: Once locked, an object retention policy cannot be modified.
+      retentionPeriod: Specifies the duration that objects need to be
+        retained. Retention duration must be greater than zero and less than
+        100 years. Note that enforcement of retention periods less than a day
+        is not guaranteed. Such periods should only be used for testing
+        purposes.
+    """
+
+    effectiveTime = _message_types.DateTimeField(1)
+    isLocked = _messages.BooleanField(2)
+    retentionPeriod = _messages.IntegerField(3)
+
   class VersioningValue(_messages.Message):
     """The bucket's versioning configuration.
 
@@ -277,25 +332,33 @@ class Bucket(_messages.Message):
   acl = _messages.MessageField('BucketAccessControl', 1, repeated=True)
   billing = _messages.MessageField('BillingValue', 2)
   cors = _messages.MessageField('CorsValueListEntry', 3, repeated=True)
-  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 4, repeated=True)
-  encryption = _messages.MessageField('EncryptionValue', 5)
-  etag = _messages.StringField(6)
-  id = _messages.StringField(7)
-  kind = _messages.StringField(8, default=u'storage#bucket')
-  labels = _messages.MessageField('LabelsValue', 9)
-  lifecycle = _messages.MessageField('LifecycleValue', 10)
-  location = _messages.StringField(11)
-  logging = _messages.MessageField('LoggingValue', 12)
-  metageneration = _messages.IntegerField(13)
-  name = _messages.StringField(14)
-  owner = _messages.MessageField('OwnerValue', 15)
-  projectNumber = _messages.IntegerField(16, variant=_messages.Variant.UINT64)
-  selfLink = _messages.StringField(17)
-  storageClass = _messages.StringField(18)
-  timeCreated = _message_types.DateTimeField(19)
-  updated = _message_types.DateTimeField(20)
-  versioning = _messages.MessageField('VersioningValue', 21)
-  website = _messages.MessageField('WebsiteValue', 22)
+  defaultEventBasedHold = _messages.BooleanField(4)
+  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 5, repeated=True)
+  encryption = _messages.MessageField('EncryptionValue', 6)
+  etag = _messages.StringField(7)
+  id = _messages.StringField(8)
+  kind = _messages.StringField(9, default=u'storage#bucket')
+  labels = _messages.MessageField('LabelsValue', 10)
+  lifecycle = _messages.MessageField('LifecycleValue', 11)
+  location = _messages.StringField(12)
+  logging = _messages.MessageField('LoggingValue', 13)
+  metageneration = _messages.IntegerField(14)
+  name = _messages.StringField(15)
+  owner = _messages.MessageField('OwnerValue', 16)
+  projectNumber = _messages.IntegerField(17, variant=_messages.Variant.UINT64)
+  selfLink = _messages.StringField(18)
+  storageClass = _messages.StringField(19)
+  timeCreated = _message_types.DateTimeField(20)
+  updated = _message_types.DateTimeField(21)
+  versioning = _messages.MessageField('VersioningValue', 22)
+  website = _messages.MessageField('WebsiteValue', 23)
+  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 24)
+  selfLink = _messages.StringField(25)
+  storageClass = _messages.StringField(26)
+  timeCreated = _message_types.DateTimeField(27)
+  updated = _message_types.DateTimeField(28)
+  versioning = _messages.MessageField('VersioningValue', 29)
+  website = _messages.MessageField('WebsiteValue', 30)
 
 
 class BucketAccessControl(_messages.Message):
@@ -630,6 +693,15 @@ class Object(_messages.Message):
     customerEncryption: Metadata of customer-supplied encryption key, if the
       object is encrypted by such a key.
     etag: HTTP 1.1 Entity tag for the object.
+    eventBasedHold: Defines the Event-Based hold for an object. Event-Based
+      hold is a way to retain objects indefinitely until an event occurs,
+      signified by the hold's release. After being released, such objects will
+      be subject to bucket-level retention (if any). One sample use case of
+      this flag is for banks to hold loan documents for at least 3 years after
+      loan is paid in full. Here bucket-level retention is 3 years and the
+      event is loan being paid in full. In this example these objects will be
+      held intact for any number of years until the event has occurred (hold
+      is released) and then 3 more years after that.
     generation: The content generation of this object. Used for object
       versioning.
     id: The ID of the object, including the bucket name, object name, and
@@ -649,9 +721,21 @@ class Object(_messages.Message):
     name: The name of the object. Required if not specified by URL parameter.
     owner: The owner of the object. This will always be the uploader of the
       object.
+    retentionExpirationTime: Specifies the earliest time that the object's
+      retention period expires. This value is server-determined and is in RFC
+      3339 format. Note 1: This field is not provided for objects with an
+      active Event-Based hold, since retention expiration is unknown until the
+      hold is removed. Note 2: This value can be provided even when
+      TemporaryHold is set (so that the user can reason about policy without
+      having to first unset the TemporaryHold).
     selfLink: The link to this object.
     size: Content-Length of the data in bytes.
     storageClass: Storage class of the object.
+    temporaryHold: Defines the temporary hold for an object. This flag is used
+      to enforce a temporary hold on an object. While it is set to true, the
+      object is protected against deletion and overwrites. A common use case
+      of this flag is regulatory investigations where objects need to be
+      retained while the investigation is undergoing.
     timeCreated: The creation time of the object in RFC 3339 format.
     timeDeleted: The deletion time of the object in RFC 3339 format. Will be
       returned if and only if this version of the object has been deleted.
@@ -720,23 +804,26 @@ class Object(_messages.Message):
   crc32c = _messages.StringField(9)
   customerEncryption = _messages.MessageField('CustomerEncryptionValue', 10)
   etag = _messages.StringField(11)
-  generation = _messages.IntegerField(12)
-  id = _messages.StringField(13)
-  kind = _messages.StringField(14, default=u'storage#object')
-  kmsKeyName = _messages.StringField(15)
-  md5Hash = _messages.StringField(16)
-  mediaLink = _messages.StringField(17)
-  metadata = _messages.MessageField('MetadataValue', 18)
-  metageneration = _messages.IntegerField(19)
-  name = _messages.StringField(20)
-  owner = _messages.MessageField('OwnerValue', 21)
-  selfLink = _messages.StringField(22)
-  size = _messages.IntegerField(23, variant=_messages.Variant.UINT64)
-  storageClass = _messages.StringField(24)
-  timeCreated = _message_types.DateTimeField(25)
-  timeDeleted = _message_types.DateTimeField(26)
-  timeStorageClassUpdated = _message_types.DateTimeField(27)
-  updated = _message_types.DateTimeField(28)
+  eventBasedHold = _messages.BooleanField(12)
+  generation = _messages.IntegerField(13)
+  id = _messages.StringField(14)
+  kind = _messages.StringField(15, default=u'storage#object')
+  kmsKeyName = _messages.StringField(16)
+  md5Hash = _messages.StringField(17)
+  mediaLink = _messages.StringField(18)
+  metadata = _messages.MessageField('MetadataValue', 19)
+  metageneration = _messages.IntegerField(20)
+  name = _messages.StringField(21)
+  owner = _messages.MessageField('OwnerValue', 22)
+  retentionExpirationTime = _message_types.DateTimeField(23)
+  selfLink = _messages.StringField(24)
+  size = _messages.IntegerField(25, variant=_messages.Variant.UINT64)
+  storageClass = _messages.StringField(26)
+  temporaryHold = _messages.BooleanField(27)
+  timeCreated = _message_types.DateTimeField(28)
+  timeDeleted = _message_types.DateTimeField(29)
+  timeStorageClassUpdated = _message_types.DateTimeField(30)
+  updated = _message_types.DateTimeField(31)
 
 
 class ObjectAccessControl(_messages.Message):
@@ -1299,6 +1386,22 @@ class StorageBucketsListChannelsRequest(_messages.Message):
 
   bucket = _messages.StringField(1, required=True)
   userProject = _messages.StringField(2)
+
+
+class StorageBucketsLockRetentionPolicyRequest(_messages.Message):
+  """A StorageBucketsLockRetentionPolicyRequest object.
+
+  Fields:
+    bucket: Name of a bucket.
+    ifMetagenerationMatch: Makes the operation conditional on whether bucket's
+      current metageneration matches the given value.
+    userProject: The project to be billed for this request, for Requester Pays
+      buckets.
+  """
+
+  bucket = _messages.StringField(1, required=True)
+  ifMetagenerationMatch = _messages.IntegerField(2, required=True)
+  userProject = _messages.StringField(3)
 
 
 class StorageBucketsPatchRequest(_messages.Message):

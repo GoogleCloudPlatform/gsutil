@@ -222,6 +222,12 @@ class CloudApiDelegator(CloudApi):
         canned_def_acl=canned_def_acl, preconditions=preconditions,
         fields=fields)
 
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    return self._GetApi(provider).LockRetentionPolicy(
+        bucket_name,
+        metageneration,
+        provider=provider)
+
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
     return self._GetApi(provider).CreateBucket(

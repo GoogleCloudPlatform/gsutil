@@ -324,6 +324,10 @@ class BotoTranslation(CloudApi):
       storage_class = ''
       if metadata and metadata.storageClass:
         storage_class = metadata.storageClass
+      if (metadata and metadata.retentionPolicy and
+          metadata.retentionPolicy.retentionPeriod):
+        headers['x-goog-bucket-retention-period'] = str(
+            metadata.retentionPolicy.retentionPeriod)
       try:
         bucket_uri.create_bucket(headers=headers, location=location,
                                  storage_class=storage_class)

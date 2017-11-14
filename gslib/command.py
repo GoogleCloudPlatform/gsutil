@@ -465,6 +465,7 @@ class Command(HelpProvider):
                                             'label',
                                             'logging',
                                             'notification',
+                                            'retention',
                                             'web')
 
   # This keeps track of the recursive depth of the current call to Apply.

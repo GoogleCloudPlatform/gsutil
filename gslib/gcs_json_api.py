@@ -393,6 +393,7 @@ class GcsJsonApi(CloudApi):
                            'lifecycle',
                            'logging',
                            'metadata',
+                           'retentionPolicy',
                            'versioning',
                            'website'):
       attr = getattr(bucket_metadata, metadata_field, None)
@@ -443,6 +444,25 @@ class GcsJsonApi(CloudApi):
                                              global_params=global_params)
       except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
         self._TranslateExceptionAndRaise(e)
+
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    try:
+      metageneration = long(metageneration)
+    except ValueError:
+      raise ArgumentException(
+          'LockRetentionPolicy Metageneration must be an integer.')
+
+    apitools_request = (
+        apitools_messages.StorageBucketsLockRetentionPolicyRequest(
+            bucket=bucket_name,
+            ifMetagenerationMatch=metageneration,
+            userProject=self.user_project))
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.buckets.LockRetentionPolicy(
+          apitools_request, global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):

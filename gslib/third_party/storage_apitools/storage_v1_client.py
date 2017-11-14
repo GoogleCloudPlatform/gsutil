@@ -407,6 +407,32 @@ class StorageV1(base_api.BaseApiClient):
         supports_download=False,
     )
 
+    def LockRetentionPolicy(self, request, global_params=None):
+      """Locks retention policy on a bucket.
+
+      Args:
+        request: (StorageBucketsLockRetentionPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Bucket) The response message.
+      """
+      config = self.GetMethodConfig('LockRetentionPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    LockRetentionPolicy.method_config = lambda: base_api.ApiMethodInfo(
+        http_method=u'POST',
+        method_id=u'storage.buckets.lockRetentionPolicy',
+        ordered_params=[u'bucket', u'ifMetagenerationMatch'],
+        path_params=[u'bucket'],
+        query_params=[u'ifMetagenerationMatch', u'userProject'],
+        relative_path=u'b/{bucket}/lockRetentionPolicy',
+        request_field='',
+        request_type_name=u'StorageBucketsLockRetentionPolicyRequest',
+        response_type_name=u'Bucket',
+        supports_download=False,
+    )
+
     def Patch(self, request, global_params=None):
       """Updates a bucket. Changes to the bucket will be readable immediately after writing, but configuration changes may take time to propagate. This method supports patch semantics.
 

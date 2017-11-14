@@ -159,31 +159,62 @@ class CommandRunner(object):
         command_map[command_name_aliases] = command
     return command_map
 
+  def _GetTabCompleteLogger(self):
+    """Returns a logger for tab completion."""
+    return CreateGsutilLogger('tab_complete')
+
   def _ConfigureCommandArgumentParserArguments(
-      self, parser, arguments, gsutil_api):
-    """Configures an argument parser with the given arguments.
+      self, parser, subcommands_or_arguments, gsutil_api):
+    """Creates parsers recursively for potentially nested subcommands.
 
     Args:
       parser: argparse parser object.
-      arguments: array of CommandArgument objects.
+      subcommands_or_arguments: list of CommandArgument objects, or recursive
+          dict with subcommand names as keys.
       gsutil_api: gsutil Cloud API instance to use.
+
     Raises:
       RuntimeError: if argument is configured with unsupported completer
+      TypeError: if subcommands_or_arguments is not a dict or list
+
     """
-    for command_argument in arguments:
-      action = parser.add_argument(
-          *command_argument.args, **command_argument.kwargs)
-      if command_argument.completer:
-        action.completer = MakeCompleter(command_argument.completer, gsutil_api)
+    logger = self._GetTabCompleteLogger()
 
-  def ConfigureCommandArgumentParsers(self, subparsers):
-    """Configures argparse arguments and argcomplete completers for commands.
+    def HandleList():
+      for command_argument in subcommands_or_arguments:
+        action = parser.add_argument(
+            *command_argument.args, **command_argument.kwargs)
+        if command_argument.completer:
+          action.completer = MakeCompleter(
+              command_argument.completer, gsutil_api)
 
-    Args:
-      subparsers: argparse object that can be used to add parsers for
-                  subcommands (called just 'commands' in gsutil)
+    def HandleDict():
+      subparsers = parser.add_subparsers()
+      for subcommand_name, subcommand_value in subcommands_or_arguments.items():
+        cur_subcommand_parser = subparsers.add_parser(
+            subcommand_name, add_help=False)
+        logger.info(
+            'Constructing argument parsers for {}'.format(subcommand_name))
+        self._ConfigureCommandArgumentParserArguments(
+            cur_subcommand_parser, subcommand_value, gsutil_api)
+
+    if isinstance(subcommands_or_arguments, list):
+      HandleList()
+    elif isinstance(subcommands_or_arguments, dict):
+      HandleDict()
+    else:
+      error_format = ('subcommands_or_arguments {} should be list or dict, '
+                      'found type {}')
+      raise TypeError(
+          error_format.format(
+              subcommands_or_arguments, type(subcommands_or_arguments)))
+
+  def GetGsutilApiForTabComplete(self):
+    """Builds and returns a gsutil_api based off gsutil_api_class_map_factory.
+
+    Returns:
+      the gsutil_api instance
     """
-
     # This should match the support map for the "ls" command.
     support_map = {
         'gs': [ApiSelector.XML, ApiSelector.JSON],
@@ -196,25 +227,48 @@ class CommandRunner(object):
     gsutil_api_map = GsutilApiMapFactory.GetApiMap(
         self.gsutil_api_class_map_factory, support_map, default_map)
 
-    logger = CreateGsutilLogger('tab_complete')
     gsutil_api = CloudApiDelegator(
         self.bucket_storage_uri_class, gsutil_api_map,
-        logger, DiscardMessagesQueue(), debug=0)
+        self._GetTabCompleteLogger(), DiscardMessagesQueue(), debug=0)
+    return gsutil_api
 
-    for command in set(self.command_map.values()):
-      command_parser = subparsers.add_parser(
-          command.command_spec.command_name, add_help=False)
-      if isinstance(command.command_spec.argparse_arguments, dict):
-        subcommand_parsers = command_parser.add_subparsers()
-        subcommand_argument_dict = command.command_spec.argparse_arguments
-        for subcommand, arguments in subcommand_argument_dict.iteritems():
-          subcommand_parser = subcommand_parsers.add_parser(
-              subcommand, add_help=False)
-          self._ConfigureCommandArgumentParserArguments(
-              subcommand_parser, arguments, gsutil_api)
-      else:
-        self._ConfigureCommandArgumentParserArguments(
-            command_parser, command.command_spec.argparse_arguments, gsutil_api)
+  def ConfigureCommandArgumentParsers(self, main_parser):
+    """Configures argparse arguments and argcomplete completers for commands.
+
+    Args:
+      main_parser: argparse object that can be called to get subparsers to add
+      subcommands (called just 'commands' in gsutil)
+    """
+    gsutil_api = self.GetGsutilApiForTabComplete()
+
+    # build a dict mapping from command name to the argparse arguments.
+    # this dict has values with either a recursive dictionary or a list of
+    # CommandArgument objects.
+    command_to_argparse_arguments = {
+        command.command_spec.command_name:
+            command.command_spec.argparse_arguments for command in
+        self.command_map.values()}
+
+    # At this point command_to_argparse_arguments looks like
+    # {
+    #   'retention': {
+    #     'set' : `set arguments array`
+    #     'get' : `set arguments array`
+    #     ...
+    #     'event': {
+    #       'set': `event set arguments array`
+    #       'release': `event release arguments array`
+    #     }
+    #   },
+    #   ... other commands here
+    # }
+    #
+    # Which will be passed into the helper and called recursively on the items
+    # in the dict, with the base case being the arguments arrays, where the
+    # arguments are added to the subparser for the lowest level command.
+
+    self._ConfigureCommandArgumentParserArguments(
+        main_parser, command_to_argparse_arguments, gsutil_api)
 
   def RunNamedCommand(self, command_name, args=None, headers=None, debug=0,
                       trace_token=None, parallel_operations=False,
