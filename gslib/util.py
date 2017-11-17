@@ -575,7 +575,9 @@ def GetGsutilClientIdAndSecret():
 
 
 def GetCredentialStoreFilename():
-  return os.path.join(GetGsutilStateDir(), 'credstore')
+  # As of gsutil 4.29, this changed from 'credstore' to 'credstore2' because
+  # of a change to the underlying credential storage format.
+  return os.path.join(GetGsutilStateDir(), 'credstore2')
 
 
 def GetGceCredentialCacheFilename():

@@ -73,6 +73,8 @@ THIRD_PARTY_LIBS = [
     ('apitools', ''),
     ('boto', ''),
     ('gcs-oauth2-boto-plugin', ''),
+    ('fasteners', ''), # oauth2client and apitools dependency
+    ('monotonic', ''), # fasteners dependency
     ('httplib2', 'python2'),
     ('python-gflags', ''),
     ('retry-decorator', ''),

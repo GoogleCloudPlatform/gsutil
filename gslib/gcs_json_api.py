@@ -54,7 +54,7 @@ from gslib.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.encryption_helper import FindMatchingCryptoKey
 from gslib.gcs_json_credentials import CheckAndGetCredentials
-from gslib.gcs_json_credentials import GetCredentialStoreKeyDict
+from gslib.gcs_json_credentials import GetCredentialStoreKey
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
@@ -92,7 +92,7 @@ from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 
 import httplib2
 import oauth2client
-from oauth2client.contrib import multistore_file
+from oauth2client.contrib import multiprocess_file_storage
 
 
 # pylint: disable=invalid-name
@@ -243,12 +243,12 @@ class GcsJsonApi(CloudApi):
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
 
-    credential_store_key_dict = GetCredentialStoreKeyDict(self.credentials,
-                                                          self.api_version)
+    credential_store_key = GetCredentialStoreKey(self.credentials,
+                                                 self.api_version)
 
     self.credentials.set_store(
-        multistore_file.get_credential_storage_custom_key(
-            GetCredentialStoreFilename(), credential_store_key_dict))
+        multiprocess_file_storage.MultiprocessFileStorage(
+            GetCredentialStoreFilename(), credential_store_key))
 
     self.num_retries = GetNumRetries()
     self.max_retry_wait = GetMaxRetryDelay()

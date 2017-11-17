@@ -52,3 +52,9 @@
 [submodule "third_party/argcomplete"]
 	path = third_party/argcomplete
 	url = https://github.com/kislyuk/argcomplete.git
+[submodule "third_party/fasteners"]
+	path = third_party/fasteners
+	url = git://github.com/gsutil-mirrors/fasteners.git
+[submodule "third_party/monotonic"]
+	path = third_party/monotonic
+	url = git://github.com/gsutil-mirrors/monotonic.git
