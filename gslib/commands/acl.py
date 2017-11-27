@@ -133,9 +133,9 @@ _CH_DESCRIPTION = """
 
 <B>CH EXAMPLES</B>
   Examples for "ch" sub-command:
-  
+
   Grant anyone on the internet READ access to the object example-object:
-  
+
     gsutil acl ch -u AllUsers:R gs://example-bucket/example-object
 
   NOTE: By default, publicly readable objects are served with a Cache-Control
@@ -148,7 +148,7 @@ _CH_DESCRIPTION = """
   (WARNING: this is not recommended as you will be responsible for the content):
 
     gsutil acl ch -u AllUsers:W gs://example-bucket
-    
+
   Grant the user john.doe@example.com WRITE access to the bucket
   example-bucket:
 
@@ -167,10 +167,14 @@ _CH_DESCRIPTION = """
   NOTE: You can replace 'owners' with 'viewers' or 'editors' to grant access
   to a project's viewers/editors respectively.
 
-  Remove access to the bucket example-bucket for the owners of project number
+  Remove access to the bucket example-bucket for the viewers of project number
   12345:
 
-    gsutil acl ch -d owners-12345 gs://example-bucket
+    gsutil acl ch -d viewers-12345 gs://example-bucket
+
+  NOTE: You cannot remove the project owners group from ACLs for gs:// buckets.
+  Attempts to do so will appear to succeed, but the service will add the project
+  owners group into the new set of ACLs before applying it.
 
   Note that removing a project requires you to reference the project by
   its number (which you can see with the acl get command) as opposed to its
