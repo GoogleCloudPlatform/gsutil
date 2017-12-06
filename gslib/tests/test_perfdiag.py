@@ -24,6 +24,7 @@ import sys
 import boto
 from gslib.commands.perfdiag import _GenerateFileData
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
@@ -176,6 +177,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Number of listing calls made:', stdout)
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
 
+  @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_single_process_single_thread(self):
     (stderr_default, _) = self._run_throughput_test(
         'wthru', 1, 1, compression_ratio=50)
@@ -186,6 +188,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Gzip compression ratio: 50', stderr_default)
     self.assertIn('Gzip transport encoding writes: True', stderr_default)
 
+  @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_single_process_multi_thread(self):
     self._run_each_parallel_throughput_test(
         'wthru', 1, 2, compression_ratio=50)
@@ -193,6 +196,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
         'wthru_file', 1, 2, compression_ratio=50)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_multi_process_multi_thread(self):
     self._run_each_parallel_throughput_test(
         'wthru', 2, 2, compression_ratio=50)
