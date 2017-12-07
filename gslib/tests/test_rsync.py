@@ -26,6 +26,7 @@ from gslib.posix_util import NA_TIME
 from gslib.posix_util import UID_ATTR
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
@@ -2142,3 +2143,96 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(listing1, expected_list_results)
       self.assertEquals(listing2, expected_list_results)
     _Check()
+
+  @SkipForS3('No compressed transport encoding support for S3.')
+  @SkipForXML('No compressed transport encoding support for the XML API.')
+  @SequentialAndParallelTransfer
+  def test_gzip_transport_encoded_all_upload(self):
+    """Test gzip encoded files upload correctly."""
+    # Setup the bucket and local data.
+    file_names = ('test', 'test.txt', 'test.xml')
+    local_uris = []
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    contents = 'x' * 10000
+    # Create local files.
+    for file_name in file_names:
+      local_uris.append(self.CreateTempFile(tmpdir, contents, file_name))
+    # Upload the data.
+    stderr = self.RunGsUtil(
+        ['-D', 'rsync', '-J', '-r', tmpdir, suri(bucket_uri)],
+        return_stderr=True)
+    self.AssertNObjectsInBucket(bucket_uri, len(local_uris))
+    # Ensure the correct files were marked for compression.
+    for local_uri in local_uris:
+      self.assertIn(
+          'Using compressed transport encoding for file://%s.' % (local_uri),
+          stderr)
+    # Ensure the progress logger sees a gzip encoding.
+    self.assertIn('send: Using gzip transport encoding for the request.',
+                  stderr)
+
+  @SkipForS3('No compressed transport encoding support for S3.')
+  @SkipForXML('No compressed transport encoding support for the XML API.')
+  @SequentialAndParallelTransfer
+  def test_gzip_transport_encoded_filtered_upload(self):
+    """Test gzip encoded files upload correctly."""
+    # Setup the bucket and local data.
+    file_names_valid = ('test.txt', 'photo.txt')
+    file_names_invalid = ('file', 'test.png', 'test.xml')
+    local_uris_valid = []
+    local_uris_invalid = []
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    contents = 'x' * 10000
+    # Create local files.
+    for file_name in file_names_valid:
+      local_uris_valid.append(self.CreateTempFile(tmpdir, contents, file_name))
+    for file_name in file_names_invalid:
+      local_uris_invalid.append(
+          self.CreateTempFile(tmpdir, contents, file_name))
+    # Upload the data.
+    stderr = self.RunGsUtil(
+        ['-D', 'rsync', '-j', 'txt', '-r', tmpdir, suri(bucket_uri)],
+        return_stderr=True)
+    self.AssertNObjectsInBucket(
+        bucket_uri, len(file_names_valid) + len(file_names_invalid))
+    # Ensure the correct files were marked for compression.
+    for local_uri in local_uris_valid:
+      self.assertIn(
+          'Using compressed transport encoding for file://%s.' % (local_uri),
+          stderr)
+    for local_uri in local_uris_invalid:
+      self.assertNotIn(
+          'Using compressed transport encoding for file://%s.' % (local_uri),
+          stderr)
+    # Ensure the progress logger sees a gzip encoding.
+    self.assertIn('send: Using gzip transport encoding for the request.',
+                  stderr)
+
+  @SkipForS3('No compressed transport encoding support for S3.')
+  @SkipForXML('No compressed transport encoding support for the XML API.')
+  @SequentialAndParallelTransfer
+  def test_gzip_transport_encoded_all_upload_parallel(self):
+    """Test gzip encoded files upload correctly."""
+    # Setup the bucket and local data.
+    file_names = ('test', 'test.txt', 'test.xml')
+    local_uris = []
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    contents = 'x' * 10000
+    for file_name in file_names:
+      local_uris.append(self.CreateTempFile(tmpdir, contents, file_name))
+    # Upload the data.
+    stderr = self.RunGsUtil(
+        ['-D', '-m', 'rsync', '-J', '-r', tmpdir, suri(bucket_uri)],
+        return_stderr=True)
+    self.AssertNObjectsInBucket(bucket_uri, len(local_uris))
+    # Ensure the correct files were marked for compression.
+    for local_uri in local_uris:
+      self.assertIn(
+          'Using compressed transport encoding for file://%s.' % (local_uri),
+          stderr)
+    # Ensure the progress logger sees a gzip encoding.
+    self.assertIn('send: Using gzip transport encoding for the request.',
+                  stderr)

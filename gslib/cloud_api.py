@@ -392,7 +392,8 @@ class CloudApi(object):
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    size=None, preconditions=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None):
+                   encryption_tuple=None, provider=None, fields=None,
+                   gzip_encoded=False):
     """Uploads object data and metadata.
 
     Args:
@@ -411,6 +412,7 @@ class CloudApi(object):
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
       fields: If present, return only these Object metadata fields.
+      gzip_encoded: Whether to use gzip transport encoding for the upload.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -424,7 +426,7 @@ class CloudApi(object):
   def UploadObjectStreaming(self, upload_stream, object_metadata,
                             canned_acl=None, preconditions=None,
                             progress_callback=None, encryption_tuple=None,
-                            provider=None, fields=None):
+                            provider=None, fields=None, gzip_encoded=False):
     """Uploads object data and metadata.
 
     Args:
@@ -443,6 +445,7 @@ class CloudApi(object):
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
       fields: If present, return only these Object metadata fields.
+      gzip_encoded: Whether to use gzip transport encoding for the upload.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -457,7 +460,7 @@ class CloudApi(object):
       self, upload_stream, object_metadata, canned_acl=None,
       size=None, preconditions=None, serialization_data=None,
       tracker_callback=None, progress_callback=None, encryption_tuple=None,
-      provider=None, fields=None):
+      provider=None, fields=None, gzip_encoded=False):
     """Uploads object data and metadata using a resumable upload strategy.
 
     Args:
@@ -484,6 +487,7 @@ class CloudApi(object):
                 class-wide default is used.
       fields: If present, return only these Object metadata fields when the
               upload is complete.
+      gzip_encoded: Whether to use gzip transport encoding for the upload.
 
     Raises:
       ArgumentException for errors during input validation.

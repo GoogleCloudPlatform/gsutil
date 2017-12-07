@@ -41,6 +41,7 @@ from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
 from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.copy_helper import GetSourceFieldsNeededForCopy
+from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -94,7 +95,7 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-a] [-c] [-C] [-d] [-e] [-n] [-p] [-r] [-U] [-x] src_url dst_url
+  gsutil rsync [-a] [-c] [-C] [-d] [-e] [-j] [-J] [-n] [-p] [-r] [-U] [-x] src_url dst_url
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -352,6 +353,26 @@ _DETAILED_HELP_TEXT = ("""
   -e             Exclude symlinks. When specified, symbolic links will be
                  ignored. Note that gsutil does not follow directory symlinks,
                  regardless of whether -e is specified.
+
+  -j <ext,...>   Applies gzip transport encoding to any file upload whose
+                 extension matches the -j extension list. This is useful when
+                 uploading files with compressible content (such as .js, .css,
+                 or .html files) because it saves network bandwidth while
+                 also leaving the data uncompressed in Google Cloud Storage.
+
+                 When you specify the -j option, files being uploaded are
+                 compressed in-memory and on-the-wire only. Both the local
+                 files and GCS objects remain uncompressed. The uploaded
+                 objects retain the Content-Type and name of the original
+                 files.
+
+  -J             Applies gzip transport encoding to file uploads. This option
+                 works like the -j option described above, but it applies to
+                 all uploaded files, regardless of extension.
+
+                 Warning: If you use this option and some of the source files
+                 don't compress well (e.g., that's often true of binary data),
+                 this option may result in longer uploads.
 
   -n             Causes rsync to run in "dry run" mode, i.e., just outputting
                  what would be copied or deleted without actually doing any
@@ -1213,8 +1234,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         copy_result = copy_helper.PerformCopy(
             cls.logger, src_url, dst_url, gsutil_api, cls,
             _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
-            headers=cls.headers, is_rsync=True,
-            preserve_posix=cls.preserve_posix_attrs)
+            headers=cls.headers, is_rsync=True, gzip_encoded=cls.gzip_encoded,
+            gzip_exts=cls.gzip_exts, preserve_posix=cls.preserve_posix_attrs)
         if copy_result is not None:
           (_, bytes_transferred, _, _) = copy_result
           with cls.stats_lock:
@@ -1326,7 +1347,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPrRUx:',
+      supported_sub_args='a:cCdenpPrRUx:j:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1464,6 +1485,13 @@ class RsyncCommand(Command):
     # Command class, so save in Command state rather than CopyHelperOpts.
     self.canned = None
 
+    # Files matching these extensions should be compressed.
+    # The gzip_encoded flag marks if the files should be compressed during
+    # the upload.
+    gzip_encoded = False
+    gzip_arg_exts = None
+    gzip_arg_all = None
+
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
@@ -1480,6 +1508,12 @@ class RsyncCommand(Command):
           self.delete_extras = True
         elif o == '-e':
           self.exclude_symlinks = True
+        elif o == '-j':
+          gzip_encoded = True
+          gzip_arg_exts = [x.strip() for x in a.split(',')]
+        elif o == '-J':
+          gzip_encoded = True
+          gzip_arg_all = GZIP_ALL_FILES
         elif o == '-n':
           self.dryrun = True
         elif o == '-p':
@@ -1502,6 +1536,12 @@ class RsyncCommand(Command):
     if self.preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
+    if gzip_arg_exts and gzip_arg_all:
+      raise CommandException(
+          'Specifying both the -j and -J options together is invalid.')
+    self.gzip_encoded = gzip_encoded
+    self.gzip_exts = gzip_arg_exts or gzip_arg_all
+
     return CreateCopyHelperOpts(
         canned_acl=canned_acl,
         preserve_acl=self.preserve_acl,

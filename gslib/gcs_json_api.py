@@ -1062,7 +1062,7 @@ class GcsJsonApi(CloudApi):
                     provider=None, fields=None, serialization_data=None,
                     tracker_callback=None, progress_callback=None,
                     apitools_strategy=apitools_transfer.SIMPLE_UPLOAD,
-                    total_size=0):
+                    total_size=0, gzip_encoded=False):
     # pylint: disable=g-doc-args
     """Upload implementation. Cloud API arguments, plus two more.
 
@@ -1134,7 +1134,7 @@ class GcsJsonApi(CloudApi):
         # One-shot upload.
         apitools_upload = apitools_transfer.Upload(
             upload_stream, content_type, total_size=size, auto_transfer=True,
-            num_retries=self.num_retries)
+            num_retries=self.num_retries, gzip_encoded=gzip_encoded)
         apitools_upload.strategy = apitools_strategy
         apitools_upload.bytes_http = self.authorized_upload_http
 
@@ -1155,7 +1155,7 @@ class GcsJsonApi(CloudApi):
             upload_stream, self.authorized_upload_http, content_type, size,
             serialization_data, apitools_strategy, apitools_request,
             global_params, bytes_uploaded_container, tracker_callback,
-            additional_headers, progress_callback)
+            additional_headers, progress_callback, gzip_encoded)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
@@ -1167,13 +1167,13 @@ class GcsJsonApi(CloudApi):
       self, upload_stream, authorized_upload_http, content_type, size,
       serialization_data, apitools_strategy, apitools_request, global_params,
       bytes_uploaded_container, tracker_callback, addl_headers,
-      progress_callback):
+      progress_callback, gzip_encoded):
     try:
       if serialization_data:
         # Resuming an existing upload.
         apitools_upload = apitools_transfer.Upload.FromData(
             upload_stream, serialization_data, self.api_client.http,
-            num_retries=self.num_retries)
+            num_retries=self.num_retries, gzip_encoded=gzip_encoded)
         apitools_upload.chunksize = GetJsonResumableChunkSize()
         apitools_upload.bytes_http = authorized_upload_http
       else:
@@ -1181,7 +1181,7 @@ class GcsJsonApi(CloudApi):
         apitools_upload = apitools_transfer.Upload(
             upload_stream, content_type, total_size=size,
             chunksize=GetJsonResumableChunkSize(), auto_transfer=False,
-            num_retries=self.num_retries)
+            num_retries=self.num_retries, gzip_encoded=gzip_encoded)
         apitools_upload.strategy = apitools_strategy
         apitools_upload.bytes_http = authorized_upload_http
         with self._ApitoolsRequestHeaders(addl_headers):
@@ -1213,9 +1213,13 @@ class GcsJsonApi(CloudApi):
           # TODO: On retry, this will seek to the bytes that the server has,
           # causing the hash to be recalculated. Make HashingFileUploadWrapper
           # save a digest according to json_resumable_chunk_size.
-          if size and not JsonResumableChunkSizeDefined():
-            # If size is known, we can send it all in one request and avoid
-            # making a round-trip per chunk.
+          if not gzip_encoded and size and not JsonResumableChunkSizeDefined():
+            # If size is known and the request doesn't need to be compressed,
+            # we can send it all in one request and avoid making a
+            # round-trip per chunk. Compression is not supported for
+            # non-chunked streaming uploads because supporting resumability
+            # for that feature results in degraded upload performance and
+            # adds significant complexity to the implementation.
             http_response = apitools_upload.StreamMedia(
                 callback=_NoOpCallback, finish_callback=_NoOpCallback,
                 additional_headers=addl_headers)
@@ -1286,18 +1290,20 @@ class GcsJsonApi(CloudApi):
 
   def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
                    size=None, preconditions=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None):
+                   encryption_tuple=None, provider=None, fields=None,
+                   gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     return self._UploadObject(
         upload_stream, object_metadata, canned_acl=canned_acl,
         size=size, preconditions=preconditions,
         progress_callback=progress_callback, encryption_tuple=encryption_tuple,
-        fields=fields, apitools_strategy=apitools_transfer.SIMPLE_UPLOAD)
+        fields=fields, apitools_strategy=apitools_transfer.SIMPLE_UPLOAD,
+        gzip_encoded=gzip_encoded)
 
   def UploadObjectStreaming(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
       progress_callback=None, encryption_tuple=None, provider=None,
-      fields=None):
+      fields=None, gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     # Streaming indicated by not passing a size.
     # Resumable capabilities are present up to the resumable chunk size using
@@ -1306,13 +1312,14 @@ class GcsJsonApi(CloudApi):
         upload_stream, object_metadata, canned_acl=canned_acl,
         preconditions=preconditions, progress_callback=progress_callback,
         encryption_tuple=encryption_tuple, fields=fields,
-        apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD, total_size=None)
+        apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD, total_size=None,
+        gzip_encoded=gzip_encoded)
 
   def UploadObjectResumable(
       self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
       size=None, serialization_data=None, tracker_callback=None,
       progress_callback=None, encryption_tuple=None, provider=None,
-      fields=None):
+      fields=None, gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     return self._UploadObject(
         upload_stream, object_metadata, canned_acl=canned_acl,
@@ -1320,7 +1327,8 @@ class GcsJsonApi(CloudApi):
         serialization_data=serialization_data,
         tracker_callback=tracker_callback, progress_callback=progress_callback,
         encryption_tuple=encryption_tuple,
-        apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD)
+        apitools_strategy=apitools_transfer.RESUMABLE_UPLOAD,
+        gzip_encoded=gzip_encoded)
 
   def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
                  canned_acl=None, preconditions=None, progress_callback=None,
