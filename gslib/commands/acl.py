@@ -21,6 +21,7 @@ from gslib import aclhelpers
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
+from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
@@ -430,7 +431,6 @@ class AclCommand(Command):
       gsutil_api = self.gsutil_api
 
     url = name_expansion_result.expanded_storage_url
-
     if url.IsBucket():
       bucket = gsutil_api.GetBucket(url.bucket_name, provider=url.scheme,
                                     fields=['acl', 'metageneration'])
@@ -439,13 +439,10 @@ class AclCommand(Command):
       gcs_object = encoding.JsonToMessage(apitools_messages.Object,
                                           name_expansion_result.expanded_result)
       current_acl = gcs_object.acl
+
     if not current_acl:
       self._RaiseForAccessDenied(url)
-
-    modification_count = 0
-    for change in self.changes:
-      modification_count += change.Execute(url, current_acl, 'acl', self.logger)
-    if modification_count == 0:
+    if self._ApplyAclChangesAndReturnChangeCount(url, current_acl) == 0:
       self.logger.info('No changes to %s', url)
       return
 
@@ -459,19 +456,57 @@ class AclCommand(Command):
       else:  # Object
         preconditions = Preconditions(gen_match=gcs_object.generation,
                                       meta_gen_match=gcs_object.metageneration)
-
         object_metadata = apitools_messages.Object(acl=current_acl)
-        gsutil_api.PatchObjectMetadata(
-            url.bucket_name, url.object_name, object_metadata,
-            preconditions=preconditions, provider=url.scheme,
-            generation=url.generation, fields=['id'])
+        try:
+          gsutil_api.PatchObjectMetadata(
+              url.bucket_name, url.object_name, object_metadata,
+              preconditions=preconditions, provider=url.scheme,
+              generation=url.generation, fields=['id'])
+        except PreconditionException as e:
+          # Special retry case where we want to do an additional step, the read
+          # of the read-modify-write cycle, to fetch the correct object
+          # metadata before reattempting ACL changes.
+          self._RefetchObjectMetadataAndApplyAclChanges(url, gsutil_api)
+
+      self.logger.info('Updated ACL on %s', url)
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
       raise CommandException('Received bad request from server: %s' % str(e))
     except AccessDeniedException:
       self._RaiseForAccessDenied(url)
+    except PreconditionException as e:
+      # For objects, retry attempts should have already been handled.
+      if url.IsObject():
+        raise CommandException(str(e))
+      # For buckets, raise PreconditionException and continue to next retry.
+      raise e
 
-    self.logger.info('Updated ACL on %s', url)
+  @Retry(PreconditionException, tries=3, timeout_secs=1)
+  def _RefetchObjectMetadataAndApplyAclChanges(self, url, gsutil_api):
+    """Reattempts object ACL changes after a PreconditionException."""
+    gcs_object = gsutil_api.GetObjectMetadata(
+        url.bucket_name, url.object_name, provider=url.scheme,
+        fields=['acl', 'generation', 'metageneration'])
+    current_acl = gcs_object.acl
+
+    if self._ApplyAclChangesAndReturnChangeCount(url, current_acl) == 0:
+      self.logger.info('No changes to %s', url)
+      return
+
+    object_metadata = apitools_messages.Object(acl=current_acl)
+    preconditions = Preconditions(gen_match=gcs_object.generation,
+                                  meta_gen_match=gcs_object.metageneration)
+    gsutil_api.PatchObjectMetadata(
+        url.bucket_name, url.object_name, object_metadata,
+        preconditions=preconditions, provider=url.scheme,
+        generation=gcs_object.generation, fields=['id'])
+
+  def _ApplyAclChangesAndReturnChangeCount(self, storage_url, acl_message):
+    modification_count = 0
+    for change in self.changes:
+      modification_count += change.Execute(
+          storage_url, acl_message, 'acl', self.logger)
+    return modification_count
 
   def RunCommand(self):
     """Command entry point for the acl command."""
