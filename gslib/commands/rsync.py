@@ -331,9 +331,9 @@ _DETAILED_HELP_TEXT = ("""
 
   -c             Causes the rsync command to compute and compare checksums
                  (instead of comparing mtime) for files if the size of source
-                 and destination as well as mtime (if available) match. This
-                 option increases local disk I/O and run time if either src_url
-                 or dst_url are on the local file system.
+                 and destination match. This option increases local disk I/O and
+                 run time if either src_url or dst_url are on the local file
+                 system.
 
   -C             If an error occurs, continue to attempt to copy the remaining
                  files. If errors occurred, gsutil's exit status will be
