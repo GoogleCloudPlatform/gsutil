@@ -10,4 +10,4 @@ install:
 # command to run tests
 script:
   - gsutil version -l
-  - gsutil -o 'GSUtil:default_project_id=999999999' test -u
+  - gsutil test -u
