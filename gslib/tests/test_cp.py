@@ -1831,7 +1831,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     if self.default_provider == 's3':
       expected_error_regex = r'AccessDenied'
     else:
-      expected_error_regex = r'Anonymous user(s)? do(es)? not have'
+      expected_error_regex = r'Anonymous \S+ do(es)? not have'
 
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
