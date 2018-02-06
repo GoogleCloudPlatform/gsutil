@@ -197,7 +197,7 @@ class PubsubApi(object):
       topic_name: Optional topic name in request that caused the exception.
 
     Returns:
-      CloudStorageApiServiceException for translatable exceptions, None
+      ServiceException for translatable exceptions, None
       otherwise.
     """
 

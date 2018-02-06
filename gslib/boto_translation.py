@@ -1518,7 +1518,7 @@ class BotoTranslation(CloudApi):
       not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
-      CloudStorageApiServiceException for translatable exceptions, None
+      ServiceException for translatable exceptions, None
       otherwise.
 
     Because we're using isinstance, check for subtypes first.

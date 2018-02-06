@@ -368,6 +368,13 @@ class CloudApiDelegator(CloudApi):
   def ListNotificationConfigs(self, bucket_name, provider=None):
     return self._GetApi(provider).ListNotificationConfigs(bucket_name)
 
+  def ListBucketAccessControls(self, bucket_name, provider=None):
+    return self._GetApi(provider).ListBucketAccessControls(bucket_name)
+
+  def ListObjectAccessControls(self, bucket_name, object_name, provider=None):
+    return self._GetApi(provider).ListObjectAccessControls(bucket_name,
+                                                           object_name)
+
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
 

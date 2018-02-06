@@ -371,6 +371,25 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
+  def ListBucketAccessControls(self, bucket_name):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageBucketAccessControlsListRequest(
+          bucket=bucket_name)
+      return self.api_client.bucketAccessControls.List(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
+  def ListObjectAccessControls(self, bucket_name, object_name):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageObjectAccessControlsListRequest(
+          bucket=bucket_name, object=object_name)
+      return self.api_client.objectAccessControls.List(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
+                                       object_name=object_name)
+
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
                   canned_def_acl=None, preconditions=None, provider=None,
                   fields=None):
@@ -1831,7 +1850,7 @@ class GcsJsonApi(CloudApi):
       not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
-      CloudStorageApiServiceException for translatable exceptions, None
+      ServiceException for translatable exceptions, None
       otherwise.
     """
     if isinstance(e, apitools_exceptions.HttpError):

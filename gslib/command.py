@@ -1051,11 +1051,34 @@ class Command(HelpProvider):
               'default object ACL.', url_str, url_str)
       else:
         acl = blr.root_object.acl
+        # Use the access controls api to check if the acl is actually empty or
+        # if the user has 403 access denied or 400 invalid argument.
         if not acl:
-          self._WarnServiceAccounts()
-          raise AccessDeniedException('Access denied. Please ensure you have '
-                                      'OWNER permission on %s.' % url_str)
+          self._ListAccessControlsAcl(url)
       print AclTranslation.JsonFromMessage(acl)
+
+  def _ListAccessControlsAcl(self, storage_url):
+    """Returns either bucket or object access controls for a storage url.
+
+    Args:
+      storage_url: StorageUrl object representing the bucket or object.
+
+    Returns:
+      BucketAccessControls, ObjectAccessControls, or None if storage_url does
+      not represent a cloud bucket or cloud object.
+
+    Raises:
+      ServiceException if there was an error in the request.
+    """
+    if storage_url.IsBucket():
+      return self.gsutil_api.ListBucketAccessControls(
+          storage_url.bucket_name, provider=storage_url.scheme)
+    elif storage_url.IsObject():
+      return self.gsutil_api.ListObjectAccessControls(
+          storage_url.bucket_name, storage_url.object_name,
+          provider=storage_url.scheme)
+    else:
+      return None
 
   def GetAclCommandBucketListingReference(self, url_str):
     """Gets a single bucket listing reference for an acl get command.
