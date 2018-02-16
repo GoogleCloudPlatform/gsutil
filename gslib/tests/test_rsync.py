@@ -54,7 +54,7 @@ if not IS_WINDOWS:
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
-NO_CHANGES = 'Building synchronization state...\nStarting synchronization\n'
+NO_CHANGES = 'Building synchronization state...\nStarting synchronization...\n'
 if not UsingCrcmodExtension(crcmod):
   NO_CHANGES = SLOW_CRCMOD_RSYNC_WARNING + '\n' + NO_CHANGES
 

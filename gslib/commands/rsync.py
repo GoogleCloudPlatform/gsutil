@@ -1440,7 +1440,7 @@ class RsyncCommand(Command):
     seek_ahead_iterator = _SeekAheadDiffIterator(
         _AvoidChecksumAndListingDiffIterator(diff_iterator))
 
-    self.logger.info('Starting synchronization')
+    self.logger.info('Starting synchronization...')
     start_time = time.time()
     try:
       self.Apply(_RsyncFunc, diff_iterator, _RsyncExceptionHandler,
