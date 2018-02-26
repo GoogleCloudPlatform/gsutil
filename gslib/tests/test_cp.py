@@ -3256,7 +3256,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_start_over_http_error(self):
-    for start_over_error in (404, 410):
+    for start_over_error in (
+        403,   # If user doesn't have storage.buckets.get access to dest bucket.
+        404,   # If the dest bucket exists, but the dest object does not.
+        410):  # If the service tells us to restart the upload from scratch.
       self.start_over_error_test_helper(start_over_error)
 
   def start_over_error_test_helper(self, http_error_num):
@@ -3274,7 +3277,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
                                fpath, suri(bucket_uri)], return_stderr=True)
-      self.assertIn('Restarting upload from scratch', stderr)
+      self.assertIn('Restarting upload of', stderr)
 
   def test_cp_minus_c(self):
     bucket_uri = self.CreateBucket()

@@ -46,6 +46,7 @@ from boto import config
 import crcmod
 
 import gslib
+from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import EncryptionException
@@ -1610,6 +1611,8 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           progress_callback=progress_callback, gzip_encoded=gzip_encoded)
       retryable = False
     except ResumableUploadStartOverException, e:
+      logger.info('Caught ResumableUploadStartOverException for upload of %s.'
+                  % src_url.url_string)
       # This can happen, for example, if the server sends a 410 response code.
       # In that case the current resumable upload ID can't be reused, so delete
       # the tracker file and try again up to max retries.
@@ -1621,12 +1624,24 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       # If the server sends a 404 response code, then the upload should only
       # be restarted if it was the object (and not the bucket) that was missing.
       try:
+        logger.info('Checking that bucket %s exists before retrying upload...'
+                     % dst_obj_metadata.bucket)
         gsutil_api.GetBucket(dst_obj_metadata.bucket, provider=dst_url.scheme)
+      except AccessDeniedException:
+        # Proceed with deleting the tracker file in the event that the bucket
+        # exists, but the user does not have permission to view its metadata.
+        pass
       except NotFoundException:
         raise
+      finally:
+        DeleteTrackerFile(tracker_file_name)
+        logger.info('Deleted tracker file %s for resumable upload of %s before '
+                    'retrying.' % (tracker_file_name, src_url.url_string))
 
-      logger.info('Restarting upload from scratch after exception %s', e)
-      DeleteTrackerFile(tracker_file_name)
+      logger.info(
+           'Restarting upload of %s from scratch (retry #%d) after exception '
+           'indicating we need to start over with a new resumable upload ID: %s'
+           % (src_url.url_string, num_startover_attempts, e))
       tracker_data = None
       src_obj_filestream.seek(0)
       # Reset the progress callback handler.
@@ -1636,10 +1651,6 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           component_num=component_num,
           dst_url=dst_url, operation_name='Uploading').call
 
-      logger.info('\n'.join(textwrap.wrap(
-          'Resumable upload of %s failed with a response code indicating we '
-          'need to start over with a new resumable upload ID. Backing off '
-          'and retrying.' % src_url.url_string)))
       # Report the retryable error to the global status queue.
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
