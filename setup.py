@@ -35,7 +35,7 @@ management tasks, including:
 """
 
 requires = [
-    'argcomplete>=1.8.2',
+    'argcomplete>=1.9.4',
     'boto==2.48.0',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
@@ -44,7 +44,7 @@ requires = [
     'httplib2>=0.10.3',
     # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
     'mock==2.0.0',
-    'monotonic>=1.3',
+    'monotonic>=1.4',
     'oauth2client==4.1.2',
     'pyOpenSSL>=0.13',
     'python-gflags>=2.0',
