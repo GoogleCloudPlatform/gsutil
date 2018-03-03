@@ -665,9 +665,22 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
   @mock.patch('time.time', new=mock.MagicMock(return_value=0))
   def testMetricsPosting(self):
     """Tests the metrics posting process as performed in metrics_reporter.py."""
+    # Windows has odd restrictions about attempting to open a named tempfile
+    # while it's open. Regardless of platform, we don't need the file to be open
+    # or even exist; we only need a valid file path to create a log file at.
     metrics_file = tempfile.NamedTemporaryFile()
-    metrics.LogCommandParams(
-        global_opts=[('-y', 'value'), ('-z', ''), ('-x', '')])
+    metrics_file_name = metrics_file.name
+    metrics_file.close()
+
+    # Logging statements will create a file at the path we just fetched. Make
+    # sure we clean up the file afterward.
+    def MetricsTempFileCleanup(file_path):
+      try:
+        os.unlink(file_path)
+      except OSError:
+        # Don't fail if the file was already cleaned up.
+        pass
+    self.addCleanup(MetricsTempFileCleanup, metrics_file_name)
 
     # Collect a metric and set log level for the metrics_reporter subprocess.
     def CollectMetricAndSetLogLevel(log_level, log_file_path):
@@ -679,6 +692,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       self.collector.ReportMetrics(wait_for_report=True, log_level=log_level,
                                    log_file_path=log_file_path)
       self.assertEqual([], self.collector._metrics)
+
+    metrics.LogCommandParams(
+        global_opts=[('-y', 'value'), ('-z', ''), ('-x', '')])
 
     # The log file should be empty unless the debug option is specified.
     CollectMetricAndSetLogLevel(logging.DEBUG, metrics_file.name)
