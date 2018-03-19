@@ -86,11 +86,12 @@ from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import ObjectIsGzipEncoded
-from gslib.util import RsyncDiffToApply
 from gslib.util import SECONDS_PER_DAY
 from gslib.util import TEN_MIB
 from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+from gslib.utils.rsync_util import DiffAction
+from gslib.utils.rsync_util import RsyncDiffToApply
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 
@@ -465,13 +466,6 @@ _PROGRESS_REPORT_LISTING_COUNT = 10000
 _tmp_files = []
 
 
-class _DiffAction(object):
-  COPY = 'copy'
-  REMOVE = 'remove'
-  MTIME_SRC_TO_DST = 'mtime_src_to_dst'
-  POSIX_SRC_TO_DST = 'posix_src_to_dst'
-
-
 # pylint: disable=unused-argument
 def _HandleSignals(signal_num, cur_stack_frame):
   """Called when rsync command is killed with SIGINT, SIGQUIT or SIGTERM."""
@@ -496,7 +490,7 @@ def CleanUpTempFiles():
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
   """Arg checker that skips symlinks if -e flag specified."""
-  if (diff_to_apply.diff_action == _DiffAction.REMOVE
+  if (diff_to_apply.diff_action == DiffAction.REMOVE
       or not command_instance.exclude_symlinks):
     # No src URL is populated for REMOVE actions.
     return True
@@ -1060,14 +1054,14 @@ class _DiffIterator(object):
         # There's no dst object corresponding to src object, so copy src to dst.
         yield RsyncDiffToApply(
             src_url_str, dst_url_str_would_copy_to, posix_attrs,
-            _DiffAction.COPY, src_size)
+            DiffAction.COPY, src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
           yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                                 _DiffAction.REMOVE, None)
+                                 DiffAction.REMOVE, None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -1081,19 +1075,19 @@ class _DiffIterator(object):
             dst_size, dst_mtime, dst_crc32c, dst_md5))
         if should_replace:
           yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 _DiffAction.COPY, src_size)
+                                 DiffAction.COPY, src_size)
         elif self.preserve_posix:
           posix_attrs, needs_update = NeedsPOSIXAttributeUpdate(
               src_atime, dst_atime, src_mtime, dst_mtime, src_uid, dst_uid,
               src_gid, dst_gid, src_mode, dst_mode)
           if needs_update:
             yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                   _DiffAction.POSIX_SRC_TO_DST, src_size)
+                                   DiffAction.POSIX_SRC_TO_DST, src_size)
         elif has_src_mtime and not has_dst_mtime:
           # File/object at destination matches source but is missing mtime
           # attribute at destination.
           yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 _DiffAction.MTIME_SRC_TO_DST, src_size)
+                                 DiffAction.MTIME_SRC_TO_DST, src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -1106,11 +1100,11 @@ class _DiffIterator(object):
     # be removed.
     if dst_url_str:
       yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             _DiffAction.REMOVE, None)
+                             DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _, _, _, _, _, _, _) = self._ParseTmpFileLine(line)
       yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             _DiffAction.REMOVE, None)
+                             DiffAction.REMOVE, None)
 
 
 class _SeekAheadDiffIterator(object):
@@ -1122,8 +1116,8 @@ class _SeekAheadDiffIterator(object):
   def __iter__(self):
     for diff_to_apply in self.cloned_diff_iterator:
       bytes_to_copy = diff_to_apply.copy_size or 0
-      if (diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST or
-          diff_to_apply.diff_action == _DiffAction.POSIX_SRC_TO_DST):
+      if (diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST or
+          diff_to_apply.diff_action == DiffAction.POSIX_SRC_TO_DST):
         # Assume MTIME_SRC_TO_DST and POSIX_SRC_TO_DST are metadata-only
         # copies. However, if the user does not have OWNER permission on
         # an object, the data must be re-sent, and this function will
@@ -1179,7 +1173,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
   dst_url_str = diff_to_apply.dst_url_str
   dst_url = StorageUrlFromString(dst_url_str)
   posix_attrs = diff_to_apply.src_posix_attrs
-  if diff_to_apply.diff_action == _DiffAction.REMOVE:
+  if diff_to_apply.diff_action == DiffAction.REMOVE:
     if cls.dryrun:
       cls.logger.info('Would remove %s', dst_url)
     else:
@@ -1195,7 +1189,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           # If the object happened to be deleted by an external process, this
           # is fine because it moves us closer to the desired state.
           pass
-  elif diff_to_apply.diff_action == _DiffAction.COPY:
+  elif diff_to_apply.diff_action == DiffAction.COPY:
     src_url_str = diff_to_apply.src_url_str
     src_url = StorageUrlFromString(src_url_str)
     if cls.dryrun:
@@ -1257,7 +1251,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       except SkipUnsupportedObjectError, e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
-  elif diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST:
+  elif diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
     # copied from the source to the destination.
@@ -1290,13 +1284,13 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
                                            diff_to_apply.dst_url_str,
                                            posix_attrs,
-                                           _DiffAction.COPY,
+                                           DiffAction.COPY,
                                            diff_to_apply.copy_size),
                      thread_state=thread_state)
       else:
         ParseAndSetPOSIXAttributes(dst_url.object_name, obj_metadata,
                                    preserve_posix=cls.preserve_posix_attrs)
-  elif diff_to_apply.diff_action == _DiffAction.POSIX_SRC_TO_DST:
+  elif diff_to_apply.diff_action == DiffAction.POSIX_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
     # copied from the source to the destination.
@@ -1330,7 +1324,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
                           'object.', dst_url.url_string)
           _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
                                            diff_to_apply.dst_url_str,
-                                           posix_attrs, _DiffAction.COPY,
+                                           posix_attrs, DiffAction.COPY,
                                            diff_to_apply.copy_size),
                      thread_state=thread_state)
   else:

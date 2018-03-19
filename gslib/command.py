@@ -88,9 +88,9 @@ from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
-from gslib.util import RsyncDiffToApply
 from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
+from gslib.utils.rsync_util import RsyncDiffToApply
 
 from gslib.wildcard_iterator import CreateWildcardIterator
 

@@ -30,9 +30,9 @@ from apitools.base.py import exceptions as apitools_exceptions
 from gslib.cloud_api import BadRequestException
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
-from gslib.util import LazyWrapper
 from gslib.util import SSL_TIMEOUT
 from gslib.util import TRANSFER_BUFFER_SIZE
+from gslib.utils.lazywrapper import LazyWrapper
 import httplib2
 from httplib2 import parse_uri
 

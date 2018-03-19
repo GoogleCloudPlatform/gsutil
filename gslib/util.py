@@ -305,70 +305,6 @@ class UTC(tzinfo):
     return timedelta(0)
 
 
-class LazyWrapper(object):
-  """Wrapper for lazily instantiated objects."""
-
-  def __init__(self, func):
-    """The init method for LazyWrapper.
-
-    Args:
-      func: A function (lambda or otherwise) to lazily evaluate.
-    """
-    self._func = func
-
-  def __int__(self):
-    try:
-      return int(self._value)
-    except AttributeError:
-      self._value = self._func()
-      return int(self._value)
-
-  def __eq__(self, other):
-    try:
-      return self._value == other
-    except AttributeError:
-      self._value = self._func()
-      return self._value == other
-
-  def __repr__(self):
-    try:
-      return str(self._value)
-    except AttributeError:
-      self._value = self._func()
-      return str(self._value)
-
-  def __str__(self):
-    try:
-      return str(self._value)
-    except AttributeError:
-      self._value = self._func()
-      return str(self._value)
-
-  def __call__(self):
-    """The call method for a LazyWrapper object."""
-    try:
-      return self._value
-    except AttributeError:
-      self._value = self._func()
-      return self._value
-
-  def __len__(self):
-    """The len method for a LazyWrapper object."""
-    try:
-      return len(self._value)
-    except AttributeError:
-      self.__call__()
-      return len(self._value)
-
-  def __iter__(self):
-    """The iter method for a LazyWrapper object."""
-    try:
-      return self._value.__iter__()
-    except AttributeError:
-      self.__call__()
-      return self._value.__iter__()
-
-
 # Enum class for specifying listing style.
 class ListingStyle(object):
   SHORT = 'SHORT'
@@ -1862,24 +1798,3 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   if url_was_unicode:
     new_url = new_url.decode('utf-8')
   return new_url
-
-
-class RsyncDiffToApply(object):
-  """Class that encapsulates info needed to apply diff for one object."""
-
-  def __init__(self, src_url_str, dst_url_str, src_posix_attrs, diff_action,
-               copy_size):
-    """Constructor.
-
-    Args:
-      src_url_str: The source URL string, or None if diff_action is REMOVE.
-      dst_url_str: The destination URL string.
-      src_posix_attrs: The source posix_attributes.
-      diff_action: _DiffAction to be applied.
-      copy_size: The amount of bytes to copy, or None if diff_action is REMOVE.
-    """
-    self.src_url_str = src_url_str
-    self.dst_url_str = dst_url_str
-    self.src_posix_attrs = src_posix_attrs
-    self.diff_action = diff_action
-    self.copy_size = copy_size
