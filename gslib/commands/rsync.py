@@ -95,9 +95,10 @@ from gslib.wildcard_iterator import CreateWildcardIterator
 
 
 _SYNOPSIS = """
-  gsutil rsync [-a] [-c] [-C] [-d] [-e] [-j] [-J] [-n] [-p] [-r] [-U] [-x] src_url dst_url
+  gsutil rsync [OPTION]... src_url dst_url
 """
 
+# pylint: disable=anomalous-backslash-in-string
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
 """ + _SYNOPSIS + """
@@ -442,6 +443,7 @@ _DETAILED_HELP_TEXT = ("""
                  NOTE: When using this on the Windows command line, use ^ as an
                  escape character instead of \ and escape the | character.
 """)
+# pylint: enable=anomalous-backslash-in-string
 
 _NA = '-'
 _OUTPUT_BUFFER_SIZE = 64 * 1024
@@ -1533,6 +1535,7 @@ class RsyncCommand(Command):
             self.exclude_pattern = re.compile(a)
           except re.error:
             raise CommandException('Invalid exclude filter (%s)' % a)
+
     if self.preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')

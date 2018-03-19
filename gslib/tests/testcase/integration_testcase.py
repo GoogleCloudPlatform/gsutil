@@ -33,12 +33,13 @@ from boto.storage_uri import BucketStorageUri
 
 import gslib
 from gslib.boto_translation import BotoTranslation
-from gslib.cloud_api import CryptoTuple
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import Base64ToHexHash
+from gslib.kms_api import KmsApi
 from gslib.posix_util import ATIME_ATTR
 from gslib.posix_util import GID_ATTR
 from gslib.posix_util import MODE_ATTR
@@ -129,6 +130,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                DiscardMessagesQueue(), 'gs')
     self.xml_api = BotoTranslation(BucketStorageUri, logging.getLogger(),
                                    DiscardMessagesQueue, self.default_provider)
+    self.kms_api = KmsApi()
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 
@@ -300,9 +302,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       return _CheckBucket()
 
-  def AssertObjectUsesEncryptionKey(self, object_uri_str, encryption_key):
-    """Strongly consistent check that the correct encryption key is used."""
-    stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+  def AssertObjectUsesCSEK(self, object_uri_str, encryption_key):
+    """Strongly consistent check that the correct CSEK encryption key is used.
+
+    This check forces use of the JSON API, as encryption information is not
+    returned in object metadata via the XML API.
+    """
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertIn(
         Base64Sha256FromBase64EncryptionKey(encryption_key), stdout,
         'Object %s did not use expected encryption key with hash %s. '
@@ -310,9 +317,26 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         (object_uri_str, Base64Sha256FromBase64EncryptionKey(encryption_key),
          stdout))
 
+  def AssertObjectUsesCMEK(self, object_uri_str, encryption_key):
+    """Strongly consistent check that the correct KMS encryption key is used.
+
+    This check forces use of the JSON API, as encryption information is not
+    returned in object metadata via the XML API.
+    """
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % encryption_key)
+
   def AssertObjectUnencrypted(self, object_uri_str):
-    stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+    """Checks that no CSEK or CMEK attributes appear in `stat` output.
+
+    This check forces use of the JSON API, as encryption information is not
+    returned in object metadata via the XML API.
+    """
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertNotIn('Encryption key SHA256', stdout)
+    self.assertNotIn('KMS key', stdout)
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
                    provider=None, prefer_json_api=False,
@@ -430,7 +454,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None,
                    prefer_json_api=False, encryption_key=None, mode=None,
                    mtime=None, uid=None, gid=None, storage_class=None,
-                   gs_idempotent_generation=0):
+                   gs_idempotent_generation=0, kms_key_name=None):
     """Creates a test object.
 
     Args:
@@ -458,20 +482,26 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           idempotently by supplying this generation number as a precondition
           and assuming the current object is correct on precondition failure.
           Defaults to 0 (new object); to disable, set to None.
+      kms_key_name: Fully-qualified name of the KMS key that should be used to
+          encrypt the object. Note that this is currently only valid for 'gs'
+          objects.
 
     Returns:
       A StorageUri for the created object.
     """
     bucket_uri = bucket_uri or self.CreateBucket()
 
-    if contents and bucket_uri.scheme == 'gs' and (prefer_json_api or
-                                                   encryption_key):
+    if (contents and
+        bucket_uri.scheme == 'gs' and
+        (prefer_json_api or encryption_key or kms_key_name)):
+
       object_name = object_name or self.MakeTempName('obj')
       json_object = self.CreateObjectJson(
           contents=contents, bucket_name=bucket_uri.bucket_name,
           object_name=object_name, encryption_key=encryption_key,
           mtime=mtime, storage_class=storage_class,
-          gs_idempotent_generation=gs_idempotent_generation)
+          gs_idempotent_generation=gs_idempotent_generation,
+          kms_key_name=kms_key_name)
       object_uri = bucket_uri.clone_replace_name(object_name)
       # pylint: disable=protected-access
       # Need to update the StorageUri with the correct values while
@@ -556,7 +586,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   def CreateObjectJson(self, contents, bucket_name=None, object_name=None,
                        encryption_key=None, mtime=None, storage_class=None,
-                       gs_idempotent_generation=None):
+                       gs_idempotent_generation=None, kms_key_name=None):
     """Creates a test object (GCS provider only) using the JSON API.
 
     Args:
@@ -577,6 +607,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           idempotently by supplying this generation number as a precondition
           and assuming the current object is correct on precondition failure.
           Defaults to 0 (new object); to disable, set to None.
+      kms_key_name: Fully-qualified name of the KMS key that should be used to
+          encrypt the object. Note that this is currently only valid for 'gs'
+          objects.
 
     Returns:
       An apitools Object for the created object.
@@ -593,15 +626,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         metadata=custom_metadata,
         bucket=bucket_name,
         contentType='application/octet-stream',
-        storageClass=storage_class)
-    encryption_tuple = None
-    if encryption_key:
-      encryption_tuple = CryptoTuple(encryption_key)
+        storageClass=storage_class,
+        kmsKeyName=kms_key_name)
+    encryption_keywrapper = CryptoKeyWrapperFromKey(encryption_key)
     try:
-      return self.json_api.UploadObject(cStringIO.StringIO(contents),
-                                        object_metadata, provider='gs',
-                                        encryption_tuple=encryption_tuple,
-                                        preconditions=preconditions)
+      return self.json_api.UploadObject(
+          cStringIO.StringIO(contents),
+          object_metadata, provider='gs',
+          encryption_tuple=encryption_keywrapper,
+          preconditions=preconditions)
     except PreconditionException:
       if gs_idempotent_generation is None:
         raise
@@ -842,3 +875,22 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """Perform a flat listing over bucket_url_string."""
     return self.RunGsUtil(['ls', suri(bucket_url_string, '**')],
                           return_stdout=True)
+
+
+class KmsTestingResources(object):
+  """Constants for KMS resource names to be used in integration testing."""
+  KEYRING_LOCATION = 'global'
+  # Since KeyRings and their child resources cannot be deleted, we minimize the
+  # number of resources created by using a hard-coded keyRing name.
+  KEYRING_NAME = 'keyring-for-gsutil-integration-tests'
+
+  # Used by tests where we don't need to alter the state of a cryptoKey and/or
+  # its IAM policy bindings once it's initialized the first time.
+  CONSTANT_KEY_NAME = 'key-for-gsutil-integration-tests'
+  CONSTANT_KEY_NAME2 = 'key-for-gsutil-integration-tests2'
+  # Pattern used for keys that should only be operated on by one tester at a
+  # time. Because multiple integration test invocations can run at the same
+  # time, we want to minimize the risk of them operating on each other's key,
+  # while also not creating too many one-time-use keys (as they cannot be
+  # deleted). Tests should fill in the %d entries with a digit between 0 and 9.
+  MUTABLE_KEY_NAME_TEMPLATE = 'cryptokey-for-gsutil-integration-tests-%d%d%d'

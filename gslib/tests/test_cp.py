@@ -58,6 +58,7 @@ from gslib.posix_util import NA_MODE
 from gslib.posix_util import UID_ATTR
 from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.posix_util import ValidatePOSIXMode
+from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.rewrite_helper import EnsureRewriteResumeCallbackHandler
 from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
@@ -1863,16 +1864,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath2 = os.path.join(fpath_dir, 'cp_minus_e')
     bucket_uri = self.CreateBucket()
     os.symlink(fpath1, fpath2)
+    # We also use -c to continue on errors. One of the expanded glob entries
+    # should be the symlinked file, which should throw a CommandException since
+    # no valid (non-symlinked) files could be found at that path; we don't want
+    # the command to terminate if that's the first file we attempt to copy.
     stderr = self.RunGsUtil(
-        ['cp', '-e', '%s%s*' % (fpath_dir, os.path.sep),
+        ['cp', '-e', '-c', '%s%s*' % (fpath_dir, os.path.sep),
          suri(bucket_uri, 'files')],
         return_stderr=True)
     self.assertIn('Copying file', stderr)
     self.assertIn('Skipping symbolic link', stderr)
 
-    # Ensure that top-level arguments are ignored if they are symlinks.
+    # Ensure that top-level arguments are ignored if they are symlinks. The file
+    # at fpath1 should be successfully copied, then copying the symlink at
+    # fpath2 should fail.
     stderr = self.RunGsUtil(
-        ['cp', '-e', fpath1, fpath2, suri(bucket_uri, 'files')],
+        ['cp', '-e', '-r', fpath1, fpath2, suri(bucket_uri, 'files')],
         return_stderr=True, expected_status=1)
     self.assertIn('Copying file', stderr)
     self.assertIn('Skipping symbolic link', stderr)
@@ -1964,7 +1971,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest(boto_config_for_test):
       self.RunGsUtil(['cp', suri(fpath), suri(bucket_uri)])
 
-    self.AssertObjectUsesEncryptionKey(object_uri, TEST_ENCRYPTION_KEY1)
+    self.AssertObjectUsesCSEK(object_uri, TEST_ENCRYPTION_KEY1)
 
     with SetBotoConfigForTest(boto_config_for_test):
       # Reading the object back should succeed.
@@ -2000,8 +2007,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath, 'rb') as fp:
         self.assertIn(CalculateB64EncodedMd5FromContents(fp), stdout)
 
-    self.AssertObjectUsesEncryptionKey(object_uri_str,
-                                       TEST_ENCRYPTION_KEY1)
+    self.AssertObjectUsesCSEK(object_uri_str,
+                              TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
   def test_cp_resumable_upload_encrypted_object_different_key(self):
@@ -2037,8 +2044,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Resuming upload', stderr)
 
     # Object should have the original key.
-    self.AssertObjectUsesEncryptionKey(object_uri_str,
-                                       TEST_ENCRYPTION_KEY1)
+    self.AssertObjectUsesCSEK(object_uri_str,
+                              TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
   def test_cp_resumable_upload_encrypted_object_missing_key(self):
@@ -2075,8 +2082,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Restarting upload from scratch', stderr)
 
       # Object should have the new key.
-      self.AssertObjectUsesEncryptionKey(object_uri_str,
-                                         TEST_ENCRYPTION_KEY2)
+      self.AssertObjectUsesCSEK(object_uri_str,
+                                TEST_ENCRYPTION_KEY2)
 
   def _ensure_object_unencrypted(self, object_uri_str):
     """Strongly consistent check that the object is unencrypted."""
@@ -3620,6 +3627,93 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['stat', foo_std_suri], return_stdout=True)
     self.assertRegexpMatchesWithFlags(
         stdout, r'Storage class:\s+STANDARD', flags=re.IGNORECASE)
+
+  def authorize_project_to_use_testing_kms_key(
+      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
+    # Make sure our keyRing and cryptoKey exist.
+    keyring_fqn = self.kms_api.CreateKeyRing(
+        PopulateProjectId(None), testcase.KmsTestingResources.KEYRING_NAME,
+        location=testcase.KmsTestingResources.KEYRING_LOCATION)
+    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+    # Make sure that the service account for our default project is authorized
+    # to use our test KMS key.
+    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
+    return key_fqn
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_correctly_applied_to_dst_obj_from_src_with_no_key(self):
+    bucket_uri = self.CreateBucket()
+    obj1_name = 'foo'
+    obj2_name = 'bar'
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    # Create the unencrypted object, then copy it, specifying a KMS key for the
+    # new object.
+    obj_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name=obj1_name, contents='foo')
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
+      self.RunGsUtil([
+          'cp', suri(obj_uri), '%s/%s' % (suri(bucket_uri), obj2_name)])
+
+    # Make sure the new object is encrypted with the specified KMS key.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK('%s/%s' % (suri(bucket_uri), obj2_name),
+                                key_fqn)
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_correctly_applied_to_dst_obj_from_local_file(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents='abcd')
+    obj_name = 'foo'
+    obj_suri = suri(bucket_uri) + '/' + obj_name
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
+      self.RunGsUtil(['cp', fpath, obj_suri])
+
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj_suri, key_fqn)
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_correctly_applied_to_dst_obj_from_src_with_diff_key(self):
+    bucket_uri = self.CreateBucket()
+    obj1_name = 'foo'
+    obj2_name = 'bar'
+    key1_fqn = self.authorize_project_to_use_testing_kms_key()
+    key2_fqn = self.authorize_project_to_use_testing_kms_key(
+        key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME2)
+    obj1_suri = suri(
+        self.CreateObject(
+            bucket_uri=bucket_uri, object_name=obj1_name, contents='foo',
+            kms_key_name=key1_fqn))
+
+    # Copy the object to the same bucket, specifying a different key to be used.
+    obj2_suri = '%s/%s' % (suri(bucket_uri), obj2_name)
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key2_fqn)]):
+      self.RunGsUtil(['cp', obj1_suri, obj2_suri])
+
+    # Ensure the new object has the different key.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj2_suri, key2_fqn)
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_not_applied_to_nonkms_dst_obj_from_src_with_kms_key(self):
+    bucket_uri = self.CreateBucket()
+    obj1_name = 'foo'
+    obj2_name = 'bar'
+    key1_fqn = self.authorize_project_to_use_testing_kms_key()
+    obj1_suri = suri(
+        self.CreateObject(
+            bucket_uri=bucket_uri, object_name=obj1_name, contents='foo',
+            kms_key_name=key1_fqn))
+
+    # Copy the object to the same bucket, not specifying any KMS key.
+    obj2_suri = '%s/%s' % (suri(bucket_uri), obj2_name)
+    self.RunGsUtil(['cp', obj1_suri, obj2_suri])
+
+    # Ensure the new object has no KMS key.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUnencrypted(obj2_suri)
 
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):

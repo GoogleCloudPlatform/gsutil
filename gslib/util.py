@@ -170,6 +170,9 @@ MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2*1024*1024*1024  # 2 GiB
 global manager  # pylint: disable=global-at-module-level
 # Single certs file for use across all processes.
 configured_certs_file = None
+# TODO(KMS): Remove this once we support specifying KMS key name for copy
+# operations via the XML API.
+is_copying_with_kms_key = False
 # Temporary certs file for cleanup upon exit.
 temp_certs_file = None
 
@@ -1238,6 +1241,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
         obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
   if obj.storageClass:
     print MakeMetadataLine('Storage class', obj.storageClass)
+  if obj.kmsKeyName:
+    print MakeMetadataLine('KMS key', obj.kmsKeyName)
   if obj.cacheControl:
     print MakeMetadataLine('Cache-Control', obj.cacheControl)
   if obj.contentDisposition:

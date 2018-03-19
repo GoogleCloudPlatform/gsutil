@@ -24,7 +24,9 @@ from gslib.posix_util import MODE_ATTR
 from gslib.posix_util import MTIME_ATTR
 from gslib.posix_util import NA_TIME
 from gslib.posix_util import UID_ATTR
+from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
@@ -2236,3 +2238,48 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Ensure the progress logger sees a gzip encoding.
     self.assertIn('send: Using gzip transport encoding for the request.',
                   stderr)
+
+  def authorize_project_to_use_testing_kms_key(
+      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
+    # Make sure our keyRing and cryptoKey exist.
+    keyring_fqn = self.kms_api.CreateKeyRing(
+        PopulateProjectId(None), testcase.KmsTestingResources.KEYRING_NAME,
+        location=testcase.KmsTestingResources.KEYRING_LOCATION)
+    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+    # Make sure that the service account for our default project is authorized
+    # to use our test KMS key.
+    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
+    return key_fqn
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_applied_to_dest_objects(self):
+    bucket_uri = self.CreateBucket()
+    cloud_container_suri = suri(bucket_uri) + '/foo'
+    obj_name = 'bar'
+    tmp_dir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmp_dir, file_name=obj_name, contents=obj_name)
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    # Rsync the object from our tmpdir to a GCS bucket, specifying a KMS key.
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
+      self.RunGsUtil(['rsync', tmp_dir, cloud_container_suri])
+
+    # Make sure the new object is encrypted with the specified KMS key.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      stdout = self.RunGsUtil(
+          ['ls', '-L', '%s/%s' % (cloud_container_suri, obj_name)],
+          return_stdout=True)
+    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
+
+  @SkipForGS('Tests that gs-specific encryption settings are skipped for s3.')
+  def test_kms_key_specified_will_not_prevent_non_kms_copy_to_s3(self):
+    tmp_dir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmp_dir, contents='foo')
+    bucket_uri = self.CreateBucket()
+    dummy_key = ('projects/myproject/locations/global/keyRings/mykeyring/'
+                 'cryptoKeys/mykey')
+
+    # Would throw an exception if the command failed because of invalid
+    # formatting (i.e. specifying KMS key in a request to S3's API).
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.RunGsUtil(['rsync', tmp_dir, suri(bucket_uri)])

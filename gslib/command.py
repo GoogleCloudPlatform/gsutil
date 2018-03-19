@@ -460,6 +460,7 @@ class Command(HelpProvider):
 
   _commands_with_subcommands_and_subopts = ('acl',
                                             'defacl',
+                                            'kms',
                                             'label',
                                             'logging',
                                             'notification',

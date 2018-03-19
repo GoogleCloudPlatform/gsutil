@@ -484,6 +484,11 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # Note: Parallel composite uploads should not be used with NEARLINE or COLDLINE
 # storage class buckets, as doing this incurs an early deletion charge for
 # each component object.
+#
+# Note: Parallel composite uploads are not enabled with Cloud KMS encrypted
+# objects as a source or destination, as composition with KMS objects is not yet
+# supported.
+
 #parallel_composite_upload_threshold = %(parallel_composite_upload_threshold)s
 #parallel_composite_upload_component_size = %(parallel_composite_upload_component_size)s
 

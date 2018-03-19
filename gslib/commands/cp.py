@@ -298,7 +298,8 @@ _CHECKSUM_VALIDATION_TEXT = """
       MD5 computed by your content pipeline when you run gsutil cp will ensure
       that the checksums match all the way through the process (e.g., detecting
       if data gets corrupted on your local disk between the time it was written
-      by your content pipeline and the time it was uploaded to GCS).
+      by your content pipeline and the time it was uploaded to Google Cloud
+      Storage).
 
   Note: The Content-MD5 header is ignored for composite objects, because such
   objects only have a CRC32C checksum.
@@ -763,7 +764,6 @@ _DETAILED_HELP_TEXT = '\n\n'.join([_SYNOPSIS_TEXT,
                                    _CHANGING_TEMP_DIRECTORIES_TEXT,
                                    _COPYING_SPECIAL_FILES_TEXT,
                                    _OPTIONS_TEXT])
-
 
 CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
 
@@ -1287,9 +1287,11 @@ class CpCommand(Command):
         elif o == '-Z':
           gzip_local = True
           gzip_arg_all = GZIP_ALL_FILES
+
     if preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
+
     if self.all_versions and self.parallel_operations:
       raise CommandException(
           'The gsutil -m option is not supported with the cp -A flag, to '
