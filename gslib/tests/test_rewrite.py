@@ -43,7 +43,7 @@ from gslib.tests.util import unittest
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.util import DiscardMessagesQueue
-from gslib.util import ONE_MIB
+from gslib.utils.unit_util import ONE_MIB
 
 
 @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')

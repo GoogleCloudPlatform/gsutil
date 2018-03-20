@@ -30,7 +30,7 @@ from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import unittest
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):

@@ -26,7 +26,7 @@ from gslib.exception import CommandException
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import TRANSFER_BUFFER_SIZE
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
 
 
 SLOW_CRCMOD_WARNING = """

@@ -43,7 +43,7 @@ from gslib.tests.util import unittest
 from gslib.util import IS_OSX
 from gslib.util import IS_WINDOWS
 from gslib.util import Retry
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top

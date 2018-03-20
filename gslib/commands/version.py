@@ -27,8 +27,8 @@ import crcmod
 import gslib
 from gslib.command import Command
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import GetConfigFilePaths
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import UsingCrcmodExtension
 
 
 _SYNOPSIS = """

@@ -71,12 +71,12 @@ import apitools.base.py.exceptions as apitools_exceptions
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
-from gslib.util import GetBotoConfigFileList
-from gslib.util import GetCertsFile
-from gslib.util import GetCleanupFiles
 from gslib.util import GetGsutilClientIdAndSecret
-from gslib.util import ProxyInfoFromEnvironmentVar
 from gslib.util import UTF8
+from gslib.utils.boto_util import GetBotoConfigFileList
+from gslib.utils.boto_util import GetCertsFile
+from gslib.utils.boto_util import GetCleanupFiles
+from gslib.utils.boto_util import ProxyInfoFromEnvironmentVar
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -202,8 +202,8 @@ def main():
   import gslib.boto_translation
   import gslib.command
   import gslib.util
-  from gslib.util import BOTO_IS_SECURE
-  from gslib.util import CERTIFICATE_VALIDATION_ENABLED
+  from gslib.utils.boto_util import BOTO_IS_SECURE
+  from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
   # pylint: disable=unused-variable
   from gcs_oauth2_boto_plugin import oauth2_client
   from apitools.base.py import credentials_lib
@@ -268,7 +268,8 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  gslib.util.configured_certs_file = gslib.util.ConfigureCertsFile()
+  gslib.utils.boto_util.configured_certs_file = (
+      gslib.utils.boto_util.ConfigureCertsFile())
   for signal_num in GetCaughtSignals():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
   GetCertsFile()
@@ -512,7 +513,7 @@ def _CheckAndHandleCredentialException(e, args):
   # have been using gsutil only for accessing publicly readable buckets and
   # objects).
   # pylint: disable=g-import-not-at-top
-  from gslib.util import HasConfiguredCredentials
+  from gslib.utils.boto_util import HasConfiguredCredentials
   if (not HasConfiguredCredentials() and
       not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
                                 False)):
@@ -551,9 +552,9 @@ def _RunNamedCommandAndHandleExceptions(
     user_project=None):
   """Runs the command and handles common exceptions."""
   # pylint: disable=g-import-not-at-top
-  from gslib.util import GetConfigFilePaths
   from gslib.util import IS_WINDOWS
   from gslib.util import IsRunningInteractively
+  from gslib.utils.boto_util import GetConfigFilePaths
   try:
     # Catch ^C so we can print a brief message instead of the normal Python
     # stack trace. Register as a final signal handler because this handler kills

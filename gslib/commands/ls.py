@@ -33,10 +33,10 @@ from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import LabelTranslation
 from gslib.util import InsistAscii
 from gslib.util import ListingStyle
-from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import PrintFullInfoAboutObject
 from gslib.util import UTF8
+from gslib.utils.unit_util import MakeHumanReadable
 
 
 # Regex that assists with converting JSON timestamp to ls-style output.

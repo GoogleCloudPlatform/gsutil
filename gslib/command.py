@@ -82,14 +82,14 @@ from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import GetConfigFilePaths
-from gslib.util import GetMaxConcurrentCompressedUploads
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
 from gslib.util import IS_WINDOWS
 from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider
 from gslib.util import UTF8
+from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
 from gslib.utils.rsync_util import RsyncDiffToApply
 
 from gslib.wildcard_iterator import CreateWildcardIterator

@@ -53,17 +53,17 @@ from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CalculateThroughput
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetStreamFromFileUrl
 from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import MakeHumanReadable
 from gslib.util import NO_MAX
 from gslib.util import NormalizeStorageClass
 from gslib.util import RemoveCRLFFromString
 from gslib.util import StdinIterator
+from gslib.utils.unit_util import CalculateThroughput
+from gslib.utils.unit_util import MakeHumanReadable
 
 _SYNOPSIS = """
   gsutil cp [OPTION]... src_url dst_url

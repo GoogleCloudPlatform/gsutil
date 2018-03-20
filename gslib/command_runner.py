@@ -54,8 +54,8 @@ from gslib.util import IsRunningInteractively
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.util import LookUpGsutilVersion
 from gslib.util import RELEASE_NOTES_URL
-from gslib.util import SECONDS_PER_DAY
 from gslib.util import UTF8
+from gslib.utils.unit_util import SECONDS_PER_DAY
 
 
 def HandleHeaderCoding(headers):

@@ -54,17 +54,17 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CheckFreeSpace
-from gslib.util import DivideAndCeil
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetDiskCounters
 from gslib.util import GetFileSize
-from gslib.util import GetMaxRetryDelay
-from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
-from gslib.util import MakeBitsHumanReadable
-from gslib.util import MakeHumanReadable
-from gslib.util import Percentile
-from gslib.util import ResumableThreshold
+from gslib.utils.boto_util import GetMaxRetryDelay
+from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.unit_util import DivideAndCeil
+from gslib.utils.unit_util import HumanReadableToBytes
+from gslib.utils.unit_util import MakeBitsHumanReadable
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import Percentile
 
 _SYNOPSIS = """
   gsutil perfdiag [-i in.json]

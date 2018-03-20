@@ -32,10 +32,10 @@ from gslib.gcs_json_credentials import CheckAndGetCredentials
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.third_party.kms_apitools import cloudkms_v1_client as apitools_client
 from gslib.third_party.kms_apitools import cloudkms_v1_messages as apitools_messages
-from gslib.util import GetCertsFile
-from gslib.util import GetMaxRetryDelay
-from gslib.util import GetNewHttp
-from gslib.util import GetNumRetries
+from gslib.utils.boto_util import GetCertsFile
+from gslib.utils.boto_util import GetMaxRetryDelay
+from gslib.utils.boto_util import GetNewHttp
+from gslib.utils.boto_util import GetNumRetries
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError)
 

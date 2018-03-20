@@ -35,9 +35,9 @@ from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.posix_util import GetDefaultMode
 import gslib.tests as gslib_tests
 from gslib.util import IS_WINDOWS
-from gslib.util import MakeHumanReadable
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.lazywrapper import LazyWrapper
+from gslib.utils.unit_util import MakeHumanReadable
 
 # pylint: disable=g-import-not-at-top, g-long-lambda
 if not IS_WINDOWS:

@@ -36,11 +36,11 @@ import boto
 
 from gslib import VERSION
 from gslib.metrics_tuple import Metric
-from gslib.util import CalculateThroughput
-from gslib.util import CreateDirIfNeeded
 from gslib.util import GetDiskCounters
-from gslib.util import HumanReadableToBytes
 from gslib.util import IS_LINUX
+from gslib.utils.system_util import CreateDirIfNeeded
+from gslib.utils.unit_util import CalculateThroughput
+from gslib.utils.unit_util import HumanReadableToBytes
 
 _GA_ENDPOINT = 'https://ssl.google-analytics.com/collect'
 

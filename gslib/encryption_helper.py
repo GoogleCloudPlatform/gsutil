@@ -149,7 +149,7 @@ def ValidateCMEK(key):
     raise CommandException(
         'KMS key should not start with leading slash (/): "%s"' % key)
 
-  if not VALID_CMEK_RE.match(key):
+  if not VALID_CMEK_RE().match(key):
     raise CommandException(
         'Invalid KMS key name: "%s".\nKMS keys should follow the format '
         '"projects/<project-id>/locations/<location>/keyRings/<keyring>/'

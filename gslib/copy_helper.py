@@ -127,24 +127,24 @@ from gslib.util import CheckFreeSpace
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CreateLock
 from gslib.util import DEFAULT_FILE_BUFFER_SIZE
-from gslib.util import DivideAndCeil
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetFileSize
-from gslib.util import GetJsonResumableChunkSize
-from gslib.util import GetMaxRetryDelay
-from gslib.util import GetNumRetries
 from gslib.util import GetStreamFromFileUrl
-from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import MakeHumanReadable
 from gslib.util import MIN_SIZE_COMPUTE_LOGGING
 from gslib.util import ObjectIsGzipEncoded
-from gslib.util import ResumableThreshold
-from gslib.util import SECONDS_PER_DAY
-from gslib.util import TEN_MIB
-from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+from gslib.utils.boto_util import GetJsonResumableChunkSize
+from gslib.utils.boto_util import GetMaxRetryDelay
+from gslib.utils.boto_util import GetNumRetries
+from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.unit_util import DivideAndCeil
+from gslib.utils.unit_util import HumanReadableToBytes
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import SECONDS_PER_DAY
+from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 # pylint: disable=g-import-not-at-top

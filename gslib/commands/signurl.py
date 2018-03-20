@@ -42,9 +42,9 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.util import GetNewHttp
 from gslib.util import NO_MAX
 from gslib.util import UTF8
+from gslib.utils.boto_util import GetNewHttp
 
 try:
   # Check for openssl.

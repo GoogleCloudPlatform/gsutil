@@ -40,7 +40,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.util import GSUTIL_PUB_TARBALL
 from gslib.util import InsistAscii
-from gslib.util import SECONDS_PER_DAY
+from gslib.utils.unit_util import SECONDS_PER_DAY
 
 
 class FakeArgparseArgument(object):

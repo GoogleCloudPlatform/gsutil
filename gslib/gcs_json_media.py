@@ -30,8 +30,8 @@ from apitools.base.py import exceptions as apitools_exceptions
 from gslib.cloud_api import BadRequestException
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
-from gslib.util import SSL_TIMEOUT
 from gslib.util import TRANSFER_BUFFER_SIZE
+from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.lazywrapper import LazyWrapper
 import httplib2
 from httplib2 import parse_uri
@@ -107,7 +107,7 @@ class UploadCallbackConnectionClassFactory(object):
       size_modifier = 1.0
 
       def __init__(self, *args, **kwargs):
-        kwargs['timeout'] = SSL_TIMEOUT
+        kwargs['timeout'] = SSL_TIMEOUT_SEC
         httplib2.HTTPSConnectionWithTimeout.__init__(self, *args, **kwargs)
 
       # Override httplib.HTTPConnection._send_output for debug logging.
@@ -311,7 +311,7 @@ class DownloadCallbackConnectionClassFactory(object):
       callback_processor = None
 
       def __init__(self, *args, **kwargs):
-        kwargs['timeout'] = SSL_TIMEOUT
+        kwargs['timeout'] = SSL_TIMEOUT_SEC
         httplib2.HTTPSConnectionWithTimeout.__init__(self, *args, **kwargs)
 
       def getresponse(self, buffering=False):

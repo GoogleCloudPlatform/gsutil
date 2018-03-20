@@ -26,8 +26,8 @@ from gslib.exception import CommandException
 from gslib.util import CreateCustomMetadata
 from gslib.util import GetValueFromObjectCustomMetadata
 from gslib.util import IS_WINDOWS
-from gslib.util import SECONDS_PER_DAY
-from gslib.util import UTC
+from gslib.utils.tz_utc import UTC
+from gslib.utils.unit_util import SECONDS_PER_DAY
 
 # pylint: disable=g-import-not-at-top
 if not IS_WINDOWS:

@@ -36,10 +36,10 @@ from gslib.thread_message import ProgressMessage
 from gslib.thread_message import RetryableErrorMessage
 from gslib.thread_message import SeekAheadMessage
 from gslib.thread_message import StatusMessage
-from gslib.util import DecimalShort
-from gslib.util import HumanReadableWithDecimalPlaces
-from gslib.util import MakeHumanReadable
-from gslib.util import PrettyTime
+from gslib.utils.unit_util import DecimalShort
+from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import PrettyTime
 
 
 class EstimationSource(object):

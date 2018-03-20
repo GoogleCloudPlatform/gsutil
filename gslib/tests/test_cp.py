@@ -93,16 +93,16 @@ from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
 from gslib.ui_controller import BytesToFixedWidthString
 from gslib.util import DiscardMessagesQueue
-from gslib.util import EIGHT_MIB
-from gslib.util import HumanReadableToBytes
 from gslib.util import IS_WINDOWS
-from gslib.util import MakeHumanReadable
-from gslib.util import ONE_KIB
-from gslib.util import ONE_MIB
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
-from gslib.util import UsingCrcmodExtension
 from gslib.util import UTF8
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.unit_util import EIGHT_MIB
+from gslib.utils.unit_util import HumanReadableToBytes
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import ONE_KIB
+from gslib.utils.unit_util import ONE_MIB
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top

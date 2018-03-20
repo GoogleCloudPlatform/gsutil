@@ -50,9 +50,10 @@ from gslib.thread_message import RetryableErrorMessage
 from gslib.util import IS_LINUX
 from gslib.util import IS_WINDOWS
 from gslib.util import LogAndHandleRetries
-from gslib.util import ONE_KIB
-from gslib.util import ONE_MIB
 from gslib.util import START_CALLBACK_PER_BYTES
+from gslib.utils.unit_util import ONE_KIB
+from gslib.utils.unit_util import ONE_MIB
+
 import mock
 
 # A piece of the URL logged for all of the tests.

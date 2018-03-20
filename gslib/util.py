@@ -19,17 +19,14 @@ from __future__ import absolute_import
 import collections
 from datetime import timedelta
 from datetime import tzinfo
-import errno
 import locale
 import logging
-import math
 import multiprocessing
 import os
 import pkgutil
 import re
 import struct
 import sys
-import tempfile
 import textwrap
 import threading
 import time
@@ -38,14 +35,6 @@ import urlparse
 import xml.etree.ElementTree as ElementTree
 
 from apitools.base.py import http_wrapper
-
-import boto
-from boto import config
-import boto.auth
-from boto.exception import NoAuthHandlerFound
-from boto.gs.connection import GSConnection
-from boto.provider import Provider
-from boto.pyami.config import BotoConfigLocations
 
 import gslib
 from gslib.exception import CommandException
@@ -57,9 +46,14 @@ from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import S3_ACL_MARKER_GUID
 from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
+from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
+from gslib.utils.boto_util import GetGsutilStateDir
+from gslib.utils.system_util import CreateDirIfNeeded
+from gslib.utils.unit_util import ONE_GIB
+from gslib.utils.unit_util import ONE_KIB
+from gslib.utils.unit_util import ONE_MIB
 
 import httplib2
-from oauth2client.client import HAS_CRYPTO
 from retry_decorator import retry_decorator
 
 # Detect platform types.
@@ -97,29 +91,21 @@ except ImportError, e:
 DEBUGLEVEL_DUMP_REQUESTS = 3
 DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
 
-ONE_KIB = 1024
-ONE_MIB = 1024 * 1024
-TWO_MIB = 2 * ONE_MIB
-EIGHT_MIB = 8 * ONE_MIB
-TEN_MIB = 10 * ONE_MIB
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 _DEFAULT_LINES = 25
 RESUMABLE_THRESHOLD_MIB = 8
 RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
 
-# By default, the timeout for SSL read errors is infinite. This could
-# cause gsutil to hang on network disconnect, so pick a more reasonable
-# timeout.
-SSL_TIMEOUT = 60
 
 # Start with a progress callback every 64 KiB during uploads/downloads (JSON
 # API). Callback implementation should back off until it hits the maximum size
 # so that callbacks do not create huge amounts of log output.
-START_CALLBACK_PER_BYTES = 1024*256
-MAX_CALLBACK_PER_BYTES = 1024*1024*100
+START_CALLBACK_PER_BYTES = 256 * ONE_KIB
+MAX_CALLBACK_PER_BYTES = 100 * ONE_MIB
 
 # Upload/download files in 8 KiB chunks over the HTTP connection.
-TRANSFER_BUFFER_SIZE = 1024*8
+# TODO: This should say the unit in the name.
+TRANSFER_BUFFER_SIZE = 8 * ONE_KIB
 
 # Default number of progress callbacks during transfer (XML API).
 XML_PROGRESS_CALLBACKS = 10
@@ -130,7 +116,8 @@ NUM_OBJECTS_PER_LIST_PAGE = 1000
 # For files >= this size, output a message indicating that we're running an
 # operation on the file (like hashing or gzipping) so it does not appear to the
 # user that the command is hanging.
-MIN_SIZE_COMPUTE_LOGGING = 100*1024*1024  # 100 MiB
+# TODO: This should say the unit in the name.
+MIN_SIZE_COMPUTE_LOGGING = 100 * ONE_MIB
 
 NO_MAX = sys.maxint
 
@@ -138,62 +125,15 @@ VERSION_MATCHER = re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?')
 
 RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 
-# Binary exponentiation strings.
-_EXP_STRINGS = [
-    (0, 'B', 'bit'),
-    (10, 'KiB', 'Kibit', 'K'),
-    (20, 'MiB', 'Mibit', 'M'),
-    (30, 'GiB', 'Gibit', 'G'),
-    (40, 'TiB', 'Tibit', 'T'),
-    (50, 'PiB', 'Pibit', 'P'),
-    (60, 'EiB', 'Eibit', 'E'),
-]
-
-_EXP_TEN_STRING = [
-    (3, 'k'),
-    (6, 'm'),
-    (9, 'b'),
-    (12, 't'),
-    (15, 'q')
-]
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
 
-SECONDS_PER_DAY = 86400L
 
 # Compressed transport encoded uploads buffer chunks of compressed data. When
 # running many uploads in parallel, compression may consume more memory than
 # available. This restricts the number of compressed transport encoded uploads
 # running in parallel such that they don't consume more memory than set here.
-MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2*1024*1024*1024  # 2 GiB
-
-global manager  # pylint: disable=global-at-module-level
-# Single certs file for use across all processes.
-configured_certs_file = None
-# TODO(KMS): Remove this once we support specifying KMS key name for copy
-# operations via the XML API.
-is_copying_with_kms_key = False
-# Temporary certs file for cleanup upon exit.
-temp_certs_file = None
-
-
-def _GenerateSuffixRegex():
-  """Creates a suffix regex for human-readable byte counts."""
-  human_bytes_re = r'(?P<num>\d*\.\d+|\d+)\s*(?P<suffix>%s)?'
-  suffixes = []
-  suffix_to_si = {}
-  for i, si in enumerate(_EXP_STRINGS):
-    si_suffixes = [s.lower() for s in list(si)[1:]]
-    for suffix in si_suffixes:
-      suffix_to_si[suffix] = i
-    suffixes.extend(si_suffixes)
-  human_bytes_re %= '|'.join(suffixes)
-  matcher = re.compile(human_bytes_re)
-  return suffix_to_si, matcher
-
-SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
-
-SECONDS_PER_DAY = 3600 * 24
+MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2 * ONE_GIB
 
 # On Unix-like systems, we will set the maximum number of open files to avoid
 # hitting the limit imposed by the OS. This number was obtained experimentally.
@@ -201,7 +141,10 @@ MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
+
 Retry = retry_decorator.retry  # pylint: disable=invalid-name
+
+global manager  # pylint: disable=global-at-module-level
 
 # Cache the values from this check such that they're available to all callers
 # without needing to run all the checks again (some of these, such as calling
@@ -267,55 +210,11 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
           os.path.join(gslib.GSUTIL_DIR, filename))))
 
 
-# This class is necessary to convert timestamps to UTC. By default Python
-# datetime objects are timezone unaware. This created problems when interacting
-# with cloud object timestamps which are timezone aware. This issue appeared
-# when handling the timeCreated metadata attribute. The values returned by the
-# service were placed in RFC 3339 format in the storage_v1_messages module. RFC
-# 3339 requires a timezone in any timestamp. This caused problems as the
-# datetime object elsewhere in the code was timezone unaware and was different
-# by exactly one hour. The main problem is because the local system uses
-# daylight savings time which consequently adjusted the timestamp ahead by one
-# hour.
-class UTC(tzinfo):
-  """Timezone information class used to convert datetime timestamps to UTC."""
-
-  def utcoffset(self, _):
-    """An offset of the number of minutes away from UTC this tzinfo object is.
-
-    Returns:
-      A time duration of zero. UTC is zero minutes away from UTC.
-    """
-    return timedelta(0)
-
-  def tzname(self, _):
-    """A method to retrieve the name of this timezone object.
-
-    Returns:
-      The name of the timezone (i.e. 'UTC').
-    """
-    return 'UTC'
-
-  def dst(self, _):
-    """A fixed offset to handle daylight savings time (DST).
-
-    Returns:
-      A time duration of zero as UTC does not use DST.
-    """
-    return timedelta(0)
-
-
 # Enum class for specifying listing style.
 class ListingStyle(object):
   SHORT = 'SHORT'
   LONG = 'LONG'
   LONG_LONG = 'LONG_LONG'
-
-
-def UsingCrcmodExtension(crcmod):
-  return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
-          (getattr(crcmod, 'crcmod', None) and
-           getattr(crcmod.crcmod, '_usingExtension', None)))
 
 
 def ObjectIsGzipEncoded(obj_metadata):
@@ -341,7 +240,7 @@ def AddAcceptEncodingGzipIfNeeded(headers_dict, compressed_encoding=False):
     # prior to our own on-the-fly decompression so they match the stored hashes.
     headers_dict['accept-encoding'] = 'gzip'
 
-
+#TODO(refactor): system_utils
 def CheckFreeSpace(path):
   """Return path/drive free space (in bytes)."""
   if IS_WINDOWS:
@@ -381,21 +280,7 @@ def CheckFreeSpace(path):
     return f_frsize * f_bavail
 
 
-def CreateDirIfNeeded(dir_path, mode=0777):
-  """Creates a directory, suppressing already-exists errors."""
-  if not os.path.exists(dir_path):
-    try:
-      # Unfortunately, even though we catch and ignore EEXIST, this call will
-      # output a (needless) error message (no way to avoid that in Python).
-      os.makedirs(dir_path, mode)
-    # Ignore 'already exists' in case user tried to start up several
-    # resumable uploads concurrently from a machine where no tracker dir had
-    # yet been created.
-    except OSError as e:
-      if e.errno != errno.EEXIST:
-        raise
-
-
+#TODO(refactor): system_utils
 def GetDiskCounters():
   """Retrieves disk I/O statistics for all disks.
 
@@ -438,60 +323,7 @@ def GetDiskCounters():
   return retdict
 
 
-def CalculateThroughput(total_bytes_transferred, total_elapsed_time):
-  """Calculates throughput and checks for a small total_elapsed_time.
-
-  Args:
-    total_bytes_transferred: Total bytes transferred in a period of time.
-    total_elapsed_time: The amount of time elapsed in seconds.
-
-  Returns:
-    The throughput as a float.
-  """
-  if total_elapsed_time < 0.01:
-    total_elapsed_time = 0.01
-  return float(total_bytes_transferred) / float(total_elapsed_time)
-
-
-def DivideAndCeil(dividend, divisor):
-  """Returns ceil(dividend / divisor).
-
-  Takes care to avoid the pitfalls of floating point arithmetic that could
-  otherwise yield the wrong result for large numbers.
-
-  Args:
-    dividend: Dividend for the operation.
-    divisor: Divisor for the operation.
-
-  Returns:
-    Quotient.
-  """
-  quotient = dividend // divisor
-  if (dividend % divisor) != 0:
-    quotient += 1
-  return quotient
-
-
-def GetGsutilStateDir():
-  """Returns the location of the directory for gsutil state files.
-
-  Certain operations, such as cross-process credential sharing and
-  resumable transfer tracking, need a known location for state files which
-  are created by gsutil as-needed.
-
-  This location should only be used for storing data that is required to be in
-  a static location.
-
-  Returns:
-    Path to directory for gsutil static state files.
-  """
-  config_file_dir = config.get(
-      'GSUtil', 'state_dir',
-      os.path.expanduser(os.path.join('~', '.gsutil')))
-  CreateDirIfNeeded(config_file_dir)
-  return config_file_dir
-
-
+#TODO(refactor): system_utils
 def GetGsutilClientIdAndSecret():
   """Returns a tuple of the gsutil OAuth2 client ID and secret.
 
@@ -513,44 +345,15 @@ def GetGsutilClientIdAndSecret():
           'p3RlpR10xMFh9ZXBS/ZNLYUu')                  # gsutil secret
 
 
-def GetCredentialStoreFilename():
-  # As of gsutil 4.29, this changed from 'credstore' to 'credstore2' because
-  # of a change to the underlying credential storage format.
-  return os.path.join(GetGsutilStateDir(), 'credstore2')
-
-
-def GetGceCredentialCacheFilename():
-  return os.path.join(GetGsutilStateDir(), 'gcecredcache')
-
-
-def GetTabCompletionLogFilename():
-  return os.path.join(GetGsutilStateDir(), 'tab-completion-logs')
-
-
-def GetTabCompletionCacheFilename():
-  tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
-  # Limit read permissions on the directory to owner for privacy.
-  CreateDirIfNeeded(tab_completion_dir, mode=0700)
-  return os.path.join(tab_completion_dir, 'cache')
-
-
+#TODO(refactor): text_utils
 def GetPrintableExceptionString(exc):
   """Returns a short Unicode string describing the exception."""
   return unicode(exc).encode(UTF8) or str(exc.__class__)
 
 
+#TODO(refactor): text_utils
 def PrintableStr(input_str):
   return input_str.encode(UTF8) if input_str is not None else None
-
-
-def PrintTrackerDirDeprecationWarningIfNeeded():
-  # TODO: Remove this along with the tracker_dir config value 1 year after
-  # 4.6 release date. Use state_dir instead.
-  if config.has_option('GSUtil', 'resumable_tracker_dir'):
-    sys.stderr.write('Warning: you have set resumable_tracker_dir in your '
-                     '.boto configuration file. This configuration option is '
-                     'deprecated; please use the state_dir configuration '
-                     'option instead.\n')
 
 
 # Name of file where we keep the timestamp for the last time we checked whether
@@ -561,415 +364,7 @@ LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
     os.path.join(GetGsutilStateDir(), '.last_software_update_check'))
 
 
-def HasConfiguredCredentials():
-  """Determines if boto credential/config file exists."""
-  has_goog_creds = (config.has_option('Credentials', 'gs_access_key_id') and
-                    config.has_option('Credentials', 'gs_secret_access_key'))
-  has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
-                    config.has_option('Credentials', 'aws_secret_access_key'))
-  has_oauth_creds = (
-      config.has_option('Credentials', 'gs_oauth2_refresh_token'))
-  has_service_account_creds = (
-      HAS_CRYPTO and
-      config.has_option('Credentials', 'gs_service_client_id') and
-      config.has_option('Credentials', 'gs_service_key_file'))
-
-  if (has_goog_creds or has_amzn_creds or has_oauth_creds or
-      has_service_account_creds):
-    return True
-
-  valid_auth_handler = None
-  try:
-    valid_auth_handler = boto.auth.get_auth_handler(
-        GSConnection.DefaultHost, config, Provider('google'),
-        requested_capability=['s3'])
-    # Exclude the no-op auth handler as indicating credentials are configured.
-    # Note we can't use isinstance() here because the no-op module may not be
-    # imported so we can't get a reference to the class type.
-    if getattr(getattr(valid_auth_handler, '__class__', None),
-               '__name__', None) == 'NoOpAuth':
-      valid_auth_handler = None
-  except NoAuthHandlerFound:
-    pass
-
-  return valid_auth_handler
-
-
-def ConfigureNoOpAuthIfNeeded():
-  """Sets up no-op auth handler if no boto credentials are configured."""
-  if not HasConfiguredCredentials():
-    if (config.has_option('Credentials', 'gs_service_client_id')
-        and not HAS_CRYPTO):
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
-        raise CommandException('\n'.join(textwrap.wrap(
-            'Your gsutil is configured with an OAuth2 service account, but '
-            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
-            'Service account authentication requires one of these libraries; '
-            'please reactivate your service account via the gcloud auth '
-            'command and ensure any gcloud packages necessary for '
-            'service accounts are present.')))
-      else:
-        raise CommandException('\n'.join(textwrap.wrap(
-            'Your gsutil is configured with an OAuth2 service account, but '
-            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
-            'Service account authentication requires one of these libraries; '
-            'please install either of them to proceed, or configure a '
-            'different type of credentials with "gsutil config".')))
-    else:
-      # With no boto config file the user can still access publicly readable
-      # buckets and objects.
-      from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
-
-
-def GetConfigFilePaths():
-  """Returns a list of the path(s) to the boto config file(s) to be loaded."""
-  config_paths = []
-  # The only case in which we load multiple boto configurations is
-  # when the BOTO_CONFIG environment variable is not set and the
-  # BOTO_PATH environment variable is set with multiple path values.
-  # Otherwise, we stop when we find the first readable config file.
-  # This predicate was taken from the boto.pyami.config module.
-  should_look_for_multiple_configs = (
-      'BOTO_CONFIG' not in os.environ and
-      'BOTO_PATH' in os.environ)
-  for path in BotoConfigLocations:
-    try:
-      with open(path, 'r'):
-        config_paths.append(path)
-        if not should_look_for_multiple_configs:
-          break
-    except IOError:
-      pass
-  return config_paths
-
-
-def GetBotoConfigFileList():
-  """Returns list of boto config files that exist."""
-  config_paths = boto.pyami.config.BotoConfigLocations
-  if 'AWS_CREDENTIAL_FILE' in os.environ:
-    config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
-  return [cfg_path for cfg_path in config_paths if os.path.exists(cfg_path)]
-
-
-def GetCertsFile():
-  return configured_certs_file
-
-
-def ConfigureCertsFile():
-  """Configures and returns the CA Certificates file.
-
-  If one is already configured, use it. Otherwise, use the cert roots
-  distributed with gsutil.
-
-  Returns:
-    string filename of the certs file to use.
-  """
-  certs_file = boto.config.get('Boto', 'ca_certificates_file', None)
-  # The 'system' keyword indicates to use the system installed certs. Some
-  # Linux distributions patch the stack such that the Python SSL
-  # infrastructure picks up the system installed certs by default, thus no
-  #  action necessary on our part
-  if certs_file == 'system':
-    return None
-  if not certs_file:
-    global configured_certs_file, temp_certs_file
-    if not configured_certs_file:
-      configured_certs_file = os.path.abspath(
-          os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
-      if not os.path.exists(configured_certs_file):
-        # If the file is not present on disk, this means the gslib module
-        # doesn't actually exist on disk anywhere. This can happen if it's
-        # being imported from a zip file. Unfortunately, we have to copy the
-        # certs file to a local temp file on disk because the underlying SSL
-        # socket requires it to be a filesystem path.
-        certs_data = pkgutil.get_data('gslib', 'data/cacerts.txt')
-        if not certs_data:
-          raise CommandException('Certificates file not found. Please '
-                                 'reinstall gsutil from scratch')
-        fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
-        f = os.fdopen(fd, 'w')
-        f.write(certs_data)
-        f.close()
-        temp_certs_file = fname
-        configured_certs_file = temp_certs_file
-    certs_file = configured_certs_file
-  return certs_file
-
-
-def GetCleanupFiles():
-  """Returns a list of temp files to delete (if possible) when program exits."""
-  return [temp_certs_file] if temp_certs_file else []
-
-
-def ProxyInfoFromEnvironmentVar(proxy_env_var):
-  """Reads proxy info from the environment and converts to httplib2.ProxyInfo.
-
-  Args:
-    proxy_env_var: Environment variable string to read, such as http_proxy or
-       https_proxy.
-
-  Returns:
-    httplib2.ProxyInfo constructed from the environment string.
-  """
-  proxy_url = os.environ.get(proxy_env_var)
-  if not proxy_url or not proxy_env_var.lower().startswith('http'):
-    return httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0)
-  proxy_protocol = proxy_env_var.lower().split('_')[0]
-  if not proxy_url.lower().startswith('http'):
-    # proxy_info_from_url requires a protocol, which is always http or https.
-    proxy_url = proxy_protocol + '://' + proxy_url
-  return httplib2.proxy_info_from_url(proxy_url, method=proxy_protocol)
-
-
-def GetNewHttp(http_class=httplib2.Http, **kwargs):
-  """Creates and returns a new httplib2.Http instance.
-
-  Args:
-    http_class: Optional custom Http class to use.
-    **kwargs: Arguments to pass to http_class constructor.
-
-  Returns:
-    An initialized httplib2.Http instance.
-  """
-  proxy_host = boto.config.get('Boto', 'proxy', None)
-  proxy_info = httplib2.ProxyInfo(
-      proxy_type=3,
-      proxy_host=proxy_host,
-      proxy_port=boto.config.getint('Boto', 'proxy_port', 0),
-      proxy_user=boto.config.get('Boto', 'proxy_user', None),
-      proxy_pass=boto.config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=boto.config.get('Boto',
-                                 'proxy_rdns',
-                                 True if proxy_host else False))
-
-  if not (proxy_info.proxy_host and proxy_info.proxy_port):
-    # Fall back to using the environment variable.
-    for proxy_env_var in ['http_proxy', 'https_proxy', 'HTTPS_PROXY']:
-      if proxy_env_var in os.environ and os.environ[proxy_env_var]:
-        proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
-        # Assume proxy_rnds is True if a proxy environment variable exists.
-        proxy_info.proxy_rdns = boto.config.get('Boto', 'proxy_rdns', True)
-        break
-
-  # Some installers don't package a certs file with httplib2, so use the
-  # one included with gsutil.
-  kwargs['ca_certs'] = GetCertsFile()
-  # Use a non-infinite SSL timeout to avoid hangs during network flakiness.
-  kwargs['timeout'] = SSL_TIMEOUT
-  http = http_class(proxy_info=proxy_info, **kwargs)
-  http.disable_ssl_certificate_validation = (not config.getbool(
-      'Boto', 'https_validate_certificates'))
-  return http
-
-
-# Retry for 10 minutes with exponential backoff, which corresponds to
-# the maximum Downtime Period specified in the GCS SLA
-# (https://cloud.google.com/storage/sla)
-def GetNumRetries():
-  return config.getint('Boto', 'num_retries', 23)
-
-
-def GetMaxRetryDelay():
-  return config.getint('Boto', 'max_retry_delay', 32)
-
-
-# Resumable downloads and uploads make one HTTP call per chunk (and must be
-# in multiples of 256KiB). Overridable for testing.
-def GetJsonResumableChunkSize():
-  chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
-                             1024*1024*100L)
-  if chunk_size == 0:
-    chunk_size = 1024*256L
-  elif chunk_size % 1024*256L != 0:
-    chunk_size += (1024*256L - (chunk_size % (1024*256L)))
-  return chunk_size
-
-
-def JsonResumableChunkSizeDefined():
-  chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size',
-                                  None)
-  return chunk_size_defined is not None
-
-
-def GetMaxUploadCompressionBufferSize():
-  """Get the max amount of memory compressed transport uploads may buffer."""
-  return HumanReadableToBytes(
-      config.get('GSUtil', 'max_upload_compression_buffer_size', '2GiB'))
-
-
-def GetMaxConcurrentCompressedUploads():
-  """Gets the max concurrent transport compressed uploads allowed in parallel.
-
-  Returns:
-    The max number of concurrent transport compressed uploads allowed in
-    parallel without exceeding the max_upload_compression_buffer_size.
-  """
-  upload_chunk_size = GetJsonResumableChunkSize()
-  # From apitools compression.py.
-  compression_chunk_size = 16777216  # 16MiB
-  total_upload_size = (
-      upload_chunk_size + compression_chunk_size + 17 +
-      5 * (((compression_chunk_size - 1) / 16383) + 1))
-  max_concurrent_uploads = (
-      GetMaxUploadCompressionBufferSize() / total_upload_size)
-  if max_concurrent_uploads <= 0:
-    max_concurrent_uploads = 1
-  return max_concurrent_uploads
-
-
-def _RoundToNearestExponent(num):
-  i = 0
-  while i + 1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
-    i += 1
-  return i, round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
-
-
-def MakeHumanReadable(num):
-  """Generates human readable string for a number of bytes.
-
-  Args:
-    num: The number, in bytes.
-
-  Returns:
-    A string form of the number using size abbreviations (KiB, MiB, etc.).
-  """
-  i, rounded_val = _RoundToNearestExponent(num)
-  return '%g %s' % (rounded_val, _EXP_STRINGS[i][1])
-
-
-def MakeBitsHumanReadable(num):
-  """Generates human readable string for a number of bits.
-
-  Args:
-    num: The number, in bits.
-
-  Returns:
-    A string form of the number using bit size abbreviations (kbit, Mbit, etc.)
-  """
-  i, rounded_val = _RoundToNearestExponent(num)
-  return '%g %s' % (rounded_val, _EXP_STRINGS[i][2])
-
-
-def HumanReadableToBytes(human_string):
-  """Tries to convert a human-readable string to a number of bytes.
-
-  Args:
-    human_string: A string supplied by user, e.g. '1M', '3 GiB'.
-  Returns:
-    An integer containing the number of bytes.
-  Raises:
-    ValueError: on an invalid string.
-  """
-  human_string = human_string.lower()
-  m = MATCH_HUMAN_BYTES.match(human_string)
-  if m:
-    num = float(m.group('num'))
-    if m.group('suffix'):
-      power = _EXP_STRINGS[SUFFIX_TO_SI[m.group('suffix')]][0]
-      num *= (2.0 ** power)
-    num = int(round(num))
-    return num
-  raise ValueError('Invalid byte string specified: %s' % human_string)
-
-
-def DecimalShort(num):
-  """Creates a shorter string version for a given number of objects.
-
-  Args:
-    num: The number of objects to be shortened.
-  Returns:
-    shortened string version for this number. It takes the largest
-    scale (thousand, million or billion) smaller than the number and divides it
-    by that scale, indicated by a suffix with one decimal place. This will thus
-    create a string of at most 6 characters, assuming num < 10^18.
-    Example: 123456789 => 123.4m
-  """
-  for divisor_exp, suffix in reversed(_EXP_TEN_STRING):
-    if num >= 10**divisor_exp:
-      quotient = '%.1lf' % (float(num) / 10**divisor_exp)
-      return quotient + suffix
-  return str(num)
-
-
-def PrettyTime(remaining_time):
-  """Creates a standard version for a given remaining time in seconds.
-
-  Created over using strftime because strftime seems to be
-    more suitable for a datetime object, rather than just a number of
-    seconds remaining.
-  Args:
-    remaining_time: The number of seconds remaining as a float, or a
-      string/None value indicating time was not correctly calculated.
-  Returns:
-    if remaining_time is a valid float, %H:%M:%D time remaining format with
-    the nearest integer from remaining_time (%H might be higher than 23).
-    Else, it returns the same message it received.
-  """
-  remaining_time = int(round(remaining_time))
-  hours = int(remaining_time / 3600)
-  if hours >= 100:
-    # Too large to display with precision of minutes and seconds.
-    # If over 1000, saying 999+ hours should be enough.
-    return '%d+ hrs' % min(hours, 999)
-  remaining_time -= (3600 * hours)
-  minutes = int(remaining_time / 60)
-  remaining_time -= (60 * minutes)
-  seconds = int(remaining_time)
-  return (str('%02d' % hours) + ':' + str('%02d' % minutes)+':' +
-          str('%02d' % seconds))
-
-
-def HumanReadableWithDecimalPlaces(number, decimal_places=1):
-  """Creates a human readable format for bytes with fixed decimal places.
-
-  Args:
-    number: The number of bytes.
-    decimal_places: The number of decimal places.
-  Returns:
-    String representing a readable format for number with decimal_places
-     decimal places.
-  """
-  number_format = MakeHumanReadable(number).split()
-  num = str(int(round(10**decimal_places * float(number_format[0]))))
-  if num == '0':
-    number_format[0] = ('0' + (('.' + ('0' * decimal_places)) if decimal_places
-                               else ''))
-  else:
-    num_length = len(num)
-    if decimal_places:
-      num = (num[:num_length-decimal_places] + '.' +
-             num[num_length-decimal_places:])
-    number_format[0] = num
-  return ' '.join(number_format)
-
-
-def Percentile(values, percent, key=lambda x: x):
-  """Find the percentile of a list of values.
-
-  Taken from: http://code.activestate.com/recipes/511478/
-
-  Args:
-    values: a list of numeric values. Note that the values MUST BE already
-            sorted.
-    percent: a float value from 0.0 to 1.0.
-    key: optional key function to compute value from each element of the list
-         of values.
-
-  Returns:
-    The percentile of the values.
-  """
-  if not values:
-    return None
-  k = (len(values) - 1) * percent
-  f = math.floor(k)
-  c = math.ceil(k)
-  if f == c:
-    return key(values[int(k)])
-  d0 = key(values[int(f)]) * (c - k)
-  d1 = key(values[int(c)]) * (k - f)
-  return d0 + d1
-
-
+#TODO(refactor): text_utils
 def RemoveCRLFFromString(input_str):
   r"""Returns the input string with all \n and \r removed."""
   return re.sub(r'[\r\n]', '', input_str)
@@ -1025,15 +420,6 @@ def LookUpGsutilVersion(gsutil_api, url_str):
           return prop.value
 
 
-class DiscardMessagesQueue(object):
-  """Emulates a Cloud API status queue but drops all messages."""
-
-  # pylint: disable=invalid-name, unused-argument
-  def put(self, message=None, timeout=None):
-    pass
-  # pylint: enable=invalid-name, unused-argument
-
-
 def GetGsutilVersionModifiedTime():
   """Returns unix timestamp of when the VERSION file was last modified."""
   if not gslib.VERSION_FILE:
@@ -1044,22 +430,6 @@ def GetGsutilVersionModifiedTime():
 def IsRunningInteractively():
   """Returns True if currently running interactively on a TTY."""
   return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
-
-
-def _HttpsValidateCertifcatesEnabled():
-  return config.get('Boto', 'https_validate_certificates', True)
-
-CERTIFICATE_VALIDATION_ENABLED = _HttpsValidateCertifcatesEnabled()
-
-
-def _BotoIsSecure():
-  return config.get('Boto', 'is_secure', True)
-
-BOTO_IS_SECURE = _BotoIsSecure()
-
-
-def ResumableThreshold():
-  return config.getint('GSUtil', 'resumable_threshold', EIGHT_MIB)
 
 
 def CreateCustomMetadata(entries=None, custom_metadata=None):
