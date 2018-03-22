@@ -72,8 +72,8 @@ _SIGNED_URL_FORMAT = ('https://{host}/{path}?x-goog-signature={sig}&'
                       '{query_string}')
 
 _SYNOPSIS = """
-  gsutil signurl [-c content_type] [-d duration] [-m http_method] \\
-      [-p password] keystore-file url...
+  gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
+      [-p <password>] [-r <region>] keystore-file url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -113,39 +113,40 @@ _DETAILED_HELP_TEXT = ("""
   have an object with that name, the operation will fail.
 
 <B>OPTIONS</B>
-  -m          Specifies the HTTP method to be authorized for use
-              with the signed url, default is GET. You may also specify
-              RESUMABLE to create a signed resumable upload start URL. When
-              using a signed URL to start a resumable upload session, you will
-              need to specify the 'x-goog-resumable:start' header in the
-              request or else signature validation will fail.
+  -m           Specifies the HTTP method to be authorized for use
+               with the signed url, default is GET. You may also specify
+               RESUMABLE to create a signed resumable upload start URL. When
+               using a signed URL to start a resumable upload session, you will
+               need to specify the 'x-goog-resumable:start' header in the
+               request or else signature validation will fail.
 
-  -d          Specifies the duration that the signed url should be valid
-              for, default duration is 1 hour.
+  -d           Specifies the duration that the signed url should be valid
+               for, default duration is 1 hour.
 
-              Times may be specified with no suffix (default hours), or
-              with s = seconds, m = minutes, h = hours, d = days.
+               Times may be specified with no suffix (default hours), or
+               with s = seconds, m = minutes, h = hours, d = days.
 
-              This option may be specified multiple times, in which case
-              the duration the link remains valid is the sum of all the
-              duration options.
+               This option may be specified multiple times, in which case
+               the duration the link remains valid is the sum of all the
+               duration options.
 
-  -c          Specifies the content type for which the signed url is
-              valid for.
+  -c           Specifies the content type for which the signed url is
+               valid for.
 
-  -p          Specify the keystore password instead of prompting.
+  -p           Specify the keystore password instead of prompting.
 
-  -r          Specifies the `region
-              https://cloud.google.com/storage/docs/bucket-locations>`_
-              in which the resources to create signed URLs for are stored.
+  -r <region>  Specifies the `region
+               <https://cloud.google.com/storage/docs/bucket-locations>`_ in
+               which the resources for which you are creating signed URLs are
+               stored.
 
-              Default value is 'auto' which will cause gsutil to fetch the
-              region for the resource. When auto-detecting the region the
-              current gsutil user's credentials, not the credentials from the
-              private-key-file, are used to fetch the bucket's metadata.
+               Default value is 'auto' which will cause gsutil to fetch the
+               region for the resource. When auto-detecting the region, the
+               current gsutil user's credentials, not the credentials from the
+               private-key-file, are used to fetch the bucket's metadata.
 
-              This option must be specified and not 'auto' when generating a
-              signed URL to create a bucket.
+               This option must be specified and not 'auto' when generating a
+               signed URL to create a bucket.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
