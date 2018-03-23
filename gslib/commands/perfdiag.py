@@ -53,13 +53,13 @@ from gslib.file_part import FilePart
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CheckFreeSpace
 from gslib.util import GetCloudApiInstance
-from gslib.util import GetDiskCounters
-from gslib.util import GetFileSize
-from gslib.util import IS_LINUX
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.system_util import CheckFreeSpace
+from gslib.utils.system_util import GetDiskCounters
+from gslib.utils.system_util import GetFileSize
+from gslib.utils.system_util import IS_LINUX
 from gslib.utils.unit_util import DivideAndCeil
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeBitsHumanReadable

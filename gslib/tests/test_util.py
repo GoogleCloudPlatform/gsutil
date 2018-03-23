@@ -25,11 +25,13 @@ from __future__ import absolute_import
 
 from gslib import util
 from gslib.utils import boto_util
+from gslib.utils import system_util
+from gslib.utils import text_util
 from gslib.utils import unit_util
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import TestParams
-from gslib.util import CompareVersions
+from gslib.utils.text_util import CompareVersions
 from gslib.utils.unit_util import DecimalShort
 from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import PrettyTime
@@ -183,7 +185,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
   def testProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""
     valid_variables = ['http_proxy', 'https_proxy']
-    if not util.IS_WINDOWS:
+    if not system_util.IS_WINDOWS:
       # Dynamically set Windows environment variables are case-insensitive.
       valid_variables.append('HTTPS_PROXY')
     # Clear any existing environment variables for the duration of the test.
@@ -302,7 +304,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))
 
   def DoTestAddQueryParamToUrl(self, url, param_name, param_val, expected_url):
-    new_url = util.AddQueryParamToUrl(url, param_name, param_val)
+    new_url = text_util.AddQueryParamToUrl(url, param_name, param_val)
     self.assertEqual(new_url, expected_url)
 
   def testAddQueryParamToUrlWorksForASCIIValues(self):

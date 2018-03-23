@@ -23,7 +23,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.storage_url import StorageUrlFromString
-from gslib.util import NO_MAX
+from gslib.utils.constants import NO_MAX
 
 
 _SYNOPSIS = """

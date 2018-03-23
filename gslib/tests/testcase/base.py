@@ -28,7 +28,7 @@ from gslib.posix_util import NA_ID
 from gslib.posix_util import NA_MODE
 import gslib.tests.util as util
 from gslib.tests.util import unittest
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
 from six import string_types
 
 MAX_BUCKET_LENGTH = 63

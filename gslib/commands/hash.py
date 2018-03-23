@@ -37,8 +37,8 @@ from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import FileMessage
 from gslib.thread_message import FinalMessage
-from gslib.util import NO_MAX
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import NO_MAX
 
 _SYNOPSIS = """
   gsutil hash [-c] [-h] [-m] filename...

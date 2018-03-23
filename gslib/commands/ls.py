@@ -31,11 +31,10 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import LabelTranslation
-from gslib.util import InsistAscii
-from gslib.util import ListingStyle
-from gslib.util import NO_MAX
 from gslib.util import PrintFullInfoAboutObject
-from gslib.util import UTF8
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
+from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import MakeHumanReadable
 
 
@@ -267,6 +266,13 @@ _DETAILED_HELP_TEXT = ("""
 
   -e          Include ETag in long listing (-l) output.
 """)
+
+
+class ListingStyle(object):
+  """Enum class for specifying listing style."""
+  SHORT = 'SHORT'
+  LONG = 'LONG'
+  LONG_LONG = 'LONG_LONG'
 
 
 class LsCommand(Command):

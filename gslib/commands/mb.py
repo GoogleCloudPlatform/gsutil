@@ -27,9 +27,9 @@ from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import InsistAscii
-from gslib.util import NO_MAX
-from gslib.util import NormalizeStorageClass
+from gslib.utils.constants import NO_MAX
+from gslib.utils.text_util import InsistAscii
+from gslib.utils.text_util import NormalizeStorageClass
 
 
 _SYNOPSIS = """

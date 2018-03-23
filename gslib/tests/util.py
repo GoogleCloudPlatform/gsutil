@@ -32,11 +32,11 @@ import crcmod
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.lazy_wrapper import LazyWrapper
 from gslib.posix_util import GetDefaultMode
 import gslib.tests as gslib_tests
-from gslib.util import IS_WINDOWS
 from gslib.utils.boto_util import UsingCrcmodExtension
-from gslib.utils.lazywrapper import LazyWrapper
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import MakeHumanReadable
 
 # pylint: disable=g-import-not-at-top, g-long-lambda

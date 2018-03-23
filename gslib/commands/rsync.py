@@ -82,13 +82,13 @@ from gslib.util import CreateCustomMetadata
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import IS_WINDOWS
 from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import ObjectIsGzipEncoded
-from gslib.util import UTF8
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
 from gslib.utils.rsync_util import DiffAction
 from gslib.utils.rsync_util import RsyncDiffToApply
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB

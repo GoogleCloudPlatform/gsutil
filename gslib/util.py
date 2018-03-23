@@ -17,27 +17,17 @@
 from __future__ import absolute_import
 
 import collections
-from datetime import timedelta
-from datetime import tzinfo
-import locale
 import logging
 import multiprocessing
 import os
-import pkgutil
-import re
-import struct
-import sys
-import textwrap
 import threading
 import time
 import traceback
-import urlparse
 import xml.etree.ElementTree as ElementTree
 
 from apitools.base.py import http_wrapper
 
 import gslib
-from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import RetryableErrorMessage
@@ -48,37 +38,18 @@ from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
 from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
 from gslib.utils.boto_util import GetGsutilStateDir
+from gslib.utils.constants import UTF8
+from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import CreateDirIfNeeded
+from gslib.utils.system_util import IS_CP1252
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.system_util import WINDOWS_1252
 from gslib.utils.unit_util import ONE_GIB
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
 import httplib2
 from retry_decorator import retry_decorator
-
-# Detect platform types.
-PLATFORM = str(sys.platform).lower()
-IS_WINDOWS = 'win32' in PLATFORM
-IS_CYGWIN = 'cygwin' in PLATFORM
-IS_LINUX = 'linux' in PLATFORM
-IS_OSX = 'darwin' in PLATFORM
-
-UTF8 = 'utf-8'
-WINDOWS_1252 = 'cp1252'
-
-# pylint: disable=g-import-not-at-top
-if IS_WINDOWS:
-  from ctypes import c_int
-  from ctypes import c_uint64
-  from ctypes import c_char_p
-  from ctypes import c_wchar_p
-  from ctypes import windll
-  from ctypes import POINTER
-  from ctypes import WINFUNCTYPE
-  from ctypes import WinError
-  IS_CP1252 = locale.getdefaultlocale()[1] == WINDOWS_1252
-else:
-  IS_CP1252 = False
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -88,11 +59,11 @@ try:
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
+
 DEBUGLEVEL_DUMP_REQUESTS = 3
 DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
 
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
-_DEFAULT_LINES = 25
 RESUMABLE_THRESHOLD_MIB = 8
 RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
 
@@ -119,11 +90,6 @@ NUM_OBJECTS_PER_LIST_PAGE = 1000
 # TODO: This should say the unit in the name.
 MIN_SIZE_COMPUTE_LOGGING = 100 * ONE_MIB
 
-NO_MAX = sys.maxint
-
-VERSION_MATCHER = re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?')
-
-RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
@@ -139,7 +105,6 @@ MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2 * ONE_GIB
 # hitting the limit imposed by the OS. This number was obtained experimentally.
 MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
 
-GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
 
 Retry = retry_decorator.retry  # pylint: disable=invalid-name
@@ -152,69 +117,6 @@ global manager  # pylint: disable=global-at-module-level
 cached_multiprocessing_is_available = None
 cached_multiprocessing_is_available_stack_trace = None
 cached_multiprocessing_is_available_message = None
-
-
-# This function used to belong inside of update.py. However, it needed to be
-# moved here due to compatibility issues with Travis CI, because update.py is
-# not included with PyPI installations.
-def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
-  """Disallows the update command if files not in the gsutil distro are found.
-
-  This prevents users from losing data if they are in the habit of running
-  gsutil from the gsutil directory and leaving data in that directory.
-
-  This will also detect someone attempting to run gsutil update from a git
-  repo, since the top-level directory will contain git files and dirs (like
-  .git) that are not distributed with gsutil.
-
-  Args:
-    directory: The directory to use this functionality on.
-
-  Raises:
-    CommandException: if files other than those distributed with gsutil found.
-  """
-  # Manifest includes recursive-includes of gslib. Directly add
-  # those to the list here so we will skip them in os.listdir() loop without
-  # having to build deeper handling of the MANIFEST file here. Also include
-  # 'third_party', which isn't present in manifest but gets added to the
-  # gsutil distro by the gsutil submodule configuration; and the MANIFEST.in
-  # and CHANGES.md files.
-  manifest_lines = ['MANIFEST.in', 'third_party']
-
-  try:
-    with open(os.path.join(directory, 'MANIFEST.in'), 'r') as fp:
-      for line in fp:
-        if line.startswith('include '):
-          manifest_lines.append(line.split()[-1])
-        elif re.match(r'recursive-include \w+ \*', line):
-          manifest_lines.append(line.split()[1])
-  except IOError:
-    logging.getLogger().warn('MANIFEST.in not found in %s.\nSkipping user data '
-                             'check.\n', directory)
-    return
-
-  # Look just at top-level directory. We don't try to catch data dropped into
-  # subdirs (like gslib) because that would require deeper parsing of
-  # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
-  # level directory.
-  for filename in os.listdir(directory):
-    if (filename.endswith('.pyc') or filename == '__pycache__'
-        or filename == '.travis.yml'):
-      # Ignore compiled code and travis config.
-      continue
-    if filename not in manifest_lines:
-      raise CommandException('\n'.join(textwrap.wrap(
-          'A file (%s) that is not distributed with gsutil was found in '
-          'the gsutil directory. The update command cannot run with user '
-          'data in the gsutil directory.' %
-          os.path.join(gslib.GSUTIL_DIR, filename))))
-
-
-# Enum class for specifying listing style.
-class ListingStyle(object):
-  SHORT = 'SHORT'
-  LONG = 'LONG'
-  LONG_LONG = 'LONG_LONG'
 
 
 def ObjectIsGzipEncoded(obj_metadata):
@@ -240,121 +142,6 @@ def AddAcceptEncodingGzipIfNeeded(headers_dict, compressed_encoding=False):
     # prior to our own on-the-fly decompression so they match the stored hashes.
     headers_dict['accept-encoding'] = 'gzip'
 
-#TODO(refactor): system_utils
-def CheckFreeSpace(path):
-  """Return path/drive free space (in bytes)."""
-  if IS_WINDOWS:
-    try:
-      # pylint: disable=invalid-name
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(
-          ('GetDiskFreeSpaceExW', windll.kernel32), (
-              (1, 'lpszPathName'),
-              (2, 'lpFreeUserSpace'),
-              (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
-    except AttributeError:
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(
-          ('GetDiskFreeSpaceExA', windll.kernel32), (
-              (1, 'lpszPathName'),
-              (2, 'lpFreeUserSpace'),
-              (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
-
-    def GetDiskFreeSpaceExErrCheck(result, unused_func, args):
-      if not result:
-        raise WinError()
-      return args[1].value
-    get_disk_free_space_ex.errcheck = GetDiskFreeSpaceExErrCheck
-
-    return get_disk_free_space_ex(os.getenv('SystemDrive'))
-  else:
-    (_, f_frsize, _, _, f_bavail, _, _, _, _, _) = os.statvfs(path)
-    return f_frsize * f_bavail
-
-
-#TODO(refactor): system_utils
-def GetDiskCounters():
-  """Retrieves disk I/O statistics for all disks.
-
-  Adapted from the psutil module's psutil._pslinux.disk_io_counters:
-    http://code.google.com/p/psutil/source/browse/trunk/psutil/_pslinux.py
-
-  Originally distributed under under a BSD license.
-  Original Copyright (c) 2009, Jay Loden, Dave Daeschler, Giampaolo Rodola.
-
-  Returns:
-    A dictionary containing disk names mapped to the disk counters from
-    /disk/diskstats.
-  """
-  # iostat documentation states that sectors are equivalent with blocks and
-  # have a size of 512 bytes since 2.4 kernels. This value is needed to
-  # calculate the amount of disk I/O in bytes.
-  sector_size = 512
-
-  partitions = []
-  with open('/proc/partitions', 'r') as f:
-    lines = f.readlines()[2:]
-    for line in lines:
-      _, _, _, name = line.split()
-      if name[-1].isdigit():
-        partitions.append(name)
-
-  retdict = {}
-  with open('/proc/diskstats', 'r') as f:
-    for line in f:
-      values = line.split()[:11]
-      _, _, name, reads, _, rbytes, rtime, writes, _, wbytes, wtime = values
-      if name in partitions:
-        rbytes = int(rbytes) * sector_size
-        wbytes = int(wbytes) * sector_size
-        reads = int(reads)
-        writes = int(writes)
-        rtime = int(rtime)
-        wtime = int(wtime)
-        retdict[name] = (reads, writes, rbytes, wbytes, rtime, wtime)
-  return retdict
-
-
-#TODO(refactor): system_utils
-def GetGsutilClientIdAndSecret():
-  """Returns a tuple of the gsutil OAuth2 client ID and secret.
-
-  Google OAuth2 clients always have a secret, even if the client is an installed
-  application/utility such as gsutil.  Of course, in such cases the "secret" is
-  actually publicly known; security depends entirely on the secrecy of refresh
-  tokens, which effectively become bearer tokens.
-
-  Returns:
-    Tuple of strings (client ID, secret).
-  """
-  if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
-      os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'):
-    # Cloud SDK installs have a separate client ID / secret.
-    return ('32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
-            'ZmssLNjJy2998hD4CTg2ejr2')                # Cloud SDK secret
-
-  return ('909320924072.apps.googleusercontent.com',   # gsutil client ID
-          'p3RlpR10xMFh9ZXBS/ZNLYUu')                  # gsutil secret
-
-
-#TODO(refactor): text_utils
-def GetPrintableExceptionString(exc):
-  """Returns a short Unicode string describing the exception."""
-  return unicode(exc).encode(UTF8) or str(exc.__class__)
-
-
-#TODO(refactor): text_utils
-def PrintableStr(input_str):
-  return input_str.encode(UTF8) if input_str is not None else None
-
 
 # Name of file where we keep the timestamp for the last time we checked whether
 # a new version of gsutil is available.
@@ -362,12 +149,6 @@ PrintTrackerDirDeprecationWarningIfNeeded()
 CreateDirIfNeeded(GetGsutilStateDir())
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
     os.path.join(GetGsutilStateDir(), '.last_software_update_check'))
-
-
-#TODO(refactor): text_utils
-def RemoveCRLFFromString(input_str):
-  r"""Returns the input string with all \n and \r removed."""
-  return re.sub(r'[\r\n]', '', input_str)
 
 
 def UnaryDictToXml(message):
@@ -427,11 +208,6 @@ def GetGsutilVersionModifiedTime():
   return int(os.path.getmtime(gslib.VERSION_FILE))
 
 
-def IsRunningInteractively():
-  """Returns True if currently running interactively on a TTY."""
-  return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
-
-
 def CreateCustomMetadata(entries=None, custom_metadata=None):
   """Creates a custom metadata (apitools Object.MetadataValue) object.
 
@@ -482,28 +258,12 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     return False, default_value
 
 
-def InsistAscii(string, message):
-  if not all(ord(c) < 128 for c in string):
-    raise CommandException(message)
-
-
-def InsistAsciiHeader(header):
-  InsistAscii(header, 'Invalid non-ASCII header (%s).' % header)
-
-
-def InsistAsciiHeaderValue(header, value):
-  InsistAscii(
-      value,
-      'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
-      'characters are allowed in headers other than x-goog-meta- and '
-      'x-amz-meta- headers' % (value, header))
-
-
 def IsCustomMetadataHeader(header):
   """Returns true if header (which must be lowercase) is a custom header."""
   return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
 
 
+# TODO(refactor): Move this to ls_helper?
 # pylint: disable=too-many-statements
 def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   """Print full info for given object (like what displays for gsutil ls -L).
@@ -612,6 +372,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   return (num_objs, num_bytes)
 
 
+# TODO(refactor): Move this to ls_helper?
 def MakeMetadataLine(label, value, indent=1):
   """Returns a string with a vertically aligned label and value.
 
@@ -633,48 +394,6 @@ def MakeMetadataLine(label, value, indent=1):
     A string with a vertically aligned label and value.
   """
   return '%s%s' % (((' ' * indent * 4) + label + ':').ljust(28), value)
-
-
-def CompareVersions(first, second):
-  """Compares the first and second gsutil version strings.
-
-  For example, 3.33 > 3.7, and 4.1 is a greater major version than 3.33.
-  Does not handle multiple periods (e.g. 3.3.4) or complicated suffixes
-  (e.g., 3.3RC4 vs. 3.3RC5). A version string with a suffix is treated as
-  less than its non-suffix counterpart (e.g. 3.32 > 3.32pre).
-
-  Args:
-    first: First gsutil version string.
-    second: Second gsutil version string.
-
-  Returns:
-    (g, m):
-       g is True if first known to be greater than second, else False.
-       m is True if first known to be greater by at least 1 major version,
-         else False.
-  """
-  m1 = VERSION_MATCHER.match(str(first))
-  m2 = VERSION_MATCHER.match(str(second))
-
-  # If passed strings we don't know how to handle, be conservative.
-  if not m1 or not m2:
-    return (False, False)
-
-  major_ver1 = int(m1.group('maj'))
-  minor_ver1 = int(m1.group('min')) if m1.group('min') else 0
-  suffix_ver1 = m1.group('suffix')
-  major_ver2 = int(m2.group('maj'))
-  minor_ver2 = int(m2.group('min')) if m2.group('min') else 0
-  suffix_ver2 = m2.group('suffix')
-
-  if major_ver1 > major_ver2:
-    return (True, True)
-  elif major_ver1 == major_ver2:
-    if minor_ver1 > minor_ver2:
-      return (True, False)
-    elif minor_ver1 == minor_ver2:
-      return (bool(suffix_ver2) and not suffix_ver1, False)
-  return (False, False)
 
 
 def _IncreaseSoftLimitForResource(resource_name, fallback_value):
@@ -745,24 +464,7 @@ def GetCloudApiInstance(cls, thread_state=None):
   return thread_state or cls.gsutil_api
 
 
-def GetFileSize(fp, position_to_eof=False):
-  """Returns size of file, optionally leaving fp positioned at EOF."""
-  if not position_to_eof:
-    cur_pos = fp.tell()
-  fp.seek(0, os.SEEK_END)
-  cur_file_size = fp.tell()
-  if not position_to_eof:
-    fp.seek(cur_pos)
-  return cur_file_size
-
-
-def GetStreamFromFileUrl(storage_url, mode='rb'):
-  if storage_url.IsStream():
-    return sys.stdin
-  else:
-    return open(storage_url.object_name, mode)
-
-
+# TODO(refactor): Move this into storage_url or storage_url_util.
 def UrlsAreForSingleProvider(url_args):
   """Tests whether the URLs are all for a single provider.
 
@@ -783,6 +485,7 @@ def UrlsAreForSingleProvider(url_args):
   return provider is not None
 
 
+# TODO(refactor): Move this into storage_url or storage_url_util.
 def HaveFileUrls(args_to_check):
   """Checks whether args_to_check contain any file URLs.
 
@@ -799,6 +502,7 @@ def HaveFileUrls(args_to_check):
   return False
 
 
+# TODO(refactor): Move this into storage_url or storage_url_util.
 def HaveProviderUrls(args_to_check):
   """Checks whether args_to_check contains any provider URLs (like 'gs://').
 
@@ -954,6 +658,7 @@ def CreateLock():
     return threading.Lock()
 
 
+# TODO(refactor): Move this into storage_url or storage_url_util.
 def IsCloudSubdirPlaceholder(url, blr=None):
   """Determines if URL is a cloud subdir placeholder.
 
@@ -968,12 +673,12 @@ def IsCloudSubdirPlaceholder(url, blr=None):
     - Cloud objects whose name ends with '/'
 
   Args:
-    url: The URL to be checked.
-    blr: BucketListingRef to check, or None if not available.
-         If None, size won't be checked.
+    url: (gslib.storage_url.StorageUrl) The URL to be checked.
+    blr: (gslib.BucketListingRef or None) The blr to check, or None if not
+        available. If `blr` is None, size won't be checked.
 
   Returns:
-    True/False.
+    (bool) True if the URL is a cloud subdir placeholder, otherwise False.
   """
   if not url.IsCloudUrl():
     return False
@@ -985,57 +690,6 @@ def IsCloudSubdirPlaceholder(url, blr=None):
   else:
     size = 0
   return size == 0 and url_str.endswith('/')
-
-
-def GetTermLines():
-  """Returns number of terminal lines."""
-  # fcntl isn't supported in Windows.
-  try:
-    import fcntl    # pylint: disable=g-import-not-at-top
-    import termios  # pylint: disable=g-import-not-at-top
-  except ImportError:
-    return _DEFAULT_LINES
-  def ioctl_GWINSZ(fd):  # pylint: disable=invalid-name
-    try:
-      return struct.unpack(
-          'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
-    except:  # pylint: disable=bare-except
-      return 0  # Failure (so will retry on different file descriptor below).
-  # Try to find a valid number of lines from termio for stdin, stdout,
-  # or stderr, in that order.
-  ioc = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-  if not ioc:
-    try:
-      fd = os.open(os.ctermid(), os.O_RDONLY)
-      ioc = ioctl_GWINSZ(fd)
-      os.close(fd)
-    except:  # pylint: disable=bare-except
-      pass
-  if not ioc:
-    ioc = os.environ.get('LINES', _DEFAULT_LINES)
-  return int(ioc)
-
-
-def FixWindowsEncodingIfNeeded(input_str):
-  """Attempts to detect Windows CP1252 encoding and convert to UTF8.
-
-  Windows doesn't provide a way to set UTF-8 for string encodings; you can set
-  the system locale (see
-  http://windows.microsoft.com/en-us/windows/change-system-locale#1TC=windows-7)
-  but that takes you to a "Change system locale" dropdown that just lists
-  languages (e.g., "English (United States)". Instead, we're forced to check if
-  a encoding as UTF8 raises an exception and if so, try converting from CP1252
-  to Unicode.
-
-  Args:
-    input_str: The input string.
-  Returns:
-    The converted string (or the original, if conversion wasn't needed).
-  """
-  if IS_CP1252:
-    return input_str.decode(WINDOWS_1252).encode(UTF8)
-  else:
-    return input_str
 
 
 def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
@@ -1087,84 +741,9 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
   return WarnAfterManyRetriesHandler
 
 
-def StdinIterator():
-  """A generator function that returns lines from stdin."""
-  for line in sys.stdin:
-    # Strip CRLF.
-    yield line.rstrip()
-
-
+# TODO(refactor): Move this into storage_url or storage_url_util... or maybe
+# text_util??
 def ConvertRecursiveToFlatWildcard(url_strs):
   """A generator that adds '**' to each url string in url_strs."""
   for url_str in url_strs:
     yield '%s**' % url_str
-
-
-def NormalizeStorageClass(sc):
-  """Returns a normalized form of the given storage class name.
-
-  Converts the given string to uppercase and expands valid abbreviations to
-  full storage class names (e.g 'std' would return 'STANDARD'). Note that this
-  method does not check if the given storage class is valid.
-
-  Args:
-    sc: String representing the storage class's full name or abbreviation.
-
-  Returns:
-    A string representing the full name of the given storage class.
-  """
-  shorthand_to_full_name = {
-      'CL': 'COLDLINE',
-      'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-      'NL': 'NEARLINE',
-      'S': 'STANDARD',
-      'STD': 'STANDARD'}
-  # Use uppercase; storage class argument for the S3 API must be uppercase,
-  # and it's case-insensitive for GS APIs.
-  sc = sc.upper()
-  if sc in shorthand_to_full_name:
-    sc = shorthand_to_full_name[sc]
-  return sc
-
-
-def AddQueryParamToUrl(url_str, param_name, param_value):
-  """Adds a query parameter to a URL string.
-
-  Appends a query parameter to the query string portion of a url. If a parameter
-  with the given name was already present, it is not removed; the new name/value
-  pair will be appended to the end of the query string. It is assumed that all
-  arguments will be of type `str` (either ASCII or UTF-8 encoded) or `unicode`.
-
-  Note that this method performs no URL-encoding. It is the caller's
-  responsibility to ensure proper URL encoding of the entire URL; i.e. if the
-  URL is already URL-encoded, you should pass in URL-encoded values for
-  param_name and param_value. If the URL is not URL-encoded, you should not pass
-  in URL-encoded parameters; instead, you could perform URL-encoding using the
-  URL string returned from this function.
-
-  Args:
-    url_str: String representing the URL.
-    param_name: String key of the query parameter.
-    param_value: String value of the query parameter.
-
-  Returns:
-    A string representing the modified url, of type `unicode` if the url_str
-    argument was a `unicode`, otherwise a `str` encoded in UTF-8.
-  """
-  url_was_unicode = isinstance(url_str, unicode)
-  if isinstance(url_str, unicode):
-    url_str = url_str.encode('utf-8')
-  if isinstance(param_name, unicode):
-    param_name = param_name.encode('utf-8')
-  if isinstance(param_value, unicode):
-    param_value = param_value.encode('utf-8')
-  scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
-
-  query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
-  query_params.append((param_name, param_value))
-  new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
-
-  new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
-  if url_was_unicode:
-    new_url = new_url.decode('utf-8')
-  return new_url

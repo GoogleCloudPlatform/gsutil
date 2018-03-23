@@ -56,12 +56,12 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.util import CreateLock
 from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.util import GetCloudApiInstance
-from gslib.util import GetStreamFromFileUrl
 from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import NO_MAX
-from gslib.util import NormalizeStorageClass
-from gslib.util import RemoveCRLFFromString
-from gslib.util import StdinIterator
+from gslib.utils.constants import NO_MAX
+from gslib.utils.system_util import GetStreamFromFileUrl
+from gslib.utils.system_util import StdinIterator
+from gslib.utils.text_util import NormalizeStorageClass
+from gslib.utils.text_util import RemoveCRLFFromString
 from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import MakeHumanReadable
 

@@ -35,6 +35,7 @@ import gslib
 from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.gcs_json_api import GcsJsonApi
@@ -57,11 +58,10 @@ from gslib.tests.util import unittest
 from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import CreateCustomMetadata
-from gslib.util import DiscardMessagesQueue
 from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import IS_WINDOWS
 from gslib.util import Retry
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import IS_WINDOWS
 
 
 LOGGER = logging.getLogger('integration-test')

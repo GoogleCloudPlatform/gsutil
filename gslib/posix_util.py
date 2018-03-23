@@ -23,10 +23,10 @@ import re
 import time
 
 from gslib.exception import CommandException
+from gslib.tz_utc import UTC
 from gslib.util import CreateCustomMetadata
 from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import IS_WINDOWS
-from gslib.utils.tz_utc import UTC
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import SECONDS_PER_DAY
 
 # pylint: disable=g-import-not-at-top

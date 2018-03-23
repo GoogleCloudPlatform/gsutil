@@ -34,8 +34,8 @@ from gslib.project_id import PopulateProjectId
 import gslib.tests as tests
 from gslib.tests.util import GetTestNames
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
-from gslib.util import NO_MAX
+from gslib.utils.constants import NO_MAX
+from gslib.utils.system_util import IS_WINDOWS
 
 # pylint: disable=g-import-not-at-top
 try:

@@ -20,7 +20,7 @@ from hashlib import sha256
 import re
 
 from gslib.exception import CommandException
-from gslib.utils.lazywrapper import LazyWrapper
+from gslib.lazy_wrapper import LazyWrapper
 
 MAX_DECRYPTION_KEYS = 100
 VALID_CMEK_RE =  LazyWrapper(

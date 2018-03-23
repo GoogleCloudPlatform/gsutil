@@ -21,8 +21,8 @@ import fnmatch
 from gslib.cloud_api import EncryptionException
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
-from gslib.util import IS_WINDOWS
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.wildcard_iterator import StorageUrlFromString
 
 

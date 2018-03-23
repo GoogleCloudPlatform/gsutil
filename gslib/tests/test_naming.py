@@ -47,8 +47,8 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetDummyProjectForUnitTest
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import IS_WINDOWS
 
 
 def _Overwrite(fp):

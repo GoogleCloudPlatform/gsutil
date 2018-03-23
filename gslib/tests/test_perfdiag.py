@@ -28,7 +28,7 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
+from gslib.utils.system_util import IS_WINDOWS
 import mock
 
 

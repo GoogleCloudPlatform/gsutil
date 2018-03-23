@@ -24,7 +24,7 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.util import NO_MAX
+from gslib.utils.constants import NO_MAX
 
 _SYNOPSIS = """
   gsutil cat [-h] url...

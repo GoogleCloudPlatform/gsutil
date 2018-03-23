@@ -27,8 +27,8 @@ from gslib.exception import CommandException
 from gslib.ls_helper import LsHelper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.util import NO_MAX
-from gslib.util import UTF8
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
 from gslib.utils.unit_util import MakeHumanReadable
 
 _SYNOPSIS = """

@@ -81,7 +81,6 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.util import AddAcceptEncodingGzipIfNeeded
-from gslib.util import GetPrintableExceptionString
 from gslib.util import LogAndHandleRetries
 from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
 from gslib.utils.boto_util import GetCertsFile
@@ -91,6 +90,7 @@ from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.boto_util import JsonResumableChunkSizeDefined
+from gslib.utils.text_util import GetPrintableExceptionString
 
 import httplib2
 import oauth2client

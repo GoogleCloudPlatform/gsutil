@@ -36,11 +36,11 @@ from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
-from gslib.util import InsistAsciiHeader
-from gslib.util import InsistAsciiHeaderValue
 from gslib.util import IsCustomMetadataHeader
-from gslib.util import NO_MAX
 from gslib.util import Retry
+from gslib.utils.constants import NO_MAX
+from gslib.utils.text_util import InsistAsciiHeader
+from gslib.utils.text_util import InsistAsciiHeaderValue
 
 _SYNOPSIS = """
   gsutil setmeta -h [header:value|header] ... url...

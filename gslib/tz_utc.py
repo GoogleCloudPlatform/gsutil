@@ -14,6 +14,9 @@
 # limitations under the License.
 """Provides a tzinfo subclass to represent the UTC timezone."""
 
+from datetime import timedelta
+from datetime import tzinfo
+
 
 class UTC(tzinfo):
   """Timezone information class used to convert datetime timestamps to UTC.

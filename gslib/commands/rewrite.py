@@ -40,10 +40,10 @@ from gslib.thread_message import FileMessage
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import ConvertRecursiveToFlatWildcard
 from gslib.util import GetCloudApiInstance
-from gslib.util import NO_MAX
-from gslib.util import NormalizeStorageClass
-from gslib.util import StdinIterator
-from gslib.util import UTF8
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import StdinIterator
+from gslib.utils.text_util import NormalizeStorageClass
 
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
 

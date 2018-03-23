@@ -47,10 +47,10 @@ from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
 from gslib.thread_message import RetryableErrorMessage
-from gslib.util import IS_LINUX
-from gslib.util import IS_WINDOWS
 from gslib.util import LogAndHandleRetries
 from gslib.util import START_CALLBACK_PER_BYTES
+from gslib.utils.system_util import IS_LINUX
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 

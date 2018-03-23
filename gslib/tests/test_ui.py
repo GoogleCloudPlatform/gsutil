@@ -67,11 +67,11 @@ from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
-from gslib.util import UTF8
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
 from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB
-from gslib.utils.boto_util import UsingCrcmodExtension
 
 DOWNLOAD_SIZE = 300
 UPLOAD_SIZE = 400

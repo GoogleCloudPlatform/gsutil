@@ -46,6 +46,7 @@ from gslib.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
 from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateMd5FromContents
@@ -92,12 +93,11 @@ from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
 from gslib.ui_controller import BytesToFixedWidthString
-from gslib.util import DiscardMessagesQueue
-from gslib.util import IS_WINDOWS
 from gslib.util import Retry
 from gslib.util import START_CALLBACK_PER_BYTES
-from gslib.util import UTF8
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import EIGHT_MIB
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable

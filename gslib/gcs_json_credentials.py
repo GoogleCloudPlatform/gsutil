@@ -30,9 +30,9 @@ from apitools.base.py import exceptions as apitools_exceptions
 from boto import config
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
-from gslib.util import GetGsutilClientIdAndSecret
 from gslib.utils.boto_util import GetBotoConfigFileList
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
+from gslib.utils.system_util import GetGsutilClientIdAndSecret
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell

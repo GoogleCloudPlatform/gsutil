@@ -46,8 +46,8 @@ from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
-from gslib.util import IS_WINDOWS
 from gslib.util import RESUMABLE_THRESHOLD_B
+from gslib.utils.system_util import IS_WINDOWS
 
 from httplib2 import ServerNotFoundError
 from oauth2client.client import HAS_CRYPTO

@@ -33,6 +33,7 @@ from gslib.copy_helper import FilterExistingComponents
 from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
 from gslib.copy_helper import WarnIfMvEarlyDeletionChargeApplies
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
@@ -45,8 +46,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
-from gslib.util import DiscardMessagesQueue
-from gslib.util import IS_WINDOWS
+from gslib.utils.system_util import IS_WINDOWS
 
 import mock
 

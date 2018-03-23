@@ -20,7 +20,7 @@ import json
 import re
 
 from gslib.cloud_api import ArgumentException
-from gslib.util import AddQueryParamToUrl
+from gslib.utils.text_util import AddQueryParamToUrl
 
 
 def ValidateDstObjectMetadata(dst_obj_metadata):

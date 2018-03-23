@@ -23,6 +23,7 @@ import re
 from boto.storage_uri import BucketStorageUri
 
 from gslib.cs_api_map import ApiSelector
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.project_id import PopulateProjectId
@@ -42,7 +43,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY4
 from gslib.tests.util import unittest
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
-from gslib.util import DiscardMessagesQueue
 from gslib.utils.unit_util import ONE_MIB
 
 

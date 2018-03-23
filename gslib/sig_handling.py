@@ -25,8 +25,8 @@ import traceback
 
 from gslib import metrics
 from gslib.exception import ControlCException
-from gslib.util import IS_WINDOWS
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import IS_WINDOWS
 
 if IS_WINDOWS:
   import ctypes  # pylint: disable=g-import-not-at-top

@@ -36,9 +36,9 @@ import boto
 
 from gslib import VERSION
 from gslib.metrics_tuple import Metric
-from gslib.util import GetDiskCounters
-from gslib.util import IS_LINUX
 from gslib.utils.system_util import CreateDirIfNeeded
+from gslib.utils.system_util import GetDiskCounters
+from gslib.utils.system_util import IS_LINUX
 from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import HumanReadableToBytes
 

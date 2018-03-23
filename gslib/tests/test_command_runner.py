@@ -38,8 +38,8 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.util import GSUTIL_PUB_TARBALL
-from gslib.util import InsistAscii
+from gslib.utils.constants import GSUTIL_PUB_TARBALL
+from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import SECONDS_PER_DAY
 
 
@@ -176,7 +176,8 @@ class TestCommandRunnerUnitTests(
 
     command_runner.GetGsutilVersionModifiedTime = self.previous_version_mod_time
 
-    command_runner.IsRunningInteractively = gslib.util.IsRunningInteractively
+    command_runner.IsRunningInteractively = (
+        gslib.utils.system_util.IsRunningInteractively)
 
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()

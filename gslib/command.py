@@ -84,14 +84,14 @@ from gslib.ui_controller import UIThread
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import HaveFileUrls
 from gslib.util import HaveProviderUrls
-from gslib.util import IS_WINDOWS
-from gslib.util import NO_MAX
 from gslib.util import UrlsAreForSingleProvider
-from gslib.util import UTF8
 from gslib.utils.boto_util import GetConfigFilePaths
 from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
 from gslib.utils.rsync_util import RsyncDiffToApply
-
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.system_util import GetTermLines
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 
@@ -635,7 +635,7 @@ class Command(HelpProvider):
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
     # If running on Windows, invoke python interpreter explicitly.
-    if gslib.util.IS_WINDOWS:
+    if IS_WINDOWS:
       self.gsutil_cmd += 'python '
     # Add full path to gsutil to make sure we test the correct version.
     self.gsutil_path = gslib.GSUTIL_PATH
@@ -1453,7 +1453,7 @@ class Command(HelpProvider):
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
 
-    if sequential_call_count >= gslib.util.GetTermLines():
+    if sequential_call_count >= GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
       self._MaybeSuggestGsutilDashM()

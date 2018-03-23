@@ -36,9 +36,9 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import MetadataMessage
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
-from gslib.util import NO_MAX
 from gslib.util import Retry
-from gslib.util import StdinIterator
+from gslib.utils.constants import NO_MAX
+from gslib.utils.system_util import StdinIterator
 
 
 _SYNOPSIS = """
