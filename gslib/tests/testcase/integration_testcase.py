@@ -315,7 +315,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.assertNotIn('Encryption key SHA256', stdout)
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
-                   provider=None, prefer_json_api=False):
+                   provider=None, prefer_json_api=False,
+                   versioning_enabled=False):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -327,7 +328,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     Defaults to 0.
       storage_class: Storage class to use. If not provided we us standard.
       provider: Provider to use - either "gs" (the default) or "s3".
-      prefer_json_api: If true, use the JSON creation functions where possible.
+      prefer_json_api: If True, use the JSON creation functions where possible.
+      versioning_enabled: If True, set the bucket's versioning attribute to
+          True.
 
     Returns:
       StorageUri for the created bucket.
@@ -345,7 +348,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
                                           test_objects=test_objects,
                                           storage_class=storage_class,
-                                          location=location)
+                                          location=location,
+                                          versioning_enabled=versioning_enabled)
       bucket_uri = boto.storage_uri(
           'gs://%s' % json_bucket.name.encode(UTF8).lower(),
           suppress_consec_slashes=False)
@@ -389,6 +393,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     _CreateBucketWithExponentialBackoff()
     self.bucket_uris.append(bucket_uri)
+
+    if versioning_enabled:
+      bucket_uri.configure_versioning(True)
+
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
                         object_name=self.MakeTempName('obj'),
@@ -409,9 +417,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       StorageUri for the created bucket with versioning enabled.
     """
-    bucket_uri = self.CreateBucket(bucket_name=bucket_name,
-                                   test_objects=test_objects)
-    bucket_uri.configure_versioning(True)
+    # Note that we prefer the JSON API so that we don't require two separate
+    # steps to create and then set versioning on the bucket (as versioning
+    # propagation on an existing bucket is subject to eventual consistency).
+    bucket_uri = self.CreateBucket(
+        bucket_name=bucket_name,
+        test_objects=test_objects,
+        prefer_json_api=True,
+        versioning_enabled=True)
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None,
@@ -498,7 +511,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return key_uri
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
-                       storage_class=None, location=None):
+                       storage_class=None, location=None,
+                       versioning_enabled=False):
     """Creates a test bucket using the JSON API.
 
     The bucket and all of its contents will be deleted after the test.
@@ -510,6 +524,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     Defaults to 0.
       storage_class: Storage class to use. If not provided we use standard.
       location: Location to use.
+      versioning_enabled: If True, set the bucket's versioning attribute to
+          True.
 
     Returns:
       Apitools Bucket for the created bucket.
@@ -520,6 +536,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_metadata.storageClass = storage_class
     if location:
       bucket_metadata.location = location
+    if versioning_enabled:
+      bucket_metadata.versioning = (
+          apitools_messages.Bucket.VersioningValue(enabled=True))
 
     # TODO: Add retry and exponential backoff.
     bucket = self.json_api.CreateBucket(bucket_name.lower(),
