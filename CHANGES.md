@@ -1,3 +1,20 @@
+Release 4.30 (release date: 2018-03-28)
+=======================================
+New features
+------------------
+- Added Cloud KMS support for Google Cloud Storage resources, allowing the use
+  of customer-managed encryption keys (CMEKs). Bucket-related functionality
+  includes the new "kms" command, which can be used to get or set a bucket's
+  default KMS key. Concerning objects, users may now specify the CMEK to be used
+  for encryption via their boto config file, in the "encryption_key" attribute.
+  In this way, users may specify either a CSEK or a CMEK to encrypt new objects,
+  but not both. For more information, see "gsutil help encryption".
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.29 (release date: 2018-03-14)
 =======================================
 New features
