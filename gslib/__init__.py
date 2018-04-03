@@ -120,3 +120,10 @@ CHECKSUM_FILE, CHECKSUM = _GetFileContents('CHECKSUM')
 if not CHECKSUM:
   raise gslib.exception.CommandException(
       'CHECKSUM file not found. Please reinstall gsutil from scratch')
+
+
+def GetGsutilVersionModifiedTime():
+  """Returns unix timestamp of when the VERSION file was last modified."""
+  if not VERSION_FILE:
+    return 0
+  return int(os.path.getmtime(VERSION_FILE))

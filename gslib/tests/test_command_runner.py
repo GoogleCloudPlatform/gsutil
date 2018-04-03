@@ -145,6 +145,7 @@ class TestCommandRunnerUnitTests(
         raise CommandException(
             'Version number (%s) is not numeric.' % gslib.VERSION)
       base_version = base_version[:-1]
+    self.old_look_up_gsutil_version = command_runner.LookUpGsutilVersion
     command_runner.LookUpGsutilVersion = lambda u, v: float(base_version) + 1
 
     # Mock out raw_input to trigger yes prompt.
@@ -156,8 +157,8 @@ class TestCommandRunnerUnitTests(
 
     # Mock out the modified time of the VERSION file.
     self.version_mod_time = 0
-    self.previous_version_mod_time = command_runner.GetGsutilVersionModifiedTime
-    command_runner.GetGsutilVersionModifiedTime = lambda: self.version_mod_time
+    self.previous_version_mod_time = gslib.GetGsutilVersionModifiedTime
+    gslib.GetGsutilVersionModifiedTime = lambda: self.version_mod_time
 
     # Create a fake pub tarball that will be used to check for gsutil version.
     self.pub_bucket_uri = self.CreateBucket('pub')
@@ -171,10 +172,10 @@ class TestCommandRunnerUnitTests(
 
     command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
         self.previous_update_file)
-    command_runner.LookUpGsutilVersion = gslib.util.LookUpGsutilVersion
+    command_runner.LookUpGsutilVersion = self.old_look_up_gsutil_version
     command_runner.raw_input = raw_input
 
-    command_runner.GetGsutilVersionModifiedTime = self.previous_version_mod_time
+    gslib.GetGsutilVersionModifiedTime = self.previous_version_mod_time
 
     command_runner.IsRunningInteractively = (
         gslib.utils.system_util.IsRunningInteractively)
