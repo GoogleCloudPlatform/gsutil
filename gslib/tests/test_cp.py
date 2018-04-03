@@ -94,8 +94,8 @@ from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
 from gslib.ui_controller import BytesToFixedWidthString
 from gslib.util import Retry
-from gslib.util import START_CALLBACK_PER_BYTES
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import EIGHT_MIB

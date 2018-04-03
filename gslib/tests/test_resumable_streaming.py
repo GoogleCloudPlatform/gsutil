@@ -25,8 +25,8 @@ from gslib.hashing_helper import CalculateHashesFromContents
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 import gslib.tests.testcase as testcase
-from gslib.util import TRANSFER_BUFFER_SIZE
 from gslib.utils.boto_util import GetJsonResumableChunkSize
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 
 
 _TEST_FILE = 'test.txt'

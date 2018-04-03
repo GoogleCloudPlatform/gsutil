@@ -25,6 +25,7 @@ from __future__ import absolute_import
 
 from gslib import util
 from gslib.utils import boto_util
+from gslib.utils import constants
 from gslib.utils import system_util
 from gslib.utils import text_util
 from gslib.utils import unit_util
@@ -244,9 +245,9 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     # The only ExceptionRetryArgs attributes that the function cares about are
     # num_retries and total_wait_sec; we can pass None for the other values.
     retry_args_over_threshold = util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 3, None, util.LONG_RETRY_WARN_SEC + 1)
+        None, None, None, 3, None, constants.LONG_RETRY_WARN_SEC + 1)
     retry_args_under_threshold = util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 2, None, util.LONG_RETRY_WARN_SEC - 1)
+        None, None, None, 2, None, constants.LONG_RETRY_WARN_SEC - 1)
 
     util.LogAndHandleRetries()(retry_args_under_threshold)
     self.assertTrue(mock_wrapped_fn.called)

@@ -23,7 +23,7 @@ import gslib.cloud_api
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
-from gslib.util import TRANSFER_BUFFER_SIZE
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 
 
 _TEST_FILE = 'test.txt'

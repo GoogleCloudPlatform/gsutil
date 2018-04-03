@@ -26,12 +26,65 @@ A constant should not be placed in this file if:
 
 import sys
 
+from gslib.utils.unit_util import ONE_GIB
+from gslib.utils.unit_util import ONE_KIB
+from gslib.utils.unit_util import ONE_MIB
+
+# Readable descriptions for httplib2 logging levels.
+DEBUGLEVEL_DUMP_REQUESTS = 3
+DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
+
+DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
+
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
+
+# Number of seconds to wait before printing a long retry warning message.
+LONG_RETRY_WARN_SEC = 10
+
+# Compressed transport encoded uploads buffer chunks of compressed data. When
+# running many uploads in parallel, compression may consume more memory than
+# available. This restricts the number of compressed transport encoded uploads
+# running in parallel such that they don't consume more memory than set here.
+MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2 * ONE_GIB
+
+# On Unix-like systems, we will set the maximum number of open files to avoid
+# hitting the limit imposed by the OS. This number was obtained experimentally.
+MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
+
+# For files >= this size, output a message indicating that we're running an
+# operation on the file (like hashing or gzipping) so it does not appear to the
+# user that the command is hanging.
+# TODO: This should say the unit in the name.
+MIN_SIZE_COMPUTE_LOGGING = 100 * ONE_MIB
+
 NO_MAX = sys.maxint
+
+# Number of objects to request in listing calls.
+NUM_OBJECTS_PER_LIST_PAGE = 1000
+
 RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
+
+RESUMABLE_THRESHOLD_MIB = 8
+RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
+
 # By default, the timeout for SSL read errors is infinite. This could
 # cause gsutil to hang on network disconnect, so pick a more reasonable
 # timeout.
 SSL_TIMEOUT_SEC = 60
+
+# Start with a progress callback every <X> KiB during uploads/downloads (JSON
+# API). Callback implementation should back off until it hits some maximum size
+# so that callbacks do not create huge amounts of log output.
+START_CALLBACK_PER_BYTES = 256 * ONE_KIB
+
+# Upload/download files in 8 KiB chunks over the HTTP connection.
+# TODO: This should say the unit in the name.
+TRANSFER_BUFFER_SIZE = 8 * ONE_KIB
+
 UTF8 = 'utf-8'
+
 WINDOWS_1252 = 'cp1252'
+
+# Default number of progress callbacks during transfer (XML API).
+XML_PROGRESS_CALLBACKS = 10
+

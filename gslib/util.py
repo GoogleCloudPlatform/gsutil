@@ -38,15 +38,14 @@ from gslib.translation_helper import S3_DELETE_MARKER_GUID
 from gslib.translation_helper import S3_MARKER_GUIDS
 from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
 from gslib.utils.boto_util import GetGsutilStateDir
+from gslib.utils.constants import LONG_RETRY_WARN_SEC
+from gslib.utils.constants import MIN_ACCEPTABLE_OPEN_FILES_LIMIT
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.system_util import IS_CP1252
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.system_util import WINDOWS_1252
-from gslib.utils.unit_util import ONE_GIB
-from gslib.utils.unit_util import ONE_KIB
-from gslib.utils.unit_util import ONE_MIB
 
 import httplib2
 from retry_decorator import retry_decorator
@@ -58,54 +57,6 @@ try:
   HAS_RESOURCE_MODULE = True
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
-
-
-DEBUGLEVEL_DUMP_REQUESTS = 3
-DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
-
-DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
-RESUMABLE_THRESHOLD_MIB = 8
-RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
-
-
-# Start with a progress callback every 64 KiB during uploads/downloads (JSON
-# API). Callback implementation should back off until it hits the maximum size
-# so that callbacks do not create huge amounts of log output.
-START_CALLBACK_PER_BYTES = 256 * ONE_KIB
-MAX_CALLBACK_PER_BYTES = 100 * ONE_MIB
-
-# Upload/download files in 8 KiB chunks over the HTTP connection.
-# TODO: This should say the unit in the name.
-TRANSFER_BUFFER_SIZE = 8 * ONE_KIB
-
-# Default number of progress callbacks during transfer (XML API).
-XML_PROGRESS_CALLBACKS = 10
-
-# Number of objects to request in listing calls.
-NUM_OBJECTS_PER_LIST_PAGE = 1000
-
-# For files >= this size, output a message indicating that we're running an
-# operation on the file (like hashing or gzipping) so it does not appear to the
-# user that the command is hanging.
-# TODO: This should say the unit in the name.
-MIN_SIZE_COMPUTE_LOGGING = 100 * ONE_MIB
-
-
-# Number of seconds to wait before printing a long retry warning message.
-LONG_RETRY_WARN_SEC = 10
-
-
-# Compressed transport encoded uploads buffer chunks of compressed data. When
-# running many uploads in parallel, compression may consume more memory than
-# available. This restricts the number of compressed transport encoded uploads
-# running in parallel such that they don't consume more memory than set here.
-MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = 2 * ONE_GIB
-
-# On Unix-like systems, we will set the maximum number of open files to avoid
-# hitting the limit imposed by the OS. This number was obtained experimentally.
-MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
-
-
 
 Retry = retry_decorator.retry  # pylint: disable=invalid-name
 

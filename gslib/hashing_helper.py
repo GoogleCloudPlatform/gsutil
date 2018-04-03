@@ -23,10 +23,10 @@ from boto import config
 import crcmod
 
 from gslib.exception import CommandException
-from gslib.util import DEFAULT_FILE_BUFFER_SIZE
-from gslib.util import MIN_SIZE_COMPUTE_LOGGING
-from gslib.util import TRANSFER_BUFFER_SIZE
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
+from gslib.utils.constants import MIN_SIZE_COMPUTE_LOGGING
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 
 
 SLOW_CRCMOD_WARNING = """

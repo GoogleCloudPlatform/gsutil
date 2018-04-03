@@ -28,7 +28,7 @@ import gslib.tests.testcase as testcase
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.ui_controller import ZERO_TASKS_TO_DO_ARGUMENT
-from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
 from gslib.utils.unit_util import MakeHumanReadable
 
 

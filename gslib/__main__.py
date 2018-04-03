@@ -69,12 +69,13 @@ from gslib.exception import CommandException
 from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.util import CreateLock
-from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
-from gslib.util import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
+from gslib.utils import constants
 from gslib.utils.boto_util import GetBotoConfigFileList
 from gslib.utils.boto_util import GetCertsFile
 from gslib.utils.boto_util import GetCleanupFiles
 from gslib.utils.boto_util import ProxyInfoFromEnvironmentVar
+from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
+from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
 from gslib.utils.constants import UTF8
 from gslib.utils.system_util import GetGsutilClientIdAndSecret
 from gslib.sig_handling import GetCaughtSignals
@@ -319,7 +320,7 @@ def main():
         test_exception_traces = True
         # Avoid printing extra warnings to stderr regarding long retries by
         # setting the threshold very high.
-        gslib.util.LONG_RETRY_WARN_SEC = 3600
+        constants.LONG_RETRY_WARN_SEC = 3600
       elif o in ('-o', '--option'):
         (opt_section_name, _, opt_value) = a.partition('=')
         if not opt_section_name:

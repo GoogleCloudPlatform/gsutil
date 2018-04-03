@@ -24,7 +24,7 @@ from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import CloudApi
 from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.util import CreateLock
-from gslib.util import TRANSFER_BUFFER_SIZE
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 
 
 # This controls the amount of bytes downloaded per download request.

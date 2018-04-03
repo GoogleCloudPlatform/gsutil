@@ -19,7 +19,7 @@ import time
 
 from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.thread_message import SeekAheadMessage
-from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
 
 
 class SeekAheadResult(object):

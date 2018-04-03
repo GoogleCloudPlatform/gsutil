@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 
 from gslib.help_provider import HelpProvider
-from gslib.util import RESUMABLE_THRESHOLD_MIB
+from gslib.utils.constants import RESUMABLE_THRESHOLD_MIB
 
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>

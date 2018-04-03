@@ -25,7 +25,7 @@ from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.hashing_helper import HashingFileUploadWrapper
 import gslib.tests.testcase as testcase
 from gslib.util import StorageUrlFromString
-from gslib.util import TRANSFER_BUFFER_SIZE
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 
 
 _TEST_FILE = 'test.txt'
