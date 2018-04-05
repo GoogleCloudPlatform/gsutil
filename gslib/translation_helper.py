@@ -661,6 +661,32 @@ def AddS3MarkerAclToObjectMetadata(object_metadata, acl_text):
           key=S3_ACL_MARKER_GUID, value=acl_text))
 
 
+def UnaryDictToXml(message):
+  """Generates XML representation of a nested dict.
+
+  This dict contains exactly one top-level entry and an arbitrary number of
+  2nd-level entries, e.g. capturing a WebsiteConfiguration message.
+
+  Args:
+    message: The dict encoding the message.
+
+  Returns:
+    XML string representation of the input dict.
+
+  Raises:
+    Exception: if dict contains more than one top-level entry.
+  """
+  if len(message) != 1:
+    raise Exception('Expected dict of size 1, got size %d' % len(message))
+
+  name, content = message.items()[0]
+  element_type = ElementTree.Element(name)
+  for element_property, value in sorted(content.items()):
+    node = ElementTree.SubElement(element_type, element_property)
+    node.text = value
+  return ElementTree.tostring(element_type)
+
+
 class LabelTranslation(object):
   """Functions for converting between various Label(JSON)/Tags(XML) formats.
 

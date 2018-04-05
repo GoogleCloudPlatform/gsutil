@@ -21,6 +21,7 @@ import json
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
 from gslib.cloud_api import ArgumentException
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
@@ -41,7 +42,6 @@ from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import GetCloudApiInstance
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
 

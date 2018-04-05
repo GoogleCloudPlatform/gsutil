@@ -29,6 +29,7 @@ from gslib.cat_helper import CatHelper
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.copy_helper import CreateCopyHelperOpts
 from gslib.copy_helper import GetSourceFieldsNeededForCopy
 from gslib.copy_helper import GZIP_ALL_FILES
@@ -55,7 +56,6 @@ from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
-from gslib.util import GetCloudApiInstance
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import NO_MAX
 from gslib.utils.system_util import GetStreamFromFileUrl

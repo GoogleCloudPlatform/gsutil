@@ -24,6 +24,9 @@ A constant should not be placed in this file if:
   unit_util.py).
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import sys
 
 from gslib.utils.unit_util import ONE_GIB

@@ -87,8 +87,7 @@ from gslib.translation_helper import LabelTranslation
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
-from gslib.util import AddAcceptEncodingGzipIfNeeded
-from gslib.util import UnaryDictToXml
+from gslib.translation_helper import UnaryDictToXml
 from gslib.utils.boto_util import ConfigureNoOpAuthIfNeeded
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
@@ -96,6 +95,7 @@ from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
+from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
 from gslib.utils.text_util import EncodeStringAsLong
 from gslib.utils.unit_util import TWO_MIB
 

@@ -14,6 +14,9 @@
 # limitations under the License.
 """Shared utility structures and methods for handling request retries."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import logging
 import time
 

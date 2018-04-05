@@ -40,6 +40,7 @@ import boto
 import boto.gs.connection
 
 import gslib
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.cloud_api_helper import GetDownloadSerializationData
@@ -53,7 +54,6 @@ from gslib.file_part import FilePart
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import GetCloudApiInstance
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import ResumableThreshold
 from gslib.utils.system_util import CheckFreeSpace

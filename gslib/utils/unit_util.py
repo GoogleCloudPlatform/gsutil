@@ -14,6 +14,9 @@
 # limitations under the License.
 """Shared utility methods that calculate, convert, and simplify units."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import math
 import re
 

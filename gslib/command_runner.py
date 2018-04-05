@@ -44,11 +44,11 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import IsCustomMetadataHeader
 from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
 from gslib.utils.constants import UTF8
+from gslib.utils.metadata_util import IsCustomMetadataHeader
 from gslib.utils.system_util import IsRunningInteractively
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.text_util import InsistAsciiHeader

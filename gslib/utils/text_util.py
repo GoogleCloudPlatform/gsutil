@@ -14,6 +14,9 @@
 # limitations under the License.
 """Shared utility structures and methods for manipulating text."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import re
 import urlparse
 

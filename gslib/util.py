@@ -15,26 +15,20 @@
 """Static data and helper functions."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import collections
-import logging
 import multiprocessing
 import os
 import threading
-import time
 import traceback
-import xml.etree.ElementTree as ElementTree
-
 
 import gslib
-from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
 from gslib.utils.boto_util import GetGsutilStateDir
 from gslib.utils.constants import MIN_ACCEPTABLE_OPEN_FILES_LIMIT
 from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.system_util import IS_WINDOWS
-
-import httplib2
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -44,9 +38,7 @@ try:
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
-
 global manager  # pylint: disable=global-at-module-level
-
 # Cache the values from this check such that they're available to all callers
 # without needing to run all the checks again (some of these, such as calling
 # multiprocessing.Manager(), are expensive operations).
@@ -54,118 +46,12 @@ cached_multiprocessing_is_available = None
 cached_multiprocessing_is_available_stack_trace = None
 cached_multiprocessing_is_available_message = None
 
-
-def ObjectIsGzipEncoded(obj_metadata):
-  """Returns true if source apitools Object has gzip content-encoding."""
-  return (obj_metadata.contentEncoding and
-          obj_metadata.contentEncoding.lower().endswith('gzip'))
-
-
-def AddAcceptEncodingGzipIfNeeded(headers_dict, compressed_encoding=False):
-  if compressed_encoding:
-    # If we send accept-encoding: gzip with a range request, the service
-    # may respond with the whole object, which would be bad for resuming.
-    # So only accept gzip encoding if the object we are downloading has
-    # a gzip content encoding.
-    # TODO: If we want to support compressive transcoding fully in the client,
-    # condition on whether we are requesting the entire range of the object.
-    # In this case, we can accept the first bytes of the object compressively
-    # transcoded, but we must perform data integrity checking on bytes after
-    # they are decompressed on-the-fly, and any connection break must be
-    # resumed without compressive transcoding since we cannot specify an
-    # offset. We would also need to ensure that hashes for downloaded data
-    # from objects stored with content-encoding:gzip continue to be calculated
-    # prior to our own on-the-fly decompression so they match the stored hashes.
-    headers_dict['accept-encoding'] = 'gzip'
-
-
 # Name of file where we keep the timestamp for the last time we checked whether
 # a new version of gsutil is available.
 PrintTrackerDirDeprecationWarningIfNeeded()
 CreateDirIfNeeded(GetGsutilStateDir())
 LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
     os.path.join(GetGsutilStateDir(), '.last_software_update_check'))
-
-
-def UnaryDictToXml(message):
-  """Generates XML representation of a nested dict.
-
-  This dict contains exactly one top-level entry and an arbitrary number of
-  2nd-level entries, e.g. capturing a WebsiteConfiguration message.
-
-  Args:
-    message: The dict encoding the message.
-
-  Returns:
-    XML string representation of the input dict.
-
-  Raises:
-    Exception: if dict contains more than one top-level entry.
-  """
-  if len(message) != 1:
-    raise Exception('Expected dict of size 1, got size %d' % len(message))
-
-  name, content = message.items()[0]
-  element_type = ElementTree.Element(name)
-  for element_property, value in sorted(content.items()):
-    node = ElementTree.SubElement(element_type, element_property)
-    node.text = value
-  return ElementTree.tostring(element_type)
-
-
-def CreateCustomMetadata(entries=None, custom_metadata=None):
-  """Creates a custom metadata (apitools Object.MetadataValue) object.
-
-  Inserts the key/value pairs in entries.
-
-  Args:
-    entries: The dictionary containing key/value pairs to insert into metadata.
-    custom_metadata: A pre-existing custom metadata object to add to.
-
-  Returns:
-    An apitools Object.MetadataVlue.
-  """
-  if custom_metadata is None:
-    custom_metadata = apitools_messages.Object.MetadataValue(
-        additionalProperties=[])
-  if entries is None:
-    entries = {}
-  for key, value in entries.iteritems():
-    custom_metadata.additionalProperties.append(
-        apitools_messages.Object.MetadataValue.AdditionalProperty(
-            key=str(key), value=str(value)))
-  return custom_metadata
-
-
-def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
-                                     default_value=None):
-  """Filters a specific element out of an object's custom metadata.
-
-  Args:
-    obj_metadata: The metadata for an object.
-    search_key: The custom metadata key to search for.
-    default_value: The default value to use for the key if it cannot be found.
-
-  Returns:
-    A tuple indicating if the value could be found in metadata and a value
-    corresponding to search_key. The value at the specified key in custom
-    metadata or the default value, if the specified key does not exist in the
-    customer metadata.
-  """
-  try:
-    value = next((attr.value for attr in
-                  obj_metadata.metadata.additionalProperties
-                  if attr.key == search_key), None)
-    if value is None:
-      return False, default_value
-    return True, value
-  except AttributeError:
-    return False, default_value
-
-
-def IsCustomMetadataHeader(header):
-  """Returns true if header (which must be lowercase) is a custom header."""
-  return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
 
 
 def _IncreaseSoftLimitForResource(resource_name, fallback_value):
@@ -216,24 +102,6 @@ def _IncreaseSoftLimitForResource(resource_name, fallback_value):
       return soft_limit
   else:
     return soft_limit
-
-
-def GetCloudApiInstance(cls, thread_state=None):
-  """Gets a gsutil Cloud API instance.
-
-  Since Cloud API implementations are not guaranteed to be thread-safe, each
-  thread needs its own instance. These instances are passed to each thread
-  via the thread pool logic in command.
-
-  Args:
-    cls: Command class to be used for single-threaded case.
-    thread_state: Per thread state from this thread containing a gsutil
-                  Cloud API instance.
-
-  Returns:
-    gsutil Cloud API instance.
-  """
-  return thread_state or cls.gsutil_api
 
 
 # This must be defined at the module level for pickling across processes.

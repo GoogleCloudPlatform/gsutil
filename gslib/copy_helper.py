@@ -50,6 +50,7 @@ from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import EncryptionException
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
@@ -126,8 +127,6 @@ from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CreateLock
-from gslib.util import GetCloudApiInstance
-from gslib.util import ObjectIsGzipEncoded
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
@@ -136,6 +135,7 @@ from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import MIN_SIZE_COMPUTE_LOGGING
 from gslib.utils.constants import UTF8
+from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils.system_util import CheckFreeSpace
 from gslib.utils.system_util import GetFileSize
 from gslib.utils.system_util import GetStreamFromFileUrl

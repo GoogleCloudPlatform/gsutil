@@ -19,6 +19,9 @@ simple file operations (disk info, retrieving metadata about existing files,
 creating directories, fetching environment variables, etc.).
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import errno
 import locale
 import os

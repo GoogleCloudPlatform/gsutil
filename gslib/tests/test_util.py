@@ -242,7 +242,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
   # We want to make sure the wrapped function is called without executing it.
   @mock.patch.object(retry_util.http_wrapper,
                      'HandleExceptionsAndRebuildHttpConnections')
-  @mock.patch.object(util.logging, 'info')
+  @mock.patch.object(retry_util.logging, 'info')
   def testWarnAfterManyRetriesHandler(self, mock_log_info_fn, mock_wrapped_fn):
     # The only ExceptionRetryArgs attributes that the function cares about are
     # num_retries and total_wait_sec; we can pass None for the other values.

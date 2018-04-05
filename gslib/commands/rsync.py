@@ -35,6 +35,7 @@ import crcmod
 
 from gslib import copy_helper
 from gslib.bucket_listing_ref import BucketListingObject
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
@@ -79,13 +80,12 @@ from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyCustomMetadata
-from gslib.util import CreateCustomMetadata
 from gslib.util import CreateLock
-from gslib.util import GetCloudApiInstance
-from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import ObjectIsGzipEncoded
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import UTF8
+from gslib.utils.metadata_util import CreateCustomMetadata
+from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
+from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils.rsync_util import DiffAction
 from gslib.utils.rsync_util import RsyncDiffToApply
 from gslib.utils.system_util import IS_WINDOWS

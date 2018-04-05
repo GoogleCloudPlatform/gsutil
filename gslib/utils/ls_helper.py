@@ -15,6 +15,7 @@
 """Utility functions and class for listing commands such as ls and du."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import fnmatch
 
@@ -80,7 +81,7 @@ def PrintDir(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
   """
-  print bucket_listing_ref.url_string.encode(UTF8)
+  print(bucket_listing_ref.url_string.encode(UTF8))
 
 
 # pylint: disable=unused-argument
@@ -102,7 +103,7 @@ def PrintDirHeader(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type PREFIX.
   """
-  print '%s:' % bucket_listing_ref.url_string.encode(UTF8)
+  print('%s:' % bucket_listing_ref.url_string.encode(UTF8))
 
 
 
@@ -140,38 +141,38 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     num_bytes = obj.size
     num_objs = 1
 
-  print '%s:' % url_str.encode(UTF8)
+  print('%s:' % url_str.encode(UTF8))
   if obj.timeCreated:
-    print MakeMetadataLine(
-        'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+    print(MakeMetadataLine(
+        'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.updated:
-    print MakeMetadataLine(
-        'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+    print(MakeMetadataLine(
+        'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if (obj.timeStorageClassUpdated and
       obj.timeStorageClassUpdated != obj.timeCreated):
-    print MakeMetadataLine(
+    print(MakeMetadataLine(
         'Storage class update time',
-        obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+        obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.storageClass:
-    print MakeMetadataLine('Storage class', obj.storageClass)
+    print(MakeMetadataLine('Storage class', obj.storageClass))
   if obj.kmsKeyName:
-    print MakeMetadataLine('KMS key', obj.kmsKeyName)
+    print(MakeMetadataLine('KMS key', obj.kmsKeyName))
   if obj.cacheControl:
-    print MakeMetadataLine('Cache-Control', obj.cacheControl)
+    print(MakeMetadataLine('Cache-Control', obj.cacheControl))
   if obj.contentDisposition:
-    print MakeMetadataLine('Content-Disposition', obj.contentDisposition)
+    print(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
   if obj.contentEncoding:
-    print MakeMetadataLine('Content-Encoding', obj.contentEncoding)
+    print(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
   if obj.contentLanguage:
-    print MakeMetadataLine('Content-Language', obj.contentLanguage)
-  print MakeMetadataLine('Content-Length', obj.size)
-  print MakeMetadataLine('Content-Type', obj.contentType)
+    print(MakeMetadataLine('Content-Language', obj.contentLanguage))
+  print(MakeMetadataLine('Content-Length', obj.size))
+  print(MakeMetadataLine('Content-Type', obj.contentType))
   if obj.componentCount:
-    print MakeMetadataLine('Component-Count', obj.componentCount)
+    print(MakeMetadataLine('Component-Count', obj.componentCount))
   if obj.timeDeleted:
-    print MakeMetadataLine(
+    print(MakeMetadataLine(
         'Archived time',
-        obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+        obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   marker_props = {}
   if obj.metadata and obj.metadata.additionalProperties:
     non_marker_props = []
@@ -181,41 +182,41 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       else:
         marker_props[add_prop.key] = add_prop.value
     if non_marker_props:
-      print MakeMetadataLine('Metadata', '')
+      print(MakeMetadataLine('Metadata', ''))
       for ap in non_marker_props:
-        print MakeMetadataLine(
+        print(MakeMetadataLine(
             ('%s' % ap.key).encode(UTF8), ('%s' % ap.value).encode(UTF8),
-            indent=2)
+            indent=2))
   if obj.customerEncryption:
     if not obj.crc32c:
-      print MakeMetadataLine('Hash (crc32c)', 'encrypted')
+      print(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
     if not obj.md5Hash:
-      print MakeMetadataLine('Hash (md5)', 'encrypted')
-    print MakeMetadataLine(
-        'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm)
-    print MakeMetadataLine(
-        'Encryption key SHA256', obj.customerEncryption.keySha256)
+      print(MakeMetadataLine('Hash (md5)', 'encrypted'))
+    print(MakeMetadataLine(
+        'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm))
+    print(MakeMetadataLine(
+        'Encryption key SHA256', obj.customerEncryption.keySha256))
   if obj.crc32c:
-    print MakeMetadataLine('Hash (crc32c)', obj.crc32c)
+    print(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
   if obj.md5Hash:
-    print MakeMetadataLine('Hash (md5)', obj.md5Hash)
-  print MakeMetadataLine('ETag', obj.etag.strip('"\''))
+    print(MakeMetadataLine('Hash (md5)', obj.md5Hash))
+  print(MakeMetadataLine('ETag', obj.etag.strip('"\'')))
   if obj.generation:
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
-    print MakeMetadataLine('Generation', generation_str)
+    print(MakeMetadataLine('Generation', generation_str))
   if obj.metageneration:
-    print MakeMetadataLine('Metageneration', obj.metageneration)
+    print(MakeMetadataLine('Metageneration', obj.metageneration))
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
     if obj.acl:
-      print MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl))
+      print(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
     elif S3_ACL_MARKER_GUID in marker_props:
-      print MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID])
+      print(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
     else:
-      print MakeMetadataLine('ACL', 'ACCESS DENIED')
-      print MakeMetadataLine(
-          'Note', 'You need OWNER permission on the object to read its ACL', 2)
+      print(MakeMetadataLine('ACL', 'ACCESS DENIED'))
+      print(MakeMetadataLine(
+          'Note', 'You need OWNER permission on the object to read its ACL', 2))
   return (num_objs, num_bytes)
 
 
@@ -229,7 +230,7 @@ def PrintObject(bucket_listing_ref):
     (num_objects, num_bytes).
   """
   try:
-    print bucket_listing_ref.url_string.encode(UTF8)
+    print(bucket_listing_ref.url_string.encode(UTF8))
   except IOError as e:
     # Windows throws an IOError 0 here for object names containing Unicode
     # chars. Ignore it.

@@ -14,6 +14,9 @@
 # limitations under the License.
 """Shared utility structures and methods for rsync functionality."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 
 class DiffAction(object):
   """Enum class representing possible actions to take for an rsync diff."""

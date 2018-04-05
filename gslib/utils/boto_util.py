@@ -18,6 +18,9 @@ This module also imports httplib2 (as it is Boto's http transport and closely
 tied to some of Boto's core functionality) and oauth2client.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import pkgutil
 import os
 import tempfile

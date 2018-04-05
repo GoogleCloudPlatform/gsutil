@@ -23,6 +23,7 @@ from apitools.base.py import encoding
 from boto import config
 
 from gslib.cloud_api import EncryptionException
+from gslib.cloud_api import GetCloudApiInstance
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -38,7 +39,6 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
 from gslib.translation_helper import PreconditionsFromHeaders
-from gslib.util import GetCloudApiInstance
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import UTF8
 from gslib.utils.system_util import StdinIterator
