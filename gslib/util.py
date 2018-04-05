@@ -25,30 +25,16 @@ import time
 import traceback
 import xml.etree.ElementTree as ElementTree
 
-from apitools.base.py import http_wrapper
 
 import gslib
-from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.thread_message import RetryableErrorMessage
-from gslib.translation_helper import AclTranslation
-from gslib.translation_helper import GenerationFromUrlAndString
-from gslib.translation_helper import S3_ACL_MARKER_GUID
-from gslib.translation_helper import S3_DELETE_MARKER_GUID
-from gslib.translation_helper import S3_MARKER_GUIDS
 from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
 from gslib.utils.boto_util import GetGsutilStateDir
-from gslib.utils.constants import LONG_RETRY_WARN_SEC
 from gslib.utils.constants import MIN_ACCEPTABLE_OPEN_FILES_LIMIT
-from gslib.utils.constants import UTF8
-from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import CreateDirIfNeeded
-from gslib.utils.system_util import IS_CP1252
 from gslib.utils.system_util import IS_WINDOWS
-from gslib.utils.system_util import WINDOWS_1252
 
 import httplib2
-from retry_decorator import retry_decorator
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -58,7 +44,6 @@ try:
 except ImportError, e:
   HAS_RESOURCE_MODULE = False
 
-Retry = retry_decorator.retry  # pylint: disable=invalid-name
 
 global manager  # pylint: disable=global-at-module-level
 
@@ -183,139 +168,6 @@ def IsCustomMetadataHeader(header):
   return header.startswith('x-goog-meta-') or header.startswith('x-amz-meta-')
 
 
-# TODO(refactor): Move this to ls_helper?
-# pylint: disable=too-many-statements
-def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
-  """Print full info for given object (like what displays for gsutil ls -L).
-
-  Args:
-    bucket_listing_ref: BucketListingRef being listed.
-                        Must have ref_type OBJECT and a populated root_object
-                        with the desired fields.
-    incl_acl: True if ACL info should be output.
-
-  Returns:
-    Tuple (number of objects, object_length)
-
-  Raises:
-    Exception: if calling bug encountered.
-  """
-  url_str = bucket_listing_ref.url_string
-  storage_url = StorageUrlFromString(url_str)
-  obj = bucket_listing_ref.root_object
-
-  if (obj.metadata and S3_DELETE_MARKER_GUID in
-      obj.metadata.additionalProperties):
-    num_bytes = 0
-    num_objs = 0
-    url_str += '<DeleteMarker>'
-  else:
-    num_bytes = obj.size
-    num_objs = 1
-
-  print '%s:' % url_str.encode(UTF8)
-  if obj.timeCreated:
-    print MakeMetadataLine(
-        'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
-  if obj.updated:
-    print MakeMetadataLine(
-        'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
-  if (obj.timeStorageClassUpdated and
-      obj.timeStorageClassUpdated != obj.timeCreated):
-    print MakeMetadataLine(
-        'Storage class update time',
-        obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT'))
-  if obj.storageClass:
-    print MakeMetadataLine('Storage class', obj.storageClass)
-  if obj.kmsKeyName:
-    print MakeMetadataLine('KMS key', obj.kmsKeyName)
-  if obj.cacheControl:
-    print MakeMetadataLine('Cache-Control', obj.cacheControl)
-  if obj.contentDisposition:
-    print MakeMetadataLine('Content-Disposition', obj.contentDisposition)
-  if obj.contentEncoding:
-    print MakeMetadataLine('Content-Encoding', obj.contentEncoding)
-  if obj.contentLanguage:
-    print MakeMetadataLine('Content-Language', obj.contentLanguage)
-  print MakeMetadataLine('Content-Length', obj.size)
-  print MakeMetadataLine('Content-Type', obj.contentType)
-  if obj.componentCount:
-    print MakeMetadataLine('Component-Count', obj.componentCount)
-  if obj.timeDeleted:
-    print MakeMetadataLine(
-        'Archived time',
-        obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT'))
-  marker_props = {}
-  if obj.metadata and obj.metadata.additionalProperties:
-    non_marker_props = []
-    for add_prop in obj.metadata.additionalProperties:
-      if add_prop.key not in S3_MARKER_GUIDS:
-        non_marker_props.append(add_prop)
-      else:
-        marker_props[add_prop.key] = add_prop.value
-    if non_marker_props:
-      print MakeMetadataLine('Metadata', '')
-      for ap in non_marker_props:
-        print MakeMetadataLine(
-            ('%s' % ap.key).encode(UTF8), ('%s' % ap.value).encode(UTF8),
-            indent=2)
-  if obj.customerEncryption:
-    if not obj.crc32c:
-      print MakeMetadataLine('Hash (crc32c)', 'encrypted')
-    if not obj.md5Hash:
-      print MakeMetadataLine('Hash (md5)', 'encrypted')
-    print MakeMetadataLine(
-        'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm)
-    print MakeMetadataLine(
-        'Encryption key SHA256', obj.customerEncryption.keySha256)
-  if obj.crc32c:
-    print MakeMetadataLine('Hash (crc32c)', obj.crc32c)
-  if obj.md5Hash:
-    print MakeMetadataLine('Hash (md5)', obj.md5Hash)
-  print MakeMetadataLine('ETag', obj.etag.strip('"\''))
-  if obj.generation:
-    generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
-    print MakeMetadataLine('Generation', generation_str)
-  if obj.metageneration:
-    print MakeMetadataLine('Metageneration', obj.metageneration)
-  if incl_acl:
-    # JSON API won't return acls as part of the response unless we have
-    # full control scope
-    if obj.acl:
-      print MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl))
-    elif S3_ACL_MARKER_GUID in marker_props:
-      print MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID])
-    else:
-      print MakeMetadataLine('ACL', 'ACCESS DENIED')
-      print MakeMetadataLine(
-          'Note', 'You need OWNER permission on the object to read its ACL', 2)
-  return (num_objs, num_bytes)
-
-
-# TODO(refactor): Move this to ls_helper?
-def MakeMetadataLine(label, value, indent=1):
-  """Returns a string with a vertically aligned label and value.
-
-  Labels of the same indentation level will start at the same column. Values
-  will all start at the same column (unless the combined left-indent and
-  label length is excessively long). If a value spans multiple lines,
-  indentation will only be applied to the first line. Example output from
-  several calls:
-
-      Label1:            Value (default indent of 1 was used)
-          Sublabel1:     Value (used indent of 2 here)
-      Label2:            Value
-
-  Args:
-    label: The label to print in the first column.
-    value: The value to print in the second column.
-    indent: (4 * indent) spaces will be placed before the label.
-  Returns:
-    A string with a vertically aligned label and value.
-  """
-  return '%s%s' % (((' ' * indent * 4) + label + ':').ljust(28), value)
-
-
 def _IncreaseSoftLimitForResource(resource_name, fallback_value):
   """Sets a new soft limit for the maximum number of open files.
 
@@ -383,60 +235,6 @@ def GetCloudApiInstance(cls, thread_state=None):
   """
   return thread_state or cls.gsutil_api
 
-
-# TODO(refactor): Move this into storage_url or storage_url_util.
-def UrlsAreForSingleProvider(url_args):
-  """Tests whether the URLs are all for a single provider.
-
-  Args:
-    url_args: Strings to check.
-
-  Returns:
-    True if URLs are for single provider, False otherwise.
-  """
-  provider = None
-  url = None
-  for url_str in url_args:
-    url = StorageUrlFromString(url_str)
-    if not provider:
-      provider = url.scheme
-    elif url.scheme != provider:
-      return False
-  return provider is not None
-
-
-# TODO(refactor): Move this into storage_url or storage_url_util.
-def HaveFileUrls(args_to_check):
-  """Checks whether args_to_check contain any file URLs.
-
-  Args:
-    args_to_check: Command-line argument subset to check.
-
-  Returns:
-    True if args_to_check contains any file URLs.
-  """
-  for url_str in args_to_check:
-    storage_url = StorageUrlFromString(url_str)
-    if storage_url.IsFileUrl():
-      return True
-  return False
-
-
-# TODO(refactor): Move this into storage_url or storage_url_util.
-def HaveProviderUrls(args_to_check):
-  """Checks whether args_to_check contains any provider URLs (like 'gs://').
-
-  Args:
-    args_to_check: Command-line argument subset to check.
-
-  Returns:
-    True if args_to_check contains any provider URLs.
-  """
-  for url_str in args_to_check:
-    storage_url = StorageUrlFromString(url_str)
-    if storage_url.IsCloudUrl() and storage_url.IsProvider():
-      return True
-  return False
 
 # This must be defined at the module level for pickling across processes.
 MultiprocessingIsAvailableResult = collections.namedtuple(
@@ -578,92 +376,4 @@ def CreateLock():
     return threading.Lock()
 
 
-# TODO(refactor): Move this into storage_url or storage_url_util.
-def IsCloudSubdirPlaceholder(url, blr=None):
-  """Determines if URL is a cloud subdir placeholder.
 
-  This function is needed because GUI tools (like the GCS cloud console) allow
-  users to create empty "folders" by creating a placeholder object; and parts
-  of gsutil need to treat those placeholder objects specially. For example,
-  gsutil rsync needs to avoid downloading those objects because they can cause
-  conflicts (see comments in rsync command for details).
-
-  We currently detect two cases:
-    - Cloud objects whose name ends with '_$folder$'
-    - Cloud objects whose name ends with '/'
-
-  Args:
-    url: (gslib.storage_url.StorageUrl) The URL to be checked.
-    blr: (gslib.BucketListingRef or None) The blr to check, or None if not
-        available. If `blr` is None, size won't be checked.
-
-  Returns:
-    (bool) True if the URL is a cloud subdir placeholder, otherwise False.
-  """
-  if not url.IsCloudUrl():
-    return False
-  url_str = url.url_string
-  if url_str.endswith('_$folder$'):
-    return True
-  if blr and blr.IsObject():
-    size = blr.root_object.size
-  else:
-    size = 0
-  return size == 0 and url_str.endswith('/')
-
-
-def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
-  """Higher-order function allowing retry handler to access global status queue.
-
-  Args:
-    is_data_transfer: If True, disable retries in apitools.
-    status_queue: The global status queue.
-
-  Returns:
-    A retry function for retryable errors in apitools.
-  """
-  def WarnAfterManyRetriesHandler(retry_args):
-    """Exception handler for http failures in apitools.
-
-    If the user has had to wait several seconds since their first request, print
-    a progress message to the terminal to let them know we're still retrying,
-    then perform the default retry logic and post a RetryableErrorMessage to the
-    global status queue.
-
-    Args:
-      retry_args: An apitools ExceptionRetryArgs tuple.
-    """
-    if retry_args.total_wait_sec >= LONG_RETRY_WARN_SEC:
-      logging.info('Retrying request, attempt #%d...', retry_args.num_retries)
-    if status_queue:
-      status_queue.put(RetryableErrorMessage(
-          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
-          total_wait_sec=retry_args.total_wait_sec))
-    http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
-
-  def RetriesInDataTransferHandler(retry_args):
-    """Exception handler that disables retries in apitools data transfers.
-
-    Post a RetryableErrorMessage to the global status queue. We handle the
-    actual retries within the download and upload functions.
-
-    Args:
-      retry_args: An apitools ExceptionRetryArgs tuple.
-    """
-    if status_queue:
-      status_queue.put(RetryableErrorMessage(
-          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
-          total_wait_sec=retry_args.total_wait_sec))
-    http_wrapper.RethrowExceptionHandler(retry_args)
-
-  if is_data_transfer:
-    return RetriesInDataTransferHandler
-  return WarnAfterManyRetriesHandler
-
-
-# TODO(refactor): Move this into storage_url or storage_url_util... or maybe
-# text_util??
-def ConvertRecursiveToFlatWildcard(url_strs):
-  """A generator that adds '**' to each url string in url_strs."""
-  for url_str in url_strs:
-    yield '%s**' % url_str

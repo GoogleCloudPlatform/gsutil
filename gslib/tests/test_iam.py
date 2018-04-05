@@ -30,7 +30,7 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 bvle = apitools_messages.Policy.BindingsValueListEntry
 

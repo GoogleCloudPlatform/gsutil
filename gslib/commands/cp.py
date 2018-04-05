@@ -51,11 +51,11 @@ from gslib.posix_util import POSIXAttributes
 from gslib.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
-from gslib.util import IsCloudSubdirPlaceholder
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import NO_MAX
 from gslib.utils.system_util import GetStreamFromFileUrl

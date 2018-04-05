@@ -72,6 +72,7 @@ from gslib.hashing_helper import Base64EncodeHash
 from gslib.hashing_helper import Base64ToHexHash
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
+from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import AclTranslation
@@ -81,22 +82,21 @@ from gslib.translation_helper import CreateBucketNotFoundException
 from gslib.translation_helper import CreateNotFoundExceptionForObjectWrite
 from gslib.translation_helper import CreateObjectNotFoundException
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
-from gslib.translation_helper import EncodeStringAsLong
-from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import HeadersFromObjectMetadata
 from gslib.translation_helper import LabelTranslation
 from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import AddAcceptEncodingGzipIfNeeded
-from gslib.util import S3_DELETE_MARKER_GUID
 from gslib.util import UnaryDictToXml
 from gslib.utils.boto_util import ConfigureNoOpAuthIfNeeded
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
+from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
+from gslib.utils.text_util import EncodeStringAsLong
 from gslib.utils.unit_util import TWO_MIB
 
 TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,

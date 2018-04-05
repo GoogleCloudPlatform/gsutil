@@ -37,8 +37,8 @@ from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.util import GetCloudApiInstance
 from gslib.util import IsCustomMetadataHeader
-from gslib.util import Retry
 from gslib.utils.constants import NO_MAX
+from gslib.utils.retry_util import Retry
 from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
 

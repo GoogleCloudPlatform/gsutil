@@ -30,11 +30,11 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
-from gslib.util import Retry
-from gslib.util import UrlsAreForSingleProvider
 from gslib.utils.constants import NO_MAX
+from gslib.utils.retry_util import Retry
 
 _SET_SYNOPSIS = """
   gsutil defacl set file-or-canned_acl_name url...

@@ -120,6 +120,45 @@ def CompareVersions(first, second):
   return (False, False)
 
 
+def ConvertRecursiveToFlatWildcard(url_strs):
+  """A generator that adds '**' to each url string in url_strs."""
+  for url_str in url_strs:
+    yield '%s**' % url_str
+
+
+def DecodeLongAsString(long_to_convert):
+  """Decodes an encoded python long into an ASCII string.
+
+  This is used for modeling S3 version_id's as apitools generation.
+
+  Args:
+    long_to_convert: long to convert to ASCII string. If this is already a
+                     string, it is simply returned.
+
+  Returns:
+    String decoded from the input long.
+  """
+  if isinstance(long_to_convert, basestring):
+    # Already converted.
+    return long_to_convert
+  return hex(long_to_convert)[2:-1].decode('hex')
+
+
+def EncodeStringAsLong(string_to_convert):
+  """Encodes an ASCII string as a python long.
+
+  This is used for modeling S3 version_id's as apitools generation.  Because
+  python longs can be arbitrarily large, this works.
+
+  Args:
+    string_to_convert: ASCII string to convert to a long.
+
+  Returns:
+    Long that represents the input string.
+  """
+  return long(string_to_convert.encode('hex'), 16)
+
+
 def FixWindowsEncodingIfNeeded(input_str):
   """Attempts to detect Windows CP1252 encoding and convert to UTF8.
 

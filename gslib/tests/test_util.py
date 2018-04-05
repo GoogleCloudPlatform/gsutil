@@ -27,6 +27,8 @@ from gslib import util
 from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import system_util
+from gslib.utils import ls_helper
+from gslib.utils import retry_util
 from gslib.utils import text_util
 from gslib.utils import unit_util
 import gslib.tests.testcase as testcase
@@ -180,7 +182,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
         TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
                    expected=('    AKeyMuchLongerThanTheLast:Value')))
     for params in test_params:
-      line = util.MakeMetadataLine(*(params.args), **(params.kwargs))
+      line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
       self.assertEqual(line, params.expected)
 
   def testProxyInfoFromEnvironmentVar(self):
@@ -238,23 +240,23 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
 
   # We want to make sure the wrapped function is called without executing it.
-  @mock.patch.object(util.http_wrapper,
+  @mock.patch.object(retry_util.http_wrapper,
                      'HandleExceptionsAndRebuildHttpConnections')
   @mock.patch.object(util.logging, 'info')
   def testWarnAfterManyRetriesHandler(self, mock_log_info_fn, mock_wrapped_fn):
     # The only ExceptionRetryArgs attributes that the function cares about are
     # num_retries and total_wait_sec; we can pass None for the other values.
-    retry_args_over_threshold = util.http_wrapper.ExceptionRetryArgs(
+    retry_args_over_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
         None, None, None, 3, None, constants.LONG_RETRY_WARN_SEC + 1)
-    retry_args_under_threshold = util.http_wrapper.ExceptionRetryArgs(
+    retry_args_under_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
         None, None, None, 2, None, constants.LONG_RETRY_WARN_SEC - 1)
 
-    util.LogAndHandleRetries()(retry_args_under_threshold)
+    retry_util.LogAndHandleRetries()(retry_args_under_threshold)
     self.assertTrue(mock_wrapped_fn.called)
     # Check that we didn't emit a message.
     self.assertFalse(mock_log_info_fn.called)
 
-    util.LogAndHandleRetries()(retry_args_over_threshold)
+    retry_util.LogAndHandleRetries()(retry_args_over_threshold)
     self.assertEqual(mock_wrapped_fn.call_count, 2)
     # Check that we did emit a message.
     self.assertTrue(mock_log_info_fn.called)

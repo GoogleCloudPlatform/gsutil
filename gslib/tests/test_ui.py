@@ -65,10 +65,10 @@ from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import MetadataManager
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
-from gslib.util import Retry
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
+from gslib.utils.retry_util import Retry
 from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB

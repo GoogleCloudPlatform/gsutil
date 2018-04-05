@@ -101,6 +101,8 @@ from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import GenerationFromUrlAndString
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
@@ -119,14 +121,12 @@ from gslib.tracker_file import WriteDownloadComponentTrackerFile
 from gslib.translation_helper import AddS3MarkerAclToObjectMetadata
 from gslib.translation_helper import CopyObjectMetadata
 from gslib.translation_helper import DEFAULT_CONTENT_TYPE
-from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
-from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import ObjectIsGzipEncoded
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay

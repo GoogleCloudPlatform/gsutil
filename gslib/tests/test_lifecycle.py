@@ -26,7 +26,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
 from gslib.translation_helper import LifecycleTranslation
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 @SkipForS3('Lifecycle command is only supported for gs:// URLs')

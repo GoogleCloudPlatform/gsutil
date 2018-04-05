@@ -59,9 +59,9 @@ from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.util import CreateCustomMetadata
 from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import Retry
 from gslib.utils.constants import UTF8
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.retry_util import Retry
 
 
 LOGGER = logging.getLogger('integration-test')

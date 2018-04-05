@@ -67,6 +67,11 @@ RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
 RESUMABLE_THRESHOLD_MIB = 8
 RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
 
+# gsutil-specific GUIDs for marking special metadata for S3 compatibility.
+S3_ACL_MARKER_GUID = '3b89a6b5-b55a-4900-8c44-0b0a2f5eab43-s3-AclMarker'
+S3_DELETE_MARKER_GUID = 'eadeeee8-fa8c-49bb-8a7d-0362215932d8-s3-DeleteMarker'
+S3_MARKER_GUIDS = [S3_ACL_MARKER_GUID, S3_DELETE_MARKER_GUID]
+
 # By default, the timeout for SSL read errors is infinite. This could
 # cause gsutil to hang on network disconnect, so pick a more reasonable
 # timeout.

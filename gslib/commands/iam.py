@@ -42,8 +42,8 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.util import GetCloudApiInstance
-from gslib.util import Retry
 from gslib.utils.constants import NO_MAX
+from gslib.utils.retry_util import Retry
 
 _SET_SYNOPSIS = """
   gsutil iam set [-afRr] [-e <etag>] file url ...

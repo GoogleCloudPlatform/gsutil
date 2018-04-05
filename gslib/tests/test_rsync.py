@@ -40,8 +40,8 @@ from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
-from gslib.util import Retry
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
 

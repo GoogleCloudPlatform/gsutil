@@ -70,7 +70,10 @@ from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import KillProcess
 from gslib.sig_handling import MultithreadedMainSignalHandler
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.storage_url import HaveFileUrls
+from gslib.storage_url import HaveProviderUrls
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
@@ -82,9 +85,6 @@ from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import HaveFileUrls
-from gslib.util import HaveProviderUrls
-from gslib.util import UrlsAreForSingleProvider
 from gslib.utils.boto_util import GetConfigFilePaths
 from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
 from gslib.utils.constants import NO_MAX

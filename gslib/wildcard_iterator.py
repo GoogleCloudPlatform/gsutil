@@ -31,11 +31,11 @@ from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
 from gslib.storage_url import WILDCARD_REGEX
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.utils.constants import UTF8
 from gslib.utils.text_util import FixWindowsEncodingIfNeeded
 from gslib.utils.text_util import PrintableStr

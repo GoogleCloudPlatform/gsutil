@@ -74,15 +74,15 @@ from gslib.posix_util import WarnNegativeAttribute
 from gslib.seek_ahead_thread import SeekAheadResult
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.storage_url import GenerationFromUrlAndString
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyCustomMetadata
-from gslib.translation_helper import GenerationFromUrlAndString
 from gslib.util import CreateCustomMetadata
 from gslib.util import CreateLock
 from gslib.util import GetCloudApiInstance
 from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import IsCloudSubdirPlaceholder
 from gslib.util import ObjectIsGzipEncoded
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import UTF8

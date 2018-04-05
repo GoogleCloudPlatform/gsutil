@@ -18,22 +18,22 @@ from __future__ import absolute_import
 
 import re
 
-from gslib.boto_translation import S3_DELETE_MARKER_GUID
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.ls_helper import ENCRYPTED_FIELDS
-from gslib.ls_helper import LsHelper
-from gslib.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.translation_helper import AclTranslation
 from gslib.translation_helper import LabelTranslation
-from gslib.util import PrintFullInfoAboutObject
 from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
+from gslib.utils.ls_helper import ENCRYPTED_FIELDS
+from gslib.utils.ls_helper import LsHelper
+from gslib.utils.ls_helper import PrintFullInfoAboutObject
+from gslib.utils.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import MakeHumanReadable
 
@@ -541,11 +541,12 @@ class LsCommand(Command):
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
-          ls_helper = LsHelper(self.WildcardIterator, self.logger,
-                               all_versions=self.all_versions,
-                               print_bucket_header_func=print_bucket_header,
-                               should_recurse=self.recursion_requested,
-                               list_subdir_contents=self.list_subdir_contents)
+          listing_helper = LsHelper(
+              self.WildcardIterator, self.logger,
+              all_versions=self.all_versions,
+              print_bucket_header_func=print_bucket_header,
+              should_recurse=self.recursion_requested,
+              list_subdir_contents=self.list_subdir_contents)
         elif listing_style == ListingStyle.LONG:
           bucket_listing_fields = ['name', 'timeCreated', 'updated', 'size']
           if self.all_versions:
@@ -553,31 +554,34 @@ class LsCommand(Command):
           if self.include_etag:
             bucket_listing_fields.append('etag')
 
-          ls_helper = LsHelper(self.WildcardIterator, self.logger,
-                               print_object_func=self._PrintLongListing,
-                               print_dir_func=_PrintPrefixLong,
-                               print_bucket_header_func=print_bucket_header,
-                               all_versions=self.all_versions,
-                               should_recurse=self.recursion_requested,
-                               fields=bucket_listing_fields,
-                               list_subdir_contents=self.list_subdir_contents)
+          listing_helper = LsHelper(
+              self.WildcardIterator, self.logger,
+              print_object_func=self._PrintLongListing,
+              print_dir_func=_PrintPrefixLong,
+              print_bucket_header_func=print_bucket_header,
+              all_versions=self.all_versions,
+              should_recurse=self.recursion_requested,
+              fields=bucket_listing_fields,
+              list_subdir_contents=self.list_subdir_contents)
 
         elif listing_style == ListingStyle.LONG_LONG:
           # List all fields
           bucket_listing_fields = (UNENCRYPTED_FULL_LISTING_FIELDS +
                                    ENCRYPTED_FIELDS)
-          ls_helper = LsHelper(self.WildcardIterator, self.logger,
-                               print_object_func=PrintFullInfoAboutObject,
-                               print_dir_func=_PrintPrefixLong,
-                               print_bucket_header_func=print_bucket_header,
-                               all_versions=self.all_versions,
-                               should_recurse=self.recursion_requested,
-                               fields=bucket_listing_fields,
-                               list_subdir_contents=self.list_subdir_contents)
+          listing_helper = LsHelper(
+              self.WildcardIterator, self.logger,
+              print_object_func=PrintFullInfoAboutObject,
+              print_dir_func=_PrintPrefixLong,
+              print_bucket_header_func=print_bucket_header,
+              all_versions=self.all_versions,
+              should_recurse=self.recursion_requested,
+              fields=bucket_listing_fields,
+              list_subdir_contents=self.list_subdir_contents)
         else:
           raise CommandException('Unknown listing style: %s' % listing_style)
 
-        exp_dirs, exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
+        exp_dirs, exp_objs, exp_bytes = (
+            listing_helper.ExpandUrlAndPrint(storage_url))
         if storage_url.IsObject() and exp_objs == 0 and exp_dirs == 0:
           got_nomatch_errors = True
         total_bytes += exp_bytes

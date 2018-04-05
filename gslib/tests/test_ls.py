@@ -56,9 +56,9 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY4
 from gslib.tests.util import TEST_ENCRYPTION_KEY4_SHA256_B64
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import PrintFullInfoAboutObject
-from gslib.util import Retry
 from gslib.utils.constants import UTF8
+from gslib.utils.ls_helper import PrintFullInfoAboutObject
+from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
 import mock
 
