@@ -12,22 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Static data and helper functions."""
+"""Functionality initialized when starting gsStatic data and helper functions."""
 
 from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
 import multiprocessing
-import os
 import threading
 import traceback
 
 import gslib
-from gslib.utils.boto_util import PrintTrackerDirDeprecationWarningIfNeeded
-from gslib.utils.boto_util import GetGsutilStateDir
 from gslib.utils.constants import MIN_ACCEPTABLE_OPEN_FILES_LIMIT
-from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.system_util import IS_WINDOWS
 
 # pylint: disable=g-import-not-at-top
@@ -46,12 +42,9 @@ cached_multiprocessing_is_available = None
 cached_multiprocessing_is_available_stack_trace = None
 cached_multiprocessing_is_available_message = None
 
-# Name of file where we keep the timestamp for the last time we checked whether
-# a new version of gsutil is available.
-PrintTrackerDirDeprecationWarningIfNeeded()
-CreateDirIfNeeded(GetGsutilStateDir())
-LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-    os.path.join(GetGsutilStateDir(), '.last_software_update_check'))
+# This must be defined at the module level for pickling across processes.
+MultiprocessingIsAvailableResult = collections.namedtuple(
+    'MultiprocessingIsAvailableResult', ['is_available', 'stack_trace'])
 
 
 def _IncreaseSoftLimitForResource(resource_name, fallback_value):
@@ -102,11 +95,6 @@ def _IncreaseSoftLimitForResource(resource_name, fallback_value):
       return soft_limit
   else:
     return soft_limit
-
-
-# This must be defined at the module level for pickling across processes.
-MultiprocessingIsAvailableResult = collections.namedtuple(
-    'MultiprocessingIsAvailableResult', ['is_available', 'stack_trace'])
 
 
 def CheckMultiprocessingAvailableAndInit(logger=None):

@@ -176,11 +176,13 @@ def _HasGSHost():
   return boto.config.get('Credentials', 'gs_host', None) is not None
 
 HAS_GS_HOST = _HasGSHost()
+HAS_NON_DEFAULT_GS_HOST = (
+    boto.gs.connection.GSConnection.DefaultHost != boto.config.get(
+        'Credentials', 'gs_host', None))
 
 
 def _HasGSPort():
   return boto.config.get('Credentials', 'gs_port', None) is not None
-
 
 HAS_GS_PORT = _HasGSPort()
 

@@ -44,7 +44,7 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
 from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE
+from gslib.utils import boto_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
 from gslib.utils.constants import UTF8
@@ -363,10 +363,12 @@ class CommandRunner(object):
     #   gcloud components update)
     logger = logging.getLogger()
     gs_host = boto.config.get('Credentials', 'gs_host', None)
+    gs_host_is_not_default = (
+        gs_host != boto.gs.connection.GSConnection.DefaultHost)
     if (not IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logger.isEnabledFor(logging.INFO)
-        or gs_host
+        or gs_host_is_not_default
         or os.environ.get('CLOUDSDK_WRAPPER') == '1'):
       return False
 
@@ -377,17 +379,20 @@ class CommandRunner(object):
     if software_update_check_period == 0:
       return False
 
+    last_checked_for_gsutil_update_timestamp_file = (
+        boto_util.GetLastCheckedForGsutilUpdateTimestampFile())
+
     cur_ts = int(time.time())
-    if not os.path.isfile(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE):
+    if not os.path.isfile(last_checked_for_gsutil_update_timestamp_file):
       # Set last_checked_ts from date of VERSION file, so if the user installed
       # an old copy of gsutil it will get noticed (and an update offered) the
       # first time they try to run it.
       last_checked_ts = gslib.GetGsutilVersionModifiedTime()
-      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
+      with open(last_checked_for_gsutil_update_timestamp_file, 'w') as f:
         f.write(str(last_checked_ts))
     else:
       try:
-        with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'r') as f:
+        with open(last_checked_for_gsutil_update_timestamp_file, 'r') as f:
           last_checked_ts = int(f.readline())
       except (TypeError, ValueError):
         return False
@@ -401,7 +406,7 @@ class CommandRunner(object):
                               credentials=NoOpCredentials(), debug=debug)
 
       cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
-      with open(LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE, 'w') as f:
+      with open(last_checked_for_gsutil_update_timestamp_file, 'w') as f:
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
       if m:

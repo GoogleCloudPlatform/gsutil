@@ -200,6 +200,10 @@ def GetJsonResumableChunkSize():
   return chunk_size
 
 
+def GetLastCheckedForGsutilUpdateTimestampFile():
+  return os.path.join(GetGsutilStateDir(), '.last_software_update_check')
+
+
 def GetMaxConcurrentCompressedUploads():
   """Gets the max concurrent transport compressed uploads allowed in parallel.
 
@@ -327,16 +331,6 @@ def JsonResumableChunkSizeDefined():
   chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size',
                                   None)
   return chunk_size_defined is not None
-
-
-def PrintTrackerDirDeprecationWarningIfNeeded():
-  # TODO: Remove this along with the tracker_dir config value 1 year after
-  # 4.6 release date. Use state_dir instead.
-  if config.has_option('GSUtil', 'resumable_tracker_dir'):
-    sys.stderr.write('Warning: you have set resumable_tracker_dir in your '
-                     '.boto configuration file. This configuration option is '
-                     'deprecated; please use the state_dir configuration '
-                     'option instead.\n')
 
 
 def ProxyInfoFromEnvironmentVar(proxy_env_var):
