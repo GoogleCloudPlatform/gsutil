@@ -31,8 +31,10 @@ from apitools.base.py import exceptions as apitools_exceptions
 from apitools.base.py import http_wrapper as apitools_http_wrapper
 from apitools.base.py import transfer as apitools_transfer
 from apitools.base.py.util import CalculateWaitForRetry
-
 from boto import config
+import httplib2
+import oauth2client
+from oauth2client.contrib import multiprocess_file_storage
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -68,12 +70,6 @@ from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import HashRewriteParameters
 from gslib.tracker_file import ReadRewriteTrackerFile
 from gslib.tracker_file import WriteRewriteTrackerFile
-from gslib.translation_helper import CreateBucketNotFoundException
-from gslib.translation_helper import CreateNotFoundExceptionForObjectWrite
-from gslib.translation_helper import CreateObjectNotFoundException
-from gslib.translation_helper import DEFAULT_CONTENT_TYPE
-from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
-from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.utils.boto_util import GetCertsFile
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetJsonResumableChunkSize
@@ -91,18 +87,18 @@ from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
 from gslib.utils.retry_util import LogAndHandleRetries
 from gslib.utils.text_util import GetPrintableExceptionString
-
-import httplib2
-import oauth2client
-from oauth2client.contrib import multiprocess_file_storage
-
+from gslib.utils.translation_helper import CreateBucketNotFoundException
+from gslib.utils.translation_helper import CreateNotFoundExceptionForObjectWrite
+from gslib.utils.translation_helper import CreateObjectNotFoundException
+from gslib.utils.translation_helper import DEFAULT_CONTENT_TYPE
+from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
+from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
 
 # pylint: disable=invalid-name
 Notification = apitools_messages.Notification
 NotificationCustomAttributesValue = Notification.CustomAttributesValue
 NotificationAdditionalProperty = (NotificationCustomAttributesValue
                                   .AdditionalProperty)
-
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
@@ -145,11 +141,9 @@ _ACL_FIELDS_SET = set(['acl', 'defaultObjectAcl', 'items/acl',
 # Fields that may be encrypted.
 _ENCRYPTED_HASHES_SET = set(['crc32c', 'md5Hash'])
 
-
 # During listing, if we attempt to decrypt an object but it has been removed,
 # we skip including the object in the listing.
 _SKIP_LISTING_OBJECT = 'skip'
-
 
 _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE = (
     'Insufficient OAuth2 scope to perform this operation.')

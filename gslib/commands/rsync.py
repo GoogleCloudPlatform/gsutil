@@ -54,7 +54,6 @@ from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import CopyCustomMetadata
 from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
@@ -89,11 +88,11 @@ from gslib.utils.posix_util import WarnNegativeAttribute
 from gslib.utils.rsync_util import DiffAction
 from gslib.utils.rsync_util import RsyncDiffToApply
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.translation_helper import CopyCustomMetadata
 from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
-
 
 _SYNOPSIS = """
   gsutil rsync [OPTION]... src_url dst_url

@@ -31,9 +31,6 @@ from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import MetadataMessage
-from gslib.translation_helper import CopyObjectMetadata
-from gslib.translation_helper import ObjectMetadataFromHeaders
-from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
@@ -41,6 +38,9 @@ from gslib.utils.metadata_util import IsCustomMetadataHeader
 from gslib.utils.retry_util import Retry
 from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
+from gslib.utils.translation_helper import CopyObjectMetadata
+from gslib.utils.translation_helper import ObjectMetadataFromHeaders
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 _PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 

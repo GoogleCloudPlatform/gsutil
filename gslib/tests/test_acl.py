@@ -29,8 +29,8 @@ from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.translation_helper import AclTranslation
 from gslib.utils.retry_util import Retry
+from gslib.utils.translation_helper import AclTranslation
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 

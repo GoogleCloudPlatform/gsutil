@@ -26,8 +26,8 @@ from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32

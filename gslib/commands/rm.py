@@ -33,12 +33,12 @@ from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import MetadataMessage
-from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import StdinIterator
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 _PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 

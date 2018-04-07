@@ -33,7 +33,6 @@ from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
-from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import UTF8
@@ -44,6 +43,7 @@ from gslib.utils.encryption_helper import MAX_DECRYPTION_KEYS
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.text_util import ConvertRecursiveToFlatWildcard
 from gslib.utils.text_util import NormalizeStorageClass
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
 
