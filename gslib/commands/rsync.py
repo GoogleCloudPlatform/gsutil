@@ -45,10 +45,6 @@ from gslib.copy_helper import GZIP_ALL_FILES
 from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
-from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
-from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.metrics import LogPerformanceSummaryParams
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadResult
@@ -63,6 +59,10 @@ from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import UTF8
+from gslib.utils.hashing_helper import CalculateB64EncodedCrc32cFromContents
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.utils.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
+from gslib.utils.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
 from gslib.utils.metadata_util import ObjectIsGzipEncoded

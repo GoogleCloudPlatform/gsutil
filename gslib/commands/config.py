@@ -32,6 +32,8 @@ import webbrowser
 
 import boto
 from boto.provider import Provider
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
 
 import gslib
 from gslib.command import Command
@@ -40,18 +42,14 @@ from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
-from gslib.hashing_helper import CHECK_HASH_ALWAYS
-from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
-from gslib.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
-from gslib.hashing_helper import CHECK_HASH_NEVER
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils.constants import RESUMABLE_THRESHOLD_B
+from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
+from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
+from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
+from gslib.utils.hashing_helper import CHECK_HASH_NEVER
 from gslib.utils.system_util import IS_WINDOWS
-
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
-
 
 _SYNOPSIS = """
   gsutil [-D] config [-a] [-b] [-e] [-f] [-n] [-o <file>] [-r] [-s <scope>] [-w]

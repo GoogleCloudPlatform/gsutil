@@ -66,8 +66,6 @@ from gslib.cloud_api import ServiceException
 import gslib.devshell_auth_plugin  # pylint: disable=unused-import
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
-from gslib.hashing_helper import Base64EncodeHash
-from gslib.hashing_helper import Base64ToHexHash
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import GenerationFromUrlAndString
@@ -96,6 +94,8 @@ from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
+from gslib.utils.hashing_helper import Base64EncodeHash
+from gslib.utils.hashing_helper import Base64ToHexHash
 from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
 from gslib.utils.text_util import EncodeStringAsLong
 from gslib.utils.unit_util import TWO_MIB

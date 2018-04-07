@@ -37,7 +37,6 @@ from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
-from gslib.hashing_helper import Base64ToHexHash
 from gslib.kms_api import KmsApi
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
@@ -53,6 +52,7 @@ import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messag
 from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.hashing_helper import Base64ToHexHash
 from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
 from gslib.utils.posix_util import ATIME_ATTR

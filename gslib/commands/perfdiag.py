@@ -49,13 +49,13 @@ from gslib.commands import config
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import ResumableThreshold
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.cloud_api_helper import GetDownloadSerializationData
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.utils.system_util import CheckFreeSpace
 from gslib.utils.system_util import GetDiskCounters
 from gslib.utils.system_util import GetFileSize
