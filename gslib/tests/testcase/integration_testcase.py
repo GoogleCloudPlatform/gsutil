@@ -36,8 +36,6 @@ from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.discard_messages_queue import DiscardMessagesQueue
-from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import Base64ToHexHash
 from gslib.kms_api import KmsApi
@@ -53,6 +51,8 @@ from gslib.tests.util import unittest
 from gslib.tests.util import USING_JSON_API
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.utils.constants import UTF8
+from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
 from gslib.utils.posix_util import ATIME_ATTR

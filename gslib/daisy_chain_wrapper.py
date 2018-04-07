@@ -22,10 +22,9 @@ import time
 
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import CloudApi
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
-
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 
 # This controls the amount of bytes downloaded per download request.
 # We do not buffer this many bytes in memory at a time - that is controlled by

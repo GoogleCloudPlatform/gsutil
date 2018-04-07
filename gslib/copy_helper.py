@@ -66,10 +66,6 @@ from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
-from gslib.encryption_helper import CryptoKeyType
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import FindMatchingCSEKInBotoConfig
-from gslib.encryption_helper import GetEncryptionKeyWrapper
 from gslib.exception import CommandException
 from gslib.exception import HashMismatchException
 from gslib.file_part import FilePart
@@ -128,6 +124,10 @@ from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import MIN_SIZE_COMPUTE_LOGGING
 from gslib.utils.constants import UTF8
+from gslib.utils.encryption_helper import CryptoKeyType
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
+from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils.posix_util import ATIME_ATTR
 from gslib.utils.posix_util import ConvertDatetimeToPOSIX

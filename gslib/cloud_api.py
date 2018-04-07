@@ -379,7 +379,7 @@ class CloudApi(object):
                  update(bytes) and digest() using that algorithm.
                  Implementation can set the digester value to None to indicate
                  bytes were not successfully digested on-the-fly.
-      decryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      decryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         decrypting an encrypted object.
 
     Raises:
@@ -409,7 +409,7 @@ class CloudApi(object):
       progress_callback: Optional callback function for progress notifications.
                          Receives calls with arguments
                          (bytes_transferred, total_size).
-      encryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
@@ -442,7 +442,7 @@ class CloudApi(object):
                          Receives calls with arguments
                          (bytes_transferred, total_size), but fills in only
                          bytes_transferred.
-      encryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
@@ -483,7 +483,7 @@ class CloudApi(object):
       progress_callback: Optional callback function for progress notifications.
                          Receives calls with arguments
                          (bytes_transferred, total_size).
-      encryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
                 class-wide default is used.
@@ -522,9 +522,9 @@ class CloudApi(object):
                          (bytes_transferred, total_size).
       max_bytes_per_call: Integer describing maximum number of bytes
                           to rewrite per service call.
-      encryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         encrypting the destination object.
-      decryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      decryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         decrypting the source object. If supplied without
                         encryption_tuple, destination object will be written
                         without customer-supplied encryption.
@@ -552,7 +552,7 @@ class CloudApi(object):
       dst_obj_metadata: Metadata for the destination object including bucket
                         and object name.
       preconditions: Destination object preconditions for the request.
-      encryption_tuple: Optional encryption_helper.CryptoKeyWrapper for
+      encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
                         decrypting source objects and encrypting the destination
                         object.
       provider: Cloud storage provider to connect to.  If not present,

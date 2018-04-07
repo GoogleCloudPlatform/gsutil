@@ -19,12 +19,12 @@ import os
 
 import boto
 
-from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.exception import CommandException
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 
 
 class TestEncryptionHelper(GsUtilUnitTestCase):

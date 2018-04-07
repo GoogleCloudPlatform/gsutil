@@ -26,10 +26,6 @@ from gslib.cloud_api import EncryptionException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
-from gslib.encryption_helper import CryptoKeyType
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import GetEncryptionKeyWrapper
-from gslib.encryption_helper import MAX_DECRYPTION_KEYS
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
@@ -41,6 +37,10 @@ from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import UTF8
+from gslib.utils.encryption_helper import CryptoKeyType
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
+from gslib.utils.encryption_helper import MAX_DECRYPTION_KEYS
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.text_util import ConvertRecursiveToFlatWildcard
 from gslib.utils.text_util import NormalizeStorageClass

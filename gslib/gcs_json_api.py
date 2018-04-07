@@ -49,10 +49,6 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
-from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
-from gslib.encryption_helper import CryptoKeyType
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.gcs_json_credentials import CheckAndGetCredentials
 from gslib.gcs_json_credentials import GetCredentialStoreKey
 from gslib.gcs_json_media import BytesTransferredContainer
@@ -88,6 +84,10 @@ from gslib.utils.boto_util import JsonResumableChunkSizeDefined
 from gslib.utils.cloud_api_helper import ListToGetFields
 from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.utils.encryption_helper import CryptoKeyType
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
 from gslib.utils.retry_util import LogAndHandleRetries
 from gslib.utils.text_util import GetPrintableExceptionString
@@ -765,7 +765,7 @@ class GcsJsonApi(CloudApi):
       generation: (int) Generation of the object to retrieve.
       fields: (list<str>) If present, return only these Object metadata fields,
           for example: ['acl', 'updated'].
-      decryption_tuple: (gslib.encryption_helper.CryptoKeyWrapper) The
+      decryption_tuple: (gslib.utils.encryption_helper.CryptoKeyWrapper) The
           CryptoKeyWrapper for the desired decryption key.
 
     Raises:
