@@ -25,7 +25,6 @@ import traceback
 
 from apitools.base.py import encoding
 from gslib import copy_helper
-from gslib.cat_helper import CatHelper
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
@@ -48,6 +47,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import cat_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
@@ -1110,7 +1110,7 @@ class CpCommand(Command):
                                'stream or a named pipe.')
       cat_out_fd = (GetStreamFromFileUrl(dst_url, mode='wb')
                     if dst_url.IsFifo() else None)
-      return CatHelper(self).CatUrlStrings(
+      return cat_helper.CatHelper(self).CatUrlStrings(
           self.args[:-1],
           cat_out_fd=cat_out_fd)
 
