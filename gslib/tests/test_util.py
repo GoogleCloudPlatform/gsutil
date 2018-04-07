@@ -23,7 +23,6 @@
 
 from __future__ import absolute_import
 
-from gslib import util
 from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import system_util
@@ -40,6 +39,7 @@ from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import PrettyTime
 import httplib2
 import mock
+
 
 # TODO: Split tests for <foo>_util methods out into their own test classes.
 class TestUtil(testcase.GsUtilUnitTestCase):

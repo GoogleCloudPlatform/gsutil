@@ -45,12 +45,6 @@ from gslib.name_expansion import DestinationInfo
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionIteratorDestinationTuple
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.posix_util import ConvertModeToBase8
-from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
-from gslib.posix_util import InitializeUserGroups
-from gslib.posix_util import POSIXAttributes
-from gslib.posix_util import SerializeFileAttributesToObjectMetadata
-from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
@@ -58,6 +52,12 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import parallelism_framework_util
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import NO_MAX
+from gslib.utils.posix_util import ConvertModeToBase8
+from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
+from gslib.utils.posix_util import InitializeUserGroups
+from gslib.utils.posix_util import POSIXAttributes
+from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
+from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.system_util import GetStreamFromFileUrl
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.text_util import NormalizeStorageClass

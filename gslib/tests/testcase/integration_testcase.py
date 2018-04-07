@@ -41,11 +41,6 @@ from gslib.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import Base64ToHexHash
 from gslib.kms_api import KmsApi
-from gslib.posix_util import ATIME_ATTR
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import MTIME_ATTR
-from gslib.posix_util import UID_ATTR
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
@@ -60,6 +55,11 @@ import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messag
 from gslib.utils.constants import UTF8
 from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
+from gslib.utils.posix_util import ATIME_ATTR
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import MTIME_ATTR
+from gslib.utils.posix_util import UID_ATTR
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.retry_util import Retry
 

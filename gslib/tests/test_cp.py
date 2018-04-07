@@ -52,13 +52,6 @@ from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import NA_ID
-from gslib.posix_util import NA_MODE
-from gslib.posix_util import UID_ATTR
-from gslib.posix_util import ValidateFilePermissionAccess
-from gslib.posix_util import ValidatePOSIXMode
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.rewrite_helper import EnsureRewriteResumeCallbackHandler
@@ -96,6 +89,13 @@ from gslib.ui_controller import BytesToFixedWidthString
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import NA_ID
+from gslib.utils.posix_util import NA_MODE
+from gslib.utils.posix_util import UID_ATTR
+from gslib.utils.posix_util import ValidateFilePermissionAccess
+from gslib.utils.posix_util import ValidatePOSIXMode
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import EIGHT_MIB

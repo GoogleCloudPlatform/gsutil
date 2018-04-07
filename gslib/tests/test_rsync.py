@@ -18,12 +18,6 @@ import os
 
 import crcmod
 from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
-from gslib.posix_util import ConvertDatetimeToPOSIX
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import MTIME_ATTR
-from gslib.posix_util import NA_TIME
-from gslib.posix_util import UID_ATTR
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
@@ -41,6 +35,12 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.posix_util import ConvertDatetimeToPOSIX
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import MTIME_ATTR
+from gslib.utils.posix_util import NA_TIME
+from gslib.utils.posix_util import UID_ATTR
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS

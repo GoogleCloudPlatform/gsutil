@@ -37,7 +37,6 @@ from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
-from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
@@ -46,6 +45,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils import parallelism_framework_util
+from gslib.utils import posix_util
 from gslib.utils import system_util
 
 import mock
@@ -378,7 +378,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
   _PI_DAY = datetime.datetime(2016, 3, 14, 15, 9, 26)
 
   @mock.patch('time.time',
-              new=mock.MagicMock(return_value=ConvertDatetimeToPOSIX(_PI_DAY)))
+              new=mock.MagicMock(
+                  return_value=posix_util.ConvertDatetimeToPOSIX(_PI_DAY)))
   def testWarnIfMvEarlyDeletionChargeApplies(self):
     """Tests that WarnIfEarlyDeletionChargeApplies warns when appropriate."""
     test_logger = logging.Logger('test')

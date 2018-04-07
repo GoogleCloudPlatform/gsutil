@@ -24,12 +24,13 @@ import shutil
 import tempfile
 
 import boto
-from gslib.posix_util import NA_ID
-from gslib.posix_util import NA_MODE
+from six import string_types
+
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.utils.constants import UTF8
-from six import string_types
+from gslib.utils.posix_util import NA_ID
+from gslib.utils.posix_util import NA_MODE
 
 MAX_BUCKET_LENGTH = 63
 

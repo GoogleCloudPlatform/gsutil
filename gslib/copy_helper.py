@@ -89,13 +89,6 @@ from gslib.parallel_tracker_file import ReadParallelUploadTrackerFile
 from gslib.parallel_tracker_file import ValidateParallelCompositeTrackerData
 from gslib.parallel_tracker_file import WriteComponentToParallelUploadTrackerFile
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
-from gslib.posix_util import ATIME_ATTR
-from gslib.posix_util import ConvertDatetimeToPOSIX
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import MTIME_ATTR
-from gslib.posix_util import ParseAndSetPOSIXAttributes
-from gslib.posix_util import UID_ATTR
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
@@ -136,6 +129,13 @@ from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import MIN_SIZE_COMPUTE_LOGGING
 from gslib.utils.constants import UTF8
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
+from gslib.utils.posix_util import ATIME_ATTR
+from gslib.utils.posix_util import ConvertDatetimeToPOSIX
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import MTIME_ATTR
+from gslib.utils.posix_util import ParseAndSetPOSIXAttributes
+from gslib.utils.posix_util import UID_ATTR
 from gslib.utils.system_util import CheckFreeSpace
 from gslib.utils.system_util import GetFileSize
 from gslib.utils.system_util import GetStreamFromFileUrl
