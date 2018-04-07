@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 import re
 
-from gslib import aclhelpers
 from gslib.command import CreateGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.storage_url import StorageUrlFromString
@@ -29,6 +28,7 @@ from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.utils import acl_helper
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import AclTranslation
 
@@ -233,94 +233,94 @@ class TestAcl(TestAclBase):
     return re.sub(r'\s*', '', json_text)
 
   def testAclChangeWithUserId(self):
-    change = aclhelpers.AclChange(self.USER_TEST_ID + ':r',
-                                  scope_type=aclhelpers.ChangeType.USER)
+    change = acl_helper.AclChange(self.USER_TEST_ID + ':r',
+                                  scope_type=acl_helper.ChangeType.USER)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'UserById', self.USER_TEST_ID)
 
   def testAclChangeWithGroupId(self):
-    change = aclhelpers.AclChange(self.GROUP_TEST_ID + ':r',
-                                  scope_type=aclhelpers.ChangeType.GROUP)
+    change = acl_helper.AclChange(self.GROUP_TEST_ID + ':r',
+                                  scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'GroupById', self.GROUP_TEST_ID)
 
   def testAclChangeWithUserEmail(self):
-    change = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':r',
-                                  scope_type=aclhelpers.ChangeType.USER)
+    change = acl_helper.AclChange(self.USER_TEST_ADDRESS + ':r',
+                                  scope_type=acl_helper.ChangeType.USER)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclChangeWithGroupEmail(self):
-    change = aclhelpers.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
-                                  scope_type=aclhelpers.ChangeType.GROUP)
+    change = acl_helper.AclChange(self.GROUP_TEST_ADDRESS + ':fc',
+                                  scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'OWNER', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 
   def testAclChangeWithDomain(self):
-    change = aclhelpers.AclChange(self.DOMAIN_TEST + ':READ',
-                                  scope_type=aclhelpers.ChangeType.GROUP)
+    change = acl_helper.AclChange(self.DOMAIN_TEST + ':READ',
+                                  scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'GroupByDomain', self.DOMAIN_TEST)
 
   def testAclChangeWithProjectOwners(self):
-    change = aclhelpers.AclChange(self._project_test_acl + ':READ',
-                                  scope_type=aclhelpers.ChangeType.PROJECT)
+    change = acl_helper.AclChange(self._project_test_acl + ':READ',
+                                  scope_type=acl_helper.ChangeType.PROJECT)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'Project', self._project_test_acl)
 
   def testAclChangeWithAllUsers(self):
-    change = aclhelpers.AclChange('AllUsers:WRITE',
-                                  scope_type=aclhelpers.ChangeType.GROUP)
+    change = acl_helper.AclChange('AllUsers:WRITE',
+                                  scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'WRITER', 'AllUsers')
 
   def testAclChangeWithAllAuthUsers(self):
-    change = aclhelpers.AclChange('AllAuthenticatedUsers:READ',
-                                  scope_type=aclhelpers.ChangeType.GROUP)
+    change = acl_helper.AclChange('AllAuthenticatedUsers:READ',
+                                  scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     change.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'AllAuthenticatedUsers')
-    remove = aclhelpers.AclDel('AllAuthenticatedUsers')
+    remove = acl_helper.AclDel('AllAuthenticatedUsers')
     remove.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHasNo(acl, 'READER', 'AllAuthenticatedUsers')
 
   def testAclDelWithUser(self):
-    add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                               scope_type=aclhelpers.ChangeType.USER)
+    add = acl_helper.AclChange(self.USER_TEST_ADDRESS + ':READ',
+                               scope_type=acl_helper.ChangeType.USER)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     add.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'UserByEmail', self.USER_TEST_ADDRESS)
 
-    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
+    remove = acl_helper.AclDel(self.USER_TEST_ADDRESS)
     remove.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHasNo(acl, 'READ', 'UserByEmail', self.USER_TEST_ADDRESS)
 
   def testAclDelWithProjectOwners(self):
-    add = aclhelpers.AclChange(self._project_test_acl + ':READ',
-                               scope_type=aclhelpers.ChangeType.PROJECT)
+    add = acl_helper.AclChange(self._project_test_acl + ':READ',
+                               scope_type=acl_helper.ChangeType.PROJECT)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     add.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'Project', self._project_test_acl)
 
-    remove = aclhelpers.AclDel(self._project_test_acl)
+    remove = acl_helper.AclDel(self._project_test_acl)
     remove.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHasNo(acl, 'READ', 'Project', self._project_test_acl)
 
   def testAclDelWithGroup(self):
-    add = aclhelpers.AclChange(self.USER_TEST_ADDRESS + ':READ',
-                               scope_type=aclhelpers.ChangeType.GROUP)
+    add = acl_helper.AclChange(self.USER_TEST_ADDRESS + ':READ',
+                               scope_type=acl_helper.ChangeType.GROUP)
     acl = list(AclTranslation.BotoBucketAclToMessage(self.sample_uri.get_acl()))
     add.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHas(acl, 'READER', 'GroupByEmail', self.USER_TEST_ADDRESS)
 
-    remove = aclhelpers.AclDel(self.USER_TEST_ADDRESS)
+    remove = acl_helper.AclDel(self.USER_TEST_ADDRESS)
     remove.Execute(self.sample_url, acl, 'acl', self.logger)
     self._AssertHasNo(acl, 'READER', 'GroupByEmail', self.GROUP_TEST_ADDRESS)
 

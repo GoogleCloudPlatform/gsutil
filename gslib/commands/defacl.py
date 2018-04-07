@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 
-from gslib import aclhelpers
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
@@ -32,6 +31,7 @@ from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
@@ -222,15 +222,15 @@ class DefAclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-g':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.GROUP))
+              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.GROUP))
         if o == '-u':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.USER))
+              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.USER))
         if o == '-p':
           self.changes.append(
-              aclhelpers.AclChange(a, scope_type=aclhelpers.ChangeType.PROJECT))
+              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.PROJECT))
         if o == '-d':
-          self.changes.append(aclhelpers.AclDel(a))
+          self.changes.append(acl_helper.AclDel(a))
 
     if not self.changes:
       raise CommandException(
