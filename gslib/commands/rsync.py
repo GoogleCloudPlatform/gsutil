@@ -33,16 +33,11 @@ import urllib
 from boto import config
 import crcmod
 
-from gslib import copy_helper
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
-from gslib.copy_helper import CreateCopyHelperOpts
-from gslib.copy_helper import GetSourceFieldsNeededForCopy
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import LogPerformanceSummaryParams
@@ -54,10 +49,15 @@ from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import constants
+from gslib.utils import copy_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
-from gslib.utils.constants import UTF8
+from gslib.utils.copy_helper import CreateCopyHelperOpts
+from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import SkipUnsupportedObjectError
 from gslib.utils.hashing_helper import CalculateB64EncodedCrc32cFromContents
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.utils.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
@@ -565,7 +565,7 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   (base_url_str, out_filename, desc) = args_tuple
   # We sort while iterating over base_url_str, allowing parallelism of batched
   # sorting with collecting the listing.
-  out_file = io.open(out_filename, mode='w', encoding=UTF8)
+  out_file = io.open(out_filename, mode='w', encoding=constants.UTF8)
   try:
     _BatchSort(_FieldedListingIterator(cls, gsutil_api, base_url_str, desc),
                out_file)
@@ -743,7 +743,7 @@ def _EncodeUrl(url_string):
   Returns:
     encoded URL.
   """
-  return urllib.quote_plus(url_string.encode(UTF8))
+  return urllib.quote_plus(url_string.encode(constants.UTF8))
 
 
 def _DecodeUrl(enc_url_string):
@@ -755,7 +755,7 @@ def _DecodeUrl(enc_url_string):
   Returns:
     decoded URL.
   """
-  return urllib.unquote_plus(enc_url_string).decode(UTF8)
+  return urllib.unquote_plus(enc_url_string).decode(constants.UTF8)
 
 
 # pylint: disable=bare-except
@@ -787,7 +787,7 @@ def _BatchSort(in_iter, out_file):
       if not current_chunk:
         break
       output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
-                             mode='w+', encoding=UTF8)
+                             mode='w+', encoding=constants.UTF8)
       chunk_files.append(output_chunk)
       output_chunk.write(unicode(''.join(current_chunk)))
       output_chunk.flush()

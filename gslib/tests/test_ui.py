@@ -32,8 +32,6 @@ import StringIO
 import crcmod
 from six.moves import queue as Queue
 
-from gslib.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
-from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.cs_api_map import ApiSelector
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
@@ -67,6 +65,8 @@ from gslib.ui_controller import UIThread
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.utils.retry_util import Retry

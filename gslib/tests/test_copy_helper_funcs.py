@@ -26,14 +26,6 @@ from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.command import CreateGsutilLogger
-from gslib.copy_helper import _DelegateUploadFileToObject
-from gslib.copy_helper import _GetPartitionInfo
-from gslib.copy_helper import _SelectUploadCompressionStrategy
-from gslib.copy_helper import _SetContentTypeFromFile
-from gslib.copy_helper import FilterExistingComponents
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
-from gslib.copy_helper import WarnIfMvEarlyDeletionChargeApplies
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
@@ -48,6 +40,14 @@ from gslib.utils import parallelism_framework_util
 from gslib.utils import posix_util
 from gslib.utils import system_util
 from gslib.utils import hashing_helper
+from gslib.utils.copy_helper import _DelegateUploadFileToObject
+from gslib.utils.copy_helper import _GetPartitionInfo
+from gslib.utils.copy_helper import _SelectUploadCompressionStrategy
+from gslib.utils.copy_helper import _SetContentTypeFromFile
+from gslib.utils.copy_helper import FilterExistingComponents
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import PerformParallelUploadFileToObjectArgs
+from gslib.utils.copy_helper import WarnIfMvEarlyDeletionChargeApplies
 
 _CalculateB64EncodedMd5FromContents = (
     hashing_helper.CalculateB64EncodedMd5FromContents)

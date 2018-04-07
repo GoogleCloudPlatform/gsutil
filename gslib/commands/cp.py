@@ -24,17 +24,9 @@ import time
 import traceback
 
 from apitools.base.py import encoding
-from gslib import copy_helper
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
-from gslib.copy_helper import CreateCopyHelperOpts
-from gslib.copy_helper import GetSourceFieldsNeededForCopy
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import ItemExistsError
-from gslib.copy_helper import Manifest
-from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
-from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import LogPerformanceSummaryParams
@@ -48,10 +40,18 @@ from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils import cat_helper
+from gslib.utils import copy_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import NO_MAX
+from gslib.utils.copy_helper import CreateCopyHelperOpts
+from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import ItemExistsError
+from gslib.utils.copy_helper import Manifest
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.utils.copy_helper import SkipUnsupportedObjectError
 from gslib.utils.posix_util import ConvertModeToBase8
 from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.utils.posix_util import InitializeUserGroups

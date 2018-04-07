@@ -41,10 +41,6 @@ import crcmod
 
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
-from gslib.copy_helper import GetTrackerFilePath
-from gslib.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
-from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
-from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
@@ -87,6 +83,10 @@ from gslib.ui_controller import BytesToFixedWidthString
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
+from gslib.utils.copy_helper import GetTrackerFilePath
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.utils.copy_helper import TrackerFileType
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.utils.hashing_helper import CalculateMd5FromContents
 from gslib.utils.posix_util import GID_ATTR
