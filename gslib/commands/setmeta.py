@@ -20,7 +20,6 @@ import time
 
 from apitools.base.py import encoding
 from gslib.cloud_api import AccessDeniedException
-from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.command import Command
@@ -37,6 +36,7 @@ from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.metadata_util import IsCustomMetadataHeader
 from gslib.utils.retry_util import Retry
 from gslib.utils.text_util import InsistAsciiHeader

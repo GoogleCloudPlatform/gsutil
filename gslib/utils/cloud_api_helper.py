@@ -23,24 +23,22 @@ from gslib.cloud_api import ArgumentException
 from gslib.utils.text_util import AddQueryParamToUrl
 
 
-def ValidateDstObjectMetadata(dst_obj_metadata):
-  """Ensures dst_obj_metadata supplies the needed fields for copy and insert.
+def GetCloudApiInstance(cls, thread_state=None):
+  """Gets a gsutil Cloud API instance.
+
+  Since Cloud API implementations are not guaranteed to be thread-safe, each
+  thread needs its own instance. These instances are passed to each thread
+  via the thread pool logic in command.
 
   Args:
-    dst_obj_metadata: Metadata to validate.
+    cls: Command class to be used for single-threaded case.
+    thread_state: Per thread state from this thread containing a gsutil
+                  Cloud API instance.
 
-  Raises:
-    ArgumentException if metadata is invalid.
+  Returns:
+    gsutil Cloud API instance.
   """
-  if not dst_obj_metadata:
-    raise ArgumentException(
-        'No object metadata supplied for destination object.')
-  if not dst_obj_metadata.name:
-    raise ArgumentException(
-        'Object metadata supplied for destination object had no object name.')
-  if not dst_obj_metadata.bucket:
-    raise ArgumentException(
-        'Object metadata supplied for destination object had no bucket name.')
+  return thread_state or cls.gsutil_api
 
 
 def GetDownloadSerializationData(
@@ -98,3 +96,23 @@ def ListToGetFields(list_fields=None):
         continue
       get_fields.add(re.sub(r'items/', '', field))
     return get_fields
+
+
+def ValidateDstObjectMetadata(dst_obj_metadata):
+  """Ensures dst_obj_metadata supplies the needed fields for copy and insert.
+
+  Args:
+    dst_obj_metadata: Metadata to validate.
+
+  Raises:
+    ArgumentException if metadata is invalid.
+  """
+  if not dst_obj_metadata:
+    raise ArgumentException(
+        'No object metadata supplied for destination object.')
+  if not dst_obj_metadata.name:
+    raise ArgumentException(
+        'Object metadata supplied for destination object had no object name.')
+  if not dst_obj_metadata.bucket:
+    raise ArgumentException(
+        'Object metadata supplied for destination object had no bucket name.')

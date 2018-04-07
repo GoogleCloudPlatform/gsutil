@@ -50,7 +50,6 @@ from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cloud_api import EncryptionException
-from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
@@ -59,7 +58,6 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
-from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
@@ -117,6 +115,8 @@ from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.utils import parallelism_framework_util
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.cloud_api_helper import GetDownloadSerializationData
 from gslib.utils.parallelism_framework_util import AtomicDict
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout

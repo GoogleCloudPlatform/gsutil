@@ -2082,8 +2082,8 @@ class WorkerThread(threading.Thread):
     self.user_project = user_project
 
     # Note that thread_gsutil_api is not initialized in the sequential
-    # case; task functions should use cloud_api.GetCloudApiInstance to
-    # retrieve the main thread's CloudApiDelegator in that case.
+    # case; task functions should use utils.cloud_api_helper.GetCloudApiInstance
+    # to retrieve the main thread's CloudApiDelegator in that case.
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
       self.thread_gsutil_api = CloudApiDelegator(

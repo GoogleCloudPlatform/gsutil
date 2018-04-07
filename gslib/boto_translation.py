@@ -62,8 +62,6 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
-from gslib.cloud_api_helper import ListToGetFields
-from gslib.cloud_api_helper import ValidateDstObjectMetadata
 # Imported for boto AuthHandler purposes.
 import gslib.devshell_auth_plugin  # pylint: disable=unused-import
 from gslib.exception import CommandException
@@ -92,6 +90,8 @@ from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import ConfigureNoOpAuthIfNeeded
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
+from gslib.utils.cloud_api_helper import ListToGetFields
+from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8

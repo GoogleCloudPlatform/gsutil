@@ -35,7 +35,6 @@ import crcmod
 
 from gslib import copy_helper
 from gslib.bucket_listing_ref import BucketListingObject
-from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
@@ -62,6 +61,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.translation_helper import CopyCustomMetadata
 from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import UTF8
 from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata

@@ -19,7 +19,6 @@ from __future__ import absolute_import
 import time
 
 from gslib.cloud_api import BucketNotFoundException
-from gslib.cloud_api import GetCloudApiInstance
 from gslib.cloud_api import NotEmptyException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
@@ -37,6 +36,7 @@ from gslib.thread_message import MetadataMessage
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import StdinIterator
 
