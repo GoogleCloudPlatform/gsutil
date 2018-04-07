@@ -45,8 +45,8 @@ from gslib.tests.util import GSMockBucketStorageUri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CreateLock
-from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils import parallelism_framework_util
+from gslib.utils import system_util
 
 import mock
 
@@ -100,7 +100,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
+    tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # dst_obj_metadata used for passing content-type.
     empty_object = apitools_messages.Object()
@@ -211,7 +211,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     empty_object = apitools_messages.Object()
 
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
+    tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
@@ -345,7 +345,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
   def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
-    if IS_WINDOWS:
+    if system_util.IS_WINDOWS:
       return unittest.skip('use_magicfile features not available on Windows')
 
     surprise_html = '<html><body>And you thought I was just text!</body></html>'

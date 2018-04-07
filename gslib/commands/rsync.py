@@ -80,7 +80,7 @@ from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.translation_helper import CopyCustomMetadata
-from gslib.util import CreateLock
+from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import UTF8
 from gslib.utils.metadata_util import CreateCustomMetadata
@@ -1406,7 +1406,7 @@ class RsyncCommand(Command):
     self.total_bytes_transferred = 0
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    self.stats_lock = CreateLock()
+    self.stats_lock = parallelism_framework_util.CreateLock()
     if not UsingCrcmodExtension(crcmod):
       if self.compute_file_checksums:
         self.logger.warn(SLOW_CRCMOD_WARNING)

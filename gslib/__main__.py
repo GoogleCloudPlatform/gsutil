@@ -68,16 +68,9 @@ import gslib.exception
 from gslib.exception import CommandException
 from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
-from gslib.util import CreateLock
+from gslib.utils import boto_util
 from gslib.utils import constants
-from gslib.utils.boto_util import GetBotoConfigFileList
-from gslib.utils.boto_util import GetCertsFile
-from gslib.utils.boto_util import GetCleanupFiles
-from gslib.utils.boto_util import ProxyInfoFromEnvironmentVar
-from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
-from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
-from gslib.utils.constants import UTF8
-from gslib.utils.system_util import GetGsutilClientIdAndSecret
+from gslib.utils import system_util
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -128,14 +121,23 @@ test_exception_traces = False
 
 # pylint: disable=unused-argument
 def _CleanupSignalHandler(signal_num, cur_stack_frame):
-  """Cleans up if process is killed with SIGINT, SIGQUIT or SIGTERM."""
+  """Cleans up if process is killed with SIGINT, SIGQUIT or SIGTERM.
+
+  Note that this method is called after main() has been called, so it has
+  access to all the modules imported at the start of main().
+
+  Args:
+    signal_num: Unused, but required in the method signature.
+    cur_stack_frame: Unused, but required in the method signature.
+  """
   _Cleanup()
-  if gslib.util.CheckMultiprocessingAvailableAndInit().is_available:
+  if (gslib.utils.parallelism_framework_util
+      .CheckMultiprocessingAvailableAndInit().is_available):
     gslib.command.TeardownMultiprocessingProcesses()
 
 
 def _Cleanup():
-  for fname in GetCleanupFiles():
+  for fname in boto_util.GetCleanupFiles():
     try:
       os.unlink(fname)
     except:  # pylint: disable=bare-except
@@ -151,14 +153,14 @@ def _OutputAndExit(message, exception=None):
     message: Message to print to stderr.
     exception: The exception that caused gsutil to fail.
   """
-  if debug >= DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
+  if debug >= constants.DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n%s\n' %
            (re.sub('\\n', '\n    ', stack_trace), message))
   else:
     err = '%s\n' % message
   try:
-    sys.stderr.write(err.encode(UTF8))
+    sys.stderr.write(err.encode(constants.UTF8))
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)
@@ -202,15 +204,13 @@ def main():
   # pylint: disable=redefined-outer-name,g-import-not-at-top
   import gslib.boto_translation
   import gslib.command
-  import gslib.util
-  from gslib.utils.boto_util import BOTO_IS_SECURE
-  from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
+  import gslib.utils.parallelism_framework_util
   # pylint: disable=unused-variable
   from gcs_oauth2_boto_plugin import oauth2_client
   from apitools.base.py import credentials_lib
   # pylint: enable=unused-variable
-  from gslib.util import CheckMultiprocessingAvailableAndInit
-  if CheckMultiprocessingAvailableAndInit().is_available:
+  if (gslib.utils.parallelism_framework_util
+      .CheckMultiprocessingAvailableAndInit().is_available):
     # These setup methods must be called, and, on Windows, they can only be
     # called from within an "if __name__ == '__main__':" block.
     gslib.command.InitializeMultiprocessingVariables()
@@ -218,16 +218,19 @@ def main():
   else:
     gslib.command.InitializeThreadingVariables()
 
-  # This needs to be done after gslib.util.InitializeMultiprocessingVariables(),
-  # since otherwise we can't call gslib.util.CreateLock.
+  # This needs to be done after InitializeMultiprocessingVariables(), since
+  # otherwise we can't call CreateLock.
   try:
     # pylint: disable=unused-import,g-import-not-at-top
     import gcs_oauth2_boto_plugin
-    gsutil_client_id, gsutil_client_secret = GetGsutilClientIdAndSecret()
+    gsutil_client_id, gsutil_client_secret = (
+        system_util.GetGsutilClientIdAndSecret())
     gcs_oauth2_boto_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
         gsutil_client_id, gsutil_client_secret)
-    gcs_oauth2_boto_plugin.oauth2_helper.SetLock(CreateLock())
-    credentials_lib.SetCredentialsCacheFileLock(CreateLock())
+    gcs_oauth2_boto_plugin.oauth2_helper.SetLock(
+        gslib.utils.parallelism_framework_util.CreateLock())
+    credentials_lib.SetCredentialsCacheFileLock(
+        gslib.utils.parallelism_framework_util.CreateLock())
   except ImportError:
     pass
 
@@ -243,7 +246,7 @@ def main():
   # Many users have a .boto configuration file from previous versions, and it
   # is useful to have all of the configuration for gsutil stored in one place.
   command_runner = CommandRunner()
-  if not BOTO_IS_SECURE:
+  if not boto_util.BOTO_IS_SECURE:
     raise CommandException('\n'.join(textwrap.wrap(
         'Your boto configuration has is_secure = False. Gsutil cannot be '
         'run this way, for security reasons.')))
@@ -269,11 +272,11 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  gslib.utils.boto_util.configured_certs_file = (
-      gslib.utils.boto_util.ConfigureCertsFile())
+  boto_util.configured_certs_file = (
+      boto_util.ConfigureCertsFile())
   for signal_num in GetCaughtSignals():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
-  GetCertsFile()
+  boto_util.GetCertsFile()
 
   try:
     try:
@@ -287,16 +290,16 @@ def main():
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Also causes boto to include httplib header output.
-        debug = DEBUGLEVEL_DUMP_REQUESTS
+        debug = constants.DEBUGLEVEL_DUMP_REQUESTS
       elif o in ('-D', '--detailedDebug'):
         # We use debug level 3 to ask gsutil code to output more detailed
         # debug output. This is a bit of a hack since it overloads the same
         # flag that was originally implemented for boto use. And we use -DD
         # to ask for really detailed debugging (i.e., including HTTP payload).
-        if debug == DEBUGLEVEL_DUMP_REQUESTS:
-          debug = DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
+        if debug == constants.DEBUGLEVEL_DUMP_REQUESTS:
+          debug = constants.DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS
         else:
-          debug = DEBUGLEVEL_DUMP_REQUESTS
+          debug = constants.DEBUGLEVEL_DUMP_REQUESTS
       elif o in ('-?', '--help'):
         _OutputUsageAndExit(command_runner)
       elif o in ('-h', '--header'):
@@ -335,7 +338,7 @@ def main():
     httplib2.debuglevel = debug
     if trace_token:
       sys.stderr.write(TRACE_WARNING)
-    if debug >= DEBUGLEVEL_DUMP_REQUESTS:
+    if debug >= constants.DEBUGLEVEL_DUMP_REQUESTS:
       sys.stderr.write(DEBUG_WARNING)
       _ConfigureLogging(level=logging.DEBUG)
       command_runner.RunNamedCommand('ver', ['-l'])
@@ -350,7 +353,8 @@ def main():
         if config_item_key in CONFIG_KEYS_TO_REDACT:
           config_items[i] = (config_item_key, 'REDACTED')
       sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
-      sys.stderr.write('config_file_list: %s\n' % GetBotoConfigFileList())
+      sys.stderr.write(
+          'config_file_list: %s\n' % boto_util.GetBotoConfigFileList())
       sys.stderr.write('config: %s\n' % str(config_items))
     elif quiet:
       _ConfigureLogging(level=logging.WARNING)
@@ -365,7 +369,7 @@ def main():
           logging.ERROR)
       oauth2client.transport._LOGGER.setLevel(logging.WARNING)
 
-    if not CERTIFICATE_VALIDATION_ENABLED:
+    if not boto_util.CERTIFICATE_VALIDATION_ENABLED:
       sys.stderr.write(HTTP_WARNING)
 
     if version:
@@ -397,7 +401,7 @@ def _CheckAndWarnForProxyDifferences():
     for proxy_env_var in ['http_proxy', 'https_proxy', 'HTTPS_PROXY']:
       if proxy_env_var in os.environ and os.environ[proxy_env_var]:
         differing_values = []
-        proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
+        proxy_info = boto_util.ProxyInfoFromEnvironmentVar(proxy_env_var)
         if proxy_info.proxy_host != boto.config.get('Boto', 'proxy', None):
           differing_values.append(
               'Boto proxy host: "%s" differs from %s proxy host: "%s"' %
@@ -514,8 +518,8 @@ def _CheckAndHandleCredentialException(e, args):
   # have been using gsutil only for accessing publicly readable buckets and
   # objects).
   # pylint: disable=g-import-not-at-top
-  from gslib.utils.boto_util import HasConfiguredCredentials
-  if (not HasConfiguredCredentials() and
+  from gslib.utils import boto_util
+  if (not boto_util.HasConfiguredCredentials() and
       not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
                                 False)):
     # The check above allows tests to assert that we get a particular,
@@ -551,18 +555,15 @@ def _RunNamedCommandAndHandleExceptions(
     command_runner, command_name, args=None, headers=None, debug_level=0,
     trace_token=None, parallel_operations=False, perf_trace_token=None,
     user_project=None):
-  """Runs the command and handles common exceptions."""
+  """Runs the command and handles common exceptions. Run from with main()."""
   # pylint: disable=g-import-not-at-top
-  from gslib.utils.boto_util import GetConfigFilePaths
-  from gslib.utils.system_util import IS_WINDOWS
-  from gslib.utils.system_util import IsRunningInteractively
   try:
     # Catch ^C so we can print a brief message instead of the normal Python
     # stack trace. Register as a final signal handler because this handler kills
     # the main gsutil process (so it must run last).
     RegisterSignalHandler(signal.SIGINT, _HandleControlC, is_final_handler=True)
     # Catch ^\ so we can force a breakpoint in a running gsutil.
-    if not IS_WINDOWS:
+    if not system_util.IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
 
     return command_runner.RunNamedCommand(command_name, args, headers,
@@ -592,8 +593,9 @@ def _RunNamedCommandAndHandleExceptions(
   except OSError as e:
     _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
   except IOError as e:
-    if (e.errno == errno.EPIPE or (IS_WINDOWS and e.errno == errno.EINVAL)
-        and not IsRunningInteractively()):
+    if (e.errno == errno.EPIPE
+        or (system_util.IS_WINDOWS and e.errno == errno.EINVAL)
+        and not system_util.IsRunningInteractively()):
       # If we get a pipe error, this just means that the pipe to stdout or
       # stderr is broken. This can happen if the user pipes gsutil to a command
       # that doesn't use the entire output stream. Instead of raising an error,
@@ -669,8 +671,8 @@ def _RunNamedCommandAndHandleExceptions(
         'pasted the ENTIRE authorization code (including any numeric prefix '
         "e.g. '4/')." % e)), exception=e)
   except Exception as e:  # pylint: disable=broad-except
-    if GetConfigFilePaths():
-      config_paths = ', '.join(GetConfigFilePaths())
+    if boto_util.GetConfigFilePaths():
+      config_paths = ', '.join(boto_util.GetConfigFilePaths())
     else:
       config_paths = 'no config found'
     # Check for two types of errors related to service accounts. These errors

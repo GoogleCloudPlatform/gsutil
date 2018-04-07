@@ -89,8 +89,6 @@ from gslib.parallel_tracker_file import ReadParallelUploadTrackerFile
 from gslib.parallel_tracker_file import ValidateParallelCompositeTrackerData
 from gslib.parallel_tracker_file import WriteComponentToParallelUploadTrackerFile
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
-from gslib.parallelism_framework_util import AtomicDict
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.posix_util import ATIME_ATTR
 from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.posix_util import GID_ATTR
@@ -125,8 +123,10 @@ from gslib.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.translation_helper import ObjectMetadataFromHeaders
 from gslib.translation_helper import PreconditionsFromHeaders
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
-from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import CreateLock
+from gslib.utils import parallelism_framework_util
+from gslib.utils.parallelism_framework_util import AtomicDict
+from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
@@ -162,13 +162,14 @@ global global_copy_helper_opts
 # ensure that if we write to the same file twice (say, for example, because the
 # user specified two identical source URLs), the writes occur serially.
 global open_files_map, open_files_lock
-open_files_map = (
-    AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
-    else AtomicDict(manager=gslib.util.manager))  # pylint: disable=invalid-name
+open_files_map = AtomicDict(
+    manager=(
+        parallelism_framework_util.top_level_manager
+        if CheckMultiprocessingAvailableAndInit().is_available else None))
 
 # We don't allow multiple processes on Windows, so using a process-safe lock
 # would be unnecessary.
-open_files_lock = CreateLock()
+open_files_lock = parallelism_framework_util.CreateLock()
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
@@ -260,10 +261,11 @@ S3_MAX_UPLOAD_SIZE = 5 * 1024 * 1024 * 1024
 # TODO: Create a message class that serializes posting this message once
 # through the UI's global status queue.
 global suggested_sliced_transfers, suggested_sliced_transfers_lock
-suggested_sliced_transfers = (
-    AtomicDict() if not CheckMultiprocessingAvailableAndInit().is_available
-    else AtomicDict(manager=gslib.util.manager))
-suggested_sliced_transfers_lock = CreateLock()
+suggested_sliced_transfers = AtomicDict(
+    manager=(
+        parallelism_framework_util.top_level_manager
+        if CheckMultiprocessingAvailableAndInit().is_available else None))
+suggested_sliced_transfers_lock = parallelism_framework_util.CreateLock()
 
 
 # TODO(KMS, Compose): Remove this once we support compose across CMEK-encrypted
@@ -277,7 +279,7 @@ global bucket_metadata_pcu_check, bucket_metadata_pcu_check_lock
 # Becomes True or False once populated. If we ever allow multiple destination
 # arguments to cp, this could become a dict of bucket name -> bool.
 bucket_metadata_pcu_check = None
-bucket_metadata_pcu_check_lock = CreateLock()
+bucket_metadata_pcu_check_lock = parallelism_framework_util.CreateLock()
 
 
 class FileConcurrencySkipError(Exception):
@@ -1043,7 +1045,7 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       encryption_key_sha256=encryption_key_sha256)
 
   # Protect the tracker file within calls to Apply.
-  tracker_file_lock = CreateLock()
+  tracker_file_lock = parallelism_framework_util.CreateLock()
   # Dict to track component info so we may align FileMessage values
   # before and after the operation.
   components_info = {}
@@ -3537,7 +3539,7 @@ class Manifest(object):
     # self.items contains a dictionary of rows
     self.items = {}
     self.manifest_filter = {}
-    self.lock = CreateLock()
+    self.lock = parallelism_framework_util.CreateLock()
 
     self.manifest_path = os.path.expanduser(path)
     self._ParseManifest()

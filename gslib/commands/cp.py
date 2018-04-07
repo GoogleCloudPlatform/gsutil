@@ -55,7 +55,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CreateLock
+from gslib.utils import parallelism_framework_util
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import NO_MAX
 from gslib.utils.system_util import GetStreamFromFileUrl
@@ -1150,7 +1150,7 @@ class CpCommand(Command):
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    self.stats_lock = CreateLock()
+    self.stats_lock = parallelism_framework_util.CreateLock()
 
     # Tracks if any copies failed.
     self.op_failure_count = 0

@@ -88,6 +88,7 @@ from gslib.translation_helper import LifecycleTranslation
 from gslib.translation_helper import REMOVE_CORS_CONFIG
 from gslib.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.translation_helper import UnaryDictToXml
+from gslib.utils import parallelism_framework_util
 from gslib.utils.boto_util import ConfigureNoOpAuthIfNeeded
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
@@ -127,7 +128,7 @@ def InitializeMultiprocessingVariables():  # pylint: disable=invalid-name
   """
   # pylint: disable=global-variable-undefined
   global boto_auth_initialized, boto_auth_initialized_lock
-  boto_auth_initialized_lock = gslib.util.CreateLock()
+  boto_auth_initialized_lock = parallelism_framework_util.CreateLock()
   boto_auth_initialized = multiprocessing.Value('i', 0)
 
 

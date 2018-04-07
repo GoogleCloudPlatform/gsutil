@@ -31,7 +31,6 @@ import json
 import logging
 import multiprocessing
 import os
-import Queue
 import signal
 import sys
 import textwrap
@@ -41,6 +40,8 @@ import traceback
 
 import boto
 from boto.storage_uri import StorageUri
+from six.moves import queue as Queue
+
 import gslib
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -57,12 +58,6 @@ from gslib.name_expansion import CopyObjectsIterator
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.parallelism_framework_util import AtomicDict
-from gslib.parallelism_framework_util import ProcessAndThreadSafeInt
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
-from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
 from gslib.sig_handling import ChildProcessSignalHandler
@@ -84,11 +79,18 @@ from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
-from gslib.util import CheckMultiprocessingAvailableAndInit
 from gslib.utils.boto_util import GetConfigFilePaths
 from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import UTF8
+import gslib.utils.parallelism_framework_util
+from gslib.utils.parallelism_framework_util import AtomicDict
+from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
+from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
+from gslib.utils.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.utils.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
+from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.utils.rsync_util import RsyncDiffToApply
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.system_util import GetTermLines
@@ -161,15 +163,15 @@ queues = []
 
 
 def _NewMultiprocessingQueue():
-  queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
-  queues.append(queue)
-  return queue
+  new_queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
+  queues.append(new_queue)
+  return new_queue
 
 
 def _NewThreadsafeQueue():
-  queue = Queue.Queue(MAX_QUEUE_SIZE)
-  queues.append(queue)
-  return queue
+  new_queue = Queue.Queue(MAX_QUEUE_SIZE)
+  queues.append(new_queue)
+  return new_queue
 
 # The maximum size of a process- or thread-safe queue. Imposing this limit
 # prevents us from needing to hold an arbitrary amount of data in memory.
@@ -237,7 +239,7 @@ def InitializeMultiprocessingVariables():
   the flow of startup/teardown looks like this:
 
   1. __main__: initializes multiprocessing variables, including any necessary
-     Manager processes (here and in gslib.util).
+     Manager processes (here and in gslib.utils.parallelism_framework_util.
   2. __main__: Registers signal handlers for terminating signals responsible
      for cleaning up multiprocessing variables and manager processes upon exit.
   3. Command.Apply registers signal handlers for the main process to kill
@@ -383,7 +385,7 @@ def TeardownMultiprocessingProcesses():
   global manager
   # pylint: enable=global-variable-not-assigned,global-variable-undefined
   manager.shutdown()
-  gslib.util.manager.shutdown()
+  gslib.utils.parallelism_framework_util.top_level_manager.shutdown()
 
 
 def InitializeThreadingVariables():

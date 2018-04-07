@@ -38,7 +38,7 @@ from gslib.tests.mock_cloud_api import MockCloudApi
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
-from gslib.util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 from gslib.utils.system_util import IS_WINDOWS
 
 
