@@ -238,7 +238,7 @@ def InitializeMultiprocessingVariables():
   the flow of startup/teardown looks like this:
 
   1. __main__: initializes multiprocessing variables, including any necessary
-     Manager processes (here and in gslib.utils.parallelism_framework_util.
+     Manager processes (here and in gslib.utils.parallelism_framework_util).
   2. __main__: Registers signal handlers for terminating signals responsible
      for cleaning up multiprocessing variables and manager processes upon exit.
   3. Command.Apply registers signal handlers for the main process to kill

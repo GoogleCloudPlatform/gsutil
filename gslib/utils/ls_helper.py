@@ -109,7 +109,7 @@ def PrintDirHeader(bucket_listing_ref):
 
 def PrintNewLine():
   """Default function for printing new lines between directories."""
-  print
+  print()
 
 
 # pylint: disable=too-many-statements

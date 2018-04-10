@@ -555,7 +555,9 @@ def _RunNamedCommandAndHandleExceptions(
     command_runner, command_name, args=None, headers=None, debug_level=0,
     trace_token=None, parallel_operations=False, perf_trace_token=None,
     user_project=None):
-  """Runs the command and handles common exceptions. Run from with main()."""
+  """Runs the command and handles common exceptions."""
+  # Note that this method is run at the end of main() and thus has access to
+  # all of the modules imported there.
   # pylint: disable=g-import-not-at-top
   try:
     # Catch ^C so we can print a brief message instead of the normal Python

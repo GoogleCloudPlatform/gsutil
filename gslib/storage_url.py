@@ -424,10 +424,12 @@ def UrlsAreForSingleProvider(url_args):
   """Tests whether the URLs are all for a single provider.
 
   Args:
-    url_args: Strings to check.
+    url_args: (Iterable[str]) Collection of strings to check.
 
   Returns:
-    True if URLs are for single provider, False otherwise.
+    True if all URLs are for single provider; False if `url_args` was empty (as
+    this would not result in a single unique provider) or URLs targeted multiple
+    unique providers.
   """
   provider = None
   url = None
