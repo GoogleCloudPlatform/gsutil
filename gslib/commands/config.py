@@ -259,7 +259,10 @@ _DETAILED_HELP_TEXT = ("""
   -e          Prompt for service account credentials. This option requires that
               -a is not set.
 
-  -f          Request token with full-control access (default).
+  -f          Request token with full control (devstorage.full_control scope).
+              Note that this does not provide non-storage scopes, such as those
+              needed to edit Pub/Sub and KMS resources (used with the
+              'notification' and 'kms' commands).
 
   -n          Write the configuration file without authentication configured.
               This flag is mutually exlusive with all flags other than -o.
@@ -267,11 +270,16 @@ _DETAILED_HELP_TEXT = ("""
   -o <file>   Write the configuration to <file> instead of ~/.boto.
               Use '-' for stdout.
 
-  -r          Request token restricted to read-only access.
+  -r          Request token with read-only access (devstorage.read_only scope).
 
-  -s <scope>  Request additional OAuth2 <scope>.
+  --reauth    Request token with reauth access (accounts.reauth scope).
 
-  -w          Request token restricted to read-write access.
+  -s <scope>  Request a specific OAuth2 <scope> instead of the default(s). This
+              option may be repeated to request multiple scopes, and may be used
+              in conjuction with other flags that request a specific scope.
+
+  -w          Request token with read-write access
+              (devstorage.read_write scope).
 """)
 
 
@@ -286,6 +294,7 @@ SCOPE_CLOUD_PLATFORM = 'https://www.googleapis.com/auth/cloud-platform'
 SCOPE_FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
 SCOPE_READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
 SCOPE_READ_ONLY = 'https://www.googleapis.com/auth/devstorage.read_only'
+SCOPE_REAUTH = 'https://www.googleapis.com/auth/accounts.reauth'
 
 CONFIG_PRELUDE_CONTENT = """
 # This file contains credentials and other configuration information needed
@@ -666,7 +675,8 @@ class ConfigCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=0,
-      supported_sub_args='habefnwrs:o:',
+      supported_sub_args='abefhno:rs:w',
+      supported_private_args=['reauth'],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1142,6 +1152,8 @@ class ConfigCommand(Command):
         output_file_name = opt_arg
       elif opt == '-r':
         scopes.append(SCOPE_READ_ONLY)
+      elif opt == '--reauth':
+        scopes.append(SCOPE_REAUTH)
       elif opt == '-s':
         scopes.append(opt_arg)
       elif opt == '-w':
@@ -1154,9 +1166,10 @@ class ConfigCommand(Command):
                              '"gsutil help config" for more information.')
 
     if not configure_auth and (has_a or has_e or scopes or launch_browser):
-      raise CommandException('The -a, -b, -e, -f, -s, and -w flags cannot be '
-                             'specified with the -n flag. Please see '
-                             '"gsutil help config" for more information.')
+      raise CommandException(
+          'The -a, -b, -e, -f, -r, --reauth, -s, and -w flags cannot be '
+          'specified with the -n flag. Please see "gsutil help config" for '
+          'more information.')
 
     # Don't allow users to configure Oauth2 (any option other than -a and -n)
     # when running in the Cloud SDK, unless they have the Cloud SDK configured
@@ -1189,6 +1202,7 @@ class ConfigCommand(Command):
 
     if not scopes:
       scopes.append(SCOPE_CLOUD_PLATFORM)
+      scopes.append(SCOPE_REAUTH)
 
     default_config_path_bak = None
     if not output_file_name:

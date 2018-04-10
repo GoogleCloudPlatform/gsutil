@@ -39,6 +39,8 @@ DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
 
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 
+DEFAULT_GCS_JSON_API_VERSION = 'v1'
+
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
 # Number of seconds to wait before printing a long retry warning message.

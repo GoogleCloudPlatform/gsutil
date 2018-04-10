@@ -34,7 +34,6 @@ from apitools.base.py.util import CalculateWaitForRetry
 from boto import config
 import httplib2
 import oauth2client
-from oauth2client.contrib import multiprocess_file_storage
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -51,8 +50,7 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
-from gslib.gcs_json_credentials import CheckAndGetCredentials
-from gslib.gcs_json_credentials import GetCredentialStoreKey
+from gslib.gcs_json_credentials import SetUpJsonCredentialsAndCache
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
@@ -71,7 +69,7 @@ from gslib.tracker_file import HashRewriteParameters
 from gslib.tracker_file import ReadRewriteTrackerFile
 from gslib.tracker_file import WriteRewriteTrackerFile
 from gslib.utils.boto_util import GetCertsFile
-from gslib.utils.boto_util import GetCredentialStoreFilename
+from gslib.utils.boto_util import GetGcsJsonApiVersion
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNewHttp
@@ -102,8 +100,6 @@ NotificationAdditionalProperty = (NotificationCustomAttributesValue
 
 # Implementation supports only 'gs' URLs, so provider is unused.
 # pylint: disable=unused-argument
-
-DEFAULT_GCS_JSON_VERSION = 'v1'
 
 NUM_BUCKETS_PER_LIST_PAGE = 1000
 
@@ -175,22 +171,10 @@ class GcsJsonApi(CloudApi):
         bucket_storage_uri_class, logger, status_queue, provider='gs',
         debug=debug, trace_token=trace_token, perf_trace_token=perf_trace_token,
         user_project=user_project)
-    no_op_credentials = False
-    if not credentials:
-      loaded_credentials = CheckAndGetCredentials(logger)
-
-      if not loaded_credentials:
-        loaded_credentials = NoOpCredentials()
-        no_op_credentials = True
-    else:
-      if isinstance(credentials, NoOpCredentials):
-        no_op_credentials = True
-
-    self.credentials = credentials or loaded_credentials
 
     self.certs_file = GetCertsFile()
-
     self.http = GetNewHttp()
+    SetUpJsonCredentialsAndCache(self, logger, credentials=credentials)
 
     # Re-use download and upload connections. This class is only called
     # sequentially, but we can share TCP warmed-up connections across calls.
@@ -203,7 +187,6 @@ class GcsJsonApi(CloudApi):
     else:
       self.authorized_download_http = self.download_http
       self.authorized_upload_http = self.upload_http
-
     WrapDownloadHttpRequest(self.authorized_download_http)
     WrapUploadHttpRequest(self.authorized_upload_http)
 
@@ -234,28 +217,17 @@ class GcsJsonApi(CloudApi):
     else:
       self.host_port = ':' + config.get('Credentials', 'gs_json_port')
 
-    self.api_version = config.get('GSUtil', 'json_api_version',
-                                  DEFAULT_GCS_JSON_VERSION)
+    self.api_version = GetGcsJsonApiVersion()
     self.url_base = (self.http_base + self.host_base + self.host_port + '/' +
                      'storage/' + self.api_version + '/')
-
-    credential_store_key = GetCredentialStoreKey(self.credentials,
-                                                 self.api_version)
-
-    self.credentials.set_store(
-        multiprocess_file_storage.MultiprocessFileStorage(
-            GetCredentialStoreFilename(), credential_store_key))
-
-    self.num_retries = GetNumRetries()
-    self.max_retry_wait = GetMaxRetryDelay()
-
-    log_request = (debug >= 3)
-    log_response = (debug >= 3)
 
     self.global_params = apitools_messages.StandardQueryParameters(
         trace='token:%s' % trace_token) if trace_token else None
     additional_http_headers = {}
     self._AddPerfTraceTokenToHeaders(additional_http_headers)
+
+    log_request = (debug >= 3)
+    log_response = (debug >= 3)
 
     self.api_client = apitools_client.StorageV1(
         url=self.url_base, http=self.http, log_request=log_request,
@@ -263,12 +235,16 @@ class GcsJsonApi(CloudApi):
         version=self.api_version, default_global_params=self.global_params,
         additional_http_headers=additional_http_headers)
 
+    self.max_retry_wait = GetMaxRetryDelay()
     self.api_client.max_retry_wait = self.max_retry_wait
+
+    self.num_retries = GetNumRetries()
     self.api_client.num_retries = self.num_retries
+
     self.api_client.retry_func = LogAndHandleRetries(
         status_queue=self.status_queue)
 
-    if no_op_credentials:
+    if isinstance(self.credentials, NoOpCredentials):
       # This API key is not secret and is used to identify gsutil during
       # anonymous requests.
       self.api_client.AddGlobalParam('key',

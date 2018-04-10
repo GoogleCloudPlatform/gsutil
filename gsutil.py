@@ -66,6 +66,8 @@ THIRD_PARTY_LIBS = [
     ('argcomplete', ''),  # For tab-completion (gcloud installs only).
     ('mock', ''),  # mock and dependencies must be before boto.
     ('funcsigs', ''),  # mock dependency
+    ('google-reauth-python', ''),  # Package name: google_reauth
+    ('pyu2f', ''),  # google_reauth dependency
     ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
     ('pyasn1', ''),  # oauth2client dependency
     ('pyasn1-modules', ''),  # oauth2client dependency

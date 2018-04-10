@@ -28,7 +28,7 @@ from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import ServiceException
-from gslib.gcs_json_credentials import CheckAndGetCredentials
+from gslib.gcs_json_credentials import SetUpJsonCredentialsAndCache
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.third_party.kms_apitools import cloudkms_v1_client as apitools_client
 from gslib.third_party.kms_apitools import cloudkms_v1_messages as apitools_messages
@@ -63,34 +63,16 @@ class KmsApi(object):
     super(KmsApi, self).__init__()
     self.logger = logger
 
-    no_op_credentials = False
-    if not credentials:
-      loaded_credentials = CheckAndGetCredentials(logger)
-
-      if not loaded_credentials:
-        loaded_credentials = NoOpCredentials()
-        no_op_credentials = True
-    else:
-      if isinstance(credentials, NoOpCredentials):
-        no_op_credentials = True
-
-    self.credentials = credentials or loaded_credentials
     self.certs_file = GetCertsFile()
     self.http = GetNewHttp()
-
     self.http_base = 'https://'
     self.host_base = config.get('Credentials', 'gs_kms_host',
                                 'cloudkms.googleapis.com')
     gs_kms_port = config.get('Credentials', 'gs_kms_port', None)
-    if not gs_kms_port:
-      self.host_port = ''
-    else:
-      self.host_port = ':' + gs_kms_port
-
+    self.host_port = (':' + gs_kms_port) if gs_kms_port else ''
     self.url_base = (self.http_base + self.host_base + self.host_port)
 
-    self.num_retries = GetNumRetries()
-    self.max_retry_wait = GetMaxRetryDelay()
+    SetUpJsonCredentialsAndCache(self, logger, credentials=credentials)
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
@@ -102,10 +84,13 @@ class KmsApi(object):
         log_response=log_response,
         credentials=self.credentials)
 
-    self.api_client.max_retry_wait = self.max_retry_wait
+    self.num_retries = GetNumRetries()
     self.api_client.num_retries = self.num_retries
 
-    if no_op_credentials:
+    self.max_retry_wait = GetMaxRetryDelay()
+    self.api_client.max_retry_wait = self.max_retry_wait
+
+    if isinstance(self.credentials, NoOpCredentials):
       # This API key is not secret and is used to identify gsutil during
       # anonymous requests.
       self.api_client.AddGlobalParam('key',

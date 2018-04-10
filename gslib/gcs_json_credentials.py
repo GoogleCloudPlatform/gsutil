@@ -25,18 +25,24 @@ import logging
 import os
 import traceback
 
+# pylint: disable=g-bad-import-order
 from apitools.base.py import credentials_lib
 from apitools.base.py import exceptions as apitools_exceptions
 from boto import config
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
+from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils.boto_util import GetBotoConfigFileList
+from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
+from gslib.utils.boto_util import GetGcsJsonApiVersion
 from gslib.utils.system_util import GetGsutilClientIdAndSecret
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
 from oauth2client.service_account import ServiceAccountCredentials
+from google_reauth import reauth_creds
+from oauth2client.contrib import multiprocess_file_storage
 
 from six import BytesIO
 
@@ -57,7 +63,56 @@ DEFAULT_SCOPES = [
 GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
 
 
-def CheckAndGetCredentials(logger):
+def GetCredentialStoreKey(credentials, api_version):
+  """Disambiguates a credential for caching in a credential store.
+
+  Different credential types have different fields that identify them.
+  This function assembles relevant information in a string to be used as the key
+  for accessing a credential.
+
+  Args:
+    credentials: An OAuth2Credentials object.
+    api_version: JSON API version being used.
+
+  Returns:
+    A string that can be used as the key to identify a credential, e.g.
+    "v1-909320924072.apps.googleusercontent.com-1/rEfrEshtOkEn"
+  """
+  # TODO: If scopes ever become available in the credentials themselves,
+  # include them in the key.
+  key_parts = [api_version]
+  # pylint: disable=protected-access
+  if isinstance(credentials, devshell.DevshellCredentials):
+    key_parts.append(credentials.user_email)
+  elif isinstance(credentials, ServiceAccountCredentials):
+    key_parts.append(credentials._service_account_email)
+  elif isinstance(credentials, oauth2client.client.OAuth2Credentials):
+    if credentials.client_id and credentials.client_id != 'null':
+      key_parts.append(credentials.client_id)
+    else:
+      key_parts.append('noclientid')
+    key_parts.append(credentials.refresh_token or 'norefreshtoken')
+  # pylint: enable=protected-access
+
+  return '-'.join(key_parts)
+
+
+def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
+  """Helper to ensure each GCS API client shares the same credentials."""
+  api.credentials = (
+      credentials or _CheckAndGetCredentials(logger) or NoOpCredentials())
+
+  # Set credential cache so that we don't have to get a new access token for
+  # every call we make. All GCS APIs use the same credentials as the JSON API,
+  # so we use its version in the key for caching access tokens.
+  credential_store_key = (
+      GetCredentialStoreKey(api.credentials, GetGcsJsonApiVersion()))
+  api.credentials.set_store(
+      multiprocess_file_storage.MultiprocessFileStorage(
+          GetCredentialStoreFilename(), credential_store_key))
+
+
+def _CheckAndGetCredentials(logger):
   """Returns credentials from the configuration file, if any are present.
 
   Args:
@@ -120,40 +175,6 @@ def CheckAndGetCredentials(logger):
     # boto does). That approach leads to much confusion if users don't
     # realize their credentials are invalid.
     raise
-
-
-def GetCredentialStoreKey(credentials, api_version):
-  """Disambiguates a credential for caching in a credential store.
-
-  Different credential types have different fields that identify them.
-  This function assembles relevant information in a string to be used as the key
-  for accessing a credential.
-
-  Args:
-    credentials: An OAuth2Credentials object.
-    api_version: JSON API version being used.
-
-  Returns:
-    A string that can be used as the key to identify a credential, e.g.
-    "v1-909320924072.apps.googleusercontent.com-1/rEfrEshtOkEn"
-  """
-  # TODO: If scopes ever become available in the credentials themselves,
-  # include them in the key.
-  key_parts = [api_version]
-  # pylint: disable=protected-access
-  if isinstance(credentials, devshell.DevshellCredentials):
-    key_parts.append(credentials.user_email)
-  elif isinstance(credentials, ServiceAccountCredentials):
-    key_parts.append(credentials._service_account_email)
-  elif isinstance(credentials, oauth2client.client.OAuth2Credentials):
-    if credentials.client_id and credentials.client_id != 'null':
-      key_parts.append(credentials.client_id)
-    else:
-      key_parts.append('noclientid')
-    key_parts.append(credentials.refresh_token or 'norefreshtoken')
-  # pylint: enable=protected-access
-
-  return '-'.join(key_parts)
 
 
 def _GetProviderTokenUri():
@@ -229,7 +250,7 @@ def _GetOauth2UserAccountCredentials():
   client_secret = config.get('OAuth2', 'client_secret',
                              os.environ.get('OAUTH2_CLIENT_SECRET',
                                             gsutil_client_secret))
-  return oauth2client.client.OAuth2Credentials(
+  return reauth_creds.Oauth2WithReauthCredentials(
       None, client_id, client_secret,
       config.get('Credentials', 'gs_oauth2_refresh_token'), None,
       provider_token_uri, None)

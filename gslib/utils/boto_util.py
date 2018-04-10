@@ -35,6 +35,7 @@ from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 
 import gslib
+from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.unit_util import HumanReadableToBytes
@@ -186,6 +187,10 @@ def GetCredentialStoreFilename():
 
 def GetGceCredentialCacheFilename():
   return os.path.join(GetGsutilStateDir(), 'gcecredcache')
+
+
+def GetGcsJsonApiVersion():
+  return config.get('GSUtil', 'json_api_version', DEFAULT_GCS_JSON_API_VERSION)
 
 
 # Resumable downloads and uploads make one HTTP call per chunk (and must be

@@ -58,3 +58,9 @@
 [submodule "third_party/monotonic"]
 	path = third_party/monotonic
 	url = git://github.com/gsutil-mirrors/monotonic.git
+[submodule "third_party/google-reauth-python"]
+	path = third_party/google-reauth-python
+	url = git://github.com/google/google-reauth-python
+[submodule "third_party/pyu2f"]
+	path = third_party/pyu2f
+	url = git://github.com/google/pyu2f

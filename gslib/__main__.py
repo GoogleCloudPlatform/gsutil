@@ -57,6 +57,7 @@ else:
 # pylint: disable=g-bad-import-order
 import httplib2
 import oauth2client
+from google_reauth import reauth_creds
 from gslib import wildcard_iterator
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -368,6 +369,7 @@ def main():
       oauth2client.contrib.multiprocess_file_storage.logger.setLevel(
           logging.ERROR)
       oauth2client.transport._LOGGER.setLevel(logging.WARNING)
+      reauth_creds._LOGGER.setLevel(logging.WARNING)
 
     if not boto_util.CERTIFICATE_VALIDATION_ENABLED:
       sys.stderr.write(HTTP_WARNING)
@@ -517,8 +519,6 @@ def _CheckAndHandleCredentialException(e, args):
   # Provide detail to users who have no boto config file (who might previously
   # have been using gsutil only for accessing publicly readable buckets and
   # objects).
-  # pylint: disable=g-import-not-at-top
-  from gslib.utils import boto_util
   if (not boto_util.HasConfiguredCredentials() and
       not boto.config.get_value('Tests', 'bypass_anonymous_access_warning',
                                 False)):

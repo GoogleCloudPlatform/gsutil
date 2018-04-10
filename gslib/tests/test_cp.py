@@ -3697,6 +3697,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.AssertObjectUsesCMEK(obj2_suri, key2_fqn)
 
   @SkipForS3('Test uses gs-specific KMS encryption')
+  @SkipForXML('Copying KMS-encrypted objects prohibited with XML API')
   def test_kms_key_not_applied_to_nonkms_dst_obj_from_src_with_kms_key(self):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
