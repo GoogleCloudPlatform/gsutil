@@ -61,6 +61,13 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
       self.ks_file = self.CreateTempFile(contents=contents)
     return self.ks_file
 
+  def testSignUrlInvalidDuration(self):
+    """Tests signurl fails with out of bounds value for valid duration."""
+    stderr = self.RunGsUtil(['signurl', '-d', '123d', 'ks_file', 'gs://uri'],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('CommandException: Max valid duration allowed is 7 days',
+                  stderr)
+
   def testSignUrlOutputP12(self):
     """Tests signurl output of a sample object with pkcs12 keystore."""
     self._DoTestSignUrlOutput(self._GetKsFile())

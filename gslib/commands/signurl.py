@@ -70,6 +70,7 @@ _STRING_TO_SIGN_FORMAT = ('{signing_algo}\n{request_time}\n{credential_scope}'
                           '\n{hashed_request}')
 _SIGNED_URL_FORMAT = ('https://{host}/{path}?x-goog-signature={sig}&'
                       '{query_string}')
+_MAX_EXPIRATION_TIME = timedelta(days=7)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
@@ -129,6 +130,8 @@ _DETAILED_HELP_TEXT = ("""
                This option may be specified multiple times, in which case
                the duration the link remains valid is the sum of all the
                duration options.
+
+               The max duration allowed is 7d.
 
   -c           Specifies the content type for which the signed url is
                valid for.
@@ -397,6 +400,10 @@ class UrlSignCommand(Command):
 
     if delta is None:
       delta = timedelta(hours=1)
+    else:
+      if delta > _MAX_EXPIRATION_TIME:
+        raise CommandException('Max valid duration allowed is '
+                               '%s' % _MAX_EXPIRATION_TIME)
 
     if method not in ['GET', 'PUT', 'DELETE', 'HEAD', 'RESUMABLE']:
       raise CommandException('HTTP method must be one of'
