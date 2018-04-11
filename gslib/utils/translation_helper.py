@@ -44,6 +44,8 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import Preconditions
 from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils.constants import S3_ACL_MARKER_GUID
+from gslib.utils.constants import S3_MARKER_GUIDS
 
 CACHE_CONTROL_REGEX = re.compile(r'^cache-control', re.I)
 CONTENT_DISPOSITION_REGEX = re.compile(r'^content-disposition', re.I)
@@ -60,10 +62,6 @@ CUSTOM_GOOG_METADATA_REGEX = re.compile(r'^x-goog-meta-(?P<header_key>.*)',
 CUSTOM_AMZ_METADATA_REGEX = re.compile(r'^x-amz-meta-(?P<header_key>.*)', re.I)
 CUSTOM_AMZ_HEADER_REGEX = re.compile(r'^x-amz-(?P<header_key>.*)', re.I)
 
-# gsutil-specific GUIDs for marking special metadata for S3 compatibility.
-S3_ACL_MARKER_GUID = '3b89a6b5-b55a-4900-8c44-0b0a2f5eab43-s3-AclMarker'
-S3_DELETE_MARKER_GUID = 'eadeeee8-fa8c-49bb-8a7d-0362215932d8-s3-DeleteMarker'
-S3_MARKER_GUIDS = [S3_ACL_MARKER_GUID, S3_DELETE_MARKER_GUID]
 # This distinguishes S3 custom headers from S3 metadata on objects.
 S3_HEADER_PREFIX = 'custom-amz-header'
 
@@ -387,57 +385,6 @@ def CreateObjectNotFoundException(code, provider, bucket_name, object_name,
   return NotFoundException('%s does not exist.' % uri_string, status=code)
 
 
-def EncodeStringAsLong(string_to_convert):
-  """Encodes an ASCII string as a python long.
-
-  This is used for modeling S3 version_id's as apitools generation.  Because
-  python longs can be arbitrarily large, this works.
-
-  Args:
-    string_to_convert: ASCII string to convert to a long.
-
-  Returns:
-    Long that represents the input string.
-  """
-  return long(string_to_convert.encode('hex'), 16)
-
-
-def _DecodeLongAsString(long_to_convert):
-  """Decodes an encoded python long into an ASCII string.
-
-  This is used for modeling S3 version_id's as apitools generation.
-
-  Args:
-    long_to_convert: long to convert to ASCII string. If this is already a
-                     string, it is simply returned.
-
-  Returns:
-    String decoded from the input long.
-  """
-  if isinstance(long_to_convert, basestring):
-    # Already converted.
-    return long_to_convert
-  return hex(long_to_convert)[2:-1].decode('hex')
-
-
-def GenerationFromUrlAndString(url, generation):
-  """Decodes a generation from a StorageURL and a generation string.
-
-  This is used to represent gs and s3 versioning.
-
-  Args:
-    url: StorageUrl representing the object.
-    generation: Long or string representing the object's generation or
-                version.
-
-  Returns:
-    Valid generation string for use in URLs.
-  """
-  if url.scheme == 's3' and generation:
-    return _DecodeLongAsString(generation)
-  return generation
-
-
 def CheckForXmlConfigurationAndRaise(config_type_string, json_txt):
   """Checks a JSON parse exception for provided XML configuration."""
   try:
@@ -712,6 +659,32 @@ def AddS3MarkerAclToObjectMetadata(object_metadata, acl_text):
   object_metadata.metadata.additionalProperties.append(
       apitools_messages.Object.MetadataValue.AdditionalProperty(
           key=S3_ACL_MARKER_GUID, value=acl_text))
+
+
+def UnaryDictToXml(message):
+  """Generates XML representation of a nested dict.
+
+  This dict contains exactly one top-level entry and an arbitrary number of
+  2nd-level entries, e.g. capturing a WebsiteConfiguration message.
+
+  Args:
+    message: The dict encoding the message.
+
+  Returns:
+    XML string representation of the input dict.
+
+  Raises:
+    Exception: if dict contains more than one top-level entry.
+  """
+  if len(message) != 1:
+    raise Exception('Expected dict of size 1, got size %d' % len(message))
+
+  name, content = message.items()[0]
+  element_type = ElementTree.Element(name)
+  for element_property, value in sorted(content.items()):
+    node = ElementTree.SubElement(element_type, element_property)
+    node.text = value
+  return ElementTree.tostring(element_type)
 
 
 class LabelTranslation(object):

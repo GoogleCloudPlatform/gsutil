@@ -23,7 +23,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 @SkipForS3('gsutil does not support KMS operations for S3 buckets.')

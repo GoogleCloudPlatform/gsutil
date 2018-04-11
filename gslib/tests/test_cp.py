@@ -41,23 +41,11 @@ import crcmod
 
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
-from gslib.copy_helper import GetTrackerFilePath
-from gslib.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
-from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
-from gslib.copy_helper import TrackerFileType
 from gslib.cs_api_map import ApiSelector
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
-from gslib.hashing_helper import CalculateMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import NA_ID
-from gslib.posix_util import NA_MODE
-from gslib.posix_util import UID_ATTR
-from gslib.posix_util import ValidateFilePermissionAccess
-from gslib.posix_util import ValidatePOSIXMode
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.rewrite_helper import EnsureRewriteResumeCallbackHandler
@@ -92,17 +80,29 @@ from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
 from gslib.ui_controller import BytesToFixedWidthString
-from gslib.util import DiscardMessagesQueue
-from gslib.util import EIGHT_MIB
-from gslib.util import HumanReadableToBytes
-from gslib.util import IS_WINDOWS
-from gslib.util import MakeHumanReadable
-from gslib.util import ONE_KIB
-from gslib.util import ONE_MIB
-from gslib.util import Retry
-from gslib.util import START_CALLBACK_PER_BYTES
-from gslib.util import UsingCrcmodExtension
-from gslib.util import UTF8
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import START_CALLBACK_PER_BYTES
+from gslib.utils.constants import UTF8
+from gslib.utils.copy_helper import GetTrackerFilePath
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_STATIC_SALT
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.utils.copy_helper import TrackerFileType
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.utils.hashing_helper import CalculateMd5FromContents
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import NA_ID
+from gslib.utils.posix_util import NA_MODE
+from gslib.utils.posix_util import UID_ATTR
+from gslib.utils.posix_util import ValidateFilePermissionAccess
+from gslib.utils.posix_util import ValidatePOSIXMode
+from gslib.utils.retry_util import Retry
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.unit_util import EIGHT_MIB
+from gslib.utils.unit_util import HumanReadableToBytes
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import ONE_KIB
+from gslib.utils.unit_util import ONE_MIB
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top

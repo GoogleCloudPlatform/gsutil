@@ -22,10 +22,10 @@ import re
 
 from boto import config
 from gslib.exception import CommandException
-from gslib.util import CreateDirIfNeeded
-from gslib.util import GetGsutilStateDir
-from gslib.util import ResumableThreshold
-from gslib.util import UTF8
+from gslib.utils.boto_util import GetGsutilStateDir
+from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.constants import UTF8
+from gslib.utils.system_util import CreateDirIfNeeded
 
 # The maximum length of a file name can vary wildly between different
 # operating systems, so we always ensure that tracker files are less

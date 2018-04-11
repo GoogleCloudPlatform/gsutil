@@ -42,7 +42,6 @@ import boto.gs.connection
 import gslib
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
-from gslib.cloud_api_helper import GetDownloadSerializationData
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
@@ -50,21 +49,22 @@ from gslib.commands import config
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.file_part import FilePart
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CheckFreeSpace
-from gslib.util import DivideAndCeil
-from gslib.util import GetCloudApiInstance
-from gslib.util import GetDiskCounters
-from gslib.util import GetFileSize
-from gslib.util import GetMaxRetryDelay
-from gslib.util import HumanReadableToBytes
-from gslib.util import IS_LINUX
-from gslib.util import MakeBitsHumanReadable
-from gslib.util import MakeHumanReadable
-from gslib.util import Percentile
-from gslib.util import ResumableThreshold
+from gslib.utils.boto_util import GetMaxRetryDelay
+from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.cloud_api_helper import GetDownloadSerializationData
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.utils.system_util import CheckFreeSpace
+from gslib.utils.system_util import GetDiskCounters
+from gslib.utils.system_util import GetFileSize
+from gslib.utils.system_util import IS_LINUX
+from gslib.utils.unit_util import DivideAndCeil
+from gslib.utils.unit_util import HumanReadableToBytes
+from gslib.utils.unit_util import MakeBitsHumanReadable
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import Percentile
 
 _SYNOPSIS = """
   gsutil perfdiag [-i in.json]

@@ -24,7 +24,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
-from gslib.util import ONE_KIB
+from gslib.utils.unit_util import ONE_KIB
 
 
 @SkipForS3('-D output is implementation-specific.')

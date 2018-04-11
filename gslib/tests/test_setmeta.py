@@ -24,8 +24,8 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.util import Retry
-from gslib.util import UTF8
+from gslib.utils.constants import UTF8
+from gslib.utils.retry_util import Retry
 
 
 class TestSetMeta(testcase.GsUtilIntegrationTestCase):

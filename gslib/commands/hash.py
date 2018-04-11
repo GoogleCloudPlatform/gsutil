@@ -27,18 +27,17 @@ from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.hashing_helper import Base64EncodeHash
-from gslib.hashing_helper import Base64ToHexHash
-from gslib.hashing_helper import CalculateHashesFromContents
-from gslib.hashing_helper import SLOW_CRCMOD_WARNING
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import FileMessage
 from gslib.thread_message import FinalMessage
-from gslib.util import NO_MAX
-from gslib.util import UsingCrcmodExtension
+from gslib.utils import boto_util
+from gslib.utils import constants
+from gslib.utils import hashing_helper
+from gslib.utils import parallelism_framework_util
+
+_PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 
 _SYNOPSIS = """
   gsutil hash [-c] [-h] [-m] filename...
@@ -79,7 +78,7 @@ class HashCommand(Command):
       command_name_aliases=[],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
-      max_args=NO_MAX,
+      max_args=constants.NO_MAX,
       supported_sub_args='chm',
       file_url_ok=True,
       provider_url_ok=False,
@@ -119,7 +118,8 @@ class HashCommand(Command):
     """
     calc_crc32c = False
     calc_md5 = False
-    format_func = lambda digest: Base64EncodeHash(digest.hexdigest())
+    format_func = (
+        lambda digest: hashing_helper.Base64EncodeHash(digest.hexdigest()))
     cloud_format_func = lambda digest: digest
     found_hash_option = False
     output_format = 'base64'
@@ -132,7 +132,8 @@ class HashCommand(Command):
         elif o == '-h':
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
-          cloud_format_func = lambda digest: Base64ToHexHash(digest)
+          cloud_format_func = (
+              lambda digest: hashing_helper.Base64ToHexHash(digest))
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True
@@ -141,8 +142,8 @@ class HashCommand(Command):
       calc_crc32c = True
       calc_md5 = True
 
-    if calc_crc32c and not UsingCrcmodExtension(crcmod):
-      logger.warn(SLOW_CRCMOD_WARNING)
+    if calc_crc32c and not boto_util.UsingCrcmodExtension(crcmod):
+      logger.warn(hashing_helper.SLOW_CRCMOD_WARNING)
 
     return calc_crc32c, calc_md5, format_func, cloud_format_func, output_format
 
@@ -190,8 +191,8 @@ class HashCommand(Command):
                   operation_name='Hashing').call)
           hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
           with open(file_name, 'rb') as fp:
-            CalculateHashesFromContents(fp, hash_dict,
-                                        callback_processor=callback_processor)
+            hashing_helper.CalculateHashesFromContents(
+                fp, hash_dict, callback_processor=callback_processor)
           self.gsutil_api.status_queue.put(
               FileMessage(url, None, time.time(), size=file_size, finished=True,
                           message_type=FileMessage.FILE_HASH))
@@ -216,7 +217,7 @@ class HashCommand(Command):
 
     if not matched_one:
       raise CommandException('No files matched')
-    PutToQueueWithTimeout(self.gsutil_api.status_queue,
+    _PutToQueueWithTimeout(self.gsutil_api.status_queue,
                           FinalMessage(time.time()))
     return 0
 

@@ -55,9 +55,9 @@ from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
 from boto.exception import ResumableUploadException
 from gslib.exception import InvalidUrlError
-from gslib.util import GetMaxRetryDelay
-from gslib.util import GetNumRetries
-from gslib.util import XML_PROGRESS_CALLBACKS
+from gslib.utils.boto_util import GetMaxRetryDelay
+from gslib.utils.boto_util import GetNumRetries
+from gslib.utils.constants import XML_PROGRESS_CALLBACKS
 
 
 class BotoResumableUpload(object):

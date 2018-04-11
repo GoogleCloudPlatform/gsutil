@@ -30,8 +30,9 @@ import gslib.commands
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
-from gslib.util import IS_WINDOWS
-from gslib.util import IsRunningInteractively
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.system_util import IsRunningInteractively
+from gslib.utils.system_util import GetTermLines
 
 _SYNOPSIS = """
   gsutil help [command or topic]
@@ -192,7 +193,7 @@ class HelpCommand(Command):
     help_str = re.sub('<B>', '\033[1m', help_str)
     help_str = re.sub('</B>', '\033[0;0m', help_str)
     num_lines = len(help_str.split('\n'))
-    if 'PAGER' in os.environ and num_lines >= gslib.util.GetTermLines():
+    if 'PAGER' in os.environ and num_lines >= GetTermLines():
       # Use -r option for less to make bolding work right.
       pager = os.environ['PAGER'].split(' ')
       if pager[0].endswith('less'):

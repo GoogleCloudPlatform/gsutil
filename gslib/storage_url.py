@@ -294,6 +294,101 @@ def _GetPathFromUrlString(url_str):
     return url_str[end_scheme_idx + 3:]
 
 
+def ContainsWildcard(url_string):
+  """Checks whether url_string contains a wildcard.
+
+  Args:
+    url_string: URL string to check.
+
+  Returns:
+    bool indicator.
+  """
+  return bool(WILDCARD_REGEX.search(url_string))
+
+
+def GenerationFromUrlAndString(url, generation):
+  """Decodes a generation from a StorageURL and a generation string.
+
+  This is used to represent gs and s3 versioning.
+
+  Args:
+    url: StorageUrl representing the object.
+    generation: Long or string representing the object's generation or
+                version.
+
+  Returns:
+    Valid generation string for use in URLs.
+  """
+  if url.scheme == 's3' and generation:
+    return text_util.DecodeLongAsString(generation)
+  return generation
+
+
+def HaveFileUrls(args_to_check):
+  """Checks whether args_to_check contain any file URLs.
+
+  Args:
+    args_to_check: Command-line argument subset to check.
+
+  Returns:
+    True if args_to_check contains any file URLs.
+  """
+  for url_str in args_to_check:
+    storage_url = StorageUrlFromString(url_str)
+    if storage_url.IsFileUrl():
+      return True
+  return False
+
+
+def HaveProviderUrls(args_to_check):
+  """Checks whether args_to_check contains any provider URLs (like 'gs://').
+
+  Args:
+    args_to_check: Command-line argument subset to check.
+
+  Returns:
+    True if args_to_check contains any provider URLs.
+  """
+  for url_str in args_to_check:
+    storage_url = StorageUrlFromString(url_str)
+    if storage_url.IsCloudUrl() and storage_url.IsProvider():
+      return True
+  return False
+
+
+def IsCloudSubdirPlaceholder(url, blr=None):
+  """Determines if a StorageUrl is a cloud subdir placeholder.
+
+  This function is needed because GUI tools (like the GCS cloud console) allow
+  users to create empty "folders" by creating a placeholder object; and parts
+  of gsutil need to treat those placeholder objects specially. For example,
+  gsutil rsync needs to avoid downloading those objects because they can cause
+  conflicts (see comments in rsync command for details).
+
+  We currently detect two cases:
+    - Cloud objects whose name ends with '_$folder$'
+    - Cloud objects whose name ends with '/'
+
+  Args:
+    url: (gslib.storage_url.StorageUrl) The URL to be checked.
+    blr: (gslib.BucketListingRef or None) The blr to check, or None if not
+        available. If `blr` is None, size won't be checked.
+
+  Returns:
+    (bool) True if the URL is a cloud subdir placeholder, otherwise False.
+  """
+  if not url.IsCloudUrl():
+    return False
+  url_str = url.url_string
+  if url_str.endswith('_$folder$'):
+    return True
+  if blr and blr.IsObject():
+    size = blr.root_object.size
+  else:
+    size = 0
+  return size == 0 and url_str.endswith('/')
+
+
 def IsFileUrlString(url_str):
   """Returns whether a string is a file URL."""
 
@@ -325,13 +420,24 @@ def StripOneSlash(url_str):
   return url_str
 
 
-def ContainsWildcard(url_string):
-  """Checks whether url_string contains a wildcard.
+def UrlsAreForSingleProvider(url_args):
+  """Tests whether the URLs are all for a single provider.
 
   Args:
-    url_string: URL string to check.
+    url_args: (Iterable[str]) Collection of strings to check.
 
   Returns:
-    bool indicator.
+    True if all URLs are for single provider; False if `url_args` was empty (as
+    this would not result in a single unique provider) or URLs targeted multiple
+    unique providers.
   """
-  return bool(WILDCARD_REGEX.search(url_string))
+  provider = None
+  url = None
+  for url_str in url_args:
+    url = StorageUrlFromString(url_str)
+    if not provider:
+      provider = url.scheme
+    elif url.scheme != provider:
+      return False
+  return provider is not None
+

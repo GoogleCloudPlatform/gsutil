@@ -18,18 +18,18 @@ from __future__ import absolute_import
 
 import sys
 
-from gslib.boto_translation import S3_DELETE_MARKER_GUID
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.ls_helper import LsHelper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
-from gslib.util import MakeHumanReadable
-from gslib.util import NO_MAX
-from gslib.util import UTF8
+from gslib.utils import ls_helper
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import S3_DELETE_MARKER_GUID
+from gslib.utils.constants import UTF8
+from gslib.utils.unit_util import MakeHumanReadable
 
 _SYNOPSIS = """
   gsutil du url...
@@ -237,7 +237,7 @@ class DuCommand(Command):
                                % self.command_name)
       bucket_listing_fields = ['size']
 
-      ls_helper = LsHelper(
+      listing_helper = ls_helper.LsHelper(
           self.WildcardIterator, self.logger,
           print_object_func=_PrintObjectLong, print_dir_func=_PrintNothing,
           print_dir_header_func=_PrintNothing,
@@ -246,7 +246,7 @@ class DuCommand(Command):
           should_recurse=True, exclude_patterns=self.exclude_patterns,
           fields=bucket_listing_fields)
 
-      # ls_helper expands to objects and prefixes, so perform a top-level
+      # LsHelper expands to objects and prefixes, so perform a top-level
       # expansion first.
       if top_level_storage_url.IsProvider():
         # Provider URL: use bucket wildcard to iterate over all buckets.
@@ -266,7 +266,7 @@ class DuCommand(Command):
         if storage_url.IsBucket() and self.summary_only:
           storage_url = StorageUrlFromString(
               storage_url.CreatePrefixUrl(wildcard_suffix='**'))
-        _, exp_objs, exp_bytes = ls_helper.ExpandUrlAndPrint(storage_url)
+        _, exp_objs, exp_bytes = listing_helper.ExpandUrlAndPrint(storage_url)
         if (storage_url.IsObject() and exp_objs == 0 and
             ContainsWildcard(url_arg) and not self.exclude_patterns):
           got_nomatch_errors = True

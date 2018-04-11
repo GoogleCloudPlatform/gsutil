@@ -38,7 +38,7 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY2_SHA256_B64
 from gslib.tests.util import unittest
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 class TestStat(testcase.GsUtilIntegrationTestCase):

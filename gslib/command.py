@@ -31,7 +31,6 @@ import json
 import logging
 import multiprocessing
 import os
-import Queue
 import signal
 import sys
 import textwrap
@@ -41,6 +40,8 @@ import traceback
 
 import boto
 from boto.storage_uri import StorageUri
+from six.moves import queue as Queue
+
 import gslib
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -57,12 +58,6 @@ from gslib.name_expansion import CopyObjectsIterator
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionResult
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.parallelism_framework_util import AtomicDict
-from gslib.parallelism_framework_util import ProcessAndThreadSafeInt
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
-from gslib.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
-from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.seek_ahead_thread import SeekAheadThread
 from gslib.sig_handling import ChildProcessSignalHandler
@@ -70,30 +65,36 @@ from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import KillProcess
 from gslib.sig_handling import MultithreadedMainSignalHandler
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.storage_url import HaveFileUrls
+from gslib.storage_url import HaveProviderUrls
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import PerformanceSummaryMessage
 from gslib.thread_message import ProducerThreadMessage
-from gslib.translation_helper import AclTranslation
-from gslib.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
-from gslib.util import CheckMultiprocessingAvailableAndInit
-from gslib.util import GetConfigFilePaths
-from gslib.util import GetMaxConcurrentCompressedUploads
-from gslib.util import HaveFileUrls
-from gslib.util import HaveProviderUrls
-from gslib.util import IS_WINDOWS
-from gslib.util import NO_MAX
-from gslib.util import RsyncDiffToApply
-from gslib.util import UrlsAreForSingleProvider
-from gslib.util import UTF8
-
+from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
+import gslib.utils.parallelism_framework_util
+from gslib.utils.parallelism_framework_util import AtomicDict
+from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
+from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
+from gslib.utils.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.utils.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
+from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
+from gslib.utils.rsync_util import RsyncDiffToApply
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.system_util import GetTermLines
+from gslib.utils.translation_helper import AclTranslation
+from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.wildcard_iterator import CreateWildcardIterator
-
 
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
 
@@ -161,15 +162,15 @@ queues = []
 
 
 def _NewMultiprocessingQueue():
-  queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
-  queues.append(queue)
-  return queue
+  new_queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
+  queues.append(new_queue)
+  return new_queue
 
 
 def _NewThreadsafeQueue():
-  queue = Queue.Queue(MAX_QUEUE_SIZE)
-  queues.append(queue)
-  return queue
+  new_queue = Queue.Queue(MAX_QUEUE_SIZE)
+  queues.append(new_queue)
+  return new_queue
 
 # The maximum size of a process- or thread-safe queue. Imposing this limit
 # prevents us from needing to hold an arbitrary amount of data in memory.
@@ -237,7 +238,7 @@ def InitializeMultiprocessingVariables():
   the flow of startup/teardown looks like this:
 
   1. __main__: initializes multiprocessing variables, including any necessary
-     Manager processes (here and in gslib.util).
+     Manager processes (here and in gslib.utils.parallelism_framework_util).
   2. __main__: Registers signal handlers for terminating signals responsible
      for cleaning up multiprocessing variables and manager processes upon exit.
   3. Command.Apply registers signal handlers for the main process to kill
@@ -383,7 +384,7 @@ def TeardownMultiprocessingProcesses():
   global manager
   # pylint: enable=global-variable-not-assigned,global-variable-undefined
   manager.shutdown()
-  gslib.util.manager.shutdown()
+  gslib.utils.parallelism_framework_util.top_level_manager.shutdown()
 
 
 def InitializeThreadingVariables():
@@ -635,7 +636,7 @@ class Command(HelpProvider):
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
     # If running on Windows, invoke python interpreter explicitly.
-    if gslib.util.IS_WINDOWS:
+    if IS_WINDOWS:
       self.gsutil_cmd += 'python '
     # Add full path to gsutil to make sure we test the correct version.
     self.gsutil_path = gslib.GSUTIL_PATH
@@ -1453,7 +1454,7 @@ class Command(HelpProvider):
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
 
-    if sequential_call_count >= gslib.util.GetTermLines():
+    if sequential_call_count >= GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
       self._MaybeSuggestGsutilDashM()
@@ -2080,8 +2081,8 @@ class WorkerThread(threading.Thread):
     self.user_project = user_project
 
     # Note that thread_gsutil_api is not initialized in the sequential
-    # case; task functions should use util.GetCloudApiInstance to
-    # retrieve the main thread's CloudApiDelegator in that case.
+    # case; task functions should use utils.cloud_api_helper.GetCloudApiInstance
+    # to retrieve the main thread's CloudApiDelegator in that case.
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
       self.thread_gsutil_api = CloudApiDelegator(

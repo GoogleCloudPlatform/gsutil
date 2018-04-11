@@ -29,7 +29,7 @@ from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import HashRewriteParameters
 from gslib.tracker_file import ReadRewriteTrackerFile
 from gslib.tracker_file import WriteRewriteTrackerFile
-from gslib.util import CreateLock
+from gslib.utils import parallelism_framework_util
 
 
 class TestTrackerFile(GsUtilUnitTestCase):
@@ -121,7 +121,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
     self.assertEqual(objects, actual_objects)
 
   def testWriteComponentToParallelUploadTrackerFile(self):
-    tracker_file_lock = CreateLock()
+    tracker_file_lock = parallelism_framework_util.CreateLock()
     fpath = self.CreateTempFile(file_name='foo')
     random_prefix = '123'
     enc_key = '456'

@@ -23,78 +23,87 @@
 
 from __future__ import absolute_import
 
-from gslib import util
+from gslib.utils import boto_util
+from gslib.utils import constants
+from gslib.utils import system_util
+from gslib.utils import ls_helper
+from gslib.utils import retry_util
+from gslib.utils import text_util
+from gslib.utils import unit_util
 import gslib.tests.testcase as testcase
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import TestParams
-from gslib.util import CompareVersions
-from gslib.util import DecimalShort
-from gslib.util import HumanReadableWithDecimalPlaces
-from gslib.util import PrettyTime
+from gslib.utils.text_util import CompareVersions
+from gslib.utils.unit_util import DecimalShort
+from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
+from gslib.utils.unit_util import PrettyTime
 import httplib2
 import mock
 
 
+# TODO: Split tests for <foo>_util methods out into their own test classes.
 class TestUtil(testcase.GsUtilUnitTestCase):
   """Tests for utility functions."""
 
   def testMakeHumanReadable(self):
     """Tests converting byte counts to human-readable strings."""
-    self.assertEqual(util.MakeHumanReadable(0), '0 B')
-    self.assertEqual(util.MakeHumanReadable(1023), '1023 B')
-    self.assertEqual(util.MakeHumanReadable(1024), '1 KiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 2), '1 MiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 3), '1 GiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 3 * 5.3), '5.3 GiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 4 * 2.7), '2.7 TiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 5), '1 PiB')
-    self.assertEqual(util.MakeHumanReadable(1024 ** 6), '1 EiB')
+    self.assertEqual(unit_util.MakeHumanReadable(0), '0 B')
+    self.assertEqual(unit_util.MakeHumanReadable(1023), '1023 B')
+    self.assertEqual(unit_util.MakeHumanReadable(1024), '1 KiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 2), '1 MiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 3), '1 GiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 3 * 5.3), '5.3 GiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 4 * 2.7), '2.7 TiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 5), '1 PiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 6), '1 EiB')
 
   def testMakeBitsHumanReadable(self):
     """Tests converting bit counts to human-readable strings."""
-    self.assertEqual(util.MakeBitsHumanReadable(0), '0 bit')
-    self.assertEqual(util.MakeBitsHumanReadable(1023), '1023 bit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024), '1 Kibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 2), '1 Mibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 3), '1 Gibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 3 * 5.3), '5.3 Gibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 4 * 2.7), '2.7 Tibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 5), '1 Pibit')
-    self.assertEqual(util.MakeBitsHumanReadable(1024 ** 6), '1 Eibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(0), '0 bit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1023), '1023 bit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024), '1 Kibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 2), '1 Mibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 3), '1 Gibit')
+    self.assertEqual(
+        unit_util.MakeBitsHumanReadable(1024 ** 3 * 5.3), '5.3 Gibit')
+    self.assertEqual(
+        unit_util.MakeBitsHumanReadable(1024 ** 4 * 2.7), '2.7 Tibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 5), '1 Pibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 6), '1 Eibit')
 
   def testHumanReadableToBytes(self):
     """Tests converting human-readable strings to byte counts."""
-    self.assertEqual(util.HumanReadableToBytes('1'), 1)
-    self.assertEqual(util.HumanReadableToBytes('15'), 15)
-    self.assertEqual(util.HumanReadableToBytes('15.3'), 15)
-    self.assertEqual(util.HumanReadableToBytes('15.7'), 16)
-    self.assertEqual(util.HumanReadableToBytes('1023'), 1023)
-    self.assertEqual(util.HumanReadableToBytes('1k'), 1024)
-    self.assertEqual(util.HumanReadableToBytes('2048'), 2048)
-    self.assertEqual(util.HumanReadableToBytes('1 k'), 1024)
-    self.assertEqual(util.HumanReadableToBytes('1 K'), 1024)
-    self.assertEqual(util.HumanReadableToBytes('1 KB'), 1024)
-    self.assertEqual(util.HumanReadableToBytes('1 KiB'), 1024)
-    self.assertEqual(util.HumanReadableToBytes('1 m'), 1024 ** 2)
-    self.assertEqual(util.HumanReadableToBytes('1 M'), 1024 ** 2)
-    self.assertEqual(util.HumanReadableToBytes('1 MB'), 1024 ** 2)
-    self.assertEqual(util.HumanReadableToBytes('1 MiB'), 1024 ** 2)
-    self.assertEqual(util.HumanReadableToBytes('1 g'), 1024 ** 3)
-    self.assertEqual(util.HumanReadableToBytes('1 G'), 1024 ** 3)
-    self.assertEqual(util.HumanReadableToBytes('1 GB'), 1024 ** 3)
-    self.assertEqual(util.HumanReadableToBytes('1 GiB'), 1024 ** 3)
-    self.assertEqual(util.HumanReadableToBytes('1t'), 1024 ** 4)
-    self.assertEqual(util.HumanReadableToBytes('1T'), 1024 ** 4)
-    self.assertEqual(util.HumanReadableToBytes('1TB'), 1024 ** 4)
-    self.assertEqual(util.HumanReadableToBytes('1TiB'), 1024 ** 4)
-    self.assertEqual(util.HumanReadableToBytes('1\t   p'), 1024 ** 5)
-    self.assertEqual(util.HumanReadableToBytes('1\t   P'), 1024 ** 5)
-    self.assertEqual(util.HumanReadableToBytes('1\t   PB'), 1024 ** 5)
-    self.assertEqual(util.HumanReadableToBytes('1\t   PiB'), 1024 ** 5)
-    self.assertEqual(util.HumanReadableToBytes('1e'), 1024 ** 6)
-    self.assertEqual(util.HumanReadableToBytes('1E'), 1024 ** 6)
-    self.assertEqual(util.HumanReadableToBytes('1EB'), 1024 ** 6)
-    self.assertEqual(util.HumanReadableToBytes('1EiB'), 1024 ** 6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1'), 1)
+    self.assertEqual(unit_util.HumanReadableToBytes('15'), 15)
+    self.assertEqual(unit_util.HumanReadableToBytes('15.3'), 15)
+    self.assertEqual(unit_util.HumanReadableToBytes('15.7'), 16)
+    self.assertEqual(unit_util.HumanReadableToBytes('1023'), 1023)
+    self.assertEqual(unit_util.HumanReadableToBytes('1k'), 1024)
+    self.assertEqual(unit_util.HumanReadableToBytes('2048'), 2048)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 k'), 1024)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 K'), 1024)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 KB'), 1024)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 KiB'), 1024)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 m'), 1024 ** 2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 M'), 1024 ** 2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 MB'), 1024 ** 2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 MiB'), 1024 ** 2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 g'), 1024 ** 3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 G'), 1024 ** 3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 GB'), 1024 ** 3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 GiB'), 1024 ** 3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1t'), 1024 ** 4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1T'), 1024 ** 4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1TB'), 1024 ** 4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1TiB'), 1024 ** 4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   p'), 1024 ** 5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   P'), 1024 ** 5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PB'), 1024 ** 5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PiB'), 1024 ** 5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1e'), 1024 ** 6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1E'), 1024 ** 6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1EB'), 1024 ** 6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1EiB'), 1024 ** 6)
 
   def testCompareVersions(self):
     """Tests CompareVersions for various use cases."""
@@ -173,13 +182,13 @@ class TestUtil(testcase.GsUtilUnitTestCase):
         TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
                    expected=('    AKeyMuchLongerThanTheLast:Value')))
     for params in test_params:
-      line = util.MakeMetadataLine(*(params.args), **(params.kwargs))
+      line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
       self.assertEqual(line, params.expected)
 
   def testProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""
     valid_variables = ['http_proxy', 'https_proxy']
-    if not util.IS_WINDOWS:
+    if not system_util.IS_WINDOWS:
       # Dynamically set Windows environment variables are case-insensitive.
       valid_variables.append('HTTPS_PROXY')
     # Clear any existing environment variables for the duration of the test.
@@ -191,7 +200,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
         for url_string in ['hostname', 'http://hostname', 'https://hostname']:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
-                util.ProxyInfoFromEnvironmentVar(env_var),
+                boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(
                     httplib2.socks.PROXY_TYPE_HTTP, 'hostname',
                     443 if env_var.lower().startswith('https') else 80))
@@ -199,20 +208,20 @@ class TestUtil(testcase.GsUtilUnitTestCase):
             for other_env_var in valid_variables:
               if other_env_var == env_var: continue
               self._AssertProxyInfosEqual(
-                  util.ProxyInfoFromEnvironmentVar(other_env_var),
+                  boto_util.ProxyInfoFromEnvironmentVar(other_env_var),
                   httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
         for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50',
                            'https://1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
-                util.ProxyInfoFromEnvironmentVar(env_var),
+                boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
                                    50))
         for url_string in ['foo:bar@1.2.3.4:50', 'http://foo:bar@1.2.3.4:50',
                            'https://foo:bar@1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
-                util.ProxyInfoFromEnvironmentVar(env_var),
+                boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
                                    '1.2.3.4', 50, proxy_user='foo',
                                    proxy_pass='bar'))
@@ -220,34 +229,34 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                            'https://bar@1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
-                util.ProxyInfoFromEnvironmentVar(env_var),
+                boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
                                    50, proxy_pass='bar'))
       for env_var in ['proxy', 'noproxy', 'garbage']:
         for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
-                util.ProxyInfoFromEnvironmentVar(env_var),
+                boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
 
   # We want to make sure the wrapped function is called without executing it.
-  @mock.patch.object(util.http_wrapper,
+  @mock.patch.object(retry_util.http_wrapper,
                      'HandleExceptionsAndRebuildHttpConnections')
-  @mock.patch.object(util.logging, 'info')
+  @mock.patch.object(retry_util.logging, 'info')
   def testWarnAfterManyRetriesHandler(self, mock_log_info_fn, mock_wrapped_fn):
     # The only ExceptionRetryArgs attributes that the function cares about are
     # num_retries and total_wait_sec; we can pass None for the other values.
-    retry_args_over_threshold = util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 3, None, util.LONG_RETRY_WARN_SEC + 1)
-    retry_args_under_threshold = util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 2, None, util.LONG_RETRY_WARN_SEC - 1)
+    retry_args_over_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
+        None, None, None, 3, None, constants.LONG_RETRY_WARN_SEC + 1)
+    retry_args_under_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
+        None, None, None, 2, None, constants.LONG_RETRY_WARN_SEC - 1)
 
-    util.LogAndHandleRetries()(retry_args_under_threshold)
+    retry_util.LogAndHandleRetries()(retry_args_under_threshold)
     self.assertTrue(mock_wrapped_fn.called)
     # Check that we didn't emit a message.
     self.assertFalse(mock_log_info_fn.called)
 
-    util.LogAndHandleRetries()(retry_args_over_threshold)
+    retry_util.LogAndHandleRetries()(retry_args_over_threshold)
     self.assertEqual(mock_wrapped_fn.call_count, 2)
     # Check that we did emit a message.
     self.assertTrue(mock_log_info_fn.called)
@@ -298,7 +307,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))
 
   def DoTestAddQueryParamToUrl(self, url, param_name, param_val, expected_url):
-    new_url = util.AddQueryParamToUrl(url, param_name, param_val)
+    new_url = text_util.AddQueryParamToUrl(url, param_name, param_val)
     self.assertEqual(new_url, expected_url)
 
   def testAddQueryParamToUrlWorksForASCIIValues(self):
@@ -328,10 +337,10 @@ class TestUtil(testcase.GsUtilUnitTestCase):
 
     self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
 
-  @mock.patch.object(util, 'GetMaxUploadCompressionBufferSize')
+  @mock.patch.object(boto_util, 'GetMaxUploadCompressionBufferSize')
   def testGetMaxConcurrentCompressedUploadsMinimum(self, mock_config):
     """Test GetMaxConcurrentCompressedUploads returns at least 1."""
     mock_config.return_value = 0
-    self.assertEqual(util.GetMaxConcurrentCompressedUploads(), 1)
+    self.assertEqual(boto_util.GetMaxConcurrentCompressedUploads(), 1)
     mock_config.return_value = -1
-    self.assertEqual(util.GetMaxConcurrentCompressedUploads(), 1)
+    self.assertEqual(boto_util.GetMaxConcurrentCompressedUploads(), 1)

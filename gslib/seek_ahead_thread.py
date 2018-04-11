@@ -17,9 +17,11 @@
 import threading
 import time
 
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
-from gslib.thread_message import SeekAheadMessage
-from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
+from gslib import thread_message
+from gslib.utils import constants
+from gslib.utils import parallelism_framework_util
+
+_PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 
 
 class SeekAheadResult(object):
@@ -96,7 +98,7 @@ class SeekAheadThread(threading.Thread):
         return
       # Periodically check to see if the ProducerThread has actually
       # completed, at which point providing an estimate is no longer useful.
-      if (num_objects % NUM_OBJECTS_PER_LIST_PAGE) == 0:
+      if (num_objects % constants.NUM_OBJECTS_PER_LIST_PAGE) == 0:
         if self.cancel_event.isSet():
           return
       num_objects += seek_ahead_result.est_num_ops
@@ -105,6 +107,6 @@ class SeekAheadThread(threading.Thread):
     if self.cancel_event.isSet():
       return
 
-    PutToQueueWithTimeout(self.status_queue,
-                          SeekAheadMessage(num_objects, num_data_bytes,
-                                           time.time()))
+    _PutToQueueWithTimeout(self.status_queue,
+                          thread_message.SeekAheadMessage(
+                              num_objects, num_data_bytes, time.time()))

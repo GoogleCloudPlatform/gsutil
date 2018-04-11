@@ -20,6 +20,9 @@ import logging
 import os
 import time
 
+import boto
+import mock
+
 import gslib
 from gslib import command_runner
 from gslib.command import Command
@@ -38,9 +41,14 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.util import GSUTIL_PUB_TARBALL
-from gslib.util import InsistAscii
-from gslib.util import SECONDS_PER_DAY
+from gslib.utils.constants import GSUTIL_PUB_TARBALL
+from gslib.utils.text_util import InsistAscii
+from gslib.utils.unit_util import SECONDS_PER_DAY
+
+SKIP_BECAUSE_RETRIES_ARE_SLOW = (
+    'gs_host is set to non-default value; trying to fetch gsutil version '
+    'metadata from the wrong host would fail repeatedly, taking a long time '
+    'for retry backoffs before finally failing the test.')
 
 
 class FakeArgparseArgument(object):
@@ -132,11 +140,14 @@ class TestCommandRunnerUnitTests(
     super(TestCommandRunnerUnitTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
-    self.previous_update_file = (
-        command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE)
-    self.timestamp_file = self.CreateTempFile()
-    command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-        self.timestamp_file)
+    self.timestamp_file_path = self.CreateTempFile()
+    get_timestamp_file_patcher = mock.patch.object(
+        command_runner.boto_util,
+        'GetLastCheckedForGsutilUpdateTimestampFile',
+        return_value=self.timestamp_file_path)
+    self.addCleanup(get_timestamp_file_patcher.stop)
+    get_timestamp_file_patcher.start()
+
 
     # Mock out the gsutil version checker.
     base_version = unicode(gslib.VERSION)
@@ -145,6 +156,7 @@ class TestCommandRunnerUnitTests(
         raise CommandException(
             'Version number (%s) is not numeric.' % gslib.VERSION)
       base_version = base_version[:-1]
+    self.old_look_up_gsutil_version = command_runner.LookUpGsutilVersion
     command_runner.LookUpGsutilVersion = lambda u, v: float(base_version) + 1
 
     # Mock out raw_input to trigger yes prompt.
@@ -156,8 +168,8 @@ class TestCommandRunnerUnitTests(
 
     # Mock out the modified time of the VERSION file.
     self.version_mod_time = 0
-    self.previous_version_mod_time = command_runner.GetGsutilVersionModifiedTime
-    command_runner.GetGsutilVersionModifiedTime = lambda: self.version_mod_time
+    self.previous_version_mod_time = gslib.GetGsutilVersionModifiedTime
+    gslib.GetGsutilVersionModifiedTime = lambda: self.version_mod_time
 
     # Create a fake pub tarball that will be used to check for gsutil version.
     self.pub_bucket_uri = self.CreateBucket('pub')
@@ -169,14 +181,13 @@ class TestCommandRunnerUnitTests(
     """Tears down the command runner mock objects."""
     super(TestCommandRunnerUnitTests, self).tearDown()
 
-    command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-        self.previous_update_file)
-    command_runner.LookUpGsutilVersion = gslib.util.LookUpGsutilVersion
+    command_runner.LookUpGsutilVersion = self.old_look_up_gsutil_version
     command_runner.raw_input = raw_input
 
-    command_runner.GetGsutilVersionModifiedTime = self.previous_version_mod_time
+    gslib.GetGsutilVersionModifiedTime = self.previous_version_mod_time
 
-    command_runner.IsRunningInteractively = gslib.util.IsRunningInteractively
+    command_runner.IsRunningInteractively = (
+        gslib.utils.system_util.IsRunningInteractively)
 
     self.gsutil_tarball_uri.delete_key()
     self.pub_bucket_uri.delete_bucket()
@@ -186,75 +197,75 @@ class TestCommandRunnerUnitTests(
     return (gslib.IS_PACKAGE_INSTALL or
             os.environ.get('CLOUDSDK_WRAPPER') == '1')
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
     with SetBotoConfigForTest([
         ('GSUtil', 'software_update_check_period', '1')]):
-      with open(self.timestamp_file, 'w') as f:
+      with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.running_interactively = False
       self.assertEqual(
           False,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_no_tracker_file_version_recent(self):
     """Tests when no timestamp file exists and VERSION file is recent."""
-    if os.path.exists(self.timestamp_file):
-      os.remove(self.timestamp_file)
-    self.assertFalse(os.path.exists(self.timestamp_file))
+    if os.path.exists(self.timestamp_file_path):
+      os.remove(self.timestamp_file_path)
+    self.assertFalse(os.path.exists(self.timestamp_file_path))
     self.version_mod_time = time.time()
     self.assertEqual(
         False,
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_no_tracker_file_version_old(self):
     """Tests when no timestamp file exists and VERSION file is old."""
-    if os.path.exists(self.timestamp_file):
-      os.remove(self.timestamp_file)
-    self.assertFalse(os.path.exists(self.timestamp_file))
+    if os.path.exists(self.timestamp_file_path):
+      os.remove(self.timestamp_file_path)
+    self.assertFalse(os.path.exists(self.timestamp_file_path))
     self.version_mod_time = 0
     expected = not self._IsPackageOrCloudSDKInstall()
     self.assertEqual(
         expected,
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_invalid_commands(self):
     """Tests that update is not triggered for certain commands."""
     self.assertEqual(
         False,
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_invalid_file_contents(self):
     """Tests no update if timestamp file has invalid value."""
-    with open(self.timestamp_file, 'w') as f:
+    with open(self.timestamp_file_path, 'w') as f:
       f.write('NaN')
     self.assertEqual(
         False,
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_should_trigger(self):
     """Tests update should be triggered if time is up."""
     with SetBotoConfigForTest([
         ('GSUtil', 'software_update_check_period', '1')]):
-      with open(self.timestamp_file, 'w') as f:
+      with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       expected = not self._IsPackageOrCloudSDKInstall()
       self.assertEqual(
           expected,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_time_for_update_yet(self):
     """Tests update not triggered if not time yet."""
     with SetBotoConfigForTest([
         ('GSUtil', 'software_update_check_period', '3')]):
-      with open(self.timestamp_file, 'w') as f:
+      with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.assertEqual(
           False,
@@ -264,19 +275,19 @@ class TestCommandRunnerUnitTests(
     """Tests no update triggered if user says no at the prompt."""
     with SetBotoConfigForTest([
         ('GSUtil', 'software_update_check_period', '1')]):
-      with open(self.timestamp_file, 'w') as f:
+      with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       command_runner.raw_input = lambda p: 'n'
       self.assertEqual(
           False,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_check_skipped_with_quiet_mode(self):
     """Tests that update isn't triggered when loglevel is in quiet mode."""
     with SetBotoConfigForTest([
         ('GSUtil', 'software_update_check_period', '1')]):
-      with open(self.timestamp_file, 'w') as f:
+      with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 
       expected = not self._IsPackageOrCloudSDKInstall()
@@ -380,11 +391,13 @@ class TestCommandRunnerIntegrationTests(
     super(TestCommandRunnerIntegrationTests, self).setUp()
 
     # Mock out the timestamp file so we can manipulate it.
-    self.previous_update_file = (
-        command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE)
-    self.timestamp_file = self.CreateTempFile(contents='0')
-    command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-        self.timestamp_file)
+    self.timestamp_file_path = self.CreateTempFile(contents='0')
+    get_timestamp_file_patcher = mock.patch.object(
+        command_runner.boto_util,
+        'GetLastCheckedForGsutilUpdateTimestampFile',
+        return_value=self.timestamp_file_path)
+    self.addCleanup(get_timestamp_file_patcher.stop)
+    get_timestamp_file_patcher.start()
 
     # Mock out raw_input to trigger yes prompt.
     command_runner.raw_input = lambda p: 'y'
@@ -392,11 +405,9 @@ class TestCommandRunnerIntegrationTests(
   def tearDown(self):
     """Tears down the command runner mock objects."""
     super(TestCommandRunnerIntegrationTests, self).tearDown()
-    command_runner.LAST_CHECKED_FOR_GSUTIL_UPDATE_TIMESTAMP_FILE = (
-        self.previous_update_file)
     command_runner.raw_input = raw_input
 
-  @unittest.skipUnless(not util.HAS_GS_HOST, 'gs_host is defined in config')
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_lookup_version_without_credentials(self):
     """Tests that gsutil tarball version lookup works without credentials."""
     with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')],

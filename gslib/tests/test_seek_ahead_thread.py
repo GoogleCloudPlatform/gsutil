@@ -16,10 +16,10 @@
 
 from __future__ import absolute_import
 
-import Queue
 import StringIO
 import threading
 
+from six.moves import queue as Queue
 
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.seek_ahead_thread import SeekAheadResult
@@ -27,9 +27,12 @@ from gslib.seek_ahead_thread import SeekAheadThread
 import gslib.tests.testcase as testcase
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
-from gslib.ui_controller import ZERO_TASKS_TO_DO_ARGUMENT
-from gslib.util import MakeHumanReadable
-from gslib.util import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils import constants
+from gslib.utils import parallelism_framework_util
+from gslib.utils import unit_util
+
+_ZERO_TASKS_TO_DO_ARGUMENT = (
+    parallelism_framework_util.ZERO_TASKS_TO_DO_ARGUMENT)
 
 
 class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
@@ -70,7 +73,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
           self.iterated_results += 1
 
     # We expect to get up to the nearest NUM_OBJECTS_PER_LIST_PAGE results.
-    noplp = NUM_OBJECTS_PER_LIST_PAGE
+    noplp = constants.NUM_OBJECTS_PER_LIST_PAGE
     for num_iterations, num_iterations_before_cancel, expected_iterations in (
         (noplp, 0, 0),
         (noplp + 1, 1, noplp),
@@ -91,7 +94,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
       seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                           status_queue)
       seek_ahead_thread.join(self.thread_wait_time)
-      status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+      status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
       ui_thread.join(self.thread_wait_time)
       if seek_ahead_thread.isAlive():
         seek_ahead_thread.terminate = True
@@ -133,7 +136,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
-    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
     ui_thread.join(self.thread_wait_time)
     if seek_ahead_thread.isAlive():
       seek_ahead_thread.terminate = True
@@ -175,7 +178,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
-    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
     ui_thread.join(self.thread_wait_time)
 
     if seek_ahead_thread.isAlive():
@@ -192,7 +195,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_objects, MakeHumanReadable(total_size)))
+        (num_objects, unit_util.MakeHumanReadable(total_size)))
 
   def testWithLocalFiles(self):
     """Tests SeekAheadThread with an actual directory."""
@@ -219,7 +222,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
-    status_queue.put(ZERO_TASKS_TO_DO_ARGUMENT)
+    status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
     ui_thread.join(self.thread_wait_time)
 
     if seek_ahead_thread.isAlive():
@@ -234,4 +237,4 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_files, MakeHumanReadable(total_size)))
+        (num_files, unit_util.MakeHumanReadable(total_size)))

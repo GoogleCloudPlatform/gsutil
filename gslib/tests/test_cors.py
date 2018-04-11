@@ -23,8 +23,8 @@ from xml.dom.minidom import parseString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
-from gslib.translation_helper import CorsTranslation
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
+from gslib.utils.translation_helper import CorsTranslation
 
 
 @SkipForS3('CORS command is only supported for gs:// URLs')

@@ -17,7 +17,7 @@ import collections
 import os
 
 from gslib.exception import CommandException
-from gslib.util import GetJsonResumableChunkSize
+from gslib.utils.boto_util import GetJsonResumableChunkSize
 
 
 class ResumableStreamingJsonUploadWrapper(object):

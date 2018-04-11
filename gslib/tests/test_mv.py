@@ -28,9 +28,9 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
-from gslib.util import Retry
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.retry_util import Retry
+from gslib.utils.system_util import IS_WINDOWS
 
 
 class TestMv(testcase.GsUtilIntegrationTestCase):

@@ -18,13 +18,12 @@ from __future__ import absolute_import
 
 import re
 
-from gslib.util import Retry
-
 import gslib.tests.testcase as testcase
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
+from gslib.utils.retry_util import Retry
 
 OBJECT_CONTENTS = 'innards'
 

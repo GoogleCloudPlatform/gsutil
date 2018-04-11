@@ -16,8 +16,8 @@
 
 import time
 
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.thread_message import ProgressMessage
+from gslib.utils import parallelism_framework_util
 
 
 # Default upper and lower bounds for progress callback frequency.
@@ -191,7 +191,7 @@ class FileProgressCallbackHandler(object):
     if self._override_total_size:
       total_size = self._override_total_size
 
-    PutToQueueWithTimeout(
+    parallelism_framework_util.PutToQueueWithTimeout(
         self._status_queue,
         ProgressMessage(total_size, last_byte_processed - self._start_byte,
                         self._src_url, time.time(),

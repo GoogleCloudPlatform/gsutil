@@ -20,8 +20,14 @@ from hashlib import sha256
 import re
 
 from gslib.exception import CommandException
+from gslib.lazy_wrapper import LazyWrapper
 
 MAX_DECRYPTION_KEYS = 100
+VALID_CMEK_RE =  LazyWrapper(
+    lambda: re.compile('projects/([^/]+)/'
+                       'locations/([a-zA-Z0-9_-]{1,63})/'
+                       'keyRings/([a-zA-Z0-9_-]{1,63})/'
+                       'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
 
 
 class CryptoKeyType(object):
@@ -143,12 +149,7 @@ def ValidateCMEK(key):
     raise CommandException(
         'KMS key should not start with leading slash (/): "%s"' % key)
 
-  # TODO: Wrap this re.compile call using LazyWrapper once that class can be
-  # imported without pulling in several other dependencies.
-  if not re.compile('projects/([^/]+)/'
-                    'locations/([a-zA-Z0-9_-]{1,63})/'
-                    'keyRings/([a-zA-Z0-9_-]{1,63})/'
-                    'cryptoKeys/([a-zA-Z0-9_-]{1,63})$').match(key):
+  if not VALID_CMEK_RE().match(key):
     raise CommandException(
         'Invalid KMS key name: "%s".\nKMS keys should follow the format '
         '"projects/<project-id>/locations/<location>/keyRings/<keyring>/'

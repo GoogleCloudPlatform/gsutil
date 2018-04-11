@@ -31,15 +31,15 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
-from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-from gslib.util import CompareVersions
-from gslib.util import DisallowUpdateIfDataInGsutilDir
-from gslib.util import GetBotoConfigFileList
-from gslib.util import GSUTIL_PUB_TARBALL
-from gslib.util import IS_CYGWIN
-from gslib.util import IS_WINDOWS
-from gslib.util import LookUpGsutilVersion
-from gslib.util import RELEASE_NOTES_URL
+from gslib.utils.boto_util import GetBotoConfigFileList
+from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.utils.constants import GSUTIL_PUB_TARBALL
+from gslib.utils.constants import RELEASE_NOTES_URL
+from gslib.utils.system_util import IS_CYGWIN
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.text_util import CompareVersions
+from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
+from gslib.utils.update_util import LookUpGsutilVersion
 
 
 _SYNOPSIS = """

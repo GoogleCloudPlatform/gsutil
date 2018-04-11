@@ -35,7 +35,6 @@ import gzip
 import os
 import StringIO
 
-from gslib import copy_helper
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.exception import CommandException
@@ -47,8 +46,9 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetDummyProjectForUnitTest
 from gslib.tests.util import unittest
-from gslib.util import IS_WINDOWS
-from gslib.util import UTF8
+from gslib.utils import constants
+from gslib.utils import copy_helper
+from gslib.utils import system_util
 
 
 def _Overwrite(fp):
@@ -343,7 +343,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                     suri(dst_dir, src_bucket_uri.bucket_name, 'dir', 'foo2')])
     self.assertEqual(expected, actual)
 
-  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  @unittest.skipIf(
+      system_util.IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def testCopyingSymlinkDirectory(self):
     """Tests that cp warns when copying a symlink directory."""
     bucket_uri = self.CreateBucket()
@@ -1162,7 +1163,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name=object_name,
                       contents='foo')
-    object_name_bytes = object_name.encode(UTF8)
+    object_name_bytes = object_name.encode(constants.UTF8)
     stdout = self.RunCommand('ls', [suri(bucket_uri, object_name_bytes)],
                              return_stdout=True)
     self.assertIn(object_name_bytes, stdout)

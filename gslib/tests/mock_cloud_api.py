@@ -34,10 +34,10 @@ need to ensure we don't lose boto coverage from mock storage_uri.
 
 
 from gslib.cloud_api import ServiceException
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import CreateBucketNotFoundException
-from gslib.translation_helper import CreateObjectNotFoundException
-from gslib.util import DiscardMessagesQueue
+from gslib.utils.translation_helper import CreateBucketNotFoundException
+from gslib.utils.translation_helper import CreateObjectNotFoundException
 
 
 class MockObject(object):

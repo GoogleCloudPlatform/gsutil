@@ -26,12 +26,11 @@ from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import CorsTranslation
-from gslib.translation_helper import REMOVE_CORS_CONFIG
-from gslib.util import NO_MAX
-from gslib.util import UrlsAreForSingleProvider
-
+from gslib.utils.constants import NO_MAX
+from gslib.utils.translation_helper import CorsTranslation
+from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
 
 _GET_SYNOPSIS = """
   gsutil cors get url

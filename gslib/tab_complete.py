@@ -25,8 +25,8 @@ from boto.gs.acl import CannedACLStrings
 from gslib.storage_url import IsFileUrlString
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
-from gslib.util import GetTabCompletionCacheFilename
-from gslib.util import GetTabCompletionLogFilename
+from gslib.utils.boto_util import GetTabCompletionCacheFilename
+from gslib.utils.boto_util import GetTabCompletionLogFilename
 from gslib.wildcard_iterator import CreateWildcardIterator
 
 TAB_COMPLETE_CACHE_TTL = 15

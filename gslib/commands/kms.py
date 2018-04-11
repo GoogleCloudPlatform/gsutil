@@ -22,10 +22,8 @@ import textwrap
 
 from gslib import metrics
 from gslib.command import Command
-from gslib.command import NO_MAX
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
-from gslib.encryption_helper import ValidateCMEK
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
@@ -33,6 +31,8 @@ from gslib.kms_api import KmsApi
 from gslib.project_id import PopulateProjectId
 from gslib.third_party.kms_apitools.cloudkms_v1_messages import Binding
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils.constants import NO_MAX
+from gslib.utils.encryption_helper import ValidateCMEK
 
 _AUTHORIZE_SYNOPSIS = """
   gsutil kms authorize [-p proj_id] -k kms_key

@@ -28,7 +28,7 @@ from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
-from gslib.util import GetTabCompletionCacheFilename
+from gslib.utils.boto_util import GetTabCompletionCacheFilename
 
 
 @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,

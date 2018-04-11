@@ -15,6 +15,7 @@
 """Tests for various combinations of configured credentials."""
 
 from gslib.cred_types import CredTypes
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
@@ -22,7 +23,6 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
-from gslib.util import DiscardMessagesQueue
 
 
 class TestCredsConfig(testcase.GsUtilUnitTestCase):

@@ -19,14 +19,14 @@
 from __future__ import absolute_import
 
 from collections import deque
-import Queue
 import sys
 import threading
 import time
 
+from six.moves import queue as Queue
+
 from gslib.metrics import LogPerformanceSummaryParams
 from gslib.metrics import LogRetryableError
-from gslib.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.thread_message import FileMessage
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
@@ -36,10 +36,14 @@ from gslib.thread_message import ProgressMessage
 from gslib.thread_message import RetryableErrorMessage
 from gslib.thread_message import SeekAheadMessage
 from gslib.thread_message import StatusMessage
-from gslib.util import DecimalShort
-from gslib.util import HumanReadableWithDecimalPlaces
-from gslib.util import MakeHumanReadable
-from gslib.util import PrettyTime
+from gslib.utils import parallelism_framework_util
+from gslib.utils.unit_util import DecimalShort
+from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
+from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils.unit_util import PrettyTime
+
+_ZERO_TASKS_TO_DO_ARGUMENT = (
+    parallelism_framework_util.ZERO_TASKS_TO_DO_ARGUMENT)
 
 
 class EstimationSource(object):
@@ -966,7 +970,7 @@ class UIController(object):
                 output, or calculate throughput.
     """
     if not isinstance(status_message, StatusMessage):
-      if status_message == ZERO_TASKS_TO_DO_ARGUMENT and not self.manager:
+      if status_message == _ZERO_TASKS_TO_DO_ARGUMENT and not self.manager:
         # Create a manager to handle early estimation messages before returning.
         self.manager = (
             DataManager(
@@ -1114,7 +1118,7 @@ class UIThread(threading.Thread):
           status_message = None
           continue
         self.ui_controller.Call(status_message, self.stream)
-        if status_message == ZERO_TASKS_TO_DO_ARGUMENT:
+        if status_message == _ZERO_TASKS_TO_DO_ARGUMENT:
           # Item from MainThread to indicate we are done.
           break
     except Exception, e:  # pylint:disable=broad-except

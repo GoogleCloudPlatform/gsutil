@@ -31,15 +31,16 @@ from gslib.exception import NO_URLS_MATCHED_GENERIC
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.storage_url import StorageUrlFromString
 from gslib.thread_message import MetadataMessage
-from gslib.translation_helper import PreconditionsFromHeaders
-from gslib.util import GetCloudApiInstance
-from gslib.util import NO_MAX
-from gslib.util import Retry
-from gslib.util import StdinIterator
+from gslib.utils import constants
+from gslib.utils import parallelism_framework_util
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.retry_util import Retry
+from gslib.utils.system_util import StdinIterator
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
+_PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 
 _SYNOPSIS = """
   gsutil rm [-f] [-r] url...
@@ -208,7 +209,7 @@ class RmCommand(Command):
       command_name_aliases=['del', 'delete', 'remove'],
       usage_synopsis=_SYNOPSIS,
       min_args=0,
-      max_args=NO_MAX,
+      max_args=constants.NO_MAX,
       supported_sub_args='afIrR',
       file_url_ok=False,
       provider_url_ok=False,
@@ -382,5 +383,5 @@ class RmCommand(Command):
         exp_src_url.bucket_name, exp_src_url.object_name,
         preconditions=self.preconditions, generation=exp_src_url.generation,
         provider=exp_src_url.scheme)
-    PutToQueueWithTimeout(gsutil_api.status_queue,
+    _PutToQueueWithTimeout(gsutil_api.status_queue,
                           MetadataMessage(message_time=time.time()))

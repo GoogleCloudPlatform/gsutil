@@ -29,12 +29,12 @@ from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command_runner import CommandRunner
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
-from gslib.util import DiscardMessagesQueue
 
 
 class GsutilApiUnitTestClassMapFactory(object):

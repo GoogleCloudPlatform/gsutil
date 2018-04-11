@@ -22,7 +22,7 @@ from gslib.commands.cp import CP_SUB_ARGS
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
-from gslib.util import NO_MAX
+from gslib.utils.constants import NO_MAX
 
 
 _SYNOPSIS = """

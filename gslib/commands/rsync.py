@@ -33,66 +33,66 @@ import urllib
 from boto import config
 import crcmod
 
-from gslib import copy_helper
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
-from gslib.copy_helper import CreateCopyHelperOpts
-from gslib.copy_helper import GetSourceFieldsNeededForCopy
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
-from gslib.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
-from gslib.hashing_helper import SLOW_CRCMOD_WARNING
 from gslib.metrics import LogPerformanceSummaryParams
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
-from gslib.posix_util import ATIME_ATTR
-from gslib.posix_util import ConvertDatetimeToPOSIX
-from gslib.posix_util import ConvertModeToBase8
-from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
-from gslib.posix_util import GID_ATTR
-from gslib.posix_util import InitializeUserGroups
-from gslib.posix_util import MODE_ATTR
-from gslib.posix_util import MTIME_ATTR
-from gslib.posix_util import NA_ID
-from gslib.posix_util import NA_MODE
-from gslib.posix_util import NA_TIME
-from gslib.posix_util import NeedsPOSIXAttributeUpdate
-from gslib.posix_util import ParseAndSetPOSIXAttributes
-from gslib.posix_util import POSIXAttributes
-from gslib.posix_util import SerializeFileAttributesToObjectMetadata
-from gslib.posix_util import UID_ATTR
-from gslib.posix_util import ValidateFilePermissionAccess
-from gslib.posix_util import WarnFutureTimestamp
-from gslib.posix_util import WarnInvalidValue
-from gslib.posix_util import WarnNegativeAttribute
 from gslib.seek_ahead_thread import SeekAheadResult
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.storage_url import GenerationFromUrlAndString
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.translation_helper import CopyCustomMetadata
-from gslib.translation_helper import GenerationFromUrlAndString
-from gslib.util import CalculateThroughput
-from gslib.util import CreateCustomMetadata
-from gslib.util import CreateLock
-from gslib.util import GetCloudApiInstance
-from gslib.util import GetValueFromObjectCustomMetadata
-from gslib.util import IS_WINDOWS
-from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import ObjectIsGzipEncoded
-from gslib.util import RsyncDiffToApply
-from gslib.util import SECONDS_PER_DAY
-from gslib.util import TEN_MIB
-from gslib.util import UsingCrcmodExtension
-from gslib.util import UTF8
+from gslib.utils import constants
+from gslib.utils import copy_helper
+from gslib.utils import parallelism_framework_util
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.copy_helper import CreateCopyHelperOpts
+from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import SkipUnsupportedObjectError
+from gslib.utils.hashing_helper import CalculateB64EncodedCrc32cFromContents
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.utils.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
+from gslib.utils.hashing_helper import SLOW_CRCMOD_WARNING
+from gslib.utils.metadata_util import CreateCustomMetadata
+from gslib.utils.metadata_util import GetValueFromObjectCustomMetadata
+from gslib.utils.metadata_util import ObjectIsGzipEncoded
+from gslib.utils.posix_util import ATIME_ATTR
+from gslib.utils.posix_util import ConvertDatetimeToPOSIX
+from gslib.utils.posix_util import ConvertModeToBase8
+from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
+from gslib.utils.posix_util import GID_ATTR
+from gslib.utils.posix_util import InitializeUserGroups
+from gslib.utils.posix_util import MODE_ATTR
+from gslib.utils.posix_util import MTIME_ATTR
+from gslib.utils.posix_util import NA_ID
+from gslib.utils.posix_util import NA_MODE
+from gslib.utils.posix_util import NA_TIME
+from gslib.utils.posix_util import NeedsPOSIXAttributeUpdate
+from gslib.utils.posix_util import ParseAndSetPOSIXAttributes
+from gslib.utils.posix_util import POSIXAttributes
+from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
+from gslib.utils.posix_util import UID_ATTR
+from gslib.utils.posix_util import ValidateFilePermissionAccess
+from gslib.utils.posix_util import WarnFutureTimestamp
+from gslib.utils.posix_util import WarnInvalidValue
+from gslib.utils.posix_util import WarnNegativeAttribute
+from gslib.utils.rsync_util import DiffAction
+from gslib.utils.rsync_util import RsyncDiffToApply
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.translation_helper import CopyCustomMetadata
+from gslib.utils.unit_util import CalculateThroughput
+from gslib.utils.unit_util import SECONDS_PER_DAY
+from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
-
 
 _SYNOPSIS = """
   gsutil rsync [OPTION]... src_url dst_url
@@ -465,13 +465,6 @@ _PROGRESS_REPORT_LISTING_COUNT = 10000
 _tmp_files = []
 
 
-class _DiffAction(object):
-  COPY = 'copy'
-  REMOVE = 'remove'
-  MTIME_SRC_TO_DST = 'mtime_src_to_dst'
-  POSIX_SRC_TO_DST = 'posix_src_to_dst'
-
-
 # pylint: disable=unused-argument
 def _HandleSignals(signal_num, cur_stack_frame):
   """Called when rsync command is killed with SIGINT, SIGQUIT or SIGTERM."""
@@ -496,7 +489,7 @@ def CleanUpTempFiles():
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
   """Arg checker that skips symlinks if -e flag specified."""
-  if (diff_to_apply.diff_action == _DiffAction.REMOVE
+  if (diff_to_apply.diff_action == DiffAction.REMOVE
       or not command_instance.exclude_symlinks):
     # No src URL is populated for REMOVE actions.
     return True
@@ -572,7 +565,7 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   (base_url_str, out_filename, desc) = args_tuple
   # We sort while iterating over base_url_str, allowing parallelism of batched
   # sorting with collecting the listing.
-  out_file = io.open(out_filename, mode='w', encoding=UTF8)
+  out_file = io.open(out_filename, mode='w', encoding=constants.UTF8)
   try:
     _BatchSort(_FieldedListingIterator(cls, gsutil_api, base_url_str, desc),
                out_file)
@@ -750,7 +743,7 @@ def _EncodeUrl(url_string):
   Returns:
     encoded URL.
   """
-  return urllib.quote_plus(url_string.encode(UTF8))
+  return urllib.quote_plus(url_string.encode(constants.UTF8))
 
 
 def _DecodeUrl(enc_url_string):
@@ -762,7 +755,7 @@ def _DecodeUrl(enc_url_string):
   Returns:
     decoded URL.
   """
-  return urllib.unquote_plus(enc_url_string).decode(UTF8)
+  return urllib.unquote_plus(enc_url_string).decode(constants.UTF8)
 
 
 # pylint: disable=bare-except
@@ -794,7 +787,7 @@ def _BatchSort(in_iter, out_file):
       if not current_chunk:
         break
       output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
-                             mode='w+', encoding=UTF8)
+                             mode='w+', encoding=constants.UTF8)
       chunk_files.append(output_chunk)
       output_chunk.write(unicode(''.join(current_chunk)))
       output_chunk.flush()
@@ -1060,14 +1053,14 @@ class _DiffIterator(object):
         # There's no dst object corresponding to src object, so copy src to dst.
         yield RsyncDiffToApply(
             src_url_str, dst_url_str_would_copy_to, posix_attrs,
-            _DiffAction.COPY, src_size)
+            DiffAction.COPY, src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
           yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                                 _DiffAction.REMOVE, None)
+                                 DiffAction.REMOVE, None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -1081,19 +1074,19 @@ class _DiffIterator(object):
             dst_size, dst_mtime, dst_crc32c, dst_md5))
         if should_replace:
           yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 _DiffAction.COPY, src_size)
+                                 DiffAction.COPY, src_size)
         elif self.preserve_posix:
           posix_attrs, needs_update = NeedsPOSIXAttributeUpdate(
               src_atime, dst_atime, src_mtime, dst_mtime, src_uid, dst_uid,
               src_gid, dst_gid, src_mode, dst_mode)
           if needs_update:
             yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                   _DiffAction.POSIX_SRC_TO_DST, src_size)
+                                   DiffAction.POSIX_SRC_TO_DST, src_size)
         elif has_src_mtime and not has_dst_mtime:
           # File/object at destination matches source but is missing mtime
           # attribute at destination.
           yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 _DiffAction.MTIME_SRC_TO_DST, src_size)
+                                 DiffAction.MTIME_SRC_TO_DST, src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -1106,11 +1099,11 @@ class _DiffIterator(object):
     # be removed.
     if dst_url_str:
       yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             _DiffAction.REMOVE, None)
+                             DiffAction.REMOVE, None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _, _, _, _, _, _, _) = self._ParseTmpFileLine(line)
       yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             _DiffAction.REMOVE, None)
+                             DiffAction.REMOVE, None)
 
 
 class _SeekAheadDiffIterator(object):
@@ -1122,8 +1115,8 @@ class _SeekAheadDiffIterator(object):
   def __iter__(self):
     for diff_to_apply in self.cloned_diff_iterator:
       bytes_to_copy = diff_to_apply.copy_size or 0
-      if (diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST or
-          diff_to_apply.diff_action == _DiffAction.POSIX_SRC_TO_DST):
+      if (diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST or
+          diff_to_apply.diff_action == DiffAction.POSIX_SRC_TO_DST):
         # Assume MTIME_SRC_TO_DST and POSIX_SRC_TO_DST are metadata-only
         # copies. However, if the user does not have OWNER permission on
         # an object, the data must be re-sent, and this function will
@@ -1179,7 +1172,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
   dst_url_str = diff_to_apply.dst_url_str
   dst_url = StorageUrlFromString(dst_url_str)
   posix_attrs = diff_to_apply.src_posix_attrs
-  if diff_to_apply.diff_action == _DiffAction.REMOVE:
+  if diff_to_apply.diff_action == DiffAction.REMOVE:
     if cls.dryrun:
       cls.logger.info('Would remove %s', dst_url)
     else:
@@ -1195,7 +1188,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           # If the object happened to be deleted by an external process, this
           # is fine because it moves us closer to the desired state.
           pass
-  elif diff_to_apply.diff_action == _DiffAction.COPY:
+  elif diff_to_apply.diff_action == DiffAction.COPY:
     src_url_str = diff_to_apply.src_url_str
     src_url = StorageUrlFromString(src_url_str)
     if cls.dryrun:
@@ -1257,7 +1250,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       except SkipUnsupportedObjectError, e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
-  elif diff_to_apply.diff_action == _DiffAction.MTIME_SRC_TO_DST:
+  elif diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
     # copied from the source to the destination.
@@ -1290,13 +1283,13 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
                                            diff_to_apply.dst_url_str,
                                            posix_attrs,
-                                           _DiffAction.COPY,
+                                           DiffAction.COPY,
                                            diff_to_apply.copy_size),
                      thread_state=thread_state)
       else:
         ParseAndSetPOSIXAttributes(dst_url.object_name, obj_metadata,
                                    preserve_posix=cls.preserve_posix_attrs)
-  elif diff_to_apply.diff_action == _DiffAction.POSIX_SRC_TO_DST:
+  elif diff_to_apply.diff_action == DiffAction.POSIX_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
     # copied from the source to the destination.
@@ -1330,7 +1323,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
                           'object.', dst_url.url_string)
           _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
                                            diff_to_apply.dst_url_str,
-                                           posix_attrs, _DiffAction.COPY,
+                                           posix_attrs, DiffAction.COPY,
                                            diff_to_apply.copy_size),
                      thread_state=thread_state)
   else:
@@ -1412,7 +1405,7 @@ class RsyncCommand(Command):
     self.total_bytes_transferred = 0
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    self.stats_lock = CreateLock()
+    self.stats_lock = parallelism_framework_util.CreateLock()
     if not UsingCrcmodExtension(crcmod):
       if self.compute_file_checksums:
         self.logger.warn(SLOW_CRCMOD_WARNING)

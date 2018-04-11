@@ -19,9 +19,9 @@ import os
 
 from gslib.commands.rsync import _ComputeNeededFileChecksums
 from gslib.commands.rsync import _NA
-from gslib.hashing_helper import CalculateB64EncodedCrc32cFromContents
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+from gslib.utils.hashing_helper import CalculateB64EncodedCrc32cFromContents
+from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 
 
 class TestRsyncFuncs(GsUtilUnitTestCase):

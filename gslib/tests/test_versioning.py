@@ -18,7 +18,7 @@ from __future__ import absolute_import
 
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 class TestVersioning(testcase.GsUtilIntegrationTestCase):

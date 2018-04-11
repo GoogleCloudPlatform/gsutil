@@ -23,7 +23,6 @@ import time
 import uuid
 
 from gslib import metrics
-from gslib import copy_helper
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PublishPermissionDeniedException
@@ -37,7 +36,7 @@ from gslib.project_id import PopulateProjectId
 from gslib.pubsub_api import PubsubApi
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.pubsub_apitools.pubsub_v1_messages import Binding
-
+from gslib.utils import copy_helper
 
 # Cloud Pub/Sub commands
 

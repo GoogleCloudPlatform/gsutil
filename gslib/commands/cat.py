@@ -19,12 +19,12 @@ from __future__ import absolute_import
 
 import re
 
-from gslib.cat_helper import CatHelper
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.util import NO_MAX
+from gslib.utils import cat_helper
+from gslib.utils import constants
 
 _SYNOPSIS = """
   gsutil cat [-h] url...
@@ -91,7 +91,7 @@ class CatCommand(Command):
       command_name_aliases=[],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
-      max_args=NO_MAX,
+      max_args=constants.NO_MAX,
       supported_sub_args='hr:',
       file_url_ok=False,
       provider_url_ok=False,
@@ -139,7 +139,7 @@ class CatCommand(Command):
         else:
           self.RaiseInvalidArgumentException()
 
-    return CatHelper(self).CatUrlStrings(self.args,
-                                         show_header=show_header,
-                                         start_byte=start_byte,
-                                         end_byte=end_byte)
+    return cat_helper.CatHelper(self).CatUrlStrings(self.args,
+                                                    show_header=show_header,
+                                                    start_byte=start_byte,
+                                                    end_byte=end_byte)

@@ -29,21 +29,21 @@ from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
-from gslib.iamhelpers import BindingStringToTuple
-from gslib.iamhelpers import BindingsTuple
-from gslib.iamhelpers import DeserializeBindingsTuple
-from gslib.iamhelpers import IsEqualBindings
-from gslib.iamhelpers import PatchBindings
-from gslib.iamhelpers import SerializeBindingsTuple
 from gslib.metrics import LogCommandParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import GetCloudApiInstance
-from gslib.util import NO_MAX
-from gslib.util import Retry
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.constants import NO_MAX
+from gslib.utils.iam_helper import BindingStringToTuple
+from gslib.utils.iam_helper import BindingsTuple
+from gslib.utils.iam_helper import DeserializeBindingsTuple
+from gslib.utils.iam_helper import IsEqualBindings
+from gslib.utils.iam_helper import PatchBindings
+from gslib.utils.iam_helper import SerializeBindingsTuple
+from gslib.utils.retry_util import Retry
 
 _SET_SYNOPSIS = """
   gsutil iam set [-afRr] [-e <etag>] file url ...

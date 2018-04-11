@@ -37,7 +37,7 @@ import os
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 class TestParallelCp(testcase.GsUtilIntegrationTestCase):

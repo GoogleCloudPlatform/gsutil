@@ -28,9 +28,9 @@ from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import NO_MAX
-from gslib.util import UrlsAreForSingleProvider
+from gslib.utils.constants import NO_MAX
 
 _SET_SYNOPSIS = """
   gsutil logging set on -b logging_bucket [-o log_object_prefix] url...

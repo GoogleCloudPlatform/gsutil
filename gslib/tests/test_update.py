@@ -35,8 +35,8 @@ from gslib.metrics import _UUID_FILE_PATH
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
-from gslib.util import CERTIFICATE_VALIDATION_ENABLED
-from gslib.util import DisallowUpdateIfDataInGsutilDir
+from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
 
 
 TESTS_DIR = os.path.abspath(os.path.dirname(__file__))

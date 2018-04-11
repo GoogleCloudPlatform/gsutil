@@ -24,18 +24,9 @@ import time
 import traceback
 
 from apitools.base.py import encoding
-from gslib import copy_helper
-from gslib.cat_helper import CatHelper
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.commands.compose import MAX_COMPONENT_COUNT
-from gslib.copy_helper import CreateCopyHelperOpts
-from gslib.copy_helper import GetSourceFieldsNeededForCopy
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import ItemExistsError
-from gslib.copy_helper import Manifest
-from gslib.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
-from gslib.copy_helper import SkipUnsupportedObjectError
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import LogPerformanceSummaryParams
@@ -44,26 +35,35 @@ from gslib.name_expansion import DestinationInfo
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import NameExpansionIteratorDestinationTuple
 from gslib.name_expansion import SeekAheadNameExpansionIterator
-from gslib.posix_util import ConvertModeToBase8
-from gslib.posix_util import DeserializeFileAttributesFromObjectMetadata
-from gslib.posix_util import InitializeUserGroups
-from gslib.posix_util import POSIXAttributes
-from gslib.posix_util import SerializeFileAttributesToObjectMetadata
-from gslib.posix_util import ValidateFilePermissionAccess
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CalculateThroughput
-from gslib.util import CreateLock
-from gslib.util import DEBUGLEVEL_DUMP_REQUESTS
-from gslib.util import GetCloudApiInstance
-from gslib.util import GetStreamFromFileUrl
-from gslib.util import IsCloudSubdirPlaceholder
-from gslib.util import MakeHumanReadable
-from gslib.util import NO_MAX
-from gslib.util import NormalizeStorageClass
-from gslib.util import RemoveCRLFFromString
-from gslib.util import StdinIterator
+from gslib.utils import cat_helper
+from gslib.utils import copy_helper
+from gslib.utils import parallelism_framework_util
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
+from gslib.utils.constants import NO_MAX
+from gslib.utils.copy_helper import CreateCopyHelperOpts
+from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import ItemExistsError
+from gslib.utils.copy_helper import Manifest
+from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
+from gslib.utils.copy_helper import SkipUnsupportedObjectError
+from gslib.utils.posix_util import ConvertModeToBase8
+from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
+from gslib.utils.posix_util import InitializeUserGroups
+from gslib.utils.posix_util import POSIXAttributes
+from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
+from gslib.utils.posix_util import ValidateFilePermissionAccess
+from gslib.utils.system_util import GetStreamFromFileUrl
+from gslib.utils.system_util import StdinIterator
+from gslib.utils.text_util import NormalizeStorageClass
+from gslib.utils.text_util import RemoveCRLFFromString
+from gslib.utils.unit_util import CalculateThroughput
+from gslib.utils.unit_util import MakeHumanReadable
 
 _SYNOPSIS = """
   gsutil cp [OPTION]... src_url dst_url
@@ -1110,7 +1110,7 @@ class CpCommand(Command):
                                'stream or a named pipe.')
       cat_out_fd = (GetStreamFromFileUrl(dst_url, mode='wb')
                     if dst_url.IsFifo() else None)
-      return CatHelper(self).CatUrlStrings(
+      return cat_helper.CatHelper(self).CatUrlStrings(
           self.args[:-1],
           cat_out_fd=cat_out_fd)
 
@@ -1150,7 +1150,7 @@ class CpCommand(Command):
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
-    self.stats_lock = CreateLock()
+    self.stats_lock = parallelism_framework_util.CreateLock()
 
     # Tracks if any copies failed.
     self.op_failure_count = 0

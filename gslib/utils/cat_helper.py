@@ -22,12 +22,12 @@ import sys
 from boto import config
 
 from gslib.cloud_api import EncryptionException
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_TARGET
-from gslib.util import ObjectIsGzipEncoded
-from gslib.wildcard_iterator import StorageUrlFromString
+from gslib.storage_url import StorageUrlFromString
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
+from gslib.utils.metadata_util import ObjectIsGzipEncoded
 
 _CAT_BUCKET_LISTING_FIELDS = ['bucket',
                               'contentEncoding',

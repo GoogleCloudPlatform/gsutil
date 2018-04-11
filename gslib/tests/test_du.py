@@ -20,7 +20,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
-from gslib.util import Retry
+from gslib.utils.retry_util import Retry
 
 
 class TestDu(testcase.GsUtilIntegrationTestCase):

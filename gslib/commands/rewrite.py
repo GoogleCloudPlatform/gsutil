@@ -26,10 +26,6 @@ from gslib.cloud_api import EncryptionException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
-from gslib.encryption_helper import CryptoKeyType
-from gslib.encryption_helper import CryptoKeyWrapperFromKey
-from gslib.encryption_helper import GetEncryptionKeyWrapper
-from gslib.encryption_helper import MAX_DECRYPTION_KEYS
 from gslib.exception import CommandException
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
@@ -37,13 +33,17 @@ from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
-from gslib.translation_helper import PreconditionsFromHeaders
-from gslib.util import ConvertRecursiveToFlatWildcard
-from gslib.util import GetCloudApiInstance
-from gslib.util import NO_MAX
-from gslib.util import NormalizeStorageClass
-from gslib.util import StdinIterator
-from gslib.util import UTF8
+from gslib.utils.cloud_api_helper import GetCloudApiInstance
+from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
+from gslib.utils.encryption_helper import CryptoKeyType
+from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
+from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
+from gslib.utils.encryption_helper import MAX_DECRYPTION_KEYS
+from gslib.utils.system_util import StdinIterator
+from gslib.utils.text_util import ConvertRecursiveToFlatWildcard
+from gslib.utils.text_util import NormalizeStorageClass
+from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
 

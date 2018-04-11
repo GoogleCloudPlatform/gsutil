@@ -18,19 +18,19 @@ from __future__ import absolute_import
 from collections import defaultdict
 import json
 from gslib.exception import CommandException
-from gslib.iamhelpers import BindingsToDict
-from gslib.iamhelpers import BindingStringToTuple as bstt
-from gslib.iamhelpers import BindingsTuple
-from gslib.iamhelpers import DiffBindings
-from gslib.iamhelpers import IsEqualBindings
-from gslib.iamhelpers import PatchBindings
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import Retry
+from gslib.utils.iam_helper import BindingsToDict
+from gslib.utils.iam_helper import BindingStringToTuple as bstt
+from gslib.utils.iam_helper import BindingsTuple
+from gslib.utils.iam_helper import DiffBindings
+from gslib.utils.iam_helper import IsEqualBindings
+from gslib.utils.iam_helper import PatchBindings
+from gslib.utils.retry_util import Retry
 
 bvle = apitools_messages.Policy.BindingsValueListEntry
 
@@ -676,7 +676,7 @@ class TestIamSet(TestIamIntegration):
     return policy
 
   # TODO(iam-beta): Replace gen_binding, _patch_binding with generators from
-  # iamhelpers.
+  # iam_helper.
   def setUp(self):
     super(TestIamSet, self).setUp()
 

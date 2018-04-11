@@ -22,8 +22,8 @@ import sys
 
 # pylint:disable=g-import-not-at-top
 try:
-  from gslib.util import GetNewHttp
-  from gslib.util import ConfigureCertsFile
+  from gslib.utils.boto_util import GetNewHttp
+  from gslib.utils.boto_util import ConfigureCertsFile
 except:  # pylint: disable=bare-except
   # Some environments import their own version of standard Python libraries
   # which might cause the import of gslib.util to fail.  Try this alternative

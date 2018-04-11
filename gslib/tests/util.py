@@ -31,13 +31,13 @@ import boto
 import crcmod
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
-from gslib.encryption_helper import Base64Sha256FromBase64EncryptionKey
-from gslib.posix_util import GetDefaultMode
+from gslib.lazy_wrapper import LazyWrapper
 import gslib.tests as gslib_tests
-from gslib.util import IS_WINDOWS
-from gslib.util import LazyWrapper
-from gslib.util import MakeHumanReadable
-from gslib.util import UsingCrcmodExtension
+from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
+from gslib.utils.posix_util import GetDefaultMode
+from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.unit_util import MakeHumanReadable
 
 # pylint: disable=g-import-not-at-top, g-long-lambda
 if not IS_WINDOWS:
@@ -176,11 +176,13 @@ def _HasGSHost():
   return boto.config.get('Credentials', 'gs_host', None) is not None
 
 HAS_GS_HOST = _HasGSHost()
+HAS_NON_DEFAULT_GS_HOST = (
+    boto.gs.connection.GSConnection.DefaultHost != boto.config.get(
+        'Credentials', 'gs_host', None))
 
 
 def _HasGSPort():
   return boto.config.get('Credentials', 'gs_port', None) is not None
-
 
 HAS_GS_PORT = _HasGSPort()
 

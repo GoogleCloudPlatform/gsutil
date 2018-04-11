@@ -19,24 +19,16 @@ import logging
 import os
 
 from apitools.base.py import exceptions as apitools_exceptions
+import mock
 
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
 from gslib.command import CreateGsutilLogger
-from gslib.copy_helper import _DelegateUploadFileToObject
-from gslib.copy_helper import _GetPartitionInfo
-from gslib.copy_helper import _SelectUploadCompressionStrategy
-from gslib.copy_helper import _SetContentTypeFromFile
-from gslib.copy_helper import FilterExistingComponents
-from gslib.copy_helper import GZIP_ALL_FILES
-from gslib.copy_helper import PerformParallelUploadFileToObjectArgs
-from gslib.copy_helper import WarnIfMvEarlyDeletionChargeApplies
+from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
-from gslib.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.parallel_tracker_file import ObjectFromTracker
-from gslib.posix_util import ConvertDatetimeToPOSIX
 from gslib.storage_url import StorageUrlFromString
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
@@ -44,11 +36,21 @@ from gslib.tests.util import GSMockBucketStorageUri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-from gslib.util import CreateLock
-from gslib.util import DiscardMessagesQueue
-from gslib.util import IS_WINDOWS
+from gslib.utils import parallelism_framework_util
+from gslib.utils import posix_util
+from gslib.utils import system_util
+from gslib.utils import hashing_helper
+from gslib.utils.copy_helper import _DelegateUploadFileToObject
+from gslib.utils.copy_helper import _GetPartitionInfo
+from gslib.utils.copy_helper import _SelectUploadCompressionStrategy
+from gslib.utils.copy_helper import _SetContentTypeFromFile
+from gslib.utils.copy_helper import FilterExistingComponents
+from gslib.utils.copy_helper import GZIP_ALL_FILES
+from gslib.utils.copy_helper import PerformParallelUploadFileToObjectArgs
+from gslib.utils.copy_helper import WarnIfMvEarlyDeletionChargeApplies
 
-import mock
+_CalculateB64EncodedMd5FromContents = (
+    hashing_helper.CalculateB64EncodedMd5FromContents)
 
 
 class TestCpFuncs(GsUtilUnitTestCase):
@@ -100,7 +102,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
+    tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # dst_obj_metadata used for passing content-type.
     empty_object = apitools_messages.Object()
@@ -114,7 +116,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         self.default_provider, bucket_name,
         fpath_uploaded_correctly))
     with open(fpath_uploaded_correctly) as f_in:
-      fpath_uploaded_correctly_md5 = CalculateB64EncodedMd5FromContents(f_in)
+      fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_uploaded_correctly,
@@ -144,7 +146,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     object_wrong_contents_url = StorageUrlFromString('%s://%s/%s' % (
         self.default_provider, bucket_name, fpath_wrong_contents))
     with open(self.CreateTempFile(contents='_')) as f_in:
-      fpath_wrong_contents_md5 = CalculateB64EncodedMd5FromContents(f_in)
+      fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_wrong_contents,
@@ -167,7 +169,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # Exists in tracker file and already uploaded, but no longer needed.
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
     with open(fpath_no_longer_used) as f_in:
-      file_md5 = CalculateB64EncodedMd5FromContents(f_in)
+      file_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name='foo6', md5Hash=file_md5), contents='6')
@@ -211,7 +213,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     empty_object = apitools_messages.Object()
 
     tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
-    tracker_file_lock = CreateLock()
+    tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
@@ -219,7 +221,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
     with open(fpath_uploaded_correctly) as f_in:
-      fpath_uploaded_correctly_md5 = CalculateB64EncodedMd5FromContents(f_in)
+      fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_uploaded_correctly,
@@ -254,7 +256,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
     fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
     with open(self.CreateTempFile(contents='_')) as f_in:
-      fpath_wrong_contents_md5 = CalculateB64EncodedMd5FromContents(f_in)
+      fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_wrong_contents = mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_wrong_contents,
@@ -345,7 +347,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
   def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
-    if IS_WINDOWS:
+    if system_util.IS_WINDOWS:
       return unittest.skip('use_magicfile features not available on Windows')
 
     surprise_html = '<html><body>And you thought I was just text!</body></html>'
@@ -378,7 +380,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
   _PI_DAY = datetime.datetime(2016, 3, 14, 15, 9, 26)
 
   @mock.patch('time.time',
-              new=mock.MagicMock(return_value=ConvertDatetimeToPOSIX(_PI_DAY)))
+              new=mock.MagicMock(
+                  return_value=posix_util.ConvertDatetimeToPOSIX(_PI_DAY)))
   def testWarnIfMvEarlyDeletionChargeApplies(self):
     """Tests that WarnIfEarlyDeletionChargeApplies warns when appropriate."""
     test_logger = logging.Logger('test')
