@@ -39,7 +39,7 @@ _AUTHORIZE_SYNOPSIS = """
 """
 
 _ENCRYPTION_SYNOPSIS = """
-  gsutil kms encryption [(-d|[-k kms_key])] bucket_url
+  gsutil kms encryption [(-d|[-k kms_key])] bucket_url...
 """
 
 _SERVICEACCOUNT_SYNOPSIS = """
@@ -52,7 +52,7 @@ _SYNOPSIS = (_AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +
 # pylint: disable=line-too-long
 _AUTHORIZE_DESCRIPTION = """
 <B>AUTHORIZE</B>
-  The authorize sub-command ensures that the default (or supplied) project has a
+  The authorize sub-command checks that the default (or supplied) project has a
   GCS-owned service account created for it, and if not, it creates one. It then
   adds appropriate encrypt/decrypt permissions to Cloud KMS resources such that
   the GCS service account can write and read Cloud KMS-encrypted objects in

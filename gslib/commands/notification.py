@@ -225,9 +225,9 @@ _CREATE_DESCRIPTION = """
 <B>NEXT STEPS</B>
   Once the create command has succeeded, Cloud Storage will publish a message to
   the specified Cloud Pub/Sub topic when eligible changes occur. In order to
-  receive these message, you will need to create a Pub/Sub subscription for your
-  Pub/Sub topic. To learn more about creating Pub/Sub subscriptions, see `the
-  Pub/Sub Subscriber Overview <https://cloud.google.com/pubsub/docs/subscriber>`_.
+  receive these message, you must create a Pub/Sub subscription for your Pub/Sub
+  topic. To learn more about creating Pub/Sub subscriptions, see `the Pub/Sub
+  Subscriber Overview <https://cloud.google.com/pubsub/docs/subscriber>`_.
 
   You can create a simple Pub/Sub subscription using the `gcloud` command-line
   tool. For example, to create a new subscription on the topic "myNewTopic" and

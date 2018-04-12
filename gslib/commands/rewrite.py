@@ -142,11 +142,13 @@ _DETAILED_HELP_TEXT = ("""
                 your boto configuration file. The value for encryption_key may
                 be either a base64-encoded CSEK or a fully-qualified KMS key
                 name. If encryption_key is specified, encrypt all objects with
-                this key. If encryption_key is unspecified, this will decrypt
-                all objects (except when the destination bucket has a default
-                KMS key set, in which case that will be used to encrypt the
-                objects). See `gsutil help encryption` for details on encryption
-                configuration.
+                this key. If encryption_key is unspecified, customer-managed or
+                customer-supplied encryption keys that were used on the original
+                objects aren't used for the rewritten objects. Instead,
+                rewritten objects are encrypted with either the default KMS key
+                set on the bucket (if one is specified) or Google-managed
+                encryption. See 'gsutil help encryption' for details on
+                encryption configuration.
 
   -O            Rewrite objects with the bucket's default object ACL instead of
                 the existing object ACL. This is needed if you do not have
