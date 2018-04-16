@@ -141,7 +141,7 @@ _CREATE_DESCRIPTION = """
   You can create multiple notification configurations for a bucket, but their
   triggers cannot overlap such that a single event could send multiple
   notifications. Attempting to create a notification configuration that
-  overlaps with an exisitng notification configuration results in an error.
+  overlaps with an existing notification configuration results in an error.
 
 <B>CREATE EXAMPLES</B>
   Begin sending notifications of all changes to the bucket example-bucket
