@@ -15,8 +15,10 @@
 """Implementation of rewrite command (in-place cloud object transformation)."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import sys
+import textwrap
 import time
 
 from apitools.base.py import encoding
@@ -94,14 +96,31 @@ _DETAILED_HELP_TEXT = ("""
 
   will rewrite the object, changing its storage class to nearline.
 
-  The rewrite command will skip objects that are already in the desired state.
-  For example, if you run:
+  If you specify the -k option and you have an encryption key set in your boto
+  configuration file, the rewrite command will skip objects that are already
+  encrypted with the specifed key.  For example, if you run:
 
     gsutil rewrite -k gs://bucket/**
 
-  and gs://bucket contains objects that already match the encryption
-  configuration, gsutil will skip rewriting those objects and only rewrite
-  objects that do not match the encryption configuration. If you specify
+  and gs://bucket contains objects encrypted with the key specified in your boto
+  configuration file, gsutil will skip rewriting those objects and only rewrite
+  objects that are not encrypted with the specified key. This avoids the cost of
+  performing redundant rewrite operations.
+
+  If you specify the -k option and you do not have an encryption key set in your
+  boto configuration file, gsutil will always rewrite each object, without
+  explicitly specifying an encryption key. This results in rewritten objects
+  being encrypted with either the bucket's default KMS key (if one is set) or
+  Google-managed encryption (no CSEK or CMEK). Gsutil does not attempt to
+  determine whether the operation is redundant (and thus skippable) because
+  gsutil cannot be sure how the object will be encrypted after the rewrite. Note
+  that if your goal is to encrypt objects with a bucket's default KMS key, you
+  can avoid redundant rewrite costs by specifying the bucket's default KMS key
+  in your boto configuration file; this allows gsutil to perform an accurate
+  comparison of the objects' current and desired encryption configurations and
+  skip rewrites for objects already encrypted with that key.
+
+  If have an encryption key set in your boto configuration file and specify
   multiple transformations, gsutil will only skip those that would not change
   the object's state. For example, if you run:
 
@@ -145,10 +164,10 @@ _DETAILED_HELP_TEXT = ("""
                 this key. If encryption_key is unspecified, customer-managed or
                 customer-supplied encryption keys that were used on the original
                 objects aren't used for the rewritten objects. Instead,
-                rewritten objects are encrypted with either the default KMS key
-                set on the bucket (if one is specified) or Google-managed
-                encryption. See 'gsutil help encryption' for details on
-                encryption configuration.
+                rewritten objects are encrypted with either the bucket's default
+                KMS key (if one is set) or Google-managed encryption (no CSEK
+                or CMEK). See 'gsutil help encryption' for details on encryption
+                configuration.
 
   -O            Rewrite objects with the bucket's default object ACL instead of
                 the existing object ACL. This is needed if you do not have
@@ -317,6 +336,15 @@ class RewriteCommand(Command):
       self.csek_hash_to_keywrapper[self.boto_file_encryption_sha256] = (
           self.boto_file_encryption_keywrapper)
 
+    if self.boto_file_encryption_keywrapper is None:
+      msg = '\n'.join(textwrap.wrap(
+          'NOTE: No encryption_key was specified in the boto configuration '
+          'file, so gsutil will not provide an encryption key in its rewrite '
+          'API requests. This will decrypt the objects unless they are in '
+          'buckets with a default KMS key set, in which case the service '
+          'will automatically encrypt the rewritten objects with that key.'))
+      print('%s\n' % msg, file=sys.stderr)
+
     # Perform rewrite requests in parallel (-m) mode, if requested.
     self.Apply(_RewriteFuncWrapper, name_expansion_iterator,
                _RewriteExceptionHandler,
@@ -409,8 +437,17 @@ class RewriteCommand(Command):
       redundant_transforms.append('storage class')
 
     # CRYPTO_KEY transform is redundant if we're using the same encryption
-    # key (if any) that was used to encrypt the source.
+    # key that was used to encrypt the source. However, if no encryption key was
+    # specified, we should still perform the rewrite. This results in the
+    # rewritten object either being encrypted with its bucket's default KMS key
+    # or having no CSEK/CMEK encryption applied. While we could attempt fetching
+    # the bucket's metadata and checking its default KMS key before performing
+    # the rewrite (in the case where we appear to be transitioning from
+    # no key to no key), that is vulnerable to the race condition where the
+    # default KMS key is changed between when we check it and when we rewrite
+    # the object.
     if (_TransformTypes.CRYPTO_KEY in self.transform_types and
+        should_encrypt_dest and
         encryption_unchanged):
       redundant_transforms.append('encryption key')
 
