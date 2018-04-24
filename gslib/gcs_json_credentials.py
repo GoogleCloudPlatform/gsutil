@@ -32,6 +32,7 @@ from boto import config
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.no_op_credentials import NoOpCredentials
+from gslib.utils import constants
 from gslib.utils.boto_util import GetBotoConfigFileList
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
@@ -46,18 +47,17 @@ from oauth2client.contrib import multiprocess_file_storage
 
 from six import BytesIO
 
-
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI = (
     'https://accounts.google.com/o/oauth2/auth')
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI = (
     'https://accounts.google.com/o/oauth2/token')
 
 DEFAULT_SCOPES = [
-    u'https://www.googleapis.com/auth/cloud-platform',
-    u'https://www.googleapis.com/auth/cloud-platform.read-only',
-    u'https://www.googleapis.com/auth/devstorage.full_control',
-    u'https://www.googleapis.com/auth/devstorage.read_only',
-    u'https://www.googleapis.com/auth/devstorage.read_write'
+    constants.Scopes.CLOUD_PLATFORM,
+    constants.Scopes.CLOUD_PLATFORM_READ_ONLY,
+    constants.Scopes.FULL_CONTROL,
+    constants.Scopes.READ_ONLY,
+    constants.Scopes.READ_WRITE,
 ]
 
 GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
@@ -78,8 +78,12 @@ def GetCredentialStoreKey(credentials, api_version):
     A string that can be used as the key to identify a credential, e.g.
     "v1-909320924072.apps.googleusercontent.com-1/rEfrEshtOkEn"
   """
-  # TODO: If scopes ever become available in the credentials themselves,
-  # include them in the key.
+  # Note: We don't include the scopes as part of the key. For a user credential
+  # object, we always construct it with manually added scopes that are necessary
+  # to negotiate reauth challenges - those scopes don't necessarily correspond
+  # to the scopes the refresh token was created with. We avoid key name
+  # mismatches for the same refresh token by not including scopes in the key
+  # string.
   key_parts = [api_version]
   # pylint: disable=protected-access
   if isinstance(credentials, devshell.DevshellCredentials):
@@ -110,6 +114,22 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   api.credentials.set_store(
       multiprocess_file_storage.MultiprocessFileStorage(
           GetCredentialStoreFilename(), credential_store_key))
+  # The cached entry for this credential often contains more context than what
+  # we can construct from boto config attributes (e.g. for a user credential,
+  # the cached version might also contain a RAPT token and expiry info).
+  # Prefer the cached credential if present.
+  cached_cred = api.credentials.store.get()
+  # As of gsutil 4.31, we never use the OAuth2Credentials class for
+  # credentials directly; rather, we use subclasses (user credentials were
+  # the only ones left using it, but they now use
+  # Oauth2WithReauthCredentials).  If we detect that a cached credential is
+  # an instance of OAuth2Credentials and not a subclass of it (as might
+  # happen when transitioning to version v4.31+), we don't fetch it from the
+  # cache. This results in our new-style credential being refreshed and
+  # overwriting the old credential cache entry in our credstore.
+  if (cached_cred
+      and not type(cached_cred) == oauth2client.client.OAuth2Credentials):
+    api.credentials = cached_cred
 
 
 def _CheckAndGetCredentials(logger):
@@ -250,10 +270,20 @@ def _GetOauth2UserAccountCredentials():
   client_secret = config.get('OAuth2', 'client_secret',
                              os.environ.get('OAUTH2_CLIENT_SECRET',
                                             gsutil_client_secret))
+  # Note that these scopes don't necessarily correspond to the refresh token
+  # being used. This list is is used for obtaining the RAPT in the reauth flow,
+  # to determine which challenges should be used.
+  scopes_for_reauth_challenge = [
+      constants.Scopes.CLOUD_PLATFORM, constants.Scopes.REAUTH]
   return reauth_creds.Oauth2WithReauthCredentials(
-      None, client_id, client_secret,
-      config.get('Credentials', 'gs_oauth2_refresh_token'), None,
-      provider_token_uri, None)
+      None,  # access_token
+      client_id,
+      client_secret,
+      config.get('Credentials', 'gs_oauth2_refresh_token'),
+      None,  # token_expiry
+      provider_token_uri,
+      None,  # user_agent
+      scopes=scopes_for_reauth_challenge)
 
 
 def _GetGceCreds():

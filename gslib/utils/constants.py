@@ -98,3 +98,13 @@ WINDOWS_1252 = 'cp1252'
 # Default number of progress callbacks during transfer (XML API).
 XML_PROGRESS_CALLBACKS = 10
 
+
+class Scopes(object):
+  """Enum class for auth scopes, as unicode."""
+  CLOUD_PLATFORM = u'https://www.googleapis.com/auth/cloud-platform'
+  CLOUD_PLATFORM_READ_ONLY = (
+      u'https://www.googleapis.com/auth/cloud-platform.read-only')
+  FULL_CONTROL = u'https://www.googleapis.com/auth/devstorage.full_control'
+  READ_ONLY = u'https://www.googleapis.com/auth/devstorage.read_only'
+  READ_WRITE = u'https://www.googleapis.com/auth/devstorage.read_write'
+  REAUTH = u'https://www.googleapis.com/auth/accounts.reauth'

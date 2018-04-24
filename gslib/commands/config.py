@@ -44,7 +44,7 @@ from gslib.exception import AbortException
 from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
-from gslib.utils.constants import RESUMABLE_THRESHOLD_B
+from gslib.utils import constants
 from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
@@ -289,12 +289,6 @@ except ImportError:
   pass
 
 GOOG_CLOUD_CONSOLE_URI = 'https://cloud.google.com/console#/project'
-
-SCOPE_CLOUD_PLATFORM = 'https://www.googleapis.com/auth/cloud-platform'
-SCOPE_FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
-SCOPE_READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
-SCOPE_READ_ONLY = 'https://www.googleapis.com/auth/devstorage.read_only'
-SCOPE_REAUTH = 'https://www.googleapis.com/auth/accounts.reauth'
 
 CONFIG_PRELUDE_CONTENT = """
 # This file contains credentials and other configuration information needed
@@ -599,7 +593,7 @@ content_language = en
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
        'hash_always': CHECK_HASH_ALWAYS,
        'hash_never': CHECK_HASH_NEVER,
-       'resumable_threshold': RESUMABLE_THRESHOLD_B,
+       'resumable_threshold': constants.RESUMABLE_THRESHOLD_B,
        'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
        'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
        'parallel_composite_upload_threshold': (
@@ -859,7 +853,7 @@ class ConfigCommand(Command):
 
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self, config_file, launch_browser=True,
-                           oauth2_scopes=[SCOPE_CLOUD_PLATFORM],
+                           oauth2_scopes=[constants.Scopes.CLOUD_PLATFORM],
                            cred_type=CredTypes.OAUTH2_USER_ACCOUNT,
                            configure_auth=True):
     """Creates a boto config file interactively.
@@ -1145,19 +1139,19 @@ class ConfigCommand(Command):
         cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
         has_e = True
       elif opt == '-f':
-        scopes.append(SCOPE_FULL_CONTROL)
+        scopes.append(constants.Scopes.FULL_CONTROL)
       elif opt == '-n':
         configure_auth = False
       elif opt == '-o':
         output_file_name = opt_arg
       elif opt == '-r':
-        scopes.append(SCOPE_READ_ONLY)
+        scopes.append(constants.Scopes.READ_ONLY)
       elif opt == '--reauth':
-        scopes.append(SCOPE_REAUTH)
+        scopes.append(constants.Scopes.REAUTH)
       elif opt == '-s':
         scopes.append(opt_arg)
       elif opt == '-w':
-        scopes.append(SCOPE_READ_WRITE)
+        scopes.append(constants.Scopes.READ_WRITE)
       else:
         self.RaiseInvalidArgumentException()
 
@@ -1201,8 +1195,8 @@ class ConfigCommand(Command):
           'pass_credentials_to_gsutil false".')) + '\n\n')
 
     if not scopes:
-      scopes.append(SCOPE_CLOUD_PLATFORM)
-      scopes.append(SCOPE_REAUTH)
+      scopes.append(constants.Scopes.CLOUD_PLATFORM)
+      scopes.append(constants.Scopes.REAUTH)
 
     default_config_path_bak = None
     if not output_file_name:
