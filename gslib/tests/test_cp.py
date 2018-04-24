@@ -108,7 +108,9 @@ from gslib.utils.unit_util import ONE_MIB
 # pylint: disable=g-import-not-at-top
 if not IS_WINDOWS:
   from gslib.tests.util import DEFAULT_MODE
-  from gslib.tests.util import INVALID_GID
+  from gslib.tests.util import GetInvalidGid
+  from gslib.tests.util import GetNonPrimaryGid
+  from gslib.tests.util import GetPrimaryGid
   from gslib.tests.util import INVALID_UID
   from gslib.tests.util import NON_PRIMARY_GID
   from gslib.tests.util import PRIMARY_GID
@@ -130,48 +132,80 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
   # A dict of test_name: attrs_dict.
   # attrs_dict holds the different attributes that we want for the object in a
   # specific test.
-  test_params = {'test1': {MODE_ATTR: '333', error: POSIX_MODE_ERROR},
-                 'test2': {GID_ATTR: INVALID_GID(), error: POSIX_GID_ERROR},
-                 'test3': {GID_ATTR: INVALID_GID(), MODE_ATTR: '420',
-                           error: POSIX_GID_ERROR},
-                 'test4': {UID_ATTR: INVALID_UID(), error: POSIX_UID_ERROR},
-                 'test5': {UID_ATTR: INVALID_UID(), MODE_ATTR: '530',
-                           error: POSIX_UID_ERROR},
-                 'test6': {UID_ATTR: INVALID_UID(), GID_ATTR: INVALID_GID(),
-                           error: POSIX_UID_ERROR},
-                 'test7': {UID_ATTR: INVALID_UID(), GID_ATTR: INVALID_GID(),
-                           MODE_ATTR: '640', error: POSIX_UID_ERROR},
-                 'test8': {UID_ATTR: INVALID_UID(), GID_ATTR: PRIMARY_GID,
-                           error: POSIX_UID_ERROR},
-                 'test9': {UID_ATTR: INVALID_UID(), GID_ATTR: NON_PRIMARY_GID(),
-                           error: POSIX_UID_ERROR},
-                 'test10': {UID_ATTR: INVALID_UID(), GID_ATTR: PRIMARY_GID,
-                            MODE_ATTR: '640', error: POSIX_UID_ERROR},
-                 'test11': {UID_ATTR: INVALID_UID(),
-                            GID_ATTR: NON_PRIMARY_GID(),
-                            MODE_ATTR: '640', error: POSIX_UID_ERROR},
-                 'test12': {UID_ATTR: USER_ID, GID_ATTR: INVALID_GID(),
-                            error: POSIX_GID_ERROR},
-                 'test13': {UID_ATTR: USER_ID, GID_ATTR: INVALID_GID(),
-                            MODE_ATTR: '640', error: POSIX_GID_ERROR},
-                 'test14': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '240',
-                            error: POSIX_INSUFFICIENT_ACCESS_ERROR}}
+  # To minimize potential test flakes from the system's GID mapping changing
+  # mid-test, we use the GID-related methods that fetch GID info each time,
+  # rather than reusing the LazyWrapper-wrapped constants across operations.
+  test_params = {
+      'test1': {MODE_ATTR: '333',
+                error: POSIX_MODE_ERROR},
+      'test2': {GID_ATTR: GetInvalidGid,
+                error: POSIX_GID_ERROR},
+      'test3': {GID_ATTR: GetInvalidGid,
+                MODE_ATTR: '420',
+                error: POSIX_GID_ERROR},
+      'test4': {UID_ATTR: INVALID_UID,
+                error: POSIX_UID_ERROR},
+      'test5': {UID_ATTR: INVALID_UID,
+                MODE_ATTR: '530',
+                error: POSIX_UID_ERROR},
+      'test6': {UID_ATTR: INVALID_UID,
+                GID_ATTR: GetInvalidGid,
+                error: POSIX_UID_ERROR},
+      'test7': {UID_ATTR: INVALID_UID,
+                GID_ATTR: GetInvalidGid,
+                MODE_ATTR: '640',
+                error: POSIX_UID_ERROR},
+      'test8': {UID_ATTR: INVALID_UID,
+                GID_ATTR: GetPrimaryGid,
+                error: POSIX_UID_ERROR},
+      'test9': {UID_ATTR: INVALID_UID,
+                GID_ATTR: GetNonPrimaryGid,
+                error: POSIX_UID_ERROR},
+      'test10': {UID_ATTR: INVALID_UID,
+                 GID_ATTR: GetPrimaryGid,
+                 MODE_ATTR: '640',
+                 error: POSIX_UID_ERROR},
+      'test11': {UID_ATTR: INVALID_UID,
+                 GID_ATTR: GetNonPrimaryGid,
+                 MODE_ATTR: '640',
+                 error: POSIX_UID_ERROR},
+      'test12': {UID_ATTR: USER_ID,
+                 GID_ATTR: GetInvalidGid,
+                 error: POSIX_GID_ERROR},
+      'test13': {UID_ATTR: USER_ID,
+                 GID_ATTR: GetInvalidGid,
+                 MODE_ATTR: '640',
+                 error: POSIX_GID_ERROR},
+      'test14': {GID_ATTR: GetPrimaryGid,
+                 MODE_ATTR: '240',
+                 error: POSIX_INSUFFICIENT_ACCESS_ERROR}}
   # The first variable below can be used to help debug the test if there is a
   # problem.
   for test_name, attrs_dict in test_params.iteritems():
     cls.ClearPOSIXMetadata(obj)
 
-    # Attributes default to None if they are not in attrs_dict.
+    # Attributes default to None if they are not in attrs_dict; some attrs are
+    # functions or LazyWrapper objects that should be called.
     uid = attrs_dict.get(UID_ATTR)
+    if uid is not None and callable(uid):
+      uid = uid()
+
     gid = attrs_dict.get(GID_ATTR)
+    if gid is not None and callable(gid):
+      gid = gid()
+
     mode = attrs_dict.get(MODE_ATTR)
+
     cls.SetPOSIXMetadata(cls.default_provider, bucket_uri.bucket_name,
                          obj.object_name, uid=uid, gid=gid, mode=mode)
     stderr = cls.RunGsUtil(['cp' if is_cp else 'mv', '-P',
                             suri(bucket_uri, obj.object_name), tmpdir],
                            expected_status=1, return_stderr=True)
-    cls.assertIn(ORPHANED_FILE, stderr, '%s not found in stderr\n%s'
-                 % (ORPHANED_FILE, stderr))
+    cls.assertIn(
+        ORPHANED_FILE,
+        stderr,
+        'Error during test "%s": %s not found in stderr:\n%s' % (
+            test_name, ORPHANED_FILE, stderr))
     error_regex = BuildErrorRegex(obj, attrs_dict.get(error))
     cls.assertTrue(
         error_regex.search(stderr),
@@ -3533,6 +3567,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
+  @Retry(AssertionError, tries=3)  # System GID mapping could change mid-run.
   def test_cp_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 
@@ -3544,6 +3579,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=True)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
+  @Retry(AssertionError, tries=3)  # System GID mapping could change mid-run.
   def test_cp_preserve_posix_bucket_to_dir_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 

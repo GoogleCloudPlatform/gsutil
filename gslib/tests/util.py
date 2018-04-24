@@ -44,39 +44,51 @@ if not IS_WINDOWS:
   import grp
   import pwd
 
-  USER_ID = os.getuid()
-  USER_NAME = LazyWrapper(lambda: pwd.getpwuid(USER_ID).pw_name)
-  PRIMARY_GID = LazyWrapper(lambda: os.getgid())
+  def GetInvalidGid():
+    # Get a list of all groups on the system which are not necessarily sorted by
+    # GID, then sort them and take the last element and add one to the GID to
+    # get a GID that is guaranteed not to be on the current system.
+    return sorted([group.gr_gid for group in grp.getgrall()])[-1] + 1
 
-  # Get a list of all groups on the system where the current username is listed
-  # as a member of the group in the gr_mem group attribute. Make this a list of
-  # all group IDs and cast as a set for more efficient lookup times.
-  USER_GROUPS = LazyWrapper(
-      lambda: set([PRIMARY_GID] +
-                  [g.gr_gid for g in grp.getgrall()
-                   if USER_NAME in g.gr_mem]))
-  # Select a group for the current user that is not the user's primary group. If
-  # the length of the user's groups is 1, then we must use the primary group.
-  # Otherwise put all of the user's groups (except the primary group) in a list,
-  # and use the first element. This guarantees us a group that is not the user's
-  # primary group (unless the user is only a member of one group).
-  NON_PRIMARY_GID = LazyWrapper(lambda: (PRIMARY_GID if len(USER_GROUPS) == 1
-                                         else [g for g in list(USER_GROUPS)
-                                               if g != PRIMARY_GID][0]))
+  def GetNonPrimaryGid():
+    # Select a group for the current user that is not the user's primary group.
+    # If the length of the user's groups is 1, then we must use the primary
+    # group.  Otherwise put all of the user's groups (except the primary group)
+    # in a list, and use the first element. This guarantees us a group that is
+    # not the user's primary group (unless the user is only a member of one
+    # group).
+    primary_gid = GetPrimaryGid()
+    user_groups = GetUserGroups()
+    if len(user_groups) == 1:
+      return primary_gid
+    return [g for g in list(user_groups) if g != primary_gid][0]
+
+  def GetPrimaryGid():
+    return os.getgid()
+
+  def GetUserGroups():
+    return set([GetPrimaryGid()] +
+               [g.gr_gid for g in grp.getgrall() if USER_NAME() in g.gr_mem])
 
   DEFAULT_MODE = int(GetDefaultMode(), 8)
-
-  # Get a list of all groups on the system which are not necessarily sorted by
-  # GID, then sort them and take the last element and add one to the GID to get
-  # a GID that is guaranteed not to be on the current system.
-  INVALID_GID = LazyWrapper(lambda: sorted([group.gr_gid for group
-                                            in grp.getgrall()])[-1] + 1)
-
+  USER_ID = os.getuid()
+  USER_NAME = LazyWrapper(lambda: pwd.getpwuid(USER_ID).pw_name)
   # Take the current user's UID and increment it by one, this counts as an
   # invalid UID, as the metric used is if the UID matches the current user's,
   # exactly.
   INVALID_UID = LazyWrapper(lambda: sorted([user.pw_uid for user
                                             in pwd.getpwall()])[-1] + 1)
+
+  # Note that because the system's GID mapping can change mid-test, tests that
+  # check for specific errors should always re-fetch these GID-related values,
+  # rather than reusing these LazyWrapper values.
+  INVALID_GID = LazyWrapper(lambda: GetInvalidGid())
+  NON_PRIMARY_GID = LazyWrapper(lambda: GetNonPrimaryGid())
+  PRIMARY_GID = LazyWrapper(lambda: GetPrimaryGid())
+  # Get a list of all groups on the system where the current username is listed
+  # as a member of the group in the gr_mem group attribute. Make this a list of
+  # all group IDs and cast as a set for more efficient lookup times.
+  USER_GROUPS = LazyWrapper(lambda: GetUserGroups())
 
 # 256-bit base64 encryption keys used for testing AES256 customer-supplied
 # encryption. These are public and open-source, so don't ever use them for
