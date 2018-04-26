@@ -3567,7 +3567,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
-  @Retry(AssertionError, tries=3)  # System GID mapping could change mid-run.
   def test_cp_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 
@@ -3579,7 +3578,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     TestCpMvPOSIXBucketToLocalNoErrors(self, bucket_uri, tmpdir, is_cp=True)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @Retry(AssertionError, tries=3)  # System GID mapping could change mid-run.
   def test_cp_preserve_posix_bucket_to_dir_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 
