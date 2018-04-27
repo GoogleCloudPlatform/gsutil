@@ -118,7 +118,10 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   # we can construct from boto config attributes (e.g. for a user credential,
   # the cached version might also contain a RAPT token and expiry info).
   # Prefer the cached credential if present.
-  cached_cred = api.credentials.store.get()
+  cached_cred = None
+  if not isinstance(api.credentials, NoOpCredentials):
+    # A NoOpCredentials object doesn't actually have a store attribute.
+    cached_cred = api.credentials.store.get()
   # As of gsutil 4.31, we never use the OAuth2Credentials class for
   # credentials directly; rather, we use subclasses (user credentials were
   # the only ones left using it, but they now use
@@ -128,7 +131,7 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   # cache. This results in our new-style credential being refreshed and
   # overwriting the old credential cache entry in our credstore.
   if (cached_cred
-      and not type(cached_cred) == oauth2client.client.OAuth2Credentials):
+      and type(cached_cred) != oauth2client.client.OAuth2Credentials):
     api.credentials = cached_cred
 
 
