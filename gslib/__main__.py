@@ -371,6 +371,11 @@ def main():
       oauth2client.transport._LOGGER.setLevel(logging.WARNING)
       reauth_creds._LOGGER.setLevel(logging.WARNING)
 
+    # TODO(reauth): Fix once reauth pins to pyu2f version newer than 0.1.3.
+    # Fixes pyu2f v0.1.3 bug.
+    import six  # pylint: disable=g-import-not-at-top
+    six.input = six.moves.input
+
     if not boto_util.CERTIFICATE_VALIDATION_ENABLED:
       sys.stderr.write(HTTP_WARNING)
 
