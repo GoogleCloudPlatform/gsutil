@@ -1,3 +1,27 @@
+Release 4.31 (release date: 2018-04-26)
+=======================================
+New features
+------------------
+- Added support for reauthentication within gsutil. Note that this only affects
+  authentication when "gs_oauth2_refresh_token" is configured under the
+  "Credentials" section of the boto config file and that token corresponds to a
+  user account enrolled in 2-step verification.
+
+Bug Fixes
+------------------
+- When creating a signed URL via the "signurl" command, gsutil now verifies that
+  the specified expiration isn't longer than 7 days (the maximum allowed by the
+  service).
+- To support rewriting objects to be encrypted using a bucket's default KMS key,
+  the "rewrite" command now rewrites all specified objects if no value is
+  specified for "encryption_key" under the "GSUtil" section in the boto config
+  file.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.30 (release date: 2018-03-28)
 =======================================
 New features
