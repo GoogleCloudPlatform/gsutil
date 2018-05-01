@@ -15,12 +15,14 @@
 """File and Cloud URL representation classes."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import re
 import stat
 
 from gslib.exception import InvalidUrlError
+from gslib.utils import system_util
 
 # Matches provider strings of the form 'gs://'
 PROVIDER_REGEX = re.compile(r'(?P<provider>[^:]*)://$')
@@ -124,16 +126,23 @@ class _FileUrl(StorageUrl):
 
   def __init__(self, url_string, is_stream=False, is_fifo=False):
     self.scheme = 'file'
+    self.delim = os.sep
     self.bucket_name = ''
+    # If given a URI that starts with "<scheme>://", the object name should not
+    # include that prefix.
     match = FILE_OBJECT_REGEX.match(url_string)
     if match and match.lastindex == 2:
       self.object_name = match.group(2)
     else:
       self.object_name = url_string
+    # On Windows, the pathname component separator is "\" instead of "/". If we
+    # find an occurrence of "/", replace it with "\" so that other logic can
+    # rely on being able to split pathname components on `os.sep`.
+    if system_util.IS_WINDOWS:
+      self.object_name = self.object_name.replace('/', '\\')
     self.generation = None
     self.is_stream = is_stream
     self.is_fifo = is_fifo
-    self.delim = os.sep
 
   def Clone(self):
     return _FileUrl(self.url_string)
@@ -183,10 +192,10 @@ class _CloudUrl(StorageUrl):
 
   def __init__(self, url_string):
     self.scheme = None
+    self.delim = '/'
     self.bucket_name = None
     self.object_name = None
     self.generation = None
-    self.delim = '/'
     provider_match = PROVIDER_REGEX.match(url_string)
     bucket_match = BUCKET_REGEX.match(url_string)
     if provider_match:

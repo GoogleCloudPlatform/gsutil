@@ -3750,6 +3750,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       self.AssertObjectUnencrypted(obj2_suri)
 
+  @unittest.skipUnless(
+      IS_WINDOWS,
+      'Only Windows paths need to be normalized to use backslashes instead of '
+      'forward slashes.')
+  def test_windows_path_with_back_and_forward_slash_is_normalized(self):
+    # Prior to this test and its corresponding fix, running
+    # `gsutil cp dir/./file gs://bucket` would result in an object whose name
+    # was "dir/./file", rather than just "file", as Windows tried to split on
+    # the path component separator "\" intead of "/".
+    tmp_dir = self.CreateTempDir()
+    self.CreateTempFile(tmpdir=tmp_dir, file_name='obj1', contents='foo')
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['cp', '%s\\./obj1' % tmp_dir, suri(bucket_uri)])
+    # If the destination path was not created correctly, this stat call should
+    # fail with a non-zero exit code because the specified object won't exist.
+    self.RunGsUtil(['stat', '%s/obj1' % suri(bucket_uri)])
+
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil cp."""
@@ -3795,3 +3812,4 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEquals(1, len(warning_messages))
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
+
