@@ -116,7 +116,7 @@ HTTP_WARNING = """
 ***************************** WARNING *****************************
 """.lstrip()
 
-debug = 0
+debug_level = 0
 test_exception_traces = False
 
 
@@ -154,7 +154,7 @@ def _OutputAndExit(message, exception=None):
     message: Message to print to stderr.
     exception: The exception that caused gsutil to fail.
   """
-  if debug >= constants.DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
+  if debug_level >= constants.DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n%s\n' %
            (re.sub('\\n', '\n    ', stack_trace), message))
@@ -235,7 +235,7 @@ def main():
   except ImportError:
     pass
 
-  global debug
+  global debug_level
   global test_exception_traces
 
   if not (2, 7) <= sys.version_info[:3] < (3,):
@@ -336,7 +336,7 @@ def main():
           boto.config.add_section(opt_section)
         boto.config.set(opt_section, opt_name, opt_value)
     metrics.LogCommandParams(global_opts=opts)
-    httplib2.debuglevel = debug
+    httplib2.debuglevel = debug_level
     if trace_token:
       sys.stderr.write(TRACE_WARNING)
     if debug_level >= constants.DEBUGLEVEL_DUMP_REQUESTS:
@@ -472,7 +472,7 @@ def _HandleControlC(signal_num, cur_stack_frame):
     signal_num: Signal that was caught.
     cur_stack_frame: Unused.
   """
-  if debug >= 2:
+  if debug_level >= 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit(
         'DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
