@@ -61,7 +61,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil config command obtains access credentials for Google Cloud
+  The ``gsutil config`` command obtains access credentials for Google Cloud
   Storage and writes a boto/gsutil configuration file containing the obtained
   credentials along with a number of other configuration-controllable values.
 
@@ -69,38 +69,57 @@ _DETAILED_HELP_TEXT = ("""
   to ~/.boto (i.e., the file .boto under the user's home directory). If the
   default file already exists, an attempt is made to rename the existing file
   to ~/.boto.bak; if that attempt fails the command will exit. A different
-  destination file can be specified with the -o option (see OPTIONS).
+  destination file can be specified with the ``-o`` option (see OPTIONS).
 
   Because the boto configuration file contains your credentials you should
   keep its file permissions set so no one but you has read access. (The file
-  is created read-only when you run gsutil config.)
+  is created read-only when you run ``gsutil config``.)
 
 
 <B>CREDENTIALS</B>
-  By default gsutil config obtains OAuth2 credentials, and writes them
-  to the [Credentials] section of the configuration file. The -r, -w,
-  -f options (see OPTIONS below) cause gsutil config to request a token
-  with restricted scope; the resulting token will be restricted to read-only
-  operations, read-write operations, or all operations (including acl get/set,
-  defacl get/set, and logging get/'set on'/'set off' operations). In
-  addition, -s <scope> can be used to request additional (non-Google-Storage)
-  scopes.
+  By default ``gsutil config`` obtains OAuth2 credentials and writes them to the
+  [Credentials] section of the configuration file. Unless otherwise specified,
+  it requests a token allowing full control of resources in several services,
+  e.g. Cloud Storage, Cloud KMS (used for the 'kms' command), and Cloud Pub/Sub
+  (used for the 'notification' command). To request a token with more limited
+  scopes, you can specify additional options (see the OPTIONS section below for
+  the full list). Some examples include:
+
+  Create a token with read-only access for storage resources:
+
+    gsutil config -r
+
+  Create a token with read-write access for storage resources:
+
+    gsutil config -w
+
+  Create a token with full-control access for storage resources:
+
+    gsutil config -f
+
+  In addition, ``-s <scope>`` can be specified multiple times to request
+  additional scopes, where ``<scope>`` is specified using the full URL of the
+  desired scope as listed on
+  https://developers.google.com/identity/protocols/googlescopes.
 
   If you want to use credentials based on access key and secret (the older
   authentication method before OAuth2 was supported) instead of OAuth2,
-  see help about the -a option in the OPTIONS section.
+  see help about the ``-a`` option in the OPTIONS section.
 
   If you wish to use gsutil with other providers (or to copy data back and
   forth between multiple providers) you can edit their credentials into the
-  [Credentials] section after creating the initial configuration file.
+  [Credentials] section after creating the initial configuration file. See the
+  list of settings below for supported settings.
 
 
 <B>CONFIGURING SERVICE ACCOUNT CREDENTIALS</B>
-  You can configure credentials for service accounts using the gsutil config -e
-  option. Service accounts are useful for authenticating on behalf of a service
-  or application (as opposed to a user).
+  Service accounts are useful for authenticating on behalf of a service or
+  application (as opposed to a user). You can configure credentials for service
+  accounts using the ``-e`` option:
 
-  When you run gsutil config -e, you will be prompted for the path to your
+    gsutil config -e
+
+  When you run ``gsutil config -e``, you will be prompted for the path to your
   private key file and, if not using a JSON key file, your service account
   email address and key file password. To get this data, follow the instructions
   on `Service Accounts <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_.
@@ -142,7 +161,7 @@ _DETAILED_HELP_TEXT = ("""
   [Boto], [GSUtil], and [OAuth2]. If you edit the file, make sure to edit the
   appropriate section (discussed below), and to be careful not to mis-edit
   any of the setting names (like "gs_access_key_id") and not to remove the
-  section delimiters (like "[Credentials]").
+  section delimiters (like [Credentials]).
 
 
 <B>ADDITIONAL CONFIGURATION-CONTROLLABLE FEATURES</B>
@@ -233,16 +252,14 @@ _DETAILED_HELP_TEXT = ("""
 <B>UPDATING TO THE LATEST CONFIGURATION FILE</B>
   We add new configuration controllable features to the boto configuration file
   over time, but most gsutil users create a configuration file once and then
-  keep it for a long time, so new features aren't apparent when you update
-  to a newer version of gsutil. If you want to get the latest configuration
-  file (which includes all the latest settings and documentation about each)
-  you can rename your current file (e.g., to '.boto_old'), run gsutil config,
-  and then edit any configuration settings you wanted from your old file
-  into the newly created file. Note, however, that if you're using OAuth2
-  credentials and you go back through the OAuth2 configuration dialog it will
-  invalidate your previous OAuth2 credentials.
-
-  If no explicit scope option is given, -f (full control) is assumed by default.
+  keep it for a long time, so new features aren't apparent when you update to a
+  newer version of gsutil. If you want to get the latest configuration file
+  (which includes all the latest settings and documentation about each) you can
+  rename your current file (e.g., to '.boto_old'), run ``gsutil config``, and
+  then edit any configuration settings you wanted from your old file into the
+  newly created file. Note, however, that if you're using OAuth2 credentials and
+  you go back through the OAuth2 configuration dialog it will invalidate your
+  previous OAuth2 credentials.
 
 
 <B>OPTIONS</B>
@@ -250,14 +267,14 @@ _DETAILED_HELP_TEXT = ("""
               authentication method before OAuth2 was supported) instead of
               obtaining an OAuth2 token.
 
-  -b          Causes gsutil config to launch a browser to obtain OAuth2 approval
-              and the project ID instead of showing the URL for each and asking
-              the user to open the browser. This will probably not work as
-              expected if you are running gsutil from an ssh window, or using
-              gsutil on Windows.
+  -b          Causes ``gsutil config`` to launch a browser to obtain OAuth2
+              approval and the project ID instead of showing the URL for each
+              and asking the user to open the browser. This will probably not
+              work as expected if you are running gsutil from an ssh window, or
+              using gsutil on Windows.
 
   -e          Prompt for service account credentials. This option requires that
-              -a is not set.
+              ``-a`` is not set.
 
   -f          Request token with full control (devstorage.full_control scope).
               Note that this does not provide non-storage scopes, such as those
@@ -265,10 +282,10 @@ _DETAILED_HELP_TEXT = ("""
               'notification' and 'kms' commands).
 
   -n          Write the configuration file without authentication configured.
-              This flag is mutually exlusive with all flags other than -o.
+              This flag is mutually exlusive with all flags other than ``-o``.
 
   -o <file>   Write the configuration to <file> instead of ~/.boto.
-              Use '-' for stdout.
+              Use ``-`` for stdout.
 
   -r          Request token with read-only access (devstorage.read_only scope).
 
