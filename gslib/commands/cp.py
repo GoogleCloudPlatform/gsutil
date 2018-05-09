@@ -279,27 +279,27 @@ _CHECKSUM_VALIDATION_TEXT = """
   checksum mismatches, but specifying the Content-MD5 header has several
   advantages:
 
-      1. It prevents the corrupted object from becoming visible at all, whereas
-      otherwise it would be visible for 1-3 seconds before gsutil deletes it.
+  1. It prevents the corrupted object from becoming visible at all, whereas
+     otherwise it would be visible for 1-3 seconds before gsutil deletes it.
 
-      2. If an object already exists with the given name, specifying the
-      Content-MD5 header will cause the existing object never to be replaced,
-      whereas otherwise it would be replaced by the corrupted object and then
-      deleted a few seconds later.
+  2. If an object already exists with the given name, specifying the
+     Content-MD5 header will cause the existing object never to be replaced,
+     whereas otherwise it would be replaced by the corrupted object and then
+     deleted a few seconds later.
 
-      3. It will definitively prevent the corrupted object from being left in
-      the cloud, whereas the gsutil approach of deleting after the upload
-      completes could fail if (for example) the gsutil process gets ^C'd
-      between upload and deletion request.
+  3. It will definitively prevent the corrupted object from being left in
+     the cloud, whereas the gsutil approach of deleting after the upload
+     completes could fail if (for example) the gsutil process gets ^C'd
+     between upload and deletion request.
 
-      4. It supports a customer-to-service integrity check handoff. For example,
-      if you have a content production pipeline that generates data to be
-      uploaded to the cloud along with checksums of that data, specifying the
-      MD5 computed by your content pipeline when you run gsutil cp will ensure
-      that the checksums match all the way through the process (e.g., detecting
-      if data gets corrupted on your local disk between the time it was written
-      by your content pipeline and the time it was uploaded to Google Cloud
-      Storage).
+  4. It supports a customer-to-service integrity check handoff. For example,
+     if you have a content production pipeline that generates data to be
+     uploaded to the cloud along with checksums of that data, specifying the
+     MD5 computed by your content pipeline when you run gsutil cp will ensure
+     that the checksums match all the way through the process (e.g., detecting
+     if data gets corrupted on your local disk between the time it was written
+     by your content pipeline and the time it was uploaded to Google Cloud
+     Storage).
 
   Note: The Content-MD5 header is ignored for composite objects, because such
   objects only have a CRC32C checksum.
@@ -365,10 +365,10 @@ _STREAMING_TRANSFERS_TEXT = """
   then copy that file to the cloud rather than streaming it (and similarly for
   large downloads).
 
-  WARNING: When performing streaming transfers gsutil does not compute a
-  checksum of the uploaded or downloaded data. Therefore, we recommend that
-  users either perform their own validation of the data or use non-streaming
-  transfers (which perform integrity checking automatically).
+  CAUTION: When performing a streaming transfer to or from Cloud Storage,
+  neither Cloud Storage nor gsutil compute a checksum. If you require data
+  validation, use a non-streaming transfer, which performs integrity checking
+  automatically.
 """
 
 _SLICED_OBJECT_DOWNLOADS_TEXT = """
@@ -589,9 +589,9 @@ _OPTIONS_TEXT = """
 
                  When you specify the -j option, files being uploaded are
                  compressed in-memory and on-the-wire only. Both the local
-                 files and GCS objects remain uncompressed. The uploaded
-                 objects retain the Content-Type and name of the original
-                 files.
+                 files and Cloud Storage objects remain uncompressed. The
+                 uploaded objects retain the Content-Type and name of the
+                 original files.
 
                  Note that if you want to use the top-level -m option to
                  parallelize copies along with the -j/-J options, you should

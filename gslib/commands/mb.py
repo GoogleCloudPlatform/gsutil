@@ -78,7 +78,7 @@ _DETAILED_HELP_TEXT = ("""
   a multi-regional location or regional location, respectively.
 
 <B>BUCKET LOCATIONS</B>
-  You can specify one of the 'available locations
+  You can specify one of the `available locations
   <https://cloud.google.com/storage/docs/bucket-locations>`_ for a bucket
   with the -l option.
 

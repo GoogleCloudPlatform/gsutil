@@ -173,9 +173,9 @@ _CH_DESCRIPTION = """
 
     gsutil acl ch -d viewers-12345 gs://example-bucket
 
-  NOTE: You cannot remove the project owners group from ACLs for gs:// buckets.
-  Attempts to do so will appear to succeed, but the service will add the project
-  owners group into the new set of ACLs before applying it.
+  NOTE: You cannot remove the project owners group from ACLs of gs:// buckets in
+  the given project. Attempts to do so will appear to succeed, but the service
+  will add the project owners group into the new set of ACLs before applying it.
 
   Note that removing a project requires you to reference the project by
   its number (which you can see with the acl get command) as opposed to its
