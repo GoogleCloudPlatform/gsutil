@@ -61,6 +61,15 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
+  The ``gsutil config`` command applies to users who have installed gsutil as a
+  standalone tool. If you installed gsutil via the Cloud SDK, ``gsutil config``
+  will fail unless you are specifically using the ``-a`` flag or have configured
+  gcloud to not pass its managed credentials to gsutil (via the command ``gcloud
+  config set pass_credentials_to_gsutil false``). For all other use cases, Cloud
+  SDK users should use the ``gcloud auth`` group of commands instead, which will
+  configure OAuth2 credentials that gcloud implicitly passes to gsutil at
+  runtime.
+
   The ``gsutil config`` command obtains access credentials for Google Cloud
   Storage and writes a boto/gsutil configuration file containing the obtained
   credentials along with a number of other configuration-controllable values.
@@ -118,6 +127,10 @@ _DETAILED_HELP_TEXT = ("""
   accounts using the ``-e`` option:
 
     gsutil config -e
+
+  Note that if you are using gsutil through the Cloud SDK, you should instead
+  activate your service account via the ``gcloud auth activate-service-account``
+  command.
 
   When you run ``gsutil config -e``, you will be prompted for the path to your
   private key file and, if not using a JSON key file, your service account
