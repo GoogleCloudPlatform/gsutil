@@ -20,15 +20,25 @@ import random
 import string
 import sys
 
+_LOG_FILE_BASENAME = 'metrics.log'
 # pylint:disable=g-import-not-at-top
 try:
-  from gslib.utils.boto_util import GetNewHttp
   from gslib.utils.boto_util import ConfigureCertsFile
+  from gslib.utils.boto_util import GetGsutilStateDir
+  from gslib.utils.boto_util import GetNewHttp
+  from gslib.utils.system_util import CreateDirIfNeeded
+  _LOG_FILE_PARENT_DIR = GetGsutilStateDir()
 except:  # pylint: disable=bare-except
   # Some environments import their own version of standard Python libraries
-  # which might cause the import of gslib.util to fail.  Try this alternative
-  # import in such cases.
+  # which might cause the import of some of our gslib.utils modules to fail
+  # (e.g. if httplib2 is missing, etc). Try these alternative definitions in
+  # such cases.
+
+  _LOG_FILE_PARENT_DIR = os.path.expanduser(os.path.join('~', '.gsutil'))
+
+  # Some environments don't have the httplib2 functionality we need.
   try:
+    import errno
     # Fall back to httplib (no proxy) if we can't import libraries normally.
     import httplib
 
@@ -56,10 +66,19 @@ except:  # pylint: disable=bare-except
 
     def ConfigureCertsFile():
       pass
-  except:
+
+    def CreateDirIfNeeded(dir_path, mode=0777):
+      """See the same-named method in gslib.utils.system_util."""
+      if not os.path.exists(dir_path):
+        try:
+          os.makedirs(dir_path, mode)
+        except OSError as e:
+          if e.errno != errno.EEXIST:
+            raise
+  except:  # pylint: disable=bare-except
     sys.exit(0)
 
-LOG_FILE_PATH = os.path.expanduser(os.path.join('~', '.gsutil/metrics.log'))
+LOG_FILE_PATH = os.path.join(_LOG_FILE_PARENT_DIR, _LOG_FILE_BASENAME)
 
 
 def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
@@ -83,7 +102,10 @@ def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
         ''.join(random.choice(string.ascii_lowercase) for _ in range(8)))
     logger = logging.getLogger(new_name)
 
-  handler = logging.FileHandler(log_file_path or LOG_FILE_PATH, mode='w')
+  log_file_path = log_file_path or LOG_FILE_PATH
+  log_file_parent_dir = os.path.dirname(log_file_path)
+  CreateDirIfNeeded(log_file_parent_dir)
+  handler = logging.FileHandler(log_file_path, mode='w')
   logger.addHandler(handler)
   logger.setLevel(log_level)
 

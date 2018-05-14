@@ -27,6 +27,7 @@ A constant should not be placed in this file if:
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
 import sys
 
 from gslib.utils.unit_util import ONE_GIB
@@ -40,6 +41,8 @@ DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 
 DEFAULT_GCS_JSON_API_VERSION = 'v1'
+
+DEFAULT_GSUTIL_STATE_DIR = os.path.expanduser(os.path.join('~', '.gsutil'))
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 

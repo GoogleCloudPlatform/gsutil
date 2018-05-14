@@ -36,6 +36,7 @@ from boto.pyami.config import BotoConfigLocations
 
 import gslib
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
+from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.unit_util import HumanReadableToBytes
@@ -172,9 +173,7 @@ def GetGsutilStateDir():
   Returns:
     Path to directory for gsutil static state files.
   """
-  config_file_dir = config.get(
-      'GSUtil', 'state_dir',
-      os.path.expanduser(os.path.join('~', '.gsutil')))
+  config_file_dir = config.get('GSUtil', 'state_dir', DEFAULT_GSUTIL_STATE_DIR)
   CreateDirIfNeeded(config_file_dir)
   return config_file_dir
 
