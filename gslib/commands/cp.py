@@ -369,6 +369,9 @@ _STREAMING_TRANSFERS_TEXT = """
   neither Cloud Storage nor gsutil compute a checksum. If you require data
   validation, use a non-streaming transfer, which performs integrity checking
   automatically.
+
+  Note: Streaming transfers are not allowed when the gsutil -m option is in
+  force.
 """
 
 _SLICED_OBJECT_DOWNLOADS_TEXT = """
@@ -869,6 +872,9 @@ class CpCommand(Command):
           (cmd_name, src_url))
     if preserve_posix and src_url.IsFileUrl() and src_url.IsStream():
       raise CommandException('Cannot preserve POSIX attributes with a stream.')
+    if self.parallel_operations and src_url.IsFileUrl() and src_url.IsStream():
+      raise CommandException(
+          'Cannot upload from a stream when using gsutil -m option.')
     if have_multiple_srcs:
       copy_helper.InsistDstUrlNamesContainer(
           copy_object_info.exp_dst_url,

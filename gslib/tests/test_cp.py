@@ -3767,6 +3767,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # fail with a non-zero exit code because the specified object won't exist.
     self.RunGsUtil(['stat', '%s/obj1' % suri(bucket_uri)])
 
+  def test_cp_minus_m_streaming_upload(self):
+    """Tests that cp -m - anything is disallowed."""
+    stderr = self.RunGsUtil(
+        ['-m', 'cp', '-', 'file'],
+        return_stderr=True, expected_status=1)
+    self.assertIn(
+        'CommandException: Cannot upload from a stream when using gsutil -m',
+        stderr)
+
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil cp."""
