@@ -216,6 +216,7 @@ _DETAILED_HELP_TEXT = ("""
       proxy_pass
       proxy_rdns
       http_socket_timeout
+      ca_certificates_file
       https_validate_certificates
       debug
       max_retry_delay
