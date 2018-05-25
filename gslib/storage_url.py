@@ -23,6 +23,7 @@ import stat
 
 from gslib.exception import InvalidUrlError
 from gslib.utils import system_util
+from gslib.utils import text_util
 
 # Matches provider strings of the form 'gs://'
 PROVIDER_REGEX = re.compile(r'(?P<provider>[^:]*)://$')
