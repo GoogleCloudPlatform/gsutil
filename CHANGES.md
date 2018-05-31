@@ -1,3 +1,28 @@
+Release 4.32 (release date: 2018-06-01)
+=======================================
+Bug Fixes
+------------------
+- Fixed a file path resolution issue on Windows that affected local-to-cloud
+  copy-based operations ("cp", "mv", "rsync"). If a local file URI containing
+  relative path components ("." or "..") or forward slashes (rather than
+  backslashes) was provided as a source argument, the resulting destination
+  object(s) was incorrectly named. For recursive operations, this resulted in
+  several files being copied to the same object path, overwriting each other.
+- Fixed an issue with the "rsync" command on Windows that resulted in each rsync
+  invocation not being able to delete its temporary synchronization files on
+  disk.
+- Fixed an issue where reading a specific generation of an object from S3 would
+  fail.
+- Fixed an issue where running gsutil with the top-level "-q" flag would result
+  in credential-related logging statements being emitted to stderr.
+- Gsutil no longer allows copying from streamed input if the top-level "-m" flag
+  is specified. While this was previously allowed, it did not work correctly.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.31 (release date: 2018-04-26)
 =======================================
 New features
