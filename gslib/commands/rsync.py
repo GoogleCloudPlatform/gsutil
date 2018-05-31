@@ -461,7 +461,11 @@ _NA = '-'
 _OUTPUT_BUFFER_SIZE = 64 * 1024
 _PROGRESS_REPORT_LISTING_COUNT = 10000
 
-# Tracks files we need to clean up at end or if interrupted.
+# Tracks files we need to clean up at end or if interrupted. Because some
+# files are passed to rsync's diff iterators, it is difficult to manage when
+# they should be closed, especially in the event that we receive a signal to
+# exit. Every time such a file is opened, its file object should be appended
+# to this list.
 _tmp_files = []
 
 
@@ -480,11 +484,24 @@ def CleanUpTempFiles():
   re-opened in read mode on Windows, so we have to use tempfile.mkstemp, which
   doesn't automatically delete temp files.
   """
-  try:
-    for fname in _tmp_files:
-      os.unlink(fname)
-  except:  # pylint: disable=bare-except
-    pass
+  # First pass: Close all the files. Wrapped iterators result in open file
+  # objects for the same file, and Windows does not allow removing the file
+  # at a given path until all its open file handles have been closed.
+  for fileobj in _tmp_files:
+    # Windows requires temp files to be closed before unlinking.
+    if not fileobj.closed:
+      fileobj.close()
+
+  # Second pass: Remove each file, skipping duplicates that have already been
+  # removed.
+  for fileobj in _tmp_files:
+    if os.path.isfile(fileobj.name):
+      try:
+        os.unlink(fileobj.name)
+      except Exception as e:  # pylint: disable=broad-except
+        logging.debug(
+            'Failed to close and delete temp file "%s". Got an error:\n%s',
+            fileobj.name, e)
 
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
@@ -806,14 +823,17 @@ def _BatchSort(in_iter, out_file):
       try:
         chunk_file.close()
         os.remove(chunk_file.name)
-      except:
-        pass
+      except Exception as e:  # pylint: disable=broad-except
+        logging.debug(
+            'Failed to remove rsync chunk file "%s". Got an error:\n%s',
+            chunk_file.name, e)
 
 
 class _DiffIterator(object):
   """Iterator yielding sequence of RsyncDiffToApply objects."""
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
+    global _tmp_files
     self.command_obj = command_obj
     self.compute_file_checksums = command_obj.compute_file_checksums
     self.delete_extras = command_obj.delete_extras
@@ -825,16 +845,24 @@ class _DiffIterator(object):
 
     self.logger.info('Building synchronization state...')
 
-    (src_fh, self.sorted_list_src_file_name) = tempfile.mkstemp(
-        prefix='gsutil-rsync-src-')
-    _tmp_files.append(self.sorted_list_src_file_name)
-    (dst_fh, self.sorted_list_dst_file_name) = tempfile.mkstemp(
-        prefix='gsutil-rsync-dst-')
-    _tmp_files.append(self.sorted_list_dst_file_name)
-    # Close the file handles; the file will be opened in write mode by
-    # _ListUrlRootFunc.
-    os.close(src_fh)
-    os.close(dst_fh)
+    # Files to track src and dst state should be created in the system's
+    # preferred temp directory so that they are eventually cleaned up if our
+    # cleanup callback is interrupted.
+    temp_src_file = tempfile.NamedTemporaryFile(
+        prefix='gsutil-rsync-src-', delete=False)
+    temp_dst_file = tempfile.NamedTemporaryFile(
+        prefix='gsutil-rsync-dst-', delete=False)
+    self.sorted_list_src_file_name = temp_src_file.name
+    self.sorted_list_dst_file_name = temp_dst_file.name
+    _tmp_files.append(temp_src_file)
+    _tmp_files.append(temp_dst_file)
+    # Close the files, but don't delete them. Because Windows does not allow
+    # a temporary file to be reopened until it's been closed, we close the
+    # files before proceeding. This allows each step below to open the file at
+    # the specified path, perform I/O, and close it so that the next step may
+    # do the same thing.
+    temp_src_file.close()
+    temp_dst_file.close()
 
     # Build sorted lists of src and dst URLs in parallel. To do this, pass
     # args to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
@@ -858,8 +886,13 @@ class _DiffIterator(object):
     if command_obj.non_retryable_listing_failures:
       raise CommandException('Caught non-retryable exception - aborting rsync')
 
+    # Note that while this leaves 2 open file handles, we track these in a
+    # global list to be closed (if not closed in the calling scope) and deleted
+    # at exit time.
     self.sorted_list_src_file = open(self.sorted_list_src_file_name, 'r')
     self.sorted_list_dst_file = open(self.sorted_list_dst_file_name, 'r')
+    _tmp_files.append(self.sorted_list_src_file)
+    _tmp_files.append(self.sorted_list_dst_file)
 
     if (base_src_url.IsCloudUrl() and base_dst_url.IsFileUrl() and
         self.preserve_posix):
@@ -1142,6 +1175,7 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
 
     # We're providing an estimate, so avoid computing checksums even though
     # that may cause our estimate to be off.
+    global _tmp_files
     self.compute_file_checksums = False
     self.delete_extras = initialized_diff_iterator.delete_extras
     self.recursion_requested = initialized_diff_iterator.delete_extras
@@ -1153,10 +1187,15 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.base_src_url = initialized_diff_iterator.base_src_url
     self.base_dst_url = initialized_diff_iterator.base_dst_url
 
+    # Note that while this leaves 2 open file handles, we track these in a
+    # global list to be closed (if not closed in the calling scope) and deleted
+    # at exit time.
     self.sorted_list_src_file = open(
         initialized_diff_iterator.sorted_list_src_file_name, 'r')
     self.sorted_list_dst_file = open(
         initialized_diff_iterator.sorted_list_dst_file_name, 'r')
+    _tmp_files.append(self.sorted_list_src_file)
+    _tmp_files.append(self.sorted_list_dst_file)
 
     # Wrap iterators in PluralityCheckableIterator so we can check emptiness.
     self.sorted_src_urls_it = PluralityCheckableIterator(
