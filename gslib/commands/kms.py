@@ -53,10 +53,10 @@ _SYNOPSIS = (_AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +
 _AUTHORIZE_DESCRIPTION = """
 <B>AUTHORIZE</B>
   The authorize sub-command checks that the default (or supplied) project has a
-  GCS-owned service account created for it, and if not, it creates one. It then
-  adds appropriate encrypt/decrypt permissions to Cloud KMS resources such that
-  the GCS service account can write and read Cloud KMS-encrypted objects in
-  buckets associated with the specified project.
+  Cloud Storage-owned service account created for it, and if not, it creates
+  one. It then adds appropriate encrypt/decrypt permissions to Cloud KMS
+  resources such that the Cloud Storage service account can write and read Cloud
+  KMS-encrypted objects in buckets associated with the specified project.
 
 <B>AUTHORIZE EXAMPLES</B>
   Authorize your default project to use a Cloud KMS key:
@@ -95,9 +95,9 @@ _ENCRYPTION_DESCRIPTION = """
 
 _SERVICEACCOUNT_DESCRIPTION = """
 <B>SERVICEACCOUNT</B>
-  The serviceaccount sub-command displays the GCS-owned service account that is
-  used to perform Cloud KMS operations against your default project (or a
-  supplied project).
+  The serviceaccount sub-command displays the Cloud Storage-owned service
+  account that is used to perform Cloud KMS operations against your default
+  project (or a supplied project).
 
 <B>SERVICEACCOUNT EXAMPLES</B>
   Show the service account for your default project:
@@ -110,11 +110,11 @@ _SERVICEACCOUNT_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  The kms command is used to configure GCS and KMS resources to support
-  encryption of GCS objects with Cloud KMS keys.
+  The kms command is used to configure Google Cloud Storage and Cloud KMS
+  resources to support encryption of Cloud Storage objects with Cloud KMS keys.
 
-  The kms command has several sub-commands that deal with configuring GCS's
-  integration with Cloud KMS:
+  The kms command has several sub-commands that deal with configuring
+  Cloud Storage's integration with Cloud KMS:
 """ + (_AUTHORIZE_DESCRIPTION +
        _ENCRYPTION_DESCRIPTION +
        _SERVICEACCOUNT_DESCRIPTION)
@@ -185,8 +185,8 @@ class KmsCommand(Command):
   def _AuthorizeProject(self, project_id, kms_key):
     """Authorizes a project's service account to be used with a KMS key.
 
-    Authorizes the GCS-owned service account for project_id to be used with
-    kms_key.
+    Authorizes the Cloud Storage-owned service account for project_id to be used
+    with kms_key.
 
     Args:
       project_id: (str) Project id string (not number).
@@ -200,8 +200,8 @@ class KmsCommand(Command):
          to encrypt/decrypt with the given key; False if the required permission
          was already present.
     """
-    # Request the GCS-owned service account for project_id, creating it
-    # if it does not exist.
+    # Request the Cloud Storage-owned service account for project_id, creating
+    # it if it does not exist.
     service_account = self.gsutil_api.GetProjectServiceAccount(
         project_id, provider='gs').email_address
 
@@ -238,7 +238,7 @@ class KmsCommand(Command):
     return 0
 
   def _EncryptionClearKey(self, bucket_metadata, bucket_url):
-    """Clears the defaultKmsKeyName on a GCS bucket.
+    """Clears the defaultKmsKeyName on a Cloud Storage bucket.
 
     Args:
       bucket_metadata: (apitools_messages.Bucket) Metadata for the given bucket.
@@ -257,7 +257,7 @@ class KmsCommand(Command):
                         bucket_metadata,
                         bucket_url,
                         svc_acct_for_project_num):
-    """Sets defaultKmsKeyName on a GCS bucket.
+    """Sets defaultKmsKeyName on a Cloud Storage bucket.
 
     Args:
       bucket_metadata: (apitools_messages.Bucket) Metadata for the given bucket.
@@ -292,8 +292,8 @@ class KmsCommand(Command):
   def _Encryption(self):
     self._GatherSubOptions()
     # For each project, we should only make one API call to look up its
-    # associated GCS-owned service account; subsequent lookups can be pulled
-    # from this cache dict.
+    # associated Cloud Storage-owned service account; subsequent lookups can be
+    # pulled from this cache dict.
     svc_acct_for_project_num = {}
 
     def _EncryptionForBucket(blr):

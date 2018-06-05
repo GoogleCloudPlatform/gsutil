@@ -363,9 +363,9 @@ _DETAILED_HELP_TEXT = ("""
 
                  When you specify the -j option, files being uploaded are
                  compressed in-memory and on-the-wire only. Both the local
-                 files and GCS objects remain uncompressed. The uploaded
-                 objects retain the Content-Type and name of the original
-                 files.
+                 files and Cloud Storage objects remain uncompressed. The
+                 uploaded objects retain the Content-Type and name of the
+                 original files.
 
                  Note that if you want to use the top-level -m option to
                  parallelize copies along with the -j/-J options, you should
