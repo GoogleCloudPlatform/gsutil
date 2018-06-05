@@ -38,8 +38,6 @@ from xml.sax import _exceptions as SaxExceptions
 
 import boto
 from boto import handler
-from boto.exception import ResumableDownloadException as BotoResumableDownloadException
-from boto.exception import ResumableTransferDisposition
 from boto.gs.cors import Cors
 from boto.gs.lifecycle import LifecycleConfig
 from boto.s3.cors import CORSConfiguration as S3Cors
@@ -47,6 +45,7 @@ from boto.s3.deletemarker import DeleteMarker
 from boto.s3.lifecycle import Lifecycle as S3Lifecycle
 from boto.s3.prefix import Prefix
 from boto.s3.tagging import Tags
+import boto.exception
 import boto.utils
 
 from gslib.boto_resumable_upload import BotoResumableUpload
@@ -627,14 +626,15 @@ class BotoTranslation(CloudApi):
           else:  # self.provider == 'gs'
             key.get_file(fp, headers, cb_handler.call, num_callbacks,
                          override_num_retries=0, hash_algs=hash_algs)
-      except BotoResumableDownloadException, e:
+      except boto.exception.ResumableDownloadException, e:
         if (e.disposition ==
-            ResumableTransferDisposition.ABORT_CUR_PROCESS):
+            boto.exception.ResumableTransferDisposition.ABORT_CUR_PROCESS):
           raise ResumableDownloadException(e.message)
         else:
           if debug >= 1:
-            self.logger.info('Caught ResumableDownloadException (%s) - will '
-                             'retry', e.message)
+            self.logger.info(
+                'Caught boto.exception.ResumableDownloadException (%s) - will '
+                'retry', e.message)
 
       # At this point we had a re-tryable failure; see if made progress.
       start_byte = fp.tell()
@@ -1843,7 +1843,7 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
       )
 
       if err.error_code in ['RequestTimeout']:
-          raise PleaseRetryException(
+          raise boto.exception.PleaseRetryException(
               "Saw %s, retrying" % err.error_code,
               response=response
           )
