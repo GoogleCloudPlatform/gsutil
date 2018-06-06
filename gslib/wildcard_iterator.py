@@ -595,7 +595,30 @@ class FileWildcardIterator(WildcardIterator):
             _UNICODE_EXCEPTION_TEXT % repr(filepath))))
 
   def _IterDir(self, directory, wildcard):
-    """An iterator over the specified dir and wildcard."""
+    """An iterator over the specified dir and wildcard.
+
+    Args:
+      directory (unicode): The path of the directory to iterate over.
+      wildcard (str): The wildcard characters used for filename pattern
+          matching.
+
+    Yields:
+      (str) A string containing the path to a file somewhere under the directory
+      hierarchy of `directory`.
+
+    Raises:
+      ComandException: If this method encounters a file path that it cannot
+      decode as UTF-8.
+    """
+    if os.path.splitdrive(directory)[0] == directory:
+      # For Windows-style paths that consist of a drive letter followed by a
+      # colon, os.path.join behaves in an odd manner. It intentionally will not
+      # join ['c:' and 'foo'] as 'c:\\foo', but rather as 'c:foo'. The latter
+      # format is not handled correctly by gsutil, so we check if the path
+      # specifies the root of a volume, and if so, append a backslash so that
+      # the resulting joined path looks like 'c:\\foo'.
+      directory += u'\\'
+
     # UTF8-encode directory before passing it to os.walk() so if there are
     # non-valid UTF8 chars in the file name (e.g., that can happen if the file
     # originated on Windows) os.walk() will not attempt to decode and then die
