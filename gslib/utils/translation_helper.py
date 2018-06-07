@@ -680,11 +680,11 @@ def UnaryDictToXml(message):
     raise Exception('Expected dict of size 1, got size %d' % len(message))
 
   name, content = message.items()[0]
-  element_type = ElementTree.Element(name)
+  element_type = xml.etree.ElementTree.Element(name)
   for element_property, value in sorted(content.items()):
-    node = ElementTree.SubElement(element_type, element_property)
+    node = xml.etree.ElementTree.SubElement(element_type, element_property)
     node.text = value
-  return ElementTree.tostring(element_type)
+  return xml.etree.ElementTree.tostring(element_type)
 
 
 class LabelTranslation(object):

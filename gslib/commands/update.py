@@ -121,7 +121,7 @@ class UpdateCommand(Command):
       subcommand_help_text={},
   )
 
-  def _ExplainIfSudoNeeded(self, tf, dirs_to_remove):
+  def _ExplainIfSudoNeeded(self, tf, dirs_to_remove, old_cwd):
     """Explains what to do if sudo needed to update gsutil software.
 
     Happens if gsutil was previously installed by a different user (typically if
@@ -130,6 +130,11 @@ class UpdateCommand(Command):
     Args:
       tf: Opened TarFile.
       dirs_to_remove: List of directories to remove.
+      old_cwd: Path to the working directory we should chdir back to if sudo is
+          needed. It's possible that we've chdir'd to a temp directory that's
+          been deleted, which can cause odd behavior (e.g. OSErrors when opening
+          the metrics subprocess). If this is not truthy, we won't attempt to
+          chdir back to this value.
 
     Raises:
       CommandException: if errors encountered.
@@ -327,7 +332,7 @@ class UpdateCommand(Command):
       else:
         print('This command will update to the "%s" version of\ngsutil at %s'
               % (tarball_version, gslib.GSUTIL_DIR))
-    self._ExplainIfSudoNeeded(tf, dirs_to_remove)
+    self._ExplainIfSudoNeeded(tf, dirs_to_remove, old_cwd)
 
     if no_prompt:
       answer = 'y'

@@ -24,6 +24,7 @@ from __future__ import print_function
 import pkgutil
 import os
 import tempfile
+import textwrap
 import sys
 
 import boto
@@ -35,6 +36,7 @@ from boto.provider import Provider
 from boto.pyami.config import BotoConfigLocations
 
 import gslib
+from gslib.exception import CommandException
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
