@@ -205,7 +205,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     common_prefix = posixpath.commonprefix([suri(bucket1_uri),
                                             suri(bucket2_uri)])
     self.assertTrue(common_prefix.startswith(
-        'gs://%sgsutil-test-test_set_wildcard_non_null_cors-' % random_prefix))
+        'gs://%sgsutil-test-test-set-wildcard-non-null-cors-' % random_prefix))
     wildcard = '%s*' % common_prefix
 
     fpath = self.CreateTempFile(contents=self.cors_doc)

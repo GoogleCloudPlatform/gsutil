@@ -88,15 +88,23 @@ class GsUtilTestCase(unittest.TestCase):
     """Creates a temporary name that is most-likely unique.
 
     Args:
-      kind: A string indicating what kind of test name this is.
-      prefix: Prefix string to be used in the temporary name.
+      kind (str): A string indicating what kind of test name this is.
+      prefix (str): Prefix string to be used in the temporary name.
 
     Returns:
-      The temporary name.
+      (str) The temporary name. If `kind` was "bucket", the temporary name may
+      have coerced this string, including the supplied `prefix`, such that it
+      contains only characters that are valid across all supported storage
+      providers (e.g. replacing "_" with "-", converting uppercase letters to
+      lowercase, etc.).
     """
     name = '%sgsutil-test-%s-%s' % (prefix, self.GetTestMethodName(), kind)
     name = name[:MAX_BUCKET_LENGTH-9]
     name = '%s-%s' % (name, self.MakeRandomTestString())
+    # As of March 2018, S3 no longer accepts underscores or uppercase letters in
+    # bucket names.
+    if kind == 'bucket':
+      name = name.replace('_', '-').lower()
     return name
 
   # TODO: Convert tests to use this for object names.

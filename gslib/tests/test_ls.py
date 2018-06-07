@@ -226,7 +226,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     common_prefix = posixpath.commonprefix([suri(bucket1_uri),
                                             suri(bucket2_uri)])
     self.assertTrue(common_prefix.startswith(
-        '%s://%sgsutil-test-test_bucket_list_wildcard-bucket-' %
+        '%s://%sgsutil-test-test-bucket-list-wildcard-bucket-' %
         (self.default_provider, random_prefix)))
     wildcard = '%s*' % common_prefix
 
