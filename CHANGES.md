@@ -1,3 +1,18 @@
+Release 4.33 (release date: 2018-06-21)
+=======================================
+Bug Fixes
+------------------
+- Fixed an issue with the "rsync" command on Windows that would cause gsutil
+  to incorrectly join file path segments when the source given was the root
+  of a drive, e.g. "C:".
+- Fixed several places where gsutil referenced a variable that had not been
+  correctly imported.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.32 (release date: 2018-06-01)
 =======================================
 Bug Fixes
