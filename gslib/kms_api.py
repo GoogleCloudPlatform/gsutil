@@ -308,7 +308,7 @@ class KmsApi(object):
           return AccessDeniedException(
               message or e.message or key_name, status=e.status_code)
       elif e.status_code == 404:
-        return NotFoundException(e.message, status=e.status_code)
+        return NotFoundException(message or e.message, status=e.status_code)
 
       elif e.status_code == 409 and key_name:
         return ServiceException(
