@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from calendar import timegm
+import getpass
 import logging
 import os
 import re
@@ -299,6 +300,10 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
   # Windows doesn't use the POSIX system for file permissions, so all files will
   # validate.
   if IS_WINDOWS:
+    return True, ''
+
+  # root can access files regardless of their permissions.
+  if getpass.getuser() == 'root':
     return True, ''
 
   uid_present = uid > NA_ID
