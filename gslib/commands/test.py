@@ -15,6 +15,7 @@
 """Implementation of gsutil test command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 from collections import namedtuple
 import logging
@@ -308,13 +309,13 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     test_index += 1
     process_done.append(False)
     if time.time() - last_log_time > 5:
-      print ('Created %d new processes (total %d/%d created)' %
+      print(('Created %d new processes (total %d/%d created)' %
              (test_index - orig_test_index, len(process_list),
-              len(parallel_tests)))
+              len(parallel_tests))))
       last_log_time = time.time()
   if test_index == len(parallel_tests):
-    print ('Test process creation finished (%d/%d created)' %
-           (len(process_list), len(parallel_tests)))
+    print(('Test process creation finished (%d/%d created)' %
+           (len(process_list), len(parallel_tests))))
   return test_index
 
 
@@ -391,8 +392,8 @@ class TestCommand(Command):
             root_coverage_file=coverage_filename)
       if len(process_results) < num_parallel_tests:
         if time.time() - last_log_time > 5:
-          print '%d/%d finished - %d failures' % (
-              len(process_results), num_parallel_tests, num_parallel_failures)
+          print('%d/%d finished - %d failures' % (
+              len(process_results), num_parallel_tests, num_parallel_failures))
           if len(process_results) == completed_as_of_last_log:
             progress_less_logging_cycles += 1
           else:
@@ -406,7 +407,7 @@ class TestCommand(Command):
             for proc_num in xrange(len(process_list)):
               if not process_done[proc_num]:
                 still_running.append(parallel_integration_tests[proc_num])
-            print 'Still running: %s' % still_running
+            print('Still running: %s' % still_running)
             # TODO: Terminate still-running processes if they
             # hang for a long time.
           last_log_time = time.time()
@@ -416,9 +417,9 @@ class TestCommand(Command):
       for result in process_results:
         if result.return_code != 0:
           new_stderr = result.stderr.split('\n')
-          print 'Results for failed test %s:' % result.name
+          print('Results for failed test %s:' % result.name)
           for line in new_stderr:
-            print line
+            print(line)
 
     return (num_parallel_failures,
             (process_run_finish_time - parallel_start_time))
@@ -429,25 +430,25 @@ class TestCommand(Command):
                        parallel_time_elapsed):
     """Prints test results for parallel and sequential tests."""
     # TODO: Properly track test skips.
-    print 'Parallel tests complete. Success: %s Fail: %s' % (
-        num_parallel_tests - num_parallel_failures, num_parallel_failures)
-    print (
+    print('Parallel tests complete. Success: %s Fail: %s' % (
+        num_parallel_tests - num_parallel_failures, num_parallel_failures))
+    print((
         'Ran %d tests in %.3fs (%d sequential in %.3fs, %d parallel in %.3fs)'
         % (num_parallel_tests + num_sequential_tests,
            float(sequential_time_elapsed + parallel_time_elapsed),
            num_sequential_tests,
            float(sequential_time_elapsed),
            num_parallel_tests,
-           float(parallel_time_elapsed)))
-    print
+           float(parallel_time_elapsed))))
+    print()
 
     if not num_parallel_failures and sequential_success:
-      print 'OK'
+      print('OK')
     else:
       if num_parallel_failures:
-        print 'FAILED (parallel tests)'
+        print('FAILED (parallel tests)')
       if not sequential_success:
-        print 'FAILED (sequential tests)'
+        print('FAILED (sequential tests)')
 
   def RunCommand(self):
     """Command entry point for the test command."""
@@ -495,8 +496,8 @@ class TestCommand(Command):
 
     test_names = sorted(GetTestNames())
     if list_tests and not self.args:
-      print 'Found %d test names:' % len(test_names)
-      print ' ', '\n  '.join(sorted(test_names))
+      print('Found %d test names:' % len(test_names))
+      print(' ', '\n  '.join(sorted(test_names)))
       return 0
 
     # Set list of commands to test if supplied.
@@ -523,8 +524,8 @@ class TestCommand(Command):
 
     if list_tests:
       test_names = GetTestNamesFromSuites(suite)
-      print 'Found %d test names:' % len(test_names)
-      print ' ', '\n  '.join(sorted(test_names))
+      print('Found %d test names:' % len(test_names))
+      print(' ', '\n  '.join(sorted(test_names)))
       return 0
 
     if logging.getLogger().getEffectiveLevel() <= logging.INFO:
@@ -594,8 +595,8 @@ class TestCommand(Command):
       # We could potentially shave off several seconds of execution time
       # by executing them in parallel with the integration tests.
       if len(sequential_tests) + len(parallel_unit_tests):
-        print 'Running %d tests sequentially.' % (len(sequential_tests) +
-                                                  len(parallel_unit_tests))
+        print('Running %d tests sequentially.' % (len(sequential_tests) +
+                                                  len(parallel_unit_tests)))
         sequential_tests_to_run = sequential_tests + parallel_unit_tests
         suite = loader.loadTestsFromNames(
             sorted([test_name for test_name in sequential_tests_to_run]))
@@ -629,11 +630,11 @@ class TestCommand(Command):
                 'If your machine becomes unresponsive, consider reducing '
                 'the amount of parallel test processes by running '
                 '\'gsutil test -p <num_processes>\'.')
-          print ('\n'.join(textwrap.wrap(
-              message % (num_parallel_tests, num_processes))))
+          print(('\n'.join(textwrap.wrap(
+              message % (num_parallel_tests, num_processes)))))
         else:
-          print ('Running %d tests sequentially in isolated processes.' %
-                 num_parallel_tests)
+          print(('Running %d tests sequentially in isolated processes.' %
+                 num_parallel_tests))
         (num_parallel_failures, parallel_time_elapsed) = self.RunParallelTests(
             parallel_integration_tests, max_parallel_tests,
             coverage_controller.data_files.filename if perform_coverage
@@ -648,8 +649,8 @@ class TestCommand(Command):
       coverage_controller.stop()
       coverage_controller.combine()
       coverage_controller.save()
-      print ('Coverage information was saved to: %s' %
-             coverage_controller.data_files.filename)
+      print(('Coverage information was saved to: %s' %
+             coverage_controller.data_files.filename))
 
     # Re-enable analytics to report the test command.
     os.environ['GSUTIL_TEST_ANALYTICS'] = '0'

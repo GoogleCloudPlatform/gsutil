@@ -193,7 +193,7 @@ class DaisyChainWrapper(object):
             provider=self.src_url.scheme, progress_callback=progress_callback,
             decryption_tuple=self.decryption_tuple)
       # We catch all exceptions here because we want to store them.
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         # Save the exception so that it can be seen in the upload thread.
         with self.download_exception_lock:
           self.download_exception = e

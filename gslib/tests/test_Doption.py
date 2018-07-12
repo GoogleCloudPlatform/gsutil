@@ -15,6 +15,7 @@
 """Integration tests for gsutil -D option."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import platform
 
@@ -41,7 +42,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
           [('GSUtil', 'resumable_threshold', str(ONE_KIB))]):
         stderr = self.RunGsUtil(
             ['-D', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
-        print 'command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)])
+        print('command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)]))
         if self.test_api == ApiSelector.JSON:
           self.assertIn('media body', stderr)
         self.assertNotIn('a1b2c3d4', stderr)

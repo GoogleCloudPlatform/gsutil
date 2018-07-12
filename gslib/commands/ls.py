@@ -15,6 +15,7 @@
 """Implementation of Unix-like ls command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import re
 
@@ -316,7 +317,7 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      print bucket_blr
+      print(bucket_blr)
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
@@ -380,7 +381,7 @@ class LsCommand(Command):
     if 'updated' in fields:
       time_updated_line = '\tTime updated:\t\t\t{updated}\n'
 
-    print(('{bucket} :\n'
+    print((('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
            '\tLocation constraint:\t\t{location_constraint}\n'
            '\tVersioning enabled:\t\t{versioning}\n'
@@ -395,7 +396,7 @@ class LsCommand(Command):
            time_updated_line +
            metageneration_line +
            '\tACL:\t\t\t\t{acl}\n'
-           '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
+           '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
     if bucket_blr.storage_url.scheme == 's3':
       print('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
@@ -436,7 +437,7 @@ class LsCommand(Command):
         'metageneration': encoded_metagen,
         'etag': encoded_etag
     }
-    print printstr % format_args
+    print(printstr % format_args)
     return (num_objs, num_bytes)
 
   def RunCommand(self):
@@ -482,7 +483,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        print '%s:' % blr.url_string.encode(UTF8)
+        print('%s:' % blr.url_string.encode(UTF8))
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -536,7 +537,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          print '%-33s%s' % ('', blr.url_string.encode(UTF8))
+          print('%-33s%s' % ('', blr.url_string.encode(UTF8)))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
@@ -587,8 +588,8 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      print ('TOTAL: %d objects, %d bytes (%s)' %
-             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
+      print(('TOTAL: %d objects, %d bytes (%s)' %
+             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')
     if got_bucket_nomatch_errors:

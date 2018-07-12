@@ -1237,7 +1237,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         try:
           with open(src_url.object_name, 'rb') as _:
             pass
-        except Exception, e:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
           cls.logger.info('Could not open %s' % src_url.object_name)
           raise
       cls.logger.info('Would copy %s to %s', src_url, dst_url)
@@ -1286,7 +1286,7 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           (_, bytes_transferred, _, _) = copy_result
           with cls.stats_lock:
             cls.total_bytes_transferred += bytes_transferred
-      except SkipUnsupportedObjectError, e:
+      except SkipUnsupportedObjectError as e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
                         src_url, e.unsupported_type)
   elif diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST:

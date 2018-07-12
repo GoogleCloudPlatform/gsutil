@@ -240,7 +240,7 @@ class _NameExpansionIterator(object):
         if self.continue_on_error:
           try:
             raise CommandException(NO_URLS_MATCHED_TARGET % url_str)
-          except CommandException, e:
+          except CommandException as e:
             # Yield a specialized tuple of (exception, stack_trace) to
             # the wrapping PluralityCheckableIterator.
             yield (e, sys.exc_info()[2])

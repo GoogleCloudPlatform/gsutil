@@ -320,7 +320,7 @@ class RmCommand(Command):
         DecrementFailureCount()
       else:
         raise
-    except ServiceException, e:
+    except ServiceException as e:
       if not self.continue_on_error:
         raise
 

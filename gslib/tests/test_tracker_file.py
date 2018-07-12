@@ -135,7 +135,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
           fpath, tracker_file_lock, new_object, self.logger,
           encryption_key_sha256=None)
       self.fail('Expected CommandException due to different encryption key')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('does not match encryption key', str(e))
 
     WriteComponentToParallelUploadTrackerFile(

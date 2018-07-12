@@ -134,24 +134,24 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
     try:
       pcit.PeekException()
       self.fail('Expected exception 1 from PeekException')
-    except CustomTestException, e:
+    except CustomTestException as e:
       self.assertIn(e.message, 'Test exception 1')
     try:
       for _ in pcit:
         pass
       self.fail('Expected exception 1 from iterator')
-    except CustomTestException, e:
+    except CustomTestException as e:
       self.assertIn(e.message, 'Test exception 1')
     try:
       pcit.PeekException()
       self.fail('Expected exception 2 from PeekException')
-    except CustomTestException, e:
+    except CustomTestException as e:
       self.assertIn(e.message, 'Test exception 2')
     try:
       for _ in pcit:
         pass
       self.fail('Expected exception 2 from iterator')
-    except CustomTestException, e:
+    except CustomTestException as e:
       self.assertIn(e.message, 'Test exception 2')
     for _ in pcit:
       self.fail('Expected StopIteration')
@@ -176,7 +176,7 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
           try:
             self.position += 1
             raise CustomTestException('Test exception 0')
-          except CustomTestException, e:
+          except CustomTestException as e:
             return (e, sys.exc_info()[2])
         elif self.position == 1:
           self.position += 1
@@ -190,7 +190,7 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
       for _ in pcit:
         pass
       self.fail('Expected exception 0 from iterator')
-    except CustomTestException, e:
+    except CustomTestException as e:
       self.assertIn(e.message, 'Test exception 0')
     for value in pcit:
       iterated_value = value

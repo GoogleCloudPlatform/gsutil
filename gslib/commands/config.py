@@ -741,7 +741,7 @@ class ConfigCommand(Command):
       flags |= os.O_NOINHERIT
     try:
       fd = os.open(file_path, flags, 0600)
-    except (OSError, IOError), e:
+    except (OSError, IOError) as e:
       raise CommandException('Failed to open %s for writing: %s' %
                              (file_path, e))
     return os.fdopen(fd, 'w')
@@ -779,7 +779,7 @@ class ConfigCommand(Command):
               'modified.'
               '\nThe only access allowed is readability by the user '
               '(permissions 0400 in chmod).')
-        except Exception, _:  # pylint: disable=broad-except
+        except Exception as _:  # pylint: disable=broad-except
           self.logger.warn(
               '\nWe were unable to modify the permissions on your file.\n'
               'If you would like to fix this yourself, consider running:\n'
@@ -1256,7 +1256,7 @@ class ConfigCommand(Command):
                 'Backing up existing config file "%s" to "%s"...\n'
                 % (default_config_path, default_config_path_bak))
             os.rename(default_config_path, default_config_path_bak)
-          except Exception, e:
+          except Exception as e:
             raise CommandException(
                 'Failed to back up existing config '
                 'file ("%s" -> "%s"): %s.'

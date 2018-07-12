@@ -15,6 +15,7 @@
 """Implementation of update command for updating gsutil."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import shutil
@@ -323,15 +324,15 @@ class UpdateCommand(Command):
       CheckAndMaybePromptForAnalyticsEnabling()
       (_, major) = CompareVersions(tarball_version, gslib.VERSION)
       if major:
-        print('\n'.join(textwrap.wrap(
+        print(('\n'.join(textwrap.wrap(
             'This command will update to the "%s" version of gsutil at %s. '
             'NOTE: This a major new version, so it is strongly recommended '
             'that you review the release note details at %s before updating to '
             'this version, especially if you use gsutil in scripts.'
-            % (tarball_version, gslib.GSUTIL_DIR, RELEASE_NOTES_URL))))
+            % (tarball_version, gslib.GSUTIL_DIR, RELEASE_NOTES_URL)))))
       else:
-        print('This command will update to the "%s" version of\ngsutil at %s'
-              % (tarball_version, gslib.GSUTIL_DIR))
+        print(('This command will update to the "%s" version of\ngsutil at %s'
+              % (tarball_version, gslib.GSUTIL_DIR)))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove, old_cwd)
 
     if no_prompt:
@@ -364,7 +365,7 @@ class UpdateCommand(Command):
     self._EnsureDirsSafeForUpdate(dirs_to_remove)
     try:
       tf.extractall(path=new_dir)
-    except Exception, e:
+    except Exception as e:
       self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       raise CommandException('Update failed: %s.' % e)
 

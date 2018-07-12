@@ -27,6 +27,13 @@ import tempfile
 import textwrap
 import sys
 
+import six
+
+if six.PY3:
+  long = int
+else:
+  long = long
+
 import boto
 from boto import config
 import boto.auth
@@ -198,11 +205,11 @@ def GetGcsJsonApiVersion():
 # in multiples of 256KiB). Overridable for testing.
 def GetJsonResumableChunkSize():
   chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
-                             1024*1024*100L)
+                             long(1024*1024*100))
   if chunk_size == 0:
-    chunk_size = 1024*256L
-  elif chunk_size % 1024*256L != 0:
-    chunk_size += (1024*256L - (chunk_size % (1024*256L)))
+    chunk_size = long(1024*256)
+  elif chunk_size % long(1024*256) != 0:
+    chunk_size += (long(1024*256) - (chunk_size % (long(1024*256))))
   return chunk_size
 
 
@@ -295,7 +302,7 @@ def GetTabCompletionLogFilename():
 def GetTabCompletionCacheFilename():
   tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
   # Limit read permissions on the directory to owner for privacy.
-  CreateDirIfNeeded(tab_completion_dir, mode=0700)
+  CreateDirIfNeeded(tab_completion_dir, mode=0o700)
   return os.path.join(tab_completion_dir, 'cache')
 
 

@@ -15,6 +15,7 @@
 """Class that runs a named gsutil command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import difflib
 import logging
@@ -325,9 +326,9 @@ class CommandRunner(object):
       # If the command changed to update, the user's original command was
       # not executed.
       return_code = 1
-      print '\n'.join(textwrap.wrap(
+      print('\n'.join(textwrap.wrap(
           'Update was successful. Exiting with code 1 as the original command '
-          'issued prior to the update was not executed and should be re-run.'))
+          'issued prior to the update was not executed and should be re-run.')))
     return return_code
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
@@ -410,26 +411,26 @@ class CommandRunner(object):
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
       if m:
-        print '\n'.join(textwrap.wrap(
+        print('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). NOTE: This is a major new version, so it is '
             'strongly recommended that you review the release note details at '
             '%s before updating to this version, especially if you use gsutil '
-            'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+            'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print
+        print()
         answer = raw_input('Would you like to update [y/N]? ')
         return answer and answer.lower()[0] == 'y'
       elif g:
-        print '\n'.join(textwrap.wrap(
+        print('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
             'available at %s if you would like to read them before updating.'
-            % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+            % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print
+        print()
         answer = raw_input('Would you like to update [Y/n]? ')
         return not answer or answer.lower()[0] != 'n'
     return False

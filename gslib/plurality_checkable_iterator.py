@@ -72,7 +72,7 @@ class PluralityCheckableIterator(object):
         # Indicates we can no longer call next() on underlying iterator, but
         # there could still be elements left to iterate in head.
         self.underlying_iter_empty = True
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         # Buffer the exception and raise it when the element is accessed.
         # Also, preserve the original stack trace, as the stack trace from
         # within plurality_checkable_iterator.next is not very useful.

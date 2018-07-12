@@ -239,7 +239,7 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
       try:
         wrapper.read()
         self.fail('Expected CommandException for invalid seek.')
-      except CommandException, e:
+      except CommandException as e:
         self.assertIn(
             'Read called on hashing file pointer in an unknown position',
             str(e))

@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import
 
-import ConfigParser
+from six.moves import configparser
 import datetime
 import errno
 import getopt
@@ -237,9 +237,6 @@ def main():
 
   global debug_level
   global test_exception_traces
-
-  if not (2, 7) <= sys.version_info[:3] < (3,):
-    raise CommandException('gsutil requires python 2.7.')
 
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto

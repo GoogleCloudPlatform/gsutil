@@ -537,7 +537,7 @@ class HttpWithNoRetries(httplib2.Http):
     except httplib2.ssl_SSLError:
       conn.close()
       raise
-    except socket.error, e:
+    except socket.error as e:
       err = 0
       if hasattr(e, 'args'):
         err = getattr(e, 'args')[0]
@@ -607,7 +607,7 @@ class HttpWithDownloadStream(httplib2.Http):
     except httplib2.ssl_SSLError:
       conn.close()
       raise
-    except socket.error, e:
+    except socket.error as e:
       err = 0
       if hasattr(e, 'args'):
         err = getattr(e, 'args')[0]
