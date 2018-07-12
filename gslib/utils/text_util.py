@@ -18,7 +18,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import re
-import urlparse
+
+from six.moves.urllib.parse import urlparse
 
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper

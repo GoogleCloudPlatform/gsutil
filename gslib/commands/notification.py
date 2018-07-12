@@ -460,7 +460,7 @@ class NotificationCommand(Command):
       channel = self.gsutil_api.WatchBucket(
           bucket_url.bucket_name, watch_url, identifier, token=client_token,
           provider=bucket_url.scheme)
-    except AccessDeniedException, e:
+    except AccessDeniedException as e:
       self.logger.warn(NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE.format(
           watch_error=str(e), watch_url=watch_url))
       raise

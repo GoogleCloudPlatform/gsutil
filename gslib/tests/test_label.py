@@ -61,7 +61,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     h = handler.XmlHandler(tags_list, None)
     try:
       xml.sax.parseString(xml_str, h)
-    except SaxExceptions.SAXParseException, e:
+    except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested labels/tagging config is invalid: %s at line %s, column '
           '%s' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))

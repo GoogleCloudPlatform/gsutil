@@ -20,6 +20,13 @@ from __future__ import print_function
 import math
 import re
 
+import six
+
+if six.PY3:
+  long = int
+else:
+  long = long
+
 # Binary exponentiation strings.
 _EXP_STRINGS = [
     (0, 'B', 'bit'),
@@ -66,7 +73,7 @@ TWO_MIB = 2 * ONE_MIB
 EIGHT_MIB = 8 * ONE_MIB
 TEN_MIB = 10 * ONE_MIB
 
-SECONDS_PER_DAY = 60 * 60 * 24L
+SECONDS_PER_DAY = long(60 * 60 * 24)
 SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 

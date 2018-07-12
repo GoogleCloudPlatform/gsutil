@@ -28,9 +28,6 @@ import pkgutil
 import sys
 import tempfile
 
-if not (2, 7) <= sys.version_info[:3] < (3,):
-  sys.exit('gsutil requires python 2.7.')
-
 import gslib.exception  # pylint: disable=g-import-not-at-top
 
 coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)

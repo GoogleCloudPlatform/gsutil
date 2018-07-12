@@ -358,7 +358,7 @@ class AclCommand(Command):
           self.RaiseInvalidArgumentException()
     try:
       self.SetAclCommandHelper(SetAclFuncWrapper, SetAclExceptionHandler)
-    except AccessDeniedException, unused_e:
+    except AccessDeniedException as unused_e:
       self._WarnServiceAccounts()
       raise
     if not self.everything_set_okay:

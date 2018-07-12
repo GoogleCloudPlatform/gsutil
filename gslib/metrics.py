@@ -771,7 +771,7 @@ def CaptureAndLogException(func):
   def Wrapper(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Exception, e:  # pylint:disable=broad-except
+    except Exception as e:  # pylint:disable=broad-except
       logger = logging.getLogger('metrics')
       logger.debug('Exception captured in %s during metrics collection: %s',
                    func.__name__, e)

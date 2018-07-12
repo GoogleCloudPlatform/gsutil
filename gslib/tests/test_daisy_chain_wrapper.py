@@ -275,7 +275,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     try:
       self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
       self.fail('Expected exception')
-    except DownloadException, e:
+    except DownloadException as e:
       self.assertIn('Download thread forces failure', str(e))
 
   def testInvalidSeek(self):
@@ -286,12 +286,12 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
       # SEEK_CUR is invalid.
       daisy_chain_wrapper.seek(0, whence=os.SEEK_CUR)
       self.fail('Expected exception')
-    except IOError, e:
+    except IOError as e:
       self.assertIn('does not support seek mode', str(e))
 
     try:
       # Seeking from the end with an offset is invalid.
       daisy_chain_wrapper.seek(1, whence=os.SEEK_END)
       self.fail('Expected exception')
-    except IOError, e:
+    except IOError as e:
       self.assertIn('Invalid seek during daisy chain', str(e))

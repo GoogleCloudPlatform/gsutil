@@ -15,6 +15,7 @@
 """Helper for cat and cp streaming download."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import io
 import sys
@@ -123,8 +124,8 @@ class CatHelper(object):
             did_some_work = True
             if show_header:
               if printed_one:
-                print
-              print '==> %s <==' % blr
+                print()
+              print('==> %s <==' % blr)
               printed_one = True
             cat_object = blr.root_object
             storage_url = StorageUrlFromString(blr.url_string)

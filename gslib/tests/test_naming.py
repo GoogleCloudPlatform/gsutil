@@ -568,7 +568,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [src_dir, dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testNonRecursiveFileAndSameNameSubdir(self):
@@ -591,7 +591,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['gs://', suri(src_bucket_uri)])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('provider-only', e.reason)
 
   def testAttemptCopyingOverlappingSrcDstFile(self):
@@ -600,7 +600,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [src_file, src_file])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('are the same file - abort', e.reason)
 
   def testAttemptCopyingToMultiMatchWildcard(self):
@@ -610,7 +610,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('cp', [suri(src_bucket_uri, 'obj0'),
                              suri(src_bucket_uri, '*')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual(e.reason.find('must match exactly 1 URL'), -1)
 
   def testAttemptCopyingMultiObjsToFile(self):
@@ -620,7 +620,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['-R', suri(src_bucket_uri, '*'), dst_file])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('must name a directory, bucket, or', e.reason)
 
   def testAttemptCopyingWithFileDirConflict(self):
@@ -634,7 +634,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['-R', suri(bucket_uri), dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual('exists where a directory needs to be created',
                           e.reason)
 
@@ -647,7 +647,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [suri(src_uri), tmpdir + '/'])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual('where the file needs to be created', e.reason)
 
   def testWildcardMoveWithinBucket(self):
@@ -670,7 +670,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_bucket_uri = self.CreateBucket(test_objects=['obj_with_suffix'])
     try:
       self.RunCommand('ls', [suri(src_bucket_uri, 'obj')])
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('matched no objects', e.reason)
 
   def testLsBucketNonRecursive(self):
@@ -778,7 +778,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('defacl', ['set', 'private', suri(src_bucket_uri, '*')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('URL must name a bucket', e.reason)
 
   # @SequentialAndParallelTransfer
@@ -902,7 +902,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand(
           'cp', [suri(src_bucket_uri, 'src_subdir'), dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testCopyingBucketSubDirToBucketSubDir(self):
@@ -1101,7 +1101,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand(
           'mv', [suri(src_bucket_uri, 'dir*'), suri(dst_bucket_uri, 'dir')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('mv command disallows naming', e.reason)
 
   def testMovingBucketSubDirToNonExistentBucketSubDir(self):
@@ -1154,7 +1154,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         self.RunCommand('ls', [suri(bucket_uris[i])])
         # Ensure exception is raised.
         self.assertTrue(False)
-      except NotFoundException, e:
+      except NotFoundException as e:
         self.assertEqual(e.status, 404)
 
   def testUnicodeArgs(self):
@@ -1230,7 +1230,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       with SetDummyProjectForUnitTest():
         self.RunCommand('mb', [suri(dst_bucket_uri)])
       self.fail('Did not get expected StorageCreateError')
-    except ServiceException, e:
+    except ServiceException as e:
       self.assertEqual(e.status, 409)
 
   def testRemoveObjsCommand(self):
@@ -1239,7 +1239,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('rm', [suri(dst_bucket_uri, 'non_existent')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run

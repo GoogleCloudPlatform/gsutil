@@ -997,18 +997,18 @@ class CpCommand(Command):
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
-    except SkipUnsupportedObjectError, e:
+    except SkipUnsupportedObjectError as e:
       message = ('Skipping item %s with unsupported object type %s' %
                  (exp_src_url.url_string, e.unsupported_type))
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
-    except copy_helper.FileConcurrencySkipError, e:
+    except copy_helper.FileConcurrencySkipError as e:
       self.logger.warn('Skipping copy of source URL %s because destination URL '
                        '%s is already being copied by another gsutil process '
                        'or thread (did you specify the same source URL twice?) '
                        % (src_url, dst_url))
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       if (copy_helper_opts.no_clobber and
           copy_helper.IsNoClobberServerException(e)):
         message = 'Rejected (noclobber): %s' % dst_url

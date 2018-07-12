@@ -44,12 +44,12 @@ TODO: gsutil-beta: Add a similar comment to the boto code.
 from __future__ import absolute_import
 
 import errno
-import httplib
+from six.moves import http_client
 import random
 import re
 import socket
 import time
-import urlparse
+from six.moves.urllib.parse import urlparse
 from boto import UserAgent
 from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
@@ -64,7 +64,7 @@ class BotoResumableUpload(object):
   """Upload helper class for resumable uploads via boto."""
 
   BUFFER_SIZE = 8192
-  RETRYABLE_EXCEPTIONS = (httplib.HTTPException, IOError, socket.error,
+  RETRYABLE_EXCEPTIONS = (http_client.HTTPException, IOError, socket.error,
                           socket.gaierror)
 
   # (start, end) response indicating service has nothing (upload protocol uses
@@ -401,7 +401,7 @@ class BotoResumableUpload(object):
         self.service_has_bytes = service_start
         if conn.debug >= 1:
           self.logger.debug('Resuming transfer.')
-      except ResumableUploadException, e:
+      except ResumableUploadException as e:
         if conn.debug >= 1:
           self.logger.debug('Unable to resume transfer (%s).', e.message)
         self._StartNewResumableUpload(key, headers)
@@ -565,7 +565,7 @@ class BotoResumableUpload(object):
         if debug >= 1:
           self.logger.debug('Resumable upload complete.')
         return
-      except self.RETRYABLE_EXCEPTIONS, e:
+      except self.RETRYABLE_EXCEPTIONS as e:
         if debug >= 1:
           self.logger.debug('Caught exception (%s)', e.__repr__())
         if isinstance(e, IOError) and e.errno == errno.EPIPE:
@@ -575,7 +575,7 @@ class BotoResumableUpload(object):
           # the upload (which will cause a new connection to be
           # opened the next time an HTTP request is sent).
           key.bucket.connection.connection.close()
-      except ResumableUploadException, e:
+      except ResumableUploadException as e:
         self.HandleResumableUploadException(e, debug)
 
       self.TrackProgressLessIterations(service_had_bytes_before_attempt,

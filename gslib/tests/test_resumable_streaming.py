@@ -92,7 +92,7 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
               self.fail('Did not get expected CommandException for '
                         'initial read size %s, buffer size %s' %
                         (initial_read, buffer_size))
-          except CommandException, e:
+          except CommandException as e:
             if not expect_exception:
               self.fail('Got unexpected CommandException "%s" for '
                         'initial read size %s, buffer size %s' %
@@ -208,7 +208,7 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
     try:
       ResumableStreamingJsonUploadWrapper(None, GetJsonResumableChunkSize() - 1)
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('Buffer size must be >= JSON resumable upload', str(e))
 
   def testSeekPartialBuffer(self):
@@ -259,7 +259,7 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
               self.fail('Did not get expected CommandException for '
                         'seek_back size %s, buffer size %s' %
                         (seek_back, buffer_size))
-          except CommandException, e:
+          except CommandException as e:
             if not expect_exception:
               self.fail('Got unexpected CommandException "%s" for '
                         'seek_back size %s, buffer size %s' %

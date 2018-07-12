@@ -18,6 +18,7 @@ see: https://cloud.google.com/storage/docs/access-control#Signed-URLs)
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import base64
 import calendar
@@ -481,7 +482,7 @@ class UrlSignCommand(Command):
         raise CommandException('Unable to parse private key from {0}'.format(
             self.args[0]))
 
-    print 'URL\tHTTP Method\tExpiration\tSigned URL'
+    print('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
       if url.scheme != 'gs':
         raise CommandException('Can only create signed urls from gs:// urls')
@@ -508,7 +509,7 @@ class UrlSignCommand(Command):
           try:
             _, bucket = self.GetSingleBucketUrlFromArg(
                 'gs://{}'.format(url.bucket_name), bucket_fields=['location'])
-          except Exception, e:
+          except Exception as e:
             raise CommandException(
                 '{}: Failed to auto-detect location for bucket \'{}\'. Please '
                 'ensure you have storage.buckets.get permission on the bucket '
@@ -526,10 +527,10 @@ class UrlSignCommand(Command):
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
-      print '{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
+      print('{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
                                         (expiration_dt
                                          .strftime('%Y-%m-%d %H:%M:%S')),
-                                        final_url.encode(UTF8))
+                                        final_url.encode(UTF8)))
 
       response_code = self._ProbeObjectAccessWithClient(
           key, client_email, gcs_path, self.logger, bucket_region)

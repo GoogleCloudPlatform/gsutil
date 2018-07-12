@@ -1121,5 +1121,5 @@ class UIThread(threading.Thread):
         if status_message == _ZERO_TASKS_TO_DO_ARGUMENT:
           # Item from MainThread to indicate we are done.
           break
-    except Exception, e:  # pylint:disable=broad-except
+    except Exception as e:  # pylint:disable=broad-except
       self.stream.write('Exception in UIThread: %s\n' % e)
