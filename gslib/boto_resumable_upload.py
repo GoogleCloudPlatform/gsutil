@@ -49,7 +49,7 @@ import random
 import re
 import socket
 import time
-from six.moves.urllib.parse import urlparse
+from six.moves import urllib
 from boto import UserAgent
 from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
@@ -108,7 +108,7 @@ class BotoResumableUpload(object):
 
     Raises InvalidUrlError if URL is syntactically invalid.
     """
-    parse_result = urlparse.urlparse(url)
+    parse_result = urllib.parse.urlparse(url)
     if (parse_result.scheme.lower() not in ['http', 'https'] or
         not parse_result.netloc):
       raise InvalidUrlError('Invalid upload URL (%s)' % url)
