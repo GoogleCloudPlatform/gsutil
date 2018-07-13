@@ -30,6 +30,8 @@ from __future__ import print_function
 import os
 import sys
 
+import six
+
 from gslib.utils.unit_util import ONE_GIB
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
@@ -65,7 +67,9 @@ MIN_ACCEPTABLE_OPEN_FILES_LIMIT = 1000
 # TODO: This should say the unit in the name.
 MIN_SIZE_COMPUTE_LOGGING = 100 * ONE_MIB
 
-NO_MAX = sys.maxint
+# The way NO_MAX is used, what is really needed here is the maximum container
+# size in the Python C code, so using six.MAXSIZE which provides that portably.
+NO_MAX = six.MAXSIZE
 
 # Number of objects to request in listing calls.
 NUM_OBJECTS_PER_LIST_PAGE = 1000

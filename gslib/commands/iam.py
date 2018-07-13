@@ -14,6 +14,7 @@
 # limitations under the License.
 """Implementation of IAM policy management command for GCS."""
 from __future__ import absolute_import
+from __future__ import print_function
 
 import itertools
 import json
@@ -301,8 +302,8 @@ class IamCommand(Command):
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
-    print json.dumps(
-        json.loads(protojson.encode_message(policy)), sort_keys=True, indent=2)
+    print(json.dumps(
+        json.loads(protojson.encode_message(policy)), sort_keys=True, indent=2))
 
   def _SetIamHelperInternal(self, storage_url, policy, thread_state=None):
     """Sets IAM policy for a single, resolved bucket / object URL.

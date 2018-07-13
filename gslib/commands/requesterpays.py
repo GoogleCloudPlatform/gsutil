@@ -15,6 +15,7 @@
 """Implementation of requesterpays configuration command for buckets."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 from gslib import metrics
 from gslib.command import Command
@@ -155,9 +156,9 @@ class RequesterPaysCommand(Command):
       for blr in bucket_iter:
         some_matched = True
         if blr.root_object.billing and blr.root_object.billing.requesterPays:
-          print '%s: Enabled' % blr.url_string.rstrip('/')
+          print('%s: Enabled' % blr.url_string.rstrip('/'))
         else:
-          print '%s: Disabled' % blr.url_string.rstrip('/')
+          print('%s: Disabled' % blr.url_string.rstrip('/'))
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 

@@ -298,7 +298,7 @@ def _GetGceCreds():
         service_account_name=config.get(
             'GoogleCompute', 'service_account', 'default'),
         cache_filename=GetGceCredentialCacheFilename())
-  except apitools_exceptions.ResourceUnavailableError, e:
+  except apitools_exceptions.ResourceUnavailableError as e:
     if 'service account' in str(e) and 'does not exist' in str(e):
       return None
     raise

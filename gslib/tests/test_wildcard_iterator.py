@@ -179,7 +179,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       for unused_ in self._test_wildcard_iterator(
           'badscheme://asdf').IterAll(expand_top_level_buckets=True):
         self.assertFalse('Expected InvalidUrlError not raised.')
-    except InvalidUrlError, e:
+    except InvalidUrlError as e:
       # Expected behavior.
       self.assertTrue(e.message.find('Unrecognized scheme') != -1)
 
@@ -367,7 +367,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
       for unused_ in self._test_wildcard_iterator(uri).IterAll(
           expand_top_level_buckets=True):
         self.fail('Expected WildcardException not raised.')
-    except wildcard_iterator.WildcardException, e:
+    except wildcard_iterator.WildcardException as e:
       # Expected behavior.
       self.assertTrue(str(e).find('more than 2 consecutive') != -1)
 

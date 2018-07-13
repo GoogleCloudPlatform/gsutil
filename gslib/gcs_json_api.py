@@ -368,7 +368,7 @@ class GcsJsonApi(CloudApi):
     try:
       return self.api_client.buckets.Get(apitools_request,
                                          global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
@@ -441,7 +441,7 @@ class GcsJsonApi(CloudApi):
       try:
         return self.api_client.buckets.Patch(apitools_request,
                                              global_params=global_params)
-      except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
@@ -472,7 +472,7 @@ class GcsJsonApi(CloudApi):
     try:
       return self.api_client.buckets.Insert(apitools_request,
                                             global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def DeleteBucket(self, bucket_name, preconditions=None, provider=None):
@@ -486,7 +486,7 @@ class GcsJsonApi(CloudApi):
 
     try:
       self.api_client.buckets.Delete(apitools_request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       if isinstance(
           self._TranslateApitoolsException(e, bucket_name=bucket_name),
           NotEmptyException):
@@ -519,7 +519,7 @@ class GcsJsonApi(CloudApi):
     try:
       bucket_list = self.api_client.buckets.List(apitools_request,
                                                  global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     for bucket in self._YieldBuckets(bucket_list):
@@ -533,7 +533,7 @@ class GcsJsonApi(CloudApi):
       try:
         bucket_list = self.api_client.buckets.List(apitools_request,
                                                    global_params=global_params)
-      except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e)
 
       for bucket in self._YieldBuckets(bucket_list):
@@ -586,7 +586,7 @@ class GcsJsonApi(CloudApi):
       try:
         object_list = self.api_client.objects.List(apitools_request,
                                                    global_params=global_params)
-      except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
       if object_list.nextPageToken:
@@ -759,7 +759,7 @@ class GcsJsonApi(CloudApi):
       else:
         return self.api_client.objects.Get(
             apitools_request, global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -808,7 +808,7 @@ class GcsJsonApi(CloudApi):
       return self._GetObjectMetadataHelper(
           bucket_name, object_name, generation=generation, fields=fields,
           decryption_tuple=CryptoKeyWrapperFromKey(decryption_key))
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -966,7 +966,7 @@ class GcsJsonApi(CloudApi):
             start_byte=start_byte, end_byte=end_byte,
             serialization_data=serialization_data,
             decryption_tuple=decryption_tuple)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -986,7 +986,7 @@ class GcsJsonApi(CloudApi):
             compressed_encoding=compressed_encoding, start_byte=start_byte,
             end_byte=end_byte, serialization_data=serialization_data,
             decryption_tuple=decryption_tuple)
-      except HTTP_TRANSFER_EXCEPTIONS, e:
+      except HTTP_TRANSFER_EXCEPTIONS as e:
         self._ValidateHttpAccessTokenRefreshError(e)
         start_byte = download_stream.tell()
         bytes_downloaded_container.bytes_transferred = start_byte
@@ -1017,7 +1017,7 @@ class GcsJsonApi(CloudApi):
       try:
         self.api_client.objects.Get(apitools_request,
                                     download=apitools_download)
-      except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                          object_name=object_name,
                                          generation=generation)
@@ -1097,7 +1097,7 @@ class GcsJsonApi(CloudApi):
       with self.api_client.IncludeFields(apitools_include_fields):
         return self.api_client.objects.Patch(apitools_request,
                                              global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -1201,7 +1201,7 @@ class GcsJsonApi(CloudApi):
             serialization_data, apitools_strategy, apitools_request,
             global_params, bytes_uploaded_container, tracker_callback,
             additional_headers, progress_callback, gzip_encoded)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
@@ -1286,7 +1286,7 @@ class GcsJsonApi(CloudApi):
             progress_callback(apitools_upload.total_size,
                               apitools_upload.total_size)
           return processed_response
-        except HTTP_TRANSFER_EXCEPTIONS, e:
+        except HTTP_TRANSFER_EXCEPTIONS as e:
           self._ValidateHttpAccessTokenRefreshError(e)
           apitools_http_wrapper.RebuildHttpConnections(
               apitools_upload.bytes_http)
@@ -1298,7 +1298,7 @@ class GcsJsonApi(CloudApi):
               start_byte = apitools_upload.progress
               bytes_uploaded_container.bytes_transferred = start_byte
               break
-            except HTTP_TRANSFER_EXCEPTIONS, e2:
+            except HTTP_TRANSFER_EXCEPTIONS as e2:
               self._ValidateHttpAccessTokenRefreshError(e2)
               apitools_http_wrapper.RebuildHttpConnections(
                   apitools_upload.bytes_http)
@@ -1326,7 +1326,7 @@ class GcsJsonApi(CloudApi):
                 'Retrying upload from byte %s after exception: %s. Trace: %s',
                 start_byte, GetPrintableExceptionString(e),
                 traceback.format_exc())
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       resumable_ex = self._TranslateApitoolsResumableUploadException(e)
       if resumable_ex:
         raise resumable_ex
@@ -1477,7 +1477,7 @@ class GcsJsonApi(CloudApi):
 
       DeleteTrackerFile(tracker_file_name)
       return rewrite_response.resource
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, dst_obj_metadata.bucket, src_provider=self.provider,
           src_bucket_name=src_obj_metadata.bucket,
@@ -1502,7 +1502,7 @@ class GcsJsonApi(CloudApi):
         userProject=self.user_project)
     try:
       return self.api_client.objects.Delete(apitools_request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -1544,7 +1544,7 @@ class GcsJsonApi(CloudApi):
       try:
         return self.api_client.objects.Compose(apitools_request,
                                                global_params=global_params)
-      except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         # We can't be sure which object was missing in the 404 case.
         if (isinstance(e, apitools_exceptions.HttpError)
             and e.status_code == 404):
@@ -1572,7 +1572,7 @@ class GcsJsonApi(CloudApi):
     try:
       return self.api_client.objects.WatchAll(apitools_request,
                                               global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def StopChannel(self, channel_id, resource_id, provider=None):
@@ -1580,7 +1580,7 @@ class GcsJsonApi(CloudApi):
     channel = apitools_messages.Channel(id=channel_id, resourceId=resource_id)
     try:
       self.api_client.channels.Stop(channel)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def GetProjectServiceAccount(self, project_number):
@@ -1589,7 +1589,7 @@ class GcsJsonApi(CloudApi):
       request = apitools_messages.StorageProjectsServiceAccountGetRequest(
           projectId=unicode(project_number))
       return self.api_client.projects_serviceAccount.Get(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def CreateNotificationConfig(
@@ -1621,7 +1621,7 @@ class GcsJsonApi(CloudApi):
           notification=notification,
           userProject=self.user_project)
       return self.api_client.notifications.Insert(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def DeleteNotificationConfig(
@@ -1635,7 +1635,7 @@ class GcsJsonApi(CloudApi):
           notification=notification,
           userProject=self.user_project)
       return self.api_client.notifications.Delete(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def ListNotificationConfigs(self, bucket_name):
@@ -1646,7 +1646,7 @@ class GcsJsonApi(CloudApi):
       response = self.api_client.notifications.List(request)
       for notification in response.items:
         yield notification
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def _BucketCannedAclToPredefinedAcl(self, canned_acl_string):

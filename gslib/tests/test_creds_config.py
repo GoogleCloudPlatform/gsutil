@@ -42,7 +42,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
       try:
         GcsJsonApi(None, self.logger, DiscardMessagesQueue())
         self.fail('Succeeded with multiple types of configured creds.')
-      except CommandException, e:
+      except CommandException as e:
         msg = str(e)
         self.assertIn('types of configured credentials', msg)
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)

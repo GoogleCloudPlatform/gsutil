@@ -18,7 +18,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import re
-import urlparse
+
+from six.moves import urllib
 
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
@@ -69,13 +70,13 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
     param_name = param_name.encode('utf-8')
   if isinstance(param_value, unicode):
     param_value = param_value.encode('utf-8')
-  scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
+  scheme, netloc, path, query_str, fragment = urllib.parse.urlsplit(url_str)
 
-  query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
+  query_params = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
+  new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
   if url_was_unicode:
     new_url = new_url.decode('utf-8')
   return new_url

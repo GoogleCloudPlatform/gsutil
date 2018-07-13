@@ -15,6 +15,7 @@
 """Implementation of hash command for calculating hashes of local files."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 from hashlib import md5
 import logging
@@ -209,11 +210,11 @@ class HashCommand(Command):
             hash_dict['md5'] = obj_metadata.md5Hash
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
-        print 'Hashes [%s] for %s:' % (output_format, file_name)
+        print('Hashes [%s] for %s:' % (output_format, file_name))
         for name, digest in hash_dict.iteritems():
-          print '\tHash (%s):\t\t%s' % (name,
+          print('\tHash (%s):\t\t%s' % (name,
                                         (format_func(digest) if url.IsFileUrl()
-                                         else cloud_format_func(digest)))
+                                         else cloud_format_func(digest))))
 
     if not matched_one:
       raise CommandException('No files matched')

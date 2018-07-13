@@ -92,7 +92,7 @@ def CheckFreeSpace(path):
     return f_frsize * f_bavail
 
 
-def CreateDirIfNeeded(dir_path, mode=0777):
+def CreateDirIfNeeded(dir_path, mode=0o777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
     try:

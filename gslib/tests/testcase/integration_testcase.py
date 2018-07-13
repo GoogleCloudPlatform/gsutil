@@ -151,7 +151,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri = self.bucket_uris[-1]
       try:
         bucket_list = self._ListBucket(bucket_uri)
-      except StorageResponseError, e:
+      except StorageResponseError as e:
         # This can happen for tests of rm -r command, which for bucket-only
         # URIs delete the bucket at the end.
         if e.status == 404:
@@ -168,7 +168,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                                  version_id=k.version_id)
             else:
               k.delete()
-          except StorageResponseError, e:
+          except StorageResponseError as e:
             # This could happen if objects that have already been deleted are
             # still showing up in the listing due to eventual consistency. In
             # that case, we continue on until we've tried to deleted every
@@ -401,7 +401,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         bucket_uri.create_bucket(storage_class=storage_class,
                                  location=location or '',
                                  headers=headers)
-      except StorageResponseError, e:
+      except StorageResponseError as e:
         # If the service returns a transient error or a connection breaks,
         # it's possible the request succeeded. If that happens, the service
         # will return 409s for all future calls even though our intent
@@ -525,7 +525,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           key_uri.set_contents_from_string(
               contents, headers={
                   'x-goog-if-generation-match': str(gs_idempotent_generation)})
-        except StorageResponseError, e:
+        except StorageResponseError as e:
           if e.status == 412:
             pass
           else:

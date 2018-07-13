@@ -15,6 +15,7 @@
 """Implementation of label command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import codecs
 import json
@@ -346,14 +347,14 @@ class LabelCommand(Command):
     (bucket_url, bucket_metadata) = self.GetSingleBucketUrlFromArg(
         bucket_arg, bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
-      print(self.gsutil_api.XmlPassThroughGetTagging(
-          bucket_url, provider=bucket_url.scheme))
+      print((self.gsutil_api.XmlPassThroughGetTagging(
+          bucket_url, provider=bucket_url.scheme)))
     else:
       if bucket_metadata.labels:
-        print(LabelTranslation.JsonFromMessage(
-            bucket_metadata.labels, pretty_print=True))
+        print((LabelTranslation.JsonFromMessage(
+            bucket_metadata.labels, pretty_print=True)))
       else:
-        print('%s has no label configuration.' % bucket_url)
+        print(('%s has no label configuration.' % bucket_url))
 
   def RunCommand(self):
     """Command entry point for the label command."""

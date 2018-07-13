@@ -23,6 +23,8 @@ import re
 import sys
 import textwrap
 
+import six
+
 from gslib.bucket_listing_ref import BucketListingBucket
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.bucket_listing_ref import BucketListingPrefix
@@ -39,6 +41,12 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import UTF8
 from gslib.utils.text_util import FixWindowsEncodingIfNeeded
 from gslib.utils.text_util import PrintableStr
+
+if six.PY3:
+    # StandardError was removed, so use the base exception type instead
+    StandardError = Exception
+else:
+    StandardError = StandardError
 
 
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')

@@ -14,6 +14,8 @@
 # limitations under the License.
 """Helper functions for tracker file functionality."""
 
+from __future__ import print_function
+
 import errno
 import hashlib
 import json
@@ -331,9 +333,9 @@ def ReadRewriteTrackerFile(tracker_file_name, rewrite_params_hash):
   except IOError as e:
     # Ignore non-existent file (happens first time a rewrite is attempted.
     if e.errno != errno.ENOENT:
-      print('Couldn\'t read Copy tracker file (%s): %s. Restarting copy '
+      print(('Couldn\'t read Copy tracker file (%s): %s. Restarting copy '
             'from scratch.' %
-            (tracker_file_name, e.strerror))
+            (tracker_file_name, e.strerror)))
   finally:
     if tracker_file:
       tracker_file.close()
