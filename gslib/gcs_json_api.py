@@ -1583,6 +1583,16 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
       self._TranslateExceptionAndRaise(e)
 
+  def ListChannels(self, bucket_name, provider=None, fields=None):
+    """See CloudApi class for function doc strings."""
+    apitools_request = apitools_messages.StorageBucketsListChannelsRequest(
+        bucket=bucket_name, userProject=self.user_project)
+
+    try:
+      return self.api_client.buckets.ListChannels(apitools_request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
   def GetProjectServiceAccount(self, project_number):
     """See CloudApi class for function doc strings."""
     try:
