@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import itertools
 import json
+import re
 
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
@@ -54,7 +55,7 @@ _GET_SYNOPSIS = """
 """
 
 _CH_SYNOPSIS = """
-  gsutil iam ch [-fRr] binding ...
+  gsutil iam ch [-fRr] binding ... url
 
   where each binding is of the form:
 
@@ -62,6 +63,11 @@ _CH_SYNOPSIS = """
       [-d] ("allUsers"|"allAuthenticatedUsers"):role[,...]
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
+
+Note: The gsutil iam command disallows setting/changing to bindings using roles
+for project conveneience groups (projectOwner, projectEditor, projectViewer),
+because it goes against the principle of least privilege.
+
 """
 
 _GET_DESCRIPTION = """
@@ -184,6 +190,8 @@ _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
+
+STORAGE_URI_REGEX = re.compile(r'[a-z]+://[a-z].*')
 
 
 def _PatchIamWrapper(cls, iter_result, thread_state):
@@ -422,23 +430,20 @@ class IamCommand(Command):
     # expecting to come across the -r, -f flags here.
     it = iter(self.args)
     for token in it:
+      if STORAGE_URI_REGEX.match(token):
+        patterns.append(token)
+        break
       if token == '-d':
         patch_bindings_tuples.append(
             BindingStringToTuple(False, it.next()))
       else:
-        try:
-          patch_bindings_tuples.append(
-              BindingStringToTuple(True, token)
-          )
-        # All following arguments are urls.
-        except (ArgumentException, CommandException):
-          patterns.append(token)
-          for token in it:
-            patterns.append(token)
-
-    # We must have some bindings to process, else this is pointless.
+        patch_bindings_tuples.append(BindingStringToTuple(True, token))
     if not patch_bindings_tuples:
       raise CommandException('Must specify at least one binding.')
+
+    # All following arguments are urls.
+    for token in it:
+      patterns.append(token)
 
     self.everything_set_okay = True
     threaded_wildcards = []
