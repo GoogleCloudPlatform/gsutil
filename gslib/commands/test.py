@@ -21,10 +21,12 @@ from collections import namedtuple
 import logging
 import os
 import subprocess
+import re
 import sys
 import tempfile
 import textwrap
 import time
+import traceback
 
 import gslib
 from gslib.cloud_api import ProjectIdException
@@ -517,10 +519,26 @@ class TestCommand(Command):
     loader = unittest.TestLoader()
 
     if commands_to_test:
-      try:
-        suite = loader.loadTestsFromNames(commands_to_test)
-      except (ImportError, AttributeError) as e:
-        raise CommandException('Invalid test argument name: %s' % str(e))
+      suite = unittest.TestSuite()
+      for command_name in commands_to_test:
+        try:
+          suite_for_current_command = loader.loadTestsFromName(command_name)
+          suite.addTests(suite_for_current_command)
+        except (ImportError, AttributeError) as e:
+          msg = ('Failed to import test code from file %s. TestLoader provided '
+                 'this error:\n\n%s' % (command_name, str(e)))
+
+          # Try to give a better error message; by default, unittest swallows
+          # ImportErrors and only shows that an import failed, not why. E.g.:
+          # "'module' object has no attribute 'test_cp'
+          try:
+            __import__(command_name)
+          except Exception as e:
+            stack_trace = traceback.format_exc()
+            err = re.sub('\\n', '\n    ', stack_trace)
+            msg += '\n\nAdditional traceback:\n\n%s' % (err)
+
+          raise CommandException(msg)
 
     if list_tests:
       test_names = GetTestNamesFromSuites(suite)

@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from collections import defaultdict
 from collections import namedtuple
 from apitools.base.protorpclite import protojson
-from gslib.cloud_api import ArgumentException
 from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
@@ -37,9 +36,9 @@ DISCOURAGED_TYPES = set([
 
 DISCOURAGED_TYPES_MSG = (
     'Assigning roles (e.g. objectCreator, legacyBucketOwner) for project '
-    'convenience groups is discouraged, as it goes against the principle of '
-    'least privilege. Consider creating and using more granular groups with '
-    'which to assign permissions. See '
+    'convenience groups is not supported by gsutil, as it goes against the '
+    'principle of least privilege. Consider creating and using more granular '
+    'groups with which to assign permissions. See '
     'https://cloud.google.com/iam/docs/using-iam-securely for more '
     'information. Assigning a role to a project group can be achieved by '
     'setting the IAM policy directly (see gsutil help iam for specifics).')
@@ -194,7 +193,7 @@ def BindingStringToTuple(is_grant, input_str):
                     user:foo@bar.com
 
   Raises:
-    ArgumentException in the case of invalid input.
+    CommandException in the case of invalid input.
 
   Returns:
     A BindingsTuple instance.
