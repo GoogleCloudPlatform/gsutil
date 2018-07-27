@@ -34,8 +34,6 @@ NO_URLS_MATCHED_TARGET = 'No URLs matched: %s'
 if six.PY3:
     # StandardError was removed, so use the base exception type instead
     StandardError = Exception
-else:
-    StandardError = StandardError
 
 
 class AbortException(StandardError):

@@ -24,8 +24,6 @@ import six
 
 if six.PY3:
   long = int
-else:
-  long = long
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [

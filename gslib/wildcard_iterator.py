@@ -45,8 +45,6 @@ from gslib.utils.text_util import PrintableStr
 if six.PY3:
     # StandardError was removed, so use the base exception type instead
     StandardError = Exception
-else:
-    StandardError = StandardError
 
 
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
