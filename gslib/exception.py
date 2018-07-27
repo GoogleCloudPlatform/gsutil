@@ -25,10 +25,15 @@ The exceptions in this module are for use across multiple different classes.
 """
 
 from __future__ import absolute_import
+import six
 
 
 NO_URLS_MATCHED_GENERIC = 'No URLs matched'
 NO_URLS_MATCHED_TARGET = 'No URLs matched: %s'
+
+if six.PY3:
+    # StandardError was removed, so use the base exception type instead
+    StandardError = Exception
 
 
 class AbortException(StandardError):

@@ -211,7 +211,7 @@ class BotoTranslation(CloudApi):
       return self._BotoBucketToBucket(bucket_uri.get_bucket(validate=True,
                                                             headers=headers),
                                       fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def ListBuckets(self, project_id=None, provider=None, fields=None):
@@ -235,7 +235,7 @@ class BotoTranslation(CloudApi):
           # can't successfully call them.
           continue
         yield self._BotoBucketToBucket(bucket, fields=get_fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
@@ -280,7 +280,7 @@ class BotoTranslation(CloudApi):
         # bypass manually raised exceptions from 200 responses.
         try:
           bucket_uri.get_bucket().set_tags(boto_tags, headers=headers)
-        except boto.exception.GSResponseError, e:
+        except boto.exception.GSResponseError as e:
           if e.status != 200:
             raise
       if metadata.lifecycle:
@@ -305,7 +305,7 @@ class BotoTranslation(CloudApi):
         bucket_uri.set_website_config(main_page_suffix, error_page,
                                       headers=headers)
       return self.GetBucket(bucket_name, fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
@@ -327,12 +327,12 @@ class BotoTranslation(CloudApi):
       try:
         bucket_uri.create_bucket(headers=headers, location=location,
                                  storage_class=storage_class)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
     else:
       try:
         bucket_uri.create_bucket(headers=headers, location=location)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
     return self.GetBucket(bucket_name, fields=fields)
 
@@ -343,7 +343,7 @@ class BotoTranslation(CloudApi):
     headers = self._CreateBaseHeaders()
     try:
       bucket_uri.delete_bucket(headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       translated_exception = self._TranslateBotoException(
           e, bucket_name=bucket_name)
       if (translated_exception and
@@ -361,7 +361,7 @@ class BotoTranslation(CloudApi):
           else:
             raise NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                     status=e.status)
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e2:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e2:
           self._TranslateExceptionAndRaise(e2, bucket_name=bucket_name)
       elif translated_exception and translated_exception.status == 404:
         raise NotFoundException('Bucket %s does not exist.' % bucket_name)
@@ -383,7 +383,7 @@ class BotoTranslation(CloudApi):
                                             delimiter=delimiter or '',
                                             all_versions=all_versions,
                                             headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
     try:
@@ -417,7 +417,7 @@ class BotoTranslation(CloudApi):
 
           yield CloudApi.CsObjectOrPrefix(return_object,
                                           CloudApi.CsObjectOrPrefixType.OBJECT)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def GetObjectMetadata(self, bucket_name, object_name, generation=None,
@@ -428,7 +428,7 @@ class BotoTranslation(CloudApi):
       return self._BotoKeyToObject(self._GetBotoKey(bucket_name, object_name,
                                                     generation=generation),
                                    fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -510,7 +510,7 @@ class BotoTranslation(CloudApi):
       else:
         raise ArgumentException('Unsupported DownloadStrategy: %s' %
                                 download_strategy)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -612,7 +612,7 @@ class BotoTranslation(CloudApi):
         fp.flush()
         # Download succeeded.
         return
-      except retryable_exceptions, e:  # pylint: disable=catching-non-exception
+      except retryable_exceptions as e:  # pylint: disable=catching-non-exception
         if debug >= 1:
           self.logger.info('Caught exception (%s)', repr(e))
         if isinstance(e, IOError) and e.errno == errno.EPIPE:
@@ -626,7 +626,7 @@ class BotoTranslation(CloudApi):
           else:  # self.provider == 'gs'
             key.get_file(fp, headers, cb_handler.call, num_callbacks,
                          override_num_retries=0, hash_algs=hash_algs)
-      except boto.exception.ResumableDownloadException, e:
+      except boto.exception.ResumableDownloadException as e:
         if (e.disposition ==
             boto.exception.ResumableTransferDisposition.ABORT_CUR_PROCESS):
           raise ResumableDownloadException(e.message)
@@ -697,7 +697,7 @@ class BotoTranslation(CloudApi):
       try:
         object_uri.set_metadata(metadata_plus, metadata_minus, False,
                                 headers=headers)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                          object_name=object_name,
                                          generation=generation)
@@ -707,7 +707,7 @@ class BotoTranslation(CloudApi):
       try:
         object_uri.set_xml_acl(boto_acl.to_xml(), key_name=object_name,
                                headers=headers)
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                          object_name=object_name,
                                          generation=generation)
@@ -865,7 +865,7 @@ class BotoTranslation(CloudApi):
                                    headers=headers)
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
@@ -888,7 +888,7 @@ class BotoTranslation(CloudApi):
           progress_callback=progress_callback, headers=headers)
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
@@ -919,7 +919,7 @@ class BotoTranslation(CloudApi):
                                 headers=headers)
       return self._HandleSuccessfulUpload(dst_uri, object_metadata,
                                           fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
@@ -937,7 +937,7 @@ class BotoTranslation(CloudApi):
                                     generation=generation)
     try:
       uri.delete_key(validate=False, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -989,7 +989,7 @@ class BotoTranslation(CloudApi):
           src_version_id=src_version_id, src_generation=src_generation)
 
       return self._BotoKeyToObject(new_key, fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, dst_obj_metadata.bucket, src_provider=self.provider,
           src_bucket_name=src_obj_metadata.bucket,
@@ -1031,7 +1031,7 @@ class BotoTranslation(CloudApi):
 
       return self.GetObjectMetadata(dst_bucket_name, dst_obj_name,
                                     fields=fields)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, dst_obj_metadata.bucket,
                                        dst_obj_metadata.name)
 
@@ -1123,7 +1123,7 @@ class BotoTranslation(CloudApi):
                                             bucket_name, object_name,
                                             generation=generation)
       return key
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
                                        generation=generation)
@@ -1154,7 +1154,7 @@ class BotoTranslation(CloudApi):
           for acl in AclTranslation.BotoBucketAclToMessage(
               bucket.get_acl(headers=headers)):
             cloud_api_bucket.acl.append(acl)
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           translated_exception = self._TranslateBotoException(
               e, bucket_name=bucket.name)
           if (translated_exception and
@@ -1169,14 +1169,14 @@ class BotoTranslation(CloudApi):
         try:
           boto_cors = bucket_uri.get_cors(headers=headers)
           cloud_api_bucket.cors = CorsTranslation.BotoCorsToMessage(boto_cors)
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'defaultObjectAcl' in fields:
         try:
           for acl in AclTranslation.BotoObjectAclToMessage(
               bucket.get_def_acl(headers=headers)):
             cloud_api_bucket.defaultObjectAcl.append(acl)
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           translated_exception = self._TranslateBotoException(
               e, bucket_name=bucket.name)
           if (translated_exception and
@@ -1200,14 +1200,14 @@ class BotoTranslation(CloudApi):
             cloud_api_bucket.encryption = (
                 apitools_messages.Bucket.EncryptionValue())
             cloud_api_bucket.encryption.defaultKmsKeyName = keyname
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'lifecycle' in fields:
         try:
           boto_lifecycle = bucket_uri.get_lifecycle_config(headers=headers)
           cloud_api_bucket.lifecycle = (
               LifecycleTranslation.BotoLifecycleToMessage(boto_lifecycle))
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'logging' in fields:
         try:
@@ -1223,7 +1223,7 @@ class BotoTranslation(CloudApi):
                     logging_config['LogObjectPrefix'])
               if log_bucket_present:
                 cloud_api_bucket.logging.logBucket = logging_config['LogBucket']
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'website' in fields:
         try:
@@ -1240,7 +1240,7 @@ class BotoTranslation(CloudApi):
               if not_found_page_present:
                 cloud_api_bucket.website.notFoundPage = (
                     website_config['NotFoundPage'])
-        except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+        except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'location' in fields:
         cloud_api_bucket.location = bucket_uri.get_location(headers=headers)
@@ -1253,14 +1253,14 @@ class BotoTranslation(CloudApi):
           boto_tags = bucket_uri.get_bucket().get_tags()
           cloud_api_bucket.labels = (
               LabelTranslation.BotoTagsToMessage(boto_tags))
-        except boto.exception.StorageResponseError, e:
+        except boto.exception.StorageResponseError as e:
           # If no tagging config exists, the S3 API returns a 404 (the GS API
           # returns a 200 with an empty TagSet). If the bucket didn't exist,
           # we would have failed much earlier in this method, so we know that
           # it's the tagging config that doesn't exist.
           if not (self.provider == 's3' and e.status == 404):
             raise
-      except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+      except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
     if not fields or 'versioning' in fields:
       versioning = bucket_uri.get_versioning_config(headers=headers)
@@ -1472,7 +1472,7 @@ class BotoTranslation(CloudApi):
         # ACLs for s3 are different and we use special markers to represent
         # them in the gsutil Cloud API.
         AddS3MarkerAclToObjectMetadata(cloud_api_object, key_acl)
-    except boto.exception.GSResponseError, e:
+    except boto.exception.GSResponseError as e:
       if e.status == 403:
         # Consume access denied exceptions to mimic JSON behavior of simply
         # returning None if sufficient permission is not present.  The caller
@@ -1590,7 +1590,7 @@ class BotoTranslation(CloudApi):
         return uri.get_def_acl()
       else:
         return uri.get_acl()
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def XmlPassThroughSetAcl(self, acl_text, storage_url, canned=True,
@@ -1618,7 +1618,7 @@ class BotoTranslation(CloudApi):
           uri.set_def_xml_acl(acl_text, uri.object_name, headers=headers)
         else:
           uri.set_xml_acl(acl_text, uri.object_name, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   # pylint: disable=catching-non-exception
@@ -1633,7 +1633,7 @@ class BotoTranslation(CloudApi):
     h = handler.XmlHandler(cors_obj, None)
     try:
       xml.sax.parseString(cors_text, h)
-    except SaxExceptions.SAXParseException, e:
+    except SaxExceptions.SAXParseException as e:
       raise CommandException('Requested CORS is invalid: %s at line %s, '
                              'column %s' % (e.getMessage(), e.getLineNumber(),
                                             e.getColumnNumber()))
@@ -1644,7 +1644,7 @@ class BotoTranslation(CloudApi):
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.set_cors(cors_obj, False, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def XmlPassThroughGetCors(self, storage_url):
@@ -1656,7 +1656,7 @@ class BotoTranslation(CloudApi):
         debug=self.debug)
     try:
       cors = uri.get_cors(False, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     parsed_xml = xml.dom.minidom.parseString(cors.to_xml().encode(UTF8))
@@ -1672,7 +1672,7 @@ class BotoTranslation(CloudApi):
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       lifecycle = uri.get_lifecycle_config(False, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     parsed_xml = xml.dom.minidom.parseString(lifecycle.to_xml().encode(UTF8))
@@ -1690,7 +1690,7 @@ class BotoTranslation(CloudApi):
     h = handler.XmlHandler(lifecycle_obj, None)
     try:
       xml.sax.parseString(lifecycle_text, h)
-    except SaxExceptions.SAXParseException, e:
+    except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested lifecycle config is invalid: %s at line %s, column %s' %
           (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
@@ -1701,7 +1701,7 @@ class BotoTranslation(CloudApi):
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.configure_lifecycle(lifecycle_obj, False, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def XmlPassThroughGetLogging(self, storage_url):
@@ -1714,7 +1714,7 @@ class BotoTranslation(CloudApi):
           debug=self.debug)
       logging_config_xml = UnaryDictToXml(uri.get_logging_config(
           headers=headers))
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(logging_config_xml).toprettyxml()
@@ -1730,7 +1730,7 @@ class BotoTranslation(CloudApi):
       # TODO: Define tags-related methods on storage_uri objects. In the
       # meantime, we invoke the underlying bucket's methods directly.
       tagging_config_xml = uri.get_bucket().get_xml_tags()
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(tagging_config_xml).toprettyxml()
@@ -1742,7 +1742,7 @@ class BotoTranslation(CloudApi):
     h = handler.XmlHandler(tags_obj, None)
     try:
       xml.sax.parseString(tagging_text, h)
-    except SaxExceptions.SAXParseException, e:
+    except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested labels/tagging config is invalid: %s at line %s, column '
           '%s' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
@@ -1755,7 +1755,7 @@ class BotoTranslation(CloudApi):
       # TODO: Define tags-related methods on storage_uri objects. In the
       # meantime, we invoke the underlying bucket's methods directly.
       uri.get_bucket().set_tags(tags_obj, headers=headers)
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
   def XmlPassThroughGetWebsite(self, storage_url):
@@ -1767,7 +1767,7 @@ class BotoTranslation(CloudApi):
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       web_config_xml = UnaryDictToXml(uri.get_website_config(headers=headers))
-    except TRANSLATABLE_BOTO_EXCEPTIONS, e:
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(web_config_xml).toprettyxml()

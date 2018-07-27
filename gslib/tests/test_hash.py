@@ -45,7 +45,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('hash', args=['non-existent-file'])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('No files matched', e.reason)
 
   def testHashHexFormat(self):

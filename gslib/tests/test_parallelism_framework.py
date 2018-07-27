@@ -521,9 +521,9 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
         test_func()
         self.fail(
             'Setting fail_on_error should raise any exception encountered.')
-      except CustomException, e:
+      except CustomException as e:
         pass
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         self.fail('Got unexpected error: ' + str(e))
 
     def _RunFailureFunc():

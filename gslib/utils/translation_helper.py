@@ -329,7 +329,7 @@ def PreconditionsFromHeaders(headers):
         return_preconditions.gen_match = long(value)
       if GOOG_METAGENERATION_MATCH_REGEX.match(header):
         return_preconditions.meta_gen_match = long(value)
-  except ValueError, _:
+  except ValueError as _:
     raise ArgumentException('Invalid precondition header specified. '
                             'x-goog-if-generation-match and '
                             'x-goog-if-metageneration match must be specified '

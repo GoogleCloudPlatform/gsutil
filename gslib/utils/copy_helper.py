@@ -1683,7 +1683,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           tracker_callback=_UploadTrackerCallback,
           progress_callback=progress_callback, gzip_encoded=gzip_encoded)
       retryable = False
-    except ResumableUploadStartOverException, e:
+    except ResumableUploadStartOverException as e:
       logger.info('Caught ResumableUploadStartOverException for upload of %s.'
                   % src_url.url_string)
       # This can happen, for example, if the server sends a 410 response code.
@@ -2086,7 +2086,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
     # -m cp.
     try:
       os.makedirs(dir_name)
-    except OSError, e:
+    except OSError as e:
       if e.errno != errno.EEXIST:
         raise
 
@@ -2888,7 +2888,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
     _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
                  local_hashes)
     DeleteDownloadTrackerFiles(dst_url, api_selector)
-  except HashMismatchException, e:
+  except HashMismatchException as e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
     # we calculate will match the gzipped bytes, not the original object. Thus,
     # we'll need to calculate and check it after unzipping.
@@ -2930,7 +2930,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
         while data:
           f_out.write(data)
           data = gzip_fp.read(GZIP_CHUNK_SIZE)
-    except IOError, e:
+    except IOError as e:
       # In the XML case where we don't know if the file was gzipped, raise
       # the original hash exception if we find that it wasn't.
       if 'Not a gzipped file' in str(e) and hash_invalid_exception:
@@ -3378,7 +3378,7 @@ def PerformCopy(
   else:  # src_url.IsFileUrl()
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       message = 'Error opening file "%s": %s.' % (src_url, e.message)
       if command_obj.continue_on_error:
         command_obj.op_failure_count += 1

@@ -33,7 +33,7 @@ try:
   # This module doesn't necessarily exist on Windows.
   import resource
   _HAS_RESOURCE_MODULE = True
-except ImportError, e:
+except ImportError as e:
   _HAS_RESOURCE_MODULE = False
 
 # Maximum time to wait (join) on the SeekAheadThread after the ProducerThread
