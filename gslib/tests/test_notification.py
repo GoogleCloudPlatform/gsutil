@@ -70,6 +70,29 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['notification', 'stopchannel', channel_id, resource_id])
 
+  @unittest.skipUnless(NOTIFICATION_URL,
+                       'Test requires notification URL configuration.')
+  def test_list_one_channel(self):
+    """Tests listing notification channel on a bucket."""
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(
+        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
+        return_stderr=False)
+
+    stderr = self.RunGsUtil(
+        ['notification', 'listchannels', suri(bucket_uri)],
+        return_stderr=True)
+    channel_id = re.findall(r'Watch channel identifier: (?P<id>.*)', stderr)
+    self.assertEqual(len(channel_id), 1)
+    resource_id = re.findall(r'Canonicalized resource identifier: (?P<id>.*)', stderr)
+    self.assertEqual(len(resource_id), 1)
+    push_url = re.findall(r'Application URL: (?P<id>.*)', stderr)
+    self.assertEqual(len(push_url), 1)
+    subscriber_email = re.findall(r'Subscriber email: (?P<id>.*)', stderr)
+    self.assertEqual(len(subscriber_email), 1)
+    creation_time = re.findall(r'Creation time: (?P<id>.*)', stderr)
+    self.assertEqual(len(creation_time), 1)
+
   def test_invalid_subcommand(self):
     stderr = self.RunGsUtil(['notification', 'foo', 'bar', 'baz'],
                             return_stderr=True, expected_status=1)
