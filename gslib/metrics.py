@@ -14,6 +14,11 @@
 # limitations under the License.
 """Static data and helper functions for collecting user data."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import atexit
 from collections import defaultdict
 from collections import namedtuple
@@ -32,6 +37,9 @@ import time
 import urllib
 import uuid
 
+import six
+from six.moves import input
+from six.moves import urllib
 import boto
 
 from gslib import VERSION
@@ -399,9 +407,9 @@ class MetricsCollector(object):
     """
     params = [('ec', category), ('ea', action), ('el', label), ('ev', value),
               (_GA_LABEL_MAP['Timestamp'], _GetTimeInMillis())]
-    params.extend([(k, v) for k, v in custom_params.iteritems()
+    params.extend([(k, v) for k, v in six.iteritems(custom_params)
                    if v is not None])
-    params.extend([(k, v) for k, v in self.ga_params.iteritems()
+    params.extend([(k, v) for k, v in six.iteritems(self.ga_params)
                    if v is not None])
 
     # Log how long after the start of the program this event happened.
@@ -409,7 +417,7 @@ class MetricsCollector(object):
       execution_time = _GetTimeInMillis() - self.start_time
     params.append((_GA_LABEL_MAP['Execution Time'], execution_time))
 
-    data = urllib.urlencode(sorted(params))
+    data = urllib.parse.urlencode(sorted(params))
     self._metrics.append(Metric(endpoint=self.endpoint, method='POST',
                                 body=data, user_agent=self.user_agent))
 
@@ -528,7 +536,7 @@ class MetricsCollector(object):
       self._ProcessFileMessage(file_message=params['file_message'])
       return
 
-    for param_name, param in params.iteritems():
+    for param_name, param in six.iteritems(params):
       # These parameters start in 0 or False state and can be updated to a
       # non-zero value or True.
       if param_name in ('uses_fan', 'uses_slice', 'avg_throughput',
@@ -591,7 +599,7 @@ class MetricsCollector(object):
                               sum(self.retryable_errors.values())})
 
     # Collect the retryable errors.
-    for error_type, num_errors in self.retryable_errors.iteritems():
+    for error_type, num_errors in six.iteritems(self.retryable_errors):
       self.CollectGAMetric(category=_GA_ERRORRETRY_CATEGORY, action=error_type,
                            **{_GA_LABEL_MAP['Retryable Errors']: num_errors})
 
@@ -675,7 +683,7 @@ class MetricsCollector(object):
                                     self.perf_sum_params.has_file_dst}
     action = ','.join(
         sorted([transfer_type
-                for transfer_type, cond in transfer_types.iteritems() if cond]))
+                for transfer_type, cond in six.iteritems(transfer_types) if cond]))
 
     # Use the time spent on Apply rather than the total command execution time
     # for the execution time metric. This aligns more closely with throughput
@@ -918,7 +926,7 @@ def CheckAndMaybePromptForAnalyticsEnabling():
   if not os.path.exists(
       _UUID_FILE_PATH) and not disable_prompt and not os.environ.get(
           'CLOUDSDK_WRAPPER'):
-    enable_analytics = raw_input('\n' + textwrap.fill(
+    enable_analytics = input('\n' + textwrap.fill(
         'gsutil developers rely on user feedback to make improvements to the '
         'tool. Would you like to send anonymous usage statistics to help '
         'improve gsutil? [y/N]') + ' ')

@@ -14,13 +14,18 @@
 # limitations under the License.
 """Helper functions for tracker file functionality."""
 
+from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import errno
 import hashlib
 import json
 import os
 import re
+
+import six
 
 from boto import config
 from gslib.exception import CommandException
@@ -67,17 +72,19 @@ def _HashFilename(filename):
   the hashed version takes fewer than 100 characters.
 
   Args:
-    filename: file name to be hashed.
+    filename: file name to be hashed. May be unicode or bytes.
 
   Returns:
     shorter, hashed version of passed file name
   """
-  if isinstance(filename, unicode):
-    filename = filename.encode(UTF8)
+  if isinstance(filename, six.text_type):
+    filename_bytes = filename.encode(UTF8)
+    filename_str = filename
   else:
-    filename = unicode(filename, UTF8).encode(UTF8)
-  m = hashlib.sha1(filename)
-  return 'TRACKER_' + m.hexdigest() + '.' + filename[-16:]
+    filename_bytes = filename
+    filename_str = filename.decode(UTF8)
+  m = hashlib.sha1(filename_bytes)
+  return 'TRACKER_' + m.hexdigest() + '.' + filename_str[-16:]
 
 
 def CreateTrackerDirIfNeeded():
@@ -304,7 +311,7 @@ def HashRewriteParameters(
     # Tracker file matching changed between gsutil 4.15 -> 4.16 and will cause
     # rewrites to start over from the beginning on a gsutil version upgrade.
     if input_param is not None:
-      md5_hash.update(str(input_param))
+      md5_hash.update(six.text_type(input_param).encode('UTF8'))
   return md5_hash.hexdigest()
 
 
@@ -524,7 +531,7 @@ def _WriteTrackerFile(tracker_file_name, data):
   """Creates a tracker file, storing the input data."""
   try:
     with os.fdopen(os.open(tracker_file_name,
-                           os.O_WRONLY | os.O_CREAT, 0600), 'w') as tf:
+                           os.O_WRONLY | os.O_CREAT, 0o600), 'w') as tf:
       tf.write(data)
     return False
   except (IOError, OSError) as e:

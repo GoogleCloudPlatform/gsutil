@@ -16,6 +16,9 @@
 """Unit tests for analytics data collection."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import logging
 import os
@@ -54,7 +57,9 @@ from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
-import mock
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 # A piece of the URL logged for all of the tests.
 GLOBAL_DIMENSIONS_URL_PARAMS = (
@@ -476,7 +481,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     """Tests the exception catching decorator CaptureAndLogException."""
 
     # A wrapped function with an exception should not stop the process.
-    mock_exc_fn = mock.MagicMock(__name__='mock_exc_fn',
+    mock_exc_fn = mock.MagicMock(__name__=str('mock_exc_fn'),
                                  side_effect=Exception())
     wrapped_fn = metrics.CaptureAndLogException(mock_exc_fn)
     wrapped_fn()
@@ -488,7 +493,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     self.assertEqual(1, mock_exc_fn.call_count)
 
-    mock_err_fn = mock.MagicMock(__name__='mock_err_fn',
+    mock_err_fn = mock.MagicMock(__name__=str('mock_err_fn'),
                                  side_effect=TypeError())
     wrapped_fn = metrics.CaptureAndLogException(mock_err_fn)
     wrapped_fn()

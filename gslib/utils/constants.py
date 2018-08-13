@@ -26,6 +26,8 @@ A constant should not be placed in this file if:
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import sys
@@ -108,10 +110,10 @@ XML_PROGRESS_CALLBACKS = 10
 
 class Scopes(object):
   """Enum class for auth scopes, as unicode."""
-  CLOUD_PLATFORM = u'https://www.googleapis.com/auth/cloud-platform'
+  CLOUD_PLATFORM = 'https://www.googleapis.com/auth/cloud-platform'
   CLOUD_PLATFORM_READ_ONLY = (
-      u'https://www.googleapis.com/auth/cloud-platform.read-only')
-  FULL_CONTROL = u'https://www.googleapis.com/auth/devstorage.full_control'
-  READ_ONLY = u'https://www.googleapis.com/auth/devstorage.read_only'
-  READ_WRITE = u'https://www.googleapis.com/auth/devstorage.read_write'
-  REAUTH = u'https://www.googleapis.com/auth/accounts.reauth'
+      'https://www.googleapis.com/auth/cloud-platform.read-only')
+  FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
+  READ_ONLY = 'https://www.googleapis.com/auth/devstorage.read_only'
+  READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
+  REAUTH = 'https://www.googleapis.com/auth/accounts.reauth'

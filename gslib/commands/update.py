@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import shutil
@@ -26,6 +28,7 @@ import tarfile
 import tempfile
 import textwrap
 
+from six.moves import input
 import gslib
 from gslib.command import Command
 from gslib.cs_api_map import ApiSelector
@@ -338,7 +341,7 @@ class UpdateCommand(Command):
     if no_prompt:
       answer = 'y'
     else:
-      answer = raw_input('Proceed? [y/N] ')
+      answer = input('Proceed? [y/N] ')
     if not answer or answer.lower()[0] != 'y':
       self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       raise CommandException('Not running update.', informational=True)

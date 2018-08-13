@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tests for signurl command."""
+
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from datetime import datetime
 from datetime import timedelta
 import pkgutil
@@ -161,7 +167,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
         ks_contents, 'notasecret')
 
     def fake_now():
-      return datetime(1900, 01, 01, 00, 05, 55)
+      return datetime(1900, 1, 1, 0, 5, 55)
 
     gslib.commands.signurl._NowUTC = fake_now
 

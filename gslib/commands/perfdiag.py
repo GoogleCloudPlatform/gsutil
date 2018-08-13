@@ -16,14 +16,14 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import calendar
 from collections import defaultdict
 from collections import namedtuple
 import contextlib
-import cStringIO
 import datetime
-import httplib
 import json
 import logging
 import math
@@ -36,9 +36,14 @@ import string
 import subprocess
 import tempfile
 import time
-
 import boto
 import boto.gs.connection
+
+import six
+from six.moves import cStringIO
+from six.moves import http_client
+from six.moves import xrange
+from six.moves import range
 
 import gslib
 from gslib.cloud_api import NotFoundException
@@ -396,7 +401,7 @@ def _GenerateFileData(fp, file_size=0, random_ratio=100,
     num_bytes_random = num_bytes - num_bytes_seq
 
     fp.write(random_bytes[:num_bytes_random])
-    fp.write(b'x' * num_bytes_seq)
+    fp.write('x' * num_bytes_seq)
     total_bytes_written += num_bytes
 
 
@@ -744,7 +749,7 @@ class PerfDiagCommand(Command):
         upload_target = StorageUrlToUploadObjectMetadata(url)
 
         def _Upload():
-          io_fp = cStringIO.StringIO(file_data.data)
+          io_fp = cStringIO(file_data.data)
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
             self.gsutil_api.UploadObject(
                 io_fp, upload_target, size=file_size, provider=self.provider,
@@ -1088,7 +1093,8 @@ class PerfDiagCommand(Command):
     # Differentiate objects created by each perfdiag execution so that leftovers
     # from a previous run (if perfdiag could not exit gracefully and delete
     # them) do not affect this run.
-    random_id = ''.join([random.choice(string.lowercase) for _ in range(10)])
+    random_id = ''.join(
+      [random.choice(string.ascii_lowercase) for _ in range(10)])
     list_prefix = 'gsutil-perfdiag-list-' + random_id + '-'
 
     for _ in xrange(self.num_objects):
@@ -1217,7 +1223,7 @@ class PerfDiagCommand(Command):
         fp = FilePart(file_name, file_start, file_size)
       else:
         data = temp_file_dict[file_name].data[file_start:file_start+file_size]
-        fp = cStringIO.StringIO(data)
+        fp = cStringIO(data)
 
       def _InnerUpload():
         if file_size < ResumableThreshold():
@@ -1350,7 +1356,7 @@ class PerfDiagCommand(Command):
       self.logger.warning('netstat not found on your system; some measurement '
                           'data will be missing')
       return None
-    netstat_output = netstat_output.strip().lower()
+    netstat_output = netstat_output.strip().lower().decode('utf-8')
     found_tcp = False
     tcp_retransmit = None
     tcp_received = None
@@ -1553,7 +1559,7 @@ class PerfDiagCommand(Command):
     for attr in dir(config):
       attr_value = getattr(config, attr)
       # Filter out multiline strings that are not useful.
-      if attr.isupper() and not (isinstance(attr_value, basestring) and
+      if attr.isupper() and not (isinstance(attr_value, six.string_types) and
                                  '\n' in attr_value):
         sysinfo['gsutil_config'][attr] = attr_value
 
@@ -1798,7 +1804,7 @@ class PerfDiagCommand(Command):
 
       if 'tcp_proc_values' in info:
         print('TCP /proc values:\n', end=' ')
-        for item in info['tcp_proc_values'].iteritems():
+        for item in six.iteritems(info['tcp_proc_values']):
           print('   %s = %s' % item)
 
       if 'boto_https_enabled' in info:
@@ -1813,7 +1819,7 @@ class PerfDiagCommand(Command):
 
       if 'google_host_connect_latencies' in info:
         print('Latencies connecting to Google Storage server IPs (ms):')
-        for ip, latency in info['google_host_connect_latencies'].iteritems():
+        for ip, latency in six.iteritems(info['google_host_connect_latencies']):
           print('  %s = %.1f' % (ip, latency * 1000.0))
 
       if 'proxy_dns_latency' in info:
@@ -1840,7 +1846,7 @@ class PerfDiagCommand(Command):
       print('Availability: %.7g%%' % availability)
       if 'error_responses_by_code' in self.results:
         sorted_codes = sorted(
-            self.results['error_responses_by_code'].iteritems())
+            six.iteritems(self.results['error_responses_by_code']))
         if sorted_codes:
           print('Error responses by code:')
           print('\n'.join('  %s: %s' % c for c in sorted_codes))
@@ -2009,8 +2015,8 @@ class PerfDiagCommand(Command):
     self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
                               provider=self.bucket_url.scheme,
                               fields=['id'])
-    self.exceptions = [httplib.HTTPException, socket.error, socket.gaierror,
-                       socket.timeout, httplib.BadStatusLine,
+    self.exceptions = [http_client.HTTPException, socket.error, socket.gaierror,
+                       socket.timeout, http_client.BadStatusLine,
                        ServiceException]
 
   # Command entry point.

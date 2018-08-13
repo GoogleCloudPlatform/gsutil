@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import platform
 
@@ -35,7 +37,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
   def test_minus_D_multipart_upload(self):
     """Tests that debug option does not output upload media body."""
     # We want to ensure it works with and without a trailing newline.
-    for file_contents in ('a1b2c3d4', 'a1b2c3d4\n'):
+    for file_contents in (b'a1b2c3d4', b'a1b2c3d4\n'):
       fpath = self.CreateTempFile(contents=file_contents)
       bucket_uri = self.CreateBucket()
       with SetBotoConfigForTest(
@@ -53,7 +55,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
   def test_minus_D_perf_trace_cp(self):
     """Test upload and download with a sample perf trace token."""
     file_name = 'bar'
-    fpath = self.CreateTempFile(file_name=file_name, contents='foo')
+    fpath = self.CreateTempFile(file_name=file_name, contents=b'foo')
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['-D', '--perf-trace-token=123', 'cp', fpath,
                              suri(bucket_uri)], return_stderr=True)
@@ -64,7 +66,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     self.assertIn('\'cookie\': \'123\'', stderr2)
 
   def test_minus_D_resumable_upload(self):
-    fpath = self.CreateTempFile(contents='a1b2c3d4')
+    fpath = self.CreateTempFile(contents=b'a1b2c3d4')
     bucket_uri = self.CreateBucket()
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '4')]):
       stderr = self.RunGsUtil(
@@ -75,14 +77,14 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
 
   def test_minus_D_cat(self):
     """Tests cat command with debug option."""
-    key_uri = self.CreateObject(contents='0123456789')
+    key_uri = self.CreateObject(contents=b'0123456789')
     with SetBotoConfigForTest([('Boto', 'proxy_pass', 'secret')]):
       (stdout, stderr) = self.RunGsUtil(
           ['-D', 'cat', suri(key_uri)], return_stdout=True, return_stderr=True)
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('config:', stderr)
-    self.assertIn("('proxy_pass', 'REDACTED')", stderr)
+    self.assertIn("('proxy_pass', u'REDACTED')", stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('header: Expires: ', stderr)
     self.assertIn('header: Date: ', stderr)

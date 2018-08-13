@@ -16,9 +16,12 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import fnmatch
 
+import six
 from gslib.cloud_api import EncryptionException
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
@@ -61,7 +64,7 @@ def MakeMetadataLine(label, value, indent=1):
   Returns:
     A string with a vertically aligned label and value.
   """
-  return '%s%s' % (((' ' * indent * 4) + label + ':').ljust(28), value)
+  return '{}{}'.format(((' ' * indent * 4) + label + ':').ljust(28), value)
 
 
 def PrintBucketHeader(bucket_listing_ref):  # pylint: disable=unused-argument
@@ -81,7 +84,7 @@ def PrintDir(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
   """
-  print(bucket_listing_ref.url_string.encode(UTF8))
+  print(bucket_listing_ref.url_string)
 
 
 # pylint: disable=unused-argument
@@ -103,8 +106,7 @@ def PrintDirHeader(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type PREFIX.
   """
-  print('%s:' % bucket_listing_ref.url_string.encode(UTF8))
-
+  print('{}:'.format(bucket_listing_ref.url_string))
 
 
 def PrintNewLine():
@@ -141,7 +143,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     num_bytes = obj.size
     num_objs = 1
 
-  print('%s:' % url_str.encode(UTF8))
+  print('{}:'.format(url_str))
   if obj.timeCreated:
     print(MakeMetadataLine(
         'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
@@ -184,9 +186,9 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     if non_marker_props:
       print(MakeMetadataLine('Metadata', ''))
       for ap in non_marker_props:
-        print(MakeMetadataLine(
-            ('%s' % ap.key).encode(UTF8), ('%s' % ap.value).encode(UTF8),
-            indent=2))
+        ap_key = '{}'.format(ap.key)
+        ap_value = '{}'.format(ap.value)
+        print(MakeMetadataLine(ap_key, ap_value, indent=2))
   if obj.customerEncryption:
     if not obj.crc32c:
       print(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
@@ -230,7 +232,13 @@ def PrintObject(bucket_listing_ref):
     (num_objects, num_bytes).
   """
   try:
-    print(bucket_listing_ref.url_string.encode(UTF8))
+    if six.PY2:
+      output = bucket_listing_ref.url_string
+      if isinstance(output, unicode):
+        output = output.encode('utf-8')
+      print(output)
+    else:
+      print(bucket_listing_ref.url_string)
   except IOError as e:
     # Windows throws an IOError 0 here for object names containing Unicode
     # chars. Ignore it.

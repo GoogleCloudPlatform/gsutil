@@ -14,7 +14,14 @@
 # limitations under the License.
 """Integration tests for rsync command."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import os
+
+import six
 
 import crcmod
 from gslib.project_id import PopulateProjectId
@@ -33,6 +40,7 @@ from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import unittest
+from gslib.tests.util import unicode_it_list
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.hashing_helper import SLOW_CRCMOD_RSYNC_WARNING
 from gslib.utils.posix_util import ConvertDatetimeToPOSIX
@@ -55,6 +63,9 @@ if not IS_WINDOWS:
   from gslib.tests.util import PRIMARY_GID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
+
+if six.PY3:
+  long = int
 
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization...\n'
 if not UsingCrcmodExtension(crcmod):
@@ -151,7 +162,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # in the future. If this test is not updated before that date, this test
     # will fail because of the hardcoded timestamp.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj3',
-                      contents='obj3', mtime=1234567891011L)
+                      contents='obj3', mtime=long(1234567891011))
     # Create objects with a negative mtime.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj4',
                       contents='obj4', mtime=-100)
@@ -348,7 +359,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj2',
                       contents='subdir/obj2', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='.obj3',
-                      contents='.OBJ3', mtime=1000000000000L)
+                      contents='.OBJ3', mtime=long(1000000000000))
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj5',
                       contents='subdir/obj5', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
@@ -2124,10 +2135,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     # The Ì character is unicode 00CC, but OSX translates this to the second
     # entry below.
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='morales_suenÌƒos.jpg')
     # The Ì character is unicode 0049+0300; OSX uses this value in both cases.
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'fooꝾoo')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='morales_suenÌƒos.jpg')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='fooꝾoo')
 
     expected_list_results = (
         frozenset(['/morales_suenÌƒos.jpg', '/fooꝾoo'])
@@ -2140,10 +2151,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _Check():
       """Tests rsync works as expected."""
       self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
-      listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
-      listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(listing1, expected_list_results)
-      self.assertEquals(listing2, expected_list_results)
+      listing1 = unicode_it_list(TailSet(tmpdir, self.FlatListDir(tmpdir)))
+      listing2 = unicode_it_list(
+        TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri)))
+      self.assertEquals(set(listing1), expected_list_results)
+      self.assertEquals(set(listing2), expected_list_results)
     _Check()
 
   @SkipForS3('No compressed transport encoding support for S3.')

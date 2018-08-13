@@ -23,11 +23,16 @@
 # by the iterator classes for the use of __iter__ anyway.
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import sys
 
+import six
 
-class PluralityCheckableIterator(object):
+
+class PluralityCheckableIterator(six.Iterator):
   """Iterator wrapper class.
 
     Allows you to check whether the wrapped iterator is empty and
@@ -62,7 +67,7 @@ class PluralityCheckableIterator(object):
       try:
         if not self.base_iterator:
           self.base_iterator = iter(self.orig_iterator)
-        e = self.base_iterator.next()
+        e = six.next(self.base_iterator)
         self.underlying_iter_empty = False
         if isinstance(e, tuple) and isinstance(e[0], Exception):
           self.head.append(('exception', e[0], e[1]))
@@ -82,13 +87,13 @@ class PluralityCheckableIterator(object):
   def __iter__(self):
     return self
 
-  def next(self):
+  def __next__(self):
     if self._PopulateHead():
       item_tuple = self.head.pop(0)
       if item_tuple[0] == 'element':
         return item_tuple[1]
       else:  # buffered exception
-        raise item_tuple[1].__class__, item_tuple[1], item_tuple[2]
+        raise six.reraise(item_tuple[1].__class__, item_tuple[1], item_tuple[2])
     raise StopIteration()
 
   def IsEmpty(self):
@@ -103,4 +108,4 @@ class PluralityCheckableIterator(object):
     """Raises an exception if the first iterated element raised."""
     if self._PopulateHead() and self.head[0][0] == 'exception':
       exception_tuple = self.head[0]
-      raise exception_tuple[1].__class__, exception_tuple[1], exception_tuple[2]
+      raise six.reraise(exception_tuple[1].__class__, exception_tuple[1], exception_tuple[2])

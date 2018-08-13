@@ -14,6 +14,11 @@
 # limitations under the License.
 """Integration tests for kms command."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from random import randint
 
 from gslib.project_id import PopulateProjectId

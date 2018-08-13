@@ -14,10 +14,17 @@
 # limitations under the License.
 """Helper functions for hashing functionality."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import base64
 import binascii
 from hashlib import md5
 import os
+
+import six
 
 from boto import config
 import crcmod
@@ -201,7 +208,7 @@ def CalculateHashesFromContents(fp, hash_dict, callback_processor=None):
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
     if not data:
       break
-    for hash_alg in hash_dict.itervalues():
+    for hash_alg in six.itervalues(hash_dict):
       hash_alg.update(data)
     if callback_processor:
       callback_processor.Progress(len(data))
@@ -252,7 +259,7 @@ def CalculateMd5FromContents(fp):
 
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
-  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
+  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip(b'\n').decode('utf-8')
 
 
 def Base64ToHexHash(base64_hash):

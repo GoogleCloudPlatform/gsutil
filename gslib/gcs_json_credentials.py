@@ -19,6 +19,10 @@
 # and credential storage.  As such, it doesn't require most of the
 # gcs_oauth2_boto_plugin logic.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import json
 import logging

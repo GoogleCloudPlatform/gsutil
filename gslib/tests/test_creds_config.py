@@ -14,6 +14,11 @@
 # limitations under the License.
 """Tests for various combinations of configured credentials."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from gslib.cred_types import CredTypes
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException

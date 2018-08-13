@@ -15,16 +15,21 @@
 """JSON gsutil Cloud API implementation for Google Cloud Storage."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from contextlib import contextmanager
 import functools
-import httplib
+from six.moves import http_client
 import json
 import logging
 import socket
 import ssl
 import time
 import traceback
+
+import six
 
 from apitools.base.py import encoding
 from apitools.base.py import exceptions as apitools_exceptions
@@ -92,6 +97,11 @@ from gslib.utils.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
 
+
+if six.PY3:
+  long = int
+
+
 # pylint: disable=invalid-name
 Notification = apitools_messages.Notification
 NotificationCustomAttributesValue = Notification.CustomAttributesValue
@@ -119,9 +129,9 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             # TODO: Honor retry-after headers.
                             apitools_exceptions.RetryAfterError,
                             apitools_exceptions.RequestError,
-                            httplib.BadStatusLine,
-                            httplib.IncompleteRead,
-                            httplib.ResponseNotReady,
+                            http_client.BadStatusLine,
+                            http_client.IncompleteRead,
+                            http_client.ResponseNotReady,
                             httplib2.ServerNotFoundError,
                             oauth2client.client.HttpAccessTokenRefreshError,
                             socket.error,
@@ -248,7 +258,7 @@ class GcsJsonApi(CloudApi):
       # This API key is not secret and is used to identify gsutil during
       # anonymous requests.
       self.api_client.AddGlobalParam('key',
-                                     u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
+                                     'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
   def _AddPerfTraceTokenToHeaders(self, headers):
     if self.perf_trace_token:
@@ -1437,7 +1447,7 @@ class GcsJsonApi(CloudApi):
 
     progress_cb_with_timeout = None
     try:
-      last_bytes_written = 0L
+      last_bytes_written = long(0)
       while True:
         with self._ApitoolsRequestHeaders(crypto_headers):
           apitools_request = apitools_messages.StorageObjectsRewriteRequest(
@@ -1780,13 +1790,13 @@ class GcsJsonApi(CloudApi):
     if isinstance(e, apitools_exceptions.StreamExhausted):
       return ResumableUploadAbortException(e.message)
     if isinstance(e, apitools_exceptions.TransferError):
-      if ('Aborting transfer' in e.message or
-          'Not enough bytes in stream' in e.message):
-        return ResumableUploadAbortException(e.message)
-      elif 'additional bytes left in stream' in e.message:
+      if ('Aborting transfer' in str(e) or
+          'Not enough bytes in stream' in str(e)):
+        return ResumableUploadAbortException(str(e))
+      elif 'additional bytes left in stream' in str(e):
         return ResumableUploadAbortException(
             '%s; this can happen if a file changes size while being uploaded' %
-            e.message)
+            str(e))
 
   def _TranslateApitoolsException(self, e, bucket_name=None, object_name=None,
                                   generation=None, not_found_exception=None):
@@ -1860,7 +1870,7 @@ class GcsJsonApi(CloudApi):
         elif 'does not have permission to publish messages' in str(e):
           return PublishPermissionDeniedException(message, status=e.status_code)
         else:
-          return AccessDeniedException(message or e.message,
+          return AccessDeniedException(message or str(e),
                                        status=e.status_code)
       elif e.status_code == 404:
         if not_found_exception:

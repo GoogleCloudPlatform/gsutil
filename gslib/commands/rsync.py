@@ -15,6 +15,9 @@
 """Implementation of Unix-like rsync command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import collections
 import errno
@@ -30,6 +33,7 @@ import time
 import traceback
 import urllib
 
+import six
 from boto import config
 import crcmod
 
@@ -93,6 +97,11 @@ from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
+
+
+if six.PY3:
+  long = int
+
 
 _SYNOPSIS = """
   gsutil rsync [OPTION]... src_url dst_url

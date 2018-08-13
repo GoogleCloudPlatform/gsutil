@@ -15,6 +15,9 @@
 """JSON gsutil Cloud API implementation for Google Cloud Storage."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import json
 import logging
@@ -94,7 +97,7 @@ class PubsubApi(object):
       # This API key is not secret and is used to identify gsutil during
       # anonymous requests.
       self.api_client.AddGlobalParam('key',
-                                     u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
+                                     'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
   def GetTopic(self, topic_name):
     request = apitools_messages.PubsubProjectsTopicsGetRequest(topic=topic_name)

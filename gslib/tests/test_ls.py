@@ -15,6 +15,10 @@
 """Tests for ls command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from datetime import datetime
 import posixpath
 import re
@@ -60,7 +64,10 @@ from gslib.utils.constants import UTF8
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
-import mock
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 KMS_XML_SKIP_MSG = ('gsutil does not support KMS operations for S3 buckets, '
                     'or listing KMS keys with the XML API.')

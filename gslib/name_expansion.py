@@ -21,11 +21,16 @@ the various rules for determining how these expansions are done.
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import collections
 import logging
 import os
 import sys
+
+import six
 
 from apitools.base.py import encoding
 import gslib
@@ -581,7 +586,7 @@ NameExpansionIteratorDestinationTuple = collections.namedtuple(
     ])
 
 
-class CopyObjectsIterator(object):
+class CopyObjectsIterator(six.Iterator):
   """Iterator wrapper for copying objects and keeping track of source URL types.
 
   This is used in the cp command for copying from multiple source to multiple
@@ -609,23 +614,23 @@ class CopyObjectsIterator(object):
     self.provider_types = []
 
     self.name_expansion_dest_iter = name_expansion_dest_iter
-    name_expansion_dest_tuple = self.name_expansion_dest_iter.next()
+    name_expansion_dest_tuple = next(self.name_expansion_dest_iter)
     self.current_expansion_iter = name_expansion_dest_tuple.name_expansion_iter
     self.current_destination = name_expansion_dest_tuple.destination
 
   def __iter__(self):
     return self
 
-  def next(self):
+  def __next__(self):
     """Keeps track of URL types as the command iterates over arguments."""
     try:
-      name_expansion_result = self.current_expansion_iter.next()
+      name_expansion_result = next(self.current_expansion_iter)
     except StopIteration:
-      name_expansion_dest_tuple = self.name_expansion_dest_iter.next()
+      name_expansion_dest_tuple = next(self.name_expansion_dest_iter)
       self.current_expansion_iter = (
           name_expansion_dest_tuple.name_expansion_iter)
       self.current_destination = name_expansion_dest_tuple.destination
-      return self.next()
+      return self.__next__()
 
     elt = CopyObjectInfo(name_expansion_result,
                          self.current_destination.exp_dst_url,

@@ -15,6 +15,9 @@
 """Wildcard iterator class and supporting functions."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import fnmatch
 import glob
@@ -43,21 +46,19 @@ from gslib.utils.text_util import FixWindowsEncodingIfNeeded
 from gslib.utils.text_util import PrintableStr
 
 if six.PY3:
-    # StandardError was removed, so use the base exception type instead
-    StandardError = Exception
-else:
-    StandardError = StandardError
+  # StandardError was removed, so use the base exception type instead
+  StandardError = Exception
 
 
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
 
 _UNICODE_EXCEPTION_TEXT = (
-    'Invalid Unicode path encountered (%s). gsutil cannot proceed '
-    'with such files present. Please remove or rename this file and '
-    'try again. NOTE: the path printed above replaces the '
-    'problematic characters with a hex-encoded printable '
-    'representation. For more details (including how to convert to a '
-    'gsutil-compatible encoding) see `gsutil help encoding`.')
+  'Invalid Unicode path encountered (%s). gsutil cannot proceed '
+  'with such files present. Please remove or rename this file and '
+  'try again. NOTE: the path printed above replaces the '
+  'problematic characters with a hex-encoded printable '
+  'representation. For more details (including how to convert to a '
+  'gsutil-compatible encoding) see `gsutil help encoding`.')
 
 
 class WildcardIterator(object):
@@ -625,7 +626,7 @@ class FileWildcardIterator(WildcardIterator):
       # format is not handled correctly by gsutil, so we check if the path
       # specifies the root of a volume, and if so, append a backslash so that
       # the resulting joined path looks like 'c:\\foo'.
-      directory += u'\\'
+      directory += '\\'
 
     # UTF8-encode directory before passing it to os.walk() so if there are
     # non-valid UTF8 chars in the file name (e.g., that can happen if the file
@@ -633,6 +634,9 @@ class FileWildcardIterator(WildcardIterator):
     # with a "codec can't decode byte" error, and instead we can catch the error
     # at yield time and print a more informative error message.
     for dirpath, dirnames, filenames in os.walk(directory.encode(UTF8)):
+      dirpath = dirpath.decode(UTF8)
+      dirnames = [dn.decode(UTF8) for dn in dirnames]
+      filenames = [fn.decode(UTF8) for fn in filenames]
       if self.logger:
         for dirname in dirnames:
           full_dir_path = os.path.join(dirpath, dirname)
@@ -640,8 +644,7 @@ class FileWildcardIterator(WildcardIterator):
             self.logger.info('Skipping symlink directory "%s"', full_dir_path)
       for f in fnmatch.filter(filenames, wildcard):
         try:
-          yield os.path.join(dirpath,
-                             FixWindowsEncodingIfNeeded(f)).decode(UTF8)
+          yield os.path.join(dirpath, FixWindowsEncodingIfNeeded(f))
         except UnicodeDecodeError:
           # Note: We considered several ways to deal with this, but each had
           # problems:

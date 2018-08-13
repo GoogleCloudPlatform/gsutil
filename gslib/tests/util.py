@@ -14,18 +14,24 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from contextlib import contextmanager
-from cStringIO import StringIO
 import functools
 import os
 import pkgutil
 import posixpath
 import re
+import io
 import sys
 import tempfile
 import unittest
-import urlparse
+
+import six
+from six.moves import urllib
+from six.moves import cStringIO
 
 import boto
 import crcmod
@@ -238,12 +244,12 @@ def _NormalizeURI(uri):
   # while on non-Windows platforms, it turns into:
   #     scheme='gs', netloc='foo', path='/bar'
   uri = uri.replace('gs://', 'file://')
-  parsed = list(urlparse.urlparse(uri))
+  parsed = list(urllib.parse.urlparse(uri))
   parsed[2] = posixpath.normpath(parsed[2])
   if parsed[2].startswith('//'):
     # The normpath function doesn't change '//foo' -> '/foo' by design.
     parsed[2] = parsed[2][1:]
-  unparsed = urlparse.urlunparse(parsed)
+  unparsed = urllib.parse.urlunparse(parsed)
   unparsed = unparsed.replace('file://', 'gs://')
   return unparsed
 
@@ -276,13 +282,15 @@ def ObjectToURI(obj, *suffixes):
   Returns:
     Storage URI string.
   """
-  if isinstance(obj, file):
-    return 'file://%s' % os.path.abspath(os.path.join(obj.name, *suffixes))
-  if isinstance(obj, basestring):
-    return 'file://%s' % os.path.join(obj, *suffixes)
-  uri = obj.uri
+  if is_file(obj):
+    return 'file://{}'.format(
+      os.path.abspath(os.path.join(obj.name, *suffixes)))
+  if isinstance(obj, six.string_types):
+    return 'file://{}'.format(os.path.join(obj, *suffixes))
+  uri = unicode_it(obj.uri)
   if suffixes:
-    uri = _NormalizeURI('/'.join([uri] + list(suffixes)))
+    suffixes_list = unicode_it_list(suffixes)
+    uri = _NormalizeURI('/'.join([uri] + suffixes_list))
 
   # Storage URIs shouldn't contain a trailing slash.
   if uri.endswith('/'):
@@ -494,7 +502,7 @@ def SetEnvironmentForTest(env_variable_dict):
   """Sets OS environment variables for a single test."""
 
   def _ApplyDictToEnvironment(dict_to_apply):
-    for k, v in dict_to_apply.iteritems():
+    for k, v in six.iteritems(dict_to_apply):
       old_values[k] = os.environ.get(k)
       if v is not None:
         os.environ[k] = v
@@ -553,6 +561,39 @@ def GetTestNames():
     if m:
       names.append(m.group('name'))
   return names
+
+
+def unicode_it(str_or_bytes):
+  if six.PY3:
+    if isinstance(str_or_bytes, bytes):
+      result = str_or_bytes.decode('utf-8')
+    elif isinstance(str_or_bytes, str):
+      result = str_or_bytes
+    else:
+      raise(TypeError('{} is neither str nor bytes'.format(str_or_bytes)))
+  else:
+    try:
+      result = six.text_type(str_or_bytes)
+    except UnicodeError:
+      if isinstance(str_or_bytes, six.binary_type):
+        result = str_or_bytes.decode('utf-8')
+      else:
+        raise
+  return result
+
+
+def unicode_it_list(str_or_bytes_list):
+  result = []
+  for elem in str_or_bytes_list:
+    result.append(unicode_it(elem))
+  return result
+
+
+def is_file(obj):
+  if six.PY2:
+    return isinstance(obj, file)
+  else:
+    return isinstance(obj, io.IOBase)
 
 
 @contextmanager
@@ -658,7 +699,7 @@ class CaptureStdout(list):
 
   def __enter__(self):
     self._stdout = sys.stdout
-    sys.stdout = self._stringio = StringIO()
+    sys.stdout = self._stringio = cStringIO()
     return self
 
   def __exit__(self, *args):

@@ -15,15 +15,20 @@
 """Contains gsutil base integration test case class."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from contextlib import contextmanager
-import cStringIO
+from six.moves import cStringIO
 import locale
 import logging
 import os
 import subprocess
 import sys
 import tempfile
+
+import six
 
 import boto
 from boto import config
@@ -48,6 +53,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import USING_JSON_API
+from gslib.tests.util import unicode_it
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
@@ -631,7 +637,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     encryption_keywrapper = CryptoKeyWrapperFromKey(encryption_key)
     try:
       return self.json_api.UploadObject(
-          cStringIO.StringIO(contents),
+          cStringIO(contents),
           object_metadata, provider='gs',
           encryption_tuple=encryption_keywrapper,
           preconditions=preconditions)
@@ -706,9 +712,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if expected_status is not None:
       self.assertEqual(
-          status, expected_status,
-          msg='Expected status %d, got %d.\nCommand:\n%s\n\nstderr:\n%s' % (
-              expected_status, status, ' '.join(cmd), stderr))
+        status, expected_status,
+        # msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
+        #   expected_status, status, ' '.join(cmd), stderr.decode('utf-8')))
+        msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
+          expected_status, status, ' '.join(cmd), stderr.decode('utf-8')))
 
     toreturn = []
     if return_status:

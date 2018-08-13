@@ -14,14 +14,20 @@
 # limitations under the License.
 """Unit tests for encryption_helper."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import base64
 import os
 
+import six
 import boto
-
 from gslib.exception import CommandException
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unicode_it_list
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
@@ -36,7 +42,8 @@ class TestEncryptionHelper(GsUtilUnitTestCase):
     boto_101_key_config = []
     # Generate 101 keys.
     for i in range(1, 102):
-      keys.append(base64.encodestring(os.urandom(32)).rstrip('\n'))
+      keys.append(base64.encodestring(os.urandom(32)).rstrip(b'\n'))
+      keys = unicode_it_list(keys)
       boto_101_key_config.append(('GSUtil', 'decryption_key%s' % i,
                                   keys[i - 1]))
     with SetBotoConfigForTest(boto_101_key_config):
@@ -60,7 +67,8 @@ class TestEncryptionHelper(GsUtilUnitTestCase):
     """Tests a config file with non-sequential decryption key numbering."""
     keys = []
     for _ in range(3):
-      keys.append(base64.encodestring(os.urandom(32)).rstrip('\n'))
+      keys.append(base64.encodestring(os.urandom(32)).rstrip(b'\n'))
+    keys = unicode_it_list(keys)
     boto_config = [
         ('GSUtil', 'decryption_key4', keys[2]),
         ('GSUtil', 'decryption_key1', keys[0]),

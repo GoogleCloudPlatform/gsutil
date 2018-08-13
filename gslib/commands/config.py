@@ -15,9 +15,11 @@
 """Implementation of config command for creating a gsutil configuration file."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import datetime
-from httplib import ResponseNotReady
 import json
 import multiprocessing
 import os
@@ -30,6 +32,8 @@ import textwrap
 import time
 import webbrowser
 
+from six.moves import input
+from six.moves.http_client import ResponseNotReady
 import boto
 from boto.provider import Provider
 from httplib2 import ServerNotFoundError
@@ -740,7 +744,7 @@ class ConfigCommand(Command):
     if hasattr(os, 'O_NOINHERIT'):
       flags |= os.O_NOINHERIT
     try:
-      fd = os.open(file_path, flags, 0600)
+      fd = os.open(file_path, flags, 0o600)
     except (OSError, IOError) as e:
       raise CommandException('Failed to open %s for writing: %s' %
                              (file_path, e))
@@ -769,11 +773,11 @@ class ConfigCommand(Command):
           '\nYour private key file is readable by people other than yourself.\n'
           'This is a security risk, since anyone with this information can use '
           'your service account.\n')
-      fix_it = raw_input('Would you like gsutil to change the file '
+      fix_it = input('Would you like gsutil to change the file '
                          'permissions for you? (y/N) ')
       if fix_it in ('y', 'Y'):
         try:
-          os.chmod(file_path, 0400)
+          os.chmod(file_path, 0o400)
           self.logger.info(
               '\nThe permissions on your file have been successfully '
               'modified.'
@@ -799,7 +803,7 @@ class ConfigCommand(Command):
       prompt: The prompt to output to the user.
       convert_to_bool: Whether to convert "y/n" to True/False.
     """
-    value = raw_input(prompt)
+    value = input(prompt)
     if value:
       if convert_to_bool:
         if value == 'y' or value == 'Y':
@@ -918,7 +922,7 @@ class ConfigCommand(Command):
     service_account_key_is_json = False
     if configure_auth:
       if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
-        gs_service_key_file = raw_input('What is the full path to your private '
+        gs_service_key_file = input('What is the full path to your private '
                                         'key file? ')
         # JSON files have the email address built-in and don't require a
         # password.
@@ -935,9 +939,9 @@ class ConfigCommand(Command):
                 'configure a different type of credentials.')
 
         if not service_account_key_is_json:
-          gs_service_client_id = raw_input('What is your service account email '
+          gs_service_client_id = input('What is your service account email '
                                            'address? ')
-          gs_service_key_file_password = raw_input(
+          gs_service_key_file_password = input(
               '\n'.join(textwrap.wrap(
                   'What is the password for your service key file [if you '
                   'haven\'t set one explicitly, leave this line blank]?'))
@@ -970,9 +974,9 @@ class ConfigCommand(Command):
         got_creds = False
         for provider in provider_map:
           if provider == 'google':
-            key_ids[provider] = raw_input('What is your %s access key ID? ' %
+            key_ids[provider] = input('What is your %s access key ID? ' %
                                           provider)
-            sec_keys[provider] = raw_input('What is your %s secret access '
+            sec_keys[provider] = input('What is your %s secret access '
                                            'key? ' % provider)
             got_creds = True
             if not key_ids[provider] or not sec_keys[provider]:
@@ -1121,7 +1125,7 @@ class ConfigCommand(Command):
             'projects,\n click the project and then copy the Project Number '
             'listed under that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
 
-      default_project_id = raw_input('What is your project-id? ').strip()
+      default_project_id = input('What is your project-id? ').strip()
       project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
 # use with the 'mb' and 'ls' commands. This default can be overridden by

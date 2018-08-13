@@ -15,6 +15,12 @@
 """Tests for compose command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
+from six.moves import xrange
+from six.moves import range
 
 from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.cs_api_map import ApiSelector

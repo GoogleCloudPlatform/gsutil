@@ -20,6 +20,8 @@ tied to some of Boto's core functionality) and oauth2client.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import pkgutil
 import os
@@ -28,12 +30,6 @@ import textwrap
 import sys
 
 import six
-
-if six.PY3:
-  long = int
-else:
-  long = long
-
 import boto
 from boto import config
 import boto.auth
@@ -53,6 +49,11 @@ from gslib.utils.unit_util import ONE_MIB
 
 import httplib2
 from oauth2client.client import HAS_CRYPTO
+
+
+if six.PY3:
+  long = int
+
 
 # Globals in this module are set according to values in the boto config.
 BOTO_IS_SECURE = config.get('Boto', 'is_secure', True)

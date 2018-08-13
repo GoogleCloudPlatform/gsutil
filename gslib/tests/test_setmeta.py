@@ -15,8 +15,13 @@
 """Integration tests for setmeta command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
+
+import six
 
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
@@ -26,6 +31,10 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
+
+
+if six.PY3:
+  long = int
 
 
 class TestSetMeta(testcase.GsUtilIntegrationTestCase):
@@ -143,7 +152,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri, '**')])
 
   def test_invalid_non_ascii_custom_header(self):
-    unicode_header = u'x-%s-meta-soufflé:5' % self.provider_custom_meta
+    unicode_header = 'x-%s-meta-soufflé:5' % self.provider_custom_meta
     unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes,
@@ -154,16 +163,15 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('Only ASCII characters are supported for x-amz-meta headers')
   def test_valid_non_ascii_custom_header(self):
     """Tests setting custom metadata with a non-ASCII content."""
-    objuri = self.CreateObject(contents='foo')
-    unicode_header = u'x-%s-meta-dessert:soufflé' % self.provider_custom_meta
+    objuri = self.CreateObject(contents=b'foo')
+    unicode_header = 'x-%s-meta-dessert:soufflé' % self.provider_custom_meta
     unicode_header_bytes = unicode_header.encode(UTF8)
     self.RunGsUtil(['setmeta', '-h', unicode_header_bytes, suri(objuri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
-      stdout = stdout.decode(UTF8)
-      self.assertTrue(re.search(ur'dessert:\s+soufflé', stdout))
+      self.assertTrue(re.search('dessert:\\s+soufflé', stdout))
     _Check1()
 
   @SkipForS3('XML header keys are case-insensitive')
@@ -176,7 +184,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         'setmeta', '-h', 'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
         suri(objuri)])
     stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, ur'CaSe:\s+SeNsItIvE')
+    self.assertRegexpMatches(stdout, r'CaSe:\s+SeNsItIvE')
 
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(
@@ -206,7 +214,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.assertIn('gsutil setmeta no longer allows canned ACLs', stderr)
 
   def test_invalid_non_ascii_header_value(self):
-    unicode_header = u'Content-Type:dessert/soufflé'
+    unicode_header = 'Content-Type:dessert/soufflé'
     unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
         ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],

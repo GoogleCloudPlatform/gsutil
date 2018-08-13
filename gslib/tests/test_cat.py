@@ -15,6 +15,9 @@
 """Tests for cat command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import NO_URLS_MATCHED_TARGET

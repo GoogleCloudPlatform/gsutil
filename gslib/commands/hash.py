@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from hashlib import md5
 import logging
@@ -23,6 +25,7 @@ import os
 import time
 
 import crcmod
+import six
 
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -211,7 +214,7 @@ class HashCommand(Command):
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
         print('Hashes [%s] for %s:' % (output_format, file_name))
-        for name, digest in hash_dict.iteritems():
+        for name, digest in six.iteritems(hash_dict):
           print('\tHash (%s):\t\t%s' % (name,
                                         (format_func(digest) if url.IsFileUrl()
                                          else cloud_format_func(digest))))

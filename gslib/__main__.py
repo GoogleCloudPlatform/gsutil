@@ -16,8 +16,12 @@
 """Main module for Google Cloud Storage command line tool."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from six.moves import configparser
+from six.moves import range
 import datetime
 import errno
 import getopt
@@ -29,6 +33,8 @@ import socket
 import sys
 import textwrap
 import traceback
+
+import six
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
@@ -161,7 +167,10 @@ def _OutputAndExit(message, exception=None):
   else:
     err = '%s\n' % message
   try:
-    sys.stderr.write(err.encode(constants.UTF8))
+    if six.PY2:
+      sys.stderr.write(err.encode(constants.UTF8))
+    else:
+      sys.stderr.write(err)
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)
@@ -347,7 +356,7 @@ def main():
           config_items.extend(boto.config.items(config_section))
         except ConfigParser.NoSectionError:
           pass
-      for i in xrange(len(config_items)):
+      for i in range(len(config_items)):
         config_item_key = config_items[i][0]
         if config_item_key in CONFIG_KEYS_TO_REDACT:
           config_items[i] = (config_item_key, 'REDACTED')
@@ -448,6 +457,7 @@ def _CheckAndWarnForProxyDifferences():
 
 def _HandleUnknownFailure(e):
   # Called if we fall through all known/handled exceptions.
+  raise
   _OutputAndExit(message='Failure: %s.' % e, exception=e)
 
 

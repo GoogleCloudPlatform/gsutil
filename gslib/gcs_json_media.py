@@ -15,15 +15,20 @@
 """Media helper functions and classes for Google Cloud Storage JSON API."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import copy
-import cStringIO
-import httplib
 import logging
 import re
 import socket
 import types
-import urlparse
+
+import six
+from six.moves import http_client
+from six.moves import urllib
+from six.moves import cStringIO
 
 from apitools.base.py import exceptions as apitools_exceptions
 
@@ -35,6 +40,11 @@ from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 import httplib2
 from httplib2 import parse_uri
+
+
+if six.PY3:
+  long = int
+
 
 # A regex for matching any series of decimal digits.
 DECIMAL_REGEX = LazyWrapper(lambda: (re.compile(r'\d+')))
@@ -126,7 +136,16 @@ class UploadCallbackConnectionClassFactory(object):
         # Refactor to allow our media-handling functions to handle
         # debuglevel == 4 and print messages to stderr.
         self._buffer.extend(('', ''))
-        msg = '\r\n'.join(self._buffer)
+        if six.PY2:
+          items = self._buffer
+        else:
+          items = []
+          for item in self._buffer:
+            if isinstance(item, bytes):
+              items.append(item.decode('utf-8'))
+            else:
+              items.append(item)
+        msg = '\r\n'.join(items)
         num_metadata_bytes = len(msg)
         if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
           outer_logger.debug('send: %s' % msg)
@@ -205,7 +224,7 @@ class UploadCallbackConnectionClassFactory(object):
                 'send: Setting progress modifier to %s.'
                 % (self.size_modifier))
         # Propagate header values.
-        httplib.HTTPSConnection.putheader(self, header, *values)
+        http_client.HTTPSConnection.putheader(self, header, *values)
 
       def send(self, data, num_metadata_bytes=0):
         """Overrides HTTPConnection.send.
@@ -224,13 +243,21 @@ class UploadCallbackConnectionClassFactory(object):
                 self.bytes_uploaded_container.bytes_transferred)
         # httplib.HTTPConnection.send accepts either a string or a file-like
         # object (anything that implements read()).
-        if isinstance(data, basestring):
-          full_buffer = cStringIO.StringIO(data)
+        if isinstance(data, six.text_type):
+          full_buffer = cStringIO(data)
+        elif isinstance(data, six.binary_type):
+          full_buffer = six.BytesIO(data)
         else:
           full_buffer = data
         partial_buffer = full_buffer.read(self.GCS_JSON_BUFFER_SIZE)
         while partial_buffer:
-          httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
+          if six.PY2:
+            httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
+          else:
+            if isinstance(partial_buffer, bytes):
+              httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
+            else:
+              httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer.encode('utf-8'))
           sent_data_bytes = len(partial_buffer)
           if num_metadata_bytes:
             if num_metadata_bytes <= sent_data_bytes:
@@ -325,8 +352,8 @@ class DownloadCallbackConnectionClassFactory(object):
         Returns:
           HTTPResponse object with wrapped read function.
         """
-        orig_response = httplib.HTTPConnection.getresponse(self)
-        if orig_response.status not in (httplib.OK, httplib.PARTIAL_CONTENT):
+        orig_response = http_client.HTTPConnection.getresponse(self)
+        if orig_response.status not in (http_client.OK, http_client.PARTIAL_CONTENT):
           return orig_response
         orig_read_func = orig_response.read
 
@@ -442,7 +469,7 @@ def WrapDownloadHttpRequest(download_http):
             location = response['location']
             (scheme, authority, path, query, fragment) = parse_uri(location)
             if authority == None:
-              response['location'] = urlparse.urljoin(absolute_uri, location)
+              response['location'] = urllib.parse.urljoin(absolute_uri, location)
           if response.status == 301 and method in ["GET", "HEAD"]:
             response['-x-permanent-redirect-url'] = response['location']
             if not response.has_key('content-location'):
@@ -534,9 +561,9 @@ class HttpWithNoRetries(httplib2.Http):
       conn.close()
       raise httplib2.ServerNotFoundError(
           'Unable to find the server at %s' % conn.host)
-    except httplib2.ssl_SSLError:
-      conn.close()
-      raise
+    # except httplib2.ssl_SSLError:
+    #   conn.close()
+    #   raise
     except socket.error as e:
       err = 0
       if hasattr(e, 'args'):
@@ -545,12 +572,12 @@ class HttpWithNoRetries(httplib2.Http):
         err = e.errno
       if err == httplib2.errno.ECONNREFUSED:  # Connection refused
         raise
-    except httplib.HTTPException:
+    except http_client.HTTPException:
       conn.close()
       raise
     try:
       response = conn.getresponse()
-    except (socket.error, httplib.HTTPException):
+    except (socket.error, http_client.HTTPException):
       conn.close()
       raise
     else:
@@ -615,14 +642,14 @@ class HttpWithDownloadStream(httplib2.Http):
         err = e.errno
       if err == httplib2.errno.ECONNREFUSED:  # Connection refused
         raise
-    except httplib.HTTPException:
+    except http_client.HTTPException:
       # Just because the server closed the connection doesn't apparently mean
       # that the server didn't send a response.
       conn.close()
       raise
     try:
       response = conn.getresponse()
-    except (socket.error, httplib.HTTPException):
+    except (socket.error, http_client.HTTPException):
       conn.close()
       raise
     else:
@@ -630,8 +657,8 @@ class HttpWithDownloadStream(httplib2.Http):
       if method == 'HEAD':
         conn.close()
         response = httplib2.Response(response)
-      elif method == 'GET' and response.status in (httplib.OK,
-                                                   httplib.PARTIAL_CONTENT):
+      elif method == 'GET' and response.status in (http_client.OK,
+                                                   http_client.PARTIAL_CONTENT):
         content_length = None
         if hasattr(response, 'msg'):
           content_length = response.getheader('content-length')

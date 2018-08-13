@@ -15,12 +15,14 @@
 """XML/boto gsutil Cloud API implementation for GCS and Amazon S3."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import binascii
 import datetime
 import errno
-import httplib
 import json
 import multiprocessing
 import os
@@ -36,6 +38,8 @@ import xml
 from xml.dom.minidom import parseString as XmlParseString
 from xml.sax import _exceptions as SaxExceptions
 
+import six
+from six.moves import http_client
 import boto
 from boto import handler
 from boto.gs.cors import Cors
@@ -47,7 +51,6 @@ from boto.s3.prefix import Prefix
 from boto.s3.tagging import Tags
 import boto.exception
 import boto.utils
-
 from gslib.boto_resumable_upload import BotoResumableUpload
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -98,6 +101,11 @@ from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
 from gslib.utils.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.utils.translation_helper import UnaryDictToXml
 from gslib.utils.unit_util import TWO_MIB
+
+
+if six.PY3:
+  long = int
+
 
 TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
                                 boto.exception.InvalidUriError,
@@ -586,7 +594,7 @@ class BotoTranslation(CloudApi):
     Raises:
       ResumableDownloadException on error.
     """
-    retryable_exceptions = (httplib.HTTPException, IOError, socket.error,
+    retryable_exceptions = (http_client.HTTPException, IOError, socket.error,
                             socket.gaierror)
 
     debug = key.bucket.connection.debug
@@ -658,7 +666,7 @@ class BotoTranslation(CloudApi):
       # which we can safely ignore).
       try:
         key.close()
-      except httplib.IncompleteRead:
+      except http_client.IncompleteRead:
         pass
 
       sleep_time_secs = min(random.random() * (2 ** progress_less_iterations),
@@ -684,7 +692,7 @@ class BotoTranslation(CloudApi):
     metadata_plus = {}
     metadata_minus = set()
     metadata_changed = False
-    for k, v in meta_headers.iteritems():
+    for k, v in six.iteritems(meta_headers):
       metadata_changed = True
       if v is None:
         metadata_minus.add(k)
@@ -1389,7 +1397,7 @@ class BotoTranslation(CloudApi):
     if getattr(key, 'metadata', None):
       custom_metadata = apitools_messages.Object.MetadataValue(
           additionalProperties=[])
-      for k, v in key.metadata.iteritems():
+      for k, v in six.iteritems(key.metadata):
         if k.lower() == 'content-language':
           # Work around content-language being inserted into custom metadata.
           continue

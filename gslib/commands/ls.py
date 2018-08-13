@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
 
@@ -426,14 +428,14 @@ class LsCommand(Command):
     encoded_metagen = None
     if self.all_versions:
       printstr += '  metageneration=%(metageneration)s'
-      encoded_metagen = str(obj.metageneration).encode(UTF8)
+      encoded_metagen = str(obj.metageneration)
     if self.include_etag:
       printstr += '  etag=%(etag)s'
-      encoded_etag = obj.etag.encode(UTF8)
+      encoded_etag = obj.etag
     format_args = {
         'size': size_string,
         'timestamp': timestamp,
-        'url': url_str.encode(UTF8),
+        'url': url_str,
         'metageneration': encoded_metagen,
         'etag': encoded_etag
     }
@@ -483,7 +485,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        print('%s:' % blr.url_string.encode(UTF8))
+        print('%s:' % blr.url_string.decode('utf-8'))
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -537,7 +539,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          print('%-33s%s' % ('', blr.url_string.encode(UTF8)))
+          print('%-33s%s' % ('', blr.url_string.decode('utf-8')))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.

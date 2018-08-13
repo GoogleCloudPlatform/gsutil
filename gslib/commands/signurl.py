@@ -19,6 +19,8 @@ see: https://cloud.google.com/storage/docs/access-control#Signed-URLs)
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import calendar

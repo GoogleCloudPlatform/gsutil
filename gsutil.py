@@ -16,11 +16,26 @@
 
 """Wrapper module for running gslib.__main__.main() from the command line."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import os
 import sys
 import warnings
 
 # TODO: gsutil-beta: Distribute a pylint rc file.
+
+if not ((2, 6) <= sys.version_info[:3] < (3,)
+        or (3, 4) <= sys.version_info[:3]):
+    sys.exit('gsutil requires python 2.7 or 3.4+.')
+
+# setup a string to load the correct httplib2
+if sys.version_info[0] == 2:
+    submodule_pyvers = 'python2'
+else:
+    submodule_pyvers = 'python3'
 
 
 def UsingCrcmodExtension(crcmod_module):
@@ -74,7 +89,7 @@ THIRD_PARTY_LIBS = [
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
-    ('httplib2', 'python2'),
+    ('httplib2', submodule_pyvers),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''),
@@ -93,7 +108,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
 # we don't assume any third party libraries are installed system-wide.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
 
-CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
 CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
 try:
   # pylint: disable=g-import-not-at-top

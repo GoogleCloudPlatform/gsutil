@@ -15,11 +15,16 @@
 """Contains gsutil base unit test case class."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import logging
 import os
 import sys
 import tempfile
+
+import six
 
 import boto
 from gslib import project_id
@@ -35,6 +40,7 @@ from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
+from gslib.tests.util import unicode_it
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -112,8 +118,18 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     sys.stdout.seek(0)
     sys.stderr.seek(0)
-    stdout = sys.stdout.read()
-    stderr = sys.stderr.read()
+    if six.PY2:
+      stdout = sys.stdout.read()
+      stderr = sys.stderr.read()
+    else:
+      try:
+        stdout = sys.stdout.read()
+        stderr = sys.stderr.read()
+      except UnicodeDecodeError:
+        sys.stdout.seek(0)
+        sys.stderr.seek(0)
+        stdout = sys.stdout.buffer.read()
+        stderr = sys.stderr.buffer.read()
     stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
     sys.stdout.close()
@@ -138,7 +154,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  return_stdout=False, return_stderr=False,
-                 return_log_handler=False, cwd=None):
+                 return_log_handler=False, cwd=None, do_trace=False):
     """Method for calling gslib.command_runner.CommandRunner.
 
     Passes parallel_operations=False for all tests, optionally saving/returning
@@ -169,7 +185,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     command_line = ' '.join([command_name] + args)
     if self.is_debugging:
-      self.stderr_save.write('\nRunCommand of %s\n' % command_line)
+      self.stderr_save.write('\nRunCommand of {}\n'.format(command_line))
 
     # Save and truncate stdout and stderr for the lifetime of RunCommand. This
     # way, we can return just the stdout and stderr that was output during the
@@ -192,20 +208,48 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     try:
       with WorkingDirectory(cwd):
+        if do_trace:
+          excstr = (
+            '\n' + 80*'*' + '\n'
+            + 'command_name={}, type={}\n'.format(command_name, type(command_name)))
+          if args:
+            excstr += 'args:\n'
+            count = 0
+            for arg in args:
+              excstr += 'args[{}]={}, type={}\n'.format(count, arg, type(arg))
+              count += 1
+          if headers:
+            excstr += 'headers:\n'
+            count = 0
+            for header in headers:
+              excstr += 'header[{}]={}, type={}\n'.format(count, header, type(header))
+              count += 1
+          excstr += 80*'*' + '\n'
+          raise Exception(excstr)
         self.command_runner.RunNamedCommand(
             command_name, args=args, headers=headers, debug=debug,
             parallel_operations=False, do_shutdown=False)
     finally:
       sys.stdout.seek(0)
-      stdout = sys.stdout.read()
       sys.stderr.seek(0)
-      stderr = sys.stderr.read()
+      if six.PY2:
+        stdout = sys.stdout.read()
+        stderr = sys.stderr.read()
+      else:
+        try:
+          stdout = sys.stdout.read()
+          stderr = sys.stderr.read()
+        except UnicodeDecodeError:
+          sys.stdout.seek(0)
+          sys.stderr.seek(0)
+          stdout = sys.stdout.buffer.read()
+          stderr = sys.stderr.buffer.read()
       logging.getLogger(command_name).removeHandler(mock_log_handler)
       mock_log_handler.close()
 
       log_output = '\n'.join(
           '%s:\n  ' % level + '\n  '.join(records)
-          for level, records in mock_log_handler.messages.iteritems()
+          for level, records in six.iteritems(mock_log_handler.messages)
           if records)
       if self.is_debugging and log_output:
         self.stderr_save.write(
@@ -343,7 +387,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       test_objects = [self.MakeTempName('obj') for _ in range(test_objects)]
     for i, name in enumerate(test_objects):
       self.CreateObject(bucket_uri=bucket_uri, object_name=name,
-                        contents='test %d' % i)
+                        contents='test {}'.format(i).encode('utf-8'))
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None):

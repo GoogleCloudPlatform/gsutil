@@ -14,6 +14,11 @@
 # limitations under the License.
 """Unit tests for tracker_file and parallel_tracker_file."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from gslib.exception import CommandException
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import ReadParallelUploadTrackerFile
@@ -38,8 +43,8 @@ class TestTrackerFile(GsUtilUnitTestCase):
   def test_HashFilename(self):
     # Tests that _HashFilename function works for both string and unicode
     # filenames (without raising any Unicode encode/decode errors).
+    _HashFilename(b'file1')
     _HashFilename('file1')
-    _HashFilename(u'file1')
 
   def test_RewriteTrackerFile(self):
     """Tests Rewrite tracker file functions."""
@@ -78,9 +83,10 @@ class TestTrackerFile(GsUtilUnitTestCase):
     random_prefix = '123'
     objects = ['obj1', '42', 'obj2', '314159']
     contents = '\n'.join([random_prefix] + objects) + '\n'
-    fpath = self.CreateTempFile(file_name='foo', contents=contents)
+    fpath = self.CreateTempFile(
+      file_name='foo', contents=contents.encode('utf-8'))
     expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
-                        for i in range(0, len(objects) / 2)]
+                        for i in range(0, len(objects) // 2)]
     (_, actual_prefix, actual_objects) = ReadParallelUploadTrackerFile(
         fpath, self.logger)
     self.assertEqual(random_prefix, actual_prefix)
@@ -88,7 +94,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
 
   def testReadEmptyGsutil416ParallelUploadTrackerFile(self):
     """Tests reading an empty pre-gsutil 4.17 parallel upload tracker file."""
-    fpath = self.CreateTempFile(file_name='foo', contents='')
+    fpath = self.CreateTempFile(file_name='foo', contents=b'')
     (_, actual_prefix, actual_objects) = ReadParallelUploadTrackerFile(
         fpath, self.logger)
     self.assertEqual(None, actual_prefix)

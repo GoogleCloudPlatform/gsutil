@@ -16,15 +16,22 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import namedtuple
 import logging
 import os
 import subprocess
+import re
 import sys
 import tempfile
 import textwrap
 import time
+import traceback
+
+import six
+from six.moves import range
 
 import gslib
 from gslib.cloud_api import ProjectIdException
@@ -43,6 +50,9 @@ try:
   import coverage
 except ImportError:
   coverage = None
+
+if six.PY3:
+  long = int
 
 
 _DEFAULT_TEST_PARALLEL_PROCESSES = 5
@@ -82,7 +92,7 @@ _DETAILED_HELP_TEXT = ("""
 
   To force tests to run sequentially:
 
-    gsutil test -p 1    
+    gsutil test -p 1
 
   To have sequentially-run tests stop running immediately when an error occurs:
 
@@ -371,7 +381,7 @@ class TestCommand(Command):
         parallel_integration_tests, 0, process_list, process_done,
         max_parallel_tests, root_coverage_file=coverage_filename)
     while len(process_results) < num_parallel_tests:
-      for proc_num in xrange(len(process_list)):
+      for proc_num in range(len(process_list)):
         if process_done[proc_num] or process_list[proc_num].poll() is None:
           continue
         process_done[proc_num] = True
@@ -404,7 +414,7 @@ class TestCommand(Command):
             # Ran 5 or more logging cycles with no progress, let the user
             # know which tests are running slowly or hanging.
             still_running = []
-            for proc_num in xrange(len(process_list)):
+            for proc_num in range(len(process_list)):
               if not process_done[proc_num]:
                 still_running.append(parallel_integration_tests[proc_num])
             print('Still running: %s' % still_running)
@@ -416,10 +426,10 @@ class TestCommand(Command):
     if num_parallel_failures:
       for result in process_results:
         if result.return_code != 0:
-          new_stderr = result.stderr.split('\n')
+          new_stderr = result.stderr.split(b'\n')
           print('Results for failed test %s:' % result.name)
           for line in new_stderr:
-            print(line)
+            print(line.decode('utf-8'))
 
     return (num_parallel_failures,
             (process_run_finish_time - parallel_start_time))
@@ -517,10 +527,27 @@ class TestCommand(Command):
     loader = unittest.TestLoader()
 
     if commands_to_test:
-      try:
-        suite = loader.loadTestsFromNames(commands_to_test)
-      except (ImportError, AttributeError) as e:
-        raise CommandException('Invalid test argument name: %s' % str(e))
+      suite = unittest.TestSuite()
+      for command_name in commands_to_test:
+        try:
+          suite_for_current_command = loader.loadTestsFromName(command_name)
+          suite.addTests(suite_for_current_command)
+        except (ImportError, AttributeError) as e:
+          # msg = (u'Failed to import test code from file %s. TestLoader provided '
+          #         +                 u'this error:\n\n%s' % (command_name, str(e)))
+
+          # Try to give a better error message; by default, unittest swallows
+          # ImportErrors and only shows that an import failed, not why. E.g.:
+          # "'module' object has no attribute 'test_cp'
+          try:
+            __import__(command_name)
+          except Exception as e:
+            stack_trace = traceback.format_exc()
+            err = re.sub('\\n', '\n    ', stack_trace)
+            msg = ''
+            msg += '\n\nAdditional traceback:\n\n%s' % (err)
+
+          raise CommandException(msg)
 
     if list_tests:
       test_names = GetTestNamesFromSuites(suite)

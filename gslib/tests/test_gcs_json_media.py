@@ -21,10 +21,18 @@
 # IN THE SOFTWARE.
 """Tests for media helper functions and classes for GCS JSON API."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 import gslib.tests.testcase as testcase
-import mock
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 
 class TestUploadCallbackConnection(testcase.GsUtilUnitTestCase):

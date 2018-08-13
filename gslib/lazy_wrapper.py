@@ -14,6 +14,11 @@
 # limitations under the License.
 """Provides a LazyWrapper class to defer loading a value until it's needed."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 
 class LazyWrapper(object):
   """Wrapper for lazily instantiated objects."""

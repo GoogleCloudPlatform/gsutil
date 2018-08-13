@@ -23,6 +23,8 @@ helpers belong in individual subclasses.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import codecs
 from collections import namedtuple
@@ -1428,7 +1430,7 @@ class Command(HelpProvider):
 
       # Try to get the next argument, handling any exceptions that arise.
       try:
-        args = args_iterator.next()
+        args = next(args_iterator)
       except StopIteration as e:
         break
       except Exception as e:  # pylint: disable=broad-except

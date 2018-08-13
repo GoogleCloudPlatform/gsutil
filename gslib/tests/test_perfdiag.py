@@ -15,11 +15,15 @@
 """Integration tests for perfdiag command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import socket
-import StringIO
 import sys
+
+import six
 
 import boto
 from gslib.commands.perfdiag import _GenerateFileData
@@ -29,7 +33,10 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import unittest
 from gslib.utils.system_util import IS_WINDOWS
-import mock
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 
 class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
@@ -227,18 +234,18 @@ class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
       return 'a' * length
     mock_urandom.side_effect = urandom
 
-    fp = StringIO.StringIO()
+    fp = six.StringIO()
     _GenerateFileData(fp, 1000, 100, 1000)
     self.assertEqual('a' * 1000, fp.getvalue())
     self.assertEqual(1000, fp.tell())
 
-    fp = StringIO.StringIO()
+    fp = six.StringIO()
     _GenerateFileData(fp, 1000, 50, 1000)
     self.assertIn('a' * 500, fp.getvalue())
     self.assertIn('x' * 500, fp.getvalue())
     self.assertEqual(1000, fp.tell())
 
-    fp = StringIO.StringIO()
+    fp = six.StringIO()
     _GenerateFileData(fp, 1001, 50, 1001)
     self.assertIn('a' * 501, fp.getvalue())
     self.assertIn('x' * 500, fp.getvalue())
@@ -251,7 +258,7 @@ class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
       return 'a' * length
     mock_urandom.side_effect = urandom
 
-    fp = StringIO.StringIO()
+    fp = six.StringIO()
     _GenerateFileData(fp, 8, 50, 4)
     self.assertEqual('aaxxaaxx', fp.getvalue())
     self.assertEqual(8, fp.tell())

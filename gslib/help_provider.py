@@ -15,6 +15,9 @@
 """Module defining help types and providers for gsutil commands."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import collections
 from gslib.exception import CommandException
@@ -75,7 +78,7 @@ def SanityCheck(help_provider, help_name_map):
   name_check_list = [help_provider.help_spec.help_name]
   name_check_list.extend(help_provider.help_spec.help_name_aliases)
   for name_or_alias in name_check_list:
-    if help_name_map.has_key(name_or_alias):
+    if name_or_alias in help_name_map:
       raise CommandException(
           'Duplicate help name/alias "%s" found while loading help from %s. '
           'That name/alias was already taken by %s' % (

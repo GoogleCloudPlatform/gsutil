@@ -15,12 +15,14 @@
 """Integration tests for cp command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import binascii
 import datetime
 from hashlib import md5
-import httplib
 import logging
 import os
 import pickle
@@ -30,6 +32,11 @@ import re
 import string
 import sys
 import threading
+
+import six
+from six.moves import http_client
+from six.moves import xrange
+from six.moves import range
 
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
@@ -75,6 +82,7 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY3
 from gslib.tests.util import unittest
+from gslib.tests.util import unicode_it
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
@@ -103,6 +111,11 @@ from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
+
+
+if six.PY3:
+  long = int
+
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
@@ -300,7 +313,7 @@ def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
     if mode != NA_MODE:
       ValidatePOSIXMode(int(mode, 8))
     ValidateFilePermissionAccess(obj_name, uid=uid, gid=gid, mode=mode)
-    fpath = cls.CreateTempFile(contents='foo', uid=uid, gid=gid, mode=mode)
+    fpath = cls.CreateTempFile(contents=b'foo', uid=uid, gid=gid, mode=mode)
     cls.RunGsUtil(['cp' if is_cp else 'mv', '-P', fpath,
                    suri(bucket_uri, obj_name)])
     if uid != NA_ID:
@@ -452,8 +465,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SequentialAndParallelTransfer
   def test_noclobber(self):
-    key_uri = self.CreateObject(contents='foo')
-    fpath = self.CreateTempFile(contents='bar')
+    key_uri = self.CreateObject(contents=b'foo')
+    fpath = self.CreateTempFile(contents=b'bar')
     stderr = self.RunGsUtil(['cp', '-n', fpath, suri(key_uri)],
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
@@ -465,7 +478,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(f.read(), 'bar')
 
   def test_dest_bucket_not_exist(self):
-    fpath = self.CreateTempFile(contents='foo')
+    fpath = self.CreateTempFile(contents=b'foo')
     invalid_bucket_uri = (
         '%s://%s' % (self.default_provider, self.nonexistent_bucket_name))
     stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
@@ -475,7 +488,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_copy_in_cloud_noclobber(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
-    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents='foo')
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents=b'foo')
     stderr = self.RunGsUtil(['cp', suri(key_uri), suri(bucket2_uri)],
                             return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
@@ -489,7 +502,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
   def test_cp_from_local_file_to_fifo(self):
-    contents = 'bar'
+    contents = b'bar'
     fifo_path = self.CreateTempFifo()
     file_path = self.CreateTempFile(contents=contents)
     list_for_output = []
@@ -513,7 +526,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_cp_from_one_object_to_fifo(self):
     fifo_path = self.CreateTempFifo()
     bucket_uri = self.CreateBucket()
-    contents = 'bar'
+    contents = b'bar'
     obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents)
     list_for_output = []
 
@@ -536,8 +549,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_cp_from_multiple_objects_to_fifo(self):
     fifo_path = self.CreateTempFifo()
     bucket_uri = self.CreateBucket()
-    contents1 = 'foo and bar'
-    contents2 = 'baz and qux'
+    contents1 = b'foo and bar'
+    contents2 = b'baz and qux'
     obj1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents1)
     obj2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents2)
     list_for_output = []
@@ -742,7 +755,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests content type override with magicfile value."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
-    fpath = self.CreateTempFile(contents='foo/bar\n')
+    fpath = self.CreateTempFile(contents=b'foo/bar\n')
     self.RunGsUtil(['cp', fpath, dsturi])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -760,7 +773,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests overriding content type when it does not match the file type."""
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, 'foo')
-    fpath = self.CreateTempFile(contents='foo/bar\n')
+    fpath = self.CreateTempFile(contents=b'foo/bar\n')
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
                     self._get_test_file('test.mp3'), dsturi])
@@ -847,8 +860,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_versioning(self):
     """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
-    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
-    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
+    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data1')
     g1 = urigen(k2_uri)
     self.RunGsUtil(['cp', suri(k1_uri), suri(k2_uri)])
     k2_uri = bucket_uri.clone_replace_name(k2_uri.object_name)
@@ -1492,8 +1505,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     dsturi = suri(bucket_uri, object_name)
 
-    fpath = self.CreateTempFile(file_name=file_name, contents='bar')
-    logpath = self.CreateTempFile(file_name=manifest_name, contents='')
+    fpath = self.CreateTempFile(file_name=file_name, contents=b'bar')
+    logpath = self.CreateTempFile(file_name=manifest_name, contents=b'')
     # Ensure the file is empty.
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
@@ -1562,11 +1575,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # scenario works. In particular, resumable uploads have tracker filename
     # logic.
     file_contents = 'x' * START_CALLBACK_PER_BYTES * 2
-    fpath = self.CreateTempFile(file_name=u'Аудиоархив',
+    fpath = self.CreateTempFile(file_name='Аудиоархив',
                                 contents=file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
-      fpath_bytes = fpath.encode(UTF8)
-      self.RunGsUtil(['cp', fpath_bytes, suri(key_uri)], return_stderr=True)
+      # fpath_bytes = fpath.encode(UTF8)
+      self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
       self.assertEquals(stdout, file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
@@ -2195,7 +2208,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.XML:
       test_callback_file = self.CreateTempFile(
           contents=pickle.dumps(_ResumableUploadRetryHandler(
-              5, httplib.BadStatusLine, ('unused',))))
+              5, http_client.BadStatusLine, ('unused',))))
     else:
       test_callback_file = self.CreateTempFile(
           contents=pickle.dumps(_ResumableUploadRetryHandler(
@@ -3784,7 +3797,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     """Tests a download with no valid server-supplied hash."""
     # S3 should have a special message for non-MD5 etags.
     bucket_uri = self.CreateBucket(provider='s3')
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     object_uri.get_key().etag = '12345'  # Not an MD5
     dst_dir = self.CreateTempDir()
 
@@ -3801,19 +3814,19 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   def test_object_and_prefix_same_name(self):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='foo')
+                                   contents=b'foo')
     self.CreateObject(bucket_uri=bucket_uri,
-                      object_name='foo/bar', contents='bar')
+                      object_name='foo/bar', contents=b'bar')
     fpath = self.CreateTempFile()
     # MockKey doesn't support hash_algs, so the MD5 will not match.
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
       self.RunCommand('cp', [suri(object_uri), fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'foo')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'foo')
 
   def test_cp_upload_respects_no_hashes(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents='abcd')
+    fpath = self.CreateTempFile(contents=b'abcd')
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
       log_handler = self.RunCommand('cp', [fpath, suri(bucket_uri)],
                                     return_log_handler=True)

@@ -15,6 +15,9 @@
 """Integration tests for gsutil --trace-token option."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase

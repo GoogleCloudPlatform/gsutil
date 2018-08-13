@@ -14,6 +14,11 @@
 # limitations under the License.
 """Helper functions for dealing with encryption keys used with cloud APIs."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import base64
 import binascii
 from hashlib import sha256
@@ -138,7 +143,8 @@ def GetEncryptionKeyWrapper(boto_config):
 def Base64Sha256FromBase64EncryptionKey(csek_encryption_key):
   return base64.encodestring(binascii.unhexlify(
       _CalculateSha256FromString(
-          base64.decodestring(csek_encryption_key)))).replace('\n', '')
+          base64.decodestring(
+            bytearray(csek_encryption_key, 'latin-1'))))).replace(b'\n', b'')
 
 
 def ValidateCMEK(key):

@@ -15,10 +15,15 @@
 """Unit tests for resumable streaming upload functions and classes."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from hashlib import md5
 import os
 import pkgutil
+
+from six.moves import range
 
 from gslib.exception import CommandException
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
@@ -219,7 +224,7 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
       wrapper = ResumableStreamingJsonUploadWrapper(
           stream, TRANSFER_BUFFER_SIZE * 3, test_small_buffer=True)
       position = 0
-      for _ in xrange(3):
+      for _ in range(3):
         data = wrapper.read(read_size)
         self.assertEqual(
             self._temp_test_file_contents[position:position + read_size],
@@ -227,10 +232,10 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
             (position, position + read_size))
         position += len(data)
 
-      data = wrapper.read(read_size / 2)
+      data = wrapper.read(read_size // 2)
       # Buffer contents should now be have contents from:
       # read_size/2 through 7*read_size/2.
-      position = read_size / 2
+      position = read_size // 2
       wrapper.seek(position)
       data = wrapper.read()
       self.assertEqual(

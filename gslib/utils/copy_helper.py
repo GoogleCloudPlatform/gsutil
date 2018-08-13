@@ -16,6 +16,9 @@
 """Helper functions for copy functionality."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 from collections import namedtuple
@@ -39,6 +42,10 @@ import tempfile
 import textwrap
 import time
 import traceback
+
+import six
+from six.moves import xrange
+from six.moves import range
 
 from apitools.base.protorpclite import protojson
 
@@ -147,6 +154,11 @@ from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
 
+
+if six.PY3:
+  long = int
+
+
 # pylint: disable=g-import-not-at-top
 if IS_WINDOWS:
   import msvcrt
@@ -177,7 +189,7 @@ _RENAME_ON_HASH_MISMATCH = False
 _RENAME_ON_HASH_MISMATCH_SUFFIX = '_corrupt'
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
-    u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
+    '/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
 
 PARALLEL_UPLOAD_STATIC_SALT = u"""
 PARALLEL_UPLOAD_SALT_TO_PREVENT_COLLISIONS.
@@ -706,7 +718,7 @@ def _CreateDigestsFromDigesters(digesters):
   if digesters:
     for alg in digesters:
       digests[alg] = base64.encodestring(
-          digesters[alg].digest()).rstrip('\n')
+          digesters[alg].digest()).rstrip(b'\n')
   return digests
 
 

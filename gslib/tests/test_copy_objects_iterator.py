@@ -16,6 +16,9 @@
 """Unit tests for name_expansion.CopyObjectsIterator class."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib.commands.cp import DestinationInfo
 from gslib.name_expansion import CopyObjectsIterator
@@ -68,14 +71,14 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     ]
 
     for (src_string, dst_string) in src_dst_strings:
-      copy_object_info = copy_objects_iterator.next()
+      copy_object_info = next(copy_objects_iterator)
       self.assertEquals(src_string,
                         copy_object_info.source_storage_url.object_name)
       self.assertEquals(dst_string, copy_object_info.exp_dst_url.object_name)
 
     iterator_ended = False
     try:
-      copy_objects_iterator.next()
+      next(copy_objects_iterator)
     except StopIteration:
       iterator_ended = True
 
@@ -98,21 +101,20 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     self.assertFalse(copy_objects_iterator.has_file_src)
     self.assertEquals(len(copy_objects_iterator.provider_types), 0)
 
-    copy_objects_iterator.next()
+    next(copy_objects_iterator)
     self.assertTrue(copy_objects_iterator.has_cloud_src)
     self.assertFalse(copy_objects_iterator.has_file_src)
     self.assertEquals(len(copy_objects_iterator.provider_types), 1)
     self.assertTrue('gs' in copy_objects_iterator.provider_types)
 
-    copy_objects_iterator.next()
+    next(copy_objects_iterator)
     self.assertTrue(copy_objects_iterator.has_cloud_src)
     self.assertTrue(copy_objects_iterator.has_file_src)
     self.assertEquals(len(copy_objects_iterator.provider_types), 2)
     self.assertTrue('file' in copy_objects_iterator.provider_types)
     self.assertFalse(copy_objects_iterator.is_daisy_chain)
 
-    copy_objects_iterator.next()
+    next(copy_objects_iterator)
     self.assertEquals(len(copy_objects_iterator.provider_types), 3)
     self.assertTrue('s3' in copy_objects_iterator.provider_types)
     self.assertTrue(copy_objects_iterator.is_daisy_chain)
-

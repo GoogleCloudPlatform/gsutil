@@ -14,6 +14,11 @@
 # limitations under the License.
 """Unit tests for functions in rsync command."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import logging
 import os
 
@@ -32,7 +37,7 @@ class TestRsyncFuncs(GsUtilUnitTestCase):
     logger = logging.getLogger()
     tmpdir = self.CreateTempDir()
     file_url_str = 'file://%s' % os.path.join(tmpdir, 'obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
     cloud_url_str = 'gs://whatever'
     with open(os.path.join(tmpdir, 'obj1'), 'rb') as fp:
       crc32c = CalculateB64EncodedCrc32cFromContents(fp)

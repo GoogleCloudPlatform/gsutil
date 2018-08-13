@@ -15,6 +15,9 @@
 """Base test case class for unit and integration tests."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from functools import wraps
 import os.path
@@ -23,11 +26,13 @@ import re
 import shutil
 import tempfile
 
+import six
 import boto
-from six import string_types
 
 import gslib.tests.util as util
 from gslib.tests.util import unittest
+from gslib.tests.util import unicode_it
+from gslib.tests.util import unicode_it_list
 from gslib.utils.constants import UTF8
 from gslib.utils.posix_util import NA_ID
 from gslib.utils.posix_util import NA_MODE
@@ -76,8 +81,6 @@ class GsUtilTestCase(unittest.TestCase):
     self.assertEqual(text.count('\n'), numlines)
 
   def GetTestMethodName(self):
-    if isinstance(self._testMethodName, unicode):
-      return self._testMethodName.encode(UTF8)
     return self._testMethodName
 
   def MakeRandomTestString(self):
@@ -134,7 +137,8 @@ class GsUtilTestCase(unittest.TestCase):
       contents_file = contents
       if contents_file is None:
         contents_file = 'test %d' % i
-      self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents=contents_file)
+      self.CreateTempFile(tmpdir=tmpdir, file_name=name,
+                          contents=contents_file.encode('utf-8'))
     return tmpdir
 
   def CreateTempFifo(self, tmpdir=None, file_name=None):
@@ -172,7 +176,8 @@ class GsUtilTestCase(unittest.TestCase):
       tmpdir: The temporary directory to place the file in. If not specified, a
               new temporary directory is created.
       contents: The contents to write to the file. If not specified, a test
-                string is constructed and written to the file.
+                string is constructed and written to the file. Since the file
+                is opened 'wb', the contents must be bytes.
       file_name: The name to use for the file. If not specified, a temporary
                  test file name is constructed. This can also be a tuple, where
                  ('dir', 'foo') means to create a file named 'foo' inside a
@@ -190,16 +195,18 @@ class GsUtilTestCase(unittest.TestCase):
     """
     tmpdir = tmpdir or self.CreateTempDir()
     file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, basestring):
+    if isinstance(file_name, six.string_types):
+      file_name = unicode_it(file_name)
       fpath = os.path.join(tmpdir, file_name)
     else:
+      file_name = unicode_it_list(file_name)
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
 
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
-                  else self.MakeTempName('contents'))
+                  else self.MakeTempName('contents').encode(UTF8))
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
@@ -223,7 +230,7 @@ class GsUtilTestCase(unittest.TestCase):
           pattern. If pattern is a regex that was compiled with existing flags,
           these, flags will be added via a bitwise-or.
     """
-    if isinstance(pattern, string_types):
+    if isinstance(pattern, six.string_types):
       pattern = re.compile(pattern, flags=flags)
     else:  # It's most likely an already-compiled pattern.
       pattern = re.compile(pattern.pattern, flags=pattern.flags | flags)

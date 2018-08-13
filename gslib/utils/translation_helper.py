@@ -15,6 +15,9 @@
 """Utility module for translating XML API objects to/from JSON objects."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import datetime
 import json
@@ -23,6 +26,7 @@ import textwrap
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ParseError as XmlParseError
 
+import six
 from apitools.base.py import encoding
 import boto
 from boto.gs.acl import ACL
@@ -46,6 +50,11 @@ from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import S3_ACL_MARKER_GUID
 from gslib.utils.constants import S3_MARKER_GUIDS
+
+
+if six.PY3:
+  long = int
+
 
 CACHE_CONTROL_REGEX = re.compile(r'^cache-control', re.I)
 CONTENT_DISPOSITION_REGEX = re.compile(r'^content-disposition', re.I)
@@ -770,7 +779,7 @@ class AclTranslation(object):
     for entry in cls.BotoAclToJson(acl):
       message = encoding.DictToMessage(entry,
                                        apitools_messages.ObjectAccessControl)
-      message.kind = u'storage#objectAccessControl'
+      message.kind = 'storage#objectAccessControl'
       yield message
 
   @classmethod
@@ -778,7 +787,7 @@ class AclTranslation(object):
     for entry in cls.BotoAclToJson(acl):
       message = encoding.DictToMessage(entry,
                                        apitools_messages.BucketAccessControl)
-      message.kind = u'storage#bucketAccessControl'
+      message.kind = 'storage#bucketAccessControl'
       yield message
 
   @classmethod
@@ -896,7 +905,7 @@ class AclTranslation(object):
     serializable_acl = []
     if acl is not None:
       for acl_entry in acl:
-        if acl_entry.kind == u'storage#objectAccessControl':
+        if acl_entry.kind == 'storage#objectAccessControl':
           acl_entry.object = None
           acl_entry.generation = None
         acl_entry.kind = None

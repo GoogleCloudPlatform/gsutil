@@ -16,9 +16,12 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
 
+import six
 from six.moves import urllib
 
 from gslib.exception import CommandException
@@ -27,16 +30,21 @@ from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import IS_CP1252
 
+
+if six.PY3:
+  long = int
+
+
 STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
-    # Values should remain uppercase, as required by non-gs providers.
-    'CL': 'COLDLINE',
-    'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-    'NL': 'NEARLINE',
-    'S': 'STANDARD',
-    'STD': 'STANDARD'}
+  # Values should remain uppercase, as required by non-gs providers.
+  'CL': 'COLDLINE',
+  'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+  'NL': 'NEARLINE',
+  'S': 'STANDARD',
+  'STD': 'STANDARD'}
 
 VERSION_MATCHER = LazyWrapper(
-    lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+  lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):
@@ -63,13 +71,13 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
     (str or unicode) A string representing the modified url, of type `unicode`
     if the url_str argument was a `unicode`, otherwise a `str` encoded in UTF-8.
   """
-  url_was_unicode = isinstance(url_str, unicode)
-  if isinstance(url_str, unicode):
-    url_str = url_str.encode('utf-8')
-  if isinstance(param_name, unicode):
-    param_name = param_name.encode('utf-8')
-  if isinstance(param_value, unicode):
-    param_value = param_value.encode('utf-8')
+  # url_was_unicode = isinstance(url_str, six.text_type)
+  # if isinstance(url_str, six.text_type):
+  #   url_str = url_str.encode('utf-8')
+  # if isinstance(param_name, six.text_type):
+  #   param_name = param_name.encode('utf-8')
+  # if isinstance(param_value, six.text_type):
+  #   param_value = param_value.encode('utf-8')
   scheme, netloc, path, query_str, fragment = urllib.parse.urlsplit(url_str)
 
   query_params = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
@@ -77,8 +85,8 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
   new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
-  if url_was_unicode:
-    new_url = new_url.decode('utf-8')
+  # if url_was_unicode:
+  #   new_url = new_url.decode('utf-8')
   return new_url
 
 
@@ -175,19 +183,22 @@ def FixWindowsEncodingIfNeeded(input_str):
   to Unicode.
 
   Args:
-    input_str: (str) The input string.
+    input_str: (str or bytes) The input string.
   Returns:
-    (str) The converted string (or the original, if conversion wasn't needed).
+    (unicode) The converted string (or the original, if conversion wasn't needed).
   """
   if IS_CP1252:
-    return input_str.decode(WINDOWS_1252).encode(UTF8)
+    assert(isinstance(input_str, six.binary_type))
+    return input_str.decode(WINDOWS_1252)
   else:
+    if isinstance(input_str, six.binary_type):
+      return input_str.decode(UTF8)
     return input_str
 
 
 def GetPrintableExceptionString(exc):
   """Returns a short Unicode string describing the exception."""
-  return unicode(exc).encode(UTF8) or unicode(exc.__class__)
+  return six.text_type(exc).encode(UTF8) or six.text_type(exc.__class__)
 
 
 def InsistAscii(string, message):
@@ -204,7 +215,7 @@ def InsistAsciiHeaderValue(header, value):
       value,
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
       'characters are allowed in headers other than x-goog-meta- and '
-      'x-amz-meta- headers' % (value, header))
+      'x-amz-meta- headers' % (repr(value), header))
 
 
 def NormalizeStorageClass(sc):

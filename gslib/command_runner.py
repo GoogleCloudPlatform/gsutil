@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import difflib
 import logging
@@ -25,6 +27,8 @@ import sys
 import textwrap
 import time
 
+import six
+from six.moves import input
 import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
@@ -81,7 +85,7 @@ def HandleHeaderCoding(headers):
   for key in headers:
     InsistAsciiHeader(key)
     if IsCustomMetadataHeader(key):
-      if not isinstance(headers[key], unicode):
+      if not isinstance(headers[key], six.text_type):
         try:
           headers[key] = headers[key].decode(UTF8)
         except UnicodeDecodeError:
@@ -110,7 +114,7 @@ def HandleArgCoding(args):
   # correctly interpret them, we decode them as utf-8.
   for i in range(len(args)):
     arg = args[i]
-    if not isinstance(arg, unicode):
+    if not isinstance(arg, six.text_type):
       try:
         args[i] = arg.decode(UTF8)
       except UnicodeDecodeError:
@@ -420,7 +424,7 @@ class CommandRunner(object):
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print()
-        answer = raw_input('Would you like to update [y/N]? ')
+        answer = input('Would you like to update [y/N]? ')
         return answer and answer.lower()[0] == 'y'
       elif g:
         print('\n'.join(textwrap.wrap(
@@ -431,6 +435,6 @@ class CommandRunner(object):
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print()
-        answer = raw_input('Would you like to update [Y/n]? ')
+        answer = input('Would you like to update [Y/n]? ')
         return not answer or answer.lower()[0] != 'n'
     return False
