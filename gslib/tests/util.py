@@ -333,6 +333,9 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
     """Dummy implementation to allow parallel uploads with tests."""
     return self.new_key()
 
+  def get_location(self, headers=None):
+    return 'US'
+
 
 TEST_BOTO_REMOVE_SECTION = 'TestRemoveSection'
 

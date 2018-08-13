@@ -633,6 +633,21 @@ class CloudApi(object):
     """
     raise NotImplementedError('StopChannel must be overloaded')
 
+  def ListChannels(self, bucket_name, provider=None):
+    """Lists object change notifications for a bucket.
+
+    Args:
+      bucket_name: Bucket containing the objects
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None.
+    """
+    raise NotImplementedError('ListChannels must be overloaded')
+
   def GetProjectServiceAccount(self, project_number, provider=None):
     """Get the GCS-owned service account representing this project.
 

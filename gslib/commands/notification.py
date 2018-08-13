@@ -24,8 +24,10 @@ import re
 import time
 import uuid
 
+from datetime import datetime
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
+from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PublishPermissionDeniedException
 from gslib.command import Command
@@ -78,13 +80,18 @@ _LIST_DESCRIPTION = """
   given bucket. The listed name of each notification config can be used with
   the delete sub-command to delete that specific notification config.
 
-  No object change notifications will be listed. Only Cloud Pub/Sub notification
-  subscription configs will be listed.
+  For listing Object Change Notifications instead of Cloud Pub/Sub notification
+  subscription configs, add a -o flag.
 
 <B>LIST EXAMPLES</B>
   Fetch the list of notification configs for the bucket example-bucket:
 
     gsutil notification list gs://example-bucket
+
+  The same as above, but for Object Change Notifications instead of Cloud
+  Pub/Sub notification subscription configs.
+
+    gsutil notification list -o gs://example-bucket
 
   Fetch the notification configs in all buckets matching a wildcard:
 
@@ -354,7 +361,6 @@ _watchbucket_help_text = (
 _stopchannel_help_text = (
     CreateHelpText(_STOPCHANNEL_SYNOPSIS, _STOPCHANNEL_DESCRIPTION))
 
-
 PAYLOAD_FORMAT_MAP = {
     'none': 'NONE',
     'json': 'JSON_API_V1'
@@ -385,7 +391,7 @@ class NotificationCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
-      supported_sub_args='i:t:m:t:o:f:e:p:s',
+      supported_sub_args='i:t:m:t:of:e:p:s',
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
@@ -485,6 +491,29 @@ class NotificationCommand(Command):
                      channel_id, resource_id)
     self.gsutil_api.StopChannel(channel_id, resource_id, provider='gs')
     self.logger.info('Succesfully removed channel.')
+
+    return 0
+
+  def _ListChannels(self, bucket_arg):
+    """Lists active channel watches on a bucket given in self.args."""
+    bucket_url = StorageUrlFromString(bucket_arg)
+    if not (bucket_url.IsBucket() and bucket_url.scheme == 'gs'):
+      raise CommandException(
+          'The %s command can only be used with gs:// bucket URLs.' %
+          self.command_name)
+    if not bucket_url.IsBucket():
+      raise CommandException('URL must name a bucket for the %s command.' %
+                             self.command_name)
+    channels = self.gsutil_api.ListChannels(
+          bucket_url.bucket_name, provider='gs').items
+    self.logger.info('Bucket %s has the following active Object Change Notifications:', bucket_url.bucket_name)
+    for idx, channel in enumerate(channels):
+      self.logger.info('\tNotification channel %d:', idx+1)
+      self.logger.info('\t\tChannel identifier: %s', channel.channel_id)
+      self.logger.info('\t\tResource identifier: %s', channel.resource_id)
+      self.logger.info('\t\tApplication URL: %s', channel.push_url)
+      self.logger.info('\t\tCreated by: %s', channel.subscriber_email)
+      self.logger.info('\t\tCreation time: %s', str(datetime.fromtimestamp(channel.creation_time_ms/1000)))
 
     return 0
 
@@ -699,10 +728,14 @@ class NotificationCommand(Command):
 
   def _List(self):
     self.CheckArguments()
-
-    for bucket_name, notification in self._EnumerateNotificationsFromArgs(
-        accept_notification_configs=False):
-      self._PrintNotificationDetails(bucket_name, notification)
+    if self.sub_opts:
+      if '-o' in dict(self.sub_opts):
+        for bucket_name in self.args:
+          self._ListChannels(bucket_name) 
+    else:
+      for bucket_name, notification in self._EnumerateNotificationsFromArgs(
+          accept_notification_configs=False):
+        self._PrintNotificationDetails(bucket_name, notification)
     return 0
 
   def _PrintNotificationDetails(self, bucket, notification):

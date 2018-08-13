@@ -107,7 +107,6 @@ class CloudApiDelegator(CloudApi):
     if api_selector not in self.loaded_apis[provider]:
       # Need to load the API.
       self._LoadApi(provider, api_selector)
-
     return self.loaded_apis[provider][api_selector]
 
   def _LoadApi(self, provider, api_selector):
@@ -344,6 +343,9 @@ class CloudApiDelegator(CloudApi):
 
   def StopChannel(self, channel_id, resource_id, provider=None):
     return self._GetApi(provider).StopChannel(channel_id, resource_id)
+
+  def ListChannels(self, bucket_name, provider=None):
+    return self._GetApi(provider).ListChannels(bucket_name)
 
   def GetProjectServiceAccount(self, project_number, provider=None):
     return self._GetApi(provider).GetProjectServiceAccount(project_number)
