@@ -561,9 +561,9 @@ class HttpWithNoRetries(httplib2.Http):
       conn.close()
       raise httplib2.ServerNotFoundError(
           'Unable to find the server at %s' % conn.host)
-    # except httplib2.ssl_SSLError:
-    #   conn.close()
-    #   raise
+    except httplib2.ssl_SSLError:
+      conn.close()
+      raise
     except socket.error as e:
       err = 0
       if hasattr(e, 'args'):

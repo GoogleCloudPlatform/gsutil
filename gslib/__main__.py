@@ -20,8 +20,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-from six.moves import configparser
-from six.moves import range
 import datetime
 import errno
 import getopt
@@ -35,6 +33,8 @@ import textwrap
 import traceback
 
 import six
+from six.moves import configparser
+from six.moves import range
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR

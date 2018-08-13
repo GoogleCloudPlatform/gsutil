@@ -513,6 +513,13 @@ class TestIamCh(TestIamIntegration):
     self.assertHasNo(
         bucket_iam_string, self.user2, IAM_BUCKET_READ_ROLE)
 
+  def test_patch_disallowed_binding_type(self):
+    """Tests that we disallow certain binding types with appropriate err."""
+    stderr = self.RunGsUtil(
+        ['iam', 'ch', 'projectOwner:my-project:admin', self.bucket.uri],
+        return_stderr=True, expected_status=1)
+    self.assertIn('not supported', stderr)
+
   def test_patch_multiple_objects(self):
     """Tests IAM patch against multiple objects."""
     self.RunGsUtil(

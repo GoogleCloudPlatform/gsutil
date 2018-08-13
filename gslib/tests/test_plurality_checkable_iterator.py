@@ -240,4 +240,3 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
       self.fail('Expected StopIteration')
     except StopIteration:
       pass
-

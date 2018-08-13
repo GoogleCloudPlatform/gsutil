@@ -533,8 +533,8 @@ class TestCommand(Command):
           suite_for_current_command = loader.loadTestsFromName(command_name)
           suite.addTests(suite_for_current_command)
         except (ImportError, AttributeError) as e:
-          # msg = (u'Failed to import test code from file %s. TestLoader provided '
-          #         +                 u'this error:\n\n%s' % (command_name, str(e)))
+          msg = ('Failed to import test code from file %s. TestLoader provided '
+                 'this error:\n\n%s' % (command_name, str(e)))
 
           # Try to give a better error message; by default, unittest swallows
           # ImportErrors and only shows that an import failed, not why. E.g.:
@@ -544,7 +544,6 @@ class TestCommand(Command):
           except Exception as e:
             stack_trace = traceback.format_exc()
             err = re.sub('\\n', '\n    ', stack_trace)
-            msg = ''
             msg += '\n\nAdditional traceback:\n\n%s' % (err)
 
           raise CommandException(msg)
