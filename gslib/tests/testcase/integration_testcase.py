@@ -368,6 +368,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       location = 'us-central1'
 
+    if bucket_name:
+      bucket_name = util.MakeBucketNameValid(bucket_name)
+
     if prefer_json_api and provider == 'gs':
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
                                           test_objects=test_objects,
@@ -560,7 +563,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       Apitools Bucket for the created bucket.
     """
-    bucket_name = bucket_name or self.MakeTempName('bucket')
+    bucket_name = util.MakeBucketNameValid(
+        bucket_name or self.MakeTempName('bucket'))
     bucket_metadata = apitools_messages.Bucket(name=bucket_name.lower())
     if storage_class:
       bucket_metadata.storageClass = storage_class
@@ -571,12 +575,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           apitools_messages.Bucket.VersioningValue(enabled=True))
 
     # TODO: Add retry and exponential backoff.
-    bucket = self.json_api.CreateBucket(bucket_name.lower(),
+    bucket = self.json_api.CreateBucket(bucket_name,
                                         metadata=bucket_metadata)
     # Add bucket to list of buckets to be cleaned up.
     # TODO: Clean up JSON buckets using JSON API.
     self.bucket_uris.append(
-        boto.storage_uri('gs://%s' % (bucket_name.lower()),
+        boto.storage_uri('gs://%s' % bucket_name,
                          suppress_consec_slashes=False))
     for i in range(test_objects):
       self.CreateObjectJson(bucket_name=bucket_name,
@@ -592,7 +596,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Args:
       contents: The contents to write to the object.
       bucket_name: Name of bucket to place the object in. If not specified,
-          a new temporary bucket is created.
+          a new temporary bucket is created. Assumes the given bucket name is
+          valid.
       object_name: The name to use for the object. If not specified, a temporary
           test object name is constructed.
       encryption_key: AES256 encryption key to use when creating the object,

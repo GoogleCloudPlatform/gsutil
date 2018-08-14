@@ -104,7 +104,7 @@ class GsUtilTestCase(unittest.TestCase):
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in
     # bucket names.
     if kind == 'bucket':
-      name = name.replace('_', '-').lower()
+      name = util.MakeBucketNameValid(name)
     return name
 
   # TODO: Convert tests to use this for object names.

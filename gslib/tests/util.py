@@ -558,6 +558,20 @@ def GetTestNames():
   return names
 
 
+def MakeBucketNameValid(name):
+  """Returns a copy of the given name with any invalid characters replaced.
+
+  Args:
+    name (str): The bucket name to transform into a valid name.
+
+  Returns:
+    (str) The version of the bucket name containing only valid characters.
+  """
+  # Neither underscores nor uppercase letters are valid characters for a
+  # bucket name. Replace those with hyphens and lowercase characters.
+  return name.replace('_', '-').lower()
+
+
 @contextmanager
 def WorkingDirectory(new_working_directory):
   """Changes the working directory for the duration of a 'with' call.
