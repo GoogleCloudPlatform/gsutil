@@ -700,34 +700,32 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
            ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
            cmd)
+    cmd_bytes = [part.encode('utf-8') for part in cmd]
+    if stdin is not None:
+      stdin = (stdin + os.linesep).encode('utf-8')
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         stdin=subprocess.PIPE, env=env)
-    (stdout, stderr) = p.communicate(stdin)
+    p = subprocess.Popen(cmd_bytes, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=env)
+    stdout, stderr = map(lambda b: b.decode('utf-8').replace(os.linesep, '\n'),
+                         p.communicate(stdin))
     status = p.returncode
 
     if expected_status is not None:
       self.assertEqual(
         status, expected_status,
-        # msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
-        #   expected_status, status, ' '.join(cmd), stderr.decode('utf-8')))
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
-          expected_status, status, ' '.join(cmd), stderr.decode('utf-8')))
+          expected_status, status, ' '.join(cmd), stderr))
 
     toreturn = []
     if return_status:
       toreturn.append(status)
     if return_stdout:
-      if IS_WINDOWS:
-        stdout = stdout.replace('\r\n', '\n')
       toreturn.append(stdout)
     if return_stderr:
-      if IS_WINDOWS:
-        stderr = stderr.replace('\r\n', '\n')
       toreturn.append(stderr)
 
     if len(toreturn) == 1:

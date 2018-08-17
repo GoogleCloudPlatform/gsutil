@@ -218,8 +218,8 @@ class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
     test_objects = 1
     bucket_uri = self.CreateBucket()
     # Create two objects in the bucket before executing perfdiag.
-    self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    self.CreateObject(bucket_uri=bucket_uri, contents='bar')
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
     mock_log_handler = self.RunCommand(
         'perfdiag', ['-n', str(test_objects), '-t', 'list', suri(bucket_uri)],
         return_log_handler=True)

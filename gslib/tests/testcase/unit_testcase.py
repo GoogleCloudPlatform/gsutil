@@ -91,9 +91,9 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.stdout_save = sys.stdout
     self.stderr_save = sys.stderr
     fd, self.stdout_file = tempfile.mkstemp()
-    sys.stdout = os.fdopen(fd, 'w+')
+    sys.stdout = os.fdopen(fd, 'wb+')
     fd, self.stderr_file = tempfile.mkstemp()
-    sys.stderr = os.fdopen(fd, 'w+')
+    sys.stderr = os.fdopen(fd, 'wb+')
     self.accumulated_stdout = []
     self.accumulated_stderr = []
 
@@ -101,7 +101,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.is_debugging = self.root_logger.isEnabledFor(logging.DEBUG)
     self.log_handlers_save = self.root_logger.handlers
     fd, self.log_handler_file = tempfile.mkstemp()
-    self.log_handler_stream = os.fdopen(fd, 'w+')
+    self.log_handler_stream = os.fdopen(fd, 'wb+')
     self.temp_log_handler = logging.StreamHandler(self.log_handler_stream)
     self.root_logger.handlers = [self.temp_log_handler]
 
@@ -130,8 +130,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         sys.stderr.seek(0)
         stdout = sys.stdout.buffer.read()
         stderr = sys.stderr.buffer.read()
-    stdout += ''.join(self.accumulated_stdout)
-    stderr += ''.join(self.accumulated_stderr)
+    stdout += b''.join(self.accumulated_stdout)
+    stderr += b''.join(self.accumulated_stderr)
     sys.stdout.close()
     sys.stderr.close()
     sys.stdout = self.stdout_save
@@ -140,21 +140,21 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     os.unlink(self.stderr_file)
 
     if self.is_debugging and stdout:
-      sys.stderr.write('==== stdout %s ====\n' % self.id())
+      sys.stderr.write(b'==== stdout %s ====\n' % self.id())
       sys.stderr.write(stdout)
-      sys.stderr.write('==== end stdout ====\n')
+      sys.stderr.write(b'==== end stdout ====\n')
     if self.is_debugging and stderr:
-      sys.stderr.write('==== stderr %s ====\n' % self.id())
+      sys.stderr.write(b'==== stderr %s ====\n' % self.id())
       sys.stderr.write(stderr)
-      sys.stderr.write('==== end stderr ====\n')
+      sys.stderr.write(b'==== end stderr ====\n')
     if self.is_debugging and log_output:
-      sys.stderr.write('==== log output %s ====\n' % self.id())
+      sys.stderr.write(b'==== log output %s ====\n' % self.id())
       sys.stderr.write(log_output)
-      sys.stderr.write('==== end log output ====\n')
+      sys.stderr.write(b'==== end log output ====\n')
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  return_stdout=False, return_stderr=False,
-                 return_log_handler=False, cwd=None, do_trace=False):
+                 return_log_handler=False, cwd=None):
     """Method for calling gslib.command_runner.CommandRunner.
 
     Passes parallel_operations=False for all tests, optionally saving/returning
@@ -208,24 +208,6 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     try:
       with WorkingDirectory(cwd):
-        if do_trace:
-          excstr = (
-            '\n' + 80*'*' + '\n'
-            + 'command_name={}, type={}\n'.format(command_name, type(command_name)))
-          if args:
-            excstr += 'args:\n'
-            count = 0
-            for arg in args:
-              excstr += 'args[{}]={}, type={}\n'.format(count, arg, type(arg))
-              count += 1
-          if headers:
-            excstr += 'headers:\n'
-            count = 0
-            for header in headers:
-              excstr += 'header[{}]={}, type={}\n'.format(count, header, type(header))
-              count += 1
-          excstr += 80*'*' + '\n'
-          raise Exception(excstr)
         self.command_runner.RunNamedCommand(
             command_name, args=args, headers=headers, debug=debug,
             parallel_operations=False, do_shutdown=False)
@@ -242,8 +224,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         except UnicodeDecodeError:
           sys.stdout.seek(0)
           sys.stderr.seek(0)
-          stdout = sys.stdout.buffer.read()
-          stderr = sys.stderr.buffer.read()
+          stdout = sys.stdout.buffer.read().decode('utf-8')
+          stderr = sys.stderr.buffer.read().decode('utf-8')
       logging.getLogger(command_name).removeHandler(mock_log_handler)
       mock_log_handler.close()
 

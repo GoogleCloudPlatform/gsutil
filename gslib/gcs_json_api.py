@@ -1600,7 +1600,7 @@ class GcsJsonApi(CloudApi):
 
     try:
       return self.api_client.buckets.ListChannels(apitools_request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def GetProjectServiceAccount(self, project_number):

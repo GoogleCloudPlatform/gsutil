@@ -165,8 +165,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     """Tests setting custom metadata with a non-ASCII content."""
     objuri = self.CreateObject(contents=b'foo')
     unicode_header = 'x-%s-meta-dessert:soufflé' % self.provider_custom_meta
-    unicode_header_bytes = unicode_header.encode(UTF8)
-    self.RunGsUtil(['setmeta', '-h', unicode_header_bytes, suri(objuri)])
+    self.RunGsUtil(['setmeta', '-h', unicode_header, suri(objuri)])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():

@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import fnmatch
+import sys
 
 import six
 from gslib.cloud_api import EncryptionException
@@ -188,7 +189,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       for ap in non_marker_props:
         ap_key = '{}'.format(ap.key)
         ap_value = '{}'.format(ap.value)
-        print(MakeMetadataLine(ap_key, ap_value, indent=2))
+        meta_data_line = MakeMetadataLine(ap_key, ap_value, indent=2)
+        print(meta_data_line.encode('utf-8'))
   if obj.customerEncryption:
     if not obj.crc32c:
       print(MakeMetadataLine('Hash (crc32c)', 'encrypted'))

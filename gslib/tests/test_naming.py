@@ -1172,8 +1172,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.CreateObject(bucket_uri=bucket_uri, object_name=object_name,
                       contents=b'foo')
     stdout = self.RunCommand('ls', [suri(bucket_uri, object_name)],
-                             return_stdout=True, do_trace=False)
-    self.assertIn(object_name, unicode_it(stdout))
+                             return_stdout=True)
+    self.assertIn(object_name.encode('utf-8'), stdout)
 
   def testRecursiveListTrailingSlash(self):
     bucket_uri = self.CreateBucket()

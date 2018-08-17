@@ -576,12 +576,9 @@ def unicode_it(str_or_bytes):
       raise(TypeError('{} is neither str nor bytes'.format(str_or_bytes)))
   else:
     try:
-      result = six.text_type(str_or_bytes)
-    except UnicodeError:
-      if isinstance(str_or_bytes, six.binary_type):
-        result = str_or_bytes.decode('utf-8')
-      else:
-        raise
+      result = unicode(str_or_bytes)
+    except UnicodeEncodeError:
+      result = str_or_bytes.decode('utf-8')
   return result
 
 

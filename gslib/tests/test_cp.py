@@ -82,7 +82,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY3
 from gslib.tests.util import unittest
-from gslib.tests.util import unicode_it
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath

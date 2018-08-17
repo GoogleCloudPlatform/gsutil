@@ -71,13 +71,6 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
     (str or unicode) A string representing the modified url, of type `unicode`
     if the url_str argument was a `unicode`, otherwise a `str` encoded in UTF-8.
   """
-  url_was_unicode = isinstance(url_str, unicode)
-  if isinstance(url_str, unicode):
-    url_str = url_str.encode('utf-8')
-  if isinstance(param_name, unicode):
-    param_name = param_name.encode('utf-8')
-  if isinstance(param_value, unicode):
-    param_value = param_value.encode('utf-8')
   scheme, netloc, path, query_str, fragment = urllib.parse.urlsplit(url_str)
 
   query_params = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
@@ -85,8 +78,6 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
   new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
-  if url_was_unicode:
-    new_url = new_url.decode('utf-8')
   return new_url
 
 
