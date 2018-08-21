@@ -36,6 +36,7 @@ from gslib.utils.ls_helper import LsHelper
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.utils.text_util import InsistAscii
+from gslib.utils import text_util
 from gslib.utils.translation_helper import AclTranslation
 from gslib.utils.translation_helper import LabelTranslation
 from gslib.utils.unit_util import MakeHumanReadable
@@ -319,7 +320,7 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      print(bucket_blr)
+      text_util.ttyprint(bucket_blr)
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
@@ -383,7 +384,7 @@ class LsCommand(Command):
     if 'updated' in fields:
       time_updated_line = '\tTime updated:\t\t\t{updated}\n'
 
-    print((('{bucket} :\n'
+    text_util.ttyprint((('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
            '\tLocation constraint:\t\t{location_constraint}\n'
            '\tVersioning enabled:\t\t{versioning}\n'
@@ -400,7 +401,7 @@ class LsCommand(Command):
            '\tACL:\t\t\t\t{acl}\n'
            '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
     if bucket_blr.storage_url.scheme == 's3':
-      print('Note: this is an S3 bucket so configuration values may be '
+      text_util.ttyprint('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
             'individual configuration commands such as gsutil acl get '
             '<bucket>.')
@@ -439,7 +440,7 @@ class LsCommand(Command):
         'metageneration': encoded_metagen,
         'etag': encoded_etag
     }
-    print(printstr % format_args)
+    text_util.ttyprint(printstr % format_args)
     return (num_objs, num_bytes)
 
   def RunCommand(self):
@@ -485,7 +486,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        print('%s:' % blr.url_string.decode('utf-8'))
+        text_util.ttyprint('%s:' % blr.url_string.decode('utf-8'))
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -539,7 +540,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          print('%-33s%s' % ('', blr.url_string.decode('utf-8')))
+          text_util.ttyprint('%-33s%s' % ('', blr.url_string.decode('utf-8')))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
@@ -590,7 +591,7 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      print(('TOTAL: %d objects, %d bytes (%s)' %
+      text_util.ttyprint(('TOTAL: %d objects, %d bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')

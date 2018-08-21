@@ -93,7 +93,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     fd, self.stdout_file = tempfile.mkstemp()
     sys.stdout = os.fdopen(fd, 'wb+')
     fd, self.stderr_file = tempfile.mkstemp()
-    sys.stderr = os.fdopen(fd, 'wb+')
+    # do not set sys.stderr to be 'wb+' - it will blow up the logger
+    sys.stderr = os.fdopen(fd, 'w+')
     self.accumulated_stdout = []
     self.accumulated_stderr = []
 
@@ -101,7 +102,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.is_debugging = self.root_logger.isEnabledFor(logging.DEBUG)
     self.log_handlers_save = self.root_logger.handlers
     fd, self.log_handler_file = tempfile.mkstemp()
-    self.log_handler_stream = os.fdopen(fd, 'wb+')
+    self.log_handler_stream = os.fdopen(fd, 'w+')
     self.temp_log_handler = logging.StreamHandler(self.log_handler_stream)
     self.root_logger.handlers = [self.temp_log_handler]
 
@@ -131,7 +132,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         stdout = sys.stdout.buffer.read()
         stderr = sys.stderr.buffer.read()
     stdout += b''.join(self.accumulated_stdout)
-    stderr += b''.join(self.accumulated_stderr)
+    stderr += ''.join(self.accumulated_stderr)
     sys.stdout.close()
     sys.stderr.close()
     sys.stdout = self.stdout_save

@@ -832,6 +832,8 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
       continue
 
     local_b64_digest = local_hashes[alg]
+    if six.PY3 and isinstance(local_b64_digest, bytes):
+      local_b64_digest = local_b64_digest.decode('utf-8')
     cloud_b64_digest = cloud_hashes[alg]
     logger.debug(
         'Comparing local vs cloud %s-checksum for %s. (%s/%s)', alg, file_name,

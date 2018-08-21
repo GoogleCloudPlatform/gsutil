@@ -135,17 +135,17 @@ class UploadCallbackConnectionClassFactory(object):
         # (no prints) or 4 (dump upload payload, httplib prints to stdout).
         # Refactor to allow our media-handling functions to handle
         # debuglevel == 4 and print messages to stderr.
-        self._buffer.extend(('', ''))
+        self._buffer.extend((b'', b''))
         if six.PY2:
           items = self._buffer
         else:
           items = []
           for item in self._buffer:
             if isinstance(item, bytes):
-              items.append(item.decode('utf-8'))
-            else:
               items.append(item)
-        msg = '\r\n'.join(items)
+            else:
+              items.append(item.encode('utf-8'))
+        msg = b'\r\n'.join(items)
         num_metadata_bytes = len(msg)
         if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
           outer_logger.debug('send: %s' % msg)

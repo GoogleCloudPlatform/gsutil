@@ -684,13 +684,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', [suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1'),
-                    suri(src_bucket_uri, 'd1', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim,
-                    suri(src_bucket_uri, 'd0', ':'),
-                    suri(src_bucket_uri, 'd0', 'foo2')])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
+                    (suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim).encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursive(self):
@@ -728,10 +728,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
                              return_stdout=True)
     expected = set([
-        suri(src_bucket_uri, 'src_subdir', 'foo'),
-        suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+        (suri(src_bucket_uri, 'src_subdir', 'foo')).encode('utf-8'),
+        (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirRecursive(self):
@@ -1182,8 +1182,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('ls', ['-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.
-    self.assertEqual(stdout.splitlines(), [suri(obj_uri) + '/:',
-                                           suri(obj_uri) + '/'])
+    self.assertEqual(stdout.splitlines(), [(suri(obj_uri) + '/:').encode('utf-8'),
+                                           (suri(obj_uri) + '/').encode('utf-8')])
 
   def FinalObjNameComponent(self, uri):
     """For gs://bucket/abc/def/ghi returns ghi."""
@@ -1223,7 +1223,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     """Test that the cat command basically runs."""
     src_uri = self.CreateObject(contents='foo')
     stdout = self.RunCommand('cat', [suri(src_uri)], return_stdout=True)
-    self.assertEqual(stdout, 'foo')
+    self.assertEqual(stdout, b'foo')
 
   def testGetLoggingCommandRuns(self):
     """Test that the 'logging get' command basically runs."""

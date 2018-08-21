@@ -78,6 +78,7 @@ import apitools.base.py.exceptions as apitools_exceptions
 from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import system_util
+from gslib.utils import text_util
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -167,10 +168,7 @@ def _OutputAndExit(message, exception=None):
   else:
     err = '%s\n' % message
   try:
-    if six.PY2:
-      sys.stderr.write(err.encode(constants.UTF8))
-    else:
-      sys.stderr.write(err)
+    text_util.ttyprint(err, end='', file=sys.stderr)
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)

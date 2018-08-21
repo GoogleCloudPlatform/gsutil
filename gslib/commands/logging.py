@@ -34,6 +34,8 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils import text_util
+
 
 _SET_SYNOPSIS = """
   gsutil logging set on -b logging_bucket [-o log_object_prefix] url...
@@ -161,15 +163,15 @@ class LoggingCommand(Command):
         self.args[0], bucket_fields=['logging'])
 
     if bucket_url.scheme == 's3':
-      sys.stdout.write(self.gsutil_api.XmlPassThroughGetLogging(
-          bucket_url, provider=bucket_url.scheme))
+      text_util.ttyprint(self.gsutil_api.XmlPassThroughGetLogging(
+          bucket_url, provider=bucket_url.scheme), end='')
     else:
       if (bucket_metadata.logging and bucket_metadata.logging.logBucket and
           bucket_metadata.logging.logObjectPrefix):
-        sys.stdout.write(str(encoding.MessageToJson(
-            bucket_metadata.logging)) + '\n')
+        text_util.ttyprint(str(encoding.MessageToJson(
+            bucket_metadata.logging)))
       else:
-        sys.stdout.write('%s has no logging configuration.\n' % bucket_url)
+        text_util.ttyprint('%s has no logging configuration.' % bucket_url)
     return 0
 
   def _Enable(self):

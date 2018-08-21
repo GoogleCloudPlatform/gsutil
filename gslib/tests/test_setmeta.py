@@ -153,9 +153,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_invalid_non_ascii_custom_header(self):
     unicode_header = 'x-%s-meta-soufflé:5' % self.provider_custom_meta
-    unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
-        ['setmeta', '-h', unicode_header_bytes,
+        ['setmeta', '-h', unicode_header,
          '%s://foo/bar' % self.default_provider],
         expected_status=1, return_stderr=True)
     self.assertIn('Invalid non-ASCII header', stderr)
@@ -214,8 +213,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_invalid_non_ascii_header_value(self):
     unicode_header = 'Content-Type:dessert/soufflé'
-    unicode_header_bytes = unicode_header.encode(UTF8)
     stderr = self.RunGsUtil(
-        ['setmeta', '-h', unicode_header_bytes, 'gs://foo/bar'],
+        ['setmeta', '-h', unicode_header, 'gs://foo/bar'],
         expected_status=1, return_stderr=True)
     self.assertIn('Invalid non-ASCII value', stderr)

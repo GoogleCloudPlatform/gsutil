@@ -19,7 +19,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
+import sys
 import re
+import locale
 
 import six
 from six.moves import urllib
@@ -245,6 +248,70 @@ def PrintableStr(input_val):
   """
   return input_val.encode(UTF8) if input_val is not None else None
 
+
+def ttyprint(*objects, **kwargs):
+  sep = kwargs.get('sep') or ''
+  end = kwargs.get('end') or os.linesep
+  file = kwargs.get('file') or sys.stdout
+  if six.PY2:
+    if hasattr(file, 'mode') and 'b' not in file.mode and end == os.linesep:
+      end = b'\n'
+    pref_enc = 'utf-8'
+    if isinstance(sep, unicode):
+      sep = sep.encode(pref_enc)
+    if isinstance(end, unicode):
+      end = end.encode(pref_enc)
+    byte_objects = []
+    for object in objects:
+      if isinstance(object, str):
+        byte_objects.append(object)
+      elif isinstance(object, unicode):
+        byte_objects.append(object.encode(pref_enc))
+      else:
+        byte_objects.append(str(object).encode(pref_enc))
+    data = sep.join(byte_objects)
+    data += end
+    ttywrite(file, data)
+  else:  # PY3
+    pref_enc = locale.getpreferredencoding(False)
+    if isinstance(sep, str):
+      sep = sep.encode(pref_enc)
+    if isinstance(end, str):
+      end = end.encode(pref_enc)
+    byte_objects = []
+    for object in objects:
+      if isinstance(object, bytes):
+        byte_objects.append(object)
+      elif isinstance(object, str):
+        byte_objects.append(object.encode(pref_enc))
+      else:
+        byte_objects.append(str(object).encode(pref_enc))
+    data = sep.join(byte_objects)
+    data += end
+    ttywrite(file, data)
+
+
+def ttywrite(fp, data):
+  if six.PY2:
+    fp.write(data)
+  else:  # PY3
+    if isinstance(data, bytes):
+      if hasattr(fp, 'mode') and 'b' in fp.mode:
+        # data is bytes, and fp is binary
+        fp.write(data)
+      elif hasattr(fp, 'buffer'):
+        # data is bytes, but fp is text - try the underlying buffer
+        fp.buffer.write(data)
+      else:
+        # data is bytes, but fp is text - try to decode bytes
+        fp.write(
+          data.decode(locale.getpreferredencoding(False)))
+    elif 'b' in fp.mode:
+      # data is not bytes, but fp is binary
+      fp.write(data.encode(locale.getpreferredencoding(False)))
+    else:
+      # data is not bytes, and fp is text
+      fp.write(data)
 
 def RemoveCRLFFromString(input_str):
   r"""Returns the input string with all \n and \r removed."""
