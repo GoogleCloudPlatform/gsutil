@@ -599,14 +599,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # stdout/stderr-replacement code. That UniStream class replacement really
     # needs to be added to the site-packages on Windows python.
     object_name = u'Аудиоархив'
-    object_name_bytes = object_name.encode(UTF8)
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo',
                                 object_name=object_name)
     self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)],
                             return_stdout=True)
-    self.assertIn(object_name_bytes, stdout)
+    self.assertIn(object_name, stdout)
     if self.default_provider == 'gs':
       self.assertIn(str(key_uri.generation), stdout)
       self.assertIn(
@@ -859,4 +858,3 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
 
     self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
-

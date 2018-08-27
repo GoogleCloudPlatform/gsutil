@@ -738,7 +738,7 @@ class MetricsCollector(object):
                       'ReportMetrics("{0}", {1}, log_file_path={2})').format(
                           temp_metrics_file.name,
                           log_level,
-                          log_file_path).encode('string-escape')
+                          log_file_path).encode('utf-8').encode('string-escape')
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)

@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from random import randint
+import unittest
 
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -87,9 +88,13 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
         stdout,
         r'[^@]+@gs-project-accounts\.iam\.gserviceaccount\.com')
 
+  @unittest.skip('All DoTestAuthorize() tests are failing: '
+                 'https://b.corp.google.com/issues/113170864')
   def testKmsAuthorizeWithoutProjectOption(self):
     self.DoTestAuthorize()
 
+  @unittest.skip('All DoTestAuthorize() tests are failing: '
+                 'https://b.corp.google.com/issues/113170864')
   def testKmsAuthorizeWithProjectOption(self):
     self.DoTestAuthorize(specified_project=PopulateProjectId(None))
 

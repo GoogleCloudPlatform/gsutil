@@ -3254,7 +3254,7 @@ def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
             'charge, because the original object is less than %s '
             'days old according to the local system time.',
             object_storage_class,
-            src_url.url_string, early_deletion_cutoff_seconds / SECONDS_PER_DAY)
+            src_url.url_string, early_deletion_cutoff_seconds // SECONDS_PER_DAY)
 
 
 def MaybeSkipUnsupportedObject(src_url, src_obj_metadata):

@@ -28,7 +28,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import pprint
 
+import six
 from apitools.base.py import exceptions as apitools_exceptions
 from apitools.base.py import http_wrapper
 from boto.storage_uri import BucketStorageUri
@@ -199,7 +201,11 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     with mock.patch.dict(os.environ, values={'CLOUDSDK_WRAPPER': ''}):
       with mock.patch('os.path.exists', return_value=True):
         # Mock the contents of the file.
-        with mock.patch('__builtin__.open') as mock_open:
+        if six.PY2:
+          builtin_open = '__builtin__.open'
+        else:
+          builtin_open = 'builtins.open'
+        with mock.patch(builtin_open) as mock_open:
           mock_open.return_value.__enter__ = lambda s: s
 
           # Set the file.read() method to return the disabled text.
@@ -453,8 +459,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # UIThread and the MainThreadUIQueue.
     mock_queue = RetryableErrorsQueue()
     value_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
-                                                             ValueError(), None,
-                                                             None, None)
+                                                             ValueError(),
+                                                             None, None, None)
     socket_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
                                                               socket.error(),
                                                               None, None, None)
@@ -468,14 +474,20 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
     metadata_retry_func(socket_error_retry_args)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    else:
+      self.assertEqual(self.collector.retryable_errors['OSError'], 1)
 
     # The media retry function raises an exception after logging because
     # the GcsJsonApi handles retryable errors for media transfers itself.
     _TryExceptAndPass(media_retry_func, value_error_retry_args)
     _TryExceptAndPass(media_retry_func, socket_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 3)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    else:
+      self.assertEqual(self.collector.retryable_errors['OSError'], 2)
 
   def testExceptionCatchingDecorator(self):
     """Tests the exception catching decorator CaptureAndLogException."""
@@ -706,12 +718,20 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     CollectMetricAndSetLogLevel(logging.DEBUG, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    expected_response = (
-        'Metric(endpoint=\'https://example.com\', method=\'POST\', '
-        'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
-        'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
-                                                metrics._GA_COMMANDS_CATEGORY,
-                                                VERSION))
+    if six.PY2:
+      expected_response = (
+          b'Metric(endpoint=u\'https://example.com\', method=u\'POST\', '
+          b'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
+          b'user_agent=u\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
+                                                  metrics._GA_COMMANDS_CATEGORY,
+                                                  VERSION))
+    else:
+      expected_response = (
+          b'Metric(endpoint=\'https://example.com\', method=\'POST\', '
+          b'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
+          b'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
+                                                  metrics._GA_COMMANDS_CATEGORY,
+                                                  VERSION))
     self.assertIn(expected_response, log_text)
     self.assertIn('RESPONSE: 200', log_text)
 

@@ -51,7 +51,8 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
     Args:
       retry_args: An apitools ExceptionRetryArgs tuple.
     """
-    if retry_args.total_wait_sec >= constants.LONG_RETRY_WARN_SEC:
+    if (retry_args.total_wait_sec is not None
+       and retry_args.total_wait_sec >= constants.LONG_RETRY_WARN_SEC):
       logging.info('Retrying request, attempt #%d...', retry_args.num_retries)
     if status_queue:
       status_queue.put(thread_message.RetryableErrorMessage(

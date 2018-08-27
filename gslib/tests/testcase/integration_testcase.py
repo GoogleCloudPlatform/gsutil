@@ -700,7 +700,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
            ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
            cmd)
-    cmd_bytes = [part.encode('utf-8') for part in cmd]
+    cmd_bytes = [part.encode('utf-8')
+                 if isinstance(part, six.text_type) else part for part in cmd]
     if stdin is not None:
       stdin = (stdin + os.linesep).encode('utf-8')
     if IS_WINDOWS:

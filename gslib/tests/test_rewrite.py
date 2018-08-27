@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import logging
 import os
 import re
+import unittest
 
 from boto.storage_uri import BucketStorageUri
 
@@ -434,6 +435,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
     return key_fqn
 
+  @unittest.skip('Mystery 409 response when running parallel tests: '
+                 'https://b.corp.google.com/issues/113170864')
   def test_rewrite_to_kms_then_unencrypted(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')

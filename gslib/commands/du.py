@@ -33,6 +33,8 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
 from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils import text_util
+
 
 _SYNOPSIS = """
   gsutil du url...
@@ -143,9 +145,9 @@ class DuCommand(Command):
 
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else str(num_bytes))
-    sys.stdout.write('%(size)-10s  %(name)s%(ending)s' % {
-        'size': size_string, 'name': name, 'ending': self.line_ending})
+                   if self.human_readable else unicode(num_bytes))
+    text_util.ttyprint('%(size)-10s  %(name)s' % {
+        'size': size_string, 'name': name}, end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -174,10 +176,10 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      sys.stdout.write('%(size)-10s  %(url)s%(ending)s' % {
+      text_util.ttyprint('%(size)-10s  %(url)s' % {
           'size': size_string,
-          'url': url_str.encode(UTF8),
-          'ending': self.line_ending})
+          'url': url_str},
+          end=self.line_ending)
 
     return (num_objs, num_bytes)
 
@@ -231,7 +233,7 @@ class DuCommand(Command):
 
     def _PrintDirectory(num_bytes, blr):
       if not self.summary_only:
-        self._PrintSummaryLine(num_bytes, blr.url_string.encode(UTF8))
+        self._PrintSummaryLine(num_bytes, blr.url_string)
 
     for url_arg in self.args:
       top_level_storage_url = StorageUrlFromString(url_arg)
@@ -277,7 +279,7 @@ class DuCommand(Command):
 
         if self.summary_only:
           self._PrintSummaryLine(exp_bytes,
-                                 blr.url_string.rstrip('/').encode(UTF8))
+                                 blr.url_string.rstrip('/'))
 
     if self.produce_total:
       self._PrintSummaryLine(total_bytes, 'total')

@@ -187,7 +187,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
       return unittest.skip('boto does not return object storage class')
 
     bucket_uri = self.CreateBucket(storage_class='NEARLINE')
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='obj')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'obj')
     stderr = self.RunGsUtil(['mv', suri(object_uri), suri(bucket_uri, 'foo')],
                             return_stderr=True)
     self.assertIn(

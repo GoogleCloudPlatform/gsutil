@@ -73,7 +73,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(unicode_it_list(stdout.splitlines())), set([
+      self.assertSetEqual(set(stdout.splitlines()), set([
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[1])),
           '%-10s  %s' % (5, suri(obj_uris[2])),
