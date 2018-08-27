@@ -23,6 +23,7 @@ import os
 import sys
 import re
 import locale
+import collections
 
 import six
 from six.moves import urllib
@@ -250,9 +251,22 @@ def PrintableStr(input_val):
 
 
 def ttyprint(*objects, **kwargs):
-  sep = kwargs.get('sep') or ''
-  end = kwargs.get('end') or os.linesep
-  file = kwargs.get('file') or sys.stdout
+  """ A Python2 compatible version of the print function.
+
+  The main purpose of this function is to favor binary output
+  over text output.
+
+  Args are the same as documented for the print function in Python2.
+  """
+  kw_params = collections.OrderedDict([('sep', ' '),
+                                       ('end', os.linesep),
+                                       ('file', sys.stdout)])
+  for key, value in kwargs.items():
+    if key not in kw_params:
+      raise TypeError(
+        "'{}' is an invalid keyword argument for this function".format(key))
+    kw_params[key] = value
+  sep, end, file = kw_params.values()
   if six.PY2:
     if hasattr(file, 'mode') and 'b' not in file.mode and end == os.linesep:
       end = b'\n'
