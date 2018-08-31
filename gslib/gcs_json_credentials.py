@@ -34,11 +34,11 @@ from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils import constants
+from gslib.utils import system_util
 from gslib.utils.boto_util import GetBotoConfigFileList
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
-from gslib.utils.system_util import GetGsutilClientIdAndSecret
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
@@ -207,7 +207,7 @@ def _CheckAndGetCredentials(logger):
     if failed_cred_type:
       if logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
@@ -291,7 +291,8 @@ def _GetOauth2UserAccountCredentials():
     return
 
   provider_token_uri = _GetProviderTokenUri()
-  gsutil_client_id, gsutil_client_secret = GetGsutilClientIdAndSecret()
+  gsutil_client_id, gsutil_client_secret = (
+      system_util.GetGsutilClientIdAndSecret())
   client_id = config.get('OAuth2', 'client_id',
                          os.environ.get('OAUTH2_CLIENT_ID', gsutil_client_id))
   client_secret = config.get('OAuth2', 'client_secret',

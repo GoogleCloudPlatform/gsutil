@@ -44,12 +44,12 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
 from gslib.utils import boto_util
+from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
 from gslib.utils.constants import UTF8
 from gslib.utils.metadata_util import IsCustomMetadataHeader
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
-from gslib.utils.system_util import IsRunningInteractively
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
@@ -311,7 +311,7 @@ class CommandRunner(object):
       args = ['-n']
 
       # Check for opt-in analytics.
-      if IsRunningInteractively() and collect_analytics:
+      if system_util.IsRunningInteractively() and collect_analytics:
         metrics.CheckAndMaybePromptForAnalyticsEnabling()
 
     if not args:
@@ -419,11 +419,11 @@ class CommandRunner(object):
     gs_host = boto.config.get('Credentials', 'gs_host', None)
     gs_host_is_not_default = (
         gs_host != boto.gs.connection.GSConnection.DefaultHost)
-    if (not IsRunningInteractively()
+    if (not system_util.IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logger.isEnabledFor(logging.INFO)
         or gs_host_is_not_default
-        or os.environ.get('CLOUDSDK_WRAPPER') == '1'):
+        or system_util.InvokedViaCloudSdk()):
       return False
 
     software_update_check_period = boto.config.getint(

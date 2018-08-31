@@ -38,13 +38,13 @@ import traceback
 # so boto requests would not include gsutil/version# in the UserAgent string.
 import boto
 import gslib
-# TODO: gsutil-beta: Cloud SDK scans for this string and performs
-# substitution; ensure this works with both apitools and boto.
+from gslib.utils import system_util
+
 boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+if system_util.InvokedViaCloudSdk():
   boto.UserAgent += ' google-cloud-sdk'
-  if os.environ.get('CLOUDSDK_VERSION'):
-    boto.UserAgent += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+  if system_util.CloudSdkVersion():
+    boto.UserAgent += '/%s' % system_util.CloudSdkVersion()
 # pylint: disable=g-import-not-at-top
 # This module also imports boto, and will override the UserAgent global variable
 # if imported above.
@@ -71,7 +71,6 @@ from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.utils import boto_util
 from gslib.utils import constants
-from gslib.utils import system_util
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -537,7 +536,7 @@ def _CheckAndHandleCredentialException(e, args):
     # when there are no configured credentials. This allows tests to
     # simulate a second user without permissions, without actually requiring
     # two separate configured users.
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       message = '\n'.join(textwrap.wrap(
           'You are attempting to access protected data with no configured '
           'credentials. Please visit '
@@ -636,7 +635,7 @@ def _RunNamedCommandAndHandleExceptions(
   except ServiceException as e:
     _OutputAndExit(message=e, exception=e)
   except oauth2client.client.HttpAccessTokenRefreshError as e:
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       _OutputAndExit('Your credentials are invalid. '
                      'Please run\n$ gcloud auth login',
                      exception=e)

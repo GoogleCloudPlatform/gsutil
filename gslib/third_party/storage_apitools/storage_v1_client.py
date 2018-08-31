@@ -13,7 +13,6 @@
 # limitations under the License.
 """Generated client library for storage version v1."""
 
-import os
 import platform
 import sys
 
@@ -22,6 +21,7 @@ from apitools.base.py import base_api
 import gslib
 from gslib.metrics import MetricsCollector
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
+from gslib.utils import system_util
 
 
 class StorageV1(base_api.BaseApiClient):
@@ -37,10 +37,10 @@ class StorageV1(base_api.BaseApiClient):
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools gsutil/%s Python/%s (%s)' % (
       gslib.VERSION, platform.python_version(), sys.platform)
-  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  if system_util.InvokedViaCloudSdk():
     _USER_AGENT += ' google-cloud-sdk'
-    if os.environ.get('CLOUDSDK_VERSION'):
-      _USER_AGENT += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+    if system_util.CloudSdkVersion():
+      _USER_AGENT += '/%s' % system_util.CloudSdkVersion()
   if MetricsCollector.IsDisabled():
     _USER_AGENT += ' analytics/disabled'
   else:

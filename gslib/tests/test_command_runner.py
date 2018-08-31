@@ -41,6 +41,7 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import SECONDS_PER_DAY
@@ -171,7 +172,6 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     self.addCleanup(get_timestamp_file_patcher.stop)
     get_timestamp_file_patcher.start()
 
-
     # Mock out the gsutil version checker.
     base_version = unicode(gslib.VERSION)
     while not base_version.isnumeric():
@@ -187,7 +187,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     # Mock out TTY check to pretend we're on a TTY even if we're not.
     self.running_interactively = True
-    command_runner.IsRunningInteractively = lambda: self.running_interactively
+    command_runner.system_util.IsRunningInteractively = (
+        lambda: self.running_interactively)
 
     # Mock out the modified time of the VERSION file.
     self.version_mod_time = 0
@@ -217,8 +218,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
   def _IsPackageOrCloudSDKInstall(self):
     # Update should not trigger for package installs or Cloud SDK installs.
-    return (gslib.IS_PACKAGE_INSTALL or
-            os.environ.get('CLOUDSDK_WRAPPER') == '1')
+    return gslib.IS_PACKAGE_INSTALL or system_util.InvokedViaCloudSdk()
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):

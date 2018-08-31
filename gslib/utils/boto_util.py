@@ -37,10 +37,10 @@ from boto.pyami.config import BotoConfigLocations
 
 import gslib
 from gslib.exception import CommandException
+from gslib.utils import system_util
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
-from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import ONE_MIB
 
@@ -102,7 +102,7 @@ def ConfigureNoOpAuthIfNeeded():
   if not HasConfiguredCredentials():
     if (config.has_option('Credentials', 'gs_service_client_id')
         and not HAS_CRYPTO):
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         raise CommandException('\n'.join(textwrap.wrap(
             'Your gsutil is configured with an OAuth2 service account, but '
             'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
@@ -176,7 +176,7 @@ def GetGsutilStateDir():
     Path to directory for gsutil static state files.
   """
   config_file_dir = config.get('GSUtil', 'state_dir', DEFAULT_GSUTIL_STATE_DIR)
-  CreateDirIfNeeded(config_file_dir)
+  system_util.CreateDirIfNeeded(config_file_dir)
   return config_file_dir
 
 
@@ -295,7 +295,7 @@ def GetTabCompletionLogFilename():
 def GetTabCompletionCacheFilename():
   tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
   # Limit read permissions on the directory to owner for privacy.
-  CreateDirIfNeeded(tab_completion_dir, mode=0700)
+  system_util.CreateDirIfNeeded(tab_completion_dir, mode=0700)
   return os.path.join(tab_completion_dir, 'cache')
 
 
