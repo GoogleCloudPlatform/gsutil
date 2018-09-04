@@ -546,13 +546,13 @@ def _ComputeNeededFileChecksums(logger, src_url_str, src_size, src_crc32c,
         src_crc32c = CalculateB64EncodedCrc32cFromContents(fp)
     elif dst_md5 != _NA or dst_url.IsFileUrl():
       if dst_size > TEN_MIB:
-        logger.info('Computing MD5 for %s...', dst_url_str)
+        logger.info('Computing MD5 for %s...', src_url_str)
       with open(src_url.object_name, 'rb') as fp:
         src_md5 = CalculateB64EncodedMd5FromContents(fp)
   if dst_url.IsFileUrl():
     if src_crc32c != _NA:
       if src_size > TEN_MIB:
-        logger.info('Computing CRC32C for %s...', src_url_str)
+        logger.info('Computing CRC32C for %s...', dst_url_str)
       with open(dst_url.object_name, 'rb') as fp:
         dst_crc32c = CalculateB64EncodedCrc32cFromContents(fp)
     elif src_md5 != _NA:
