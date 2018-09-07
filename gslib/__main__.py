@@ -240,6 +240,8 @@ def main():
   if not (2, 7) <= sys.version_info[:3] < (3,):
     raise CommandException('gsutil requires python 2.7.')
 
+  boto_util.MonkeyPatchBoto()
+
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
   # config file for compatibility with previous versions and user convenience.
