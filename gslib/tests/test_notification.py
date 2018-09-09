@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import re
+import time
 import uuid
 
 import boto
@@ -24,6 +25,7 @@ import boto
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
+from gslib.utils.retry_util import Retry
 
 
 def _LoadNotificationUrl():
@@ -75,20 +77,33 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
   def test_list_one_channel(self):
     """Tests listing notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
+
+    # Set up an OCN (object change notification) on the newly created bucket.
     self.RunGsUtil(
         ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
         return_stderr=False)
+    # The OCN listing in the service is eventually consistent. In initial
+    # tests, it almost never was ready immediately after calling WatchBucket
+    # above, so we A) sleep for a few seconds before the first OCN listing
+    # attempt, and B) wrap the OCN listing attempt in retry logic in case
+    # it raises a BucketNotFoundException (note that RunGsUtil will raise this
+    # as an AssertionError due to the exit status not being 0).
+    @Retry(AssertionError, tries=3, timeout_secs=5)
+    def _ListObjectChangeNotifications():
+      stderr = self.RunGsUtil(
+          ['notification', 'list', '-o', suri(bucket_uri)],
+          return_stderr=True)
+      return stderr
+    time.sleep(5)
+    stderr = _ListObjectChangeNotifications()
 
-    stderr = self.RunGsUtil(
-        ['notification', 'listchannels', suri(bucket_uri)],
-        return_stderr=True)
-    channel_id = re.findall(r'Watch channel identifier: (?P<id>.*)', stderr)
+    channel_id = re.findall(r'Channel identifier: (?P<id>.*)', stderr)
     self.assertEqual(len(channel_id), 1)
-    resource_id = re.findall(r'Canonicalized resource identifier: (?P<id>.*)', stderr)
+    resource_id = re.findall(r'Resource identifier: (?P<id>.*)', stderr)
     self.assertEqual(len(resource_id), 1)
     push_url = re.findall(r'Application URL: (?P<id>.*)', stderr)
     self.assertEqual(len(push_url), 1)
-    subscriber_email = re.findall(r'Subscriber email: (?P<id>.*)', stderr)
+    subscriber_email = re.findall(r'Created by: (?P<id>.*)', stderr)
     self.assertEqual(len(subscriber_email), 1)
     creation_time = re.findall(r'Creation time: (?P<id>.*)', stderr)
     self.assertEqual(len(creation_time), 1)
