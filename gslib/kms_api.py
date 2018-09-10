@@ -232,7 +232,8 @@ class KmsApi(object):
       # In the event of a scope error, the www-authenticate field of the HTTP
       # response should contain text of the form
       #
-      # 'Bearer realm="https://accounts.google.com/", error=insufficient_scope,
+      # 'Bearer realm="https://oauth2.googleapis.com/",
+      # error=insufficient_scope,
       # scope="${space separated list of acceptable scopes}"'
       #
       # Here we use a quick string search to find the scope list, just looking

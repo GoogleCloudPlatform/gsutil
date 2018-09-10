@@ -674,7 +674,7 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 # authorization provider being used. Primarily useful for tool developers.
 #provider_label = Google
 #provider_authorization_uri = https://accounts.google.com/o/oauth2/auth
-#provider_token_uri = https://accounts.google.com/o/oauth2/token
+#provider_token_uri = https://oauth2.googleapis.com/token
 
 # 'oauth2_refresh_retries' controls the number of retry attempts made when
 # rate limiting errors occur for OAuth2 requests to retrieve an access token.

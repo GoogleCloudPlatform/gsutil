@@ -51,7 +51,7 @@ from six import BytesIO
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI = (
     'https://accounts.google.com/o/oauth2/auth')
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI = (
-    'https://accounts.google.com/o/oauth2/token')
+    'https://oauth2.googleapis.com/token')
 
 DEFAULT_SCOPES = [
     constants.Scopes.CLOUD_PLATFORM,
