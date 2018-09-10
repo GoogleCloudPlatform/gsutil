@@ -239,7 +239,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     UIController.
     """
     bucket_uri = self.CreateBucket()
-    file_contents = 'd' * DOWNLOAD_SIZE
+    file_contents = b'd' * DOWNLOAD_SIZE
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents=file_contents)
     fpath = self.CreateTempFile()
@@ -255,7 +255,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     percentage and total number of files.
     """
     bucket_uri = self.CreateBucket()
-    file_contents = 'd' * DOWNLOAD_SIZE
+    file_contents = b'd' * DOWNLOAD_SIZE
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents=file_contents)
     fpath = self.CreateTempFile()
@@ -270,7 +270,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     UIController.
     """
     bucket_uri = self.CreateBucket()
-    file_contents = 'u' * UPLOAD_SIZE
+    file_contents = b'u' * UPLOAD_SIZE
     fpath = self.CreateTempFile(file_name='sample-file.txt',
                                 contents=file_contents)
     stderr = self.RunGsUtil(['-m', 'cp', suri(fpath), suri(bucket_uri)],
@@ -286,7 +286,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     percentage and total number of files.
     """
     bucket_uri = self.CreateBucket()
-    file_contents = 'u' * UPLOAD_SIZE
+    file_contents = b'u' * UPLOAD_SIZE
     fpath = self.CreateTempFile(file_name='sample-file.txt',
                                 contents=file_contents)
     stderr = self.RunGsUtil(['cp', suri(fpath), suri(bucket_uri)],
@@ -306,7 +306,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     total_size = 0
     for i in range(num_objects):
       file_size = DOWNLOAD_SIZE // 3
-      file_contents = 'd' * file_size
+      file_contents = b'd' * file_size
       object_uri = self.CreateObject(bucket_uri=bucket_uri,
                                      object_name='foo' + str(i),
                                      contents=file_contents)
@@ -333,7 +333,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     total_size = 0
     for i in range(num_objects):
       file_size = DOWNLOAD_SIZE // 3
-      file_contents = 'd' * file_size
+      file_contents = b'd' * file_size
       object_uri = self.CreateObject(bucket_uri=bucket_uri,
                                      object_name='foo' + str(i),
                                      contents=file_contents)
@@ -359,7 +359,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     total_size = 0
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
-      file_contents = 'u' * file_size
+      file_contents = b'u' * file_size
       fpath = self.CreateTempFile(file_name='foo' + str(i),
                                   contents=file_contents)
       total_size += file_size
@@ -384,7 +384,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     total_size = 0
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
-      file_contents = 'u' * file_size
+      file_contents = b'u' * file_size
       fpath = self.CreateTempFile(file_name='foo' + str(i),
                                   contents=file_contents)
       total_size += file_size
@@ -403,7 +403,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     This was adapted from test_cp_resumable_upload_break.
     """
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents='a' * HALT_SIZE)
+    fpath = self.CreateTempFile(contents=b'a' * HALT_SIZE)
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
         ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))]
@@ -429,7 +429,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     This was adapted from test_cp_resumable_upload_break.
     """
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents='a' * HALT_SIZE)
+    fpath = self.CreateTempFile(contents=b'a' * HALT_SIZE)
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
         ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))]
@@ -461,7 +461,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     if not gsutil_flags:
       gsutil_flags = []
     bucket_uri = self.CreateBucket()
-    file_contents = 'a' * HALT_SIZE
+    file_contents = b'a' * HALT_SIZE
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
                                    contents=file_contents)
     fpath = self.CreateTempFile()
@@ -488,7 +488,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       if '-q' not in gsutil_args:
         self.assertIn('Resuming download', stderr)
 
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
     if '-q' in gsutil_flags:
       self.assertEquals('', stderr)
@@ -543,9 +543,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     dst_url = StorageUrlFromString(suri(bucket_uri, 'foo'))
 
-    file_contents = 'foobar'
+    file_contents = b'foobar'
+    file_name = 'foobar'
     source_file = self.CreateTempFile(
-        contents=file_contents, file_name=file_contents)
+        contents=file_contents, file_name=file_name)
     src_url = StorageUrlFromString(source_file)
 
     # Simulate an upload that had occurred by writing a tracker file
@@ -590,7 +591,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
             'Tracker file %s should have been deleted.' % tracker_file_name)
         read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
-        self.assertEqual(read_contents, file_contents)
+        self.assertEqual(read_contents.encode('utf-8'), file_contents)
         if '-m' in gsutil_flags:
           CheckUiOutputWithMFlag(self, stderr, 1, total_size=len(file_contents))
         else:
@@ -626,7 +627,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       gsutil_flags = []
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents='abc' * HALT_SIZE)
+                                   contents=b'abc' * HALT_SIZE)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltOneComponentCopyCallbackHandler(5)))
@@ -699,7 +700,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     total_size = 0
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
-      file_contents = 'u' * file_size
+      file_contents = b'u' * file_size
       fpath = self.CreateTempFile(file_name='foo' + str(i),
                                   contents=file_contents)
       total_size += file_size
@@ -716,7 +717,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(contents='bar',
+    object_uri = self.CreateObject(contents=b'bar',
                                    encryption_key=TEST_ENCRYPTION_KEY1)
     stdin_arg = suri(object_uri)
 
@@ -728,7 +729,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
     self.AssertObjectUsesCSEK(stdin_arg, TEST_ENCRYPTION_KEY2)
     num_objects = 1
-    total_size = len('bar')
+    total_size = len(b'bar')
     CheckUiOutputWithMFlag(self, stderr, num_objects, total_size)
 
   def test_ui_rewrite_with_no_m_flag(self):
@@ -738,7 +739,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(contents='bar',
+    object_uri = self.CreateObject(contents=b'bar',
                                    encryption_key=TEST_ENCRYPTION_KEY1)
     stdin_arg = suri(object_uri)
 
@@ -750,7 +751,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
     self.AssertObjectUsesCSEK(stdin_arg, TEST_ENCRYPTION_KEY2)
     num_objects = 1
-    total_size = len('bar')
+    total_size = len(b'bar')
     CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size)
 
   def test_ui_setmeta_with_m_flag(self):
@@ -759,8 +760,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     Adapted from test_recursion_works on test_setmeta.
     """
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     stderr = self.RunGsUtil(['-m', 'setmeta', '-h',
                              'content-type:footype', suri(object1_uri),
                              suri(object2_uri)], return_stderr=True)
@@ -776,8 +777,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     Adapted from test_recursion_works on test_setmeta.
     """
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     stderr = self.RunGsUtil(['setmeta', '-h', 'content-type:footype',
                              suri(object1_uri), suri(object2_uri)],
                             return_stderr=True)
@@ -794,10 +795,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     get_acl_prefix = ['-m', 'acl', 'get']
     set_acl_prefix = ['-m', 'acl', 'set']
-    obj_uri = suri(self.CreateObject(contents='foo'))
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
     stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
                             return_stderr=True)
     CheckUiOutputWithMFlag(self, stderr, 1, metadata=True)
@@ -819,10 +820,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     get_acl_prefix = ['acl', 'get']
     set_acl_prefix = ['acl', 'set']
-    obj_uri = suri(self.CreateObject(contents='foo'))
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
     stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
                             return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, 1, metadata=True)
@@ -855,22 +856,22 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2', mtime=10)
+                      contents=b'.obj2', mtime=10)
     self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
+                      contents=b'subdir/obj3')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
-                      contents='obj6_', mtime=100)
+                      contents=b'obj6_', mtime=100)
     # .obj2 will be replaced and have mtime of 10
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5')
+                      contents=b'subdir/obj5')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj6',
-                      contents='obj6', mtime=100)
+                      contents=b'obj6', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)

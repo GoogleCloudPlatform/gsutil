@@ -247,7 +247,7 @@ def PrintableStr(input_val):
   Returns:
     (str) A UTF-8 encoded string, or None.
   """
-  return input_val.encode(UTF8) if input_val is not None else None
+  return input_val
 
 
 def ttyprint(*objects, **kwargs):

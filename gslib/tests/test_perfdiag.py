@@ -231,34 +231,34 @@ class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
   def test_generate_file_data(self, mock_urandom):
     """Test the right amount of random and sequential data is generated."""
     def urandom(length):
-      return 'a' * length
+      return b'a' * length
     mock_urandom.side_effect = urandom
 
-    fp = six.StringIO()
+    fp = six.BytesIO()
     _GenerateFileData(fp, 1000, 100, 1000)
-    self.assertEqual('a' * 1000, fp.getvalue())
+    self.assertEqual(b'a' * 1000, fp.getvalue())
     self.assertEqual(1000, fp.tell())
 
-    fp = six.StringIO()
+    fp = six.BytesIO()
     _GenerateFileData(fp, 1000, 50, 1000)
-    self.assertIn('a' * 500, fp.getvalue())
-    self.assertIn('x' * 500, fp.getvalue())
+    self.assertIn(b'a' * 500, fp.getvalue())
+    self.assertIn(b'x' * 500, fp.getvalue())
     self.assertEqual(1000, fp.tell())
 
-    fp = six.StringIO()
+    fp = six.BytesIO()
     _GenerateFileData(fp, 1001, 50, 1001)
-    self.assertIn('a' * 501, fp.getvalue())
-    self.assertIn('x' * 500, fp.getvalue())
+    self.assertIn(b'a' * 501, fp.getvalue())
+    self.assertIn(b'x' * 500, fp.getvalue())
     self.assertEqual(1001, fp.tell())
 
   @mock.patch('os.urandom')
   def test_generate_file_data_repeat(self, mock_urandom):
     """Test that random data repeats when exhausted."""
     def urandom(length):
-      return 'a' * length
+      return b'a' * length
     mock_urandom.side_effect = urandom
 
-    fp = six.StringIO()
+    fp = six.BytesIO()
     _GenerateFileData(fp, 8, 50, 4)
-    self.assertEqual('aaxxaaxx', fp.getvalue())
+    self.assertEqual(b'aaxxaaxx', fp.getvalue())
     self.assertEqual(8, fp.tell())

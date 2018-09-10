@@ -42,7 +42,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_initial_metadata(self):
     """Tests copying file to an object with metadata."""
-    objuri = suri(self.CreateObject(contents='foo'))
+    objuri = suri(self.CreateObject(contents=b'foo'))
     inpath = self.CreateTempFile()
     ct = 'image/gif'
     self.RunGsUtil(['-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
@@ -57,7 +57,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_overwrite_existing(self):
     """Tests overwriting an object's metadata."""
-    objuri = suri(self.CreateObject(contents='foo'))
+    objuri = suri(self.CreateObject(contents=b'foo'))
     inpath = self.CreateTempFile()
     self.RunGsUtil(['-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
                     '-h', 'Content-Type:image/gif', 'cp', inpath, objuri])
@@ -74,7 +74,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('Preconditions not supported for s3 objects')
   def test_generation_precondition(self):
     """Tests setting metadata with a generation precondition."""
-    object_uri = self.CreateObject(contents='foo')
+    object_uri = self.CreateObject(contents=b'foo')
     generation = object_uri.generation
     ct = 'image/gif'
     stderr = self.RunGsUtil(
@@ -95,7 +95,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('Preconditions not supported for s3 objects')
   def test_metageneration_precondition(self):
     """Tests setting metadata with a metageneration precondition."""
-    object_uri = self.CreateObject(contents='foo')
+    object_uri = self.CreateObject(contents=b'foo')
     ct = 'image/gif'
     stderr = self.RunGsUtil(
         ['-h', 'x-goog-if-metageneration-match:5', 'setmeta', '-h',
@@ -124,7 +124,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Each header must appear at most once', stderr)
 
   def test_setmeta_seek_ahead(self):
-    object_uri = self.CreateObject(contents='foo')
+    object_uri = self.CreateObject(contents=b'foo')
     with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
                                ('GSUtil', 'task_estimation_force', 'True')]):
       stderr = self.RunGsUtil(['-m', 'setmeta', '-h', 'content-type:footype',
@@ -133,8 +133,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_recursion_works(self):
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     self.RunGsUtil(['setmeta', '-R', '-h', 'content-type:footype',
                     suri(bucket_uri)])
 
@@ -177,7 +177,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     """Tests setting custom metadata with an uppercase value."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip('XML header keys are case-insensitive.')
-    objuri = self.CreateObject(contents='foo')
+    objuri = self.CreateObject(contents=b'foo')
     self.RunGsUtil([
         'setmeta', '-h', 'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
         suri(objuri)])
@@ -198,7 +198,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.assertIn('must name an object', stderr)
 
   def test_setmeta_valid_with_multiple_colons_in_value(self):
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     self.RunGsUtil([
         'setmeta', '-h', 'x-%s-meta-foo:bar:baz' % self.provider_custom_meta,
         suri(obj_uri)])

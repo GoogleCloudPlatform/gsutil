@@ -74,7 +74,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     object_base_name = self.MakeTempName('obj')
     object_name = object_base_name + '-suffix'
-    object_uri = self.CreateObject(object_name=object_name, contents='data')
+    object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
     request = '%s://%s/%s' % (
         self.default_provider, object_uri.bucket_name, object_base_name)
@@ -86,7 +86,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     object_base_name = self.MakeTempName('obj')
     object_name = object_base_name + '/subobj'
-    object_uri = self.CreateObject(object_name=object_name, contents='data')
+    object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
     request = '%s://%s/' % (self.default_provider, object_uri.bucket_name)
     expected_result = '//%s/%s/' % (object_uri.bucket_name, object_base_name)
@@ -115,7 +115,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     object_base_name = self.MakeTempName('obj')
     object_name = object_base_name + '-suffix'
-    object_uri = self.CreateObject(object_name=object_name, contents='data')
+    object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
     request = '%s://%s/%s' % (
         self.default_provider, object_uri.bucket_name, object_base_name)
@@ -132,10 +132,10 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     object_base_name = self.MakeTempName('obj')
     object1_name = object_base_name + '-suffix1'
     self.CreateObject(
-        bucket_uri=bucket_uri, object_name=object1_name, contents='data')
+        bucket_uri=bucket_uri, object_name=object1_name, contents=b'data')
     object2_name = object_base_name + '-suffix2'
     self.CreateObject(
-        bucket_uri=bucket_uri, object_name=object2_name, contents='data')
+        bucket_uri=bucket_uri, object_name=object2_name, contents=b'data')
 
     request = '%s://%s/%s' % (
         self.default_provider, bucket_uri.bucket_name, object_base_name)
@@ -292,7 +292,7 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     with SetBotoConfigForTest([('GSUtil', 'state_dir', self.CreateTempDir())]):
       object_uri = self.CreateObject(
-          object_name='subdir/subobj', contents='test data')
+          object_name='subdir/subobj', contents=b'test data')
 
       cached_prefix = '%s://%s/' % (
           self.default_provider, object_uri.bucket_name)
@@ -319,7 +319,7 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     """
 
     with SetBotoConfigForTest([('GSUtil', 'state_dir', self.CreateTempDir())]):
-      object_uri = self.CreateObject(object_name='obj', contents='test data')
+      object_uri = self.CreateObject(object_name='obj', contents=b'test data')
 
       cached_prefix = '%s://%s/' % (
           self.default_provider, object_uri.bucket_name)
@@ -342,7 +342,7 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     """
 
     with SetBotoConfigForTest([('GSUtil', 'state_dir', self.CreateTempDir())]):
-      object_uri = self.CreateObject(object_name='obj', contents='test data')
+      object_uri = self.CreateObject(object_name='obj', contents=b'test data')
 
       cached_prefix = '%s://%s/' % (
           self.default_provider, object_uri.bucket_name)

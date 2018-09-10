@@ -23,8 +23,6 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
-from gslib.tests.util import unicode_it
-from gslib.tests.util import unicode_it_list
 from gslib.utils.retry_util import Retry
 
 
@@ -153,7 +151,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil(
           ['du', '-s', subdir1, subdir2], return_stdout=True)
-      self.assertSetEqual(set(unicode_it_list(stdout.splitlines())), set([
+      self.assertSetEqual(set(stdout.splitlines()), set([
           '%-10s  %s' % (18, subdir1),
           '%-10s  %s' % (18, subdir2),
       ]))
@@ -217,7 +215,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil([
           'du', '-e', '*sub2/five*', '-e', '*sub1材/four',
           suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(unicode_it_list(stdout.splitlines())), set([
+      self.assertSetEqual(set(stdout.splitlines()), set([
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[3])),
           '%-10s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
@@ -230,14 +228,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri, obj_uris = self._create_nested_subdir()
     fpath = self.CreateTempFile(
       contents='*sub2/five*\n*sub1材/four'.encode('utf-8'))
-    fpath = unicode_it(fpath)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-X', fpath, suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(unicode_it_list(stdout.splitlines())), set([
+      self.assertSetEqual(set(stdout.splitlines()), set([
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[3])),
           '%-10s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),

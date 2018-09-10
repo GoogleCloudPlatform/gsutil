@@ -212,7 +212,7 @@ class CommandRunner(object):
       if isinstance(command.command_spec.argparse_arguments, dict):
         subcommand_parsers = command_parser.add_subparsers()
         subcommand_argument_dict = command.command_spec.argparse_arguments
-        for subcommand, arguments in subcommand_argument_dict.iteritems():
+        for subcommand, arguments in six.iteritems(subcommand_argument_dict):
           subcommand_parser = subcommand_parsers.add_parser(
               subcommand, add_help=False)
           self._ConfigureCommandArgumentParserArguments(

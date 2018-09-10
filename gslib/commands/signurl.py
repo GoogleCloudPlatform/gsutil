@@ -30,8 +30,9 @@ import getpass
 import hashlib
 import json
 import re
-import urllib
 
+import six
+from six.moves import urllib
 from apitools.base.py.exceptions import HttpError
 from apitools.base.py.http_wrapper import MakeRequest
 from apitools.base.py.http_wrapper import Request
@@ -263,7 +264,7 @@ def _GenSignedUrl(key, client_id, method, duration,
 
   canonical_resource = '/{}'.format(gcs_path)
   canonical_query_string = '&'.join(
-      ['{}={}'.format(param, urllib.quote_plus(signed_query_params[param]))
+      ['{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
        for param in sorted(signed_query_params.keys())])
   canonical_headers = '\n'.join(
       ['{}:{}'.format(header.lower(), signed_headers[header])
@@ -502,7 +503,7 @@ class UrlSignCommand(Command):
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(url.bucket_name,
-                                    urllib.quote(url.object_name.encode(UTF8)))
+                                    urllib.parse.quote(url.object_name.encode(UTF8)))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:

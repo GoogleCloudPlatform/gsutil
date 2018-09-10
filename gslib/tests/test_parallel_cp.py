@@ -80,7 +80,7 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
-    src_file = self.CreateTempFile(tmpdir=tmpdir, file_name='obj', contents='')
+    src_file = self.CreateTempFile(tmpdir=tmpdir, file_name='obj', contents=b'')
     dst_bucket_uri = self.CreateBucket()
     # Make an object under subdir so next copy will treat subdir as a subdir.
     self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri, 'subdir/a')])
@@ -135,7 +135,7 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
   def testCopyingObjsAndFilesToBucket(self):
     """Tests copying objects and files to a bucket."""
     src_bucket_uri = self.CreateBucket()
-    self.CreateObject(src_bucket_uri, object_name='f1', contents='foo')
+    self.CreateObject(src_bucket_uri, object_name='f1', contents=b'foo')
     src_dir = self.CreateTempDir(test_files=['f2'])
     dst_bucket_uri = self.CreateBucket()
     self.RunGsUtil(['cp', '-R', suri(src_bucket_uri, '**'),
@@ -173,9 +173,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     for final_dst_char in ('', '/'):
       dst_bucket_uri = self.CreateBucket()
       self.CreateObject(dst_bucket_uri, object_name='subdir0/existing',
-                        contents='foo')
+                        contents=b'foo')
       self.CreateObject(dst_bucket_uri, object_name='subdir1/existing',
-                        contents='foo')
+                        contents=b'foo')
       src_dir = self.CreateTempDir(test_files=['f0', 'f1', 'f2'])
 
       for i in range(2):
@@ -206,9 +206,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
 
       dst_bucket_uri = self.CreateBucket()
       self.CreateObject(dst_bucket_uri, object_name='d0/placeholder',
-                        contents='foo')
+                        contents=b'foo')
       self.CreateObject(dst_bucket_uri, object_name='d1/placeholder',
-                        contents='foo')
+                        contents=b'foo')
 
       for i in range(2):
         src_dir = self.CreateTempDir(test_files=[('d3', 'd4', 'nested', 'f1')])

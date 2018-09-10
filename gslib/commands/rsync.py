@@ -31,12 +31,12 @@ import tempfile
 import textwrap
 import time
 import traceback
-import urllib
+import sys
 
 import six
+from six.moves import urllib
 from boto import config
 import crcmod
-
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
@@ -769,7 +769,10 @@ def _EncodeUrl(url_string):
   Returns:
     encoded URL.
   """
-  return urllib.quote_plus(url_string.encode(constants.UTF8))
+  if six.PY2:
+    return urllib.parse.quote_plus(url_string.encode(constants.UTF8))
+  else:
+    return urllib.parse.quote_plus(url_string)
 
 
 def _DecodeUrl(enc_url_string):
@@ -781,7 +784,10 @@ def _DecodeUrl(enc_url_string):
   Returns:
     decoded URL.
   """
-  return urllib.unquote_plus(enc_url_string).decode(constants.UTF8)
+  if six.PY2:
+    return urllib.parse.unquote_plus(enc_url_string).decode(constants.UTF8)
+  else:
+    return urllib.parse.unquote_plus(enc_url_string)
 
 
 # pylint: disable=bare-except
@@ -815,7 +821,7 @@ def _BatchSort(in_iter, out_file):
       output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
                              mode='w+', encoding=constants.UTF8)
       chunk_files.append(output_chunk)
-      output_chunk.write(unicode(''.join(current_chunk)))
+      output_chunk.write(six.text_type(''.join(current_chunk)))
       output_chunk.flush()
       output_chunk.seek(0)
     out_file.writelines(heapq.merge(*chunk_files))
@@ -1063,7 +1069,7 @@ class _DiffIterator(object):
         else:
           (src_url_str, src_size, src_time_created, src_atime, src_mtime,
            src_mode, src_uid, src_gid, src_crc32c, src_md5) = (
-               self._ParseTmpFileLine(self.sorted_src_urls_it.next()))
+               self._ParseTmpFileLine(next(self.sorted_src_urls_it)))
           posix_attrs = POSIXAttributes(atime=src_atime, mtime=src_mtime,
                                         uid=src_uid, gid=src_gid, mode=src_mode)
           # Skip past base URL and normalize slashes so we can compare across
@@ -1078,7 +1084,7 @@ class _DiffIterator(object):
           # We don't need time created at the destination.
           (dst_url_str, dst_size, _, dst_atime, dst_mtime, dst_mode, dst_uid,
            dst_gid, dst_crc32c,
-           dst_md5) = self._ParseTmpFileLine(self.sorted_dst_urls_it.next())
+           dst_md5) = self._ParseTmpFileLine(next(self.sorted_dst_urls_it))
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           dst_url_str_to_check = _EncodeUrl(

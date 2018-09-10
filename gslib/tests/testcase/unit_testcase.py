@@ -40,7 +40,6 @@ from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
-from gslib.tests.util import unicode_it
 
 
 class GsutilApiUnitTestClassMapFactory(object):

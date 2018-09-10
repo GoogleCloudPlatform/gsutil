@@ -31,7 +31,7 @@ class TestTraceTokenOption(testcase.GsUtilIntegrationTestCase):
 
   def test_minus_tracetoken_cat(self):
     """Tests cat command with trace-token option."""
-    key_uri = self.CreateObject(contents='0123456789')
+    key_uri = self.CreateObject(contents=b'0123456789')
     (_, stderr) = self.RunGsUtil(
         ['-D', '--trace-token=THISISATOKEN', 'cat', suri(key_uri)],
         return_stdout=True, return_stderr=True)

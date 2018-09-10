@@ -101,7 +101,7 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
 
     # Tests cloud object with -h.
     stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
-    self.assertIn(b'Hashes [hex]', stdout)
+    self.assertIn('Hashes [hex]', stdout)
 
     if self.default_provider == 'gs':
       # Hex hashes for cloud objects get converted to lowercase but their
@@ -130,14 +130,14 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['compose', suri(obj1), suri(obj2), suri(obj1)])
 
     stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)
-    self.assertIn(b'Hashes [hex]', stdout)
+    self.assertIn('Hashes [hex]', stdout)
     # Hex hashes for cloud objects get converted to lowercase but their
     # meaning is the same.
     self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC.lower()).encode('utf-8'),
+      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC.lower()),
       stdout)
 
     stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
-    self.assertIn(b'Hashes [base64]', stdout)
+    self.assertIn('Hashes [base64]', stdout)
     self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC).encode('utf-8'), stdout)
+      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC), stdout)

@@ -139,7 +139,7 @@ class HashCommand(Command):
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
           cloud_format_func = (
-              lambda digest: hashing_helper.Base64ToHexHash(digest))
+              lambda digest: hashing_helper.Base64ToHexHash(digest).decode('ascii'))
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True

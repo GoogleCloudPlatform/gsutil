@@ -31,8 +31,6 @@ import boto
 
 import gslib.tests.util as util
 from gslib.tests.util import unittest
-from gslib.tests.util import unicode_it
-from gslib.tests.util import unicode_it_list
 from gslib.utils.constants import UTF8
 from gslib.utils.posix_util import NA_ID
 from gslib.utils.posix_util import NA_MODE
@@ -195,11 +193,9 @@ class GsUtilTestCase(unittest.TestCase):
     """
     tmpdir = tmpdir or self.CreateTempDir()
     file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, six.string_types):
-      file_name = unicode_it(file_name)
+    if isinstance(file_name, six.text_type):
       fpath = os.path.join(tmpdir, file_name)
     else:
-      file_name = unicode_it_list(file_name)
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))

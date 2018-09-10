@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import re
 
+import six
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -363,7 +364,7 @@ class LsCommand(Command):
     # prettier.
     for key in fields:
       previous_value = fields[key]
-      if (not isinstance(previous_value, basestring) or
+      if (not isinstance(previous_value, six.string_types) or
           '\n' not in previous_value):
         continue
       new_value = previous_value.replace('\n', '\n\t  ')
@@ -422,8 +423,7 @@ class LsCommand(Command):
       num_bytes = obj.size
       num_objs = 1
 
-    timestamp = JSON_TIMESTAMP_RE.sub(
-        r'\1T\2Z', str(obj.timeCreated).decode(UTF8).encode('ascii'))
+    timestamp = JSON_TIMESTAMP_RE.sub(r'\1T\2Z', str(obj.timeCreated))
     printstr = '%(size)10s  %(timestamp)s  %(url)s'
     encoded_etag = None
     encoded_metagen = None

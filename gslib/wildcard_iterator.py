@@ -333,13 +333,16 @@ class CloudWildcardIterator(WildcardIterator):
         delimiter = '/'
     # The following debug output is useful for tracing how the algorithm
     # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
-    if self.debug > 1:
-      sys.stderr.write(
-          'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
-          'prefix_wildcard=%s, suffix_wildcard=%s\n' %
-          (PrintableStr(wildcard), PrintableStr(prefix),
-           PrintableStr(delimiter), PrintableStr(prefix_wildcard),
-           PrintableStr(suffix_wildcard)))
+    # if self.debug > 1:
+    #   sys.stderr.write(
+    #       'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
+    #       'prefix_wildcard=%s, suffix_wildcard=%s\n' %
+    #       (wildcard, prefix,
+    #        delimiter, prefix_wildcard,
+    #        suffix_wildcard))
+    #       (PrintableStr(wildcard), PrintableStr(prefix),
+    #        PrintableStr(delimiter), PrintableStr(prefix_wildcard),
+    #        PrintableStr(suffix_wildcard)))
     return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
   def _SingleVersionMatches(self, listed_generation):

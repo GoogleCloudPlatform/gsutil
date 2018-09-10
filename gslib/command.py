@@ -1890,7 +1890,7 @@ class ProducerThread(threading.Thread):
       self.args_iterator = iter(self.args_iterator)
       while True:
         try:
-          args = self.args_iterator.next()
+          args = next(self.args_iterator)
         except StopIteration as e:
           break
         except Exception as e:  # pylint: disable=broad-except
@@ -2341,4 +2341,3 @@ def ResetFailureCount():
   """Resets the failure_count variable to 0 - useful if error is expected."""
   global failure_count
   failure_count.Reset()
-

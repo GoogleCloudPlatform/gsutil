@@ -67,7 +67,7 @@ class PluralityCheckableIterator(six.Iterator):
       try:
         if not self.base_iterator:
           self.base_iterator = iter(self.orig_iterator)
-        e = six.next(self.base_iterator)
+        e = next(self.base_iterator)
         self.underlying_iter_empty = False
         if isinstance(e, tuple) and isinstance(e[0], Exception):
           self.head.append(('exception', e[0], e[1]))

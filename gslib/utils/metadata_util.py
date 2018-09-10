@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import six
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 
@@ -61,7 +62,7 @@ def CreateCustomMetadata(entries=None, custom_metadata=None):
         additionalProperties=[])
   if entries is None:
     entries = {}
-  for key, value in entries.iteritems():
+  for key, value in six.iteritems(entries):
     custom_metadata.additionalProperties.append(
         apitools_messages.Object.MetadataValue.AdditionalProperty(
             key=str(key), value=str(value)))

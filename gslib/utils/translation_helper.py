@@ -315,7 +315,7 @@ def CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=False):
         dst_metadata_dict[src_prop.key] = src_prop.value
     # Rewrite the list with our updated dict.
     dst_obj_metadata.metadata.additionalProperties = []
-    for k, v in dst_metadata_dict.iteritems():
+    for k, v in six.iteritems(dst_metadata_dict):
       dst_obj_metadata.metadata.additionalProperties.append(
           apitools_messages.Object.MetadataValue.AdditionalProperty(key=k,
                                                                     value=v))
@@ -714,7 +714,7 @@ class LabelTranslation(object):
   def BotoTagsFromMessage(cls, message):
     label_dict = json.loads(cls.JsonFromMessage(message))
     tag_set = TagSet()
-    for key, value in label_dict.iteritems():
+    for key, value in six.iteritems(label_dict):
       if value:  # Skip values which may be set to None.
         tag_set.add_tag(key, value)
     tags = Tags()

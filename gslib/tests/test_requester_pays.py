@@ -28,7 +28,7 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retry_util import Retry
 
-OBJECT_CONTENTS = 'innards'
+OBJECT_CONTENTS = b'innards'
 
 
 @SkipForS3('gsutil doesn\'t support S3 Requester Pays.')
@@ -68,6 +68,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(self.user_project_flag + command_list,
                             return_stdout=True)
     if regex:
+      if isinstance(regex, bytes):
+        regex = regex.decode('utf-8')
       self.assertRegexpMatchesWithFlags(stdout, regex, flags=re.IGNORECASE)
 
   def _run_non_requester_pays_test(self, command_list):
@@ -170,7 +172,7 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
         ['cp', suri(self.non_requester_pays_object_uri), suri(dest_bucket_uri)])
 
   def test_compose(self):
-    data_list = ['apple', 'orange', 'banana']
+    data_list = [b'apple', b'orange', b'banana']
 
     bucket_uri = self.CreateBucket()
     components = [self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
@@ -220,9 +222,9 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
   def test_mv(self):
     requester_pays_bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(bucket_uri=requester_pays_bucket_uri,
-                                    contents='foo')
+                                    contents=b'foo')
     object2_uri = self.CreateObject(bucket_uri=requester_pays_bucket_uri,
-                                    contents='oOOo')
+                                    contents=b'oOOo')
     self.AssertNObjectsInBucket(requester_pays_bucket_uri, 2)
     self._set_requester_pays(requester_pays_bucket_uri)
     dest_bucket_uri = self.CreateBucket()
@@ -233,8 +235,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(requester_pays_bucket_uri, 0)
 
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='bar')
-    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='baz')
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'baz')
     self.AssertNObjectsInBucket(bucket_uri, 2)
     for obj in [object1_uri, object2_uri]:
       self._run_non_requester_pays_test(
@@ -242,14 +244,14 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, 0)
 
   def test_rewrite(self):
-    object_uri = self.CreateObject(contents='bar')
+    object_uri = self.CreateObject(contents=b'bar')
     self._run_non_requester_pays_test(
         ['rewrite', '-s', 'dra', suri(object_uri)])
 
     req_pays_bucket_uri = self.CreateBucket()
     self._set_requester_pays(req_pays_bucket_uri)
     req_pays_obj_uri = self.CreateObject(bucket_uri=req_pays_bucket_uri,
-                                         contents='baz')
+                                         contents=b'baz')
     self._run_requester_pays_test(
         ['rewrite', '-s', 'dra', suri(req_pays_obj_uri)])
 
@@ -269,13 +271,13 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
   def test_setmeta(self):
     req_pays_obj_uri = self.CreateObject(
         bucket_uri=self.requester_pays_bucket_uri,
-        contents='<html><body>text</body></html>')
+        contents=b'<html><body>text</body></html>')
     self._run_requester_pays_test(
         ['setmeta', '-h', 'content-type:text/html', suri(req_pays_obj_uri)])
 
     obj_uri = self.CreateObject(
         bucket_uri=self.non_requester_pays_bucket_uri,
-        contents='<html><body>text</body></html>')
+        contents=b'<html><body>text</body></html>')
     self._run_non_requester_pays_test(
         ['setmeta', '-h', 'content-type:text/html', suri(obj_uri)])
 

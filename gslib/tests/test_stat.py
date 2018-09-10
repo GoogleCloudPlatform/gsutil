@@ -57,13 +57,13 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     """Tests stat output of an outdated object under version control."""
     bucket_uri = self.CreateVersionedBucket()
     old_object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, contents='z')
+        bucket_uri=bucket_uri, contents=b'z')
 
     # Update object
     self.CreateObject(
         bucket_uri=bucket_uri,
         object_name=old_object_uri.object_name,
-        contents='z', gs_idempotent_generation=urigen(old_object_uri))
+        contents=b'z', gs_idempotent_generation=urigen(old_object_uri))
 
     stdout = self.RunGsUtil(
         ['stat', old_object_uri.version_specific_uri], return_stdout=True)
@@ -72,7 +72,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_output(self):
     """Tests stat output of a single object."""
-    object_uri = self.CreateObject(contents='z')
+    object_uri = self.CreateObject(contents=b'z')
     stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
     self.assertIn(object_uri.uri, stdout)
     self.assertIn('Creation time:', stdout)
@@ -105,7 +105,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('ETag:', stdout)
 
   def test_minus_q_stat(self):
-    object_uri = self.CreateObject(contents='z')
+    object_uri = self.CreateObject(contents=b'z')
     stdout = self.RunGsUtil(['-q', 'stat', suri(object_uri)],
                             return_stdout=True)
     self.assertEquals(0, len(stdout))
@@ -121,7 +121,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   def test_stat_one_missing(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
-                      contents='z')
+                      contents=b'z')
     stdout, stderr = self.RunGsUtil(
         ['stat', suri(bucket_uri, 'missing'), suri(bucket_uri, 'notmissing')],
         expected_status=1, return_stdout=True, return_stderr=True)
@@ -131,7 +131,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   def test_stat_one_missing_wildcard(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='notmissing',
-                      contents='z')
+                      contents=b'z')
     stdout, stderr = self.RunGsUtil(
         ['stat', suri(bucket_uri, 'missin*'), suri(bucket_uri, 'notmissin*')],
         expected_status=1, return_stdout=True, return_stderr=True)
@@ -140,7 +140,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_bucket_wildcard(self):
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents='z')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents=b'z')
     stat_string = suri(bucket_uri)[:-1] + '?/foo'
     self.RunGsUtil(['stat', stat_string])
     stat_string2 = suri(bucket_uri)[:-1] + '*/foo'
@@ -149,9 +149,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   def test_stat_object_wildcard(self):
     bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo1',
-                                    contents='z')
+                                    contents=b'z')
     object2_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo2',
-                                    contents='z')
+                                    contents=b'z')
     stat_string = suri(object1_uri)[:-2] + '*'
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -179,14 +179,14 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
       self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
       self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
 
     # Stat object without key should return encrypted hashes.
     stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
     self.assertNotIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
     self.assertNotIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
     self.assertIn('encrypted', stdout)
-    self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+    self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
 
   def test_stat_encrypted_object_wildcard(self):
     """Tests stat command with a mix of encrypted and unencrypted objects."""
@@ -215,16 +215,16 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       @Retry(AssertionError, tries=3, timeout_secs=1)
       def _StatExpectMixed():
         """Runs stat and validates output."""
-        stdout = self.RunGsUtil(['stat', stat_string], return_stdout=True)
+        stdout, stderr = self.RunGsUtil(['stat', stat_string], return_stdout=True, return_stderr=True)
         self.assertIn(suri(object1_uri), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(suri(object2_uri), stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_MD5, stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_CRC32C, stdout)
         self.assertIn('encrypted', stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(suri(object3_uri), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_CRC32C, stdout)

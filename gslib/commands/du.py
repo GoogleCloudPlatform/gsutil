@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import sys
 
+import six
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -145,7 +146,7 @@ class DuCommand(Command):
 
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else unicode(num_bytes))
+                   if self.human_readable else six.text_type(num_bytes))
     text_util.ttyprint('%(size)-10s  %(name)s' % {
         'size': size_string, 'name': name}, end=self.line_ending)
 
@@ -209,7 +210,7 @@ class DuCommand(Command):
           if a == '-':
             f = sys.stdin
           else:
-            f = open(a, 'r')
+            f = open(a, 'rb')
           try:
             for line in f:
               line = line.strip().decode(UTF8)

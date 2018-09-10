@@ -272,7 +272,8 @@ def Base64ToHexHash(base64_hash):
   Returns:
     Hex digest of the input argument.
   """
-  return binascii.hexlify(base64.decodestring(base64_hash.strip('\n"\'')))
+  return binascii.hexlify(
+    base64.decodestring(base64_hash.strip('\n"\'').encode('utf-8')))
 
 
 def _CalculateB64EncodedHashFromContents(fp, hash_alg):

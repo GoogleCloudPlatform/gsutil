@@ -50,7 +50,6 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetDummyProjectForUnitTest
 from gslib.tests.util import unittest
-from gslib.tests.util import unicode_it
 from gslib.utils import constants
 from gslib.utils import copy_helper
 from gslib.utils import system_util
@@ -699,15 +698,14 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', ['-R', suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1'),
-                    suri(src_bucket_uri, 'd1', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2', 'foo3'),
-                    suri(src_bucket_uri, 'd0', ':'),
-                    suri(src_bucket_uri, 'd0', 'foo2')])
-    expected.add('')  # Blank line between subdir listings.
-    output = unicode_it(output)
-    actual = set(output.split('\n'))
+    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', 'd2', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', 'd2', 'foo3').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursiveWithLeadingSlashObjectName(self):
@@ -715,10 +713,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
     output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(dst_bucket_uri, 'f0')])
-    expected.add('')  # Blank line between subdir listings.
-    output = unicode_it(output)
-    actual = set(output.split('\n'))
+    expected = set([suri(dst_bucket_uri, 'f0').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirNonRecursive(self):
@@ -728,7 +725,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
                              return_stdout=True)
     expected = set([
-        (suri(src_bucket_uri, 'src_subdir', 'foo')).encode('utf-8'),
+        suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
         (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode('utf-8')])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set(output.split(b'\n'))
@@ -743,13 +740,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           'ls', ['-R', suri(src_bucket_uri, 'src_subdir') + final_char],
           return_stdout=True)
       expected = set([
-          suri(src_bucket_uri, 'src_subdir', ':'),
-          suri(src_bucket_uri, 'src_subdir', 'foo'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', ':'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2')])
-      expected.add('')  # Blank line between subdir listings.
-      output = unicode_it(output)
-      actual = set(output.split('\n'))
+          suri(src_bucket_uri, 'src_subdir', ':').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode('utf-8')])
+      expected.add(b'')  # Blank line between subdir listings.
+      actual = set(output.split(b'\n'))
       self.assertEqual(expected, actual)
 
   def testSetAclOnBucketRuns(self):

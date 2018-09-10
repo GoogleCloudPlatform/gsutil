@@ -363,8 +363,8 @@ class TestIamCh(TestIamIntegration):
     super(TestIamCh, self).setUp()
     self.bucket = self.CreateBucket()
     self.bucket2 = self.CreateBucket()
-    self.object = self.CreateObject(bucket_uri=self.bucket, contents='foo')
-    self.object2 = self.CreateObject(bucket_uri=self.bucket, contents='bar')
+    self.object = self.CreateObject(bucket_uri=self.bucket, contents=b'foo')
+    self.object2 = self.CreateObject(bucket_uri=self.bucket, contents=b'bar')
 
     self.bucket_iam_string = self.RunGsUtil(
         ['iam', 'get', self.bucket.uri], return_stdout=True)
@@ -701,31 +701,31 @@ class TestIamSet(TestIamIntegration):
     self.bucket_iam_string = self.RunGsUtil(
         ['iam', 'get', self.bucket.uri], return_stdout=True)
     self.old_bucket_iam_path = self.CreateTempFile(
-        contents=self.bucket_iam_string)
+        contents=self.bucket_iam_string.encode('utf-8'))
     self.new_bucket_iam_policy = self._patch_binding(
         json.loads(self.bucket_iam_string),
         IAM_BUCKET_READ_ROLE,
         self.public_bucket_read_binding)
     self.new_bucket_iam_path = self.CreateTempFile(
-        contents=json.dumps(self.new_bucket_iam_policy))
+        contents=json.dumps(self.new_bucket_iam_policy).encode('utf-8'))
 
     # Create a temporary object to get the IAM policy.
-    tmp_object = self.CreateObject(contents='foobar')
+    tmp_object = self.CreateObject(contents=b'foobar')
     self.object_iam_string = self.RunGsUtil(
         ['iam', 'get', tmp_object.uri], return_stdout=True)
     self.old_object_iam_path = self.CreateTempFile(
-        contents=self.object_iam_string)
+        contents=self.object_iam_string.encode('utf-8'))
     self.new_object_iam_policy = self._patch_binding(
         json.loads(self.object_iam_string), IAM_OBJECT_READ_ROLE,
         self.public_object_read_binding)
     self.new_object_iam_path = self.CreateTempFile(
-        contents=json.dumps(self.new_object_iam_policy))
+        contents=json.dumps(self.new_object_iam_policy).encode('utf-8'))
 
   def test_seek_ahead_iam(self):
     """Ensures that the seek-ahead iterator is being used with iam commands."""
 
     gsutil_object = self.CreateObject(
-        bucket_uri=self.bucket, contents='foobar')
+        bucket_uri=self.bucket, contents=b'foobar')
 
     # This forces the seek-ahead iterator to be utilized.
     with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
@@ -737,7 +737,7 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_invalid_iam_bucket(self):
     """Ensures invalid content returns error on input check."""
-    inpath = self.CreateTempFile(contents='badIam')
+    inpath = self.CreateTempFile(contents=b'badIam')
     stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('ArgumentException', stderr)
@@ -859,17 +859,17 @@ class TestIamSet(TestIamIntegration):
     """
 
     old_gsutil_object = self.CreateObject(
-        bucket_uri=self.versioned_bucket, contents='foo')
+        bucket_uri=self.versioned_bucket, contents=b'foo')
     old_gsutil_object2 = self.CreateObject(
-        bucket_uri=self.versioned_bucket, contents='bar')
+        bucket_uri=self.versioned_bucket, contents=b'bar')
     gsutil_object = self.CreateObject(
         bucket_uri=self.versioned_bucket,
         object_name=old_gsutil_object.object_name,
-        contents='new_foo', gs_idempotent_generation=urigen(old_gsutil_object))
+        contents=b'new_foo', gs_idempotent_generation=urigen(old_gsutil_object))
     gsutil_object2 = self.CreateObject(
         bucket_uri=self.versioned_bucket,
         object_name=old_gsutil_object2.object_name,
-        contents='new_bar', gs_idempotent_generation=urigen(old_gsutil_object2))
+        contents=b'new_bar', gs_idempotent_generation=urigen(old_gsutil_object2))
     return (old_gsutil_object, old_gsutil_object2, gsutil_object,
             gsutil_object2)
 
@@ -1040,9 +1040,9 @@ class TestIamSet(TestIamIntegration):
     iterating over gs://bad_bucket.
     """
 
-    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents='foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents=b'foobar')
     gsutil_object2 = self.CreateObject(
-        bucket_uri=self.bucket, contents='foobar')
+        bucket_uri=self.bucket, contents=b'foobar')
 
     stderr = self.RunGsUtil(['-m', 'iam', 'set', '-r', self.new_object_iam_path,
                              'gs://%s' % self.nonexistent_bucket_name,
@@ -1058,7 +1058,7 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_single_unversioned_object(self):
     """Tests setting a valid IAM on an object."""
-    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents='foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents=b'foobar')
 
     lookup_uri = gsutil_object.uri
     self.RunGsUtil(['iam', 'set', self.new_object_iam_path, lookup_uri])
@@ -1077,7 +1077,7 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_single_versioned_object(self):
     """Tests setting a valid IAM on a versioned object."""
-    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents='foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents=b'foobar')
 
     lookup_uri = gsutil_object.version_specific_uri
     self.RunGsUtil(['iam', 'set', self.new_object_iam_path, lookup_uri])
@@ -1096,7 +1096,7 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_multithreaded_single_object(self):
     """Tests setting a valid IAM on a single object with multithreading."""
-    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents='foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket, contents=b'foobar')
 
     lookup_uri = gsutil_object.version_specific_uri
     self.RunGsUtil(

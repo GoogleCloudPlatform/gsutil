@@ -118,8 +118,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
   def test_stdin_args(self):
     """Tests mv with the -I option."""
     tmpdir = self.CreateTempDir()
-    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents='data1')
-    fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents='data2')
+    fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data1')
+    fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data2')
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['mv', '-I', suri(bucket_uri)],
                    stdin='\n'.join((fpath1, fpath2)))
@@ -135,9 +135,9 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
   def test_mv_no_clobber(self):
     """Tests mv with the -n option."""
-    fpath1 = self.CreateTempFile(contents='data1')
+    fpath1 = self.CreateTempFile(contents=b'data1')
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
     stderr = self.RunGsUtil(['mv', '-n', fpath1, suri(object_uri)],
                             return_stderr=True)
     # Copy should be skipped and source file should not be removed.
@@ -171,7 +171,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
 
     obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
-                            contents='obj')
+                            contents=b'obj')
     TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')

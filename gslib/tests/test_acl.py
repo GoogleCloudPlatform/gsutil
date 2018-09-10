@@ -67,8 +67,8 @@ class TestAcl(TestAclBase):
 
   def test_set_invalid_acl_object(self):
     """Ensures that invalid content returns a bad request error."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
-    inpath = self.CreateTempFile(contents='badAcl')
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
+    inpath = self.CreateTempFile(contents=b'badAcl')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('ArgumentException', stderr)
@@ -76,15 +76,15 @@ class TestAcl(TestAclBase):
   def test_set_invalid_acl_bucket(self):
     """Ensures that invalid content returns a bad request error."""
     bucket_uri = suri(self.CreateBucket())
-    inpath = self.CreateTempFile(contents='badAcl')
+    inpath = self.CreateTempFile(contents=b'badAcl')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('ArgumentException', stderr)
 
   def test_set_xml_acl_json_api_object(self):
     """Ensures XML content returns a bad request error and migration warning."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
-    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
+    inpath = self.CreateTempFile(contents=b'<ValidXml></ValidXml>')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('ArgumentException', stderr)
@@ -93,7 +93,7 @@ class TestAcl(TestAclBase):
   def test_set_xml_acl_json_api_bucket(self):
     """Ensures XML content returns a bad request error and migration warning."""
     bucket_uri = suri(self.CreateBucket())
-    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    inpath = self.CreateTempFile(contents=b'<ValidXml></ValidXml>')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('ArgumentException', stderr)
@@ -101,7 +101,7 @@ class TestAcl(TestAclBase):
 
   def test_set_valid_acl_object(self):
     """Tests setting a valid ACL on an object."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
     inpath = self.CreateTempFile(contents=acl_string)
@@ -117,7 +117,7 @@ class TestAcl(TestAclBase):
 
   def test_set_valid_permission_whitespace_object(self):
     """Ensures that whitespace is allowed in role and entity elements."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
     acl_string = re.sub(r'"role"', r'"role" \n', acl_string)
@@ -147,7 +147,7 @@ class TestAcl(TestAclBase):
 
   def test_invalid_canned_acl_object(self):
     """Ensures that an invalid canned ACL returns a CommandException."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
     stderr = self.RunGsUtil(
         self._set_acl_prefix + ['not-a-canned-acl', obj_uri],
         return_stderr=True, expected_status=1)
@@ -159,7 +159,7 @@ class TestAcl(TestAclBase):
     bucket_uri = self.CreateBucket()
 
     # Default ACL is project private.
-    obj_uri1 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo'))
+    obj_uri1 = suri(self.CreateObject(bucket_uri=bucket_uri, contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri1],
                                 return_stdout=True)
 
@@ -170,7 +170,7 @@ class TestAcl(TestAclBase):
     # Default object ACL may take some time to propagate.
     @Retry(AssertionError, tries=5, timeout_secs=1)
     def _Check1():
-      obj_uri2 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo2'))
+      obj_uri2 = suri(self.CreateObject(bucket_uri=bucket_uri, contents=b'foo2'))
       acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri2],
                                    return_stdout=True)
       self.assertNotEqual(acl_string, acl_string2)
@@ -185,7 +185,7 @@ class TestAcl(TestAclBase):
     # Default object ACL may take some time to propagate.
     @Retry(AssertionError, tries=5, timeout_secs=1)
     def _Check2():
-      obj_uri3 = suri(self.CreateObject(bucket_uri=bucket_uri, contents='foo3'))
+      obj_uri3 = suri(self.CreateObject(bucket_uri=bucket_uri, contents=b'foo3'))
       acl_string3 = self.RunGsUtil(self._get_acl_prefix + [obj_uri3],
                                    return_stdout=True)
       self.assertEqual(acl_string, acl_string3)
@@ -196,9 +196,9 @@ class TestAcl(TestAclBase):
     """Tests setting an ACL on a specific version of an object."""
     bucket_uri = self.CreateVersionedBucket()
     # Create initial object version.
-    uri = self.CreateObject(bucket_uri=bucket_uri, contents='data')
+    uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data')
     # Create a second object version.
-    inpath = self.CreateTempFile(contents='def')
+    inpath = self.CreateTempFile(contents=b'def')
     self.RunGsUtil(['cp', inpath, uri.uri])
 
     # Find out the two object version IDs.
@@ -448,7 +448,7 @@ class TestAcl(TestAclBase):
 
   def testObjectAclChange(self):
     """Tests acl change on an object."""
-    obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
+    obj = self.CreateObject(bucket_uri=self.sample_uri, contents=b'something')
     self.AssertNObjectsInBucket(self.sample_uri, 1)
 
     test_regex = self._MakeScopeRegex(
@@ -488,7 +488,7 @@ class TestAcl(TestAclBase):
 
   def testObjectAclChangeAllUsers(self):
     """Tests acl ch AllUsers:R on an object."""
-    obj = self.CreateObject(bucket_uri=self.sample_uri, contents='something')
+    obj = self.CreateObject(bucket_uri=self.sample_uri, contents=b'something')
     self.AssertNObjectsInBucket(self.sample_uri, 1)
 
     all_users_regex = re.compile(
@@ -505,7 +505,7 @@ class TestAcl(TestAclBase):
 
   def testSeekAheadAcl(self):
     """Tests seek-ahead iterator with ACL sub-commands."""
-    object_uri = self.CreateObject(contents='foo')
+    object_uri = self.CreateObject(contents=b'foo')
     # Get the object's current ACL for application via set.
     current_acl = self.RunGsUtil(['acl', 'get', suri(object_uri)],
                                  return_stdout=True)
@@ -533,7 +533,7 @@ class TestAcl(TestAclBase):
     for i in range(count):
       objects.append(self.CreateObject(
           bucket_uri=self.sample_uri,
-          contents='something {0}'.format(i)))
+          contents=b'something {0}'.format(i)))
 
     self.AssertNObjectsInBucket(self.sample_uri, count)
 
@@ -560,7 +560,7 @@ class TestAcl(TestAclBase):
   def testRecursiveChangeAcl(self):
     """Tests recursively changing ACLs on nested objects."""
     obj = self.CreateObject(bucket_uri=self.sample_uri, object_name='foo/bar',
-                            contents='something')
+                            contents=b'something')
     self.AssertNObjectsInBucket(self.sample_uri, 1)
 
     test_regex = self._MakeScopeRegex(
@@ -595,10 +595,10 @@ class TestAcl(TestAclBase):
     bucket = self.CreateVersionedBucket()
     object_name = self.MakeTempName('obj')
     obj1_uri = self.CreateObject(
-        bucket_uri=bucket, object_name=object_name, contents='One thing')
+        bucket_uri=bucket, object_name=object_name, contents=b'One thing')
     # Create another on the same URI, giving us a second version.
     self.CreateObject(
-        bucket_uri=bucket, object_name=object_name, contents='Another thing',
+        bucket_uri=bucket, object_name=object_name, contents=b'Another thing',
         gs_idempotent_generation=urigen(obj1_uri))
 
     lines = self.AssertNObjectsInBucket(bucket, 2, versioned=True)
@@ -631,7 +631,7 @@ class TestAcl(TestAclBase):
     self.assertNotIn('Retrying', stderr)
 
   def testAclGetWithoutFullControl(self):
-    object_uri = self.CreateObject(contents='foo')
+    object_uri = self.CreateObject(contents=b'foo')
     expected_error_regex = r'Anonymous \S+ do(es)? not have'
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(self._get_acl_prefix + [suri(object_uri)],
@@ -663,7 +663,7 @@ class TestAcl(TestAclBase):
     """Tests -f option to continue after failure."""
     bucket_uri = self.CreateBucket()
     obj_uri = suri(self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                     contents='foo'))
+                                     contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
     self.RunGsUtil(self._set_acl_prefix +
@@ -680,7 +680,7 @@ class TestS3CompatibleAcl(TestAclBase):
 
   def testAclObjectGetSet(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
 
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(obj_uri)],
@@ -703,8 +703,8 @@ class TestS3OnlyAcl(TestAclBase):
   # TODO: Format all test case names consistently.
   def test_set_xml_acl(self):
     """Ensures XML content does not return an XML warning for S3."""
-    obj_uri = suri(self.CreateObject(contents='foo'))
-    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    obj_uri = suri(self.CreateObject(contents=b'foo'))
+    inpath = self.CreateTempFile(contents=b'<ValidXml></ValidXml>')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('BadRequestException', stderr)
@@ -713,7 +713,7 @@ class TestS3OnlyAcl(TestAclBase):
   def test_set_xml_acl_bucket(self):
     """Ensures XML content does not return an XML warning for S3."""
     bucket_uri = suri(self.CreateBucket())
-    inpath = self.CreateTempFile(contents='<ValidXml></ValidXml>')
+    inpath = self.CreateTempFile(contents=b'<ValidXml></ValidXml>')
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
                             return_stderr=True, expected_status=1)
     self.assertIn('BadRequestException', stderr)

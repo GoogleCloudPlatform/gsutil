@@ -272,7 +272,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -282,7 +282,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_one_object_with_l(self):
     """Tests listing one object with -l."""
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     stdout = self.RunGsUtil(['ls', '-l', suri(obj_uri)], return_stdout=True)
     output_items = stdout.split()
     self.assertTrue(output_items[0].isdigit())
@@ -292,7 +292,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_one_object_with_L(self):
     """Tests listing one object with -L."""
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     # Ensure that creation and update don't take place in the same second.
     time.sleep(2)
     # Check that the creation time, rather than the updated time, is displayed.
@@ -387,7 +387,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_etag(self):
     """Tests that listing an object with an etag."""
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     # TODO: When testcase setup can use JSON, match against the exact JSON
     # etag.
     etag = obj_uri.get_key().etag.strip('"\'')
@@ -543,7 +543,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_sizes(self):
     """Tests various size listing options."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, contents='x' * 2048)
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'x' * 2048)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -622,7 +622,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_list_acl(self):
     """Tests that long listing includes an ACL."""
-    key_uri = self.CreateObject(contents='foo')
+    key_uri = self.CreateObject(contents=b'foo')
     stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
     self.assertIn('ACL:', stdout)
     self.assertNotIn('ACCESS DENIED', stdout)
@@ -630,7 +630,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_gzip_content_length(self):
     """Tests listing a gzipped object."""
     file_size = 10000
-    file_contents = 'x' * file_size
+    file_contents = b'x' * file_size
     fpath = self.CreateTempFile(contents=file_contents, file_name='foo.txt')
     key_uri = self.CreateObject()
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath), suri(key_uri)])
@@ -666,7 +666,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_recursive_list_trailing_slash(self):
     """Tests listing an object with a trailing slash."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
@@ -676,7 +676,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_recursive_list_trailing_two_slash(self):
     """Tests listing an object with two trailing slashes."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
@@ -689,9 +689,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     wildcard_folder_object = 'wildcard*/'
     object_matching_folder = 'wildcard10/foo'
     self.CreateObject(bucket_uri=bucket_uri, object_name=wildcard_folder_object,
-                      contents='foo')
+                      contents=b'foo')
     self.CreateObject(bucket_uri=bucket_uri, object_name=object_matching_folder,
-                      contents='foo')
+                      contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 2)
     stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
                             return_stderr=True, expected_status=1)
@@ -712,7 +712,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Bucket is not publicly readable by default.
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                   object_name='permitted', contents='foo')
+                                   object_name='permitted', contents=b'foo')
     # Set this object to be publicly readable.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
     # Drop credentials.
@@ -740,7 +740,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
       _ListExpectDecrypted()
 
     # Listing object without a key should return encrypted hashes.
@@ -752,7 +752,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
       self.assertIn('encrypted', stdout)
-      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
     _ListExpectEncrypted()
 
     # Listing object with a non-matching key should return encrypted hashes.
@@ -797,17 +797,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_MD5, stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_CRC32C, stdout)
         self.assertIn('encrypted', stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY3_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY3_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT4_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT4_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY4_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY4_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT5_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT5_CRC32C, stdout)
 
@@ -833,6 +833,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML(KMS_XML_SKIP_MSG)
   @SkipForS3(KMS_XML_SKIP_MSG)
+  # @unittest.skip('Mystery 409 response when run parallel: '
+  #                'https://b.corp.google.com/issues/113170864')
   def test_default_kms_key_listed_for_bucket(self):
     bucket_uri = self.CreateBucket()
 
@@ -852,7 +854,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     key_fqn = self.set_default_kms_key_on_bucket(bucket_uri)
     # Copy an object into our bucket and encrypt using the key from above.
     obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents='foo',
+        bucket_uri=bucket_uri, object_name='foo', contents=b'foo',
         kms_key_name=key_fqn)
 
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)

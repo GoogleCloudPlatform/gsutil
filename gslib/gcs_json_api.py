@@ -665,8 +665,12 @@ class GcsJsonApi(CloudApi):
       # For CSEK-encrypted objects, we can do almost the same thing as above,
       # but we also need to add some info about the decryption key (if it's
       # available) into the request.
+      key_sha256 = object_metadata.customerEncryption.keySha256
+      if six.PY3:
+        if not isinstance(key_sha256, bytes):
+          key_sha256 = key_sha256.encode('ascii')
       decryption_key = FindMatchingCSEKInBotoConfig(
-          object_metadata.customerEncryption.keySha256, config)
+          key_sha256, config)
       if decryption_key:
         get_metadata_func = functools.partial(
             self._GetObjectMetadataHelper, bucket_name, object_metadata.name,
@@ -809,6 +813,9 @@ class GcsJsonApi(CloudApi):
       # be added to the StorageObjectsGetRequest in order to retrieve hash
       # fields.
       key_sha256 = object_metadata.customerEncryption.keySha256
+      if six.PY3:
+        if not isinstance(key_sha256, bytes):
+          key_sha256 = key_sha256.encode('ascii')
       decryption_key = FindMatchingCSEKInBotoConfig(key_sha256, config)
       if not decryption_key:
         raise EncryptionException(
@@ -1607,7 +1614,7 @@ class GcsJsonApi(CloudApi):
     """See CloudApi class for function doc strings."""
     try:
       request = apitools_messages.StorageProjectsServiceAccountGetRequest(
-          projectId=unicode(project_number))
+          projectId=six.text_type(project_number))
       return self.api_client.projects_serviceAccount.Get(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)

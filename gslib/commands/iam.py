@@ -23,6 +23,8 @@ import itertools
 import json
 import re
 
+import six
+from six.moves import zip
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
 from gslib.cloud_api import ArgumentException
@@ -439,7 +441,7 @@ class IamCommand(Command):
         break
       if token == '-d':
         patch_bindings_tuples.append(
-            BindingStringToTuple(False, it.next()))
+            BindingStringToTuple(False, next(it)))
       else:
         patch_bindings_tuples.append(BindingStringToTuple(True, token))
     if not patch_bindings_tuples:
@@ -489,7 +491,7 @@ class IamCommand(Command):
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
       self.Apply(
           _PatchIamWrapper,
-          itertools.izip(
+          zip(
               serialized_bindings_tuples_it, name_expansion_iterator),
           _PatchIamExceptionHandler,
           fail_on_error=not self.continue_on_error,
@@ -590,7 +592,7 @@ class IamCommand(Command):
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
           _SetIamWrapper,
-          itertools.izip(
+          zip(
               policy_it, name_expansion_iterator),
           _SetIamExceptionHandler,
           fail_on_error=not self.continue_on_error,

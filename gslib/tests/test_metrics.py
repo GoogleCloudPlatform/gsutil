@@ -727,23 +727,23 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                                   VERSION))
     else:
       expected_response = (
-          b'Metric(endpoint=\'https://example.com\', method=\'POST\', '
-          b'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
-          b'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
+          'Metric(endpoint=\'https://example.com\', method=\'POST\', '
+          'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
+          'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
                                                   metrics._GA_COMMANDS_CATEGORY,
-                                                  VERSION))
+                                                  VERSION)).encode('utf_8')
     self.assertIn(expected_response, log_text)
-    self.assertIn('RESPONSE: 200', log_text)
+    self.assertIn(b'RESPONSE: 200', log_text)
 
     CollectMetricAndSetLogLevel(logging.INFO, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    self.assertEqual(log_text, '')
+    self.assertEqual(log_text, b'')
 
     CollectMetricAndSetLogLevel(logging.WARN, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    self.assertEqual(log_text, '')
+    self.assertEqual(log_text, b'')
 
   def testMetricsReportingWithFail(self):
     """Tests that metrics reporting error does not throw an exception."""
@@ -782,7 +782,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                   object_name='foo', contents='bar')
+                                   object_name='foo', contents=b'bar')
     # Set the command name to rsync in order to collect PerformanceSummary info.
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'rsync'
     # Generate a JSON API instance to test with, because the RunGsUtil method
@@ -835,7 +835,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     # For the resumable upload exception, we need to ensure at least one
     # callback occurs.
     halt_size = START_CALLBACK_PER_BYTES * 2
-    fpath = self.CreateTempFile(contents='a' * halt_size)
+    fpath = self.CreateTempFile(contents=b'a' * halt_size)
 
     # Test that the retry function for data transfers catches and logs an error.
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
@@ -953,7 +953,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     tmpdir1 = self.CreateTempDir()
     tmpdir2 = self.CreateTempDir()
     file_size = ONE_MIB
-    self.CreateTempFile(tmpdir=tmpdir1, contents='a' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir1, contents=b'a' * file_size)
 
     # Run an rsync file-to-file command with fan parallelism, without slice
     # parallelism.
@@ -989,8 +989,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     file_size = 6
-    self.CreateTempFile(tmpdir=tmpdir, contents='a' * file_size)
-    self.CreateTempFile(tmpdir=tmpdir, contents='b' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir, contents=b'a' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir, contents=b'b' * file_size)
 
     process_count = 1 if IS_WINDOWS else 2
     # Run a parallel composite upload without fan parallelism.
@@ -1025,7 +1025,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     file_size = 6
     object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, contents='a' * file_size)
+        bucket_uri=bucket_uri, contents=b'a' * file_size)
 
     fpath = self.CreateTempFile()
     # Run a sliced object download with fan parallelism.
@@ -1062,7 +1062,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket()
     file_size = 6
     key_uri = self.CreateObject(
-        bucket_uri=bucket1_uri, contents='a' * file_size)
+        bucket_uri=bucket1_uri, contents=b'a' * file_size)
 
     # Run a daisy-chain cloud-to-cloud copy without parallelism.
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
@@ -1093,8 +1093,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     """Tests the collection of daisy-chain operations."""
     s3_bucket = self.CreateBucket(provider='s3')
     gs_bucket = self.CreateBucket(provider='gs')
-    unused_s3_key = self.CreateObject(bucket_uri=s3_bucket, contents='foo')
-    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents='bar')
+    unused_s3_key = self.CreateObject(bucket_uri=s3_bucket, contents=b'foo')
+    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents=b'bar')
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
         ['rsync', suri(s3_bucket), suri(gs_bucket)])

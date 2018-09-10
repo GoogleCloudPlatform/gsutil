@@ -38,6 +38,7 @@ from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
+from gslib.utils import text_util
 import httplib2
 from httplib2 import parse_uri
 
@@ -561,7 +562,7 @@ class HttpWithNoRetries(httplib2.Http):
       conn.close()
       raise httplib2.ServerNotFoundError(
           'Unable to find the server at %s' % conn.host)
-    except httplib2.ssl_SSLError:
+    except httplib2.ssl.SSLError:
       conn.close()
       raise
     except socket.error as e:
@@ -631,7 +632,7 @@ class HttpWithDownloadStream(httplib2.Http):
       conn.close()
       raise httplib2.ServerNotFoundError(
           'Unable to find the server at %s' % conn.host)
-    except httplib2.ssl_SSLError:
+    except httplib2.ssl.SSLError:
       conn.close()
       raise
     except socket.error as e:
@@ -670,7 +671,7 @@ class HttpWithDownloadStream(httplib2.Http):
             if self.stream is None:
               raise apitools_exceptions.InvalidUserInputError(
                   'Cannot exercise HttpWithDownloadStream with no stream')
-            self.stream.write(new_data)
+            text_util.ttywrite(self.stream, new_data)
             bytes_read += len(new_data)
           else:
             break

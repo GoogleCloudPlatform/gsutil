@@ -53,7 +53,6 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import USING_JSON_API
-from gslib.tests.util import unicode_it
 import gslib.third_party.storage_apitools.storage_v1_messages as apitools_messages
 from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
@@ -317,7 +316,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertIn(
-        Base64Sha256FromBase64EncryptionKey(encryption_key), stdout,
+        Base64Sha256FromBase64EncryptionKey(encryption_key).decode('ascii'),
+        stdout,
         'Object %s did not use expected encryption key with hash %s. '
         'Actual object: %s'%
         (object_uri_str, Base64Sha256FromBase64EncryptionKey(encryption_key),
@@ -381,7 +381,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                           location=location,
                                           versioning_enabled=versioning_enabled)
       bucket_uri = boto.storage_uri(
-          'gs://%s' % json_bucket.name.encode(UTF8).lower(),
+          'gs://%s' % json_bucket.name.lower(),
           suppress_consec_slashes=False)
       self.bucket_uris.append(bucket_uri)
       return bucket_uri
@@ -430,7 +430,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
                         object_name=self.MakeTempName('obj'),
-                        contents='test %d' % i)
+                        contents='test {:d}'.format(i).encode('ascii'))
     return bucket_uri
 
   def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
@@ -497,6 +497,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """
     bucket_uri = bucket_uri or self.CreateBucket()
 
+    if contents and not isinstance(contents, six.binary_type):
+      raise TypeError(
+        'contents must be either none or bytes, not {}'.format(type(contents)))
     if (contents and
         bucket_uri.scheme == 'gs' and
         (prefer_json_api or encryption_key or kms_key_name)):
@@ -587,7 +590,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for i in range(test_objects):
       self.CreateObjectJson(bucket_name=bucket_name,
                             object_name=self.MakeTempName('obj'),
-                            contents='test %d' % i)
+                            contents='test {:d}'.format(i).encode('ascii'))
     return bucket
 
   def CreateObjectJson(self, contents, bucket_name=None, object_name=None,
@@ -637,7 +640,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     encryption_keywrapper = CryptoKeyWrapperFromKey(encryption_key)
     try:
       return self.json_api.UploadObject(
-          cStringIO(contents),
+          six.BytesIO(contents),
           object_metadata, provider='gs',
           encryption_tuple=encryption_keywrapper,
           preconditions=preconditions)

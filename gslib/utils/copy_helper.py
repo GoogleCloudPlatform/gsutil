@@ -749,7 +749,7 @@ def _CreateDigestsFromLocalFile(status_queue, algs, file_name, src_url,
                 status_queue, src_url=src_url,
                 operation_name='Hashing').call))
   digests = {}
-  for alg_name, digest in hash_dict.iteritems():
+  for alg_name, digest in six.iteritems(hash_dict):
     digests[alg_name] = Base64EncodeHash(digest.hexdigest())
   return digests
 
@@ -780,7 +780,7 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
   if dst_obj_metadata.crc32c:
     upload_hashes['crc32c'] = dst_obj_metadata.crc32c
 
-  for alg, upload_b64_digest in upload_hashes.iteritems():
+  for alg, upload_b64_digest in six.iteritems(upload_hashes):
     if alg not in download_hashes:
       continue
 
@@ -3393,7 +3393,7 @@ def PerformCopy(
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
     except Exception as e:  # pylint: disable=broad-except
-      message = 'Error opening file "%s": %s.' % (src_url, e.message)
+      message = 'Error opening file "%s": %s.' % (src_url, str(e))
       if command_obj.continue_on_error:
         command_obj.op_failure_count += 1
         logger.error(message)

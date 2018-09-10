@@ -165,7 +165,7 @@ class PubsubApi(object):
     if isinstance(http_error, apitools_exceptions.HttpError):
       if getattr(http_error, 'content', None):
         try:
-          json_obj = json.loads(http_error.content)
+          json_obj = json.loads(http_error.content.decode('utf-8'))
           if 'error' in json_obj and 'message' in json_obj['error']:
             return json_obj['error']['message']
         except Exception:  # pylint: disable=broad-except
@@ -251,7 +251,7 @@ class PubsubApi(object):
           return AccessDeniedException(message or e.message,
                                        status=e.status_code)
       elif e.status_code == 404:
-        return NotFoundException(e.message, status=e.status_code)
+        return NotFoundException(message, status=e.status_code)
 
       elif e.status_code == 409 and topic_name:
         return ServiceException(

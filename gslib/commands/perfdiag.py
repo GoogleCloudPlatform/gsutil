@@ -370,6 +370,10 @@ def _DummyTrackerCallback(_):
 class DummyFile(object):
   """A dummy, file-like object that throws away everything written to it."""
 
+  # Because Python2 is so loose about bytes and text, Python3 code really
+  # works best with a hint about a file object's mode.
+  mode = 'bw'
+
   def write(self, *args, **kwargs):  # pylint: disable=invalid-name
     pass
 
@@ -404,7 +408,7 @@ def _GenerateFileData(fp, file_size=0, random_ratio=100,
     num_bytes_random = num_bytes - num_bytes_seq
 
     fp.write(random_bytes[:num_bytes_random])
-    fp.write('x' * num_bytes_seq)
+    fp.write(b'x' * num_bytes_seq)
     total_bytes_written += num_bytes
 
 
@@ -752,7 +756,7 @@ class PerfDiagCommand(Command):
         upload_target = StorageUrlToUploadObjectMetadata(url)
 
         def _Upload():
-          io_fp = cStringIO(file_data.data)
+          io_fp = six.BytesIO(file_data.data)
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
             self.gsutil_api.UploadObject(
                 io_fp, upload_target, size=file_size, provider=self.provider,
@@ -1226,7 +1230,7 @@ class PerfDiagCommand(Command):
         fp = FilePart(file_name, file_start, file_size)
       else:
         data = temp_file_dict[file_name].data[file_start:file_start+file_size]
-        fp = cStringIO(data)
+        fp = six.BytesIO(data)
 
       def _InnerUpload():
         if file_size < ResumableThreshold():

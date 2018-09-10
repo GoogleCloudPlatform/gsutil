@@ -45,7 +45,6 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
-from gslib.tests.util import unicode_it
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import SECONDS_PER_DAY
@@ -159,7 +158,7 @@ class TestCommandRunnerUnitTests(
 
 
     # Mock out the gsutil version checker.
-    base_version = unicode_it(gslib.VERSION)
+    base_version = six.text_type(gslib.VERSION)
     while not base_version.isnumeric():
       if not base_version:
         raise CommandException(

@@ -197,7 +197,7 @@ def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
   found, val = GetValueFromObjectCustomMetadata(obj_metadata, attr, NA_ID)
   try:
     val = int(val)
-    if found and id <= NA_ID:
+    if found and val <= NA_ID:
       WarnNegativeAttribute(attr_name, url_str)
       val = NA_ID
   except ValueError:

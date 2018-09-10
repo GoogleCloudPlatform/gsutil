@@ -41,7 +41,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     """Tests composing num_components object."""
     bucket_uri = self.CreateBucket()
 
-    data_list = ['data-%d,' % i for i in xrange(num_components)]
+    data_list = [b'data-%d,' % i for i in xrange(num_components)]
     components = [self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
                   for data in data_list]
 
@@ -96,9 +96,9 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     component1 = self.CreateObject(
-        bucket_uri=bucket_uri, contents='hello ', object_name='component1')
+        bucket_uri=bucket_uri, contents=b'hello ', object_name='component1')
     component2 = self.CreateObject(
-        bucket_uri=bucket_uri, contents='world!', object_name='component2')
+        bucket_uri=bucket_uri, contents=b'world!', object_name='component2')
 
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
 
@@ -109,8 +109,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     """Tests composing objects with a destination precondition."""
     # Tests that cp -v option handles the if-generation-match header correctly.
     bucket_uri = self.CreateVersionedBucket()
-    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data1')
-    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents='data2')
+    k1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data1')
+    k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
     g1 = k1_uri.generation
 
     gen_match_header = 'x-goog-if-generation-match:%s' % g1
@@ -131,9 +131,9 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
-    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo',
                                     encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='bar',
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar',
                                     encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Compose without correct key should fail.
@@ -160,9 +160,9 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
   def test_compose_different_encryption_keys(self):
     """Tests composing encrypted objects with different encryption keys."""
     bucket_uri = self.CreateBucket()
-    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo',
                                     encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='bar',
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar',
                                     encryption_key=TEST_ENCRYPTION_KEY2)
 
     with SetBotoConfigForTest([
@@ -183,7 +183,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_missing_second_source_object(self):
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
 
     # Compose with missing source object
     stderr = self.RunGsUtil(['compose', suri(object_uri),

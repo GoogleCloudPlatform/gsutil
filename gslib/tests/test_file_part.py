@@ -23,7 +23,6 @@ import os
 
 from gslib.file_part import FilePart
 import gslib.tests.testcase as testcase
-from gslib.tests.util import unicode_it
 
 
 # pylint: disable=protected-access
