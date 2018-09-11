@@ -1,3 +1,33 @@
+Release 4.34 (release date: 2018-09-11)
+=======================================
+New features
+------------------
+- Added bucket lock support to gsutil. Currently, your project must be
+  whitelisted for use with the new bucket lock functionality. This restriction
+  will be lifted in the near future.
+
+Bug Fixes
+------------------
+- Fixed issue where "rsync -P" would fail if run as the root user.
+- Fixed an issue with credential caching where the source credentials for an
+  entity would change but the old cached credentials would still be used.
+
+Other Changes
+------------------
+- OAuth2 token exchanges now go to https://oauth2.googleapis.com/token instead
+  of https://accounts.google.com/o/oauth2/token. Users using gsutil behind a
+  firewall may need to adjust their firewall rules.
+- If invoked via the Cloud SDK, gsutil's debug output now displays the path to
+  gcloud's gsutil wrapper script for "gsutil path", rather than the actual entry
+  point for the bundled gsutil component.
+- Improved error messages for failed Cloud KMS requests.
+- Improved error messages for "iam ch" command to clarify that assigning
+  roles to project convenience groups (e.g. "projectEditor") is not allowed.
+- Enhanced perfdiag command to include GCE instance details (if applicable)
+  and the target bucket's location and storage class.
+- Several documentation updates and clarifications.
+
+
 Release 4.33 (release date: 2018-06-21)
 =======================================
 Bug Fixes
