@@ -158,6 +158,10 @@ _CH_DESCRIPTION = """
     gsutil iam ch user:john.doe@example.com:objectCreator,objectViewer \\
                   gs://ex-bucket
 
+  To specify a custom role for a particular member:
+
+    gsutil iam ch user:john.doe@example.com:roles/customRoleName gs://ex-bucket
+
   To apply a grant and simultaneously remove a binding to a bucket:
 
     gsutil iam ch -d group:readers@example.com:legacyBucketReader \\

@@ -224,8 +224,17 @@ def BindingStringToTuple(is_grant, input_str):
   if is_grant and not roles:
     raise CommandException('Must specify a role to grant.')
 
-  roles = ['roles/storage.%s' % r if r else DROP_ALL for r in roles.split(',')]
+  roles = [ResolveRole(r) for r in roles.split(',')]
+
   bindings = [
       apitools_messages.Policy.BindingsValueListEntry(
           members=[member], role=r) for r in set(roles)]
   return BindingsTuple(is_grant=is_grant, bindings=bindings)
+
+
+def ResolveRole(role):
+  if not role:
+    return DROP_ALL
+  if 'roles/' in role:
+    return role
+  return 'roles/storage.%s' % role
