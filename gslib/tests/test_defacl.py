@@ -40,9 +40,6 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
   def setUp(self):
     super(TestDefacl, self).setUp()
-    if six.PY2:
-      self.assertRegex = self.assertRegexpMatches
-      self.assertNotRegex = self.assertNotRegexpMatches
 
   def _MakeScopeRegex(self, role, entity_type, email_address):
     template_regex = (r'\{.*"entity":\s*"%s-%s".*"role":\s*"%s".*\}' %

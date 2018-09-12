@@ -312,7 +312,7 @@ def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
     mode = attrs_dict.get(MODE_ATTR, NA_MODE)
     if mode != NA_MODE:
       ValidatePOSIXMode(int(mode, 8))
-    ValidateFilePermissionAccess(obj_name, uid=uid, gid=gid, mode=mode)
+    ValidateFilePermissionAccess(obj_name, uid=uid, gid=int(gid), mode=int(mode))
     fpath = cls.CreateTempFile(contents=b'foo', uid=uid, gid=gid, mode=mode)
     cls.RunGsUtil(['cp' if is_cp else 'mv', '-P', fpath,
                    suri(bucket_uri, obj_name)])
@@ -2198,6 +2198,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(f.read(), contents)
 
   @SkipForS3('No resumable upload support for S3.')
+  @unittest.skip('intermittent hangs in multiprocess test run')
   def test_cp_resumable_upload_retry(self):
     """Tests that a resumable upload completes with one retry."""
     bucket_uri = self.CreateBucket()
