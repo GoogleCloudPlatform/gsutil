@@ -64,9 +64,9 @@ _CH_SYNOPSIS = """
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
 
-Note: The gsutil iam command disallows setting/changing to bindings using roles
-for project conveneience groups (projectOwner, projectEditor, projectViewer),
-because it goes against the principle of least privilege.
+Note: The gsutil iam command disallows using project convenience groups
+(projectOwner, projectEditor, projectViewer) as the first segment of a binding
+because these groups go against the principle of least privilege.
 
 """
 

@@ -228,7 +228,7 @@ _DETAILED_HELP_TEXT = ("""
   executes DNS queries to Google servers and collects the results, collects
   network statistics information from the output of netstat -s, and looks at the
   BIOS product name string. It will also attempt to connect to your proxy server
-  if you have one configured, and will look up the location and storage class of
+  if you have one configured and will look up the location and storage class of
   the bucket being used for performance testing. None of this information will
   be sent to Google unless you choose to send it.
 """)

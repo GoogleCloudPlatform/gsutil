@@ -97,17 +97,17 @@ _DETAILED_HELP_TEXT = ("""
 <B>Retention Policy</B>
   You can specify retention period in one of the following formats:
 
-  --retention <number>s     Specifies retention period of N seconds for
-                            objects in this bucket.
+    --retention <number>s     Specifies retention period of <number> seconds for
+                              objects in this bucket.
 
-  --retention <number>d     Specifies retention period of N days for
-                            objects in this bucket.
+    --retention <number>d     Specifies retention period of <number> days for
+                              objects in this bucket.
 
-  --retention <number>m     Specifies retention period of N months for
-                            objects in this bucket.
+    --retention <number>m     Specifies retention period of <number> months for
+                              objects in this bucket.
 
-  --retention <number>y     Specifies retention period of N years for
-                            objects in this bucket.
+    --retention <number>y     Specifies retention period of <number> years for
+                              objects in this bucket.
 
   Examples:
 
@@ -120,19 +120,21 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>OPTIONS</B>
   -c class          Specifies the default storage class. Default is "Standard".
+                    Can only be set on gs:// buckets.
 
   -l location       Can be any multi-regional or regional location. See
                     https://cloud.google.com/storage/docs/bucket-locations
-                    for a discussion of this distinction. Default is US.
-                    Locations are case insensitive.
+                    for a discussion of this distinction. Default is US for
+                    gs:// buckets. Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
+                    Can only be set on gs:// buckets.
 
   -s class          Same as -c.
 
   --retention time  Specifies the retention policy. Default is no retention
-                    retention policy. This can only be set on gs://buckets and
-                    requires using the JSON API.
+                    policy. This can only be set on gs:// buckets and requires
+                    using the JSON API.
 """)
 
 

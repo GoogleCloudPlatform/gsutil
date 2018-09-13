@@ -51,11 +51,11 @@ _SET_SYNOPSIS = """
 """
 
 _CLEAR_SYNOPSIS = """
-  gsutil retention clear bucket_url
+  gsutil retention clear bucket_url...
 """
 
 _GET_SYNOPSIS = """
-  gsutil retention get bucket_url
+  gsutil retention get bucket_url...
 """
 
 _LOCK_SYNOPSIS = """
@@ -80,33 +80,37 @@ _SET_DESCRIPTION = """
   Retention Policy on one or more buckets.
 
   If you would like to remove an unlocked Retention Policy from one or more
-  buckets, please use the "gsutil retention clear" command.
+  buckets, use the "gsutil retention clear" command.
 
   The "set" sub-command can set retention policy with the following formats:
 
 <B>SET FORMATS</B>
-  <number>s           Specifies retention period of N seconds for
-                      objects in this bucket.
+  Formats for the "set" subcommand include:
 
-  <number>d           Specifies retention period of N days for
-                      objects in this bucket.
+    <number>s           Specifies retention period of <number> seconds for
+                        objects in this bucket.
 
-  <number>m           Specifies retention period of N months for
-                      objects in this bucket.
+    <number>d           Specifies retention period of <number> days for
+                        objects in this bucket.
 
-  <number>y           Specifies retention period of N years for
-                      objects in this bucket.
+    <number>m           Specifies retention period of <number> months for
+                        objects in this bucket.
+
+    <number>y           Specifies retention period of <number> years for
+                        objects in this bucket.
 
   GCS JSON API accepts retention period as number of seconds. Durations provided
   in terms of days, months or years will be converted to their rough equivalent
   values in seconds, using the following conversions:
     - A month is considered to be 31 days or 2,678,400 seconds.
     - A year is considered to be 365.25 days or 31,557,600 seconds.
-  TODO: add link to public documentation about this conversion.
+
+  For more information, see the `Bucket Lock documentation
+  <https://cloud.google.com/storage/docs/bucket-lock>`_.
 
   Provided retention period must be greater than 0 and less than 100 years.
-  Clients may define retention duration only in one form (seconds, days, months
-  or years) and not a combination of them. These values are not cumulative.
+  Clients may define retention duration only in one form (seconds, days, months,
+  or years) and not a combination of them.
 
   It is important to note that, while it is possible to specify durations
   shorter than a day (using seconds), enforcement of such retentions is not
@@ -115,19 +119,19 @@ _SET_DESCRIPTION = """
 <B>EXAMPLES</B>
   Setting Retention Policy with duration of 1 year on a bucket:
 
-      gsutil retention set 1y gs://my-bucket
+    gsutil retention set 1y gs://my-bucket
 
   Setting Retention Policy with duration of 36 months on a bucket:
 
-      gsutil retention set 36m gs://some-bucket
+    gsutil retention set 36m gs://some-bucket
 
-  You can also provide a precondition on bucket's meta-generation in order to
+  You can also provide a precondition on a bucket's meta-generation in order to
   avoid potential race conditions. You can use gsutil's '-h' option to specify
   preconditions. For example, the following specifies a precondition that checks
-  bucket's metageneration before setting the Retention Policy on the bucket.
+  a bucket's metageneration before setting the Retention Policy on the bucket.
 
-      gsutil -h "x-goog-if-metageneration-match: 1" \\
-             retention set 1y gs://my-bucket
+    gsutil -h "x-goog-if-metageneration-match: 1" \\
+      retention set 1y gs://my-bucket
 """
 
 _CLEAR_DESCRIPTION = """
@@ -139,7 +143,7 @@ _CLEAR_DESCRIPTION = """
 <B>EXAMPLES</B>
   Clearing Retention Policy (that has not yet been locked) on a bucket:
 
-      gsutil retention clear gs://my-bucket
+    gsutil retention clear gs://my-bucket
 """
 
 _GET_DESCRIPTION = """
@@ -150,18 +154,17 @@ _GET_DESCRIPTION = """
 
 _LOCK_DESCRIPTION = """
 <B>LOCK</B>
-  The "gsutil retention lock" command will <B>PERMANENTLY</B> lock unlocked
+  The "gsutil retention lock" command will PERMANENTLY lock unlocked
   Retention Policy on one or more buckets.
 
-  ***CAUTION***
-
-  A locked Retention Policy cannot be removed from the bucket until bucket is
-  deleted.
+  CAUTION: A locked Retention Policy cannot be removed from a bucket or reduced
+  in duration. Once locked, deleting the bucket is the only way to "remove" a
+  Retention Policy.
 """
 
 _EVENT_DEFAULT_DESCRIPTION = """
 <B>EVENT-DEFAULT</B>
-  The "gsutil retention event-default" command will sets the default value for
+  The "gsutil retention event-default" command sets the default value for an
   Event-Based Hold on one or more buckets.
 
   By setting the default Event-Based Hold on a bucket, newly created objects
@@ -171,19 +174,19 @@ _EVENT_DEFAULT_DESCRIPTION = """
 <B>EXAMPLES</B>
   Setting the default Event-Based Hold on a bucket:
 
-      gsutil retention event-default set gs://my-bucket
+    gsutil retention event-default set gs://my-bucket
 
   Releasing the default Event-Based Hold on a bucket:
 
-      gsutil retention event-default release gs://my-bucket
+    gsutil retention event-default release gs://my-bucket
 
-  You can also provide a precondition on bucket's meta-generation in order to
+  You can also provide a precondition on a bucket's meta-generation in order to
   avoid potential race conditions. You can use gsutil's '-h' option to specify
   preconditions. For example, the following specifies a precondition that checks
-  bucket's metageneration before setting the Retention Policy on the bucket.
+  a bucket's metageneration before setting the Retention Policy on the bucket.
 
-      gsutil -h "x-goog-if-metageneration-match: 1" \\
-             retention event-default set gs://my-bucket
+    gsutil -h "x-goog-if-metageneration-match: 1" \\
+      retention event-default set gs://my-bucket
 """
 
 _EVENT_DESCRIPTION = """
@@ -194,23 +197,23 @@ _EVENT_DESCRIPTION = """
 <B>EXAMPLES</B>
   Setting the Event-Based Hold on object(s):
 
-      gsutil retention event set gs://my-bucket/my-object
+    gsutil retention event set gs://my-bucket/my-object
 
   Releasing the Event-Based Hold on object(s):
 
-      gsutil retention event release gs://my-bucket/my-object
+    gsutil retention event release gs://my-bucket/my-object
 
-  You can also provide a precondition on object's meta-generation in order to
+  You can also provide a precondition on an object's meta-generation in order to
   avoid potential race conditions. You can use gsutil's '-h' option to specify
   preconditions. For example, the following specifies a precondition that checks
-  object's metageneration before setting the Event-Based hold on the object.
+  an object's metageneration before setting the Event-Based hold on the object.
 
-      gsutil -h "x-goog-if-metageneration-match: 1" \\
-             retention event set gs://my-bucket/my-object
+    gsutil -h "x-goog-if-metageneration-match: 1" \\
+      retention event set gs://my-bucket/my-object
 
-  If you want to (un)set Event-Based Hold on a large number of objects, then
-  you might want to use the gsutil -m option, to perform a parallel update.
-  For example, the following command sets Event-Based Hold on objects ending
+  If you want to (un)set an Event-Based Hold on a large number of objects, then
+  you might want to use the top-level '-m' option to perform a parallel update.
+  For example, the following command sets an Event-Based Hold on objects ending
   with .jpg in parallel, in the root folder:
 
       gsutil -m retention event set gs://my-bucket/*.jpg
@@ -224,26 +227,26 @@ _TEMP_DESCRIPTION = """
 <B>EXAMPLES</B>
   Setting the Temporary Hold on object(s):
 
-      gsutil retention temp set gs://my-bucket/my-object
+    gsutil retention temp set gs://my-bucket/my-object
 
   Releasing the Temporary Hold on object(s):
 
-      gsutil retention temp release gs://my-bucket/my-object
+    gsutil retention temp release gs://my-bucket/my-object
 
-  You can also provide a precondition on object's meta-generation in order to
+  You can also provide a precondition on an object's meta-generation in order to
   avoid potential race conditions. You can use gsutil's '-h' option to specify
   preconditions. For example, the following specifies a precondition that checks
-  object's metageneration before setting the Event-Based hold on the object.
+  an object's metageneration before setting the Event-Based hold on the object.
 
-      gsutil -h "x-goog-if-metageneration-match: 1" \\
-             retention temp set gs://my-bucket/my-object
+    gsutil -h "x-goog-if-metageneration-match: 1" \\
+      retention temp set gs://my-bucket/my-object
 
-  If you want to (un)set Temporary Hold on a large number of objects, then
-  you might want to use the gsutil -m option, to perform a parallel update.
-  For example, the following command sets Temporary Hold on objects ending
+  If you want to (un)set a Temporary Hold on a large number of objects, then
+  you might want to use the top-level '-m' option to perform a parallel update.
+  For example, the following command sets a Temporary Hold on objects ending
   with .jpg in parallel, in the root folder:
 
-      gsutil -m retention temp set gs://bucket/*.jpg
+    gsutil -m retention temp set gs://bucket/*.jpg
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _CLEAR_SYNOPSIS +  _GET_SYNOPSIS + _LOCK_SYNOPSIS +
