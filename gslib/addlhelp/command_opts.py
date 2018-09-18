@@ -107,7 +107,8 @@ _DETAILED_HELP_TEXT = ("""
               an error when the -m flag is disabled, all commands will
               continue to try all operations when -m is enabled with multiple
               threads or processes, and the number of failed operations (if any)
-              will be reported at the end of the command's execution.
+              will be reported as an exception at the end of the command's 
+              execution.
 
   -o          Set/override values in the boto configuration value, in the format
               <section>:<name>=<value>, e.g. gsutil -o "Boto:proxy=host" ...

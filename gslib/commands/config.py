@@ -45,11 +45,11 @@ from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils import constants
+from gslib.utils import system_util
 from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.utils.hashing_helper import CHECK_HASH_NEVER
-from gslib.utils.system_util import IS_WINDOWS
 
 _SYNOPSIS = """
   gsutil [-D] config [-a] [-b] [-e] [-f] [-n] [-o <file>] [-r] [-s <scope>] [-w]
@@ -674,7 +674,7 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 # authorization provider being used. Primarily useful for tool developers.
 #provider_label = Google
 #provider_authorization_uri = https://accounts.google.com/o/oauth2/auth
-#provider_token_uri = https://accounts.google.com/o/oauth2/token
+#provider_token_uri = https://oauth2.googleapis.com/token
 
 # 'oauth2_refresh_retries' controls the number of retry attempts made when
 # rate limiting errors occur for OAuth2 requests to retrieve an access token.
@@ -756,7 +756,7 @@ class ConfigCommand(Command):
     Args:
       file_path: The name of the private key file.
     """
-    if IS_WINDOWS:
+    if system_util.IS_WINDOWS:
       # For Windows, this check doesn't work (it actually just checks whether
       # the file is read-only). Since Windows files have a complicated ACL
       # system, this check doesn't make much sense on Windows anyway, so we
@@ -1031,7 +1031,7 @@ class ConfigCommand(Command):
             'edit and uncomment the\n# following line:\n'
             '#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n')
     else:
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         config_file.write(
             '# Google OAuth2 credentials are managed by the Cloud SDK and\n'
             '# do not need to be present in this file.\n')
@@ -1091,7 +1091,7 @@ class ConfigCommand(Command):
 
     # Write the config file GSUtil section that includes the default
     # project ID input from the user.
-    if not os.environ.get('CLOUDSDK_WRAPPER'):
+    if not system_util.InvokedViaCloudSdk():
       if launch_browser:
         sys.stdout.write(
             'Attempting to launch a browser to open the Google Cloud Console '
@@ -1199,9 +1199,10 @@ class ConfigCommand(Command):
     # Don't allow users to configure Oauth2 (any option other than -a and -n)
     # when running in the Cloud SDK, unless they have the Cloud SDK configured
     # not to pass credentials to gsutil.
-    if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
-        os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1' and
-        not has_a and configure_auth):
+    if (system_util.InvokedViaCloudSdk() and
+        system_util.CloudSdkCredPassingEnabled() and
+        not has_a and
+        configure_auth):
       raise CommandException('\n'.join([
           'OAuth2 is the preferred authentication mechanism with the Cloud '
           'SDK.',
@@ -1218,7 +1219,7 @@ class ConfigCommand(Command):
               initial_indent='- ', subsequent_indent='  ')),
       ]))
 
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1' and has_a:
+    if system_util.InvokedViaCloudSdk() and has_a:
       sys.stderr.write('\n'.join(textwrap.wrap(
           'This command will configure HMAC credentials, but gsutil will use '
           'OAuth2 credentials from the Cloud SDK by default. To make sure '

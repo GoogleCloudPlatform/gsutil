@@ -41,6 +41,7 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import SECONDS_PER_DAY
@@ -59,13 +60,19 @@ class FakeArgparseArgument(object):
 class FakeArgparseParser(object):
   """Fake for argparse parser."""
 
-  def __init__(self):
+  def __init__(self, name='Default'):
     self.arguments = []
+    self.subparsers = None
+    self.name = name
 
   def add_argument(self, *unused_args, **unused_kwargs):
     argument = FakeArgparseArgument()
     self.arguments.append(argument)
     return argument
+
+  def add_subparsers(self):
+    self.subparsers = FakeArgparseSubparsers()
+    return self.subparsers
 
 
 class FakeArgparseSubparsers(object):
@@ -74,8 +81,8 @@ class FakeArgparseSubparsers(object):
   def __init__(self):
     self.parsers = []
 
-  def add_parser(self, unused_name, **unused_kwargs):
-    parser = FakeArgparseParser()
+  def add_parser(self, name='Default', **unused_kwargs):
+    parser = FakeArgparseParser(name=name)
     self.parsers.append(parser)
     return parser
 
@@ -103,6 +110,25 @@ class FakeCommandWithInvalidCompleter(Command):
     pass
 
 
+class FakeCommandWithNestedArguments(object):
+  subcommand_name = 'event'
+  subcommand_subname = 'set'
+  # Matches the number of CommandArguments in argparse_arguments below.
+  num_args = 2
+
+  command_spec = Command.CreateCommandSpec(
+      'FakeCommandWithNestedArguments',
+      argparse_arguments={
+          subcommand_name: {
+              subcommand_subname: [
+                  CommandArgument('arg1'),
+                  CommandArgument('arg2'),
+              ]
+          }
+      }
+  )
+
+
 class FakeCommandWithCompleters(Command):
   """Command with various completer types."""
 
@@ -124,15 +150,13 @@ class FakeCommandWithCompleters(Command):
       help_type='command_help',
       help_one_line_summary='fake command for tests',
       help_text='fake command for tests',
-      subcommand_help_text={}
-  )
+      subcommand_help_text={})
 
   def __init__(self):
     pass
 
 
-class TestCommandRunnerUnitTests(
-    testcase.unit_testcase.GsUtilUnitTestCase):
+class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil update check in command_runner module."""
 
   def setUp(self):
@@ -147,7 +171,6 @@ class TestCommandRunnerUnitTests(
         return_value=self.timestamp_file_path)
     self.addCleanup(get_timestamp_file_patcher.stop)
     get_timestamp_file_patcher.start()
-
 
     # Mock out the gsutil version checker.
     base_version = unicode(gslib.VERSION)
@@ -164,7 +187,8 @@ class TestCommandRunnerUnitTests(
 
     # Mock out TTY check to pretend we're on a TTY even if we're not.
     self.running_interactively = True
-    command_runner.IsRunningInteractively = lambda: self.running_interactively
+    command_runner.system_util.IsRunningInteractively = (
+        lambda: self.running_interactively)
 
     # Mock out the modified time of the VERSION file.
     self.version_mod_time = 0
@@ -194,8 +218,7 @@ class TestCommandRunnerUnitTests(
 
   def _IsPackageOrCloudSDKInstall(self):
     # Update should not trigger for package installs or Cloud SDK installs.
-    return (gslib.IS_PACKAGE_INSTALL or
-            os.environ.get('CLOUDSDK_WRAPPER') == '1')
+    return gslib.IS_PACKAGE_INSTALL or system_util.InvokedViaCloudSdk()
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
@@ -317,11 +340,45 @@ class TestCommandRunnerUnitTests(
         gsutil_api_class_map_factory=self.mock_gsutil_api_class_map_factory,
         command_map=command_map)
 
-    subparsers = FakeArgparseSubparsers()
+    parser = FakeArgparseParser()
     try:
-      runner.ConfigureCommandArgumentParsers(subparsers)
+      runner.ConfigureCommandArgumentParsers(parser)
     except RuntimeError as e:
       self.assertIn('Unknown completer', e.message)
+
+  @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
+                       'Tab completion requires argcomplete')
+  def test_command_argument_parser_setup_nested_argparse_arguments(self):
+    command_map = {
+        FakeCommandWithNestedArguments.command_spec.command_name:
+            FakeCommandWithNestedArguments(),
+    }
+    runner = CommandRunner(
+        bucket_storage_uri_class=self.mock_bucket_storage_uri,
+        gsutil_api_class_map_factory=self.mock_gsutil_api_class_map_factory,
+        command_map=command_map)
+    parser = FakeArgparseParser()
+    runner.ConfigureCommandArgumentParsers(parser)
+
+    # Start at first level of subparsers.
+    cur_subparser = parser.subparsers.parsers[0]
+    self.assertEqual(cur_subparser.name,
+                     FakeCommandWithNestedArguments.command_spec.command_name)
+
+    # Go one level further, checking the current subparser's first subparser.
+    cur_subparser = cur_subparser.subparsers.parsers[0]
+    self.assertEqual(cur_subparser.name,
+                     FakeCommandWithNestedArguments.subcommand_name)
+
+    cur_subparser = cur_subparser.subparsers.parsers[0]
+    self.assertEqual(cur_subparser.name,
+                     FakeCommandWithNestedArguments.subcommand_subname)
+
+    # FakeArgparseParser adds a FakeArgparseArgument in place of any arguments
+    # passed in via add_argument(), so we can't check for anything beyond the
+    # presence of the correct number of arguments here.
+    self.assertEqual(len(cur_subparser.arguments),
+                     FakeCommandWithNestedArguments.num_args)
 
   @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
                        'Tab completion requires argcomplete')
@@ -337,21 +394,24 @@ class TestCommandRunnerUnitTests(
         gsutil_api_class_map_factory=self.mock_gsutil_api_class_map_factory,
         command_map=command_map)
 
-    subparsers = FakeArgparseSubparsers()
-    runner.ConfigureCommandArgumentParsers(subparsers)
+    main_parser = FakeArgparseParser()
 
-    self.assertEqual(1, len(subparsers.parsers))
-    parser = subparsers.parsers[0]
-    self.assertEqual(6, len(parser.arguments))
-    self.assertEqual(CloudObjectCompleter, type(parser.arguments[0].completer))
-    self.assertEqual(LocalObjectCompleter, type(parser.arguments[1].completer))
-    self.assertEqual(
-        CloudOrLocalObjectCompleter, type(parser.arguments[2].completer))
-    self.assertEqual(
-        NoOpCompleter, type(parser.arguments[3].completer))
-    self.assertEqual(CloudObjectCompleter, type(parser.arguments[4].completer))
-    self.assertEqual(
-        LocalObjectOrCannedACLCompleter, type(parser.arguments[5].completer))
+    runner.ConfigureCommandArgumentParsers(main_parser)
+
+    self.assertEqual(1, len(main_parser.subparsers.parsers))
+    subparser = main_parser.subparsers.parsers[0]
+    self.assertEqual(6, len(subparser.arguments))
+    self.assertEqual(CloudObjectCompleter,
+                     type(subparser.arguments[0].completer))
+    self.assertEqual(LocalObjectCompleter,
+                     type(subparser.arguments[1].completer))
+    self.assertEqual(CloudOrLocalObjectCompleter,
+                     type(subparser.arguments[2].completer))
+    self.assertEqual(NoOpCompleter, type(subparser.arguments[3].completer))
+    self.assertEqual(CloudObjectCompleter,
+                     type(subparser.arguments[4].completer))
+    self.assertEqual(LocalObjectOrCannedACLCompleter,
+                     type(subparser.arguments[5].completer))
 
   # pylint: disable=invalid-encoded-data
   def test_valid_arg_coding(self):

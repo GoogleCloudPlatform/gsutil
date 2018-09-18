@@ -65,9 +65,9 @@ _CH_SYNOPSIS = """
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
 
-Note: The gsutil iam command disallows setting/changing to bindings using roles
-for project conveneience groups (projectOwner, projectEditor, projectViewer),
-because it goes against the principle of least privilege.
+Note: The gsutil iam command disallows using project convenience groups
+(projectOwner, projectEditor, projectViewer) as the first segment of a binding
+because these groups go against the principle of least privilege.
 
 """
 
@@ -158,6 +158,10 @@ _CH_DESCRIPTION = """
 
     gsutil iam ch user:john.doe@example.com:objectCreator,objectViewer \\
                   gs://ex-bucket
+
+  To specify a custom role for a particular member:
+
+    gsutil iam ch user:john.doe@example.com:roles/customRoleName gs://ex-bucket
 
   To apply a grant and simultaneously remove a binding to a bucket:
 

@@ -226,10 +226,12 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>NOTE</B>
   The perfdiag command collects system information. It collects your IP address,
-  executes DNS queries to Google servers and collects the results, and collects
-  network statistics information from the output of netstat -s. It will also
-  attempt to connect to your proxy server if you have one configured. None of
-  this information will be sent to Google unless you choose to send it.
+  executes DNS queries to Google servers and collects the results, collects
+  network statistics information from the output of netstat -s, and looks at the
+  BIOS product name string. It will also attempt to connect to your proxy server
+  if you have one configured and will look up the location and storage class of
+  the bucket being used for performance testing. None of this information will
+  be sent to Google unless you choose to send it.
 """)
 
 FileDataTuple = namedtuple(
@@ -1436,6 +1438,32 @@ class PerfDiagCommand(Command):
     except (CommandException, OSError):
       sysinfo['googserv_route'] = ''
 
+    # Check the BIOS product name, to determine if we're running on a GCE
+    # instance.
+    # TODO: Add support for checking if we're on GCE from Windows, via WMI.
+    if IS_LINUX:
+      try:
+        with open('/sys/class/dmi/id/product_name', 'r') as fp:
+          sysinfo['on_gce'] = (fp.readline() == 'Google Compute Engine\n')
+      except OSError:
+        pass
+      # If we're running on GCE include details about the instance.
+      if sysinfo.get('on_gce', False):
+        hostname = socket.gethostname()
+        cmd = ['gcloud', 'compute', 'instances', 'list', '--filter=', hostname]
+        try:
+          sysinfo['gce_instance_info'] = self._Exec(cmd, return_output=True)
+        except (CommandException, OSError):
+          sysinfo['gce_instance_info'] = ''
+
+    # Record info about location and storage class of the bucket being used for
+    # performance testing.
+    bucket_info = self.gsutil_api.GetBucket(
+        self.bucket_url.bucket_name, fields=['location', 'storageClass'],
+        provider=self.bucket_url.scheme)
+    sysinfo['bucket_location'] = bucket_info.location
+    sysinfo['bucket_storageClass'] = bucket_info.storageClass
+
     # Try to determine the latency of a DNS lookup for the Google hostname
     # endpoint. Note: we don't piggyback on gethostbyname_ex below because
     # the _ex version requires an extra RTT.
@@ -1741,6 +1769,23 @@ class PerfDiagCommand(Command):
           localdt = datetime.datetime.fromtimestamp(localtime)
           print('Measurement time: \n %s' % localdt.strftime(
               '%Y-%m-%d %I:%M:%S %p %Z'))
+
+      if 'on_gce' in info:
+        print('Running on GCE: \n  %s' % info['on_gce'])
+        if info['on_gce']:
+          print('GCE Instance:\n\t%s' %
+                info['gce_instance_info'].replace('\n', '\n\t'))
+      print('Bucket location: \n  %s' % info['bucket_location'])
+      print('Bucket storage class: \n  %s' % info['bucket_storageClass'])
+      print('Google Server: \n  %s' % info['googserv_route'])
+      print('Google Server IP Addresses: \n  %s' %
+             ('\n  '.join(info['googserv_ips'])))
+      print('Google Server Hostnames: \n  %s' %
+             ('\n  '.join(info['googserv_hostnames'])))
+      print('Google DNS thinks your IP is: \n  %s' % info['dns_o-o_ip'])
+      print('CPU Count: \n  %s' % info['cpu_count'])
+      print('CPU Load Average: \n  %s' % info['load_avg'])
+
 
       print('Google Server: \n  %s' % info['googserv_route'])
       print(('Google Server IP Addresses: \n  %s' %

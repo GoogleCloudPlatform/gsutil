@@ -337,6 +337,8 @@ class LsCommand(Command):
     fields['cors_config'] = 'Present' if bucket.cors else 'None'
     fields['lifecycle_config'] = 'Present' if bucket.lifecycle else 'None'
     fields['requester_pays'] = bucket.billing and bucket.billing.requesterPays
+    if bucket.retentionPolicy:
+      fields['retention_policy'] = 'Present'
     if bucket.labels:
       fields['labels'] = LabelTranslation.JsonFromMessage(
           bucket.labels, pretty_print=True)
@@ -355,6 +357,8 @@ class LsCommand(Command):
           '%a, %d %b %Y %H:%M:%S GMT')
     if bucket.updated:
       fields['updated'] = bucket.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    if bucket.defaultEventBasedHold:
+      fields['default_eventbased_hold'] = bucket.defaultEventBasedHold
 
     # For field values that are multiline, add indenting to make it look
     # prettier.
@@ -374,12 +378,19 @@ class LsCommand(Command):
     metageneration_line = ''
     time_created_line = ''
     time_updated_line = ''
+    default_eventbased_hold_line = ''
+    retention_policy_line = ''
     if 'metageneration' in fields:
       metageneration_line = '\tMetageneration:\t\t\t{metageneration}\n'
     if 'time_created' in fields:
       time_created_line = '\tTime created:\t\t\t{time_created}\n'
     if 'updated' in fields:
       time_updated_line = '\tTime updated:\t\t\t{updated}\n'
+    if 'default_eventbased_hold' in fields:
+      default_eventbased_hold_line = (
+          '\tDefault Event-Based Hold:\t{default_eventbased_hold}\n')
+    if 'retention_policy' in fields:
+      retention_policy_line = '\tRetention Policy:\t\t{retention_policy}\n'
 
     print((('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
@@ -389,8 +400,10 @@ class LsCommand(Command):
            '\tWebsite configuration:\t\t{website_config}\n'
            '\tCORS configuration: \t\t{cors_config}\n'
            '\tLifecycle configuration:\t{lifecycle_config}\n'
-           '\tRequester Pays enabled:\t\t{requester_pays}\n'
-           '\tLabels:\t\t\t\t{labels}\n'
+           '\tRequester Pays enabled:\t\t{requester_pays}\n' +
+           retention_policy_line +
+           default_eventbased_hold_line +
+           '\tLabels:\t\t\t\t{labels}\n' +
            '\tDefault KMS key:\t\t{default_kms_key}\n' +
            time_created_line +
            time_updated_line +
@@ -506,6 +519,8 @@ class LsCommand(Command):
                          'logging',
                          'lifecycle',
                          'metageneration',
+                         'retentionPolicy',
+                         'defaultEventBasedHold',
                          'storageClass',
                          'timeCreated',
                          'updated',

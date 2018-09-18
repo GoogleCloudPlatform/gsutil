@@ -158,6 +158,23 @@ class CloudApi(object):
     """
     raise NotImplementedError('PatchBucket must be overloaded')
 
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    """Locks the Retention Policy on the bucket.
+
+    Args:
+      bucket_name: Name of bucket to update.
+      metageneration: Bucket metageneration to use as a precondition.
+      provider: Cloud storage provider to connect to. If not present,
+                class-wide default is used.
+
+    Raises:
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None
+    """
+    raise NotImplementedError('LockRetentionPolicy must be overloaded')
+
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
     """Creates a new bucket with the specified metadata.
@@ -629,6 +646,21 @@ class CloudApi(object):
       None.
     """
     raise NotImplementedError('StopChannel must be overloaded')
+
+  def ListChannels(self, bucket_name, provider=None):
+    """Lists object change notifications for a bucket.
+
+    Args:
+      bucket_name: Bucket containing the objects
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+
+    Returns:
+      None.
+    """
+    raise NotImplementedError('ListChannels must be overloaded')
 
   def GetProjectServiceAccount(self, project_number, provider=None):
     """Get the GCS-owned service account representing this project.

@@ -13,7 +13,6 @@
 # limitations under the License.
 """Generated client library for storage version v1."""
 
-import os
 import platform
 import sys
 
@@ -22,6 +21,7 @@ from apitools.base.py import base_api
 import gslib
 from gslib.metrics import MetricsCollector
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
+from gslib.utils import system_util
 
 
 class StorageV1(base_api.BaseApiClient):
@@ -37,10 +37,10 @@ class StorageV1(base_api.BaseApiClient):
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools gsutil/%s Python/%s (%s)' % (
       gslib.VERSION, platform.python_version(), sys.platform)
-  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  if system_util.InvokedViaCloudSdk():
     _USER_AGENT += ' google-cloud-sdk'
-    if os.environ.get('CLOUDSDK_VERSION'):
-      _USER_AGENT += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+    if system_util.CloudSdkVersion():
+      _USER_AGENT += '/%s' % system_util.CloudSdkVersion()
   if MetricsCollector.IsDisabled():
     _USER_AGENT += ' analytics/disabled'
   else:
@@ -378,6 +378,58 @@ class StorageV1(base_api.BaseApiClient):
         request_field='',
         request_type_name=u'StorageBucketsListRequest',
         response_type_name=u'Buckets',
+        supports_download=False,
+    )
+
+    def ListChannels(self, request, global_params=None):
+      r"""List active object change notification channels for this bucket.
+
+      Args:
+        request: (StorageBucketsListChannelsRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Channels) The response message.
+      """
+      config = self.GetMethodConfig('ListChannels')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    ListChannels.method_config = lambda: base_api.ApiMethodInfo(
+        http_method=u'GET',
+        method_id=u'storage.buckets.listChannels',
+        ordered_params=[u'bucket'],
+        path_params=[u'bucket'],
+        query_params=[u'userProject'],
+        relative_path=u'b/{bucket}/channels',
+        request_field='',
+        request_type_name=u'StorageBucketsListChannelsRequest',
+        response_type_name=u'Channels',
+        supports_download=False,
+    )
+
+    def LockRetentionPolicy(self, request, global_params=None):
+      """Locks retention policy on a bucket.
+
+      Args:
+        request: (StorageBucketsLockRetentionPolicyRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Bucket) The response message.
+      """
+      config = self.GetMethodConfig('LockRetentionPolicy')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    LockRetentionPolicy.method_config = lambda: base_api.ApiMethodInfo(
+        http_method=u'POST',
+        method_id=u'storage.buckets.lockRetentionPolicy',
+        ordered_params=[u'bucket', u'ifMetagenerationMatch'],
+        path_params=[u'bucket'],
+        query_params=[u'ifMetagenerationMatch', u'userProject'],
+        relative_path=u'b/{bucket}/lockRetentionPolicy',
+        request_field='',
+        request_type_name=u'StorageBucketsLockRetentionPolicyRequest',
+        response_type_name=u'Bucket',
         supports_download=False,
     )
 

@@ -35,6 +35,7 @@ from gslib.metrics import _UUID_FILE_PATH
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
+from gslib.utils import system_util
 from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
 
@@ -50,7 +51,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
                        'Test requires https certificate validation enabled.')
   def test_update(self):
     """Tests that the update command works or raises proper exceptions."""
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       stderr = self.RunGsUtil(['update'], stdin='n',
                               return_stderr=True, expected_status=1)
       self.assertIn('update command is disabled for Cloud SDK', stderr)
@@ -78,14 +79,22 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # working files left in top-level directory by gsutil developers (like tags,
     # .git*, etc.)
     os.makedirs(gsutil_dst)
-    for comp in ('CHANGES.md', 'CHECKSUM', 'gslib', 'gsutil',
-                 'gsutil.py', 'LICENSE', 'MANIFEST.in', 'README.md', 'setup.py', 'test',
-                 'third_party', 'VERSION'):
-      if os.path.isdir(os.path.join(GSUTIL_DIR, comp)):
-        func = shutil.copytree
-      else:
-        func = shutil.copyfile
-      func(os.path.join(GSUTIL_DIR, comp), os.path.join(gsutil_dst, comp))
+    for comp in ('CHANGES.md',
+                 'CHECKSUM',
+                 'gslib',
+                 'gsutil',
+                 'gsutil.py',
+                 'LICENSE',
+                 'MANIFEST.in',
+                 'README.md',
+                 'setup.py',
+                 'test',
+                 'third_party',
+                 'VERSION'):
+      cp_src_path = os.path.join(GSUTIL_DIR, comp)
+      cp_dst_path = os.path.join(gsutil_dst, comp)
+      func = shutil.copytree if os.path.isdir(cp_src_path) else shutil.copyfile
+      func(cp_src_path, cp_dst_path)
 
     # Create a fake version number in the source so we can verify it in the
     # destination.

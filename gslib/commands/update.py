@@ -21,7 +21,6 @@ import os
 import shutil
 import signal
 import stat
-import sys
 import tarfile
 import tempfile
 import textwrap
@@ -32,12 +31,11 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
+from gslib.utils import system_util
 from gslib.utils.boto_util import GetBotoConfigFileList
 from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
-from gslib.utils.system_util import IS_CYGWIN
-from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
 from gslib.utils.update_util import LookUpGsutilVersion
@@ -141,7 +139,7 @@ class UpdateCommand(Command):
       CommandException: if errors encountered.
     """
     # If running under Windows or Cygwin we don't need (or have) sudo.
-    if IS_CYGWIN or IS_WINDOWS:
+    if system_util.IS_CYGWIN or system_util.IS_WINDOWS:
       return
 
     user_id = os.getuid()
@@ -226,7 +224,7 @@ class UpdateCommand(Command):
         # happen because of Windows exclusive file locking, and the update
         # actually succeeds but just leaves the old versions around in the
         # user's temp dir.
-        if not IS_WINDOWS:
+        if not system_util.IS_WINDOWS:
           raise
     if old_cwd:
       try:
@@ -243,7 +241,7 @@ class UpdateCommand(Command):
           'tarball. If you installed gsutil via another method, use the same '
           'method to update it.')
 
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       raise CommandException(
           'The update command is disabled for Cloud SDK installs. Please run '
           '"gcloud components update" to update it. Note: the Cloud SDK '
@@ -375,7 +373,7 @@ class UpdateCommand(Command):
     # here. Since enterprise mode is not not supported for Windows
     # users, we can skip this step when running on Windows, which
     # avoids the problem that Windows has no find or xargs command.
-    if not IS_WINDOWS:
+    if not system_util.IS_WINDOWS:
       # Make all files and dirs in updated area owner-RW and world-R, and make
       # all directories owner-RWX and world-RX.
       for dirname, subdirs, filenames in os.walk(new_dir):

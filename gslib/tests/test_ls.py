@@ -64,6 +64,8 @@ import mock
 
 KMS_XML_SKIP_MSG = ('gsutil does not support KMS operations for S3 buckets, '
                     'or listing KMS keys with the XML API.')
+BUCKET_LOCK_SKIP_MSG = ('gsutil does not support bucket lock operations for '
+                        'S3 buckets or listing retention policy with XML API.')
 
 
 class TestLsUnit(testcase.GsUtilUnitTestCase):
@@ -853,3 +855,50 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
 
+  @SkipForXML(BUCKET_LOCK_SKIP_MSG)
+  @SkipForS3(BUCKET_LOCK_SKIP_MSG)
+  def test_list_retention_policy(self):
+    bucket_uri = self.CreateBucketWithRetentionPolicy(
+        retention_period_in_seconds=1)
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Retention Policy\:\t*Present')
+    # Clearing Retention Policy on the bucket.
+    self.RunGsUtil(['retention', 'clear', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertNotRegexpMatches(stdout, r'Retention Policy:')
+
+  @SkipForXML(BUCKET_LOCK_SKIP_MSG)
+  @SkipForS3(BUCKET_LOCK_SKIP_MSG)
+  def test_list_default_event_based_hold(self):
+    bucket_uri = self.CreateBucket()
+    self.RunGsUtil(['retention', 'event-default', 'set', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Default Event-Based Hold:\t* *True')
+    # Clearing the default Event-Based Hold on the bucket.
+    self.RunGsUtil(['retention', 'event-default', 'release', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertNotRegexpMatches(stdout, r'Default Event-Based Hold')
+
+  @SkipForXML(BUCKET_LOCK_SKIP_MSG)
+  @SkipForS3(BUCKET_LOCK_SKIP_MSG)
+  def test_list_temporary_hold(self):
+    object_uri = self.CreateObject(contents='content')
+    self.RunGsUtil(['retention', 'temp', 'set', suri(object_uri)])
+    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Temporary Hold')
+    # Clearing the Temporary Hold on the object.
+    self.RunGsUtil(['retention', 'temp', 'release', suri(object_uri)])
+    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
+    self.assertNotRegexpMatches(stdout, r'Temporary Hold')
+
+  @SkipForXML(BUCKET_LOCK_SKIP_MSG)
+  @SkipForS3(BUCKET_LOCK_SKIP_MSG)
+  def test_list_event_based_hold(self):
+    object_uri = self.CreateObject(contents='content')
+    self.RunGsUtil(['retention', 'event', 'set', suri(object_uri)])
+    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
+    self.assertRegexpMatches(stdout, r'Event-Based Hold')
+    # Clearing the Event-Based Hold on the object.
+    self.RunGsUtil(['retention', 'event', 'release', suri(object_uri)])
+    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
+    self.assertNotRegexpMatches(stdout, r'Event-Based Hold')

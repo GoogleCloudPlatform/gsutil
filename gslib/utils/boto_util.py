@@ -42,10 +42,10 @@ from boto.pyami.config import BotoConfigLocations
 
 import gslib
 from gslib.exception import CommandException
+from gslib.utils import system_util
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
-from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import ONE_MIB
 
@@ -107,7 +107,7 @@ def ConfigureNoOpAuthIfNeeded():
   if not HasConfiguredCredentials():
     if (config.has_option('Credentials', 'gs_service_client_id')
         and not HAS_CRYPTO):
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         raise CommandException('\n'.join(textwrap.wrap(
             'Your gsutil is configured with an OAuth2 service account, but '
             'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
@@ -181,7 +181,7 @@ def GetGsutilStateDir():
     Path to directory for gsutil static state files.
   """
   config_file_dir = config.get('GSUtil', 'state_dir', DEFAULT_GSUTIL_STATE_DIR)
-  CreateDirIfNeeded(config_file_dir)
+  system_util.CreateDirIfNeeded(config_file_dir)
   return config_file_dir
 
 
@@ -300,7 +300,7 @@ def GetTabCompletionLogFilename():
 def GetTabCompletionCacheFilename():
   tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
   # Limit read permissions on the directory to owner for privacy.
-  CreateDirIfNeeded(tab_completion_dir, mode=0o700)
+  system_util.CreateDirIfNeeded(tab_completion_dir, mode=0o700)
   return os.path.join(tab_completion_dir, 'cache')
 
 
@@ -344,6 +344,52 @@ def JsonResumableChunkSizeDefined():
   return chunk_size_defined is not None
 
 
+def MonkeyPatchBoto():
+  """Apply gsutil-specific patches to Boto.
+
+  Note that this method should not be used as a replacement for contributing
+  fixes to the upstream Boto library. However, the Boto library has historically
+  not been consistent about release cadence, so upstream fixes may not be
+  available immediately in a version which we can pin to. Also, some fixes may
+  only be applicable to gsutil. In such cases, patches should be applied to the
+  Boto library here (and removed if/when they are included in the upstream
+  repository and included in an official new release that we pull in). This
+  method should be invoked after all other Boto-related initialization has been
+  completed.
+  """
+  # pylint: disable=g-import-not-at-top
+  # This should have already been imported if this method was called in the
+  # correct place, but we need to perform the import within this method for
+  # this module to recognize it.  We don't import this at module level because
+  # its import timing is important and is managed elsewhere.
+  import gcs_oauth2_boto_plugin
+  # pylint: enable=g-import-not-at-top
+
+  # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
+  boto.s3.key.Key.should_retry = _PatchedShouldRetryMethod
+
+  # TODO(https://github.com/boto/boto/issues/3831): Remove this if the GitHub
+  # issue is ever addressed.
+  orig_get_plugin_method = boto.plugin.get_plugin
+
+  def _PatchedGetPluginMethod(cls, requested_capability=None):
+    handler_subclasses = orig_get_plugin_method(
+        cls, requested_capability=requested_capability)
+    # In Boto's logic, higher precedence handlers should be closer to the end
+    # of the list.  We always want to prefer OAuth2 credentials over HMAC
+    # credentials if both are present, so we shuffle OAuth2 handlers to the end
+    # of the handler list.
+    xml_oauth2_handlers = (
+        gcs_oauth2_boto_plugin.oauth2_plugin.OAuth2ServiceAccountAuth,
+        gcs_oauth2_boto_plugin.oauth2_plugin.OAuth2Auth)
+    new_result = (
+        [r for r in handler_subclasses if r not in xml_oauth2_handlers] +
+        [r for r in handler_subclasses if r in xml_oauth2_handlers])
+    return new_result
+
+  boto.plugin.get_plugin = _PatchedGetPluginMethod
+
+
 def ProxyInfoFromEnvironmentVar(proxy_env_var):
   """Reads proxy info from the environment and converts to httplib2.ProxyInfo.
 
@@ -372,3 +418,61 @@ def UsingCrcmodExtension(crcmod):
   return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
           (getattr(crcmod, 'crcmod', None) and
            getattr(crcmod.crcmod, '_usingExtension', None)))
+
+
+# TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
+def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
+  """Replaces boto.s3.key's should_retry() to handle KMS-encrypted objects."""
+  provider = self.bucket.connection.provider
+
+  if not chunked_transfer:
+      if response.status in [500, 503]:
+          # 500 & 503 can be plain retries.
+          return True
+
+      if response.getheader('location'):
+          # If there's a redirect, plain retry.
+          return True
+
+  if 200 <= response.status <= 299:
+      self.etag = response.getheader('etag')
+      md5 = self.md5
+      if isinstance(md5, bytes):
+          md5 = md5.decode('utf-8')
+
+      # If you use customer-provided encryption keys, the ETag value that
+      # Amazon S3 returns in the response will not be the MD5 of the
+      # object.
+      amz_server_side_encryption_customer_algorithm = response.getheader(
+          'x-amz-server-side-encryption-customer-algorithm', None)
+      # The same is applicable for KMS-encrypted objects in gs buckets.
+      goog_customer_managed_encryption = response.getheader(
+          'x-goog-encryption-kms-key-name', None)
+      if (amz_server_side_encryption_customer_algorithm is None and
+              goog_customer_managed_encryption is None):
+          if self.etag != '"%s"' % md5:
+              raise provider.storage_data_error(
+                  'ETag from S3 did not match computed MD5. '
+                  '%s vs. %s' % (self.etag, self.md5))
+
+      return True
+
+  if response.status == 400:
+      # The 400 must be trapped so the retry handler can check to
+      # see if it was a timeout.
+      # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
+      # out.
+      body = response.read()
+      err = provider.storage_response_error(
+          response.status,
+          response.reason,
+          body
+      )
+
+      if err.error_code in ['RequestTimeout']:
+          raise boto.exception.PleaseRetryException(
+              "Saw %s, retrying" % err.error_code,
+              response=response
+          )
+
+  return False

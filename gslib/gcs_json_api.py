@@ -393,6 +393,7 @@ class GcsJsonApi(CloudApi):
                            'lifecycle',
                            'logging',
                            'metadata',
+                           'retentionPolicy',
                            'versioning',
                            'website'):
       attr = getattr(bucket_metadata, metadata_field, None)
@@ -443,6 +444,25 @@ class GcsJsonApi(CloudApi):
                                              global_params=global_params)
       except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e)
+
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    try:
+      metageneration = long(metageneration)
+    except ValueError:
+      raise ArgumentException(
+          'LockRetentionPolicy Metageneration must be an integer.')
+
+    apitools_request = (
+        apitools_messages.StorageBucketsLockRetentionPolicyRequest(
+            bucket=bucket_name,
+            ifMetagenerationMatch=metageneration,
+            userProject=self.user_project))
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.buckets.LockRetentionPolicy(
+          apitools_request, global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
@@ -1583,6 +1603,16 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
+  def ListChannels(self, bucket_name, provider=None, fields=None):
+    """See CloudApi class for function doc strings."""
+    apitools_request = apitools_messages.StorageBucketsListChannelsRequest(
+        bucket=bucket_name, userProject=self.user_project)
+
+    try:
+      return self.api_client.buckets.ListChannels(apitools_request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
   def GetProjectServiceAccount(self, project_number):
     """See CloudApi class for function doc strings."""
     try:
@@ -1746,8 +1776,9 @@ class GcsJsonApi(CloudApi):
       # In the event of a scope error, the www-authenticate field of the HTTP
       # response should contain text of the form
       #
-      # 'Bearer realm="https://accounts.google.com/", error=insufficient_scope,
-      # scope="${space separated list of acceptable scopes}"'
+      # 'Bearer realm="https://oauth2.googleapis.com/",
+      # error=insufficient_scope, scope="${space separated list of acceptable
+      # scopes}"'
       #
       # Here we use a quick string search to find the scope list, just looking
       # for a substring with the form 'scope="${scopes}"'.

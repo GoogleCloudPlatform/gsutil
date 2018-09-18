@@ -104,7 +104,6 @@ class CloudApiDelegator(CloudApi):
     if api_selector not in self.loaded_apis[provider]:
       # Need to load the API.
       self._LoadApi(provider, api_selector)
-
     return self.loaded_apis[provider][api_selector]
 
   def _LoadApi(self, provider, api_selector):
@@ -222,6 +221,12 @@ class CloudApiDelegator(CloudApi):
         bucket_name, metadata, canned_acl=canned_acl,
         canned_def_acl=canned_def_acl, preconditions=preconditions,
         fields=fields)
+
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    return self._GetApi(provider).LockRetentionPolicy(
+        bucket_name,
+        metageneration,
+        provider=provider)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
@@ -341,6 +346,9 @@ class CloudApiDelegator(CloudApi):
 
   def StopChannel(self, channel_id, resource_id, provider=None):
     return self._GetApi(provider).StopChannel(channel_id, resource_id)
+
+  def ListChannels(self, bucket_name, provider=None):
+    return self._GetApi(provider).ListChannels(bucket_name)
 
   def GetProjectServiceAccount(self, project_number, provider=None):
     return self._GetApi(provider).GetProjectServiceAccount(project_number)
