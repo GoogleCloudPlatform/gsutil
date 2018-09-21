@@ -202,6 +202,44 @@ _DETAILED_HELP_TEXT = ("""
      "gsutil help versions".
 
 
+<B>BE CAREFUL WHEN SYNCHRONIZING OVER OS-SPECIFIC FILE TYPTES (SYMLINKS, DEVICES, ETC.)</B>
+  Running gsutil rsync over a directory containing operating system-specific
+  file types (symbolic links, device files, sockets, named pipes, etc.) can
+  cause various problems. For example, running a command like:
+
+    gsutil rsync -r ./dir gs://my-bucket
+
+  will cause gsutil to follow any symbolic links in ./dir, creating objects in
+  my-bucket containing the data from the files to which the symlinks point. This
+  can cause various problems:
+
+    * If you use gsutil rsync as a simple way to backup a directory to a bucket,
+      restoring from that bucket will result in files where the symlinks used
+      to be. At best this is wasteful of space, and at worst it can result in
+      outdated data or broken applications -- depending on what is consuming
+      the symlinks.
+
+    * If you use gsutil rsync over directories containing broken symlinks,
+      gsutil rsync will abort (unless you pass the -e option).
+
+    * gsutil rsync skips symlinks that point to directories.
+
+  Since gsutil rsync is intended to support data operations (like moving a data
+  set to the cloud for computational processing) and it needs to be compatible
+  both in the cloud and across common operating systems, there are no plans for
+  gsutil rsync to support operating system-specific file types like symlinks.
+
+  We recommend that users do one of the following:
+
+  * Don't use gsutil rsync over directories containing symlinks or other OS-
+    specific file types.
+  * Use the -e option to exclude symlinks or the -x option to exclude
+    OS-specific file types by name.
+  * Use a tool (such as tar) that preserves symlinks and other OS-specific file
+    types, packaging up directories containing such files before uploading to
+    the cloud.
+
+
 <B>EVENTUAL CONSISTENCY WITH NON-GOOGLE CLOUD PROVIDERS</B>
   While Google Cloud Storage is strongly consistent, some cloud providers
   only support eventual consistency. You may encounter scenarios where rsync
