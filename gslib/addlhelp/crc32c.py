@@ -36,7 +36,7 @@ _DETAILED_HELP_TEXT = ("""
   The crcmod module contains a pure-Python implementation of CRC32C, but using
   it results in very poor performance. A Python C extension is also provided by
   crcmod, which requires compiling into a binary module for use. gsutil ships
-  with a precompiled crcmod C extension for Mac OS X; for other platforms, see
+  with a precompiled crcmod C extension for macOS; for other platforms, see
   the installation instructions below.
 
   At the end of each copy operation, the gsutil cp and rsync commands validate
@@ -87,15 +87,15 @@ _DETAILED_HELP_TEXT = ("""
     sudo pip uninstall crcmod
     sudo pip install -U crcmod
 
-  Mac OS X
-  --------
+  macOS
+  -----
 
-  gsutil distributes a pre-compiled version of crcmod for OS X, so you shouldn't
+  gsutil distributes a pre-compiled version of crcmod for macOS, so you shouldn't
   need to compile and install it yourself. If for some reason the pre-compiled
   version is not being detected, please let the Google Cloud Storage team know
   (see "gsutil help support").
 
-  To compile manually on OS X, you will first need to install
+  To compile manually on macOS, you will first need to install
   `XCode <https://developer.apple.com/xcode/>`_ and then run:
 
     sudo easy_install -U pip
