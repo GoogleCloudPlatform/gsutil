@@ -60,6 +60,9 @@ class GsUtilTestCase(unittest.TestCase):
   """Base test case class for unit and integration tests."""
 
   def setUp(self):
+    if six.PY2:
+      self.assertRegex = self.assertRegexpMatches
+      self.assertNotRegex = self.assertNotRegexpMatches
     if util.RUN_S3_TESTS:
       self.test_api = 'XML'
       self.default_provider = 's3'
@@ -134,9 +137,9 @@ class GsUtilTestCase(unittest.TestCase):
     for i, name in enumerate(test_files):
       contents_file = contents
       if contents_file is None:
-        contents_file = 'test %d' % i
+        contents_file = ('test %d' % i).encode('ascii')
       self.CreateTempFile(tmpdir=tmpdir, file_name=name,
-                          contents=contents_file.encode('utf-8'))
+                          contents=contents_file)
     return tmpdir
 
   def CreateTempFifo(self, tmpdir=None, file_name=None):
@@ -155,7 +158,7 @@ class GsUtilTestCase(unittest.TestCase):
     """
     tmpdir = tmpdir or self.CreateTempDir()
     file_name = file_name or self.MakeTempName('fifo')
-    if isinstance(file_name, basestring):
+    if isinstance(file_name, six.string_types):
       fpath = os.path.join(tmpdir, file_name)
     else:
       fpath = os.path.join(tmpdir, *file_name)
@@ -207,9 +210,9 @@ class GsUtilTestCase(unittest.TestCase):
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
-    if uid != NA_ID or gid != NA_ID:
-      os.chown(fpath, uid, gid)
-    if mode != NA_MODE:
+    if uid != NA_ID or int(gid) != NA_ID:
+      os.chown(fpath, uid, int(gid))
+    if int(mode) != NA_MODE:
       os.chmod(fpath, int(mode, 8))
     return fpath
 

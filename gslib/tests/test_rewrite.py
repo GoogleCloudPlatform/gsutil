@@ -166,9 +166,9 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
     # Rotate all keys to TEST_ENCRYPTION_KEY1.
     boto_config_for_test = [
-        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1),
-        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY2),
-        ('GSUtil', 'decryption_key2', TEST_ENCRYPTION_KEY3)]
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1.decode('ascii')),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY2.decode('ascii')),
+        ('GSUtil', 'decryption_key2', TEST_ENCRYPTION_KEY3.decode('ascii'))]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil(command_args, return_stderr=True)

@@ -41,14 +41,14 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     """Tests composing num_components object."""
     bucket_uri = self.CreateBucket()
 
-    data_list = [b'data-%d,' % i for i in xrange(num_components)]
+    data_list = [('data-%d,' % i).encode('ascii') for i in xrange(num_components)]
     components = [self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
                   for data in data_list]
 
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
 
     self.RunGsUtil(['compose'] + components + [composite.uri])
-    self.assertEqual(composite.get_contents_as_string(), ''.join(data_list))
+    self.assertEqual(composite.get_contents_as_string(), b''.join(data_list))
 
   def test_compose_too_many_fails(self):
     components = ['gs://b/component-obj'] * (MAX_COMPOSE_ARITY + 1)
@@ -103,7 +103,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
 
     self.RunGsUtil(['compose', component1.uri, component2.uri, composite.uri])
-    self.assertEqual(composite.get_contents_as_string(), 'hello world!')
+    self.assertEqual(composite.get_contents_as_string(), b'hello world!')
 
   def test_compose_with_precondition(self):
     """Tests composing objects with a destination precondition."""

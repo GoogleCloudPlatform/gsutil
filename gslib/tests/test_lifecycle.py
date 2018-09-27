@@ -151,9 +151,9 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
 
     # The lifecycle policy we fetch should include all the False- and 0-valued
     # attributes that we just set.
-    self.assertRegexpMatches(stdout, r'"age":\s+0')
-    self.assertRegexpMatches(stdout, r'"isLive":\s+false')
-    self.assertRegexpMatches(stdout, r'"numNewerVersions":\s+0')
+    self.assertRegex(stdout, r'"age":\s+0')
+    self.assertRegex(stdout, r'"isLive":\s+false')
+    self.assertRegex(stdout, r'"numNewerVersions":\s+0')
 
   def test_set_lifecycle_and_reset(self):
     """Tests setting and turning off lifecycle configuration."""

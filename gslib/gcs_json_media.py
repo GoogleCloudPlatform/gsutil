@@ -650,7 +650,7 @@ class HttpWithDownloadStream(httplib2.Http):
       raise
     try:
       response = conn.getresponse()
-    except (socket.error, http_client.HTTPException):
+    except (socket.error, http_client.HTTPException) as e:
       conn.close()
       raise
     else:

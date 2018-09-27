@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import io
 import re
 import locale
 import collections
@@ -251,7 +252,7 @@ def PrintableStr(input_val):
 
 
 def ttyprint(*objects, **kwargs):
-  """ A Python2 compatible version of the print function.
+  """ A Python 2&3 compatible version of the print function.
 
   The main purpose of this function is to favor binary output
   over text output.
@@ -310,7 +311,7 @@ def ttywrite(fp, data):
     fp.write(data)
   else:  # PY3
     if isinstance(data, bytes):
-      if hasattr(fp, 'mode') and 'b' in fp.mode:
+      if (hasattr(fp, 'mode') and 'b' in fp.mode) or isinstance(fp, io.BytesIO):
         # data is bytes, and fp is binary
         fp.write(data)
       elif hasattr(fp, 'buffer'):

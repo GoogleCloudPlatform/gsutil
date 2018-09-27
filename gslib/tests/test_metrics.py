@@ -807,7 +807,11 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                            side_effect=socket.error()):
       _TryExceptAndPass(gsutil_api.CopyObject, src_obj_metadata,
                         dst_obj_metadata)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    else:
+      # In PY3, socket.* errors are deprecated aliases for OSError
+      self.assertEqual(self.collector.retryable_errors['OSError'], 1)
 
     # Throw an error when removing a bucket.
     with mock.patch.object(

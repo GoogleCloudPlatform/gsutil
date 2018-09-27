@@ -529,7 +529,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['-h', 'x-goog-if-generation-match:12345', 'rm',
                              suri(object_uri)], return_stderr=True,
                             expected_status=1)
-    self.assertRegexpMatches(
+    self.assertRegex(
         stderr, r'PreconditionException: 412 (Precondition)?\s*(Failed|None)')
 
   def test_stdin_args(self):

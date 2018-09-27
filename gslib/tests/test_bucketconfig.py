@@ -60,8 +60,9 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
   def test_set_multi_config(self):
     """Tests that bucket config patching affects only the desired config."""
     bucket_uri = self.CreateBucket()
-    lifecycle_path = self.CreateTempFile(contents=self.lifecycle_doc)
-    cors_path = self.CreateTempFile(contents=self.cors_doc)
+    lifecycle_path = self.CreateTempFile(
+        contents=self.lifecycle_doc.encode('utf-8'))
+    cors_path = self.CreateTempFile(contents=self.cors_doc.encode('utf-8'))
 
     self.RunGsUtil(self._set_cors_command + [cors_path, suri(bucket_uri)])
     cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],

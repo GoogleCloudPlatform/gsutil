@@ -343,7 +343,11 @@ class BotoResumableUpload(object):
     # in debug stream.
     http_conn.set_debuglevel(0)
     while buf:
-      http_conn.send(buf)
+      buf_bytes = buf
+      if six.PY3:
+        if isinstance(buf, str):
+          buf_bytes = buf.encode('utf-8')
+      http_conn.send(buf_bytes)
       total_bytes_uploaded += len(buf)
       if cb:
         i += 1

@@ -1328,11 +1328,11 @@ class BotoTranslation(CloudApi):
     crc32c = None
     if not fields or 'crc32c' in fields:
       if hasattr(key, 'cloud_hashes') and 'crc32c' in key.cloud_hashes:
-        crc32c = base64.encodestring(key.cloud_hashes['crc32c']).rstrip('\n')
+        crc32c = base64.encodestring(key.cloud_hashes['crc32c']).rstrip(b'\n')
     md5_hash = None
     if not fields or 'md5Hash' in fields:
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
-        md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip('\n')
+        md5_hash = base64.encodestring(key.cloud_hashes['md5']).rstrip(b'\n')
       elif self._GetMD5FromETag(getattr(key, 'etag', None)):
         md5_hash = Base64EncodeHash(self._GetMD5FromETag(key.etag))
       elif self.provider == 's3':
@@ -1360,6 +1360,12 @@ class BotoTranslation(CloudApi):
       # populated in the key, which can fail if the user does not have
       # permission on the bucket.
       storage_class = getattr(key, '_storage_class', None)
+
+    if six.PY3:
+      if crc32c and isinstance(crc32c, bytes):
+        crc32c = crc32c.decode('ascii')
+      if md5_hash and isinstance(md5_hash, bytes):
+        md5_hash = md5_hash.decode('ascii')
 
     cloud_api_object = apitools_messages.Object(
         bucket=key.bucket.name,
@@ -1568,7 +1574,7 @@ class BotoTranslation(CloudApi):
 
     if isinstance(e, boto.exception.InvalidUriError):
       # Work around textwrap when searching for this string.
-      if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message.encode(UTF8)):
+      if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message):
         return NotFoundException(e.message, status=404)
       return InvalidUrlError(e.message)
 
@@ -1791,6 +1797,9 @@ class BotoTranslation(CloudApi):
         headers=headers)
     body = response.read()
     if response.status == 200:
+      if six.PY3:
+        if isinstance(body, bytes):
+          body = body.decode('utf-8')
       match = re.search(r'<DefaultKmsKeyName>([^<]+)</DefaultKmsKeyName>',
                         body, re.MULTILINE)
       if match:

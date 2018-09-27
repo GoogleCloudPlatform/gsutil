@@ -208,6 +208,9 @@ def CalculateHashesFromContents(fp, hash_dict, callback_processor=None):
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
     if not data:
       break
+    if six.PY3:
+      if isinstance(data, str):
+        data = data.encode('utf-8')
     for hash_alg in six.itervalues(hash_dict):
       hash_alg.update(data)
     if callback_processor:
@@ -418,6 +421,8 @@ class HashingFileUploadWrapper(object):
                              'digest.')
 
     data = self._orig_fp.read(size)
+    if isinstance(data, six.text_type):
+      data = data.encode('utf-8')
     self._digesters_previous_mark = self._digesters_current_mark
     for alg in self._digesters:
       self._digesters_previous[alg] = self._digesters[alg].copy()
@@ -507,6 +512,8 @@ class HashingFileUploadWrapper(object):
     bytes_this_round = min(bytes_remaining, TRANSFER_BUFFER_SIZE)
     while bytes_this_round:
       data = self._orig_fp.read(bytes_this_round)
+      if isinstance(data, six.text_type):
+        data = data.encode('utf-8')
       bytes_remaining -= bytes_this_round
       for alg in self._digesters:
         self._digesters[alg].update(data)

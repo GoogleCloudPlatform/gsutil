@@ -513,6 +513,7 @@ class RewriteCommand(Command):
     # the UIThread.
     sys.stderr.write(
         _ConstructAnnounceText(operation_name, transform_url.url_string))
+    sys.stderr.flush()
 
     # Message indicating beginning of operation.
     gsutil_api.status_queue.put(

@@ -428,7 +428,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
                             return_stdout=True)
     # No labels are present by default.
-    self.assertRegexpMatches(stdout, r'Labels:\s+None')
+    self.assertRegex(stdout, r'Labels:\s+None')
 
     # Add a label and check that it shows up.
     self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri])
@@ -436,7 +436,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     label_regex = re.compile(
         r'Labels:\s+\{\s+"labelkey":\s+"labelvalue"\s+\}', re.MULTILINE)
-    self.assertRegexpMatches(stdout, label_regex)
+    self.assertRegex(stdout, label_regex)
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_location(self):
@@ -639,9 +639,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+      self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
       find_content_length_re = r'Content-Length:\s+(?P<num>\d)'
-      self.assertRegexpMatches(stdout, find_content_length_re)
+      self.assertRegex(stdout, find_content_length_re)
       m = re.search(find_content_length_re, stdout)
       content_length = int(m.group('num'))
       self.assertGreater(content_length, 0)
@@ -833,19 +833,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML(KMS_XML_SKIP_MSG)
   @SkipForS3(KMS_XML_SKIP_MSG)
-  # @unittest.skip('Mystery 409 response when run parallel: '
-  #                'https://b.corp.google.com/issues/113170864')
   def test_default_kms_key_listed_for_bucket(self):
     bucket_uri = self.CreateBucket()
 
     # Default KMS key is not set by default.
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Default KMS key:\s+None')
+    self.assertRegex(stdout, r'Default KMS key:\s+None')
 
     # Default KMS key's name should be listed after being set on the bucket.
     key_fqn = self.set_default_kms_key_on_bucket(bucket_uri)
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Default KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'Default KMS key:\s+%s' % key_fqn)
 
   @SkipForXML(KMS_XML_SKIP_MSG)
   @SkipForS3(KMS_XML_SKIP_MSG)
@@ -859,4 +857,4 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
 
-    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'KMS key:\s+%s' % key_fqn)

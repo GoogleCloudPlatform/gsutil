@@ -245,6 +245,8 @@ def main():
   global debug_level
   global test_exception_traces
 
+  boto_util.MonkeyPatchBoto()
+
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
   # config file for compatibility with previous versions and user convenience.
@@ -608,7 +610,18 @@ def _RunNamedCommandAndHandleExceptions(
   except boto.auth_handler.NotReadyToAuthenticate:
     _OutputAndExit(message='NotReadyToAuthenticate', exception=e)
   except OSError as e:
-    _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
+    # In Python 3, IOError (next except) is an alias for OSError
+    # Sooo... we need the same logic here
+    if (e.errno == errno.EPIPE
+        or (system_util.IS_WINDOWS and e.errno == errno.EINVAL)
+        and not system_util.IsRunningInteractively()):
+      # If we get a pipe error, this just means that the pipe to stdout or
+      # stderr is broken. This can happen if the user pipes gsutil to a command
+      # that doesn't use the entire output stream. Instead of raising an error,
+      # just swallow it up and exit cleanly.
+      sys.exit(0)
+    else:
+      _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
   except IOError as e:
     if (e.errno == errno.EPIPE
         or (system_util.IS_WINDOWS and e.errno == errno.EINVAL)

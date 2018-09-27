@@ -31,6 +31,8 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
+from gslib.utils import text_util
+
 
 _CAT_BUCKET_LISTING_FIELDS = ['bucket',
                               'contentEncoding',
@@ -68,7 +70,7 @@ class CatHelper(object):
       buf = src_fd.read(io.DEFAULT_BUFFER_SIZE)
       if not buf:
         break
-      dst_fd.write(buf)
+      text_util.ttywrite(dst_fd, buf)
 
   def CatUrlStrings(self, url_strings, show_header=False, start_byte=0,
                     end_byte=None, cat_out_fd=None):

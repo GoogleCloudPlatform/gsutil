@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import platform
 
+import six
 import gslib
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
@@ -84,39 +85,58 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('config:', stderr)
-    self.assertIn("('proxy_pass', u'REDACTED')", stderr)
-    self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
-    self.assertIn('header: Expires: ', stderr)
-    self.assertIn('header: Date: ', stderr)
-    self.assertIn('header: Content-Type: application/octet-stream', stderr)
-    self.assertIn('header: Content-Length: 10', stderr)
+    if six.PY2:
+      self.assertIn("('proxy_pass', u'REDACTED')", stderr)
+      self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
+      self.assertIn('header: Expires: ', stderr)
+      self.assertIn('header: Date: ', stderr)
+      self.assertIn('header: Content-Type: application/octet-stream', stderr)
+      self.assertIn('header: Content-Length: 10', stderr)
+    else:
+      self.assertIn("('proxy_pass', 'REDACTED')", stderr)
+      self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
+      self.assertIn('Expires header: ', stderr)
+      self.assertIn('Date header: ', stderr)
+      self.assertIn('Content-Type header: ', stderr)
+      self.assertIn('Content-Length header: ', stderr)
 
     if self.test_api == ApiSelector.XML:
-      self.assertRegexpMatches(
-          stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
-          (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
-
-      self.assertIn('header: Cache-Control: private, max-age=0',
-                    stderr)
-      self.assertIn('header: Last-Modified: ', stderr)
-      self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)
-      self.assertIn('header: x-goog-generation: ', stderr)
-      self.assertIn('header: x-goog-metageneration: 1', stderr)
-      self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
-      self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
+      if six.PY2:
+        self.assertRegex(
+            stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
+            (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
+        self.assertIn('header: Cache-Control: private, max-age=0',
+                      stderr)
+        self.assertIn('header: Last-Modified: ', stderr)
+        self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)
+        self.assertIn('header: x-goog-generation: ', stderr)
+        self.assertIn('header: x-goog-metageneration: 1', stderr)
+        self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
+        self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
+      else:
+        self.assertIn('Cache-Control header: ', stderr)
+        self.assertIn('Last-Modified header: ', stderr)
+        self.assertIn('ETag header:', stderr)
+        self.assertIn('x-goog-generation header:', stderr)
+        self.assertIn('x-goog-metageneration header:', stderr)
+        self.assertIn('x-goog-hash header:', stderr)
     elif self.test_api == ApiSelector.JSON:
-      self.assertRegexpMatches(
+      self.assertRegex(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
           (key_uri.bucket_name, key_uri.object_name, gslib.VERSION,
            platform.python_version()))
-      self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
-                     'must-revalidate'), stderr)
-      self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
+      if six.PY2:
+        self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
+                       'must-revalidate'), stderr)
+        self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
+      else:
+        self.assertIn('Cache-Control header: ', stderr)
+        self.assertIn("md5Hash: 'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
 
     if gslib.IS_PACKAGE_INSTALL:
       self.assertIn('PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS', stdout)
     else:
-      self.assertRegexpMatches(stdout, r'.*checksum: [0-9a-f]{32}.*')
+      self.assertRegex(stdout, r'.*checksum: [0-9a-f]{32}.*')
     self.assertIn('gsutil version: %s' % gslib.VERSION, stdout)
     self.assertIn('boto version: ', stdout)
     self.assertIn('python version: ', stdout)

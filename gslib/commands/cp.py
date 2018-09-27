@@ -63,6 +63,7 @@ from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.system_util import GetStreamFromFileUrl
 from gslib.utils.system_util import StdinIterator
+from gslib.utils.system_util import StdinIteratorCls
 from gslib.utils.text_util import NormalizeStorageClass
 from gslib.utils.text_util import RemoveCRLFFromString
 from gslib.utils.unit_util import CalculateThroughput
@@ -1126,7 +1127,9 @@ class CpCommand(Command):
     if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
         raise CommandException('Source URLs cannot be specified with -I option')
-      src_url_strs = [StdinIterator()]
+      # Use StdinIteratorCls instead of StdinIterator here to avoid Python 3
+      # generator pickling errors when multiprocessing a command.
+      src_url_strs = [StdinIteratorCls()]
     else:
       if len(self.args) < 2:
         raise CommandException('Wrong number of arguments for "cp" command.')

@@ -84,17 +84,13 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(serviceaccount_cmd, return_stdout=True)
 
-    self.assertRegexpMatches(
+    self.assertRegex(
         stdout,
         r'[^@]+@gs-project-accounts\.iam\.gserviceaccount\.com')
 
-  @unittest.skip('All DoTestAuthorize() tests are failing: '
-                 'https://b.corp.google.com/issues/113170864')
   def testKmsAuthorizeWithoutProjectOption(self):
     self.DoTestAuthorize()
 
-  @unittest.skip('All DoTestAuthorize() tests are failing: '
-                 'https://b.corp.google.com/issues/113170864')
   def testKmsAuthorizeWithProjectOption(self):
     self.DoTestAuthorize(specified_project=PopulateProjectId(None))
 

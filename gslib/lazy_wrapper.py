@@ -82,6 +82,3 @@ class LazyWrapper(object):
     except AttributeError:
       self.__call__()
       return self._value.__iter__()
-
-
-

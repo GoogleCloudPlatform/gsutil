@@ -109,7 +109,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
         ['cat', suri(obj_uri1), suri(bucket_uri) + 'nonexistent'],
         return_stdout=True, return_stderr=True, expected_status=1)
     # First object should print, second should produce an exception.
-    self.assertIn(data1, stdout)
+    self.assertIn(data1.decode('ascii'), stdout)
     self.assertIn('NotFoundException', stderr)
 
     stdout, stderr = self.RunGsUtil(
@@ -117,13 +117,13 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
         return_stdout=True, return_stderr=True, expected_status=1)
 
     # If first object is invalid, exception should halt output immediately.
-    self.assertNotIn(data1, stdout)
+    self.assertNotIn(data1.decode('ascii'), stdout)
     self.assertIn('NotFoundException', stderr)
 
     # Two valid objects should both print successfully.
     stdout = self.RunGsUtil(['cat', suri(obj_uri1), suri(obj_uri2)],
                             return_stdout=True)
-    self.assertIn(data1 + data2, stdout)
+    self.assertIn(data1.decode('ascii') + data2.decode('ascii'), stdout)
 
   @SkipForS3('S3 customer-supplied encryption keys are not supported.')
   def test_cat_encrypted_object(self):
@@ -142,7 +142,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
 
     with SetBotoConfigForTest(boto_config_for_test):
       stdout = self.RunGsUtil(['cat', suri(object_uri)], return_stdout=True)
-      self.assertEqual(stdout, object_contents)
+      self.assertEqual(stdout.encode('ascii'), object_contents)
       stdout = self.RunGsUtil(['cat', '-r 1-3', suri(object_uri)],
                               return_stdout=True)
       self.assertEqual(stdout, '123')

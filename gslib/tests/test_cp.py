@@ -32,6 +32,7 @@ import re
 import string
 import sys
 import threading
+import ast
 
 import six
 from six.moves import http_client
@@ -470,12 +471,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', '-n', fpath, suri(key_uri)],
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
-    self.assertEqual(key_uri.get_contents_as_string(), 'foo')
+    self.assertEqual(key_uri.get_contents_as_string(), b'foo')
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
-      self.assertEqual(f.read(), 'bar')
+      self.assertEqual(f.read(), b'bar')
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
@@ -585,7 +586,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fifo_path = self.CreateTempFifo()
     object_name = 'foo'
-    object_contents = 'bar'
+    object_contents = b'bar'
     list_for_output = []
 
     # Start writer in the background, which won't finish until a corresponding
@@ -618,7 +619,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   def test_streaming_from_fifo_to_stdout(self):
     fifo_path = self.CreateTempFifo()
-    contents = 'bar'
+    contents = b'bar'
     list_for_output = []
 
     write_thread = threading.Thread(
@@ -634,13 +635,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     write_thread.join(120)
     if not list_for_output:
       self.fail('Reading/writing to the fifo timed out.')
-    self.assertEqual(list_for_output[0].strip(), contents)
+    self.assertEqual(list_for_output[0].strip().encode('ascii'), contents)
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
   def test_streaming_from_stdout_to_fifo(self):
     fifo_path = self.CreateTempFifo()
-    contents = 'bar'
+    contents = b'bar'
     list_for_output = []
     list_for_gsutil_output = []
 
@@ -685,7 +686,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
             re.search(r'Content-Type:\s+audio/x-mpg', stdout) or
             re.search(r'Content-Type:\s+audio/mpeg', stdout))
       else:
-        self.assertRegexpMatches(stdout, r'Content-Type:\s+audio/mpeg')
+        self.assertRegex(stdout, r'Content-Type:\s+audio/mpeg')
     _Check1()
 
     self.RunGsUtil(['cp', self._get_test_file('test.gif'), dsturi])
@@ -694,7 +695,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
     _Check2()
 
   def test_content_type_override_default(self):
@@ -709,7 +710,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout,
+      self.assertRegex(stdout,
                                r'Content-Type:\s+application/octet-stream')
     _Check1()
 
@@ -720,7 +721,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout,
+      self.assertRegex(stdout,
                                r'Content-Type:\s+application/octet-stream')
     _Check2()
 
@@ -736,7 +737,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
+      self.assertRegex(stdout, r'Content-Type:\s+text/plain')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:text/plain', 'cp',
@@ -746,7 +747,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
+      self.assertRegex(stdout, r'Content-Type:\s+text/plain')
     _Check2()
 
   @unittest.skipIf(IS_WINDOWS, 'magicfile is not available on Windows.')
@@ -765,7 +766,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       use_magicfile = boto.config.getbool('GSUtil', 'use_magicfile', False)
       content_type = ('text/plain' if use_magicfile
                       else 'application/octet-stream')
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % content_type)
+      self.assertRegex(stdout, r'Content-Type:\s+%s' % content_type)
     _Check1()
 
   @SequentialAndParallelTransfer
@@ -782,7 +783,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
     _Check1()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp',
@@ -792,7 +793,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
     _Check2()
 
     self.RunGsUtil(['-h', 'Content-Type:image/gif', 'cp', fpath, dsturi])
@@ -801,7 +802,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
     _Check3()
 
   @SequentialAndParallelTransfer
@@ -818,8 +819,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/plain')
-      self.assertNotRegexpMatches(stdout, r'image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+text/plain')
+      self.assertNotRegex(stdout, r'image/gif')
     _Check1()
 
     self.RunGsUtil(['-h', 'CONTENT-TYPE:image/gif',
@@ -830,8 +831,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
-      self.assertNotRegexpMatches(stdout, r'image/gif,\s*image/gif')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
+      self.assertNotRegex(stdout, r'image/gif,\s*image/gif')
     _Check2()
 
   @SequentialAndParallelTransfer
@@ -846,15 +847,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                     fpath, dst_uri])
 
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-    self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
+    self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
+    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
     dst_uri2 = suri(bucket_uri, 'bar')
     self.RunGsUtil(['cp', dst_uri, dst_uri2])
     # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-    self.assertRegexpMatches(stdout, r'Metadata:\s*1:\s*abcd')
+    self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
+    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
   @SequentialAndParallelTransfer
   def test_versioning(self):
@@ -873,26 +874,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile()
     # Check to make sure current version is data3.
     self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'data3')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'data3')
 
     # Check contents of all three versions
     self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g1), fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'data1')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'data1')
     self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g2), fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'data2')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'data2')
     self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g3), fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'data3')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'data3')
 
     # Copy first version to current and verify.
     self.RunGsUtil(['cp', '%s#%s' % (k2_uri.versionless_uri, g1),
                     k2_uri.versionless_uri])
     self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
-    with open(fpath, 'r') as f:
-      self.assertEqual(f.read(), 'data1')
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'data1')
 
     # Attempt to specify a version-specific URI for destination.
     stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri], return_stderr=True,
@@ -1214,9 +1215,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     def _Check():
       uri = suri(bucket2_uri, key_uri.object_name)
       stdout = self.RunGsUtil(['ls', '-L', uri], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Cache-Control:\s+public,max-age=12')
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+image/gif')
-      self.assertRegexpMatches(stdout, r'Metadata:\s+1:\s+abcd')
+      self.assertRegex(stdout, r'Cache-Control:\s+public,max-age=12')
+      self.assertRegex(stdout, r'Content-Type:\s+image/gif')
+      self.assertRegex(stdout, r'Metadata:\s+1:\s+abcd')
       new_acl_json = self.RunGsUtil(['acl', 'get', uri], return_stdout=True)
       self.assertEqual(acl_json, new_acl_json)
     _Check()
@@ -1348,13 +1349,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = b'foo'
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=contents)
     stdout = self.RunGsUtil(['cp', suri(key_uri), '-'], return_stdout=True)
-    self.assertIn(contents, stdout)
+    self.assertIn(contents, stdout.encode('ascii'))
 
   def test_cp_local_file_to_local_stream(self):
     contents = b'content'
     fpath = self.CreateTempFile(contents=contents)
     stdout = self.RunGsUtil(['cp', fpath, '-'], return_stdout=True)
-    self.assertIn(contents, stdout)
+    self.assertIn(contents, stdout.encode('utf-8'))
 
   @SequentialAndParallelTransfer
   def test_cp_zero_byte_file(self):
@@ -1474,9 +1475,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'bar')
-    with open(fpath, 'r') as f_in:
+    with open(fpath, 'rb') as f_in:
       file_md5 = base64.encodestring(binascii.unhexlify(
-          CalculateMd5FromContents(f_in))).rstrip('\n')
+          CalculateMd5FromContents(f_in))).rstrip(b'\n')
     self.RunGsUtil(['cp', fpath, suri(bucket_uri)])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1484,8 +1485,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertRegexpMatches(stdout,
-                               r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5))
+      self.assertRegex(
+        stdout, r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5.decode('ascii')))
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS,
@@ -1512,7 +1513,31 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
     with open(logpath, 'r') as f:
       lines = f.readlines()
-    lines = [six.text_type(line, 'utf-8') for line in lines]
+    if six.PY3:
+      # What the hell is this?
+      # Well, it is a hack. So far as I can tell, CreateTempFile has no need
+      # for text file output except for here (where it is used to create a
+      # logfile), and the other place this 'code' appears in the manifest
+      # download test. So rather than mangle that code to support this one
+      # special case, I did this. The purpose is to get rid of strings that
+      # contain the string representation of bytes. Not all do, but even one
+      # is enough.
+      decode_lines = []
+      for line in lines:
+        if line.startswith("b'"):
+          some_strs = line.split(',')
+          line_parts = []
+          for some_str in some_strs:
+            if some_str.startswith("b'"):
+              line_parts.append(ast.literal_eval(some_str).decode('utf-8'))
+            else:
+              line_parts.append(some_str)
+          decode_lines.append(','.join(line_parts))
+        else:
+          decode_lines.append(line)
+      lines = decode_lines
+    else:  # PY2
+      lines = [unicode(line, 'utf-8') for line in lines]
     self.assertEqual(len(lines), 2)
 
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
@@ -1549,6 +1574,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                    return_stdout=True)
     with open(logpath, 'r') as f:
       lines = f.readlines()
+    if six.PY3:
+      decode_lines = []
+      for line in lines:
+        if line.startswith("b'"):
+          some_strs = line.split(',')
+          line_parts = []
+          for some_str in some_strs:
+            if some_str.startswith("b'"):
+              line_parts.append(ast.literal_eval(some_str).decode('utf-8'))
+            else:
+              line_parts.append(some_str)
+          decode_lines.append(','.join(line_parts))
+        else:
+          decode_lines.append(line)
+      lines = decode_lines
     self.assertEqual(len(lines), 2)
 
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
@@ -1582,12 +1622,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # fpath_bytes = fpath.encode(UTF8)
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
-      self.assertEquals(stdout, file_contents)
+      self.assertEquals(stdout.encode('ascii'), file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
                                 str(START_CALLBACK_PER_BYTES * 3))]):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
-      self.assertEquals(stdout, file_contents)
+      self.assertEquals(stdout.encode('ascii'), file_contents)
 
   # Note: We originally one time implemented a test
   # (test_copy_invalid_unicode_filename) that invalid unicode filenames were
@@ -1612,15 +1652,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     uri2 = suri(bucket_uri, 'test.js')
     uri3 = suri(bucket_uri, 'test.txt')
     stdout = self.RunGsUtil(['stat', uri1], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri2], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri3], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
     fpath4 = self.CreateTempFile()
     for uri in (uri1, uri2, uri3):
       self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'r') as f:
+      with open(fpath4, 'rb') as f:
         self.assertEqual(f.read(), contents)
 
   @SkipForS3('No compressed transport encoding support for S3.')
@@ -1667,9 +1707,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath4 = self.CreateTempFile()
     for uri in (local_uri1, local_uri2, local_uri3):
       stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
-      self.assertNotRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
       self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'r') as f:
+      with open(fpath4, 'rb') as f:
         self.assertEqual(f.read(), contents)
 
   @SkipForS3('No compressed transport encoding support for S3.')
@@ -1701,8 +1741,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
     random.seed(0)
+
     contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(self.halt_size)])
+                 for _ in xrange(self.halt_size)]).encode('ascii')
     random.seed()  # Reset the seed for any other tests.
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
@@ -1735,17 +1776,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     uri3 = suri(bucket_uri, 'test.txt')
     uri4 = suri(bucket_uri, 'test')
     stdout = self.RunGsUtil(['stat', uri1], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri2], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri3], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     stdout = self.RunGsUtil(['stat', uri4], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
     fpath4 = self.CreateTempFile()
     for uri in (uri1, uri2, uri3, uri4):
       self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'r') as f:
+      with open(fpath4, 'rb') as f:
         self.assertEqual(f.read(), contents)
 
   @SkipForS3('No compressed transport encoding support for S3.')
@@ -1788,9 +1829,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath4 = self.CreateTempFile()
     for uri in (remote_uri1, remote_uri2):
       stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
-      self.assertNotRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
       self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'r') as f:
+      with open(fpath4, 'rb') as f:
         self.assertEqual(f.read(), contents)
 
   def test_both_gzip_options_error(self):
@@ -1884,7 +1925,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
                               return_stderr=True, expected_status=1)
-      self.assertRegexpMatches(stderr, expected_error_regex)
+    self.assertRegex(stderr, expected_error_regex)
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
   def test_cp_minus_r_minus_e(self):
@@ -1948,7 +1989,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(object_name='foo', contents=object_contents)
     tmp_dir = self.CreateTempDir()
     self.RunGsUtil(['-m', 'cp', suri(object_uri), suri(object_uri), tmp_dir])
-    with open(os.path.join(tmp_dir, 'foo'), 'r') as in_fp:
+    with open(os.path.join(tmp_dir, 'foo'), 'rb') as in_fp:
       contents = in_fp.read()
       # Contents should be not duplicated.
       self.assertEqual(contents, object_contents)
@@ -1968,7 +2009,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     with SetBotoConfigForTest(boto_config_for_test):
       self.RunGsUtil(['cp', suri(object_uri), suri(fpath)])
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), object_contents)
 
     # If multiple keys are supplied and one is correct, download should succeed.
@@ -1980,7 +2021,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     with SetBotoConfigForTest(boto_config_for_test2):
       self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
-    with open(fpath2, 'r') as f:
+    with open(fpath2, 'rb') as f:
       self.assertEqual(f.read(), object_contents)
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
@@ -2024,7 +2065,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Reading the object back should succeed.
       fpath2 = self.CreateTempFile()
       self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), suri(fpath2)])
-      with open(fpath2, 'r') as f:
+      with open(fpath2, 'rb') as f:
         self.assertEqual(f.read(), file_contents)
 
   @SkipForS3('No resumable upload or encryption support for S3.')
@@ -2165,7 +2206,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     random.seed(0)
     contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(self.halt_size)])
+                    for _ in xrange(self.halt_size)]).encode('ascii')
     random.seed()  # Reset the seed for any other tests.
     local_uri = self.CreateTempFile(file_name='test.txt', contents=contents)
     # Configure boto
@@ -2192,13 +2233,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     temp_uri = self.CreateTempFile()
     remote_uri = suri(bucket_uri, 'test.txt')
     stdout = self.RunGsUtil(['stat', remote_uri], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+    self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
     self.RunGsUtil(['cp', remote_uri, suri(temp_uri)])
-    with open(temp_uri, 'r') as f:
+    with open(temp_uri, 'rb') as f:
       self.assertEqual(f.read(), contents)
 
   @SkipForS3('No resumable upload support for S3.')
-  @unittest.skip('intermittent hangs in multiprocess test run')
   def test_cp_resumable_upload_retry(self):
     """Tests that a resumable upload completes with one retry."""
     bucket_uri = self.CreateBucket()
@@ -2409,8 +2449,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_url = StorageUrlFromString(suri(bucket_uri, 'foo'))
 
     file_contents = b'foobar'
+    file_name = 'foobar'
     source_file = self.CreateTempFile(
-        contents=file_contents, file_name=file_contents)
+        contents=file_contents, file_name=file_name)
     src_url = StorageUrlFromString(source_file)
 
     # Simulate an upload that had occurred by writing a tracker file
@@ -2457,7 +2498,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
             'Tracker file %s should have been deleted.' % tracker_file_name)
         read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
-        self.assertEqual(read_contents, file_contents)
+        self.assertEqual(read_contents.encode('ascii'), file_contents)
     finally:
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
@@ -2488,7 +2529,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     existing_components = [existing_component]
     enc_key_sha256 = TEST_ENCRYPTION_KEY1_SHA256_B64
     WriteParallelUploadTrackerFile(
-        tracker_file_name, tracker_prefix, existing_components, enc_key_sha256)
+        tracker_file_name, tracker_prefix, existing_components,
+        enc_key_sha256.decode('ascii'))
 
     try:
       # Now "resume" the upload using the original encryption key.
@@ -2506,7 +2548,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
             'Tracker file %s should have been deleted.' % tracker_file_name)
         read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
-        self.assertEqual(read_contents, file_contents)
+        self.assertEqual(read_contents.encode('ascii'), file_contents)
     finally:
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
@@ -2599,7 +2641,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
 
   def test_cp_resumable_download_break(self):
@@ -2663,7 +2705,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True)
       self.assertIn('Restarting download', stderr)
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), file_contents, 'File contents differ')
 
   @SequentialAndParallelTransfer
@@ -2730,7 +2772,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath)],
                               return_stderr=True)
       self.assertIn('Restarting download from scratch', stderr)
-      with open(fpath, 'r') as f:
+      with open(fpath, 'rb') as f:
         self.assertEqual(f.read(), file_contents, 'File contents differ')
 
   def test_cp_resumable_download_file_larger(self):
@@ -2806,7 +2848,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(tmpdir=tmp_dir)
     matching_contents = b'abcd' * ONE_KIB
     temp_download_file = fpath + '_.gstmp'
-    with open(temp_download_file, 'w') as fp:
+    with open(temp_download_file, 'wb') as fp:
       fp.write(matching_contents)
 
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
@@ -2901,7 +2943,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject()
     random.seed(0)
     contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(self.halt_size)])
+                    for _ in xrange(self.halt_size)]).encode('ascii')
     random.seed()  # Reset the seed for any other tests.
     fpath1 = self.CreateTempFile(file_name='unzipped.txt', contents=contents)
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath1), suri(object_uri)])
@@ -2956,7 +2998,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
-      with open(fpath2, 'r') as f:
+      with open(fpath2, 'rb') as f:
         self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
@@ -2983,7 +3025,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
       self.assertIn('Found no hashes to validate object downloaded', stderr)
-      with open(fpath, 'r') as f:
+      with open(fpath, 'rb') as f:
         self.assertEqual(f.read(), contents, 'File contents did not match.')
 
   @SkipForS3('No resumable upload support for S3.')
@@ -3028,8 +3070,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abc' * ONE_KIB, 'File contents differ')
+      with open(fpath, 'rb') as f:
+        self.assertEqual(f.read(), b'abc' * ONE_KIB, 'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Sliced download requires fast crcmod.')
@@ -3069,8 +3111,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn('Resuming download', stderr)
       # Temporary download file should have been deleted.
       self.assertFalse(os.path.isfile(fpath + '_.gstmp'))
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abcd' * self.halt_size,
+      with open(fpath, 'rb') as f:
+        self.assertEqual(f.read(), b'abcd' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3112,8 +3154,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abc' * self.halt_size,
+      with open(fpath, 'rb') as f:
+        self.assertEqual(f.read(), b'abc' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3156,8 +3198,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abc' * self.halt_size,
+      with open(fpath, 'rb') as f:
+        self.assertEqual(f.read(), b'abc' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3306,8 +3348,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Each tracker file should have been deleted.
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
-      with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abcd' * self.halt_size)
+      with open(fpath, 'rb') as f:
+        self.assertEqual(f.read(), b'abcd' * self.halt_size)
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload_start_over_http_error(self):
@@ -3806,7 +3848,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
         'cp', [suri(object_uri), dst_dir], return_log_handler=True)
     warning_messages = log_handler.messages['warning']
     self.assertEquals(2, len(warning_messages))
-    self.assertRegexpMatches(
+    self.assertRegex(
         warning_messages[0],
         r'Non-MD5 etag \(12345\) present for key .*, '
         r'data integrity checks are not possible')

@@ -822,6 +822,9 @@ class GcsJsonApi(CloudApi):
             'Missing decryption key with SHA256 hash %s. No decryption key '
             'matches object %s://%s/%s' % (key_sha256, self.provider,
                                            bucket_name, object_name))
+      if six.PY3:
+        if not isinstance(decryption_key, bytes):
+          decryption_key = decryption_key.encode('utf-8')
       return self._GetObjectMetadataHelper(
           bucket_name, object_name, generation=generation, fields=fields,
           decryption_tuple=CryptoKeyWrapperFromKey(decryption_key))
@@ -983,6 +986,12 @@ class GcsJsonApi(CloudApi):
             start_byte=start_byte, end_byte=end_byte,
             serialization_data=serialization_data,
             decryption_tuple=decryption_tuple)
+    # If you are fighting a redacted exception spew in multiprocess/multithread
+    # calls, add your exception to TRANSLATABLE_APITOOLS_EXCEPTIONS and put
+    # something like this immediately after the following except statement:
+    # import sys, traceback; sys.stderr.write('\n{}\n'.format(
+    #     traceback.format_exc())); sys.stderr.flush()
+    # This may hang, but you should get a stack trace spew after Ctrl-C.
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name,
@@ -1003,6 +1012,12 @@ class GcsJsonApi(CloudApi):
             compressed_encoding=compressed_encoding, start_byte=start_byte,
             end_byte=end_byte, serialization_data=serialization_data,
             decryption_tuple=decryption_tuple)
+      # If you are fighting a redacted exception spew in multiprocess/multithread
+      # calls, add your exception to HTTP_TRANSFER_EXCEPTIONS and put
+      # something like this immediately after the following except statement:
+      # import sys, traceback; sys.stderr.write('\n{}\n'.format(
+      #     traceback.format_exc())); sys.stderr.flush()
+      # This may hang, but you should get a stack trace spew after Ctrl-C.
       except HTTP_TRANSFER_EXCEPTIONS as e:
         self._ValidateHttpAccessTokenRefreshError(e)
         start_byte = download_stream.tell()
@@ -1902,7 +1917,7 @@ class GcsJsonApi(CloudApi):
                                                  generation=generation)
           return CreateBucketNotFoundException(e.status_code, self.provider,
                                                bucket_name)
-        return NotFoundException(e.message, status=e.status_code)
+        return NotFoundException(str(e), status=e.status_code)
 
       elif e.status_code == 409 and bucket_name:
         if 'The bucket you tried to delete was not empty.' in str(e):

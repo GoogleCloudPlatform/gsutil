@@ -521,6 +521,9 @@ class PerfDiagCommand(Command):
     stderr = subprocess.PIPE if mute_stderr else None
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr)
     (stdoutdata, _) = p.communicate()
+    if six.PY3:
+      if isinstance(stdoutdata, bytes):
+        stdoutdata = stdoutdata.decode('utf-8')
     if raise_on_error and p.returncode:
       raise CommandException("Received non-zero return code (%d) from "
                              "subprocess '%s'." % (p.returncode, ' '.join(cmd)))
@@ -655,16 +658,33 @@ class PerfDiagCommand(Command):
       except OSError:
         pass
 
-      if self.threads > 1 or self.processes > 1:
-        args = [obj for obj in self.temporary_objects]
-        self.Apply(
-            _DeleteWrapper, args, _PerfdiagExceptionHandler,
-            arg_checker=DummyArgChecker,
-            parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-            process_count=self.processes, thread_count=self.threads)
-      else:
-        for object_name in self.temporary_objects:
-          self.Delete(object_name, self.gsutil_api)
+      # I usually hate leaving commented out code in commits, but this is a
+      # rare exception. This commented out code attempted to clean up the
+      # files created by the perfdiag command. If there is only one process and
+      # thread, it worked by serializing the deletes. If it had more than one
+      # process (multiple threads on a single process seemed to work fine, but
+      # don't quote me on that), it tried to fire up a multi-processing delete
+      # that used the existing process pool created during the previous part of
+      # the perfdiag command execution. This randomly fails in Python 3. So I
+      # have left this code here, commented out, and have replaced it with the
+      # sequential delete part only. That this fails in Python 3 will probably
+      # present as other problems later. At least a multiprocessing rm using
+      # gsutil -m appears to always work, so it is something to do with this
+      # usage of parallel override and existing process pools, I think.
+      # PS - only fails when using prefer XML.
+
+      # if self.threads > 1 or self.processes > 1:
+      #   args = [obj for obj in self.temporary_objects]
+      #   self.Apply(
+      #       _DeleteWrapper, args, _PerfdiagExceptionHandler,
+      #       arg_checker=DummyArgChecker,
+      #       parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
+      #       process_count=self.processes, thread_count=self.threads)
+      # else:
+      #   for object_name in self.temporary_objects:
+      #     self.Delete(object_name, self.gsutil_api)
+      for object_name in self.temporary_objects:
+        self.Delete(object_name, self.gsutil_api)
     self.teardown_completed = True
 
   @contextlib.contextmanager
@@ -1363,7 +1383,7 @@ class PerfDiagCommand(Command):
       self.logger.warning('netstat not found on your system; some measurement '
                           'data will be missing')
       return None
-    netstat_output = netstat_output.strip().lower().decode('utf-8')
+    netstat_output = netstat_output.strip().lower()
     found_tcp = False
     tcp_retransmit = None
     tcp_received = None
@@ -1786,7 +1806,7 @@ class PerfDiagCommand(Command):
         text_util.ttyprint('Running on GCE: \n  %s' % info['on_gce'])
         if info['on_gce']:
           text_util.ttyprint('GCE Instance:\n\t%s' %
-                 info['gce_instance_info'].replace(b'\n', b'\n\t'))
+                 info['gce_instance_info'].replace('\n', '\n\t'))
       text_util.ttyprint('Bucket location: \n  %s' % info['bucket_location'])
       text_util.ttyprint('Bucket storage class: \n  %s' % info['bucket_storageClass'])
       text_util.ttyprint('Google Server: \n  %s' % info['googserv_route'])

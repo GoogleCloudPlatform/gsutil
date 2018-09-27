@@ -102,6 +102,9 @@ def FindMatchingCSEKInBotoConfig(key_sha256, boto_config):
     (str) Base64-encoded encryption key string if a match is found, None
     otherwise.
   """
+  if six.PY3:
+    if not isinstance(key_sha256, bytes):
+      key_sha256 = key_sha256.encode('ascii')
   keywrapper = CryptoKeyWrapperFromKey(
       boto_config.get('GSUtil', 'encryption_key', None))
   if (keywrapper is not None and

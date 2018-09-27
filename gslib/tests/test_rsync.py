@@ -2282,7 +2282,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           ['ls', '-L', '%s/%s' % (cloud_container_suri, obj_name)],
           return_stdout=True)
-    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'KMS key:\s+%s' % key_fqn)
 
   @SkipForGS('Tests that gs-specific encryption settings are skipped for s3.')
   def test_kms_key_specified_will_not_prevent_non_kms_copy_to_s3(self):

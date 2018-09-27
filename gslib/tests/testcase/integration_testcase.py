@@ -706,7 +706,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     cmd_bytes = [part.encode('utf-8')
                  if isinstance(part, six.text_type) else part for part in cmd]
     if stdin is not None:
-      stdin = (stdin + os.linesep).encode('utf-8')
+      if six.PY3:
+        if isinstance(stdin, bytes):
+          stdin = (stdin + os.linesep.encode('ascii'))
+        else:
+          stdin = (stdin + os.linesep).encode('utf-8')
+      else:
+          stdin = (stdin + os.linesep).encode('utf-8')
     if IS_WINDOWS:
       cmd = [sys.executable] + cmd
     env = os.environ.copy()

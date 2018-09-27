@@ -70,9 +70,10 @@ class ProgressCallbackWithTimeout(object):
     self._bytes_processed_since_callback += bytes_processed
     cur_time = time.time()
     if (self._bytes_processed_since_callback > self._bytes_per_callback or
-        (self._total_bytes_processed + self._bytes_processed_since_callback >=
-         self._total_size and self._total_size is not None) or
-	       (self._last_time - cur_time) > self._timeout):
+        (self._total_size is not None and
+         self._total_bytes_processed + self._bytes_processed_since_callback >=
+         self._total_size) or
+	(self._last_time - cur_time) > self._timeout):
       self._total_bytes_processed += self._bytes_processed_since_callback
       # TODO: We check if >= total_size and truncate because JSON uploads count
       # multipart metadata during their send progress. If the size is unknown,

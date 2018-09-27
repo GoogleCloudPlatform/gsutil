@@ -30,6 +30,8 @@ import os
 import struct
 import sys
 
+import six
+
 from gslib.utils.constants import WINDOWS_1252
 
 _DEFAULT_NUM_TERM_LINES = 25
@@ -231,3 +233,18 @@ def StdinIterator():
   for line in sys.stdin:
     # Strip CRLF.
     yield line.rstrip()
+
+
+class StdinIteratorCls(six.Iterator):
+  """An iterator that returns lines from stdin.
+     This is needed because Python 3 balks at pickling the
+     generator version above.
+  """
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    line = sys.stdin.readline()
+    if not line:
+      raise StopIteration()
+    return line.rstrip()

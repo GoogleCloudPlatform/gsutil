@@ -51,8 +51,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % ct)
-      self.assertRegexpMatches(stdout, r'xyz:\s+abc')
+      self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
+      self.assertRegex(stdout, r'xyz:\s+abc')
     _Check1()
 
   def test_overwrite_existing(self):
@@ -67,7 +67,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Type:\s+text/html')
+      self.assertRegex(stdout, r'Content-Type:\s+text/html')
       self.assertNotIn('xyz', stdout)
     _Check1()
 
@@ -89,8 +89,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
          'x-%s-meta-xyz:abc' % self.provider_custom_meta,
          '-h', 'Content-Type:%s' % ct, suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % ct)
-    self.assertRegexpMatches(stdout, r'xyz:\s+abc')
+    self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
+    self.assertRegex(stdout, r'xyz:\s+abc')
 
   @SkipForS3('Preconditions not supported for s3 objects')
   def test_metageneration_precondition(self):
@@ -108,8 +108,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
          'x-%s-meta-xyz:abc' % self.provider_custom_meta,
          '-h', 'Content-Type:%s' % ct, suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Content-Type:\s+%s' % ct)
-    self.assertRegexpMatches(stdout, r'xyz:\s+abc')
+    self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
+    self.assertRegex(stdout, r'xyz:\s+abc')
 
   def test_duplicate_header_removal(self):
     stderr = self.RunGsUtil(
@@ -182,7 +182,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         'setmeta', '-h', 'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
         suri(objuri)])
     stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'CaSe:\s+SeNsItIvE')
+    self.assertRegex(stdout, r'CaSe:\s+SeNsItIvE')
 
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(
@@ -203,7 +203,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         'setmeta', '-h', 'x-%s-meta-foo:bar:baz' % self.provider_custom_meta,
         suri(obj_uri)])
     stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'foo:\s+bar:baz')
+    self.assertRegex(stdout, r'foo:\s+bar:baz')
 
   def test_setmeta_with_canned_acl(self):
     stderr = self.RunGsUtil(

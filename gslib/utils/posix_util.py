@@ -315,7 +315,7 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
     return True, ''
 
   uid_present = uid > NA_ID
-  gid_present = gid > NA_ID
+  gid_present = int(gid) > NA_ID
   mode_present = mode > NA_MODE
   mode_valid = ValidatePOSIXMode(int(str(mode), 8))
 
@@ -365,7 +365,7 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
             '' if valid
             else 'Insufficient access with uid/gid/mode for %s, uid: %d, '
             'mode: %s' % (url_str, uid, oct(mode)[-3:]))
-  elif gid in USER_GROUPS:
+  elif int(gid) in USER_GROUPS:
     valid = bool(mode & G_R)
     return (valid,
             '' if valid

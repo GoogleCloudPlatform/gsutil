@@ -104,7 +104,7 @@ class TestAcl(TestAclBase):
     obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
     self.RunGsUtil(self._set_acl_prefix + ['public-read', obj_uri])
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                  return_stdout=True)
@@ -122,7 +122,7 @@ class TestAcl(TestAclBase):
                                 return_stdout=True)
     acl_string = re.sub(r'"role"', r'"role" \n', acl_string)
     acl_string = re.sub(r'"entity"', r'\n "entity"', acl_string)
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
 
     self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri])
 
@@ -134,7 +134,7 @@ class TestAcl(TestAclBase):
     bucket_uri = suri(self.CreateBucket())
     acl_string = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
     self.RunGsUtil(self._set_acl_prefix + ['public-read', bucket_uri])
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                  return_stdout=True)
@@ -179,7 +179,7 @@ class TestAcl(TestAclBase):
     _Check1()
 
     # Now change it back to the default via XML.
-    inpath = self.CreateTempFile(contents=acl_string)
+    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
     self.RunGsUtil(self._set_defacl_prefix + [inpath, suri(bucket_uri)])
 
     # Default object ACL may take some time to propagate.
@@ -395,13 +395,13 @@ class TestAcl(TestAclBase):
         'OWNER', 'user', self.USER_TEST_ADDRESS)
     json_text = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-u', self.USER_TEST_ADDRESS+':fc', suri(self.sample_uri)])
     json_text = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-    self.assertRegexpMatches(json_text, test_regex)
+    self.assertRegex(json_text, test_regex)
 
     test_regex2 = self._MakeScopeRegex(
         'WRITER', 'user', self.USER_TEST_ADDRESS)
@@ -409,14 +409,14 @@ class TestAcl(TestAclBase):
                    ['-u', self.USER_TEST_ADDRESS+':w', suri(self.sample_uri)])
     json_text2 = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-    self.assertRegexpMatches(json_text2, test_regex2)
+    self.assertRegex(json_text2, test_regex2)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.USER_TEST_ADDRESS, suri(self.sample_uri)])
 
     json_text3 = self.RunGsUtil(
         self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(json_text3, test_regex)
+    self.assertNotRegex(json_text3, test_regex)
 
   def testProjectAclChangesOnBucket(self):
     """Tests project entity acl changes on a bucket."""
@@ -437,14 +437,14 @@ class TestAcl(TestAclBase):
       json_text = self.RunGsUtil(
           self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
 
-      self.assertRegexpMatches(json_text, test_regex)
+      self.assertRegex(json_text, test_regex)
 
       self.RunGsUtil(self._ch_acl_prefix +
                      ['-d', self._project_test_acl, suri(self.sample_uri)])
 
       json_text2 = self.RunGsUtil(
           self._get_acl_prefix + [suri(self.sample_uri)], return_stdout=True)
-      self.assertNotRegexpMatches(json_text2, test_regex)
+      self.assertNotRegex(json_text2, test_regex)
 
   def testObjectAclChange(self):
     """Tests acl change on an object."""
@@ -455,13 +455,13 @@ class TestAcl(TestAclBase):
         'READER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)])
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
-    self.assertRegexpMatches(json_text, test_regex)
+    self.assertRegex(json_text, test_regex)
 
     test_regex2 = self._MakeScopeRegex(
         'OWNER', 'group', self.GROUP_TEST_ADDRESS)
@@ -469,13 +469,13 @@ class TestAcl(TestAclBase):
                    ['-g', self.GROUP_TEST_ADDRESS+':OWNER', suri(obj)])
     json_text2 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                 return_stdout=True)
-    self.assertRegexpMatches(json_text2, test_regex2)
+    self.assertRegex(json_text2, test_regex2)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-d', self.GROUP_TEST_ADDRESS, suri(obj)])
     json_text3 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                 return_stdout=True)
-    self.assertNotRegexpMatches(json_text3, test_regex2)
+    self.assertNotRegex(json_text3, test_regex2)
 
     all_auth_regex = re.compile(
         r'\{.*"entity":\s*"allAuthenticatedUsers".*"role":\s*"OWNER".*\}',
@@ -484,7 +484,7 @@ class TestAcl(TestAclBase):
     self.RunGsUtil(self._ch_acl_prefix + ['-g', 'AllAuth:O', suri(obj)])
     json_text4 = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                 return_stdout=True)
-    self.assertRegexpMatches(json_text4, all_auth_regex)
+    self.assertRegex(json_text4, all_auth_regex)
 
   def testObjectAclChangeAllUsers(self):
     """Tests acl ch AllUsers:R on an object."""
@@ -495,13 +495,13 @@ class TestAcl(TestAclBase):
         r'\{.*"entity":\s*"allUsers".*"role":\s*"READER".*\}', flags=re.DOTALL)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
-    self.assertNotRegexpMatches(json_text, all_users_regex)
+    self.assertNotRegex(json_text, all_users_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-g', 'AllUsers:R', suri(obj)])
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
-    self.assertRegexpMatches(json_text, all_users_regex)
+    self.assertRegex(json_text, all_users_regex)
 
   def testSeekAheadAcl(self):
     """Tests seek-ahead iterator with ACL sub-commands."""
@@ -509,7 +509,7 @@ class TestAcl(TestAclBase):
     # Get the object's current ACL for application via set.
     current_acl = self.RunGsUtil(['acl', 'get', suri(object_uri)],
                                  return_stdout=True)
-    current_acl_file = self.CreateTempFile(contents=current_acl)
+    current_acl_file = self.CreateTempFile(contents=current_acl.encode('utf-8'))
 
     with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
                                ('GSUtil', 'task_estimation_force', 'True')]):
@@ -533,7 +533,7 @@ class TestAcl(TestAclBase):
     for i in range(count):
       objects.append(self.CreateObject(
           bucket_uri=self.sample_uri,
-          contents=b'something {0}'.format(i)))
+          contents='something {0}'.format(i).encode('ascii')))
 
     self.AssertNObjectsInBucket(self.sample_uri, count)
 
@@ -544,7 +544,7 @@ class TestAcl(TestAclBase):
       json_texts.append(self.RunGsUtil(
           self._get_acl_prefix + [suri(obj)], return_stdout=True))
     for json_text in json_texts:
-      self.assertNotRegexpMatches(json_text, test_regex)
+      self.assertNotRegex(json_text, test_regex)
 
     uris = [suri(obj) for obj in objects]
     self.RunGsUtil(['-m', '-DD'] + self._ch_acl_prefix +
@@ -555,7 +555,7 @@ class TestAcl(TestAclBase):
       json_texts.append(self.RunGsUtil(
           self._get_acl_prefix + [suri(obj)], return_stdout=True))
     for json_text in json_texts:
-      self.assertRegexpMatches(json_text, test_regex)
+      self.assertRegex(json_text, test_regex)
 
   def testRecursiveChangeAcl(self):
     """Tests recursively changing ACLs on nested objects."""
@@ -567,7 +567,7 @@ class TestAcl(TestAclBase):
         'READER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegex(json_text, test_regex)
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
     def _AddAcl():
@@ -576,7 +576,7 @@ class TestAcl(TestAclBase):
           ['-R', '-g', self.GROUP_TEST_ADDRESS+':READ', suri(obj)[:-3]])
       json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                  return_stdout=True)
-      self.assertRegexpMatches(json_text, test_regex)
+      self.assertRegex(json_text, test_regex)
     _AddAcl()
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
@@ -587,7 +587,7 @@ class TestAcl(TestAclBase):
                      ['-d', delete_grant, suri(obj)])
       json_text = self.RunGsUtil(self._get_acl_prefix + [suri(obj)],
                                  return_stdout=True)
-      self.assertNotRegexpMatches(json_text, test_regex)
+      self.assertNotRegex(json_text, test_regex)
     _DeleteAcl()
 
   def testMultiVersionSupport(self):
@@ -609,17 +609,17 @@ class TestAcl(TestAclBase):
         'READER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [obj_v1],
                                return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._ch_acl_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS+':READ', obj_v1])
     json_text = self.RunGsUtil(self._get_acl_prefix + [obj_v1],
                                return_stdout=True)
-    self.assertRegexpMatches(json_text, test_regex)
+    self.assertRegex(json_text, test_regex)
 
     json_text = self.RunGsUtil(self._get_acl_prefix + [obj_v2],
                                return_stdout=True)
-    self.assertNotRegexpMatches(json_text, test_regex)
+    self.assertNotRegex(json_text, test_regex)
 
   def testBadRequestAclChange(self):
     stdout, stderr = self.RunGsUtil(
@@ -636,7 +636,7 @@ class TestAcl(TestAclBase):
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(self._get_acl_prefix + [suri(object_uri)],
                               return_stderr=True, expected_status=1)
-      self.assertRegexpMatches(stderr, expected_error_regex)
+      self.assertRegex(stderr, expected_error_regex)
 
   def testTooFewArgumentsFails(self):
     """Tests calling ACL commands with insufficient number of arguments."""
@@ -671,7 +671,6 @@ class TestAcl(TestAclBase):
                    expected_status=1)
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                  return_stdout=True)
-
     self.assertNotEqual(acl_string, acl_string2)
 
 
@@ -685,14 +684,14 @@ class TestS3CompatibleAcl(TestAclBase):
 
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(obj_uri)],
                             return_stdout=True)
-    set_contents = self.CreateTempFile(contents=stdout)
+    set_contents = self.CreateTempFile(contents=stdout.encode('utf-8'))
     self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(obj_uri)])
 
   def testAclBucketGetSet(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    set_contents = self.CreateTempFile(contents=stdout)
+    set_contents = self.CreateTempFile(contents=stdout.encode('utf-8'))
     self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(bucket_uri)])
 
 
