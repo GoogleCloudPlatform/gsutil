@@ -161,7 +161,7 @@ _NAME_CONSTRUCTION_TEXT = """
   to create folders, it does so by creating a "placeholder" object that ends
   with a "/" character. gsutil skips these objects when downloading from the
   cloud to the local file system, because attempting to create a file that
-  ends with a "/" is not allowed on Linux and MacOS. Because of this, it is
+  ends with a "/" is not allowed on Linux and macOS. Because of this, it is
   recommended that you not create objects that end with "/" (unless you don't
   need to be able to download such objects using gsutil).
 """
@@ -432,7 +432,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   downloaded by gsutil or other Python applications. Note that for such uploads,
   crcmod is required for downloading regardless of whether the parallel
   composite upload option is on or not. For some distributions this is easy
-  (e.g., it comes pre-installed on MacOS), but in other cases some users have
+  (e.g., it comes pre-installed on macOS), but in other cases some users have
   found it difficult. Because of this, at present parallel composite uploads are
   disabled by default. Google is actively working with a number of the Linux
   distributions to get crcmod included with the stock distribution. Once that is
@@ -524,7 +524,7 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   space during one of these operations (e.g., raising
   "CommandException: Inadequate temp space available to compress <your file>"
   during a gsutil cp -z operation), you can change where it writes these
-  temp files by setting the TMPDIR environment variable. On Linux and MacOS
+  temp files by setting the TMPDIR environment variable. On Linux and macOS
   you can do this either by running gsutil this way:
 
     TMPDIR=/some/directory gsutil cp ...
@@ -537,7 +537,7 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   On Windows 7 you can change the TMPDIR environment variable from Start ->
   Computer -> System -> Advanced System Settings -> Environment Variables.
   You need to reboot after making this change for it to take effect. (Rebooting
-  is not necessary after running the export command on Linux and MacOS.)
+  is not necessary after running the export command on Linux and macOS.)
 """
 
 _COPYING_SPECIAL_FILES_TEXT = """

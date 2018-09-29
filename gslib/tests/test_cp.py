@@ -1578,7 +1578,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   # Note: We originally one time implemented a test
   # (test_copy_invalid_unicode_filename) that invalid unicode filenames were
-  # skipped, but it turns out os.walk() on MacOS doesn't have problems with
+  # skipped, but it turns out os.walk() on macOS doesn't have problems with
   # such files (so, failed that test). Given that, we decided to remove the
   # test.
 
