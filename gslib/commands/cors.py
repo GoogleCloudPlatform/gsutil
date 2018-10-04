@@ -59,7 +59,7 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + '\n\n'
 _DESCRIPTION = ("""
   Gets or sets the Cross-Origin Resource Sharing (CORS) configuration on one or
   more buckets. This command is supported for buckets only, not objects. An
-  example CORS JSON document looks like the folllowing:
+  example CORS JSON document looks like the following:
 
     [
       {
