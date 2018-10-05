@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import base64
 import binascii
 import datetime
+import gslib
+import gzip
 from hashlib import md5
 import httplib
 import logging
@@ -38,7 +40,6 @@ from boto.exception import ResumableTransferDisposition
 from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
 import crcmod
-
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
@@ -80,6 +81,7 @@ from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
 from gslib.ui_controller import BytesToFixedWidthString
+from gslib.utils import hashing_helper
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import START_CALLBACK_PER_BYTES
 from gslib.utils.constants import UTF8
@@ -2946,6 +2948,43 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), contents, 'File contents did not match.')
       self.assertFalse(os.path.isfile(tracker_filename))
       self.assertFalse(os.path.isfile('%s_.gztmp' % fpath2))
+
+  def test_cp_download_transfer_encoded(self):
+    """Tests chunked transfer encoded download handling.
+
+   Tests that download works correctly with a gzipped chunked transfer-encoded
+   object (which therefore lacks Content-Length) of a size that gets fetched
+   in a single chunk (exercising downloading of objects lacking a length
+   response header).
+    """
+    # Upload a file / content-encoding / content-type that triggers this flow.
+    # Note: We need to use the file with pre-zipped format and manually set the
+    # content-encoding and content-type because the Python gzip module (used by
+    # gsutil cp -Z) won't reproduce the bytes that trigger this problem.
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo')
+    input_filename = os.path.join(
+        gslib.GSLIB_DIR, 'tests/test_data/favicon.ico.gz')
+    self.RunGsUtil(['-h', 'Content-Encoding:gzip',
+                    '-h', 'Content-Type:image/x-icon',
+                    'cp', suri(input_filename), suri(object_uri)])
+    # Compute the MD5 of the uncompressed bytes.
+    with gzip.open(input_filename) as fp:
+      hash_dict = {}
+      hash_dict['md5'] = md5()
+      hashing_helper.CalculateHashesFromContents(fp, hash_dict)
+      in_file_md5 = hash_dict['md5'].digest()
+
+    # Downloading this file triggers the flow.
+    fpath2 = self.CreateTempFile()
+    self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
+    # Compute MD5 of the downloaded (uncompressed) file, and validate it.
+    with open(fpath2, 'rb') as fp:
+      hash_dict = {}
+      hash_dict['md5'] = md5()
+      hashing_helper.CalculateHashesFromContents(fp, hash_dict)
+      out_file_md5 = hash_dict['md5'].digest()
+    self.assertEqual(in_file_md5, out_file_md5)
 
   @SequentialAndParallelTransfer
   def test_cp_resumable_download_check_hashes_never(self):
