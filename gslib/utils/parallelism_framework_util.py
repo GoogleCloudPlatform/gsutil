@@ -330,7 +330,7 @@ Your max number of open files, %s, is too low to allow safe multiprocessing.
 On Linux you can fix this by adding something like "ulimit -n 10000" to your
 ~/.bashrc or equivalent file and opening a new terminal.
 
-On MacOS, you may also need to run a command like this once (in addition to the
+On macOS, you may also need to run a command like this once (in addition to the
 above instructions), which might require a restart of your system to take
 effect:
   launchctl limit maxfiles 10000

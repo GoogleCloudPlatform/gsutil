@@ -128,14 +128,6 @@ def ConfigureNoOpAuthIfNeeded():
       from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
 
 
-def GetBotoConfigFileList():
-  """Returns list of boto config files that exist."""
-  config_paths = BotoConfigLocations
-  if 'AWS_CREDENTIAL_FILE' in os.environ:
-    config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
-  return [cfg_path for cfg_path in config_paths if os.path.exists(cfg_path)]
-
-
 def GetCertsFile():
   return configured_certs_file
 
@@ -147,24 +139,31 @@ def GetCleanupFiles():
 
 def GetConfigFilePaths():
   """Returns a list of the path(s) to the boto config file(s) to be loaded."""
-  config_paths = []
-  # The only case in which we load multiple boto configurations is
-  # when the BOTO_CONFIG environment variable is not set and the
-  # BOTO_PATH environment variable is set with multiple path values.
-  # Otherwise, we stop when we find the first readable config file.
-  # This predicate was taken from the boto.pyami.config module.
-  should_look_for_multiple_configs = (
-      'BOTO_CONFIG' not in os.environ and
-      'BOTO_PATH' in os.environ)
-  for path in BotoConfigLocations:
+  potential_config_paths = BotoConfigLocations
+
+  # When Boto's pyami.config.Config class is initialized, it attempts to read
+  # this file, transform it into valid Boto config syntax, and load credentials
+  # from it, but it does not add this file to BotoConfigLocations.
+  if 'AWS_CREDENTIAL_FILE' in os.environ:
+    potential_config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
+  # Provider-specific config files, like the one below, are checked for and
+  # loaded when Boto's Provider class is initialized. These aren't listed in
+  # BotoConfigLocations, but can still affect what credentials are loaded, so
+  # we display them in our config list to make auth'n debugging easier.
+  aws_cred_file = os.path.join(os.path.expanduser('~'), '.aws', 'credentials')
+  if os.path.isfile(aws_cred_file):
+    potential_config_paths.append(aws_cred_file)
+
+  # Only return credential files which we have permission to read (and thus can
+  # actually load credentials from).
+  readable_config_paths = []
+  for path in potential_config_paths:
     try:
       with open(path, 'r'):
-        config_paths.append(path)
-        if not should_look_for_multiple_configs:
-          break
+        readable_config_paths.append(path)
     except IOError:
       pass
-  return config_paths
+  return readable_config_paths
 
 
 def GetGsutilStateDir():

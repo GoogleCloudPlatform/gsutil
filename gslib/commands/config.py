@@ -344,7 +344,7 @@ CONFIG_PRELUDE_CONTENT = """
 # exceptions in Python's multiprocessing.Manager. More processes are
 # probably not needed to saturate most networks.
 #
-# On Windows and Mac systems parallel multi-processing and multi-threading
+# On Windows and macOS systems, parallel multi-processing and multi-threading
 # in Python presents various challenges so we retain compatibility with
 # the established parallel mode operation, i.e. one process and 24 threads.
 if platform.system() == 'Linux':
@@ -479,7 +479,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # however, to enhance performance for transfers involving large numbers of
 # files, you may experiment with hand tuning these values to optimize
 # performance for your particular system configuration.
-# MacOS and Windows users should see
+# Windows and macOS users should see
 # https://github.com/GoogleCloudPlatform/gsutil/issues/77 before attempting
 # to experiment with these values.
 #parallel_process_count = %(parallel_process_count)d
@@ -553,7 +553,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 
 # 'use_magicfile' specifies if the 'file --mime <filename>' command should be
 # used to guess content types instead of the default filename extension-based
-# mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
+# mechanism. Available on UNIX and macOS (and possibly on Windows, if you're
 # running Cygwin or some other package that provides implementations of
 # UNIX-like commands). When available and enabled use_magicfile should be more
 # robust because it analyzes file contents in addition to extensions.
