@@ -31,7 +31,7 @@ from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils import system_util
-from gslib.utils.boto_util import GetBotoConfigFileList
+from gslib.utils.boto_util import GetConfigFilePaths
 from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
@@ -147,7 +147,7 @@ class UpdateCommand(Command):
 
     # Won't fail - this command runs after main startup code that insists on
     # having a config file.
-    config_file_list = GetBotoConfigFileList()
+    config_file_list = GetConfigFilePaths()
     config_files = ' '.join(config_file_list)
     self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
 

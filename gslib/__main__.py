@@ -357,7 +357,7 @@ def main():
           config_items[i] = (config_item_key, 'REDACTED')
       sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
       sys.stderr.write(
-          'config_file_list: %s\n' % boto_util.GetBotoConfigFileList())
+          'config_file_list: %s\n' % boto_util.GetConfigFilePaths())
       sys.stderr.write('config: %s\n' % str(config_items))
     else:  # Non-debug log level.
       root_logger_level = logging.WARNING if quiet else logging.INFO
