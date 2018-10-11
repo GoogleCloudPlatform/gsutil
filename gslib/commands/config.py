@@ -21,7 +21,6 @@ from httplib import ResponseNotReady
 import json
 import multiprocessing
 import os
-import platform
 import signal
 import socket
 import stat
@@ -32,9 +31,6 @@ import webbrowser
 
 import boto
 from boto.provider import Provider
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
-
 import gslib
 from gslib.command import Command
 from gslib.command import DEFAULT_TASK_ESTIMATION_THRESHOLD
@@ -50,6 +46,9 @@ from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.utils.hashing_helper import CHECK_HASH_NEVER
+from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
 
 _SYNOPSIS = """
   gsutil [-D] config [-a] [-b] [-e] [-f] [-n] [-o <file>] [-r] [-s <scope>] [-w]
@@ -344,15 +343,16 @@ CONFIG_PRELUDE_CONTENT = """
 # exceptions in Python's multiprocessing.Manager. More processes are
 # probably not needed to saturate most networks.
 #
-# On Windows and macOS systems, parallel multi-processing and multi-threading
-# in Python presents various challenges so we retain compatibility with
-# the established parallel mode operation, i.e. one process and 24 threads.
-if platform.system() == 'Linux':
-  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
-  DEFAULT_PARALLEL_THREAD_COUNT = 5
-else:
+# On Windows and Alpine Linux, Python multi-processing presents various
+# challenges so we retain compatibility with the established parallel mode
+# operation, i.e. one process and 24 threads.
+should_prohibit_multiprocessing, unused_os = ShouldProhibitMultiprocessing()
+if should_prohibit_multiprocessing:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
   DEFAULT_PARALLEL_THREAD_COUNT = 24
+else:
+  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
+  DEFAULT_PARALLEL_THREAD_COUNT = 5
 
 # TODO: Once compiled crcmod is being distributed by major Linux distributions
 # revert DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD value to '150M'.
@@ -479,9 +479,6 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # however, to enhance performance for transfers involving large numbers of
 # files, you may experiment with hand tuning these values to optimize
 # performance for your particular system configuration.
-# Windows and macOS users should see
-# https://github.com/GoogleCloudPlatform/gsutil/issues/77 before attempting
-# to experiment with these values.
 #parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d
 

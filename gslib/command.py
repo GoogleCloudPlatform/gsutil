@@ -40,8 +40,6 @@ import traceback
 
 import boto
 from boto.storage_uri import StorageUri
-from six.moves import queue as Queue
-
 import gslib
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -77,7 +75,7 @@ from gslib.thread_message import ProducerThreadMessage
 from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import UIController
 from gslib.ui_controller import UIThread
-from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import GetMaxConcurrentCompressedUploads
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import UTF8
@@ -87,14 +85,16 @@ from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailable
 from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
 from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.utils.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
+from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
 from gslib.utils.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.utils.rsync_util import RsyncDiffToApply
-from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.system_util import GetTermLines
+from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import AclTranslation
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.wildcard_iterator import CreateWildcardIterator
+from six.moves import queue as Queue
 
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
 
@@ -1223,12 +1223,13 @@ class Command(HelpProvider):
       process_count = 1
       thread_count = 1
 
-    if IS_WINDOWS and process_count > 1:
+    should_prohibit_multiprocessing, os_name = ShouldProhibitMultiprocessing()
+    if should_prohibit_multiprocessing and process_count > 1:
       raise CommandException('\n'.join(textwrap.wrap(
-          ('It is not possible to set process_count > 1 on Windows. Please '
+          ('It is not possible to set process_count > 1 on %s. Please '
            'update your config file(s) (located at %s) and set '
            '"parallel_process_count = 1".') %
-          ', '.join(GetConfigFilePaths()))))
+          (os_name, ', '.join(GetFriendlyConfigFilePaths())))))
     self.logger.debug('process count: %d', process_count)
     self.logger.debug('thread count: %d', thread_count)
 

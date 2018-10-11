@@ -357,7 +357,7 @@ def main():
           config_items[i] = (config_item_key, 'REDACTED')
       sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
       sys.stderr.write(
-          'config_file_list: %s\n' % boto_util.GetConfigFilePaths())
+          'config_file_list: %s\n' % boto_util.GetFriendlyConfigFilePaths())
       sys.stderr.write('config: %s\n' % str(config_items))
     else:  # Non-debug log level.
       root_logger_level = logging.WARNING if quiet else logging.INFO
@@ -684,10 +684,7 @@ def _RunNamedCommandAndHandleExceptions(
         'pasted the ENTIRE authorization code (including any numeric prefix '
         "e.g. '4/')." % e)), exception=e)
   except Exception as e:  # pylint: disable=broad-except
-    if boto_util.GetConfigFilePaths():
-      config_paths = ', '.join(boto_util.GetConfigFilePaths())
-    else:
-      config_paths = 'no config found'
+    config_paths = ', '.join(boto_util.GetFriendlyConfigFilePaths())
     # Check for two types of errors related to service accounts. These errors
     # appear to be the same except for their messages, but they are caused by
     # different problems and both have unhelpful error messages. Moreover,

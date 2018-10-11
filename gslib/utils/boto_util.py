@@ -161,6 +161,14 @@ def GetConfigFilePaths():
   return readable_config_paths
 
 
+def GetFriendlyConfigFilePaths():
+  """Like GetConfigFilePaths but returns a not-found message if paths empty."""
+  readable_config_paths = GetConfigFilePaths()
+  if len(readable_config_paths) == 0:
+    readable_config_paths.append('No config found')
+  return readable_config_paths
+
+
 def GetGsutilStateDir():
   """Returns the location of the directory for gsutil state files.
 

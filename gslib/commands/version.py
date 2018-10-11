@@ -27,7 +27,7 @@ import crcmod
 import gslib
 from gslib.command import Command
 from gslib.utils import system_util
-from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 
@@ -85,10 +85,7 @@ class VersionCommand(Command):
         if o == '-l':
           long_form = True
 
-    if GetConfigFilePaths():
-      config_paths = ', '.join(GetConfigFilePaths())
-    else:
-      config_paths = 'no config found'
+    config_paths = ', '.join(GetFriendlyConfigFilePaths())
 
     shipped_checksum = gslib.CHECKSUM
     try:

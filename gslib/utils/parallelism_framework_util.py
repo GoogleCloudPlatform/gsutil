@@ -18,15 +18,15 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
+import errno
+import logging
 import multiprocessing
 import threading
 import traceback
 
-from six.moves import queue as Queue
-
-import gslib
 from gslib.utils import constants
 from gslib.utils import system_util
+from six.moves import queue as Queue
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -231,8 +231,37 @@ def _IncreaseSoftLimitForResource(resource_name, fallback_value):
     return soft_limit
 
 
+def ShouldProhibitMultiprocessing():
+  """Determines if the OS doesn't support multiprocessing.
+
+  There are two cases we currently know about:
+    - Multiple processes are not supported on Windows.
+    - If an error is encountered while using multiple processes on Alpine Linux
+      gsutil hangs. For this case it's possible we could do more work to find
+      the root cause but after a fruitless initial attempt we decided instead
+      to fall back on multi-threading w/o multiprocesing.
+
+  Returns:
+    (bool indicator if multiprocessing should be prohibited, OS name)
+  """
+  if system_util.IS_WINDOWS:
+    return (True, 'Windows')
+  try:
+    with open('/etc/os-release', 'r') as f:
+      os_name = f.read().split('\n')[0].split('=')[1].strip('"')
+      return ('alpine linux' in os_name.lower(), os_name)
+  except IOError as e:
+    if e.errno == errno.ENOENT:
+      logging.debug('Unable to open /etc/os-release to determine whether OS '
+                    'supports multiprocessing: errno=%d, message=%s'
+                    % (e.errno, e.message))
+      return (False, 'Unknown')
+    else:
+      raise
+
+
 def CheckMultiprocessingAvailableAndInit(logger=None):
-  """Checks if multiprocessing is available.
+  """Checks if multiprocessing is available, and if so performs initialization.
 
   There are some environments in which there is no way to use multiprocessing
   logic that's built into Python (e.g., if /dev/shm is not available, then
@@ -240,8 +269,7 @@ def CheckMultiprocessingAvailableAndInit(logger=None):
   needed to make sure the environment can support the pieces of the
   multiprocessing module that we need.
 
-  If multiprocessing is available, this performs necessary initialization for
-  multiprocessing.  See gslib.command.InitializeMultiprocessingVariables for
+  See gslib.command.InitializeMultiprocessingVariables for
   an explanation of why this is necessary.
 
   Args:
@@ -266,11 +294,12 @@ def CheckMultiprocessingAvailableAndInit(logger=None):
         is_available=_cached_multiprocessing_is_available,
         stack_trace=_cached_multiprocessing_check_stack_trace)
 
-  if system_util.IS_WINDOWS:
+  should_prohibit_multiprocessing, os_name = ShouldProhibitMultiprocessing()
+  if should_prohibit_multiprocessing:
     message = """
-Multiple processes are not supported on Windows. Operations requesting
+Multiple processes are not supported on %s. Operations requesting
 parallelism will be executed with multiple threads in a single process only.
-"""
+""" % os_name
     if logger:
       logger.warn(message)
     return MultiprocessingIsAvailableResult(is_available=False,

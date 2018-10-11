@@ -35,7 +35,7 @@ from gslib.exception import CommandException
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils import constants
 from gslib.utils import system_util
-from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
@@ -190,7 +190,7 @@ def _CheckAndGetCredentials(logger):
            'config to create credentials and later run gcloud auth, and '
            'create a second set of credentials. Your boto config path is: '
            '%s. For more help, see "gsutil help creds".')
-          % (configured_cred_types, GetConfigFilePaths()))
+          % (configured_cred_types, GetFriendlyConfigFilePaths()))
 
     failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
     user_creds = _GetOauth2UserAccountCredentials()
