@@ -1405,7 +1405,7 @@ class Command(HelpProvider):
           'may run significantly faster if you instead use gsutil -m %s ...\n'
           'Please see the -m section under "gsutil help options" for further '
           'information about when gsutil -m can be advantageous.'
-          % sys.argv[1]) + '\n')
+          % self.command_spec.command_name) + '\n')
 
   # pylint: disable=g-doc-args
   def _SequentialApply(self, func, args_iterator, exception_handler, caller_id,
