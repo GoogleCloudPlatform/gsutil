@@ -151,8 +151,14 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
 
-  Note: If you are synchronizing a large amount of data between clouds you might
-  consider setting up a
+  Note 1: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
+  that can be surprising. Also, attempting to copy files whose names contain
+  wildcard characters can result in problems. For more details about these
+  issues see the section "POTENTIALLY SURPRISING BEHAVIOR WHEN USING WILDCARDS"
+  under "gsutil help wildcards".
+
+  Note 2: If you are synchronizing a large amount of data between clouds you
+  might consider setting up a
   `Google Compute Engine <https://cloud.google.com/products/compute-engine>`_
   account and running gsutil there. Since cross-provider gsutil data transfers
   flow through the machine where gsutil is running, doing this can make your

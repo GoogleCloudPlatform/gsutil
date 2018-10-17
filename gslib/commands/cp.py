@@ -111,6 +111,12 @@ _DESCRIPTION_TEXT = """
 
   The contents of stdin can name files, cloud URLs, and wildcards of files
   and cloud URLs.
+
+  Note: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
+  that can be surprising. Also, attempting to copy files whose names contain
+  wildcard characters can result in problems. For more details about these
+  issues see the section "POTENTIALLY SURPRISING BEHAVIOR WHEN USING WILDCARDS"
+  under "gsutil help wildcards".
 """
 
 _NAME_CONSTRUCTION_TEXT = """
