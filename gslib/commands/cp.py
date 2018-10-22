@@ -249,13 +249,6 @@ _COPY_IN_CLOUD_TEXT = """
 _CHECKSUM_VALIDATION_TEXT = """
 
 
-<B>BE CAREFUL WHEN SYNCHRONIZING OVER OS-SPECIFIC FILE TYPTES (SYMLINKS, DEVICES, ETC.)</B>
-
-  Please see the section about OS-specific file types in "gsutil help rsync".
-  While that section was written specifically about the rsync command, analogous
-  points apply to the cp command.
-
-
 <B>CHECKSUM VALIDATION</B>
   At the end of every upload or download the gsutil cp command validates that
   the checksum it computes for the source file/object matches the checksum
@@ -541,12 +534,11 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
 """
 
 _COPYING_SPECIAL_FILES_TEXT = """
-<B>COPYING SPECIAL FILES</B>
-  gsutil cp does not support copying special file types such as sockets, device
-  files, named pipes, or any other non-standard files intended to represent an
-  operating system resource. You should not run gsutil cp with sources that
-  include such files (for example, recursively copying the root directory on
-  Linux that includes /dev ). If you do, gsutil cp may fail or hang.
+<B>SYNCHRONIZING OVER OS-SPECIFIC FILE TYPES (SYMLINKS, DEVICES, ETC.)</B>
+
+  Please see the section about OS-specific file types in "gsutil help rsync".
+  While that section was written specifically about the rsync command, analogous
+  points apply to the cp command.
 """
 
 _OPTIONS_TEXT = """
