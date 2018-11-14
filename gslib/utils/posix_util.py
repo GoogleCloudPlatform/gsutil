@@ -295,28 +295,30 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
 
   Returns:
     A (bool, str) tuple, True if and only if it's safe to copy the file, and a
-    string details for the error.
+    string containing details for the error.
   """
   # Windows doesn't use the POSIX system for file permissions, so all files will
   # validate.
   if IS_WINDOWS:
     return True, ''
 
-  # root can access files regardless of their permissions.
-  if getpass.getuser() == 'root':
-    return True, ''
-
   uid_present = uid > NA_ID
   gid_present = gid > NA_ID
   mode_present = mode > NA_MODE
-  mode_valid = ValidatePOSIXMode(int(str(mode), 8))
-
+  # No need to perform validation if Posix attrs are not being preserved.
   if not (uid_present or gid_present or mode_present):
     return True, ''
 
-  if not mode_valid and mode_present:
-    return False, 'Mode for %s won\'t allow read access.' % url_str
-  elif not mode_present:
+  # The root user on non-Windows systems can access files regardless of their
+  # permissions.
+  if os.geteuid() == 0:
+    return True, ''
+
+  mode_valid = ValidatePOSIXMode(int(str(mode), 8))
+  if mode_present:
+    if not mode_valid:
+      return False, 'Mode for %s won\'t allow read access.' % url_str
+  else:
     # Calculate the default mode if the mode doesn't exist.
     # Convert mode to a 3-digit, base-8 integer.
     mode = int(GetDefaultMode())
