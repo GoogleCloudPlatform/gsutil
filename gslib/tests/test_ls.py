@@ -201,6 +201,24 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       time_updated = time_updated_match.group('time_updated_val')
       time_updated = time.strptime(time_updated, '%a, %d %b %Y %H:%M:%S %Z')
       self.assertGreater(time_updated, time_created)
+      # Check that for bucket policy only fields.
+      self._AssertBucketPolicyOnly(False, stdout)
+
+  def test_bucket_with_Lb_bucket_policy_only(self):
+    if self.test_api == ApiSelector.JSON:
+      bucket_uri = self.CreateBucket(bucket_policy_only=True,
+                                     prefer_json_api=True)
+      stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
+                              return_stdout=True)
+      self._AssertBucketPolicyOnly(True, stdout)
+
+  def _AssertBucketPolicyOnly(self, value, stdout):
+    bucket_policy_only_re = re.compile(
+        r'^\s*Bucket Policy Only enabled:\s+(?P<bpo_val>.+)$',
+        re.MULTILINE)
+    bucket_policy_only_match = re.search(bucket_policy_only_re, stdout)
+    bucket_policy_only_val = bucket_policy_only_match.group('bpo_val')
+    self.assertEqual(str(value), bucket_policy_only_val)
 
   def test_bucket_with_lb(self):
     """Tests ls -lb."""

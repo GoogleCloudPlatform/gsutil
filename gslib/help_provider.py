@@ -22,7 +22,8 @@ from gslib.exception import CommandException
 ALL_HELP_TYPES = ['command_help', 'additional_help']
 
 # Constants enforced by SanityCheck
-MAX_HELP_NAME_LEN = 16
+# Mainly here for help output formatting purposes, can be changed if necessary.
+MAX_HELP_NAME_LEN = 17
 MIN_ONE_LINE_SUMMARY_LEN = 10
 MAX_ONE_LINE_SUMMARY_LEN = 80 - MAX_HELP_NAME_LEN
 

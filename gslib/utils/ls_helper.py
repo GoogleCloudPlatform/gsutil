@@ -239,9 +239,9 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     elif S3_ACL_MARKER_GUID in marker_props:
       print(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
     else:
-      print(MakeMetadataLine('ACL', 'ACCESS DENIED'))
-      print(MakeMetadataLine(
-          'Note', 'You need OWNER permission on the object to read its ACL', 2))
+      # Empty ACLs are possible with Bucket Policy Only and no longer imply
+      # ACCESS DENIED anymore.
+      print(MakeMetadataLine('ACL', '[]'))
   return (num_objs, num_bytes)
 
 

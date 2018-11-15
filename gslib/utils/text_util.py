@@ -206,6 +206,11 @@ def InsistAsciiHeaderValue(header, value):
       'x-amz-meta- headers' % (value, header))
 
 
+def InsistOnOrOff(value, message):
+  if value != 'on' and value != 'off':
+    raise CommandException(message)
+
+
 def NormalizeStorageClass(sc):
   """Returns a normalized form of the given storage class name.
 

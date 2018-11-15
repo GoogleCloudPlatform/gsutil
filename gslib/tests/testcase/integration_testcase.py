@@ -470,9 +470,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def DateTimeToSeconds(self, datetime_obj):
     return int(time.mktime(datetime_obj.timetuple()))
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
-                   retention_policy=None, provider=None, prefer_json_api=False,
-                   versioning_enabled=False):
+  def CreateBucket(self,
+                   bucket_name=None,
+                   test_objects=0,
+                   storage_class=None,
+                   retention_policy=None,
+                   provider=None,
+                   prefer_json_api=False,
+                   versioning_enabled=False,
+                   bucket_policy_only=False):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -488,6 +494,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       prefer_json_api: If True, use the JSON creation functions where possible.
       versioning_enabled: If True, set the bucket's versioning attribute to
           True.
+      bucket_policy_only: If True, set the bucket's iamConfiguration's
+          bucketPolicyOnly attribute to True.
 
     Returns:
       StorageUri for the created bucket.
@@ -510,7 +518,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                           storage_class=storage_class,
                                           location=location,
                                           versioning_enabled=versioning_enabled,
-                                          retention_policy=retention_policy)
+                                          retention_policy=retention_policy,
+                                          bucket_policy_only=bucket_policy_only)
       bucket_uri = boto.storage_uri(
           'gs://%s' % json_bucket.name.encode(UTF8).lower(),
           suppress_consec_slashes=False)
@@ -679,7 +688,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
                        storage_class=None, location=None,
                        versioning_enabled=False,
-                       retention_policy=None):
+                       retention_policy=None,
+                       bucket_policy_only=False):
     """Creates a test bucket using the JSON API.
 
     The bucket and all of its contents will be deleted after the test.
@@ -694,6 +704,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       versioning_enabled: If True, set the bucket's versioning attribute to
           True.
       retention_policy: Retention policy to be used on the bucket.
+      bucket_policy_only: If True, set the bucket's iamConfiguration's
+          bucketPolicyOnly attribute to True.
 
     Returns:
       Apitools Bucket for the created bucket.
@@ -710,6 +722,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           apitools_messages.Bucket.VersioningValue(enabled=True))
     if retention_policy:
       bucket_metadata.retentionPolicy = retention_policy
+    if bucket_policy_only:
+      iam_config = apitools_messages.Bucket.IamConfigurationValue()
+      iam_config.bucketPolicyOnly = iam_config.BucketPolicyOnlyValue()
+      iam_config.bucketPolicyOnly.enabled = True
+      bucket_metadata.iamConfiguration = iam_config
 
     # TODO: Add retry and exponential backoff.
     bucket = self.json_api.CreateBucket(bucket_name,

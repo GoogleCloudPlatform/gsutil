@@ -30,11 +30,13 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retention_util import RetentionInSeconds
 from gslib.utils.text_util import InsistAscii
+from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 
 _SYNOPSIS = """
-  gsutil mb [-c class] [-l location] [-p proj_id] [--retention time] url...
+  gsutil mb [-b bucket_policy_only] [-c class] [-l location] [-p proj_id]
+            [--retention time] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -61,6 +63,11 @@ _DETAILED_HELP_TEXT = ("""
 
   The --retention option specifies the retention period for the bucket. For more
   details about retention policy see "gsutil help retention".
+
+  The -b option specifies the Bucket Policy Only setting of the bucket.
+  ACLs assigned to objects are not evaluated in buckets with Bucket Policy Only
+  enabled. Consequently, only IAM policies grant access to objects in these
+  buckets.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -118,23 +125,36 @@ _DETAILED_HELP_TEXT = ("""
   If you don't specify a --retention option, the bucket is created with no
   retention policy.
 
+<B>BUCKET POLICY ONLY</B>
+  You can specify one of the available settings for a bucket
+  with the -b option.
+
+  Examples:
+
+    gsutil mb -b off gs://bucket-with-acls
+
+    gsutil mb -b on gs://bucket-with-no-acls
+
 <B>OPTIONS</B>
-  -c class          Specifies the default storage class. Default is "Standard".
-                    Can only be set on gs:// buckets.
+  -b bucket_policy_only  Specifies the Bucket Policy Only setting.
+                         Default is "off"
 
-  -l location       Can be any multi-regional or regional location. See
-                    https://cloud.google.com/storage/docs/bucket-locations
-                    for a discussion of this distinction. Default is US for
-                    gs:// buckets. Locations are case insensitive.
+  -c class               Specifies the default storage class.
+                         Default is "Standard".
 
-  -p proj_id        Specifies the project ID under which to create the bucket.
-                    Can only be set on gs:// buckets.
+  -l location            Can be any multi-regional or regional location. See
+                         https://cloud.google.com/storage/docs/bucket-locations
+                         for a discussion of this distinction. Default is US.
+                         Locations are case insensitive.
 
-  -s class          Same as -c.
+  -p proj_id             Specifies the project ID under which to create the
+                         bucket.
 
-  --retention time  Specifies the retention policy. Default is no retention
-                    policy. This can only be set on gs:// buckets and requires
-                    using the JSON API.
+  -s class               Same as -c.
+
+  --retention time       Specifies the retention policy. Default is no retention
+                         policy. This can only be set on gs:// buckets and
+                         requires using the JSON API.
 """)
 
 
@@ -142,6 +162,9 @@ _DETAILED_HELP_TEXT = ("""
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
 # Regex to disallow buckets with individual DNS labels longer than 63.
 TOO_LONG_DNS_NAME_COMP = re.compile(r'[-_a-z0-9]{64}')
+
+IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
+BucketPolicyOnlyValue = IamConfigurationValue.BucketPolicyOnlyValue
 
 
 class MbCommand(Command):
@@ -154,7 +177,7 @@ class MbCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='c:l:p:s:',
+      supported_sub_args='b:c:l:p:s:',
       supported_private_args=['retention='],
       file_url_ok=False,
       provider_url_ok=False,
@@ -180,6 +203,7 @@ class MbCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the mb command."""
+    bucket_policy_only = None
     location = None
     storage_class = None
     seconds = None
@@ -195,9 +219,20 @@ class MbCommand(Command):
           storage_class = NormalizeStorageClass(a)
         elif o == '--retention':
           seconds = RetentionInSeconds(a)
+        elif o == '-b':
+          if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
+            raise CommandException('The -b [on|off] option '
+                                   'can only be used with the JSON API')
+          InsistOnOrOff(a, 'Only on and off values allowed for -b option')
+          bucket_policy_only = (a == 'on')
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class)
+    if bucket_policy_only:
+      bucket_metadata.iamConfiguration = IamConfigurationValue()
+      iam_config = bucket_metadata.iamConfiguration
+      iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
+      iam_config.bucketPolicyOnly.enabled = bucket_policy_only
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)

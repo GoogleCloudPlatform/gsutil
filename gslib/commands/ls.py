@@ -205,6 +205,7 @@ _DETAILED_HELP_TEXT = ("""
             Time created:                 Thu, 14 Jan 2016 19:25:17 GMT
             Time updated:                 Thu, 08 Jun 2017 21:17:59 GMT
             Metageneration:               1
+            Bucket Policy Only enabled:   False
             ACL:
               [
                 {
@@ -358,6 +359,9 @@ class LsCommand(Command):
       fields['updated'] = bucket.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')
     if bucket.defaultEventBasedHold:
       fields['default_eventbased_hold'] = bucket.defaultEventBasedHold
+    if bucket.iamConfiguration and bucket.iamConfiguration.bucketPolicyOnly:
+      enabled = bucket.iamConfiguration.bucketPolicyOnly.enabled
+      fields['bucket_policy_only_enabled'] = enabled
 
     # For field values that are multiline, add indenting to make it look
     # prettier.
@@ -379,6 +383,7 @@ class LsCommand(Command):
     time_updated_line = ''
     default_eventbased_hold_line = ''
     retention_policy_line = ''
+    bucket_policy_only_enabled_line = ''
     if 'metageneration' in fields:
       metageneration_line = '\tMetageneration:\t\t\t{metageneration}\n'
     if 'time_created' in fields:
@@ -390,6 +395,10 @@ class LsCommand(Command):
           '\tDefault Event-Based Hold:\t{default_eventbased_hold}\n')
     if 'retention_policy' in fields:
       retention_policy_line = '\tRetention Policy:\t\t{retention_policy}\n'
+    if 'bucket_policy_only_enabled' in fields:
+      bucket_policy_only_enabled_line = ('\tBucket Policy Only enabled:\t'
+                                         '{bucket_policy_only_enabled}\n')
+
 
     print(('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
@@ -407,6 +416,7 @@ class LsCommand(Command):
            time_created_line +
            time_updated_line +
            metageneration_line +
+           bucket_policy_only_enabled_line +
            '\tACL:\t\t\t\t{acl}\n'
            '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
@@ -513,6 +523,7 @@ class LsCommand(Command):
                          'cors',
                          'defaultObjectAcl',
                          'encryption',
+                         'iamConfiguration',
                          'labels',
                          'location',
                          'logging',
