@@ -82,7 +82,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>BUCKET LOCATIONS</B>
   You can specify one of the `available locations
-  <https://cloud.google.com/storage/docs/bucket-locations>`_ for a bucket
+  <https://cloud.google.com/storage/docs/locations>`_ for a bucket
   with the -l option.
 
   Examples:
