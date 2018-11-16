@@ -139,7 +139,7 @@ _DETAILED_HELP_TEXT = ("""
   -p           Specify the keystore password instead of prompting.
 
   -r <region>  Specifies the `region
-               <https://cloud.google.com/storage/docs/bucket-locations>`_ in
+               <https://cloud.google.com/storage/docs/locations>`_ in
                which the resources for which you are creating signed URLs are
                stored.
 
