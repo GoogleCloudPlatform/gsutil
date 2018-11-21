@@ -2146,6 +2146,55 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(listing2, expected_list_results)
     _Check()
 
+  def test_skip_old_files(self):
+    """Tests that rsync -u works correctly"""
+    src_bucket1 = self.CreateBucket()
+    src_bucket2 = self.CreateBucket()
+    dst_bucket = self.CreateBucket()
+
+    self.CreateObject(bucket_uri=src_bucket1, object_name='obj1',
+                    contents='obj1-1', mtime=10)
+    self.CreateObject(bucket_uri=src_bucket1, object_name='obj2',
+                    contents='obj2-1', mtime=10)
+    self.CreateObject(bucket_uri=src_bucket1, object_name='obj3',
+                    contents='obj3-1', mtime=10)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      self.RunGsUtil(['rsync', '-u', suri(src_bucket1), suri(dst_bucket)])
+      listing1 = TailSet(suri(src_bucket1), self.FlatListBucket(src_bucket1))
+      listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
+      self.assertEquals(listing1, set(['/obj1', '/obj2', '/obj3']))
+      self.assertEquals(listing2, set(['/obj1', '/obj2', '/obj3']))
+    _Check()
+
+    self.CreateObject(bucket_uri=src_bucket2, object_name='obj1',
+                     contents='obj1-2', mtime=9)
+    self.CreateObject(bucket_uri=src_bucket2, object_name='obj2',
+                     contents='obj2-2', mtime=10)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      self.RunGsUtil(['rsync', '-u', suri(src_bucket2), suri(dst_bucket)])
+      self.assertEquals('obj1-1', self.RunGsUtil(
+          ['cat', suri(dst_bucket, 'obj1')], return_stdout=True))
+      self.assertEquals('obj2-1', self.RunGsUtil(
+          ['cat', suri(dst_bucket, 'obj2')], return_stdout=True))
+      self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj1', '10')
+      self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj2', '10')
+    _Check2()
+
+    self.CreateObject(bucket_uri=src_bucket2, object_name='obj3',
+                      contents='obj3-2', mtime=11)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check3():
+      self.RunGsUtil(['rsync', '-u', suri(src_bucket2), suri(dst_bucket)], return_stderr=True)
+      self.assertEquals('obj3-2', self.RunGsUtil(
+          ['cat', suri(dst_bucket, 'obj3')], return_stdout=True))
+      self._VerifyObjectMtime(dst_bucket.bucket_name, 'obj3', '11')
+    _Check3()
+
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
