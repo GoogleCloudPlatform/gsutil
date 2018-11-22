@@ -475,7 +475,9 @@ _DETAILED_HELP_TEXT = ("""
                  only the top-level directory in the source and destination URLs
                  match, skipping any sub-directories.
 
-  -u             Skip files that are newer on the receiver.
+  -u             When a file/object is present in both the source and
+                 destination, if mtime is available for both, do not perform
+                 the copy if the destination mtime is newer.
                  
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER
@@ -1055,7 +1057,8 @@ class _DiffIterator(object):
     use_hashes = (self.compute_file_checksums or
                   (StorageUrlFromString(src_url_str).IsCloudUrl() and
                    StorageUrlFromString(dst_url_str).IsCloudUrl()))
-    if self.skip_old_files and has_src_mtime and has_dst_mtime and src_mtime < dst_mtime:
+    if (self.skip_old_files and has_src_mtime and has_dst_mtime and
+            src_mtime < dst_mtime):
       return False, has_src_mtime, has_dst_mtime
     if not use_hashes and has_src_mtime and has_dst_mtime:
       return (src_mtime != dst_mtime or src_size != dst_size, has_src_mtime,
