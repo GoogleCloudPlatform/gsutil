@@ -1058,7 +1058,7 @@ class _DiffIterator(object):
                   (StorageUrlFromString(src_url_str).IsCloudUrl() and
                    StorageUrlFromString(dst_url_str).IsCloudUrl()))
     if (self.skip_old_files and has_src_mtime and has_dst_mtime and
-            src_mtime < dst_mtime):
+        src_mtime < dst_mtime):
       return False, has_src_mtime, has_dst_mtime
     if not use_hashes and has_src_mtime and has_dst_mtime:
       return (src_mtime != dst_mtime or src_size != dst_size, has_src_mtime,
