@@ -475,6 +475,10 @@ _DETAILED_HELP_TEXT = ("""
                  only the top-level directory in the source and destination URLs
                  match, skipping any sub-directories.
 
+  -u             When a file/object is present in both the source and
+                 destination, if mtime is available for both, do not perform
+                 the copy if the destination mtime is newer.
+                 
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER
                  storage class.
@@ -886,6 +890,7 @@ class _DiffIterator(object):
     self.base_src_url = base_src_url
     self.base_dst_url = base_dst_url
     self.preserve_posix = command_obj.preserve_posix_attrs
+    self.skip_old_files = command_obj.skip_old_files
 
     self.logger.info('Building synchronization state...')
 
@@ -1052,6 +1057,9 @@ class _DiffIterator(object):
     use_hashes = (self.compute_file_checksums or
                   (StorageUrlFromString(src_url_str).IsCloudUrl() and
                    StorageUrlFromString(dst_url_str).IsCloudUrl()))
+    if (self.skip_old_files and has_src_mtime and has_dst_mtime and
+        src_mtime < dst_mtime):
+      return False, has_src_mtime, has_dst_mtime
     if not use_hashes and has_src_mtime and has_dst_mtime:
       return (src_mtime != dst_mtime or src_size != dst_size, has_src_mtime,
               has_dst_mtime)
@@ -1230,6 +1238,7 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.logger = logging.getLogger('dummy')
     self.base_src_url = initialized_diff_iterator.base_src_url
     self.base_dst_url = initialized_diff_iterator.base_dst_url
+    self.skip_old_files = initialized_diff_iterator.skip_old_files
 
     # Note that while this leaves 2 open file handles, we track these in a
     # global list to be closed (if not closed in the calling scope) and deleted
@@ -1437,7 +1446,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPrRUx:j:J',
+      supported_sub_args='a:cCdenpPrRuUx:j:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1567,6 +1576,7 @@ class RsyncCommand(Command):
     self.compute_file_checksums = False
     self.dryrun = False
     self.exclude_pattern = None
+    self.skip_old_files = False
     self.skip_unsupported_objects = False
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
@@ -1581,7 +1591,6 @@ class RsyncCommand(Command):
     gzip_encoded = False
     gzip_arg_exts = None
     gzip_arg_all = None
-
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-a':
@@ -1614,6 +1623,8 @@ class RsyncCommand(Command):
             InitializeUserGroups()
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
+        elif o == '-u':
+          self.skip_old_files = True
         elif o == '-U':
           self.skip_unsupported_objects = True
         elif o == '-x':
