@@ -21,11 +21,10 @@ tied to some of Boto's core functionality) and oauth2client.
 from __future__ import absolute_import
 from __future__ import print_function
 
-import pkgutil
 import os
+import pkgutil
 import tempfile
 import textwrap
-import sys
 
 import boto
 from boto import config
@@ -367,9 +366,6 @@ def MonkeyPatchBoto():
   import gcs_oauth2_boto_plugin
   # pylint: enable=g-import-not-at-top
 
-  # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-  boto.s3.key.Key.should_retry = _PatchedShouldRetryMethod
-
   # TODO(https://github.com/boto/boto/issues/3831): Remove this if the GitHub
   # issue is ever addressed.
   orig_get_plugin_method = boto.plugin.get_plugin
@@ -420,61 +416,3 @@ def UsingCrcmodExtension(crcmod):
   return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
           (getattr(crcmod, 'crcmod', None) and
            getattr(crcmod.crcmod, '_usingExtension', None)))
-
-
-# TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
-  """Replaces boto.s3.key's should_retry() to handle KMS-encrypted objects."""
-  provider = self.bucket.connection.provider
-
-  if not chunked_transfer:
-      if response.status in [500, 503]:
-          # 500 & 503 can be plain retries.
-          return True
-
-      if response.getheader('location'):
-          # If there's a redirect, plain retry.
-          return True
-
-  if 200 <= response.status <= 299:
-      self.etag = response.getheader('etag')
-      md5 = self.md5
-      if isinstance(md5, bytes):
-          md5 = md5.decode('utf-8')
-
-      # If you use customer-provided encryption keys, the ETag value that
-      # Amazon S3 returns in the response will not be the MD5 of the
-      # object.
-      amz_server_side_encryption_customer_algorithm = response.getheader(
-          'x-amz-server-side-encryption-customer-algorithm', None)
-      # The same is applicable for KMS-encrypted objects in gs buckets.
-      goog_customer_managed_encryption = response.getheader(
-          'x-goog-encryption-kms-key-name', None)
-      if (amz_server_side_encryption_customer_algorithm is None and
-              goog_customer_managed_encryption is None):
-          if self.etag != '"%s"' % md5:
-              raise provider.storage_data_error(
-                  'ETag from S3 did not match computed MD5. '
-                  '%s vs. %s' % (self.etag, self.md5))
-
-      return True
-
-  if response.status == 400:
-      # The 400 must be trapped so the retry handler can check to
-      # see if it was a timeout.
-      # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
-      # out.
-      body = response.read()
-      err = provider.storage_response_error(
-          response.status,
-          response.reason,
-          body
-      )
-
-      if err.error_code in ['RequestTimeout']:
-          raise boto.exception.PleaseRetryException(
-              "Saw %s, retrying" % err.error_code,
-              response=response
-          )
-
-  return False

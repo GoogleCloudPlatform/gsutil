@@ -1191,13 +1191,9 @@ class BotoTranslation(CloudApi):
             self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'encryption' in fields:
         try:
-          # TODO(boto-2.49.0, KMS, Compose): Boto 2.48.0 does not have
-          # functionality to check for a bucket's EncryptionConfiguration. Until
-          # the next version is released, we send a request directly and do
-          # naive parsing of the response to check for the presence of a
-          # DefaultKmsKeyName node. Remove this method and replace it with the
-          # appropriate storage_uri functionality once it's available.
-          keyname = self._GetBucketDefaultKmsKeyName(bucket, headers=headers)
+          keyname = (
+              bucket_uri.get_encryption_config(
+                  headers=headers).default_kms_key_name)
           if keyname:
             cloud_api_bucket.encryption = (
                 apitools_messages.Bucket.EncryptionValue())
@@ -1773,24 +1769,3 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(web_config_xml).toprettyxml()
-
-  # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-  def _GetBucketDefaultKmsKeyName(self, bucket, headers=None):
-    """Returns the bucket's defaultKmsKeyName (str), or None."""
-    encryption_query_param = 'encryptionConfig'
-    if encryption_query_param not in boto.utils.qsa_of_interest:
-      boto.utils.qsa_of_interest.append(encryption_query_param)
-    response = bucket.connection.make_request(
-        'GET', bucket.name, query_args=encryption_query_param,
-        headers=headers)
-    body = response.read()
-    if response.status == 200:
-      match = re.search(r'<DefaultKmsKeyName>([^<]+)</DefaultKmsKeyName>',
-                        body, re.MULTILINE)
-      if match:
-        return match.group(1)
-      return None
-    else:
-      raise bucket.connection.provider.storage_response_error(
-          response.status, response.reason, body)
-
