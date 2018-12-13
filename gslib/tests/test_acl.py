@@ -18,7 +18,7 @@ from __future__ import absolute_import
 
 import re
 
-from gslib.command import CreateGsutilLogger
+from gslib.command import CreateOrGetGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
@@ -54,7 +54,7 @@ class TestAcl(TestAclBase):
     super(TestAcl, self).setUp()
     self.sample_uri = self.CreateBucket()
     self.sample_url = StorageUrlFromString(str(self.sample_uri))
-    self.logger = CreateGsutilLogger('acl')
+    self.logger = CreateOrGetGsutilLogger('acl')
     # Argument to acl ch -p must be the project number, not a name; create a
     # bucket to perform translation.
     self._project_number = self.json_api.GetBucket(

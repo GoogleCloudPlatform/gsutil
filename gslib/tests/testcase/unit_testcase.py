@@ -189,6 +189,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     mock_log_handler = MockLoggingHandler()
     logging.getLogger(command_name).addHandler(mock_log_handler)
+    if debug:
+      logging.getLogger(command_name).setLevel(logging.DEBUG)
 
     try:
       with WorkingDirectory(cwd):

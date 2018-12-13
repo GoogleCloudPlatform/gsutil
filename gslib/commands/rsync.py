@@ -694,8 +694,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
       fields.extend(['metadata/%s' % ATIME_ATTR, 'metadata/%s' % MODE_ATTR,
                      'metadata/%s' % GID_ATTR, 'metadata/%s' % UID_ATTR])
     iterator = CreateWildcardIterator(
-        wildcard, gsutil_api, debug=cls.debug, project_id=cls.project_id,
-        ignore_symlinks=cls.exclude_symlinks).IterObjects(
+        wildcard, gsutil_api, project_id=cls.project_id,
+        ignore_symlinks=cls.exclude_symlinks, logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=fields)
   i = 0
@@ -1480,10 +1480,9 @@ class RsyncCommand(Command):
     Raises:
       CommandException if url_str doesn't name an existing container.
     """
-    (url, have_existing_container) = (
-        copy_helper.ExpandUrlToSingleBlr(url_str, self.gsutil_api, self.debug,
-                                         self.project_id,
-                                         treat_nonexistent_object_as_subdir))
+    (url, have_existing_container) = copy_helper.ExpandUrlToSingleBlr(
+        url_str, self.gsutil_api, self.project_id,
+        treat_nonexistent_object_as_subdir, logger=self.logger)
     if not have_existing_container:
       raise CommandException(
           'arg (%s) does not name a directory, bucket, or bucket subdir.'

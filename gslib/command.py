@@ -99,28 +99,39 @@ from six.moves import queue as Queue
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
 
 
-def CreateGsutilLogger(command_name):
-  """Creates a logger that resembles 'print' output.
+def CreateOrGetGsutilLogger(command_name):
+  """Fetches a logger with the given name that resembles 'print' output.
 
-  This logger abides by gsutil -d/-D/-DD/-q options.
+  Initial Logger Configuration:
 
-  By default (if none of the above options is specified) the logger will display
-  all messages logged with level INFO or above. Log propagation is disabled.
+  The logger abides by gsutil -d/-D/-DD/-q options. If none of those options
+  were specified at invocation, the returned logger will display all messages
+  logged with level INFO or above. Log propagation is disabled.
+
+  If a logger with the specified name has already been created and configured,
+  it is not reconfigured, e.g.:
+
+    foo = CreateOrGetGsutilLogger('foo')  # Creates and configures Logger "foo".
+    foo.setLevel(logging.DEBUG)  # Change level from INFO to DEBUG
+    foo = CreateOrGetGsutilLogger('foo')  # Does not reset level to INFO.
 
   Args:
-    command_name: Command name to create logger for.
+    command_name: (str) Command name to create logger for.
 
   Returns:
-    A logger object.
+    A logging.Logger object.
   """
   log = logging.getLogger(command_name)
-  log.propagate = False
-  log.setLevel(logging.root.level)
-  log_handler = logging.StreamHandler()
-  log_handler.setFormatter(logging.Formatter('%(message)s'))
-  # Commands that call other commands (like mv) would cause log handlers to be
-  # added more than once, so avoid adding if one is already present.
+  # There are some scenarios (e.g. unit tests, commands like `mv` that call
+  # other commands) in which we call this function multiple times. To avoid
+  # adding duplicate handlers or overwriting logger attributes set elsewhere,
+  # we only configure the logger if it's one we haven't configured before (i.e.
+  # one that doesn't have a handler set yet).
   if not log.handlers:
+    log.propagate = False
+    log.setLevel(logging.root.level)
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(logging.Formatter('%(message)s'))
     log.addHandler(log_handler)
   return log
 
@@ -583,7 +594,7 @@ class Command(HelpProvider):
     # pylint: enable=global-variable-undefined
     # pylint: enable=global-variable-not-assigned
     # Global instance of a threaded logger object.
-    self.logger = CreateGsutilLogger(self.command_name)
+    self.logger = CreateOrGetGsutilLogger(self.command_name)
     if logging_filters:
       for log_filter in logging_filters:
         self.logger.addFilter(log_filter)
@@ -736,7 +747,7 @@ class Command(HelpProvider):
     """
     return CreateWildcardIterator(
         url_string, self.gsutil_api, all_versions=all_versions,
-        debug=self.debug, project_id=self.project_id)
+        project_id=self.project_id, logger=self.logger)
 
   def GetSeekAheadGsutilApi(self):
     """Helper to instantiate a Cloud API instance for a seek-ahead iterator.
@@ -2186,7 +2197,7 @@ class WorkerThread(threading.Thread):
       cls = self.cached_classes.get(caller_id, None)
       if not cls:
         cls = copy.copy(class_map[caller_id])
-        cls.logger = CreateGsutilLogger(cls.command_name)
+        cls.logger = CreateOrGetGsutilLogger(cls.command_name)
         self.cached_classes[caller_id] = cls
 
       self.PerformTask(task, cls)

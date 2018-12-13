@@ -1082,7 +1082,7 @@ class CpCommand(Command):
       # directories to the destination directory.
       (exp_dst_url, have_existing_dst_container) = (
           copy_helper.ExpandUrlToSingleBlr(dst_url_str, self.gsutil_api,
-                                           self.debug, self.project_id))
+                                           self.project_id, logger=self.logger))
       name_expansion_iterator_dst_tuple = NameExpansionIteratorDestinationTuple(
           NameExpansionIterator(
               self.command_name, self.debug,

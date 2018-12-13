@@ -312,7 +312,7 @@ class _NameExpansionIterator(object):
       Wildcard iterator over URL string.
     """
     return gslib.wildcard_iterator.CreateWildcardIterator(
-        url_string, self.gsutil_api, debug=self.debug,
+        url_string, self.gsutil_api,
         all_versions=self.all_versions,
         project_id=self.project_id, ignore_symlinks=self.ignore_symlinks,
         logger=self.logger)

@@ -359,17 +359,21 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     os.mkdir(os.path.join(tmpdir, 'symlinkdir'))
     # Create a symlink to a directory to ensure we warn when encountering it.
     os.symlink(tmpdir2, os.path.join(subdir, 'symlinkdir'))
-    mock_log_handler = self.RunCommand('cp', ['-r', tmpdir, suri(bucket_uri)],
-                                       return_log_handler=True)
+    mock_log_handler = self.RunCommand(
+        'cp', ['-r', tmpdir, suri(bucket_uri)],
+        debug=1,
+        return_log_handler=True)
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected_object_path = suri(bucket_uri, os.path.basename(tmpdir),
                                 'subdir', os.path.basename(fpath1))
     expected = set([expected_object_path])
     self.assertEqual(expected, actual)
-    self.assertIn('Skipping symlink directory "%s"' %
-                  os.path.join(subdir, 'symlinkdir'),
-                  mock_log_handler.messages['info'])
+    desired_msg = (
+        'Skipping symlink directory "%s"' % os.path.join(subdir, 'symlinkdir'))
+    self.assertIn(desired_msg, mock_log_handler.messages['info'],
+                  '"%s" not found in mock_log_handler["info"]: %s' % (
+                      desired_msg, str(mock_log_handler.messages)))
 
   def testCopyingBucketToBucket(self):
     """Tests copying from a bucket-only URI to a bucket."""

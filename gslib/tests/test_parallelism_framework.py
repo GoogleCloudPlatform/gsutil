@@ -32,7 +32,7 @@ import time
 from boto.storage_uri import BucketStorageUri
 from gslib import cs_api_map
 from gslib.command import Command
-from gslib.command import CreateGsutilLogger
+from gslib.command import CreateOrGetGsutilLogger
 from gslib.command import DummyArgChecker
 from gslib.tests.mock_cloud_api import MockCloudApi
 import gslib.tests.testcase as testcase
@@ -227,7 +227,7 @@ class FakeCommand(Command):
     }
     self.gsutil_api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
         cs_api_map.GsutilApiClassMapFactory, support_map, default_map)
-    self.logger = CreateGsutilLogger('FakeCommand')
+    self.logger = CreateOrGetGsutilLogger('FakeCommand')
     self.parallel_operations = do_parallel
     self.failure_count = 0
     self.gsutil_api = MockCloudApi()

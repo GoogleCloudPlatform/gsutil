@@ -30,7 +30,7 @@ import gslib
 from gslib import metrics
 from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.command import Command
-from gslib.command import CreateGsutilLogger
+from gslib.command import CreateOrGetGsutilLogger
 from gslib.command import GetFailureCount
 from gslib.command import OLD_ALIAS_MAP
 from gslib.command import ShutDownGsutil
@@ -161,7 +161,7 @@ class CommandRunner(object):
 
   def _GetTabCompleteLogger(self):
     """Returns a logger for tab completion."""
-    return CreateGsutilLogger('tab_complete')
+    return CreateOrGetGsutilLogger('tab_complete')
 
   def _ConfigureCommandArgumentParserArguments(
       self, parser, subcommands_or_arguments, gsutil_api):

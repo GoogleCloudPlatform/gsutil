@@ -25,7 +25,7 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
-from gslib.command import CreateGsutilLogger
+from gslib.command import CreateOrGetGsutilLogger
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
@@ -304,7 +304,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     """Tests that _TranslateApitoolsResumableUploadException works correctly."""
     gsutil_api = GcsJsonApi(
         GSMockBucketStorageUri,
-        CreateGsutilLogger('copy_test'),
+        CreateOrGetGsutilLogger('copy_test'),
         DiscardMessagesQueue())
 
     gsutil_api.http.disable_ssl_certificate_validation = True
