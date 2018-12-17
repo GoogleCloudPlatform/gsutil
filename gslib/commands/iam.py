@@ -144,7 +144,7 @@ _CH_DESCRIPTION = """
 
     gsutil iam ch user:john.doe@example.com:objectCreator gs://ex-bucket
 
-  To make a bucket's objects publically readable:
+  To make a bucket's objects publicly readable:
 
     gsutil iam ch allUsers:objectViewer gs://ex-bucket
 
