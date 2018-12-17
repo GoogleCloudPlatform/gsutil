@@ -274,11 +274,8 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  boto_util.configured_certs_file = (
-      boto_util.ConfigureCertsFile())
   for signal_num in GetCaughtSignals():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
-  boto_util.GetCertsFile()
 
   try:
     try:
@@ -336,6 +333,12 @@ def main():
         if not boto.config.has_section(opt_section):
           boto.config.add_section(opt_section)
         boto.config.set(opt_section, opt_name, opt_value)
+
+    # Now that any Boto option overrides (via `-o` args) have been parsed,
+    # perform initialization that depends on those options.
+    boto_util.configured_certs_file = (
+        boto_util.ConfigureCertsFile())
+
     metrics.LogCommandParams(global_opts=opts)
     httplib2.debuglevel = debug_level
     if trace_token:
