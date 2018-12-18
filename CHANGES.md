@@ -1,3 +1,29 @@
+Release 4.35 (release date: 2018-12-18)
+=======================================
+New features
+------------------
+- Added -u option to rsync; this will skip copying files/objects that are newer
+  (as determined by checking mtime) at the destination.
+
+Bug Fixes
+------------------
+- The "iam ch" command now allows supplying custom IAM roles.
+- Fixed an issue where debug output was not displaying all of the loaded config
+  files under the "config path(s)" label.
+- Disabled running with multiple processes when running on Alpine Linux, as this
+  would sometimes cause gsutil to hang forever. Running with multiple threads is
+  still allowed.
+- The "rsync" command now prints log messages during synchronization to indicate
+  when symlinks are being skipped.
+- The "Boto:ca_certificates_file" config option can now be overridden using
+  the -o option.
+
+Other Changes
+------------------
+- Disallowed installing gsutil on Python versions != 2.7.
+- Several documentation updates and clarifications.
+
+
 Release 4.34 (release date: 2018-09-11)
 =======================================
 New features
