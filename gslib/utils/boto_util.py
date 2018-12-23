@@ -23,11 +23,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import pkgutil
 import os
+import pkgutil
 import tempfile
 import textwrap
-import sys
 
 import six
 import boto
@@ -40,10 +39,10 @@ from boto.pyami.config import BotoConfigLocations
 
 import gslib
 from gslib.exception import CommandException
+from gslib.utils import system_util
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
-from gslib.utils.system_util import CreateDirIfNeeded
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import ONE_MIB
 
@@ -110,7 +109,7 @@ def ConfigureNoOpAuthIfNeeded():
   if not HasConfiguredCredentials():
     if (config.has_option('Credentials', 'gs_service_client_id')
         and not HAS_CRYPTO):
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         raise CommandException('\n'.join(textwrap.wrap(
             'Your gsutil is configured with an OAuth2 service account, but '
             'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
@@ -131,14 +130,6 @@ def ConfigureNoOpAuthIfNeeded():
       from gslib import no_op_auth_plugin  # pylint: disable=unused-variable
 
 
-def GetBotoConfigFileList():
-  """Returns list of boto config files that exist."""
-  config_paths = BotoConfigLocations
-  if 'AWS_CREDENTIAL_FILE' in os.environ:
-    config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
-  return [cfg_path for cfg_path in config_paths if os.path.exists(cfg_path)]
-
-
 def GetCertsFile():
   return configured_certs_file
 
@@ -150,24 +141,39 @@ def GetCleanupFiles():
 
 def GetConfigFilePaths():
   """Returns a list of the path(s) to the boto config file(s) to be loaded."""
-  config_paths = []
-  # The only case in which we load multiple boto configurations is
-  # when the BOTO_CONFIG environment variable is not set and the
-  # BOTO_PATH environment variable is set with multiple path values.
-  # Otherwise, we stop when we find the first readable config file.
-  # This predicate was taken from the boto.pyami.config module.
-  should_look_for_multiple_configs = (
-      'BOTO_CONFIG' not in os.environ and
-      'BOTO_PATH' in os.environ)
-  for path in BotoConfigLocations:
+  potential_config_paths = BotoConfigLocations
+
+  # When Boto's pyami.config.Config class is initialized, it attempts to read
+  # this file, transform it into valid Boto config syntax, and load credentials
+  # from it, but it does not add this file to BotoConfigLocations.
+  if 'AWS_CREDENTIAL_FILE' in os.environ:
+    potential_config_paths.append(os.environ['AWS_CREDENTIAL_FILE'])
+  # Provider-specific config files, like the one below, are checked for and
+  # loaded when Boto's Provider class is initialized. These aren't listed in
+  # BotoConfigLocations, but can still affect what credentials are loaded, so
+  # we display them in our config list to make auth'n debugging easier.
+  aws_cred_file = os.path.join(os.path.expanduser('~'), '.aws', 'credentials')
+  if os.path.isfile(aws_cred_file):
+    potential_config_paths.append(aws_cred_file)
+
+  # Only return credential files which we have permission to read (and thus can
+  # actually load credentials from).
+  readable_config_paths = []
+  for path in potential_config_paths:
     try:
       with open(path, 'r'):
-        config_paths.append(path)
-        if not should_look_for_multiple_configs:
-          break
+        readable_config_paths.append(path)
     except IOError:
       pass
-  return config_paths
+  return readable_config_paths
+
+
+def GetFriendlyConfigFilePaths():
+  """Like GetConfigFilePaths but returns a not-found message if paths empty."""
+  readable_config_paths = GetConfigFilePaths()
+  if len(readable_config_paths) == 0:
+    readable_config_paths.append('No config found')
+  return readable_config_paths
 
 
 def GetGsutilStateDir():
@@ -184,7 +190,7 @@ def GetGsutilStateDir():
     Path to directory for gsutil static state files.
   """
   config_file_dir = config.get('GSUtil', 'state_dir', DEFAULT_GSUTIL_STATE_DIR)
-  CreateDirIfNeeded(config_file_dir)
+  system_util.CreateDirIfNeeded(config_file_dir)
   return config_file_dir
 
 
@@ -303,7 +309,7 @@ def GetTabCompletionLogFilename():
 def GetTabCompletionCacheFilename():
   tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
   # Limit read permissions on the directory to owner for privacy.
-  CreateDirIfNeeded(tab_completion_dir, mode=0o700)
+  system_util.CreateDirIfNeeded(tab_completion_dir, mode=0o700)
   return os.path.join(tab_completion_dir, 'cache')
 
 
@@ -367,9 +373,6 @@ def MonkeyPatchBoto():
   # its import timing is important and is managed elsewhere.
   import gcs_oauth2_boto_plugin
   # pylint: enable=g-import-not-at-top
-
-  # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-  boto.s3.key.Key.should_retry = _PatchedShouldRetryMethod
 
   # TODO(https://github.com/boto/boto/issues/3831): Remove this if the GitHub
   # issue is ever addressed.

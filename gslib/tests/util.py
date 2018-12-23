@@ -569,12 +569,25 @@ def GetTestNames():
       names.append(m.group('name'))
   return names
 
-
 def is_file(obj):
   if six.PY2:
     return isinstance(obj, file)
   else:
     return isinstance(obj, io.IOBase)
+
+
+def MakeBucketNameValid(name):
+  """Returns a copy of the given name with any invalid characters replaced.
+
+  Args:
+    name (str): The bucket name to transform into a valid name.
+
+  Returns:
+    (str) The version of the bucket name containing only valid characters.
+  """
+  # Neither underscores nor uppercase letters are valid characters for a
+  # bucket name. Replace those with hyphens and lowercase characters.
+  return name.replace('_', '-').lower()
 
 
 @contextmanager

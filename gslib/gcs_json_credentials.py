@@ -24,6 +24,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import base64
 import json
 import logging
 import os
@@ -37,11 +38,11 @@ from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils import constants
-from gslib.utils.boto_util import GetBotoConfigFileList
+from gslib.utils import system_util
+from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
-from gslib.utils.system_util import GetGsutilClientIdAndSecret
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
@@ -54,7 +55,7 @@ from six import BytesIO
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_AUTHORIZATION_URI = (
     'https://accounts.google.com/o/oauth2/auth')
 DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI = (
-    'https://accounts.google.com/o/oauth2/token')
+    'https://oauth2.googleapis.com/token')
 
 DEFAULT_SCOPES = [
     constants.Scopes.CLOUD_PLATFORM,
@@ -70,9 +71,15 @@ GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
 def GetCredentialStoreKey(credentials, api_version):
   """Disambiguates a credential for caching in a credential store.
 
-  Different credential types have different fields that identify them.
-  This function assembles relevant information in a string to be used as the key
-  for accessing a credential.
+  Different credential types have different fields that identify them.  This
+  function assembles relevant information in a string to be used as the key for
+  accessing a credential.  Note that in addition to uniquely identifying the
+  entity to which a credential corresponds, we must differentiate between two or
+  more of that entity's credentials that have different attributes such that the
+  credentials should not be treated as interchangeable, e.g. if they target
+  different API versions (happens for developers targeting different test
+  environments), have different private key IDs (for service account JSON
+  keyfiles), or target different provider token (refresh) URIs.
 
   Args:
     credentials: An OAuth2Credentials object.
@@ -80,7 +87,7 @@ def GetCredentialStoreKey(credentials, api_version):
 
   Returns:
     A string that can be used as the key to identify a credential, e.g.
-    "v1-909320924072.apps.googleusercontent.com-1/rEfrEshtOkEn"
+    "v1-909320924072.apps.googleusercontent.com-1/rEfrEshtOkEn-https://..."
   """
   # Note: We don't include the scopes as part of the key. For a user credential
   # object, we always construct it with manually added scopes that are necessary
@@ -89,18 +96,35 @@ def GetCredentialStoreKey(credentials, api_version):
   # mismatches for the same refresh token by not including scopes in the key
   # string.
   key_parts = [api_version]
-  # pylint: disable=protected-access
   if isinstance(credentials, devshell.DevshellCredentials):
     key_parts.append(credentials.user_email)
   elif isinstance(credentials, ServiceAccountCredentials):
+    # pylint: disable=protected-access
     key_parts.append(credentials._service_account_email)
+    if getattr(credentials, '_private_key_id', None):  # JSON keyfile.
+      # Differentiate between two different JSON keyfiles for the same service
+      # account.
+      key_parts.append(credentials._private_key_id)
+    elif getattr(credentials, '_private_key_pkcs12', None):  # P12 keyfile
+      # Use a prefix of the Base64-encoded PEM string to differentiate it from
+      # others. Using a prefix of reasonable length prevents the key from being
+      # unnecessarily large, and the likelihood of having two PEM strings with
+      # the same prefixes is sufficiently low.
+      key_parts.append(base64.b64encode(credentials._private_key_pkcs12)[:20])
+    # pylint: enable=protected-access
   elif isinstance(credentials, oauth2client.client.OAuth2Credentials):
     if credentials.client_id and credentials.client_id != 'null':
       key_parts.append(credentials.client_id)
     else:
       key_parts.append('noclientid')
     key_parts.append(credentials.refresh_token or 'norefreshtoken')
-  # pylint: enable=protected-access
+
+  # If a cached credential is targeting provider token URI 'A' for token refresh
+  # requests, then the user changes their boto file or private key file to
+  # target URI 'B', we don't want to treat the cached and the new credential as
+  # interchangeable.  This applies for all credentials that store a token URI.
+  if getattr(credentials, 'token_uri', None):
+    key_parts.append(credentials.token_uri)
 
   return '-'.join(key_parts)
 
@@ -170,7 +194,7 @@ def _CheckAndGetCredentials(logger):
            'config to create credentials and later run gcloud auth, and '
            'create a second set of credentials. Your boto config path is: '
            '%s. For more help, see "gsutil help creds".')
-          % (configured_cred_types, GetBotoConfigFileList()))
+          % (configured_cred_types, GetFriendlyConfigFilePaths()))
 
     failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
     user_creds = _GetOauth2UserAccountCredentials()
@@ -187,7 +211,7 @@ def _CheckAndGetCredentials(logger):
     if failed_cred_type:
       if logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
@@ -271,7 +295,8 @@ def _GetOauth2UserAccountCredentials():
     return
 
   provider_token_uri = _GetProviderTokenUri()
-  gsutil_client_id, gsutil_client_secret = GetGsutilClientIdAndSecret()
+  gsutil_client_id, gsutil_client_secret = (
+      system_util.GetGsutilClientIdAndSecret())
   client_id = config.get('OAuth2', 'client_id',
                          os.environ.get('OAUTH2_CLIENT_ID', gsutil_client_id))
   client_secret = config.get('OAuth2', 'client_secret',

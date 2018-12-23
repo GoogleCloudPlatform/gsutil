@@ -44,13 +44,13 @@ from six.moves import range
 # so boto requests would not include gsutil/version# in the UserAgent string.
 import boto
 import gslib
-# TODO: gsutil-beta: Cloud SDK scans for this string and performs
-# substitution; ensure this works with both apitools and boto.
+from gslib.utils import system_util
+
 boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+if system_util.InvokedViaCloudSdk():
   boto.UserAgent += ' google-cloud-sdk'
-  if os.environ.get('CLOUDSDK_VERSION'):
-    boto.UserAgent += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+  if system_util.CloudSdkVersion():
+    boto.UserAgent += '/%s' % system_util.CloudSdkVersion()
 # pylint: disable=g-import-not-at-top
 # This module also imports boto, and will override the UserAgent global variable
 # if imported above.
@@ -247,6 +247,8 @@ def main():
 
   boto_util.MonkeyPatchBoto()
 
+  boto_util.MonkeyPatchBoto()
+
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
   # config file for compatibility with previous versions and user convenience.
@@ -279,11 +281,8 @@ def main():
       boto.config.add_section('Boto')
     boto.config.setbool('Boto', 'https_validate_certificates', True)
 
-  boto_util.configured_certs_file = (
-      boto_util.ConfigureCertsFile())
   for signal_num in GetCaughtSignals():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
-  boto_util.GetCertsFile()
 
   try:
     try:
@@ -341,6 +340,12 @@ def main():
         if not boto.config.has_section(opt_section):
           boto.config.add_section(opt_section)
         boto.config.set(opt_section, opt_name, opt_value)
+
+    # Now that any Boto option overrides (via `-o` args) have been parsed,
+    # perform initialization that depends on those options.
+    boto_util.configured_certs_file = (
+        boto_util.ConfigureCertsFile())
+
     metrics.LogCommandParams(global_opts=opts)
     httplib2.debuglevel = debug_level
     if trace_token:
@@ -362,7 +367,7 @@ def main():
           config_items[i] = (config_item_key, 'REDACTED')
       sys.stderr.write('Command being run: %s\n' % ' '.join(sys.argv))
       sys.stderr.write(
-          'config_file_list: %s\n' % boto_util.GetBotoConfigFileList())
+          'config_file_list: %s\n' % boto_util.GetFriendlyConfigFilePaths())
       sys.stderr.write('config: %s\n' % str(config_items))
     else:  # Non-debug log level.
       root_logger_level = logging.WARNING if quiet else logging.INFO
@@ -544,7 +549,7 @@ def _CheckAndHandleCredentialException(e, args):
     # when there are no configured credentials. This allows tests to
     # simulate a second user without permissions, without actually requiring
     # two separate configured users.
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       message = '\n'.join(textwrap.wrap(
           'You are attempting to access protected data with no configured '
           'credentials. Please visit '
@@ -654,7 +659,7 @@ def _RunNamedCommandAndHandleExceptions(
   except ServiceException as e:
     _OutputAndExit(message=e, exception=e)
   except oauth2client.client.HttpAccessTokenRefreshError as e:
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    if system_util.InvokedViaCloudSdk():
       _OutputAndExit('Your credentials are invalid. '
                      'Please run\n$ gcloud auth login',
                      exception=e)
@@ -701,10 +706,7 @@ def _RunNamedCommandAndHandleExceptions(
         'pasted the ENTIRE authorization code (including any numeric prefix '
         "e.g. '4/')." % e)), exception=e)
   except Exception as e:  # pylint: disable=broad-except
-    if boto_util.GetConfigFilePaths():
-      config_paths = ', '.join(boto_util.GetConfigFilePaths())
-    else:
-      config_paths = 'no config found'
+    config_paths = ', '.join(boto_util.GetFriendlyConfigFilePaths())
     # Check for two types of errors related to service accounts. These errors
     # appear to be the same except for their messages, but they are caused by
     # different problems and both have unhelpful error messages. Moreover,
@@ -739,8 +741,7 @@ def _PerformTabCompletion(command_runner):
         ' not found.\nCause: %s' % e,
         exception=e)
   parser = argparse.ArgumentParser(add_help=False)
-  subparsers = parser.add_subparsers()
-  command_runner.ConfigureCommandArgumentParsers(subparsers)
+  command_runner.ConfigureCommandArgumentParsers(parser)
   argcomplete.autocomplete(parser, exit_method=sys.exit)
 
   return 0

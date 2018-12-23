@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 import atexit
 from collections import defaultdict
-from collections import namedtuple
 from functools import wraps
 import logging
 import os
@@ -43,9 +42,7 @@ import boto
 
 from gslib import VERSION
 from gslib.metrics_tuple import Metric
-from gslib.utils.system_util import CreateDirIfNeeded
-from gslib.utils.system_util import GetDiskCounters
-from gslib.utils.system_util import IS_LINUX
+from gslib.utils import system_util
 from gslib.utils.unit_util import CalculateThroughput
 from gslib.utils.unit_util import HumanReadableToBytes
 
@@ -306,7 +303,7 @@ class MetricsCollector(object):
 
     # Non-testing cases involve checking the cloud SDK wrapper and the analytics
     # uuid file.
-    elif os.environ.get('CLOUDSDK_WRAPPER') == '1':
+    elif system_util.InvokedViaCloudSdk():
       cls._disabled_cache = not os.environ.get('GA_CID')
     elif os.path.exists(_UUID_FILE_PATH):
       with open(_UUID_FILE_PATH) as f:
@@ -434,8 +431,8 @@ class MetricsCollector(object):
 
       # Store the disk stats at the beginning of the command so we can calculate
       # time spent on disk I/O.
-      if IS_LINUX:
-        self.disk_counters_start = GetDiskCounters()
+      if system_util.IS_LINUX:
+        self.disk_counters_start = system_util.GetDiskCounters()
 
       # True if using fan parallelism, when the user specifies the -m option.
       self.uses_fan = False
@@ -627,9 +624,9 @@ class MetricsCollector(object):
                                                     attr_name)
 
     # Calculate the disk stats again to calculate deltas of time spent on I/O.
-    if IS_LINUX:
+    if system_util.IS_LINUX:
       disk_start = self.perf_sum_params.disk_counters_start
-      disk_end = GetDiskCounters()
+      disk_end = system_util.GetDiskCounters()
       # Read and write time are the 5th and 6th elements of the stat tuple.
       custom_params[_GA_LABEL_MAP['Disk I/O Time']] = (
           sum([stat[4] + stat[5] for stat in disk_end.values()]) -
@@ -922,9 +919,9 @@ def CheckAndMaybePromptForAnalyticsEnabling():
   If the user agrees, generates a UUID file. Will not prompt if part of SDK.
   """
   disable_prompt = boto.config.get_value('GSUtil', 'disable_analytics_prompt')
-  if not os.path.exists(
-      _UUID_FILE_PATH) and not disable_prompt and not os.environ.get(
-          'CLOUDSDK_WRAPPER'):
+  if (not os.path.exists(_UUID_FILE_PATH) and
+      not disable_prompt and
+      not system_util.InvokedViaCloudSdk()):
     enable_analytics = input('\n' + textwrap.fill(
         'gsutil developers rely on user feedback to make improvements to the '
         'tool. Would you like to send anonymous usage statistics to help '
@@ -933,7 +930,7 @@ def CheckAndMaybePromptForAnalyticsEnabling():
     text_to_write = _DISABLED_TEXT
     if enable_analytics.lower()[0] == 'y':
       text_to_write = uuid.uuid4().hex
-    CreateDirIfNeeded(os.path.dirname(_UUID_FILE_PATH))
+    system_util.CreateDirIfNeeded(os.path.dirname(_UUID_FILE_PATH))
     with open(_UUID_FILE_PATH, 'w') as f:
       f.write(text_to_write)
 

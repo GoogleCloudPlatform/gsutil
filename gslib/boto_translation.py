@@ -207,8 +207,6 @@ class BotoTranslation(CloudApi):
         boto_auth_initialized.value = 1
     self.api_version = boto.config.get_value(
         'GSUtil', 'default_api_version', '1')
-    # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-    boto.s3.key.Key.should_retry = _PatchedShouldRetryMethod
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -332,6 +330,10 @@ class BotoTranslation(CloudApi):
       storage_class = ''
       if metadata and metadata.storageClass:
         storage_class = metadata.storageClass
+      if (metadata and metadata.retentionPolicy and
+          metadata.retentionPolicy.retentionPeriod):
+        headers['x-goog-bucket-retention-period'] = str(
+            metadata.retentionPolicy.retentionPeriod)
       try:
         bucket_uri.create_bucket(headers=headers, location=location,
                                  storage_class=storage_class)
@@ -1197,13 +1199,9 @@ class BotoTranslation(CloudApi):
             self._TranslateExceptionAndRaise(e, bucket_name=bucket.name)
       if not fields or 'encryption' in fields:
         try:
-          # TODO(boto-2.49.0, KMS, Compose): Boto 2.48.0 does not have
-          # functionality to check for a bucket's EncryptionConfiguration. Until
-          # the next version is released, we send a request directly and do
-          # naive parsing of the response to check for the presence of a
-          # DefaultKmsKeyName node. Remove this method and replace it with the
-          # appropriate storage_uri functionality once it's available.
-          keyname = self._GetBucketDefaultKmsKeyName(bucket, headers=headers)
+          keyname = (
+              bucket_uri.get_encryption_config(
+                  headers=headers).default_kms_key_name)
           if keyname:
             cloud_api_bucket.encryption = (
                 apitools_messages.Bucket.EncryptionValue())
@@ -1530,7 +1528,7 @@ class BotoTranslation(CloudApi):
       not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
-      CloudStorageApiServiceException for translatable exceptions, None
+      ServiceException for translatable exceptions, None
       otherwise.
 
     Because we're using isinstance, check for subtypes first.
@@ -1785,84 +1783,3 @@ class BotoTranslation(CloudApi):
       self._TranslateExceptionAndRaise(e)
 
     return XmlParseString(web_config_xml).toprettyxml()
-
-  # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-  def _GetBucketDefaultKmsKeyName(self, bucket, headers=None):
-    """Returns the bucket's defaultKmsKeyName (str), or None."""
-    encryption_query_param = 'encryptionConfig'
-    if encryption_query_param not in boto.utils.qsa_of_interest:
-      boto.utils.qsa_of_interest.append(encryption_query_param)
-    response = bucket.connection.make_request(
-        'GET', bucket.name, query_args=encryption_query_param,
-        headers=headers)
-    body = response.read()
-    if response.status == 200:
-      if six.PY3:
-        if isinstance(body, bytes):
-          body = body.decode('utf-8')
-      match = re.search(r'<DefaultKmsKeyName>([^<]+)</DefaultKmsKeyName>',
-                        body, re.MULTILINE)
-      if match:
-        return match.group(1)
-      return None
-    else:
-      raise bucket.connection.provider.storage_response_error(
-          response.status, response.reason, body)
-
-
-# TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
-def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
-  """Replaces boto.s3.key's should_retry() to handle KMS-encrypted objects."""
-  provider = self.bucket.connection.provider
-
-  if not chunked_transfer:
-      if response.status in [500, 503]:
-          # 500 & 503 can be plain retries.
-          return True
-
-      if response.getheader('location'):
-          # If there's a redirect, plain retry.
-          return True
-
-  if 200 <= response.status <= 299:
-      self.etag = response.getheader('etag')
-      md5 = self.md5
-      if isinstance(md5, bytes):
-          md5 = md5.decode('utf-8')
-
-      # If you use customer-provided encryption keys, the ETag value that
-      # Amazon S3 returns in the response will not be the MD5 of the
-      # object.
-      amz_server_side_encryption_customer_algorithm = response.getheader(
-          'x-amz-server-side-encryption-customer-algorithm', None)
-      # The same is applicable for KMS-encrypted objects in gs buckets.
-      goog_customer_managed_encryption = response.getheader(
-          'x-goog-encryption-kms-key-name', None)
-      if (amz_server_side_encryption_customer_algorithm is None and
-              goog_customer_managed_encryption is None):
-          if self.etag != '"%s"' % md5:
-              raise provider.storage_data_error(
-                  'ETag from S3 did not match computed MD5. '
-                  '%s vs. %s' % (self.etag, self.md5))
-
-      return True
-
-  if response.status == 400:
-      # The 400 must be trapped so the retry handler can check to
-      # see if it was a timeout.
-      # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
-      # out.
-      body = response.read()
-      err = provider.storage_response_error(
-          response.status,
-          response.reason,
-          body
-      )
-
-      if err.error_code in ['RequestTimeout']:
-          raise boto.exception.PleaseRetryException(
-              "Saw %s, retrying" % err.error_code,
-              response=response
-          )
-
-  return False

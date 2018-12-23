@@ -54,7 +54,7 @@ _DETAILED_HELP_TEXT = ("""
   which allows browsers to render the object properly. gsutil sets the
   Content-Type automatically at upload time, based on each filename extension.
   For example, uploading files with names ending in .txt will set Content-Type
-  to text/plain. If you're running gsutil on Linux or MacOS and would prefer to
+  to text/plain. If you're running gsutil on Linux or macOS and would prefer to
   have content type set based on naming plus content examination, see the
   use_magicfile configuration variable in the .boto configuration file (See
   also "gsutil help config"). In general, using use_magicfile is more robust

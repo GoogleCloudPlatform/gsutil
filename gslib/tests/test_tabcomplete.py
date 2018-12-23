@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 import os
 import time
 
-from gslib.command import CreateGsutilLogger
+from gslib.command import CreateOrGetGsutilLogger
 from gslib.tab_complete import CloudObjectCompleter
 from gslib.tab_complete import TAB_COMPLETE_CACHE_TTL
 from gslib.tab_complete import TabCompletionCache
@@ -41,7 +41,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
   def setUp(self):
     super(TestTabComplete, self).setUp()
-    self.logger = CreateGsutilLogger('tab_complete')
+    self.logger = CreateOrGetGsutilLogger('tab_complete')
 
   def test_single_bucket(self):
     """Tests tab completion matching a single bucket."""

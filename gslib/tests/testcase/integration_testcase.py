@@ -21,12 +21,15 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 from six.moves import cStringIO
+import cStringIO
+import datetime
 import locale
 import logging
 import os
 import subprocess
 import sys
 import tempfile
+import time
 
 import six
 
@@ -41,6 +44,7 @@ from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import Preconditions
 from gslib.discard_messages_queue import DiscardMessagesQueue
+from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.kms_api import KmsApi
 from gslib.project_id import GOOG_PROJ_ID_HDR
@@ -179,7 +183,23 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
             # that case, we continue on until we've tried to deleted every
             # object in the listing before raising the error on which to retry.
             if e.status == 404:
+              # This could happen if objects that have already been deleted are
+              # still showing up in the listing due to eventual consistency. In
+              # that case, we continue on until we've tried to deleted every
+              # obj in the listing before raising the error on which to retry.
               error = e
+            elif e.status == 403 and (e.error_code == 'ObjectUnderActiveHold' or
+                                      e.error_code == 'RetentionPolicyNotMet'):
+              # Object deletion fails if they are under active Temporary Hold,
+              # Event-Based hold or still under retention.
+              #
+              # We purposefully do not raise error in order to allow teardown
+              # to process all the objects in a bucket first. The retry logic on
+              # the teardown method will kick in when bucket deletion fails (due
+              # to bucket being non-empty) and retry deleting these objects
+              # and their associated buckets.
+              self._ClearHoldsOnObjectAndWaitForRetentionDuration(
+                  bucket_uri, k.name)
             else:
               raise
         if error:
@@ -187,6 +207,48 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         bucket_list = self._ListBucket(bucket_uri)
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
+
+  def _ClearHoldsOnObjectAndWaitForRetentionDuration(self, bucket_uri,
+                                                     object_name):
+    """Removes Holds on test objects and waits till retention duration is over.
+
+    This method makes sure that object is not under active Temporary Hold or
+    Release Hold. It also waits (up to 1 minute) till retention duration for the
+    object is over. This is necessary for cleanup, otherwise such test objects
+    cannot be deleted.
+
+    It's worth noting that tests should do their best to remove holds and wait
+    for objects' retention period on their own and this is just a fallback.
+    Additionally, Tests should not use retention duration longer than 1 minute,
+    preferably only few seconds in order to avoid lengthening test execution
+    time unnecessarily.
+
+    Args:
+      bucket_uri: bucket's uri.
+      object_name: object's name.
+    """
+    object_metadata = self.json_api.GetObjectMetadata(
+        bucket_uri.bucket_name,
+        object_name,
+        fields=['timeCreated', 'temporaryHold', 'eventBasedHold'])
+    object_uri = '{}{}'.format(bucket_uri, object_name)
+    if object_metadata.temporaryHold:
+      self.RunGsUtil(['retention', 'temp', 'release', object_uri])
+
+    if object_metadata.eventBasedHold:
+      self.RunGsUtil(['retention', 'event', 'release', object_uri])
+
+    retention_policy = self.json_api.GetBucket(
+        bucket_uri.bucket_name, fields=['retentionPolicy']).retentionPolicy
+    retention_period = (retention_policy.retentionPeriod
+                        if retention_policy is not None else 0)
+    # throwing exceptions for Retention durations larger than 60 seconds.
+    if retention_period <= 60:
+      time.sleep(retention_period)
+    else:
+      raise CommandException(('Retention duration is too large for bucket "{}".'
+                              ' Use shorter durations for Retention duration in'
+                              ' tests').format(bucket_uri))
 
   def _SetObjectCustomMetadataAttribute(self, provider, bucket_name,
                                         object_name, attr_name, attr_value):
@@ -344,8 +406,83 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.assertNotIn('Encryption key SHA256', stdout)
     self.assertNotIn('KMS key', stdout)
 
+  def CreateBucketWithRetentionPolicy(self,
+                                      retention_period_in_seconds,
+                                      is_locked=None,
+                                      bucket_name=None):
+    """Creates a test bucket with Retention Policy.
+
+    The bucket and all of its contents will be deleted after the test.
+
+    Args:
+      retention_period_in_seconds: Retention duration in seconds
+      is_locked: Indicates whether Retention Policy should be locked
+                 on the bucket or not.
+      bucket_name: Create the bucket with this name. If not provided, a
+                   temporary test bucket name is constructed.
+
+    Returns:
+      StorageUri for the created bucket.
+    """
+    # Creating bucket with Retention Policy.
+    retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
+        retentionPeriod=retention_period_in_seconds))
+    bucket_uri = self.CreateBucket(bucket_name=bucket_name,
+                                   retention_policy=retention_policy,
+                                   prefer_json_api=True)
+
+    if is_locked:
+      # Locking Retention Policy
+      self.RunGsUtil(['retention', 'lock', suri(bucket_uri)], stdin='y')
+
+    # Verifying Retention Policy on the bucket.
+    self.VerifyRetentionPolicy(
+        bucket_uri,
+        expected_retention_period_in_seconds=retention_period_in_seconds,
+        expected_is_locked=is_locked)
+
+    return bucket_uri
+
+  def VerifyRetentionPolicy(self,
+                            bucket_uri,
+                            expected_retention_period_in_seconds=None,
+                            expected_is_locked=None):
+    """Verifies the Retention Policy on a bucket.
+
+    Args:
+      bucket_uri: Specifies the bucket.
+      expected_retention_period_in_seconds: Specifies the expected Retention
+                                            Period of the Retention Policy on
+                                            the bucket. Setting this field to
+                                            None, implies that no Retention
+                                            Policy should be present.
+      expected_is_locked: Indicates whether the Retention Policy should be
+                          locked or not.
+    """
+    actual_retention_policy = self.json_api.GetBucket(
+        bucket_uri.bucket_name, fields=['retentionPolicy']).retentionPolicy
+
+    if expected_retention_period_in_seconds is None:
+      self.assertEqual(actual_retention_policy, None)
+    else:
+      self.assertEqual(actual_retention_policy.retentionPeriod,
+                       expected_retention_period_in_seconds)
+      self.assertEqual(actual_retention_policy.isLocked, expected_is_locked)
+      # Verifying the effectiveTime of the Retention Policy:
+      #    since this is integration test and we don't have exact time of the
+      #    server. We just verify that the effective time is a timestamp within
+      #    last minute.
+      effective_time_in_seconds = self.DateTimeToSeconds(
+          actual_retention_policy.effectiveTime)
+      current_time_in_seconds = self.DateTimeToSeconds(datetime.datetime.now())
+      self.assertGreater(effective_time_in_seconds,
+                         current_time_in_seconds - 60)
+
+  def DateTimeToSeconds(self, datetime_obj):
+    return int(time.mktime(datetime_obj.timetuple()))
+
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
-                   provider=None, prefer_json_api=False,
+                   retention_policy=None, provider=None, prefer_json_api=False,
                    versioning_enabled=False):
     """Creates a test bucket.
 
@@ -357,6 +494,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       test_objects: The number of objects that should be placed in the bucket.
                     Defaults to 0.
       storage_class: Storage class to use. If not provided we us standard.
+      retention_policy: Retention policy to be used on the bucket.
       provider: Provider to use - either "gs" (the default) or "s3".
       prefer_json_api: If True, use the JSON creation functions where possible.
       versioning_enabled: If True, set the bucket's versioning attribute to
@@ -374,16 +512,19 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       location = 'us-central1'
 
+    if bucket_name:
+      bucket_name = util.MakeBucketNameValid(bucket_name)
+
     if prefer_json_api and provider == 'gs':
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
                                           test_objects=test_objects,
                                           storage_class=storage_class,
                                           location=location,
-                                          versioning_enabled=versioning_enabled)
+                                          versioning_enabled=versioning_enabled,
+                                          retention_policy=retention_policy)
       bucket_uri = boto.storage_uri(
           'gs://%s' % json_bucket.name.lower(),
           suppress_consec_slashes=False)
-      self.bucket_uris.append(bucket_uri)
       return bucket_uri
 
     bucket_name = bucket_name or self.MakeTempName('bucket')
@@ -551,7 +692,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   def CreateBucketJson(self, bucket_name=None, test_objects=0,
                        storage_class=None, location=None,
-                       versioning_enabled=False):
+                       versioning_enabled=False,
+                       retention_policy=None):
     """Creates a test bucket using the JSON API.
 
     The bucket and all of its contents will be deleted after the test.
@@ -565,11 +707,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       location: Location to use.
       versioning_enabled: If True, set the bucket's versioning attribute to
           True.
+      retention_policy: Retention policy to be used on the bucket.
 
     Returns:
       Apitools Bucket for the created bucket.
     """
-    bucket_name = bucket_name or self.MakeTempName('bucket')
+    bucket_name = util.MakeBucketNameValid(
+        bucket_name or self.MakeTempName('bucket'))
     bucket_metadata = apitools_messages.Bucket(name=bucket_name.lower())
     if storage_class:
       bucket_metadata.storageClass = storage_class
@@ -578,14 +722,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if versioning_enabled:
       bucket_metadata.versioning = (
           apitools_messages.Bucket.VersioningValue(enabled=True))
+    if retention_policy:
+      bucket_metadata.retentionPolicy = retention_policy
 
     # TODO: Add retry and exponential backoff.
-    bucket = self.json_api.CreateBucket(bucket_name.lower(),
+    bucket = self.json_api.CreateBucket(bucket_name,
                                         metadata=bucket_metadata)
     # Add bucket to list of buckets to be cleaned up.
     # TODO: Clean up JSON buckets using JSON API.
     self.bucket_uris.append(
-        boto.storage_uri('gs://%s' % (bucket_name.lower()),
+        boto.storage_uri('gs://%s' % bucket_name,
                          suppress_consec_slashes=False))
     for i in range(test_objects):
       self.CreateObjectJson(bucket_name=bucket_name,
@@ -601,7 +747,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Args:
       contents: The contents to write to the object.
       bucket_name: Name of bucket to place the object in. If not specified,
-          a new temporary bucket is created.
+          a new temporary bucket is created. Assumes the given bucket name is
+          valid.
       object_name: The name to use for the object. If not specified, a temporary
           test object name is constructed.
       encryption_key: AES256 encryption key to use when creating the object,

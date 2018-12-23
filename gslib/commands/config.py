@@ -23,7 +23,6 @@ import datetime
 import json
 import multiprocessing
 import os
-import platform
 import signal
 import socket
 import stat
@@ -36,9 +35,6 @@ from six.moves import input
 from six.moves.http_client import ResponseNotReady
 import boto
 from boto.provider import Provider
-from httplib2 import ServerNotFoundError
-from oauth2client.client import HAS_CRYPTO
-
 import gslib
 from gslib.command import Command
 from gslib.command import DEFAULT_TASK_ESTIMATION_THRESHOLD
@@ -49,11 +45,14 @@ from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils import constants
+from gslib.utils import system_util
 from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.utils.hashing_helper import CHECK_HASH_NEVER
-from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
+from httplib2 import ServerNotFoundError
+from oauth2client.client import HAS_CRYPTO
 
 _SYNOPSIS = """
   gsutil [-D] config [-a] [-b] [-e] [-f] [-n] [-o <file>] [-r] [-s <scope>] [-w]
@@ -348,15 +347,16 @@ CONFIG_PRELUDE_CONTENT = """
 # exceptions in Python's multiprocessing.Manager. More processes are
 # probably not needed to saturate most networks.
 #
-# On Windows and Mac systems parallel multi-processing and multi-threading
-# in Python presents various challenges so we retain compatibility with
-# the established parallel mode operation, i.e. one process and 24 threads.
-if platform.system() == 'Linux':
-  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
-  DEFAULT_PARALLEL_THREAD_COUNT = 5
-else:
+# On Windows and Alpine Linux, Python multi-processing presents various
+# challenges so we retain compatibility with the established parallel mode
+# operation, i.e. one process and 24 threads.
+should_prohibit_multiprocessing, unused_os = ShouldProhibitMultiprocessing()
+if should_prohibit_multiprocessing:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
   DEFAULT_PARALLEL_THREAD_COUNT = 24
+else:
+  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
+  DEFAULT_PARALLEL_THREAD_COUNT = 5
 
 # TODO: Once compiled crcmod is being distributed by major Linux distributions
 # revert DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD value to '150M'.
@@ -483,9 +483,6 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # however, to enhance performance for transfers involving large numbers of
 # files, you may experiment with hand tuning these values to optimize
 # performance for your particular system configuration.
-# MacOS and Windows users should see
-# https://github.com/GoogleCloudPlatform/gsutil/issues/77 before attempting
-# to experiment with these values.
 #parallel_process_count = %(parallel_process_count)d
 #parallel_thread_count = %(parallel_thread_count)d
 
@@ -557,7 +554,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 
 # 'use_magicfile' specifies if the 'file --mime <filename>' command should be
 # used to guess content types instead of the default filename extension-based
-# mechanism. Available on UNIX and MacOS (and possibly on Windows, if you're
+# mechanism. Available on UNIX and macOS (and possibly on Windows, if you're
 # running Cygwin or some other package that provides implementations of
 # UNIX-like commands). When available and enabled use_magicfile should be more
 # robust because it analyzes file contents in addition to extensions.
@@ -678,7 +675,7 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 # authorization provider being used. Primarily useful for tool developers.
 #provider_label = Google
 #provider_authorization_uri = https://accounts.google.com/o/oauth2/auth
-#provider_token_uri = https://accounts.google.com/o/oauth2/token
+#provider_token_uri = https://oauth2.googleapis.com/token
 
 # 'oauth2_refresh_retries' controls the number of retry attempts made when
 # rate limiting errors occur for OAuth2 requests to retrieve an access token.
@@ -760,7 +757,7 @@ class ConfigCommand(Command):
     Args:
       file_path: The name of the private key file.
     """
-    if IS_WINDOWS:
+    if system_util.IS_WINDOWS:
       # For Windows, this check doesn't work (it actually just checks whether
       # the file is read-only). Since Windows files have a complicated ACL
       # system, this check doesn't make much sense on Windows anyway, so we
@@ -1035,7 +1032,7 @@ class ConfigCommand(Command):
             'edit and uncomment the\n# following line:\n'
             '#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n')
     else:
-      if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+      if system_util.InvokedViaCloudSdk():
         config_file.write(
             '# Google OAuth2 credentials are managed by the Cloud SDK and\n'
             '# do not need to be present in this file.\n')
@@ -1095,7 +1092,7 @@ class ConfigCommand(Command):
 
     # Write the config file GSUtil section that includes the default
     # project ID input from the user.
-    if not os.environ.get('CLOUDSDK_WRAPPER'):
+    if not system_util.InvokedViaCloudSdk():
       if launch_browser:
         sys.stdout.write(
             'Attempting to launch a browser to open the Google Cloud Console '
@@ -1203,9 +1200,10 @@ class ConfigCommand(Command):
     # Don't allow users to configure Oauth2 (any option other than -a and -n)
     # when running in the Cloud SDK, unless they have the Cloud SDK configured
     # not to pass credentials to gsutil.
-    if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
-        os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1' and
-        not has_a and configure_auth):
+    if (system_util.InvokedViaCloudSdk() and
+        system_util.CloudSdkCredPassingEnabled() and
+        not has_a and
+        configure_auth):
       raise CommandException('\n'.join([
           'OAuth2 is the preferred authentication mechanism with the Cloud '
           'SDK.',
@@ -1222,7 +1220,7 @@ class ConfigCommand(Command):
               initial_indent='- ', subsequent_indent='  ')),
       ]))
 
-    if os.environ.get('CLOUDSDK_WRAPPER') == '1' and has_a:
+    if system_util.InvokedViaCloudSdk() and has_a:
       sys.stderr.write('\n'.join(textwrap.wrap(
           'This command will configure HMAC credentials, but gsutil will use '
           'OAuth2 credentials from the Cloud SDK by default. To make sure '

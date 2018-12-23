@@ -1324,17 +1324,19 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
     return bucket_metadata_pcu_check
 
 
-def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
-                         treat_nonexistent_object_as_subdir=False):
+def ExpandUrlToSingleBlr(url_str, gsutil_api, project_id,
+                         treat_nonexistent_object_as_subdir=False,
+                         logger=None):
   """Expands wildcard if present in url_str.
 
   Args:
     url_str: String representation of requested url.
     gsutil_api: gsutil Cloud API instance to use.
-    debug: debug level to use (for iterators).
     project_id: project ID to use (for iterators).
     treat_nonexistent_object_as_subdir: indicates if should treat a non-existent
-                                        object as a subdir.
+        object as a subdir.
+    logger: logging.Logger instance to use for output. If None, the root Logger
+        will be used.
 
   Returns:
       (exp_url, have_existing_dst_container)
@@ -1347,11 +1349,12 @@ def ExpandUrlToSingleBlr(url_str, gsutil_api, debug, project_id,
   Raises:
     CommandException: if url_str matched more than 1 URL.
   """
+  logger = logger or logging.Logger()
   # Handle wildcarded url case.
   if ContainsWildcard(url_str):
     blr_expansion = list(CreateWildcardIterator(url_str, gsutil_api,
-                                                debug=debug,
-                                                project_id=project_id))
+                                                project_id=project_id,
+                                                logger=logger))
     if len(blr_expansion) != 1:
       raise CommandException('Destination (%s) must match exactly 1 URL' %
                              url_str)

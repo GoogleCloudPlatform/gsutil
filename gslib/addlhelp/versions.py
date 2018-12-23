@@ -123,6 +123,12 @@ _DETAILED_HELP_TEXT = ("""
   command (trying to do so will result in an error), because writing to a
   versioned object always creates a new version.
 
+  Note also that some shells treat "#" as a special character (e.g., zsh with
+  the extendedglob option enabled). If you're using a shell that treats "#" as a
+  special character you will need to surround the argument with quotes, such as:
+
+    gsutil cp 'gs://bucket/object#1360035307075000' ./dir
+
   If an object has been deleted, it will not show up in a normal gsutil ls
   listing (i.e., ls without the -a option). You can restore a deleted object by
   running gsutil ls -a to find the available versions, and then copying one of

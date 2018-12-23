@@ -381,6 +381,25 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
+  def ListBucketAccessControls(self, bucket_name):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageBucketAccessControlsListRequest(
+          bucket=bucket_name)
+      return self.api_client.bucketAccessControls.List(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
+  def ListObjectAccessControls(self, bucket_name, object_name):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageObjectAccessControlsListRequest(
+          bucket=bucket_name, object=object_name)
+      return self.api_client.objectAccessControls.List(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
+                                       object_name=object_name)
+
   def PatchBucket(self, bucket_name, metadata, canned_acl=None,
                   canned_def_acl=None, preconditions=None, provider=None,
                   fields=None):
@@ -403,6 +422,7 @@ class GcsJsonApi(CloudApi):
                            'lifecycle',
                            'logging',
                            'metadata',
+                           'retentionPolicy',
                            'versioning',
                            'website'):
       attr = getattr(bucket_metadata, metadata_field, None)
@@ -453,6 +473,25 @@ class GcsJsonApi(CloudApi):
                                              global_params=global_params)
       except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e)
+
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    try:
+      metageneration = long(metageneration)
+    except ValueError:
+      raise ArgumentException(
+          'LockRetentionPolicy Metageneration must be an integer.')
+
+    apitools_request = (
+        apitools_messages.StorageBucketsLockRetentionPolicyRequest(
+            bucket=bucket_name,
+            ifMetagenerationMatch=metageneration,
+            userProject=self.user_project))
+    global_params = apitools_messages.StandardQueryParameters()
+    try:
+      return self.api_client.buckets.LockRetentionPolicy(
+          apitools_request, global_params=global_params)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
@@ -1788,8 +1827,9 @@ class GcsJsonApi(CloudApi):
       # In the event of a scope error, the www-authenticate field of the HTTP
       # response should contain text of the form
       #
-      # 'Bearer realm="https://accounts.google.com/", error=insufficient_scope,
-      # scope="${space separated list of acceptable scopes}"'
+      # 'Bearer realm="https://oauth2.googleapis.com/",
+      # error=insufficient_scope, scope="${space separated list of acceptable
+      # scopes}"'
       #
       # Here we use a quick string search to find the scope list, just looking
       # for a substring with the form 'scope="${scopes}"'.
@@ -1842,7 +1882,7 @@ class GcsJsonApi(CloudApi):
       not_found_exception: Optional exception to raise in the not-found case.
 
     Returns:
-      CloudStorageApiServiceException for translatable exceptions, None
+      ServiceException for translatable exceptions, None
       otherwise.
     """
     if isinstance(e, apitools_exceptions.HttpError):

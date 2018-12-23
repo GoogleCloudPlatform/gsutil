@@ -2157,6 +2157,75 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(set(listing2), expected_list_results)
     _Check()
 
+  def test_dir_to_bucket_minus_u(self):
+    """Tests that rsync -u works correctly."""
+    tmpdir = self.CreateTempDir()
+    dst_bucket = self.CreateBucket()
+    ORIG_MTIME = 10
+
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj1',
+                      contents='obj1-1', mtime=ORIG_MTIME)
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj2',
+                      contents='obj2-1', mtime=ORIG_MTIME)
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj3',
+                      contents='obj3-1', mtime=ORIG_MTIME)
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj4',
+                      contents='obj4-1', mtime=ORIG_MTIME)
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj5',
+                      contents='obj5-1', mtime=ORIG_MTIME)
+    self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
+                      contents='obj6-1', mtime=ORIG_MTIME)
+
+    # Source files with older mtimes should NOT be copied:
+    # Same size, different contents.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1-2',
+                        mtime=ORIG_MTIME - 1)
+    # Same size, same contents.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2-1',
+                        mtime=ORIG_MTIME - 1)
+    # Different size and contents.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3-newer',
+                        mtime=ORIG_MTIME - 1)
+
+    # Source files with equal mtimes should fall back to other checks:
+    # Same size and mtime without specifying `-c` => should NOT be copied even
+    # if the contents differ.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4-2',
+                        mtime=ORIG_MTIME)
+    # Different file size => SHOULD be copied.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj5', contents='obj5-bigger',
+                        mtime=ORIG_MTIME)
+
+    # Source files with newer mtimes should be copied:
+    # Same size and contents => SHOULD still be copied.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents='obj6-1',
+                        mtime=ORIG_MTIME + 1)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      self.RunGsUtil(['rsync', '-u', tmpdir, suri(dst_bucket)])
+      # Objects 1-4 should NOT have been overwritten:
+      self.assertEquals(
+          'obj1-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj1')], return_stdout=True))
+      self.assertEquals(
+          'obj2-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj2')], return_stdout=True))
+      self.assertEquals(
+          'obj3-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj3')], return_stdout=True))
+      self.assertEquals(
+          'obj4-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj4')], return_stdout=True))
+      # Objects 5 and 6 SHOULD have been overwritten:
+      self.assertEquals(
+          'obj5-bigger',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj5')], return_stdout=True))
+      # Contents were equal, so we verify via mtime that the source was copied.
+      self._VerifyObjectMtime(
+          dst_bucket.bucket_name, 'obj6', str(ORIG_MTIME + 1))
+    _Check()
+
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer

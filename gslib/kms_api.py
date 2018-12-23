@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 import json
 import logging
-import os
 import traceback
 
 from apitools.base.py import exceptions as apitools_exceptions
@@ -35,6 +34,7 @@ from gslib.gcs_json_credentials import SetUpJsonCredentialsAndCache
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.third_party.kms_apitools import cloudkms_v1_client as apitools_client
 from gslib.third_party.kms_apitools import cloudkms_v1_messages as apitools_messages
+from gslib.utils import system_util
 from gslib.utils.boto_util import GetCertsFile
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNewHttp
@@ -42,7 +42,7 @@ from gslib.utils.boto_util import GetNumRetries
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError)
 
-if os.environ.get('CLOUDSDK_WRAPPER'):
+if system_util.InvokedViaCloudSdk():
   _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE = (
       'Insufficient OAuth2 scope to perform this operation. '
       'Please re-run `gcloud auth login`')
@@ -235,7 +235,8 @@ class KmsApi(object):
       # In the event of a scope error, the www-authenticate field of the HTTP
       # response should contain text of the form
       #
-      # 'Bearer realm="https://accounts.google.com/", error=insufficient_scope,
+      # 'Bearer realm="https://oauth2.googleapis.com/",
+      # error=insufficient_scope,
       # scope="${space separated list of acceptable scopes}"'
       #
       # Here we use a quick string search to find the scope list, just looking

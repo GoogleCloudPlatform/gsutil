@@ -39,11 +39,28 @@ from gslib.wildcard_iterator import StorageUrlFromString
 
 ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
 UNENCRYPTED_FULL_LISTING_FIELDS = [
-    'acl', 'cacheControl', 'componentCount', 'contentDisposition',
-    'contentEncoding', 'contentLanguage', 'contentType', 'kmsKeyName',
-    'customerEncryption', 'etag', 'generation', 'metadata',
-    'metageneration', 'size', 'storageClass', 'timeCreated', 'timeDeleted',
-    'updated', 'timeStorageClassUpdated']
+    'acl',
+    'cacheControl',
+    'componentCount',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'kmsKeyName',
+    'customerEncryption',
+    'etag',
+    'eventBasedHold',
+    'generation',
+    'metadata',
+    'metageneration',
+    'retentionExpirationTime',
+    'size',
+    'storageClass',
+    'temporaryHold',
+    'timeCreated',
+    'timeDeleted',
+    'timeStorageClassUpdated',
+    'updated']
 
 
 def MakeMetadataLine(label, value, indent=1):
@@ -159,6 +176,14 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
         obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.storageClass:
     text_util.ttyprint(MakeMetadataLine('Storage class', obj.storageClass))
+  if obj.temporaryHold:
+    text_util.ttyprint(MakeMetadataLine('Temporary Hold', 'Enabled'))
+  if obj.eventBasedHold:
+    text_util.ttyprint(MakeMetadataLine('Event-Based Hold', 'Enabled'))
+  if obj.retentionExpirationTime:
+    text_util.ttyprint(MakeMetadataLine(
+        'Retention Expiration',
+        obj.retentionExpirationTime.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.kmsKeyName:
     text_util.ttyprint(MakeMetadataLine('KMS key', obj.kmsKeyName))
   if obj.cacheControl:

@@ -29,7 +29,7 @@ _DETAILED_HELP_TEXT = ("""
   network link that's also used by a number of other important jobs.
 
   While gsutil has no built-in support for throttling requests, there are
-  various tools available on Linux and MacOS that can be used to throttle
+  various tools available on Linux and macOS that can be used to throttle
   gsutil requests.
 
   One tool is `trickle <https://github.com/mariusae/trickle>`_ (available via

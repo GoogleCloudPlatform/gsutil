@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import fnmatch
 import glob
+import logging
 import os
 import re
 import sys
@@ -86,7 +87,7 @@ class CloudWildcardIterator(WildcardIterator):
   """
 
   def __init__(self, wildcard_url, gsutil_api, all_versions=False,
-               debug=0, project_id=None):
+               project_id=None, logger=None):
     """Instantiates an iterator that matches the wildcard URL.
 
     Args:
@@ -96,14 +97,15 @@ class CloudWildcardIterator(WildcardIterator):
       all_versions: If true, the iterator yields all versions of objects
                     matching the wildcard.  If false, yields just the live
                     object version.
-      debug: Debug level to control debug output for iterator.
       project_id: Project ID to use for bucket listings.
+      logger: logging.Logger used for outputting debug messages during
+              iteration. If None, the root logger will be used.
     """
     self.wildcard_url = wildcard_url
     self.all_versions = all_versions
-    self.debug = debug
     self.gsutil_api = gsutil_api
     self.project_id = project_id
+    self.logger = logger or logging.getLogger()
 
   def __iter__(self, bucket_listing_fields=None,
                expand_top_level_buckets=False):
@@ -333,16 +335,12 @@ class CloudWildcardIterator(WildcardIterator):
         delimiter = '/'
     # The following debug output is useful for tracing how the algorithm
     # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
-    # if self.debug > 1:
-    #   sys.stderr.write(
-    #       'DEBUG: wildcard=%s, prefix=%s, delimiter=%s, '
-    #       'prefix_wildcard=%s, suffix_wildcard=%s\n' %
-    #       (wildcard, prefix,
-    #        delimiter, prefix_wildcard,
-    #        suffix_wildcard))
-    #       (PrintableStr(wildcard), PrintableStr(prefix),
-    #        PrintableStr(delimiter), PrintableStr(prefix_wildcard),
-    #        PrintableStr(suffix_wildcard)))
+    self.logger.debug(
+        'wildcard=%s, prefix=%s, delimiter=%s, '
+        'prefix_wildcard=%s, suffix_wildcard=%s\n',
+        PrintableStr(wildcard), PrintableStr(prefix),
+        PrintableStr(delimiter), PrintableStr(prefix_wildcard),
+        PrintableStr(suffix_wildcard))
     return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
   def _SingleVersionMatches(self, listed_generation):
@@ -531,20 +529,18 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_url, debug=0, ignore_symlinks=False,
-               logger=None):
+  def __init__(self, wildcard_url, ignore_symlinks=False, logger=None):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
-      debug: Debug level (range 0..3).
       ignore_symlinks: If True, ignore symlinks during iteration.
-      logger: logging.Logger for outputting messages during iteration.
+      logger: logging.Logger used for outputting debug messages during
+              iteration. If None, the root logger will be used.
     """
     self.wildcard_url = wildcard_url
-    self.debug = debug
     self.ignore_symlinks = ignore_symlinks
-    self.logger = logger
+    self.logger = logger or logging.getLogger()
 
   def __iter__(self, bucket_listing_fields=None):
     """Iterator that gets called when iterating over the file wildcard.
@@ -742,7 +738,7 @@ class WildcardException(StandardError):
     return 'WildcardException: %s' % self.reason
 
 
-def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
+def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
                            project_id=None, ignore_symlinks=False,
                            logger=None):
   """Instantiate a WildcardIterator for the given URL string.
@@ -754,20 +750,20 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False, debug=0,
     all_versions: If true, the iterator yields all versions of objects
                   matching the wildcard.  If false, yields just the live
                   object version.
-    debug: Debug level to control debug output for iterator.
     project_id: Project id to use for bucket listings.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
-    logger: For outputting debug messages during iteration.
+    logger: logging.Logger used for outputting debug messages during iteration.
+            If None, the root logger will be used.
 
   Returns:
     A WildcardIterator that handles the requested iteration.
   """
 
   url = StorageUrlFromString(url_str)
+  logger = logger or logging.getLogger()
   if url.IsFileUrl():
-    return FileWildcardIterator(url, debug=debug,
-                                ignore_symlinks=ignore_symlinks, logger=logger)
+    return FileWildcardIterator(
+        url, ignore_symlinks=ignore_symlinks, logger=logger)
   else:  # Cloud URL
     return CloudWildcardIterator(
-        url, gsutil_api, all_versions=all_versions, debug=debug,
-        project_id=project_id)
+        url, gsutil_api, all_versions=all_versions, project_id=project_id)

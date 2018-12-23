@@ -115,6 +115,12 @@ _DESCRIPTION_TEXT = """
 
   The contents of stdin can name files, cloud URLs, and wildcards of files
   and cloud URLs.
+
+  Note: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
+  that can be surprising. Also, attempting to copy files whose names contain
+  wildcard characters can result in problems. For more details about these
+  issues see the section "POTENTIALLY SURPRISING BEHAVIOR WHEN USING WILDCARDS"
+  under "gsutil help wildcards".
 """
 
 _NAME_CONSTRUCTION_TEXT = """
@@ -165,7 +171,7 @@ _NAME_CONSTRUCTION_TEXT = """
   to create folders, it does so by creating a "placeholder" object that ends
   with a "/" character. gsutil skips these objects when downloading from the
   cloud to the local file system, because attempting to create a file that
-  ends with a "/" is not allowed on Linux and MacOS. Because of this, it is
+  ends with a "/" is not allowed on Linux and macOS. Because of this, it is
   recommended that you not create objects that end with "/" (unless you don't
   need to be able to download such objects using gsutil).
 """
@@ -251,6 +257,8 @@ _COPY_IN_CLOUD_TEXT = """
 """
 
 _CHECKSUM_VALIDATION_TEXT = """
+
+
 <B>CHECKSUM VALIDATION</B>
   At the end of every upload or download the gsutil cp command validates that
   the checksum it computes for the source file/object matches the checksum
@@ -427,7 +435,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   downloaded by gsutil or other Python applications. Note that for such uploads,
   crcmod is required for downloading regardless of whether the parallel
   composite upload option is on or not. For some distributions this is easy
-  (e.g., it comes pre-installed on MacOS), but in other cases some users have
+  (e.g., it comes pre-installed on macOS), but in other cases some users have
   found it difficult. Because of this, at present parallel composite uploads are
   disabled by default. Google is actively working with a number of the Linux
   distributions to get crcmod included with the stock distribution. Once that is
@@ -519,7 +527,7 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   space during one of these operations (e.g., raising
   "CommandException: Inadequate temp space available to compress <your file>"
   during a gsutil cp -z operation), you can change where it writes these
-  temp files by setting the TMPDIR environment variable. On Linux and MacOS
+  temp files by setting the TMPDIR environment variable. On Linux and macOS
   you can do this either by running gsutil this way:
 
     TMPDIR=/some/directory gsutil cp ...
@@ -532,16 +540,15 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   On Windows 7 you can change the TMPDIR environment variable from Start ->
   Computer -> System -> Advanced System Settings -> Environment Variables.
   You need to reboot after making this change for it to take effect. (Rebooting
-  is not necessary after running the export command on Linux and MacOS.)
+  is not necessary after running the export command on Linux and macOS.)
 """
 
 _COPYING_SPECIAL_FILES_TEXT = """
-<B>COPYING SPECIAL FILES</B>
-  gsutil cp does not support copying special file types such as sockets, device
-  files, named pipes, or any other non-standard files intended to represent an
-  operating system resource. You should not run gsutil cp with sources that
-  include such files (for example, recursively copying the root directory on
-  Linux that includes /dev ). If you do, gsutil cp may fail or hang.
+<B>SYNCHRONIZING OVER OS-SPECIFIC FILE TYPES (SYMLINKS, DEVICES, ETC.)</B>
+
+  Please see the section about OS-specific file types in "gsutil help rsync".
+  While that section was written specifically about the rsync command, analogous
+  points apply to the cp command.
 """
 
 _OPTIONS_TEXT = """
@@ -1079,7 +1086,7 @@ class CpCommand(Command):
       # directories to the destination directory.
       (exp_dst_url, have_existing_dst_container) = (
           copy_helper.ExpandUrlToSingleBlr(dst_url_str, self.gsutil_api,
-                                           self.debug, self.project_id))
+                                           self.project_id, logger=self.logger))
       name_expansion_iterator_dst_tuple = NameExpansionIteratorDestinationTuple(
           NameExpansionIterator(
               self.command_name, self.debug,

@@ -87,25 +87,25 @@ _DETAILED_HELP_TEXT = ("""
   names while listing buckets). However, because gsutil must perform
   translation, it is likely there are other erroneous edge cases when using
   Windows with Unicode. If you encounter problems, you might consider instead
-  using cygwin (on Windows) or Linux or MacOS - all of which support Unicode.
+  using cygwin (on Windows) or Linux or macOS - all of which support Unicode.
 
 
-<B>USING UNICODE FILENAMES ON MAC OS</B>
-  MacOS stores filenames in decomposed form (also known as
+<B>USING UNICODE FILENAMES ON MACOS</B>
+  macOS stores filenames in decomposed form (also known as
   `NFD normalization <https://en.wikipedia.org/wiki/Unicode_equivalence>`_).
   For example, if a filename contains an accented "e" character, that character
   will be converted to an "e" followed by an accent before being saved to the
   filesystem. As a consequence, it's possible to have different name strings
   for files uploaded from an operating system that doesn't enforce decomposed
-  form (like Ubuntu) from one that does (like MacOS).
+  form (like Ubuntu) from one that does (like macOS).
 
   The following example shows how this behavior could lead to unexpected
   results. Say you create a file with non-ASCII characters on Ubuntu. Ubuntu
   stores that filename in its composed form. When you upload the file to the
   cloud, it is stored as named. But if you use gsutil rysnc to bring the file to
-  a MacOS machine and edit the file, then when you use gsutil rsync to bring
+  a macOS machine and edit the file, then when you use gsutil rsync to bring
   this version back to the cloud, you end up with two different objects, instead
-  of overwriting the original. This is because MacOS converted the filename to
+  of overwriting the original. This is because macOS converted the filename to
   a decomposed form, and Cloud Storage sees this as a different object name.
 
 

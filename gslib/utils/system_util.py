@@ -96,6 +96,14 @@ def CheckFreeSpace(path):
     return f_frsize * f_bavail
 
 
+def CloudSdkCredPassingEnabled():
+  return os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'
+
+
+def CloudSdkVersion():
+  return os.environ.get('CLOUDSDK_VERSION', '')
+
+
 def CreateDirIfNeeded(dir_path, mode=0o777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
@@ -175,8 +183,7 @@ def GetGsutilClientIdAndSecret():
   Returns:
     (str, str) A 2-tuple of (client ID, secret).
   """
-  if (os.environ.get('CLOUDSDK_WRAPPER') == '1' and
-      os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'):
+  if InvokedViaCloudSdk() and CloudSdkCredPassingEnabled():
     # Cloud SDK installs have a separate client ID / secret.
     return ('32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
             'ZmssLNjJy2998hD4CTg2ejr2')                # Cloud SDK secret
@@ -221,6 +228,10 @@ def GetTermLines():
   if not ioc:
     ioc = os.environ.get('LINES', _DEFAULT_NUM_TERM_LINES)
   return int(ioc)
+
+
+def InvokedViaCloudSdk():
+  return os.environ.get('CLOUDSDK_WRAPPER') == '1'
 
 
 def IsRunningInteractively():

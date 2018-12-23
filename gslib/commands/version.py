@@ -30,7 +30,8 @@ import boto
 import crcmod
 import gslib
 from gslib.command import Command
-from gslib.utils.boto_util import GetConfigFilePaths
+from gslib.utils import system_util
+from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 
@@ -88,10 +89,7 @@ class VersionCommand(Command):
         if o == '-l':
           long_form = True
 
-    if GetConfigFilePaths():
-      config_paths = ', '.join(GetConfigFilePaths())
-    else:
-      config_paths = 'no config found'
+    config_paths = ', '.join(GetFriendlyConfigFilePaths())
 
     shipped_checksum = gslib.CHECKSUM
     try:
@@ -130,12 +128,10 @@ class VersionCommand(Command):
           os_version='%s %s' % (platform.system(), platform.release()),
           multiprocessing_available=(
               CheckMultiprocessingAvailableAndInit().is_available),
-          cloud_sdk=(os.environ.get('CLOUDSDK_WRAPPER') == '1'),
-          cloud_sdk_credentials=(
-              os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL') == '1'
-          ),
+          cloud_sdk=system_util.InvokedViaCloudSdk(),
+          cloud_sdk_credentials=system_util.CloudSdkCredPassingEnabled(),
           config_paths=config_paths,
-          gsutil_path=gslib.GSUTIL_PATH,
+          gsutil_path=GetCloudSdkGsutilWrapperScriptPath() or gslib.GSUTIL_PATH,
           compiled_crcmod=UsingCrcmodExtension(crcmod),
           is_package_install=gslib.IS_PACKAGE_INSTALL,
           is_editable_install=gslib.IS_EDITABLE_INSTALL,
@@ -179,3 +175,30 @@ class VersionCommand(Command):
         m.update(content.encode('utf-8'))
         f.close()
     return m.hexdigest()
+
+
+def GetCloudSdkGsutilWrapperScriptPath():
+  """If gsutil was invoked via the Cloud SDK, find its gsutil wrapper script.
+
+  Returns:
+    (str) The path to the Cloud SDK's gsutil wrapper script, or an empty string
+    if gsutil was not invoked via the Cloud SDK or the wrapper script could not
+    be found at its expected path.
+  """
+  # If running via the Cloud SDK, the "real" gsutil script was probably invoked
+  # indirectly through gcloud's gsutil wrapper script (the former is at
+  # <sdk-root>/platform/gsutil/gsutil, while the latter is located at
+  # <sdk-root>/bin/gsutil). We should print the wrapper script's path if it
+  # exists and we were invoked via the Cloud SDK.
+  gsutil_path = gslib.GSUTIL_PATH
+  if system_util.InvokedViaCloudSdk():
+    platform_path_suffix = os.path.join('platform', 'gsutil', 'gsutil')
+    if gsutil_path.endswith(platform_path_suffix):
+      bin_path = os.path.join(
+          gsutil_path[0:gsutil_path.rfind(platform_path_suffix)],
+          'bin', 'gsutil')
+      if os.path.exists(bin_path):
+        return bin_path
+
+  return ''
+

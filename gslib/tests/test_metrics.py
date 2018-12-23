@@ -367,7 +367,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'cp'
     # GetDiskCounters is called at initialization of _PerformanceSummaryParams,
     # which occurs during the first call to LogPerformanceSummaryParams.
-    with mock.patch('gslib.metrics.GetDiskCounters',
+    with mock.patch('gslib.metrics.system_util.GetDiskCounters',
                     return_value={'fake-disk': (0, 0, 0, 0, 0, 0)}):
       metrics.LogPerformanceSummaryParams(
           uses_fan=True, uses_slice=True, avg_throughput=10,
@@ -396,7 +396,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         (1, 1)].GetThroughput(), 10)
 
     # GetDiskCounters is called a second time during collection.
-    with mock.patch('gslib.metrics.GetDiskCounters',
+    with mock.patch('gslib.metrics.system_util.GetDiskCounters',
                     return_value={'fake-disk': (0, 0, 0, 0, 10, 10)}):
       self.collector._CollectPerformanceSummaryMetric()
 

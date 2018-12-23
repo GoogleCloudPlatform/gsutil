@@ -26,6 +26,7 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import MAX_BUCKET_LENGTH
 from gslib.tests.testcase.integration_testcase import SkipForS3
+import gslib.tests.util as util
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
@@ -421,6 +422,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     buri_base = 'gsutil-test-%s' % self.GetTestMethodName()
     buri_base = buri_base[:MAX_BUCKET_LENGTH-20]
     buri_base = '%s-%s' % (buri_base, self.MakeRandomTestString())
+    buri_base = util.MakeBucketNameValid(buri_base)
     buri1 = self.CreateBucket(bucket_name='%s-tbuck1' % buri_base)
     buri2 = self.CreateBucket(bucket_name='%s-tbuck2' % buri_base)
     buri3 = self.CreateBucket(bucket_name='%s-tb3' % buri_base)

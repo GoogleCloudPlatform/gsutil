@@ -225,6 +225,12 @@ class CloudApiDelegator(CloudApi):
         canned_def_acl=canned_def_acl, preconditions=preconditions,
         fields=fields)
 
+  def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
+    return self._GetApi(provider).LockRetentionPolicy(
+        bucket_name,
+        metageneration,
+        provider=provider)
+
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
                    provider=None, fields=None):
     return self._GetApi(provider).CreateBucket(
@@ -364,6 +370,13 @@ class CloudApiDelegator(CloudApi):
 
   def ListNotificationConfigs(self, bucket_name, provider=None):
     return self._GetApi(provider).ListNotificationConfigs(bucket_name)
+
+  def ListBucketAccessControls(self, bucket_name, provider=None):
+    return self._GetApi(provider).ListBucketAccessControls(bucket_name)
+
+  def ListObjectAccessControls(self, bucket_name, object_name, provider=None):
+    return self._GetApi(provider).ListObjectAccessControls(bucket_name,
+                                                           object_name)
 
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.

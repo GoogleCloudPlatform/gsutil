@@ -14,6 +14,7 @@ import gslib.third_party.kms_apitools.cloudkms_v1_messages as messages
 
 import gslib
 from gslib.metrics import MetricsCollector
+from gslib.utils import system_util
 
 
 class CloudkmsV1(base_api.BaseApiClient):
@@ -29,10 +30,10 @@ class CloudkmsV1(base_api.BaseApiClient):
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools gsutil/%s Python/%s (%s)' % (
       gslib.VERSION, platform.python_version(), sys.platform)
-  if os.environ.get('CLOUDSDK_WRAPPER') == '1':
+  if system_util.InvokedViaCloudSdk():
     _USER_AGENT += ' google-cloud-sdk'
-    if os.environ.get('CLOUDSDK_VERSION'):
-      _USER_AGENT += '/%s' % os.environ.get('CLOUDSDK_VERSION')
+    if system_util.CloudSdkVersion():
+      _USER_AGENT += '/%s' % system_util.CloudSdkVersion()
   if MetricsCollector.IsDisabled():
     _USER_AGENT += ' analytics/disabled'
   else:

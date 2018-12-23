@@ -31,12 +31,13 @@ from gslib.exception import InvalidUrlError
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils.retention_util import RetentionInSeconds
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.text_util import NormalizeStorageClass
 
 
 _SYNOPSIS = """
-  gsutil mb [-c class] [-l location] [-p proj_id] url...
+  gsutil mb [-c class] [-l location] [-p proj_id] [--retention time] url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -61,6 +62,8 @@ _DETAILED_HELP_TEXT = ("""
   storage class cannot be changed. Instead, you would need to create a new
   bucket and move the data over and then delete the original bucket.
 
+  The --retention option specifies the retention period for the bucket. For more
+  details about retention policy see "gsutil help retention".
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -82,7 +85,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>BUCKET LOCATIONS</B>
   You can specify one of the `available locations
-  <https://cloud.google.com/storage/docs/bucket-locations>`_ for a bucket
+  <https://cloud.google.com/storage/docs/locations>`_ for a bucket
   with the -l option.
 
   Examples:
@@ -94,17 +97,47 @@ _DETAILED_HELP_TEXT = ("""
   If you don't specify a -l option, the bucket is created in the default
   location (US).
 
+<B>Retention Policy</B>
+  You can specify retention period in one of the following formats:
+
+    --retention <number>s     Specifies retention period of <number> seconds for
+                              objects in this bucket.
+
+    --retention <number>d     Specifies retention period of <number> days for
+                              objects in this bucket.
+
+    --retention <number>m     Specifies retention period of <number> months for
+                              objects in this bucket.
+
+    --retention <number>y     Specifies retention period of <number> years for
+                              objects in this bucket.
+
+  Examples:
+
+    gsutil mb --retention 1y gs://some-bucket
+
+    gsutil mb --retention 36m gs://some-bucket
+
+  If you don't specify a --retention option, the bucket is created with no
+  retention policy.
+
 <B>OPTIONS</B>
   -c class          Specifies the default storage class. Default is "Standard".
+                    Can only be set on gs:// buckets.
 
   -l location       Can be any multi-regional or regional location. See
                     https://cloud.google.com/storage/docs/bucket-locations
-                    for a discussion of this distinction. Default is US.
-                    Locations are case insensitive.
+                    for a discussion of this distinction. Default is US for
+                    gs:// buckets. Locations are case insensitive.
 
   -p proj_id        Specifies the project ID under which to create the bucket.
+                    Can only be set on gs:// buckets.
 
   -s class          Same as -c.
+
+  --retention time  Specifies the retention policy. Default is no retention
+                    policy. This can only be set on gs:// buckets and requires
+                    using the JSON API.
 """)
 
 
@@ -125,6 +158,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='c:l:p:s:',
+      supported_private_args=['retention='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -151,6 +185,7 @@ class MbCommand(Command):
     """Command entry point for the mb command."""
     location = None
     storage_class = None
+    seconds = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -161,12 +196,22 @@ class MbCommand(Command):
           self.project_id = a
         elif o == '-c' or o == '-s':
           storage_class = NormalizeStorageClass(a)
+        elif o == '--retention':
+          seconds = RetentionInSeconds(a)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class)
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
+      if seconds is not None:
+        if bucket_url.scheme != 'gs':
+          raise CommandException('Retention policy can only be specified for '
+                                 'GCS buckets.')
+        retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
+            retentionPeriod=seconds))
+        bucket_metadata.retentionPolicy = retention_policy
+
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_url)

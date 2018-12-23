@@ -313,11 +313,21 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_valid_multiple_roles(self):
     """Tests parsing of multiple roles bound to one user."""
-    (_, bindings) = bstt(True, 'allUsers:a,b,c')
-    self.assertEquals(len(bindings), 3)
+    (_, bindings) = bstt(True, 'allUsers:a,b,c,roles/custom')
+    self.assertEquals(len(bindings), 4)
     self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
     self.assertIn(bvle(members=['allUsers'], role='roles/storage.b'), bindings)
     self.assertIn(bvle(members=['allUsers'], role='roles/storage.c'), bindings)
+    self.assertIn(bvle(members=['allUsers'], role='roles/custom'), bindings)
+
+  def test_valid_custom_roles(self):
+    """Tests parsing of custom roles bound to one user."""
+    (_, bindings) = bstt(True, 'user:foo@bar.com:roles/custom1,roles/custom2')
+    self.assertEquals(len(bindings), 2)
+    self.assertIn(
+        bvle(members=['user:foo@bar.com'], role='roles/custom1'), bindings)
+    self.assertIn(
+        bvle(members=['user:foo@bar.com'], role='roles/custom2'), bindings)
 
   def test_valid_member(self):
     """Tests member parsing."""
