@@ -867,8 +867,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       env.update(env_vars)
     p = subprocess.Popen(cmd_bytes, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=env)
-    stdout, stderr = map(lambda b: b.decode('utf-8').replace(os.linesep, '\n'),
-                         p.communicate(stdin))
+    likely_encoding = sys.stdout.encoding or UTF8
+    stdout, stderr = map(
+        lambda b: b.decode(likely_encoding).replace(os.linesep, '\n'),
+        p.communicate(stdin))
     status = p.returncode
 
     if expected_status is not None:

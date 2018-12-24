@@ -2164,41 +2164,41 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     ORIG_MTIME = 10
 
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj1',
-                      contents='obj1-1', mtime=ORIG_MTIME)
+                      contents=b'obj1-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj2',
-                      contents='obj2-1', mtime=ORIG_MTIME)
+                      contents=b'obj2-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj3',
-                      contents='obj3-1', mtime=ORIG_MTIME)
+                      contents=b'obj3-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj4',
-                      contents='obj4-1', mtime=ORIG_MTIME)
+                      contents=b'obj4-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj5',
-                      contents='obj5-1', mtime=ORIG_MTIME)
+                      contents=b'obj5-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
-                      contents='obj6-1', mtime=ORIG_MTIME)
+                      contents=b'obj6-1', mtime=ORIG_MTIME)
 
     # Source files with older mtimes should NOT be copied:
     # Same size, different contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1-2',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1-2',
                         mtime=ORIG_MTIME - 1)
     # Same size, same contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2-1',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents=b'obj2-1',
                         mtime=ORIG_MTIME - 1)
     # Different size and contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3-newer',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents=b'obj3-newer',
                         mtime=ORIG_MTIME - 1)
 
     # Source files with equal mtimes should fall back to other checks:
     # Same size and mtime without specifying `-c` => should NOT be copied even
     # if the contents differ.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4-2',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4-2',
                         mtime=ORIG_MTIME)
     # Different file size => SHOULD be copied.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj5', contents='obj5-bigger',
-                        mtime=ORIG_MTIME)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj5',
+                        contents=b'obj5-bigger', mtime=ORIG_MTIME)
 
     # Source files with newer mtimes should be copied:
     # Same size and contents => SHOULD still be copied.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents='obj6-1',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents=b'obj6-1',
                         mtime=ORIG_MTIME + 1)
 
     @Retry(AssertionError, tries=3, timeout_secs=1)

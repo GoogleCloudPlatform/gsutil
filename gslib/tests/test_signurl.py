@@ -86,7 +86,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     """Tests signurl output of a sample object."""
 
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='z')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd_base = ['signurl'] if json_keystore else ['signurl', '-p', 'notasecret']
     stdout = self.RunGsUtil(cmd_base + ['-m', 'PUT', ks_file, suri(object_uri)],
                             return_stdout=True)
@@ -137,7 +137,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
     for obj_name in objs:
       obj_urls.append(self.CreateObject(bucket_uri=bucket,
-                                        object_name=obj_name, contents=''))
+                                        object_name=obj_name, contents=b''))
 
     stdout = self.RunGsUtil(['signurl', '-p',
                              'notasecret', self._GetKsFile(),

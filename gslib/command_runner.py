@@ -127,6 +127,15 @@ def HandleArgCoding(args):
             repr(arg))))
 
 
+def _StringToSysArgType(unicode_str):
+  """Converts a string literal (unicode) to the same type as sys.argv[0]."""
+  # TODO(PY3-ONLY): If we remove the PY2 code branch, this method becomes
+  # a no-op, so we can just remove the whole method when we move to PY3.
+  if six.PY2:
+    return unicode_str.encode(UTF8)
+  return unicode_str
+
+
 class CommandRunner(object):
   """Runs gsutil commands and does some top-level argument handling."""
 
@@ -313,7 +322,7 @@ class CommandRunner(object):
         self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
       command_changed_to_update = True
-      args = ['-n']
+      args = [_StringToSysArgType('-n')]
 
       # Check for opt-in analytics.
       if system_util.IsRunningInteractively() and collect_analytics:
@@ -344,7 +353,10 @@ class CommandRunner(object):
             'please instead update using your package manager.')
 
       raise CommandException('Invalid command "%s".' % command_name)
-    if '--help' in args:
+    # Call str() on this string because the type of objects in `args` differ
+    # on Python 2 vs 3 (bytes vs unicode), and we want to compare using the
+    # same as whatever is in `args`.
+    if _StringToSysArgType('--help') in args:
       new_args = [command_name]
       original_command_class = self.command_map[command_name]
       subcommands = original_command_class.help_spec.subcommand_help_text.keys()

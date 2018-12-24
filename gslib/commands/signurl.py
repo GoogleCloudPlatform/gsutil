@@ -30,6 +30,7 @@ import getpass
 import hashlib
 import json
 import re
+import sys
 
 import six
 from six.moves import urllib
@@ -291,7 +292,8 @@ def _GenSignedUrl(key, client_id, method, duration,
     logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
                  % string_to_sign)
 
-  signature = base64.b16encode(sign(key, string_to_sign, 'RSA-SHA256')).lower()
+  signature = base64.b16encode(
+      sign(key, string_to_sign, b'RSA-SHA256')).lower()
 
   final_url = _SIGNED_URL_FORMAT.format(
       host=gs_host, path=gcs_path, sig=signature,
@@ -386,6 +388,9 @@ class UrlSignCommand(Command):
     region = _AUTO_DETECT_REGION
 
     for o, v in self.sub_opts:
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        v = v.decode(sys.stdin.encoding or UTF8)
       if o == '-d':
         if delta is not None:
           delta += _DurationToTimeDelta(v)
@@ -530,10 +535,19 @@ class UrlSignCommand(Command):
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
-      print('{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
-                                        (expiration_dt
-                                         .strftime('%Y-%m-%d %H:%M:%S')),
-                                        final_url.encode(UTF8)))
+      time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        time_str = time_str.decode(UTF8)
+
+      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(
+          url.url_string, method, time_str, final_url)
+
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        url_info_str = url_info_str.encode(UTF8)
+
+      print(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, client_email, gcs_path, self.logger, bucket_region)

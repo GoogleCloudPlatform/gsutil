@@ -888,7 +888,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_list_temporary_hold(self):
-    object_uri = self.CreateObject(contents='content')
+    object_uri = self.CreateObject(contents=b'content')
     self.RunGsUtil(['retention', 'temp', 'set', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Temporary Hold')
@@ -900,7 +900,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_list_event_based_hold(self):
-    object_uri = self.CreateObject(contents='content')
+    object_uri = self.CreateObject(contents=b'content')
     self.RunGsUtil(['retention', 'event', 'set', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Event-Based Hold')
