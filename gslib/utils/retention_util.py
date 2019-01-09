@@ -65,7 +65,7 @@ def _ConfirmWithUserPrompt(question, default_response):
     if not response:
       return default_response
     if response not in ['y', 'yes', 'n', 'no']:
-      print '\tPlease respond with \'yes\'/\'y\' or \'no\'/\'n\'.'
+      print('\tPlease respond with \'yes\'/\'y\' or \'no\'/\'n\'.')
       continue
     if response == 'yes' or response == 'y':
       return True

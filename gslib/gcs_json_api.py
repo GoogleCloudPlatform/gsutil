@@ -387,7 +387,7 @@ class GcsJsonApi(CloudApi):
       request = apitools_messages.StorageBucketAccessControlsListRequest(
           bucket=bucket_name)
       return self.api_client.bucketAccessControls.List(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def ListObjectAccessControls(self, bucket_name, object_name):
@@ -396,7 +396,7 @@ class GcsJsonApi(CloudApi):
       request = apitools_messages.StorageObjectAccessControlsListRequest(
           bucket=bucket_name, object=object_name)
       return self.api_client.objectAccessControls.List(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name)
 
@@ -490,7 +490,7 @@ class GcsJsonApi(CloudApi):
     try:
       return self.api_client.buckets.LockRetentionPolicy(
           apitools_request, global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
