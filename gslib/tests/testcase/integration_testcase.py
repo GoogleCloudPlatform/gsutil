@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
-import cStringIO
+from six.moves import cStringIO
 import datetime
 import locale
 import logging
