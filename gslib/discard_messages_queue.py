@@ -21,13 +21,15 @@ from __future__ import unicode_literals
 
 
 class DiscardMessagesQueue(object):
-  """Emulates a Cloud API status queue but drops all messages.
+    """Emulates a Cloud API status queue but drops all messages.
 
-  This is useful when you want to perform some operations but not have the UI
-  thread display information about those ops (e.g. running a test or fetching
-  the public gsutil tarball object's metadata to perform a version check).
-  """
-  # pylint: disable=invalid-name, unused-argument
-  def put(self, message=None, timeout=None):
-    pass
-  # pylint: enable=invalid-name, unused-argument
+    This is useful when you want to perform some operations but not have the UI
+    thread display information about those ops (e.g. running a test or fetching
+    the public gsutil tarball object's metadata to perform a version check).
+    """
+
+    # pylint: disable=invalid-name, unused-argument
+    def put(self, message=None, timeout=None):
+        pass
+
+    # pylint: enable=invalid-name, unused-argument

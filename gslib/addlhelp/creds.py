@@ -21,8 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   gsutil currently supports several types of credentials/authentication, as
   well as the ability to access public data anonymously (see "gsutil help anon"
@@ -142,18 +141,18 @@ _DETAILED_HELP_TEXT = ("""
 
     For more details about App Engine service accounts, see:
       https://developers.google.com/appengine/docs/python/appidentity/overview
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about types of credentials and authentication."""
+    """Additional help about types of credentials and authentication."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='creds',
-      help_name_aliases=['credentials', 'authentication', 'auth', 'gcloud'],
-      help_type='additional_help',
-      help_one_line_summary='Credential Types Supporting Various Use Cases',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="creds",
+        help_name_aliases=["credentials", "authentication", "auth", "gcloud"],
+        help_type="additional_help",
+        help_one_line_summary="Credential Types Supporting Various Use Cases",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

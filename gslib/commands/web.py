@@ -33,7 +33,6 @@ from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 
-
 _SET_SYNOPSIS = """
   gsutil web set [-m main_page_suffix] [-e error_page] bucket_url...
 """
@@ -42,7 +41,7 @@ _GET_SYNOPSIS = """
   gsutil web get bucket_url
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip("\n")
 
 _SET_DESCRIPTION = """
 <B>SET</B>
@@ -75,7 +74,8 @@ _GET_DESCRIPTION = """
 
 """
 
-_DESCRIPTION = """
+_DESCRIPTION = (
+    """
   The Website Configuration feature enables you to configure a Google Cloud
   Storage bucket to behave like a static website. This means requests made via a
   domain-named bucket aliased using a Domain Name System "CNAME" to
@@ -127,7 +127,10 @@ _DESCRIPTION = """
      https://cloud.google.com/storage/docs/website-configuration.
 
   The web command has two sub-commands:
-""" + _SET_DESCRIPTION + _GET_DESCRIPTION
+"""
+    + _SET_DESCRIPTION
+    + _GET_DESCRIPTION
+)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -136,106 +139,117 @@ _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 
 class WebCommand(Command):
-  """Implementation of gsutil web command."""
+    """Implementation of gsutil web command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'web',
-      command_name_aliases=['setwebcfg', 'getwebcfg'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=2,
-      max_args=NO_MAX,
-      supported_sub_args='m:e:',
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments={
-          'set': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ],
-          'get': [
-              CommandArgument.MakeNCloudBucketURLsArgument(1)
-          ]
-      }
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='web',
-      help_name_aliases=['getwebcfg', 'setwebcfg'],
-      help_type='command_help',
-      help_one_line_summary=(
-          'Set a main page and/or error page for one or more buckets'),
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "web",
+        command_name_aliases=["setwebcfg", "getwebcfg"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=2,
+        max_args=NO_MAX,
+        supported_sub_args="m:e:",
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=1,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments={
+            "set": [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+            "get": [CommandArgument.MakeNCloudBucketURLsArgument(1)],
+        },
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="web",
+        help_name_aliases=["getwebcfg", "setwebcfg"],
+        help_type="command_help",
+        help_one_line_summary=(
+            "Set a main page and/or error page for one or more buckets"
+        ),
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={"get": _get_help_text, "set": _set_help_text},
+    )
 
-  def _GetWeb(self):
-    """Gets website configuration for a bucket."""
-    bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
-        self.args[0], bucket_fields=['website'])
+    def _GetWeb(self):
+        """Gets website configuration for a bucket."""
+        bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
+            self.args[0], bucket_fields=["website"]
+        )
 
-    if bucket_url.scheme == 's3':
-      sys.stdout.write(self.gsutil_api.XmlPassThroughGetWebsite(
-          bucket_url, provider=bucket_url.scheme))
-    else:
-      if bucket_metadata.website and (bucket_metadata.website.mainPageSuffix or
-                                      bucket_metadata.website.notFoundPage):
-        sys.stdout.write(str(encoding.MessageToJson(
-            bucket_metadata.website)) + '\n')
-      else:
-        sys.stdout.write('%s has no website configuration.\n' % bucket_url)
+        if bucket_url.scheme == "s3":
+            sys.stdout.write(
+                self.gsutil_api.XmlPassThroughGetWebsite(
+                    bucket_url, provider=bucket_url.scheme
+                )
+            )
+        else:
+            if bucket_metadata.website and (
+                bucket_metadata.website.mainPageSuffix
+                or bucket_metadata.website.notFoundPage
+            ):
+                sys.stdout.write(
+                    str(encoding.MessageToJson(bucket_metadata.website)) + "\n"
+                )
+            else:
+                sys.stdout.write("%s has no website configuration.\n" % bucket_url)
 
-    return 0
+        return 0
 
-  def _SetWeb(self):
-    """Sets website configuration for a bucket."""
-    main_page_suffix = None
-    error_page = None
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o == '-m':
-          main_page_suffix = a
-        elif o == '-e':
-          error_page = a
+    def _SetWeb(self):
+        """Sets website configuration for a bucket."""
+        main_page_suffix = None
+        error_page = None
+        if self.sub_opts:
+            for o, a in self.sub_opts:
+                if o == "-m":
+                    main_page_suffix = a
+                elif o == "-e":
+                    error_page = a
 
-    url_args = self.args
+        url_args = self.args
 
-    website = apitools_messages.Bucket.WebsiteValue(
-        mainPageSuffix=main_page_suffix, notFoundPage=error_page)
+        website = apitools_messages.Bucket.WebsiteValue(
+            mainPageSuffix=main_page_suffix, notFoundPage=error_page
+        )
 
-    # Iterate over URLs, expanding wildcards and setting the website
-    # configuration on each.
-    some_matched = False
-    for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
-      for blr in bucket_iter:
-        url = blr.storage_url
-        some_matched = True
-        self.logger.info('Setting website configuration on %s...', blr)
-        bucket_metadata = apitools_messages.Bucket(website=website)
-        self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                                    provider=url.scheme, fields=['id'])
-    if not some_matched:
-      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
-    return 0
+        # Iterate over URLs, expanding wildcards and setting the website
+        # configuration on each.
+        some_matched = False
+        for url_str in url_args:
+            bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=["id"])
+            for blr in bucket_iter:
+                url = blr.storage_url
+                some_matched = True
+                self.logger.info("Setting website configuration on %s...", blr)
+                bucket_metadata = apitools_messages.Bucket(website=website)
+                self.gsutil_api.PatchBucket(
+                    url.bucket_name, bucket_metadata, provider=url.scheme, fields=["id"]
+                )
+        if not some_matched:
+            raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
+        return 0
 
-  def RunCommand(self):
-    """Command entry point for the web command."""
-    action_subcommand = self.args.pop(0)
-    self.ParseSubOpts(check_args=True)
-    if action_subcommand == 'get':
-      func = self._GetWeb
-    elif action_subcommand == 'set':
-      func = self._SetWeb
-    else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help web".') %
-                             (action_subcommand, self.command_name))
+    def RunCommand(self):
+        """Command entry point for the web command."""
+        action_subcommand = self.args.pop(0)
+        self.ParseSubOpts(check_args=True)
+        if action_subcommand == "get":
+            func = self._GetWeb
+        elif action_subcommand == "set":
+            func = self._SetWeb
+        else:
+            raise CommandException(
+                (
+                    'Invalid subcommand "%s" for the %s command.\n'
+                    'See "gsutil help web".'
+                )
+                % (action_subcommand, self.command_name)
+            )
 
-    # Commands with both suboptions and subcommands need to reparse for
-    # suboptions, so we log again.
-    metrics.LogCommandParams(subcommands=[action_subcommand],
-                             sub_opts=self.sub_opts)
-    return func()
+        # Commands with both suboptions and subcommands need to reparse for
+        # suboptions, so we log again.
+        metrics.LogCommandParams(
+            subcommands=[action_subcommand], sub_opts=self.sub_opts
+        )
+        return func()

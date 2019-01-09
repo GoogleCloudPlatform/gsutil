@@ -22,7 +22,8 @@ from __future__ import unicode_literals
 from gslib.help_provider import HelpProvider
 from gslib.utils.constants import RESUMABLE_THRESHOLD_MIB
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>OVERVIEW</B>
   If you use gsutil in large production tasks (such as uploading or
   downloading many GiBs of data each night), there are a number of things
@@ -134,20 +135,28 @@ _DETAILED_HELP_TEXT = ("""
      speed, available memory, CPU load, and other conditions, this may or may
      not be optimal. Try experimenting with higher or lower numbers of threads
      to find the best number of threads for your environment.
-""" % RESUMABLE_THRESHOLD_MIB)
+"""
+    % RESUMABLE_THRESHOLD_MIB
+)
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about using gsutil for production tasks."""
+    """Additional help about using gsutil for production tasks."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='prod',
-      help_name_aliases=[
-          'production', 'resumable', 'resumable upload', 'resumable transfer',
-          'resumable download', 'scripts', 'scripting'],
-      help_type='additional_help',
-      help_one_line_summary='Scripting Production Transfers',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="prod",
+        help_name_aliases=[
+            "production",
+            "resumable",
+            "resumable upload",
+            "resumable transfer",
+            "resumable download",
+            "scripts",
+            "scripting",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Scripting Production Transfers",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

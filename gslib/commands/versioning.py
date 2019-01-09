@@ -29,7 +29,6 @@ from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 
-
 _SET_SYNOPSIS = """
   gsutil versioning set [on|off] bucket_url...
 """
@@ -38,7 +37,7 @@ _GET_SYNOPSIS = """
   gsutil versioning get bucket_url...
 """
 
-_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip("\n")
 
 _SET_DESCRIPTION = """
 <B>SET</B>
@@ -54,12 +53,16 @@ _GET_DESCRIPTION = """
   bucket and displays whether or not it is enabled.
 """
 
-_DESCRIPTION = """
+_DESCRIPTION = (
+    """
   The Versioning Configuration feature enables you to configure a Google Cloud
   Storage bucket to keep old versions of objects.
 
   The gsutil versioning command has two sub-commands:
-""" + _SET_DESCRIPTION + _GET_DESCRIPTION
+"""
+    + _SET_DESCRIPTION
+    + _GET_DESCRIPTION
+)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -68,116 +71,121 @@ _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 
 class VersioningCommand(Command):
-  """Implementation of gsutil versioning command."""
+    """Implementation of gsutil versioning command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'versioning',
-      command_name_aliases=['setversioning', 'getversioning'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=2,
-      max_args=NO_MAX,
-      supported_sub_args='',
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=2,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments={
-          'set': [
-              CommandArgument('mode', choices=['on', 'off']),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ],
-          'get': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ]
-      }
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='versioning',
-      help_name_aliases=['getversioning', 'setversioning'],
-      help_type='command_help',
-      help_one_line_summary=(
-          'Enable or suspend versioning for one or more buckets'),
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "versioning",
+        command_name_aliases=["setversioning", "getversioning"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=2,
+        max_args=NO_MAX,
+        supported_sub_args="",
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=2,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments={
+            "set": [
+                CommandArgument("mode", choices=["on", "off"]),
+                CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+            ],
+            "get": [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+        },
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="versioning",
+        help_name_aliases=["getversioning", "setversioning"],
+        help_type="command_help",
+        help_one_line_summary=("Enable or suspend versioning for one or more buckets"),
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={"get": _get_help_text, "set": _set_help_text},
+    )
 
-  def _CalculateUrlsStartArg(self):
-    if not self.args:
-      self.RaiseWrongNumberOfArgumentsException()
-    if self.args[0].lower() == 'set':
-      return 2
-    else:
-      return 1
-
-  def _SetVersioning(self):
-    """Gets versioning configuration for a bucket."""
-    versioning_arg = self.args[0].lower()
-    if versioning_arg not in ('on', 'off'):
-      raise CommandException('Argument to "%s set" must be either [on|off]'
-                             % (self.command_name))
-    url_args = self.args[1:]
-    if not url_args:
-      self.RaiseWrongNumberOfArgumentsException()
-
-    # Iterate over URLs, expanding wildcards and set the versioning
-    # configuration on each.
-    some_matched = False
-    for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=['id'])
-      for blr in bucket_iter:
-        url = blr.storage_url
-        some_matched = True
-        bucket_metadata = apitools_messages.Bucket(
-            versioning=apitools_messages.Bucket.VersioningValue())
-        if versioning_arg == 'on':
-          self.logger.info('Enabling versioning for %s...', url)
-          bucket_metadata.versioning.enabled = True
+    def _CalculateUrlsStartArg(self):
+        if not self.args:
+            self.RaiseWrongNumberOfArgumentsException()
+        if self.args[0].lower() == "set":
+            return 2
         else:
-          self.logger.info('Suspending versioning for %s...', url)
-          bucket_metadata.versioning.enabled = False
-        self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                                    provider=url.scheme, fields=['id'])
-    if not some_matched:
-      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
+            return 1
 
-  def _GetVersioning(self):
-    """Gets versioning configuration for one or more buckets."""
-    url_args = self.args
+    def _SetVersioning(self):
+        """Gets versioning configuration for a bucket."""
+        versioning_arg = self.args[0].lower()
+        if versioning_arg not in ("on", "off"):
+            raise CommandException(
+                'Argument to "%s set" must be either [on|off]' % (self.command_name)
+            )
+        url_args = self.args[1:]
+        if not url_args:
+            self.RaiseWrongNumberOfArgumentsException()
 
-    # Iterate over URLs, expanding wildcards and getting the versioning
-    # configuration on each.
-    some_matched = False
-    for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
-                                                 bucket_fields=['versioning'])
-      for blr in bucket_iter:
-        some_matched = True
-        if blr.root_object.versioning and blr.root_object.versioning.enabled:
-          print('%s: Enabled' % blr.url_string.rstrip('/'))
+        # Iterate over URLs, expanding wildcards and set the versioning
+        # configuration on each.
+        some_matched = False
+        for url_str in url_args:
+            bucket_iter = self.GetBucketUrlIterFromArg(url_str, bucket_fields=["id"])
+            for blr in bucket_iter:
+                url = blr.storage_url
+                some_matched = True
+                bucket_metadata = apitools_messages.Bucket(
+                    versioning=apitools_messages.Bucket.VersioningValue()
+                )
+                if versioning_arg == "on":
+                    self.logger.info("Enabling versioning for %s...", url)
+                    bucket_metadata.versioning.enabled = True
+                else:
+                    self.logger.info("Suspending versioning for %s...", url)
+                    bucket_metadata.versioning.enabled = False
+                self.gsutil_api.PatchBucket(
+                    url.bucket_name, bucket_metadata, provider=url.scheme, fields=["id"]
+                )
+        if not some_matched:
+            raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
+
+    def _GetVersioning(self):
+        """Gets versioning configuration for one or more buckets."""
+        url_args = self.args
+
+        # Iterate over URLs, expanding wildcards and getting the versioning
+        # configuration on each.
+        some_matched = False
+        for url_str in url_args:
+            bucket_iter = self.GetBucketUrlIterFromArg(
+                url_str, bucket_fields=["versioning"]
+            )
+            for blr in bucket_iter:
+                some_matched = True
+                if blr.root_object.versioning and blr.root_object.versioning.enabled:
+                    print("%s: Enabled" % blr.url_string.rstrip("/"))
+                else:
+                    print("%s: Suspended" % blr.url_string.rstrip("/"))
+        if not some_matched:
+            raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
+
+    def RunCommand(self):
+        """Command entry point for the versioning command."""
+        action_subcommand = self.args.pop(0)
+        if action_subcommand == "get":
+            func = self._GetVersioning
+            metrics.LogCommandParams(subcommands=[action_subcommand])
+        elif action_subcommand == "set":
+            func = self._SetVersioning
+            versioning_arg = self.args[0].lower()
+            if versioning_arg in ("on", "off"):
+                metrics.LogCommandParams(
+                    subcommands=[action_subcommand, versioning_arg]
+                )
         else:
-          print('%s: Suspended' % blr.url_string.rstrip('/'))
-    if not some_matched:
-      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
-
-  def RunCommand(self):
-    """Command entry point for the versioning command."""
-    action_subcommand = self.args.pop(0)
-    if action_subcommand == 'get':
-      func = self._GetVersioning
-      metrics.LogCommandParams(subcommands=[action_subcommand])
-    elif action_subcommand == 'set':
-      func = self._SetVersioning
-      versioning_arg = self.args[0].lower()
-      if versioning_arg in ('on', 'off'):
-        metrics.LogCommandParams(
-            subcommands=[action_subcommand, versioning_arg])
-    else:
-      raise CommandException((
-          'Invalid subcommand "%s" for the %s command.\n'
-          'See "gsutil help %s".') % (
-              action_subcommand, self.command_name, self.command_name))
-    func()
-    return 0
+            raise CommandException(
+                (
+                    'Invalid subcommand "%s" for the %s command.\n'
+                    'See "gsutil help %s".'
+                )
+                % (action_subcommand, self.command_name, self.command_name)
+            )
+        func()
+        return 0

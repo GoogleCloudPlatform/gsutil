@@ -23,25 +23,25 @@ import boto
 
 from gslib.cloud_api import ProjectIdException
 
-GOOG_PROJ_ID_HDR = 'x-goog-project-id'
+GOOG_PROJ_ID_HDR = "x-goog-project-id"
 UNIT_TEST_PROJECT_ID = None  # Set to a string value when running unit tests.
 
 
 def PopulateProjectId(project_id=None):
-  """Returns the project_id from the boto config file if one is not provided."""
-  # Provided project_id takes highest precedence.
-  if project_id:
-    return project_id
+    """Returns the project_id from the boto config file if one is not provided."""
+    # Provided project_id takes highest precedence.
+    if project_id:
+        return project_id
 
-  # If present, return the default project id supplied in the boto config file.
-  default_id = boto.config.get_value('GSUtil', 'default_project_id')
-  if default_id:
-    return default_id
+    # If present, return the default project id supplied in the boto config file.
+    default_id = boto.config.get_value("GSUtil", "default_project_id")
+    if default_id:
+        return default_id
 
-  # Unit tests shouldn't interact with projects, but some functionality
-  # depends on this method to return a project id. If the default project id
-  # value has been set by the unit test setup, return that id.
-  if UNIT_TEST_PROJECT_ID:
-    return UNIT_TEST_PROJECT_ID
+    # Unit tests shouldn't interact with projects, but some functionality
+    # depends on this method to return a project id. If the default project id
+    # value has been set by the unit test setup, return that id.
+    if UNIT_TEST_PROJECT_ID:
+        return UNIT_TEST_PROJECT_ID
 
-  raise ProjectIdException('MissingProjectId')
+    raise ProjectIdException("MissingProjectId")

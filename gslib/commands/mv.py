@@ -27,16 +27,18 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils.constants import NO_MAX
 
-
 _SYNOPSIS = """
   gsutil mv [-p] src_url dst_url
   gsutil mv [-p] src_url... dst_url
   gsutil mv [-p] -I dst_url
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -93,70 +95,75 @@ _DETAILED_HELP_TEXT = ("""
   gsutil mv command). Please see the OPTIONS sections of "gsutil help cp"
   for more information.
 
-""")
+"""
+)
 
 
 class MvCommand(Command):
-  """Implementation of gsutil mv command.
+    """Implementation of gsutil mv command.
 
-     Note that there is no atomic rename operation - this command is simply
-     a shorthand for 'cp' followed by 'rm'.
-  """
+       Note that there is no atomic rename operation - this command is simply
+       a shorthand for 'cp' followed by 'rm'.
+    """
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'mv',
-      command_name_aliases=['move', 'ren', 'rename'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=1,
-      max_args=NO_MAX,
-      # Flags for mv are passed through to cp.
-      supported_sub_args=CP_SUB_ARGS,
-      file_url_ok=True,
-      provider_url_ok=False,
-      urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-      ]
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='mv',
-      help_name_aliases=['move', 'rename'],
-      help_type='command_help',
-      help_one_line_summary='Move/rename objects and/or subdirectories',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "mv",
+        command_name_aliases=["move", "ren", "rename"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=1,
+        max_args=NO_MAX,
+        # Flags for mv are passed through to cp.
+        supported_sub_args=CP_SUB_ARGS,
+        file_url_ok=True,
+        provider_url_ok=False,
+        urls_start_arg=0,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="mv",
+        help_name_aliases=["move", "rename"],
+        help_type="command_help",
+        help_one_line_summary="Move/rename objects and/or subdirectories",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def RunCommand(self):
-    """Command entry point for the mv command."""
-    # Check each source arg up, refusing to delete a bucket src URL (force users
-    # to explicitly do that as a separate operation).
-    for arg_to_check in self.args[0:-1]:
-      url = StorageUrlFromString(arg_to_check)
-      if url.IsCloudUrl() and (url.IsBucket() or url.IsProvider()):
-        raise CommandException('You cannot move a source bucket using the mv '
-                               'command. If you meant to move\nall objects in '
-                               'the bucket, you can use a command like:\n'
-                               '\tgsutil mv %s/* %s' %
-                               (arg_to_check, self.args[-1]))
+    def RunCommand(self):
+        """Command entry point for the mv command."""
+        # Check each source arg up, refusing to delete a bucket src URL (force users
+        # to explicitly do that as a separate operation).
+        for arg_to_check in self.args[0:-1]:
+            url = StorageUrlFromString(arg_to_check)
+            if url.IsCloudUrl() and (url.IsBucket() or url.IsProvider()):
+                raise CommandException(
+                    "You cannot move a source bucket using the mv "
+                    "command. If you meant to move\nall objects in "
+                    "the bucket, you can use a command like:\n"
+                    "\tgsutil mv %s/* %s" % (arg_to_check, self.args[-1])
+                )
 
-    # Insert command-line opts in front of args so they'll be picked up by cp
-    # and rm commands (e.g., for -p option). Use undocumented (internal
-    # use-only) cp -M option, which causes each original object to be deleted
-    # after successfully copying to its destination, and also causes naming
-    # behavior consistent with Unix mv naming behavior (see comments in
-    # ConstructDstUrl).
-    unparsed_args = ['-M']
-    if self.recursion_requested:
-      unparsed_args.append('-R')
-    unparsed_args.extend(self.unparsed_args)
-    self.command_runner.RunNamedCommand(
-        'cp', args=unparsed_args, headers=self.headers, debug=self.debug,
-        trace_token=self.trace_token, user_project=self.user_project,
-        parallel_operations=self.parallel_operations)
+        # Insert command-line opts in front of args so they'll be picked up by cp
+        # and rm commands (e.g., for -p option). Use undocumented (internal
+        # use-only) cp -M option, which causes each original object to be deleted
+        # after successfully copying to its destination, and also causes naming
+        # behavior consistent with Unix mv naming behavior (see comments in
+        # ConstructDstUrl).
+        unparsed_args = ["-M"]
+        if self.recursion_requested:
+            unparsed_args.append("-R")
+        unparsed_args.extend(self.unparsed_args)
+        self.command_runner.RunNamedCommand(
+            "cp",
+            args=unparsed_args,
+            headers=self.headers,
+            debug=self.debug,
+            trace_token=self.trace_token,
+            user_project=self.user_project,
+            parallel_operations=self.parallel_operations,
+        )
 
-    return 0
+        return 0

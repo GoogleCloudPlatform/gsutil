@@ -40,9 +40,12 @@ _SYNOPSIS = """
   gsutil compose gs://bucket/obj1 [gs://bucket/obj2 ...] gs://bucket/composite
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -81,105 +84,122 @@ _DETAILED_HELP_TEXT = ("""
   you can compose per second. This rate counts both the components being
   appended to a composite object as well as the components being copied when
   the composite object of which they are a part is copied.
-""" % (MAX_COMPOSE_ARITY, MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1,
-       MAX_COMPONENT_RATE))
+"""
+    % (
+        MAX_COMPOSE_ARITY,
+        MAX_COMPONENT_COUNT,
+        MAX_COMPONENT_COUNT - 1,
+        MAX_COMPONENT_RATE,
+    )
+)
 
 
 class ComposeCommand(Command):
-  """Implementation of gsutil compose command."""
+    """Implementation of gsutil compose command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'compose',
-      command_name_aliases=['concat'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=1,
-      max_args=MAX_COMPOSE_ARITY + 1,
-      supported_sub_args='',
-      # Not files, just object names without gs:// prefix.
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='compose',
-      help_name_aliases=['concat'],
-      help_type='command_help',
-      help_one_line_summary=(
-          'Concatenate a sequence of objects into a new composite object.'),
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "compose",
+        command_name_aliases=["concat"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=1,
+        max_args=MAX_COMPOSE_ARITY + 1,
+        supported_sub_args="",
+        # Not files, just object names without gs:// prefix.
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=1,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()],
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="compose",
+        help_name_aliases=["concat"],
+        help_type="command_help",
+        help_one_line_summary=(
+            "Concatenate a sequence of objects into a new composite object."
+        ),
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def CheckProvider(self, url):
-    if url.scheme != 'gs':
-      raise CommandException(
-          '"compose" called on URL with unsupported provider (%s).' % str(url))
+    def CheckProvider(self, url):
+        if url.scheme != "gs":
+            raise CommandException(
+                '"compose" called on URL with unsupported provider (%s).' % str(url)
+            )
 
-  # Command entry point.
-  def RunCommand(self):
-    """Command entry point for the compose command."""
-    target_url_str = self.args[-1]
-    self.args = self.args[:-1]
-    target_url = StorageUrlFromString(target_url_str)
-    self.CheckProvider(target_url)
-    if target_url.HasGeneration():
-      raise CommandException('A version-specific URL (%s) cannot be '
-                             'the destination for gsutil compose - abort.'
-                             % target_url)
+    # Command entry point.
+    def RunCommand(self):
+        """Command entry point for the compose command."""
+        target_url_str = self.args[-1]
+        self.args = self.args[:-1]
+        target_url = StorageUrlFromString(target_url_str)
+        self.CheckProvider(target_url)
+        if target_url.HasGeneration():
+            raise CommandException(
+                "A version-specific URL (%s) cannot be "
+                "the destination for gsutil compose - abort." % target_url
+            )
 
-    dst_obj_metadata = apitools_messages.Object(name=target_url.object_name,
-                                                bucket=target_url.bucket_name)
+        dst_obj_metadata = apitools_messages.Object(
+            name=target_url.object_name, bucket=target_url.bucket_name
+        )
 
-    components = []
-    # Remember the first source object so we can get its content type.
-    first_src_url = None
-    for src_url_str in self.args:
-      if ContainsWildcard(src_url_str):
-        src_url_iter = self.WildcardIterator(src_url_str).IterObjects()
-      else:
-        src_url_iter = [BucketListingObject(StorageUrlFromString(src_url_str))]
-      for blr in src_url_iter:
-        src_url = blr.storage_url
-        self.CheckProvider(src_url)
+        components = []
+        # Remember the first source object so we can get its content type.
+        first_src_url = None
+        for src_url_str in self.args:
+            if ContainsWildcard(src_url_str):
+                src_url_iter = self.WildcardIterator(src_url_str).IterObjects()
+            else:
+                src_url_iter = [BucketListingObject(StorageUrlFromString(src_url_str))]
+            for blr in src_url_iter:
+                src_url = blr.storage_url
+                self.CheckProvider(src_url)
 
-        if src_url.bucket_name != target_url.bucket_name:
-          raise CommandException(
-              'GCS does not support inter-bucket composing.')
+                if src_url.bucket_name != target_url.bucket_name:
+                    raise CommandException(
+                        "GCS does not support inter-bucket composing."
+                    )
 
-        if not first_src_url:
-          first_src_url = src_url
-        src_obj_metadata = (
-            apitools_messages.ComposeRequest.SourceObjectsValueListEntry(
-                name=src_url.object_name))
-        if src_url.HasGeneration():
-          src_obj_metadata.generation = src_url.generation
-        components.append(src_obj_metadata)
-        # Avoid expanding too many components, and sanity check each name
-        # expansion result.
-        if len(components) > MAX_COMPOSE_ARITY:
-          raise CommandException('"compose" called with too many component '
-                                 'objects. Limit is %d.' % MAX_COMPOSE_ARITY)
+                if not first_src_url:
+                    first_src_url = src_url
+                src_obj_metadata = apitools_messages.ComposeRequest.SourceObjectsValueListEntry(
+                    name=src_url.object_name
+                )
+                if src_url.HasGeneration():
+                    src_obj_metadata.generation = src_url.generation
+                components.append(src_obj_metadata)
+                # Avoid expanding too many components, and sanity check each name
+                # expansion result.
+                if len(components) > MAX_COMPOSE_ARITY:
+                    raise CommandException(
+                        '"compose" called with too many component '
+                        "objects. Limit is %d." % MAX_COMPOSE_ARITY
+                    )
 
-    if not components:
-      raise CommandException('"compose" requires at least 1 component object.')
+        if not components:
+            raise CommandException('"compose" requires at least 1 component object.')
 
-    dst_obj_metadata.contentType = self.gsutil_api.GetObjectMetadata(
-        first_src_url.bucket_name, first_src_url.object_name,
-        provider=first_src_url.scheme, fields=['contentType']).contentType
+        dst_obj_metadata.contentType = self.gsutil_api.GetObjectMetadata(
+            first_src_url.bucket_name,
+            first_src_url.object_name,
+            provider=first_src_url.scheme,
+            fields=["contentType"],
+        ).contentType
 
-    preconditions = PreconditionsFromHeaders(self.headers or {})
+        preconditions = PreconditionsFromHeaders(self.headers or {})
 
-    self.logger.info(
-        'Composing %s from %d component object(s).',
-        target_url, len(components))
-    self.gsutil_api.ComposeObject(
-        components, dst_obj_metadata, preconditions=preconditions,
-        provider=target_url.scheme,
-        encryption_tuple=GetEncryptionKeyWrapper(config))
+        self.logger.info(
+            "Composing %s from %d component object(s).", target_url, len(components)
+        )
+        self.gsutil_api.ComposeObject(
+            components,
+            dst_obj_metadata,
+            preconditions=preconditions,
+            provider=target_url.scheme,
+            encryption_tuple=GetEncryptionKeyWrapper(config),
+        )

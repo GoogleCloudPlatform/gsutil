@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   Versioning-enabled buckets maintain an archive of objects, providing a way to
   un-delete data that you accidentally deleted, or to retrieve older versions of
@@ -282,18 +282,18 @@ _DETAILED_HELP_TEXT = ("""
 <B>FOR MORE INFORMATION</B>
   For more details on how to use versioning and preconditions, see
   https://cloud.google.com/storage/docs/object-versioning
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about object versioning."""
+    """Additional help about object versioning."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='versions',
-      help_name_aliases=['concurrency', 'concurrency control'],
-      help_type='additional_help',
-      help_one_line_summary='Object Versioning and Concurrency Control',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="versions",
+        help_name_aliases=["concurrency", "concurrency control"],
+        help_type="additional_help",
+        help_one_line_summary="Object Versioning and Concurrency Control",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

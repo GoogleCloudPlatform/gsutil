@@ -32,188 +32,312 @@ from gslib.tests.util import unittest
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 
-
 if six.PY3:
-  long = int
+    long = int
 
 
 class TestSetMeta(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for setmeta command."""
+    """Integration tests for setmeta command."""
 
-  def test_initial_metadata(self):
-    """Tests copying file to an object with metadata."""
-    objuri = suri(self.CreateObject(contents=b'foo'))
-    inpath = self.CreateTempFile()
-    ct = 'image/gif'
-    self.RunGsUtil(['-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-                    '-h', 'Content-Type:%s' % ct, 'cp', inpath, objuri])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
-      self.assertRegex(stdout, r'xyz:\s+abc')
-    _Check1()
+    def test_initial_metadata(self):
+        """Tests copying file to an object with metadata."""
+        objuri = suri(self.CreateObject(contents=b"foo"))
+        inpath = self.CreateTempFile()
+        ct = "image/gif"
+        self.RunGsUtil(
+            [
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:%s" % ct,
+                "cp",
+                inpath,
+                objuri,
+            ]
+        )
 
-  def test_overwrite_existing(self):
-    """Tests overwriting an object's metadata."""
-    objuri = suri(self.CreateObject(contents=b'foo'))
-    inpath = self.CreateTempFile()
-    self.RunGsUtil(['-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-                    '-h', 'Content-Type:image/gif', 'cp', inpath, objuri])
-    self.RunGsUtil(['setmeta', '-h', 'Content-Type:text/html', '-h',
-                    'x-%s-meta-xyz' % self.provider_custom_meta, objuri])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', objuri], return_stdout=True)
-      self.assertRegex(stdout, r'Content-Type:\s+text/html')
-      self.assertNotIn('xyz', stdout)
-    _Check1()
+        # Use @Retry as hedge against bucket listing eventual consistency.
+        @Retry(AssertionError, tries=3, timeout_secs=1)
+        def _Check1():
+            stdout = self.RunGsUtil(["ls", "-L", objuri], return_stdout=True)
+            self.assertRegex(stdout, r"Content-Type:\s+%s" % ct)
+            self.assertRegex(stdout, r"xyz:\s+abc")
 
-  @SkipForS3('Preconditions not supported for s3 objects')
-  def test_generation_precondition(self):
-    """Tests setting metadata with a generation precondition."""
-    object_uri = self.CreateObject(contents=b'foo')
-    generation = object_uri.generation
-    ct = 'image/gif'
-    stderr = self.RunGsUtil(
-        ['-h', 'x-goog-if-generation-match:%d' % (long(generation) + 1),
-         'setmeta', '-h', 'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-         '-h', 'Content-Type:%s' % ct, suri(object_uri)], expected_status=1,
-        return_stderr=True)
-    self.assertIn('Precondition', stderr)
+        _Check1()
 
-    self.RunGsUtil(
-        ['-h', 'x-goog-generation-match:%s' % generation, 'setmeta', '-h',
-         'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-         '-h', 'Content-Type:%s' % ct, suri(object_uri)])
-    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
-    self.assertRegex(stdout, r'xyz:\s+abc')
+    def test_overwrite_existing(self):
+        """Tests overwriting an object's metadata."""
+        objuri = suri(self.CreateObject(contents=b"foo"))
+        inpath = self.CreateTempFile()
+        self.RunGsUtil(
+            [
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:image/gif",
+                "cp",
+                inpath,
+                objuri,
+            ]
+        )
+        self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "Content-Type:text/html",
+                "-h",
+                "x-%s-meta-xyz" % self.provider_custom_meta,
+                objuri,
+            ]
+        )
 
-  @SkipForS3('Preconditions not supported for s3 objects')
-  def test_metageneration_precondition(self):
-    """Tests setting metadata with a metageneration precondition."""
-    object_uri = self.CreateObject(contents=b'foo')
-    ct = 'image/gif'
-    stderr = self.RunGsUtil(
-        ['-h', 'x-goog-if-metageneration-match:5', 'setmeta', '-h',
-         'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-         '-h', 'Content-Type:%s' % ct, suri(object_uri)], expected_status=1,
-        return_stderr=True)
-    self.assertIn('Precondition', stderr)
-    self.RunGsUtil(
-        ['-h', 'x-goog-metageneration-match:1', 'setmeta', '-h',
-         'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-         '-h', 'Content-Type:%s' % ct, suri(object_uri)])
-    stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'Content-Type:\s+%s' % ct)
-    self.assertRegex(stdout, r'xyz:\s+abc')
+        # Use @Retry as hedge against bucket listing eventual consistency.
+        @Retry(AssertionError, tries=3, timeout_secs=1)
+        def _Check1():
+            stdout = self.RunGsUtil(["ls", "-L", objuri], return_stdout=True)
+            self.assertRegex(stdout, r"Content-Type:\s+text/html")
+            self.assertNotIn("xyz", stdout)
 
-  def test_duplicate_header_removal(self):
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type',
-         'gs://foo/bar'], expected_status=1, return_stderr=True)
-    self.assertIn('Each header must appear at most once', stderr)
+        _Check1()
 
-  def test_duplicate_header(self):
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
-         'gs://foo/bar'], expected_status=1, return_stderr=True)
-    self.assertIn('Each header must appear at most once', stderr)
+    @SkipForS3("Preconditions not supported for s3 objects")
+    def test_generation_precondition(self):
+        """Tests setting metadata with a generation precondition."""
+        object_uri = self.CreateObject(contents=b"foo")
+        generation = object_uri.generation
+        ct = "image/gif"
+        stderr = self.RunGsUtil(
+            [
+                "-h",
+                "x-goog-if-generation-match:%d" % (long(generation) + 1),
+                "setmeta",
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:%s" % ct,
+                suri(object_uri),
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Precondition", stderr)
 
-  def test_setmeta_seek_ahead(self):
-    object_uri = self.CreateObject(contents=b'foo')
-    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
-                               ('GSUtil', 'task_estimation_force', 'True')]):
-      stderr = self.RunGsUtil(['-m', 'setmeta', '-h', 'content-type:footype',
-                               suri(object_uri)], return_stderr=True)
-      self.assertIn('Estimated work for this command: objects: 1\n', stderr)
+        self.RunGsUtil(
+            [
+                "-h",
+                "x-goog-generation-match:%s" % generation,
+                "setmeta",
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:%s" % ct,
+                suri(object_uri),
+            ]
+        )
+        stdout = self.RunGsUtil(["ls", "-L", suri(object_uri)], return_stdout=True)
+        self.assertRegex(stdout, r"Content-Type:\s+%s" % ct)
+        self.assertRegex(stdout, r"xyz:\s+abc")
 
-  def test_recursion_works(self):
-    bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
-    object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
-    self.RunGsUtil(['setmeta', '-R', '-h', 'content-type:footype',
-                    suri(bucket_uri)])
+    @SkipForS3("Preconditions not supported for s3 objects")
+    def test_metageneration_precondition(self):
+        """Tests setting metadata with a metageneration precondition."""
+        object_uri = self.CreateObject(contents=b"foo")
+        ct = "image/gif"
+        stderr = self.RunGsUtil(
+            [
+                "-h",
+                "x-goog-if-metageneration-match:5",
+                "setmeta",
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:%s" % ct,
+                suri(object_uri),
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Precondition", stderr)
+        self.RunGsUtil(
+            [
+                "-h",
+                "x-goog-metageneration-match:1",
+                "setmeta",
+                "-h",
+                "x-%s-meta-xyz:abc" % self.provider_custom_meta,
+                "-h",
+                "Content-Type:%s" % ct,
+                suri(object_uri),
+            ]
+        )
+        stdout = self.RunGsUtil(["ls", "-L", suri(object_uri)], return_stdout=True)
+        self.assertRegex(stdout, r"Content-Type:\s+%s" % ct)
+        self.assertRegex(stdout, r"xyz:\s+abc")
 
-    for obj_uri in [object1_uri, object2_uri]:
-      stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
-      self.assertIn('footype', stdout)
+    def test_duplicate_header_removal(self):
+        stderr = self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "Content-Type:text/html",
+                "-h",
+                "Content-Type",
+                "gs://foo/bar",
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Each header must appear at most once", stderr)
 
-  def test_metadata_parallelism(self):
-    """Ensure that custom metadata works in the multi-thread/process case."""
-    # If this test hangs, it can indicate a pickling error.
-    bucket_uri = self.CreateBucket(test_objects=2)
-    self.AssertNObjectsInBucket(bucket_uri, 2)
-    self.RunGsUtil(
-        ['setmeta', '-h', 'x-%s-meta-abc:123' % self.provider_custom_meta,
-         suri(bucket_uri, '**')])
+    def test_duplicate_header(self):
+        stderr = self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "Content-Type:text/html",
+                "-h",
+                "Content-Type:foobar",
+                "gs://foo/bar",
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Each header must appear at most once", stderr)
 
-  def test_invalid_non_ascii_custom_header(self):
-    unicode_header = 'x-%s-meta-soufflé:5' % self.provider_custom_meta
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', unicode_header,
-         '%s://foo/bar' % self.default_provider],
-        expected_status=1, return_stderr=True)
-    self.assertIn('Invalid non-ASCII header', stderr)
+    def test_setmeta_seek_ahead(self):
+        object_uri = self.CreateObject(contents=b"foo")
+        with SetBotoConfigForTest(
+            [
+                ("GSUtil", "task_estimation_threshold", "1"),
+                ("GSUtil", "task_estimation_force", "True"),
+            ]
+        ):
+            stderr = self.RunGsUtil(
+                ["-m", "setmeta", "-h", "content-type:footype", suri(object_uri)],
+                return_stderr=True,
+            )
+            self.assertIn("Estimated work for this command: objects: 1\n", stderr)
 
-  @SkipForS3('Only ASCII characters are supported for x-amz-meta headers')
-  def test_valid_non_ascii_custom_header(self):
-    """Tests setting custom metadata with a non-ASCII content."""
-    objuri = self.CreateObject(contents=b'foo')
-    unicode_header = 'x-%s-meta-dessert:soufflé' % self.provider_custom_meta
-    self.RunGsUtil(['setmeta', '-h', unicode_header, suri(objuri)])
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', suri(objuri)], return_stdout=True)
-      self.assertTrue(re.search('dessert:\\s+soufflé', stdout))
-    _Check1()
+    def test_recursion_works(self):
+        bucket_uri = self.CreateBucket()
+        object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b"foo")
+        object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b"foo")
+        self.RunGsUtil(
+            ["setmeta", "-R", "-h", "content-type:footype", suri(bucket_uri)]
+        )
 
-  @SkipForS3('XML header keys are case-insensitive')
-  def test_uppercase_header(self):
-    """Tests setting custom metadata with an uppercase value."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML header keys are case-insensitive.')
-    objuri = self.CreateObject(contents=b'foo')
-    self.RunGsUtil([
-        'setmeta', '-h', 'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
-        suri(objuri)])
-    stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
-    self.assertRegex(stdout, r'CaSe:\s+SeNsItIvE')
+        for obj_uri in [object1_uri, object2_uri]:
+            stdout = self.RunGsUtil(["stat", suri(obj_uri)], return_stdout=True)
+            self.assertIn("footype", stdout)
 
-  def test_disallowed_header(self):
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'Content-Length:5', 'gs://foo/bar'],
-        expected_status=1, return_stderr=True)
-    self.assertIn('Invalid or disallowed header', stderr)
+    def test_metadata_parallelism(self):
+        """Ensure that custom metadata works in the multi-thread/process case."""
+        # If this test hangs, it can indicate a pickling error.
+        bucket_uri = self.CreateBucket(test_objects=2)
+        self.AssertNObjectsInBucket(bucket_uri, 2)
+        self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "x-%s-meta-abc:123" % self.provider_custom_meta,
+                suri(bucket_uri, "**"),
+            ]
+        )
 
-  def test_setmeta_bucket(self):
-    bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'x-%s-meta-foo:5' % self.provider_custom_meta,
-         suri(bucket_uri)], expected_status=1, return_stderr=True)
-    self.assertIn('must name an object', stderr)
+    def test_invalid_non_ascii_custom_header(self):
+        unicode_header = "x-%s-meta-soufflé:5" % self.provider_custom_meta
+        stderr = self.RunGsUtil(
+            ["setmeta", "-h", unicode_header, "%s://foo/bar" % self.default_provider],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Invalid non-ASCII header", stderr)
 
-  def test_setmeta_valid_with_multiple_colons_in_value(self):
-    obj_uri = self.CreateObject(contents=b'foo')
-    self.RunGsUtil([
-        'setmeta', '-h', 'x-%s-meta-foo:bar:baz' % self.provider_custom_meta,
-        suri(obj_uri)])
-    stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'foo:\s+bar:baz')
+    @SkipForS3("Only ASCII characters are supported for x-amz-meta headers")
+    def test_valid_non_ascii_custom_header(self):
+        """Tests setting custom metadata with a non-ASCII content."""
+        objuri = self.CreateObject(contents=b"foo")
+        unicode_header = "x-%s-meta-dessert:soufflé" % self.provider_custom_meta
+        self.RunGsUtil(["setmeta", "-h", unicode_header, suri(objuri)])
 
-  def test_setmeta_with_canned_acl(self):
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', 'x-%s-acl:public-read' % self.provider_custom_meta,
-         'gs://foo/bar'], expected_status=1, return_stderr=True)
-    self.assertIn('gsutil setmeta no longer allows canned ACLs', stderr)
+        # Use @Retry as hedge against bucket listing eventual consistency.
+        @Retry(AssertionError, tries=3, timeout_secs=1)
+        def _Check1():
+            stdout = self.RunGsUtil(["ls", "-L", suri(objuri)], return_stdout=True)
+            self.assertTrue(re.search("dessert:\\s+soufflé", stdout))
 
-  def test_invalid_non_ascii_header_value(self):
-    unicode_header = 'Content-Type:dessert/soufflé'
-    stderr = self.RunGsUtil(
-        ['setmeta', '-h', unicode_header, 'gs://foo/bar'],
-        expected_status=1, return_stderr=True)
-    self.assertIn('Invalid non-ASCII value', stderr)
+        _Check1()
+
+    @SkipForS3("XML header keys are case-insensitive")
+    def test_uppercase_header(self):
+        """Tests setting custom metadata with an uppercase value."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("XML header keys are case-insensitive.")
+        objuri = self.CreateObject(contents=b"foo")
+        self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "x-%s-meta-CaSe:SeNsItIvE" % self.provider_custom_meta,
+                suri(objuri),
+            ]
+        )
+        stdout = self.RunGsUtil(["stat", suri(objuri)], return_stdout=True)
+        self.assertRegex(stdout, r"CaSe:\s+SeNsItIvE")
+
+    def test_disallowed_header(self):
+        stderr = self.RunGsUtil(
+            ["setmeta", "-h", "Content-Length:5", "gs://foo/bar"],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Invalid or disallowed header", stderr)
+
+    def test_setmeta_bucket(self):
+        bucket_uri = self.CreateBucket()
+        stderr = self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "x-%s-meta-foo:5" % self.provider_custom_meta,
+                suri(bucket_uri),
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("must name an object", stderr)
+
+    def test_setmeta_valid_with_multiple_colons_in_value(self):
+        obj_uri = self.CreateObject(contents=b"foo")
+        self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "x-%s-meta-foo:bar:baz" % self.provider_custom_meta,
+                suri(obj_uri),
+            ]
+        )
+        stdout = self.RunGsUtil(["stat", suri(obj_uri)], return_stdout=True)
+        self.assertRegex(stdout, r"foo:\s+bar:baz")
+
+    def test_setmeta_with_canned_acl(self):
+        stderr = self.RunGsUtil(
+            [
+                "setmeta",
+                "-h",
+                "x-%s-acl:public-read" % self.provider_custom_meta,
+                "gs://foo/bar",
+            ],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("gsutil setmeta no longer allows canned ACLs", stderr)
+
+    def test_invalid_non_ascii_header_value(self):
+        unicode_header = "Content-Type:dessert/soufflé"
+        stderr = self.RunGsUtil(
+            ["setmeta", "-h", unicode_header, "gs://foo/bar"],
+            expected_status=1,
+            return_stderr=True,
+        )
+        self.assertIn("Invalid non-ASCII value", stderr)

@@ -58,9 +58,12 @@ _SYNOPSIS = """
   gsutil [-D] config [-a] [-b] [-e] [-f] [-n] [-o <file>] [-r] [-s <scope>] [-w]
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -314,15 +317,17 @@ _DETAILED_HELP_TEXT = ("""
 
   -w          Request token with read-write access
               (devstorage.read_write scope).
-""")
-
+"""
+)
 
 try:
-  from gcs_oauth2_boto_plugin import oauth2_helper  # pylint: disable=g-import-not-at-top
+    from gcs_oauth2_boto_plugin import (
+        oauth2_helper,
+    )  # pylint: disable=g-import-not-at-top
 except ImportError:
-  pass
+    pass
 
-GOOG_CLOUD_CONSOLE_URI = 'https://cloud.google.com/console#/project'
+GOOG_CLOUD_CONSOLE_URI = "https://cloud.google.com/console#/project"
 
 CONFIG_PRELUDE_CONTENT = """
 # This file contains credentials and other configuration information needed
@@ -352,25 +357,25 @@ CONFIG_PRELUDE_CONTENT = """
 # operation, i.e. one process and 24 threads.
 should_prohibit_multiprocessing, unused_os = ShouldProhibitMultiprocessing()
 if should_prohibit_multiprocessing:
-  DEFAULT_PARALLEL_PROCESS_COUNT = 1
-  DEFAULT_PARALLEL_THREAD_COUNT = 24
+    DEFAULT_PARALLEL_PROCESS_COUNT = 1
+    DEFAULT_PARALLEL_THREAD_COUNT = 24
 else:
-  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
-  DEFAULT_PARALLEL_THREAD_COUNT = 5
+    DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
+    DEFAULT_PARALLEL_THREAD_COUNT = 5
 
 # TODO: Once compiled crcmod is being distributed by major Linux distributions
 # revert DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD value to '150M'.
-DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = '0'
-DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = '50M'
-DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD = '150M'
-DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE = '200M'
+DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD = "0"
+DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE = "50M"
+DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD = "150M"
+DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE = "200M"
 DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS = 4
 
 # Compressed transport encoded uploads buffer chunks of compressed data. When
 # running many uploads in parallel, compression may consume more memory than
 # available. This restricts the number of compressed transport encoded uploads
 # running in parallel such that they don't consume more memory than set here.
-DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = '2G'
+DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = "2G"
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
@@ -621,27 +626,31 @@ content_language = en
 # Disables the prompt asking for opt-in to data collection for analytics.
 #disable_analytics_prompt = True
 
-""" % {'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
-       'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
-       'hash_always': CHECK_HASH_ALWAYS,
-       'hash_never': CHECK_HASH_NEVER,
-       'resumable_threshold': constants.RESUMABLE_THRESHOLD_B,
-       'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
-       'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
-       'parallel_composite_upload_threshold': (
-           DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
-       'parallel_composite_upload_component_size': (
-           DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
-       'sliced_object_download_threshold': (
-           DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
-       'sliced_object_download_component_size': (
-           DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
-       'sliced_object_download_max_components': (
-           DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
-       'max_component_count': MAX_COMPONENT_COUNT,
-       'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
-       'max_upload_compression_buffer_size': (
-           DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE)}
+""" % {
+    "hash_fast_else_fail": CHECK_HASH_IF_FAST_ELSE_FAIL,
+    "hash_fast_else_skip": CHECK_HASH_IF_FAST_ELSE_SKIP,
+    "hash_always": CHECK_HASH_ALWAYS,
+    "hash_never": CHECK_HASH_NEVER,
+    "resumable_threshold": constants.RESUMABLE_THRESHOLD_B,
+    "parallel_process_count": DEFAULT_PARALLEL_PROCESS_COUNT,
+    "parallel_thread_count": DEFAULT_PARALLEL_THREAD_COUNT,
+    "parallel_composite_upload_threshold": (
+        DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
+    ),
+    "parallel_composite_upload_component_size": (
+        DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
+    ),
+    "sliced_object_download_threshold": (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
+    "sliced_object_download_component_size": (
+        DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE
+    ),
+    "sliced_object_download_max_components": (
+        DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
+    ),
+    "max_component_count": MAX_COMPONENT_COUNT,
+    "task_estimation_threshold": DEFAULT_TASK_ESTIMATION_THRESHOLD,
+    "max_upload_compression_buffer_size": (DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
+}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]
@@ -692,625 +701,747 @@ CONFIG_OAUTH2_CONFIG_CONTENT = """
 
 
 class ConfigCommand(Command):
-  """Implementation of gsutil config command."""
+    """Implementation of gsutil config command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'config',
-      command_name_aliases=['cfg', 'conf', 'configure'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=0,
-      max_args=0,
-      supported_sub_args='abefhno:rs:w',
-      supported_private_args=['reauth'],
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=0,
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='config',
-      help_name_aliases=['cfg', 'conf', 'configure', 'aws', 's3'],
-      help_type='command_help',
-      help_one_line_summary=(
-          'Obtain credentials and create configuration file'),
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "config",
+        command_name_aliases=["cfg", "conf", "configure"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=0,
+        max_args=0,
+        supported_sub_args="abefhno:rs:w",
+        supported_private_args=["reauth"],
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=0,
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="config",
+        help_name_aliases=["cfg", "conf", "configure", "aws", "s3"],
+        help_type="command_help",
+        help_one_line_summary=("Obtain credentials and create configuration file"),
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def _OpenConfigFile(self, file_path):
-    """Creates and opens a configuration file for writing.
+    def _OpenConfigFile(self, file_path):
+        """Creates and opens a configuration file for writing.
 
-    The file is created with mode 0600, and attempts to open existing files will
-    fail (the latter is important to prevent symlink attacks).
+        The file is created with mode 0600, and attempts to open existing files will
+        fail (the latter is important to prevent symlink attacks).
 
-    It is the caller's responsibility to close the file.
+        It is the caller's responsibility to close the file.
 
-    Args:
-      file_path: Path of the file to be created.
+        Args:
+          file_path: Path of the file to be created.
 
-    Returns:
-      A writable file object for the opened file.
+        Returns:
+          A writable file object for the opened file.
 
-    Raises:
-      CommandException: if an error occurred when opening the file (including
-          when the file already exists).
-    """
-    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
-    # Accommodate Windows; copied from python2.6/tempfile.py.
-    if hasattr(os, 'O_NOINHERIT'):
-      flags |= os.O_NOINHERIT
-    try:
-      fd = os.open(file_path, flags, 0o600)
-    except (OSError, IOError) as e:
-      raise CommandException('Failed to open %s for writing: %s' %
-                             (file_path, e))
-    return os.fdopen(fd, 'w')
-
-  def _CheckPrivateKeyFilePermissions(self, file_path):
-    """Checks that the file has reasonable permissions for a private key.
-
-    In particular, check that the filename provided by the user is not
-    world- or group-readable. If either of these are true, we issue a warning
-    and offer to fix the permissions.
-
-    Args:
-      file_path: The name of the private key file.
-    """
-    if system_util.IS_WINDOWS:
-      # For Windows, this check doesn't work (it actually just checks whether
-      # the file is read-only). Since Windows files have a complicated ACL
-      # system, this check doesn't make much sense on Windows anyway, so we
-      # just don't do it.
-      return
-
-    st = os.stat(file_path)
-    if bool((stat.S_IRGRP | stat.S_IROTH) & st.st_mode):
-      self.logger.warn(
-          '\nYour private key file is readable by people other than yourself.\n'
-          'This is a security risk, since anyone with this information can use '
-          'your service account.\n')
-      fix_it = input('Would you like gsutil to change the file '
-                         'permissions for you? (y/N) ')
-      if fix_it in ('y', 'Y'):
+        Raises:
+          CommandException: if an error occurred when opening the file (including
+              when the file already exists).
+        """
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
+        # Accommodate Windows; copied from python2.6/tempfile.py.
+        if hasattr(os, "O_NOINHERIT"):
+            flags |= os.O_NOINHERIT
         try:
-          os.chmod(file_path, 0o400)
-          self.logger.info(
-              '\nThe permissions on your file have been successfully '
-              'modified.'
-              '\nThe only access allowed is readability by the user '
-              '(permissions 0400 in chmod).')
-        except Exception as _:  # pylint: disable=broad-except
-          self.logger.warn(
-              '\nWe were unable to modify the permissions on your file.\n'
-              'If you would like to fix this yourself, consider running:\n'
-              '"sudo chmod 400 </path/to/key>" for improved security.')
-      else:
-        self.logger.info(
-            '\nYou have chosen to allow this file to be readable by others.\n'
-            'If you would like to fix this yourself, consider running:\n'
-            '"sudo chmod 400 </path/to/key>" for improved security.')
+            fd = os.open(file_path, flags, 0o600)
+        except (OSError, IOError) as e:
+            raise CommandException("Failed to open %s for writing: %s" % (file_path, e))
+        return os.fdopen(fd, "w")
 
-  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(self, varname, prompt,
-                                                       convert_to_bool=False):
-    """Prompts for one proxy config line, saves to boto.config if not empty.
+    def _CheckPrivateKeyFilePermissions(self, file_path):
+        """Checks that the file has reasonable permissions for a private key.
 
-    Args:
-      varname: The config variable name.
-      prompt: The prompt to output to the user.
-      convert_to_bool: Whether to convert "y/n" to True/False.
-    """
-    value = input(prompt)
-    if value:
-      if convert_to_bool:
-        if value == 'y' or value == 'Y':
-          value = 'True'
+        In particular, check that the filename provided by the user is not
+        world- or group-readable. If either of these are true, we issue a warning
+        and offer to fix the permissions.
+
+        Args:
+          file_path: The name of the private key file.
+        """
+        if system_util.IS_WINDOWS:
+            # For Windows, this check doesn't work (it actually just checks whether
+            # the file is read-only). Since Windows files have a complicated ACL
+            # system, this check doesn't make much sense on Windows anyway, so we
+            # just don't do it.
+            return
+
+        st = os.stat(file_path)
+        if bool((stat.S_IRGRP | stat.S_IROTH) & st.st_mode):
+            self.logger.warn(
+                "\nYour private key file is readable by people other than yourself.\n"
+                "This is a security risk, since anyone with this information can use "
+                "your service account.\n"
+            )
+            fix_it = input(
+                "Would you like gsutil to change the file "
+                "permissions for you? (y/N) "
+            )
+            if fix_it in ("y", "Y"):
+                try:
+                    os.chmod(file_path, 0o400)
+                    self.logger.info(
+                        "\nThe permissions on your file have been successfully "
+                        "modified."
+                        "\nThe only access allowed is readability by the user "
+                        "(permissions 0400 in chmod)."
+                    )
+                except Exception as _:  # pylint: disable=broad-except
+                    self.logger.warn(
+                        "\nWe were unable to modify the permissions on your file.\n"
+                        "If you would like to fix this yourself, consider running:\n"
+                        '"sudo chmod 400 </path/to/key>" for improved security.'
+                    )
+            else:
+                self.logger.info(
+                    "\nYou have chosen to allow this file to be readable by others.\n"
+                    "If you would like to fix this yourself, consider running:\n"
+                    '"sudo chmod 400 </path/to/key>" for improved security.'
+                )
+
+    def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        self, varname, prompt, convert_to_bool=False
+    ):
+        """Prompts for one proxy config line, saves to boto.config if not empty.
+
+        Args:
+          varname: The config variable name.
+          prompt: The prompt to output to the user.
+          convert_to_bool: Whether to convert "y/n" to True/False.
+        """
+        value = input(prompt)
+        if value:
+            if convert_to_bool:
+                if value == "y" or value == "Y":
+                    value = "True"
+                else:
+                    value = "False"
+            boto.config.set("Boto", varname, value)
+
+    def _PromptForProxyConfig(self):
+        """Prompts for proxy config data, loads non-empty values into boto.config.
+        """
+        self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+            "proxy", "What is your proxy host? "
+        )
+        self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+            "proxy_port", "What is your proxy port? "
+        )
+        self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+            "proxy_user", "What is your proxy user (leave blank if not used)? "
+        )
+        self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+            "proxy_pass", "What is your proxy pass (leave blank if not used)? "
+        )
+        self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+            "proxy_rdns",
+            "Should DNS lookups be resolved by your proxy? (Y if your site "
+            "disallows client DNS lookups)? ",
+            convert_to_bool=True,
+        )
+
+    def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
+        """Writes proxy name/value pair or comment line to config file.
+
+        Writes proxy name/value pair if value is not None.  Otherwise writes
+        comment line.
+
+        Args:
+          config_file: File object to which the resulting config file will be
+              written.
+          name: The config variable name.
+          value: The value, or None.
+          desc: Human readable description (for comment).
+        """
+        if not value:
+            name = "#%s" % name
+            value = "<%s>" % desc
+        config_file.write("%s = %s\n" % (name, value))
+
+    def _WriteProxyConfigFileSection(self, config_file):
+        """Writes proxy section of configuration file.
+
+        Args:
+          config_file: File object to which the resulting config file will be
+              written.
+        """
+        config = boto.config
+        config_file.write(
+            "# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n"
+            "# If you need a user/password with this proxy, edit and uncomment\n"
+            "# those lines as well. If your organization also disallows DNS\n"
+            "# lookups by client machines, set proxy_rdns to True (the default).\n"
+            "# If you have installed gsutil through the Cloud SDK and have \n"
+            "# configured proxy settings in gcloud, those proxy settings will \n"
+            "# override any other options (including those set here, along with \n"
+            "# any settings in proxy-related environment variables). Otherwise, \n"
+            "# if proxy_host and proxy_port are not specified in this file and\n"
+            "# one of the OS environment variables http_proxy, https_proxy, or\n"
+            "# HTTPS_PROXY is defined, gsutil will use the proxy server specified\n"
+            "# in these environment variables, in order of precedence according\n"
+            "# to how they are listed above.\n"
+        )
+        self._WriteConfigLineMaybeCommented(
+            config_file, "proxy", config.get_value("Boto", "proxy", None), "proxy host"
+        )
+        self._WriteConfigLineMaybeCommented(
+            config_file,
+            "proxy_port",
+            config.get_value("Boto", "proxy_port", None),
+            "proxy port",
+        )
+        self._WriteConfigLineMaybeCommented(
+            config_file,
+            "proxy_user",
+            config.get_value("Boto", "proxy_user", None),
+            "proxy user",
+        )
+        self._WriteConfigLineMaybeCommented(
+            config_file,
+            "proxy_pass",
+            config.get_value("Boto", "proxy_pass", None),
+            "proxy password",
+        )
+        self._WriteConfigLineMaybeCommented(
+            config_file,
+            "proxy_rdns",
+            config.get_value("Boto", "proxy_rdns", False),
+            "let proxy server perform DNS lookups",
+        )
+
+    # pylint: disable=dangerous-default-value,too-many-statements
+    def _WriteBotoConfigFile(
+        self,
+        config_file,
+        launch_browser=True,
+        oauth2_scopes=[constants.Scopes.CLOUD_PLATFORM],
+        cred_type=CredTypes.OAUTH2_USER_ACCOUNT,
+        configure_auth=True,
+    ):
+        """Creates a boto config file interactively.
+
+        Needed credentials are obtained interactively, either by asking the user for
+        access key and secret, or by walking the user through the OAuth2 approval
+        flow.
+
+        Args:
+          config_file: File object to which the resulting config file will be
+              written.
+          launch_browser: In the OAuth2 approval flow, attempt to open a browser
+              window and navigate to the approval URL.
+          oauth2_scopes: A list of OAuth2 scopes to request authorization for, when
+              using OAuth2.
+          cred_type: There are three options:
+            - for HMAC, ask the user for access key and secret
+            - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow
+              and produce a config with an oauth2_refresh_token credential.
+            - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for service
+              account email address and private key file (and if the file is a .p12
+              file, the password for that file).
+          configure_auth: Boolean, whether or not to configure authentication in
+              the generated file.
+        """
+        # Collect credentials
+        provider_map = {"aws": "aws", "google": "gs"}
+        uri_map = {"aws": "s3", "google": "gs"}
+        key_ids = {}
+        sec_keys = {}
+        service_account_key_is_json = False
+        if configure_auth:
+            if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
+                gs_service_key_file = input(
+                    "What is the full path to your private " "key file? "
+                )
+                # JSON files have the email address built-in and don't require a
+                # password.
+                try:
+                    with open(gs_service_key_file, "rb") as key_file_fp:
+                        json.loads(key_file_fp.read())
+                    service_account_key_is_json = True
+                except ValueError:
+                    if not HAS_CRYPTO:
+                        raise CommandException(
+                            "Service account authentication via a .p12 file requires "
+                            "either\nPyOpenSSL or PyCrypto 2.6 or later. Please install "
+                            "either of these\nto proceed, use a JSON-format key file, or "
+                            "configure a different type of credentials."
+                        )
+
+                if not service_account_key_is_json:
+                    gs_service_client_id = input(
+                        "What is your service account email " "address? "
+                    )
+                    gs_service_key_file_password = input(
+                        "\n".join(
+                            textwrap.wrap(
+                                "What is the password for your service key file [if you "
+                                "haven't set one explicitly, leave this line blank]?"
+                            )
+                        )
+                        + " "
+                    )
+                self._CheckPrivateKeyFilePermissions(gs_service_key_file)
+            elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
+                oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(
+                    boto.config, cred_type
+                )
+                try:
+                    oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
+                        oauth2_client, oauth2_scopes, launch_browser
+                    )
+                except (ResponseNotReady, ServerNotFoundError, socket.error):
+                    # TODO: Determine condition to check for in the ResponseNotReady
+                    # exception so we only run proxy config flow if failure was caused by
+                    # request being blocked because it wasn't sent through proxy. (This
+                    # error could also happen if gsutil or the oauth2 client had a bug
+                    # that attempted to incorrectly reuse an HTTP connection, for
+                    # example.)
+                    sys.stdout.write(
+                        "\n".join(
+                            textwrap.wrap(
+                                "Unable to connect to accounts.google.com during OAuth2 flow. "
+                                "This can happen if your site uses a proxy. If you are using "
+                                "gsutil through a proxy, please enter the proxy's information; "
+                                "otherwise leave the following fields blank."
+                            )
+                        )
+                        + "\n"
+                    )
+                    self._PromptForProxyConfig()
+                    oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(
+                        boto.config, cred_type
+                    )
+                    oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
+                        oauth2_client, oauth2_scopes, launch_browser
+                    )
+            elif cred_type == CredTypes.HMAC:
+                got_creds = False
+                for provider in provider_map:
+                    if provider == "google":
+                        key_ids[provider] = input(
+                            "What is your %s access key ID? " % provider
+                        )
+                        sec_keys[provider] = input(
+                            "What is your %s secret access " "key? " % provider
+                        )
+                        got_creds = True
+                        if not key_ids[provider] or not sec_keys[provider]:
+                            raise CommandException(
+                                "Incomplete credentials provided. Please try again."
+                            )
+                if not got_creds:
+                    raise CommandException("No credentials provided. Please try again.")
+
+        # Write the config file prelude.
+        config_file.write(CONFIG_PRELUDE_CONTENT.lstrip())
+        config_file.write(
+            "# This file was created by gsutil version %s at %s.\n"
+            % (gslib.VERSION, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        config_file.write(
+            "#\n# You can create additional configuration files by "
+            "running\n# gsutil config [options] [-o <config-file>]\n\n\n"
+        )
+
+        # Write the config file Credentials section.
+        config_file.write("[Credentials]\n\n")
+        if configure_auth:
+            if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
+                config_file.write(
+                    "# Google OAuth2 service account credentials "
+                    '(for "gs://" URIs):\n'
+                )
+                config_file.write("gs_service_key_file = %s\n" % gs_service_key_file)
+                if not service_account_key_is_json:
+                    config_file.write(
+                        "gs_service_client_id = %s\n" % gs_service_client_id
+                    )
+
+                    if not gs_service_key_file_password:
+                        config_file.write(
+                            "# If you would like to set your password, you can do so\n"
+                            "# using the following commands (replaced with your\n"
+                            "# information):\n"
+                            '# "openssl pkcs12 -in cert1.p12 -out temp_cert.pem"\n'
+                            '# "openssl pkcs12 -export -in temp_cert.pem -out cert2.p12"\n'
+                            '# "rm -f temp_cert.pem"\n'
+                            '# Your initial password is "notasecret" - for more\n'
+                            "# information, please see \n"
+                            "# http://www.openssl.org/docs/apps/pkcs12.html.\n"
+                        )
+                        config_file.write("#gs_service_key_file_password =\n\n")
+                    else:
+                        config_file.write(
+                            "gs_service_key_file_password = %s\n\n"
+                            % gs_service_key_file_password
+                        )
+            elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
+                config_file.write(
+                    '# Google OAuth2 credentials (for "gs://" URIs):\n'
+                    "# The following OAuth2 account is authorized for scope(s):\n"
+                )
+                for scope in oauth2_scopes:
+                    config_file.write("#     %s\n" % scope)
+                config_file.write(
+                    "gs_oauth2_refresh_token = %s\n\n" % oauth2_refresh_token
+                )
+            else:
+                config_file.write(
+                    '# To add Google OAuth2 credentials ("gs://" URIs), '
+                    "edit and uncomment the\n# following line:\n"
+                    "#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n"
+                )
         else:
-          value = 'False'
-      boto.config.set('Boto', varname, value)
+            if system_util.InvokedViaCloudSdk():
+                config_file.write(
+                    "# Google OAuth2 credentials are managed by the Cloud SDK and\n"
+                    "# do not need to be present in this file.\n"
+                )
 
-  def _PromptForProxyConfig(self):
-    """Prompts for proxy config data, loads non-empty values into boto.config.
-    """
-    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy', 'What is your proxy host? ')
-    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_port', 'What is your proxy port? ')
-    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_user', 'What is your proxy user (leave blank if not used)? ')
-    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_pass', 'What is your proxy pass (leave blank if not used)? ')
-    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_rdns',
-        'Should DNS lookups be resolved by your proxy? (Y if your site '
-        'disallows client DNS lookups)? ',
-        convert_to_bool=True)
-
-  def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
-    """Writes proxy name/value pair or comment line to config file.
-
-    Writes proxy name/value pair if value is not None.  Otherwise writes
-    comment line.
-
-    Args:
-      config_file: File object to which the resulting config file will be
-          written.
-      name: The config variable name.
-      value: The value, or None.
-      desc: Human readable description (for comment).
-    """
-    if not value:
-      name = '#%s' % name
-      value = '<%s>' % desc
-    config_file.write('%s = %s\n' % (name, value))
-
-  def _WriteProxyConfigFileSection(self, config_file):
-    """Writes proxy section of configuration file.
-
-    Args:
-      config_file: File object to which the resulting config file will be
-          written.
-    """
-    config = boto.config
-    config_file.write(
-        '# To use a proxy, edit and uncomment the proxy and proxy_port lines.\n'
-        '# If you need a user/password with this proxy, edit and uncomment\n'
-        '# those lines as well. If your organization also disallows DNS\n'
-        '# lookups by client machines, set proxy_rdns to True (the default).\n'
-        '# If you have installed gsutil through the Cloud SDK and have \n'
-        '# configured proxy settings in gcloud, those proxy settings will \n'
-        '# override any other options (including those set here, along with \n'
-        '# any settings in proxy-related environment variables). Otherwise, \n'
-        '# if proxy_host and proxy_port are not specified in this file and\n'
-        '# one of the OS environment variables http_proxy, https_proxy, or\n'
-        '# HTTPS_PROXY is defined, gsutil will use the proxy server specified\n'
-        '# in these environment variables, in order of precedence according\n'
-        '# to how they are listed above.\n')
-    self._WriteConfigLineMaybeCommented(
-        config_file, 'proxy', config.get_value('Boto', 'proxy', None),
-        'proxy host')
-    self._WriteConfigLineMaybeCommented(
-        config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
-        'proxy port')
-    self._WriteConfigLineMaybeCommented(
-        config_file, 'proxy_user', config.get_value('Boto', 'proxy_user', None),
-        'proxy user')
-    self._WriteConfigLineMaybeCommented(
-        config_file, 'proxy_pass', config.get_value('Boto', 'proxy_pass', None),
-        'proxy password')
-    self._WriteConfigLineMaybeCommented(
-        config_file, 'proxy_rdns',
-        config.get_value('Boto', 'proxy_rdns', False),
-        'let proxy server perform DNS lookups')
-
-  # pylint: disable=dangerous-default-value,too-many-statements
-  def _WriteBotoConfigFile(self, config_file, launch_browser=True,
-                           oauth2_scopes=[constants.Scopes.CLOUD_PLATFORM],
-                           cred_type=CredTypes.OAUTH2_USER_ACCOUNT,
-                           configure_auth=True):
-    """Creates a boto config file interactively.
-
-    Needed credentials are obtained interactively, either by asking the user for
-    access key and secret, or by walking the user through the OAuth2 approval
-    flow.
-
-    Args:
-      config_file: File object to which the resulting config file will be
-          written.
-      launch_browser: In the OAuth2 approval flow, attempt to open a browser
-          window and navigate to the approval URL.
-      oauth2_scopes: A list of OAuth2 scopes to request authorization for, when
-          using OAuth2.
-      cred_type: There are three options:
-        - for HMAC, ask the user for access key and secret
-        - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow
-          and produce a config with an oauth2_refresh_token credential.
-        - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for service
-          account email address and private key file (and if the file is a .p12
-          file, the password for that file).
-      configure_auth: Boolean, whether or not to configure authentication in
-          the generated file.
-    """
-    # Collect credentials
-    provider_map = {'aws': 'aws', 'google': 'gs'}
-    uri_map = {'aws': 's3', 'google': 'gs'}
-    key_ids = {}
-    sec_keys = {}
-    service_account_key_is_json = False
-    if configure_auth:
-      if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
-        gs_service_key_file = input('What is the full path to your private '
-                                        'key file? ')
-        # JSON files have the email address built-in and don't require a
-        # password.
-        try:
-          with open(gs_service_key_file, 'rb') as key_file_fp:
-            json.loads(key_file_fp.read())
-          service_account_key_is_json = True
-        except ValueError:
-          if not HAS_CRYPTO:
-            raise CommandException(
-                'Service account authentication via a .p12 file requires '
-                'either\nPyOpenSSL or PyCrypto 2.6 or later. Please install '
-                'either of these\nto proceed, use a JSON-format key file, or '
-                'configure a different type of credentials.')
-
-        if not service_account_key_is_json:
-          gs_service_client_id = input('What is your service account email '
-                                           'address? ')
-          gs_service_key_file_password = input(
-              '\n'.join(textwrap.wrap(
-                  'What is the password for your service key file [if you '
-                  'haven\'t set one explicitly, leave this line blank]?'))
-              + ' ')
-        self._CheckPrivateKeyFilePermissions(gs_service_key_file)
-      elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
-        oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
-                                                                 cred_type)
-        try:
-          oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
-              oauth2_client, oauth2_scopes, launch_browser)
-        except (ResponseNotReady, ServerNotFoundError, socket.error):
-          # TODO: Determine condition to check for in the ResponseNotReady
-          # exception so we only run proxy config flow if failure was caused by
-          # request being blocked because it wasn't sent through proxy. (This
-          # error could also happen if gsutil or the oauth2 client had a bug
-          # that attempted to incorrectly reuse an HTTP connection, for
-          # example.)
-          sys.stdout.write('\n'.join(textwrap.wrap(
-              "Unable to connect to accounts.google.com during OAuth2 flow. "
-              "This can happen if your site uses a proxy. If you are using "
-              "gsutil through a proxy, please enter the proxy's information; "
-              "otherwise leave the following fields blank.")) + '\n')
-          self._PromptForProxyConfig()
-          oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(boto.config,
-                                                                   cred_type)
-          oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
-              oauth2_client, oauth2_scopes, launch_browser)
-      elif cred_type == CredTypes.HMAC:
-        got_creds = False
         for provider in provider_map:
-          if provider == 'google':
-            key_ids[provider] = input('What is your %s access key ID? ' %
-                                          provider)
-            sec_keys[provider] = input('What is your %s secret access '
-                                           'key? ' % provider)
-            got_creds = True
-            if not key_ids[provider] or not sec_keys[provider]:
-              raise CommandException(
-                  'Incomplete credentials provided. Please try again.')
-        if not got_creds:
-          raise CommandException('No credentials provided. Please try again.')
-
-    # Write the config file prelude.
-    config_file.write(CONFIG_PRELUDE_CONTENT.lstrip())
-    config_file.write(
-        '# This file was created by gsutil version %s at %s.\n'
-        % (gslib.VERSION,
-           datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    config_file.write(
-        '#\n# You can create additional configuration files by '
-        'running\n# gsutil config [options] [-o <config-file>]\n\n\n')
-
-    # Write the config file Credentials section.
-    config_file.write('[Credentials]\n\n')
-    if configure_auth:
-      if cred_type == CredTypes.OAUTH2_SERVICE_ACCOUNT:
-        config_file.write('# Google OAuth2 service account credentials '
-                          '(for "gs://" URIs):\n')
-        config_file.write('gs_service_key_file = %s\n' % gs_service_key_file)
-        if not service_account_key_is_json:
-          config_file.write('gs_service_client_id = %s\n'
-                            % gs_service_client_id)
-
-          if not gs_service_key_file_password:
+            key_prefix = provider_map[provider]
+            uri_scheme = uri_map[provider]
+            if provider in key_ids and provider in sec_keys:
+                config_file.write(
+                    '# %s credentials ("%s://" URIs):\n' % (provider, uri_scheme)
+                )
+                config_file.write(
+                    "%s_access_key_id = %s\n" % (key_prefix, key_ids[provider])
+                )
+                config_file.write(
+                    "%s_secret_access_key = %s\n" % (key_prefix, sec_keys[provider])
+                )
+            else:
+                config_file.write(
+                    '# To add HMAC %s credentials for "%s://" URIs, edit and '
+                    "uncomment the\n# following two lines:\n"
+                    "#%s_access_key_id = <your %s access key ID>\n"
+                    "#%s_secret_access_key = <your %s secret access key>\n"
+                    % (provider, uri_scheme, key_prefix, provider, key_prefix, provider)
+                )
+            host_key = Provider.HostKeyMap[provider]
             config_file.write(
-                '# If you would like to set your password, you can do so\n'
-                '# using the following commands (replaced with your\n'
-                '# information):\n'
-                '# "openssl pkcs12 -in cert1.p12 -out temp_cert.pem"\n'
-                '# "openssl pkcs12 -export -in temp_cert.pem -out cert2.p12"\n'
-                '# "rm -f temp_cert.pem"\n'
-                '# Your initial password is "notasecret" - for more\n'
-                '# information, please see \n'
-                '# http://www.openssl.org/docs/apps/pkcs12.html.\n')
-            config_file.write('#gs_service_key_file_password =\n\n')
-          else:
-            config_file.write('gs_service_key_file_password = %s\n\n'
-                              % gs_service_key_file_password)
-      elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
-        config_file.write(
-            '# Google OAuth2 credentials (for "gs://" URIs):\n'
-            '# The following OAuth2 account is authorized for scope(s):\n')
-        for scope in oauth2_scopes:
-          config_file.write('#     %s\n' % scope)
-        config_file.write(
-            'gs_oauth2_refresh_token = %s\n\n' % oauth2_refresh_token)
-      else:
-        config_file.write(
-            '# To add Google OAuth2 credentials ("gs://" URIs), '
-            'edit and uncomment the\n# following line:\n'
-            '#gs_oauth2_refresh_token = <your OAuth2 refresh token>\n\n')
-    else:
-      if system_util.InvokedViaCloudSdk():
-        config_file.write(
-            '# Google OAuth2 credentials are managed by the Cloud SDK and\n'
-            '# do not need to be present in this file.\n')
+                "# The ability to specify an alternate storage host and port\n"
+                "# is primarily for cloud storage service developers.\n"
+                "# Setting a non-default gs_host only works if prefer_api=xml.\n"
+                "#%s_host = <alternate storage host address>\n"
+                "#%s_port = <alternate storage host port>\n" % (host_key, host_key)
+            )
+            if host_key == "gs":
+                config_file.write(
+                    "#%s_json_host = <alternate JSON API storage host address>\n"
+                    "#%s_json_port = <alternate JSON API storage host port>\n\n"
+                    % (host_key, host_key)
+                )
+            config_file.write("\n")
 
-    for provider in provider_map:
-      key_prefix = provider_map[provider]
-      uri_scheme = uri_map[provider]
-      if provider in key_ids and provider in sec_keys:
-        config_file.write('# %s credentials ("%s://" URIs):\n' %
-                          (provider, uri_scheme))
-        config_file.write('%s_access_key_id = %s\n' %
-                          (key_prefix, key_ids[provider]))
-        config_file.write('%s_secret_access_key = %s\n' %
-                          (key_prefix, sec_keys[provider]))
-      else:
+        # Write the config file Boto section.
+        config_file.write("%s\n" % CONFIG_BOTO_SECTION_CONTENT)
+        self._WriteProxyConfigFileSection(config_file)
+
+        # Write the Google Compute Engine section.
+        config_file.write(CONFIG_GOOGLECOMPUTE_SECTION_CONTENT)
+
+        # Write the config file GSUtil section that doesn't depend on user input.
+        config_file.write(CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT)
+
+        # Write the default API version.
         config_file.write(
-            '# To add HMAC %s credentials for "%s://" URIs, edit and '
-            'uncomment the\n# following two lines:\n'
-            '#%s_access_key_id = <your %s access key ID>\n'
-            '#%s_secret_access_key = <your %s secret access key>\n' %
-            (provider, uri_scheme, key_prefix, provider, key_prefix,
-             provider))
-      host_key = Provider.HostKeyMap[provider]
-      config_file.write(
-          '# The ability to specify an alternate storage host and port\n'
-          '# is primarily for cloud storage service developers.\n'
-          '# Setting a non-default gs_host only works if prefer_api=xml.\n'
-          '#%s_host = <alternate storage host address>\n'
-          '#%s_port = <alternate storage host port>\n'
-          % (host_key, host_key))
-      if host_key == 'gs':
-        config_file.write(
-            '#%s_json_host = <alternate JSON API storage host address>\n'
-            '#%s_json_port = <alternate JSON API storage host port>\n\n'
-            % (host_key, host_key))
-      config_file.write('\n')
-
-    # Write the config file Boto section.
-    config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
-    self._WriteProxyConfigFileSection(config_file)
-
-    # Write the Google Compute Engine section.
-    config_file.write(CONFIG_GOOGLECOMPUTE_SECTION_CONTENT)
-
-    # Write the config file GSUtil section that doesn't depend on user input.
-    config_file.write(CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT)
-
-    # Write the default API version.
-    config_file.write("""
+            """
 # 'default_api_version' specifies the default Google Cloud Storage XML API
 # version to use. If not set below gsutil defaults to API version 1.
-""")
-    api_version = 2
-    if cred_type == CredTypes.HMAC: api_version = 1
+"""
+        )
+        api_version = 2
+        if cred_type == CredTypes.HMAC:
+            api_version = 1
 
-    config_file.write('default_api_version = %d\n' % api_version)
+        config_file.write("default_api_version = %d\n" % api_version)
 
-    # Write the config file GSUtil section that includes the default
-    # project ID input from the user.
-    if not system_util.InvokedViaCloudSdk():
-      if launch_browser:
-        sys.stdout.write(
-            'Attempting to launch a browser to open the Google Cloud Console '
-            'at URL: %s\n\n'
-            '[Note: due to a Python bug, you may see a spurious error message '
-            '"object is not\ncallable [...] in [...] Popen.__del__" which can '
-            'be ignored.]\n\n' % GOOG_CLOUD_CONSOLE_URI)
-        sys.stdout.write(
-            'In your browser you should see the Cloud Console. Find the '
-            'project you will\nuse, and then copy the Project ID string from '
-            'the second '
-            'column. Older projects do\nnot have Project ID strings. For such '
-            'projects, click the project and then copy the\nProject Number '
-            'listed under that project.\n\n')
-        if not webbrowser.open(GOOG_CLOUD_CONSOLE_URI, new=1, autoraise=True):
-          sys.stdout.write(
-              'Launching browser appears to have failed; please navigate a '
-              'browser to the following URL:\n%s\n' % GOOG_CLOUD_CONSOLE_URI)
-        # Short delay; webbrowser.open on linux insists on printing out a
-        # message which we don't want to run into the prompt for the auth code.
-        time.sleep(2)
-      else:
-        sys.stdout.write(
-            '\nPlease navigate your browser to %s,\nthen find the project '
-            'you will use, and copy the Project ID string from the\nsecond '
-            'column. Older projects do not have Project ID strings. For such '
-            'projects,\n click the project and then copy the Project Number '
-            'listed under that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
+        # Write the config file GSUtil section that includes the default
+        # project ID input from the user.
+        if not system_util.InvokedViaCloudSdk():
+            if launch_browser:
+                sys.stdout.write(
+                    "Attempting to launch a browser to open the Google Cloud Console "
+                    "at URL: %s\n\n"
+                    "[Note: due to a Python bug, you may see a spurious error message "
+                    '"object is not\ncallable [...] in [...] Popen.__del__" which can '
+                    "be ignored.]\n\n" % GOOG_CLOUD_CONSOLE_URI
+                )
+                sys.stdout.write(
+                    "In your browser you should see the Cloud Console. Find the "
+                    "project you will\nuse, and then copy the Project ID string from "
+                    "the second "
+                    "column. Older projects do\nnot have Project ID strings. For such "
+                    "projects, click the project and then copy the\nProject Number "
+                    "listed under that project.\n\n"
+                )
+                if not webbrowser.open(GOOG_CLOUD_CONSOLE_URI, new=1, autoraise=True):
+                    sys.stdout.write(
+                        "Launching browser appears to have failed; please navigate a "
+                        "browser to the following URL:\n%s\n" % GOOG_CLOUD_CONSOLE_URI
+                    )
+                # Short delay; webbrowser.open on linux insists on printing out a
+                # message which we don't want to run into the prompt for the auth code.
+                time.sleep(2)
+            else:
+                sys.stdout.write(
+                    "\nPlease navigate your browser to %s,\nthen find the project "
+                    "you will use, and copy the Project ID string from the\nsecond "
+                    "column. Older projects do not have Project ID strings. For such "
+                    "projects,\n click the project and then copy the Project Number "
+                    "listed under that project.\n\n" % GOOG_CLOUD_CONSOLE_URI
+                )
 
-      default_project_id = input('What is your project-id? ').strip()
-      project_id_section_prelude = """
+            default_project_id = input("What is your project-id? ").strip()
+            project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
 # use with the 'mb' and 'ls' commands. This default can be overridden by
 # specifying the -p option to the 'mb' and 'ls' commands.
 """
-      if not default_project_id:
-        raise CommandException(
-            'No default project ID entered. The default project ID is needed '
-            'by the\nls and mb commands; please try again.')
-      config_file.write('%sdefault_project_id = %s\n\n\n' %
-                        (project_id_section_prelude, default_project_id))
+            if not default_project_id:
+                raise CommandException(
+                    "No default project ID entered. The default project ID is needed "
+                    "by the\nls and mb commands; please try again."
+                )
+            config_file.write(
+                "%sdefault_project_id = %s\n\n\n"
+                % (project_id_section_prelude, default_project_id)
+            )
 
-      CheckAndMaybePromptForAnalyticsEnabling()
+            CheckAndMaybePromptForAnalyticsEnabling()
 
-    # Write the config file OAuth2 section that doesn't depend on user input.
-    config_file.write(CONFIG_OAUTH2_CONFIG_CONTENT)
+        # Write the config file OAuth2 section that doesn't depend on user input.
+        config_file.write(CONFIG_OAUTH2_CONFIG_CONTENT)
 
-    # If the user ran gsutil config with a custom client ID, write that to the
-    # config file.
-    if (cred_type == CredTypes.OAUTH2_USER_ACCOUNT
-        and configure_auth
-        and oauth2_client.client_id != oauth2_helper.CLIENT_ID
-        and oauth2_client.client_secret != oauth2_helper.CLIENT_SECRET):
-      config_file.write('client_id = %s\nclient_secret = %s\n' %
-                        (oauth2_client.client_id, oauth2_client.client_secret))
-    else:
-      config_file.write('#client_id = <OAuth2 client id>\n'
-                        '#client_secret = <OAuth2 client secret>\n')
-
-  def RunCommand(self):
-    """Command entry point for the config command."""
-    scopes = []
-    cred_type = CredTypes.OAUTH2_USER_ACCOUNT
-    launch_browser = False
-    output_file_name = None
-    has_a = False
-    has_e = False
-    configure_auth = True
-    for opt, opt_arg in self.sub_opts:
-      if opt == '-a':
-        cred_type = CredTypes.HMAC
-        has_a = True
-      elif opt == '-b':
-        launch_browser = True
-      elif opt == '-e':
-        cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
-        has_e = True
-      elif opt == '-f':
-        scopes.append(constants.Scopes.FULL_CONTROL)
-      elif opt == '-n':
-        configure_auth = False
-      elif opt == '-o':
-        output_file_name = opt_arg
-      elif opt == '-r':
-        scopes.append(constants.Scopes.READ_ONLY)
-      elif opt == '--reauth':
-        scopes.append(constants.Scopes.REAUTH)
-      elif opt == '-s':
-        scopes.append(opt_arg)
-      elif opt == '-w':
-        scopes.append(constants.Scopes.READ_WRITE)
-      else:
-        self.RaiseInvalidArgumentException()
-
-    if has_e and has_a:
-      raise CommandException('Both -a and -e cannot be specified. Please see '
-                             '"gsutil help config" for more information.')
-
-    if not configure_auth and (has_a or has_e or scopes or launch_browser):
-      raise CommandException(
-          'The -a, -b, -e, -f, -r, --reauth, -s, and -w flags cannot be '
-          'specified with the -n flag. Please see "gsutil help config" for '
-          'more information.')
-
-    # Don't allow users to configure Oauth2 (any option other than -a and -n)
-    # when running in the Cloud SDK, unless they have the Cloud SDK configured
-    # not to pass credentials to gsutil.
-    if (system_util.InvokedViaCloudSdk() and
-        system_util.CloudSdkCredPassingEnabled() and
-        not has_a and
-        configure_auth):
-      raise CommandException('\n'.join([
-          'OAuth2 is the preferred authentication mechanism with the Cloud '
-          'SDK.',
-          'Run "gcloud auth login" to configure authentication, unless:',
-          '\n'.join(textwrap.wrap(
-              'You don\'t want gsutil to use OAuth2 credentials from the Cloud '
-              'SDK, but instead want to manage credentials with .boto files '
-              'generated by running "gsutil config"; in which case run '
-              '"gcloud config set pass_credentials_to_gsutil false".',
-              initial_indent='- ', subsequent_indent='  ')),
-          '\n'.join(textwrap.wrap(
-              'You want to authenticate with an HMAC access key and secret, in '
-              'which case run "gsutil config -a".',
-              initial_indent='- ', subsequent_indent='  ')),
-      ]))
-
-    if system_util.InvokedViaCloudSdk() and has_a:
-      sys.stderr.write('\n'.join(textwrap.wrap(
-          'This command will configure HMAC credentials, but gsutil will use '
-          'OAuth2 credentials from the Cloud SDK by default. To make sure '
-          'the HMAC credentials are used, run: "gcloud config set '
-          'pass_credentials_to_gsutil false".')) + '\n\n')
-
-    if not scopes:
-      scopes.append(constants.Scopes.CLOUD_PLATFORM)
-      scopes.append(constants.Scopes.REAUTH)
-
-    default_config_path_bak = None
-    if not output_file_name:
-      # Check to see if a default config file name is requested via
-      # environment variable. If so, use it, otherwise use the hard-coded
-      # default file. Then use the default config file name, if it doesn't
-      # exist or can be moved out of the way without clobbering an existing
-      # backup file.
-      boto_config_from_env = os.environ.get('BOTO_CONFIG', None)
-      if boto_config_from_env:
-        default_config_path = boto_config_from_env
-      else:
-        default_config_path = os.path.expanduser(os.path.join('~', '.boto'))
-      if not os.path.exists(default_config_path):
-        output_file_name = default_config_path
-      else:
-        default_config_path_bak = default_config_path + '.bak'
-        if os.path.exists(default_config_path_bak):
-          raise CommandException(
-              'Cannot back up existing config '
-              'file "%s": backup file exists ("%s").'
-              % (default_config_path, default_config_path_bak))
+        # If the user ran gsutil config with a custom client ID, write that to the
+        # config file.
+        if (
+            cred_type == CredTypes.OAUTH2_USER_ACCOUNT
+            and configure_auth
+            and oauth2_client.client_id != oauth2_helper.CLIENT_ID
+            and oauth2_client.client_secret != oauth2_helper.CLIENT_SECRET
+        ):
+            config_file.write(
+                "client_id = %s\nclient_secret = %s\n"
+                % (oauth2_client.client_id, oauth2_client.client_secret)
+            )
         else:
-          try:
-            sys.stderr.write(
-                'Backing up existing config file "%s" to "%s"...\n'
-                % (default_config_path, default_config_path_bak))
-            os.rename(default_config_path, default_config_path_bak)
-          except Exception as e:
+            config_file.write(
+                "#client_id = <OAuth2 client id>\n"
+                "#client_secret = <OAuth2 client secret>\n"
+            )
+
+    def RunCommand(self):
+        """Command entry point for the config command."""
+        scopes = []
+        cred_type = CredTypes.OAUTH2_USER_ACCOUNT
+        launch_browser = False
+        output_file_name = None
+        has_a = False
+        has_e = False
+        configure_auth = True
+        for opt, opt_arg in self.sub_opts:
+            if opt == "-a":
+                cred_type = CredTypes.HMAC
+                has_a = True
+            elif opt == "-b":
+                launch_browser = True
+            elif opt == "-e":
+                cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
+                has_e = True
+            elif opt == "-f":
+                scopes.append(constants.Scopes.FULL_CONTROL)
+            elif opt == "-n":
+                configure_auth = False
+            elif opt == "-o":
+                output_file_name = opt_arg
+            elif opt == "-r":
+                scopes.append(constants.Scopes.READ_ONLY)
+            elif opt == "--reauth":
+                scopes.append(constants.Scopes.REAUTH)
+            elif opt == "-s":
+                scopes.append(opt_arg)
+            elif opt == "-w":
+                scopes.append(constants.Scopes.READ_WRITE)
+            else:
+                self.RaiseInvalidArgumentException()
+
+        if has_e and has_a:
             raise CommandException(
-                'Failed to back up existing config '
-                'file ("%s" -> "%s"): %s.'
-                % (default_config_path, default_config_path_bak, e))
-          output_file_name = default_config_path
+                "Both -a and -e cannot be specified. Please see "
+                '"gsutil help config" for more information.'
+            )
 
-    if output_file_name == '-':
-      output_file = sys.stdout
-    else:
-      output_file = self._OpenConfigFile(output_file_name)
-      sys.stderr.write('\n'.join(textwrap.wrap(
-          'This command will create a boto config file at %s containing your '
-          'credentials, based on your responses to the following questions.'
-          % output_file_name)) + '\n')
+        if not configure_auth and (has_a or has_e or scopes or launch_browser):
+            raise CommandException(
+                "The -a, -b, -e, -f, -r, --reauth, -s, and -w flags cannot be "
+                'specified with the -n flag. Please see "gsutil help config" for '
+                "more information."
+            )
 
-    # Catch ^C so we can restore the backup.
-    RegisterSignalHandler(signal.SIGINT, _CleanupHandler)
-    try:
-      self._WriteBotoConfigFile(output_file, launch_browser=launch_browser,
-                                oauth2_scopes=scopes, cred_type=cred_type,
-                                configure_auth=configure_auth)
-    except Exception as e:
-      user_aborted = isinstance(e, AbortException)
-      if user_aborted:
-        sys.stderr.write('\nCaught ^C; cleaning up\n')
-      # If an error occurred during config file creation, remove the invalid
-      # config file and restore the backup file.
-      if output_file_name != '-':
-        output_file.close()
-        os.unlink(output_file_name)
+        # Don't allow users to configure Oauth2 (any option other than -a and -n)
+        # when running in the Cloud SDK, unless they have the Cloud SDK configured
+        # not to pass credentials to gsutil.
+        if (
+            system_util.InvokedViaCloudSdk()
+            and system_util.CloudSdkCredPassingEnabled()
+            and not has_a
+            and configure_auth
+        ):
+            raise CommandException(
+                "\n".join(
+                    [
+                        "OAuth2 is the preferred authentication mechanism with the Cloud "
+                        "SDK.",
+                        'Run "gcloud auth login" to configure authentication, unless:',
+                        "\n".join(
+                            textwrap.wrap(
+                                "You don't want gsutil to use OAuth2 credentials from the Cloud "
+                                "SDK, but instead want to manage credentials with .boto files "
+                                'generated by running "gsutil config"; in which case run '
+                                '"gcloud config set pass_credentials_to_gsutil false".',
+                                initial_indent="- ",
+                                subsequent_indent="  ",
+                            )
+                        ),
+                        "\n".join(
+                            textwrap.wrap(
+                                "You want to authenticate with an HMAC access key and secret, in "
+                                'which case run "gsutil config -a".',
+                                initial_indent="- ",
+                                subsequent_indent="  ",
+                            )
+                        ),
+                    ]
+                )
+            )
+
+        if system_util.InvokedViaCloudSdk() and has_a:
+            sys.stderr.write(
+                "\n".join(
+                    textwrap.wrap(
+                        "This command will configure HMAC credentials, but gsutil will use "
+                        "OAuth2 credentials from the Cloud SDK by default. To make sure "
+                        'the HMAC credentials are used, run: "gcloud config set '
+                        'pass_credentials_to_gsutil false".'
+                    )
+                )
+                + "\n\n"
+            )
+
+        if not scopes:
+            scopes.append(constants.Scopes.CLOUD_PLATFORM)
+            scopes.append(constants.Scopes.REAUTH)
+
+        default_config_path_bak = None
+        if not output_file_name:
+            # Check to see if a default config file name is requested via
+            # environment variable. If so, use it, otherwise use the hard-coded
+            # default file. Then use the default config file name, if it doesn't
+            # exist or can be moved out of the way without clobbering an existing
+            # backup file.
+            boto_config_from_env = os.environ.get("BOTO_CONFIG", None)
+            if boto_config_from_env:
+                default_config_path = boto_config_from_env
+            else:
+                default_config_path = os.path.expanduser(os.path.join("~", ".boto"))
+            if not os.path.exists(default_config_path):
+                output_file_name = default_config_path
+            else:
+                default_config_path_bak = default_config_path + ".bak"
+                if os.path.exists(default_config_path_bak):
+                    raise CommandException(
+                        "Cannot back up existing config "
+                        'file "%s": backup file exists ("%s").'
+                        % (default_config_path, default_config_path_bak)
+                    )
+                else:
+                    try:
+                        sys.stderr.write(
+                            'Backing up existing config file "%s" to "%s"...\n'
+                            % (default_config_path, default_config_path_bak)
+                        )
+                        os.rename(default_config_path, default_config_path_bak)
+                    except Exception as e:
+                        raise CommandException(
+                            "Failed to back up existing config "
+                            'file ("%s" -> "%s"): %s.'
+                            % (default_config_path, default_config_path_bak, e)
+                        )
+                    output_file_name = default_config_path
+
+        if output_file_name == "-":
+            output_file = sys.stdout
+        else:
+            output_file = self._OpenConfigFile(output_file_name)
+            sys.stderr.write(
+                "\n".join(
+                    textwrap.wrap(
+                        "This command will create a boto config file at %s containing your "
+                        "credentials, based on your responses to the following questions."
+                        % output_file_name
+                    )
+                )
+                + "\n"
+            )
+
+        # Catch ^C so we can restore the backup.
+        RegisterSignalHandler(signal.SIGINT, _CleanupHandler)
         try:
-          if default_config_path_bak:
-            sys.stderr.write('Restoring previous backed up file (%s)\n' %
-                             default_config_path_bak)
-            os.rename(default_config_path_bak, output_file_name)
+            self._WriteBotoConfigFile(
+                output_file,
+                launch_browser=launch_browser,
+                oauth2_scopes=scopes,
+                cred_type=cred_type,
+                configure_auth=configure_auth,
+            )
         except Exception as e:
-          # Raise the original exception so that we can see what actually went
-          # wrong, rather than just finding out that we died before assigning
-          # a value to default_config_path_bak.
-          raise e
-      raise
+            user_aborted = isinstance(e, AbortException)
+            if user_aborted:
+                sys.stderr.write("\nCaught ^C; cleaning up\n")
+            # If an error occurred during config file creation, remove the invalid
+            # config file and restore the backup file.
+            if output_file_name != "-":
+                output_file.close()
+                os.unlink(output_file_name)
+                try:
+                    if default_config_path_bak:
+                        sys.stderr.write(
+                            "Restoring previous backed up file (%s)\n"
+                            % default_config_path_bak
+                        )
+                        os.rename(default_config_path_bak, output_file_name)
+                except Exception as e:
+                    # Raise the original exception so that we can see what actually went
+                    # wrong, rather than just finding out that we died before assigning
+                    # a value to default_config_path_bak.
+                    raise e
+            raise
 
-    if output_file_name != '-':
-      output_file.close()
-      if not boto.config.has_option('Boto', 'proxy'):
-        sys.stderr.write('\n' + '\n'.join(textwrap.wrap(
-            'Boto config file "%s" created.\nIf you need to use a proxy to '
-            'access the Internet please see the instructions in that file.'
-            % output_file_name)) + '\n')
+        if output_file_name != "-":
+            output_file.close()
+            if not boto.config.has_option("Boto", "proxy"):
+                sys.stderr.write(
+                    "\n"
+                    + "\n".join(
+                        textwrap.wrap(
+                            'Boto config file "%s" created.\nIf you need to use a proxy to '
+                            "access the Internet please see the instructions in that file."
+                            % output_file_name
+                        )
+                    )
+                    + "\n"
+                )
 
-    return 0
+        return 0
 
 
 def _CleanupHandler(unused_signalnum, unused_handler):
-  raise AbortException('User interrupted config command')
+    raise AbortException("User interrupted config command")

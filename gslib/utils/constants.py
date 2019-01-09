@@ -44,11 +44,11 @@ DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4
 
 DEFAULT_FILE_BUFFER_SIZE = 8 * ONE_KIB
 
-DEFAULT_GCS_JSON_API_VERSION = 'v1'
+DEFAULT_GCS_JSON_API_VERSION = "v1"
 
-DEFAULT_GSUTIL_STATE_DIR = os.path.expanduser(os.path.join('~', '.gsutil'))
+DEFAULT_GSUTIL_STATE_DIR = os.path.expanduser(os.path.join("~", ".gsutil"))
 
-GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
+GSUTIL_PUB_TARBALL = "gs://pub/gsutil.tar.gz"
 
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
@@ -76,14 +76,14 @@ NO_MAX = six.MAXSIZE
 # Number of objects to request in listing calls.
 NUM_OBJECTS_PER_LIST_PAGE = 1000
 
-RELEASE_NOTES_URL = 'https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt'
+RELEASE_NOTES_URL = "https://pub.storage.googleapis.com/gsutil_ReleaseNotes.txt"
 
 RESUMABLE_THRESHOLD_MIB = 8
 RESUMABLE_THRESHOLD_B = RESUMABLE_THRESHOLD_MIB * ONE_MIB
 
 # gsutil-specific GUIDs for marking special metadata for S3 compatibility.
-S3_ACL_MARKER_GUID = '3b89a6b5-b55a-4900-8c44-0b0a2f5eab43-s3-AclMarker'
-S3_DELETE_MARKER_GUID = 'eadeeee8-fa8c-49bb-8a7d-0362215932d8-s3-DeleteMarker'
+S3_ACL_MARKER_GUID = "3b89a6b5-b55a-4900-8c44-0b0a2f5eab43-s3-AclMarker"
+S3_DELETE_MARKER_GUID = "eadeeee8-fa8c-49bb-8a7d-0362215932d8-s3-DeleteMarker"
 S3_MARKER_GUIDS = [S3_ACL_MARKER_GUID, S3_DELETE_MARKER_GUID]
 
 # By default, the timeout for SSL read errors is infinite. This could
@@ -100,20 +100,22 @@ START_CALLBACK_PER_BYTES = 256 * ONE_KIB
 # TODO: This should say the unit in the name.
 TRANSFER_BUFFER_SIZE = 8 * ONE_KIB
 
-UTF8 = 'utf-8'
+UTF8 = "utf-8"
 
-WINDOWS_1252 = 'cp1252'
+WINDOWS_1252 = "cp1252"
 
 # Default number of progress callbacks during transfer (XML API).
 XML_PROGRESS_CALLBACKS = 10
 
 
 class Scopes(object):
-  """Enum class for auth scopes, as unicode."""
-  CLOUD_PLATFORM = 'https://www.googleapis.com/auth/cloud-platform'
-  CLOUD_PLATFORM_READ_ONLY = (
-      'https://www.googleapis.com/auth/cloud-platform.read-only')
-  FULL_CONTROL = 'https://www.googleapis.com/auth/devstorage.full_control'
-  READ_ONLY = 'https://www.googleapis.com/auth/devstorage.read_only'
-  READ_WRITE = 'https://www.googleapis.com/auth/devstorage.read_write'
-  REAUTH = 'https://www.googleapis.com/auth/accounts.reauth'
+    """Enum class for auth scopes, as unicode."""
+
+    CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
+    CLOUD_PLATFORM_READ_ONLY = (
+        "https://www.googleapis.com/auth/cloud-platform.read-only"
+    )
+    FULL_CONTROL = "https://www.googleapis.com/auth/devstorage.full_control"
+    READ_ONLY = "https://www.googleapis.com/auth/devstorage.read_only"
+    READ_WRITE = "https://www.googleapis.com/auth/devstorage.read_write"
+    REAUTH = "https://www.googleapis.com/auth/accounts.reauth"

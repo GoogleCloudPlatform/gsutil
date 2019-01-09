@@ -18,5 +18,5 @@
 
 import gsutil
 
-if __name__ == '__main__':
-  gsutil.RunMain()
+if __name__ == "__main__":
+    gsutil.RunMain()

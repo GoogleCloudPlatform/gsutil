@@ -32,86 +32,106 @@ from gslib.utils.retry_util import Retry
 
 
 def _LoadNotificationUrl():
-  return boto.config.get_value('GSUtil', 'test_notification_url')
+    return boto.config.get_value("GSUtil", "test_notification_url")
+
 
 NOTIFICATION_URL = _LoadNotificationUrl()
 
 
 class TestNotification(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for notification command."""
+    """Integration tests for notification command."""
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
-  def test_watch_bucket(self):
-    """Tests creating a notification channel on a bucket."""
-    bucket_uri = self.CreateBucket()
-    self.RunGsUtil([
-        'notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)])
+    @unittest.skipUnless(
+        NOTIFICATION_URL, "Test requires notification URL configuration."
+    )
+    def test_watch_bucket(self):
+        """Tests creating a notification channel on a bucket."""
+        bucket_uri = self.CreateBucket()
+        self.RunGsUtil(
+            ["notification", "watchbucket", NOTIFICATION_URL, suri(bucket_uri)]
+        )
 
-    identifier = str(uuid.uuid4())
-    token = str(uuid.uuid4())
-    stderr = self.RunGsUtil([
-        'notification', 'watchbucket', '-i', identifier, '-t', token,
-        NOTIFICATION_URL, suri(bucket_uri)], return_stderr=True)
-    self.assertIn('token: %s' % token, stderr)
-    self.assertIn('identifier: %s' % identifier, stderr)
+        identifier = str(uuid.uuid4())
+        token = str(uuid.uuid4())
+        stderr = self.RunGsUtil(
+            [
+                "notification",
+                "watchbucket",
+                "-i",
+                identifier,
+                "-t",
+                token,
+                NOTIFICATION_URL,
+                suri(bucket_uri),
+            ],
+            return_stderr=True,
+        )
+        self.assertIn("token: %s" % token, stderr)
+        self.assertIn("identifier: %s" % identifier, stderr)
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
-  def test_stop_channel(self):
-    """Tests stopping a notification channel on a bucket."""
-    bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
-        return_stderr=True)
+    @unittest.skipUnless(
+        NOTIFICATION_URL, "Test requires notification URL configuration."
+    )
+    def test_stop_channel(self):
+        """Tests stopping a notification channel on a bucket."""
+        bucket_uri = self.CreateBucket()
+        stderr = self.RunGsUtil(
+            ["notification", "watchbucket", NOTIFICATION_URL, suri(bucket_uri)],
+            return_stderr=True,
+        )
 
-    channel_id = re.findall(r'channel identifier: (?P<id>.*)', stderr)
-    self.assertEqual(len(channel_id), 1)
-    resource_id = re.findall(r'resource identifier: (?P<id>.*)', stderr)
-    self.assertEqual(len(resource_id), 1)
+        channel_id = re.findall(r"channel identifier: (?P<id>.*)", stderr)
+        self.assertEqual(len(channel_id), 1)
+        resource_id = re.findall(r"resource identifier: (?P<id>.*)", stderr)
+        self.assertEqual(len(resource_id), 1)
 
-    channel_id = channel_id[0]
-    resource_id = resource_id[0]
+        channel_id = channel_id[0]
+        resource_id = resource_id[0]
 
-    self.RunGsUtil(['notification', 'stopchannel', channel_id, resource_id])
+        self.RunGsUtil(["notification", "stopchannel", channel_id, resource_id])
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
-  def test_list_one_channel(self):
-    """Tests listing notification channel on a bucket."""
-    bucket_uri = self.CreateBucket()
+    @unittest.skipUnless(
+        NOTIFICATION_URL, "Test requires notification URL configuration."
+    )
+    def test_list_one_channel(self):
+        """Tests listing notification channel on a bucket."""
+        bucket_uri = self.CreateBucket()
 
-    # Set up an OCN (object change notification) on the newly created bucket.
-    self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
-        return_stderr=False)
-    # The OCN listing in the service is eventually consistent. In initial
-    # tests, it almost never was ready immediately after calling WatchBucket
-    # above, so we A) sleep for a few seconds before the first OCN listing
-    # attempt, and B) wrap the OCN listing attempt in retry logic in case
-    # it raises a BucketNotFoundException (note that RunGsUtil will raise this
-    # as an AssertionError due to the exit status not being 0).
-    @Retry(AssertionError, tries=3, timeout_secs=5)
-    def _ListObjectChangeNotifications():
-      stderr = self.RunGsUtil(
-          ['notification', 'list', '-o', suri(bucket_uri)],
-          return_stderr=True)
-      return stderr
-    time.sleep(5)
-    stderr = _ListObjectChangeNotifications()
+        # Set up an OCN (object change notification) on the newly created bucket.
+        self.RunGsUtil(
+            ["notification", "watchbucket", NOTIFICATION_URL, suri(bucket_uri)],
+            return_stderr=False,
+        )
 
-    channel_id = re.findall(r'Channel identifier: (?P<id>.*)', stderr)
-    self.assertEqual(len(channel_id), 1)
-    resource_id = re.findall(r'Resource identifier: (?P<id>.*)', stderr)
-    self.assertEqual(len(resource_id), 1)
-    push_url = re.findall(r'Application URL: (?P<id>.*)', stderr)
-    self.assertEqual(len(push_url), 1)
-    subscriber_email = re.findall(r'Created by: (?P<id>.*)', stderr)
-    self.assertEqual(len(subscriber_email), 1)
-    creation_time = re.findall(r'Creation time: (?P<id>.*)', stderr)
-    self.assertEqual(len(creation_time), 1)
+        # The OCN listing in the service is eventually consistent. In initial
+        # tests, it almost never was ready immediately after calling WatchBucket
+        # above, so we A) sleep for a few seconds before the first OCN listing
+        # attempt, and B) wrap the OCN listing attempt in retry logic in case
+        # it raises a BucketNotFoundException (note that RunGsUtil will raise this
+        # as an AssertionError due to the exit status not being 0).
+        @Retry(AssertionError, tries=3, timeout_secs=5)
+        def _ListObjectChangeNotifications():
+            stderr = self.RunGsUtil(
+                ["notification", "list", "-o", suri(bucket_uri)], return_stderr=True
+            )
+            return stderr
 
-  def test_invalid_subcommand(self):
-    stderr = self.RunGsUtil(['notification', 'foo', 'bar', 'baz'],
-                            return_stderr=True, expected_status=1)
-    self.assertIn('Invalid subcommand', stderr)
+        time.sleep(5)
+        stderr = _ListObjectChangeNotifications()
+
+        channel_id = re.findall(r"Channel identifier: (?P<id>.*)", stderr)
+        self.assertEqual(len(channel_id), 1)
+        resource_id = re.findall(r"Resource identifier: (?P<id>.*)", stderr)
+        self.assertEqual(len(resource_id), 1)
+        push_url = re.findall(r"Application URL: (?P<id>.*)", stderr)
+        self.assertEqual(len(push_url), 1)
+        subscriber_email = re.findall(r"Created by: (?P<id>.*)", stderr)
+        self.assertEqual(len(subscriber_email), 1)
+        creation_time = re.findall(r"Creation time: (?P<id>.*)", stderr)
+        self.assertEqual(len(creation_time), 1)
+
+    def test_invalid_subcommand(self):
+        stderr = self.RunGsUtil(
+            ["notification", "foo", "bar", "baz"], return_stderr=True, expected_status=1
+        )
+        self.assertIn("Invalid subcommand", stderr)

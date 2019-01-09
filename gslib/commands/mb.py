@@ -35,14 +35,16 @@ from gslib.utils.retention_util import RetentionInSeconds
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.text_util import NormalizeStorageClass
 
-
 _SYNOPSIS = """
   gsutil mb [-c class] [-l location] [-p proj_id] [--retention time] url...
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -138,106 +140,136 @@ _DETAILED_HELP_TEXT = ("""
   --retention time  Specifies the retention policy. Default is no retention
                     policy. This can only be set on gs:// buckets and requires
                     using the JSON API.
-""")
-
+"""
+)
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
-BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
+BUCKET_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$")
 # Regex to disallow buckets with individual DNS labels longer than 63.
-TOO_LONG_DNS_NAME_COMP = re.compile(r'[-_a-z0-9]{64}')
+TOO_LONG_DNS_NAME_COMP = re.compile(r"[-_a-z0-9]{64}")
 
 
 class MbCommand(Command):
-  """Implementation of gsutil mb command."""
+    """Implementation of gsutil mb command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'mb',
-      command_name_aliases=['makebucket', 'createbucket', 'md', 'mkdir'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=1,
-      max_args=NO_MAX,
-      supported_sub_args='c:l:p:s:',
-      supported_private_args=['retention='],
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-      ]
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='mb',
-      help_name_aliases=[
-          'createbucket', 'makebucket', 'md', 'mkdir', 'location', 'dra',
-          'dras', 'reduced_availability', 'durable_reduced_availability', 'rr',
-          'reduced_redundancy', 'standard', 'storage class', 'nearline', 'nl'],
-      help_type='command_help',
-      help_one_line_summary='Make buckets',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "mb",
+        command_name_aliases=["makebucket", "createbucket", "md", "mkdir"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=1,
+        max_args=NO_MAX,
+        supported_sub_args="c:l:p:s:",
+        supported_private_args=["retention="],
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=0,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="mb",
+        help_name_aliases=[
+            "createbucket",
+            "makebucket",
+            "md",
+            "mkdir",
+            "location",
+            "dra",
+            "dras",
+            "reduced_availability",
+            "durable_reduced_availability",
+            "rr",
+            "reduced_redundancy",
+            "standard",
+            "storage class",
+            "nearline",
+            "nl",
+        ],
+        help_type="command_help",
+        help_one_line_summary="Make buckets",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def RunCommand(self):
-    """Command entry point for the mb command."""
-    location = None
-    storage_class = None
-    seconds = None
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o == '-l':
-          location = a
-        elif o == '-p':
-          # Project IDs are sent as header values when using gs and s3 XML APIs.
-          InsistAscii(a, 'Invalid non-ASCII character found in project ID')
-          self.project_id = a
-        elif o == '-c' or o == '-s':
-          storage_class = NormalizeStorageClass(a)
-        elif o == '--retention':
-          seconds = RetentionInSeconds(a)
+    def RunCommand(self):
+        """Command entry point for the mb command."""
+        location = None
+        storage_class = None
+        seconds = None
+        if self.sub_opts:
+            for o, a in self.sub_opts:
+                if o == "-l":
+                    location = a
+                elif o == "-p":
+                    # Project IDs are sent as header values when using gs and s3 XML APIs.
+                    InsistAscii(a, "Invalid non-ASCII character found in project ID")
+                    self.project_id = a
+                elif o == "-c" or o == "-s":
+                    storage_class = NormalizeStorageClass(a)
+                elif o == "--retention":
+                    seconds = RetentionInSeconds(a)
 
-    bucket_metadata = apitools_messages.Bucket(location=location,
-                                               storageClass=storage_class)
+        bucket_metadata = apitools_messages.Bucket(
+            location=location, storageClass=storage_class
+        )
 
-    for bucket_url_str in self.args:
-      bucket_url = StorageUrlFromString(bucket_url_str)
-      if seconds is not None:
-        if bucket_url.scheme != 'gs':
-          raise CommandException('Retention policy can only be specified for '
-                                 'GCS buckets.')
-        retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
-            retentionPeriod=seconds))
-        bucket_metadata.retentionPolicy = retention_policy
+        for bucket_url_str in self.args:
+            bucket_url = StorageUrlFromString(bucket_url_str)
+            if seconds is not None:
+                if bucket_url.scheme != "gs":
+                    raise CommandException(
+                        "Retention policy can only be specified for " "GCS buckets."
+                    )
+                retention_policy = apitools_messages.Bucket.RetentionPolicyValue(
+                    retentionPeriod=seconds
+                )
+                bucket_metadata.retentionPolicy = retention_policy
 
-      if not bucket_url.IsBucket():
-        raise CommandException('The mb command requires a URL that specifies a '
-                               'bucket.\n"%s" is not valid.' % bucket_url)
-      if (not BUCKET_NAME_RE.match(bucket_url.bucket_name) or
-          TOO_LONG_DNS_NAME_COMP.search(bucket_url.bucket_name)):
-        raise InvalidUrlError(
-            'Invalid bucket name in URL "%s"' % bucket_url.bucket_name)
+            if not bucket_url.IsBucket():
+                raise CommandException(
+                    "The mb command requires a URL that specifies a "
+                    'bucket.\n"%s" is not valid.' % bucket_url
+                )
+            if not BUCKET_NAME_RE.match(
+                bucket_url.bucket_name
+            ) or TOO_LONG_DNS_NAME_COMP.search(bucket_url.bucket_name):
+                raise InvalidUrlError(
+                    'Invalid bucket name in URL "%s"' % bucket_url.bucket_name
+                )
 
-      self.logger.info('Creating %s...', bucket_url)
-      # Pass storage_class param only if this is a GCS bucket. (In S3 the
-      # storage class is specified on the key object.)
-      try:
-        self.gsutil_api.CreateBucket(
-            bucket_url.bucket_name, project_id=self.project_id,
-            metadata=bucket_metadata, provider=bucket_url.scheme)
-      except BadRequestException as e:
-        if (e.status == 400 and e.reason == 'DotfulBucketNameNotUnderTld' and
-            bucket_url.scheme == 'gs'):
-          bucket_name = bucket_url.bucket_name
-          final_comp = bucket_name[bucket_name.rfind('.')+1:]
-          raise CommandException('\n'.join(textwrap.wrap(
-              'Buckets with "." in the name must be valid DNS names. The bucket'
-              ' you are attempting to create (%s) is not a valid DNS name,'
-              ' because the final component (%s) is not currently a valid part'
-              ' of the top-level DNS tree.' % (bucket_name, final_comp))))
-        else:
-          raise
+            self.logger.info("Creating %s...", bucket_url)
+            # Pass storage_class param only if this is a GCS bucket. (In S3 the
+            # storage class is specified on the key object.)
+            try:
+                self.gsutil_api.CreateBucket(
+                    bucket_url.bucket_name,
+                    project_id=self.project_id,
+                    metadata=bucket_metadata,
+                    provider=bucket_url.scheme,
+                )
+            except BadRequestException as e:
+                if (
+                    e.status == 400
+                    and e.reason == "DotfulBucketNameNotUnderTld"
+                    and bucket_url.scheme == "gs"
+                ):
+                    bucket_name = bucket_url.bucket_name
+                    final_comp = bucket_name[bucket_name.rfind(".") + 1 :]
+                    raise CommandException(
+                        "\n".join(
+                            textwrap.wrap(
+                                'Buckets with "." in the name must be valid DNS names. The bucket'
+                                " you are attempting to create (%s) is not a valid DNS name,"
+                                " because the final component (%s) is not currently a valid part"
+                                " of the top-level DNS tree."
+                                % (bucket_name, final_comp)
+                            )
+                        )
+                    )
+                else:
+                    raise
 
-    return 0
+        return 0

@@ -33,18 +33,21 @@ import tempfile
 
 import gslib.exception  # pylint: disable=g-import-not-at-top
 
-coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
+coverage_outfile = os.getenv("GSUTIL_COVERAGE_OUTPUT_FILE", None)
 if coverage_outfile:
-  try:
-    import coverage  # pylint: disable=g-import-not-at-top
-    coverage_controller = coverage.coverage(
-        data_file=coverage_outfile, data_suffix=True, auto_data=True,
-        source=['gslib'], omit=['gslib/third_party/*', 'gslib/tests/*',
-                                tempfile.gettempdir() + '*'])
-    coverage_controller.start()
-  except ImportError:
-    pass
+    try:
+        import coverage  # pylint: disable=g-import-not-at-top
 
+        coverage_controller = coverage.coverage(
+            data_file=coverage_outfile,
+            data_suffix=True,
+            auto_data=True,
+            source=["gslib"],
+            omit=["gslib/third_party/*", "gslib/tests/*", tempfile.gettempdir() + "*"],
+        )
+        coverage_controller.start()
+    except ImportError:
+        pass
 
 # Directory containing the gslib module.
 GSLIB_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -69,61 +72,67 @@ PROGRAM_FILES_DIR = GSLIB_DIR
 
 # The gslib directory will be underneath the gsutil directory when installed
 # from a tarball, but somewhere else on the machine if installed via setup.py.
-if (not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')) and
-    os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR):
-  IS_PACKAGE_INSTALL = False
-  PROGRAM_FILES_DIR = GSUTIL_DIR
+if (
+    not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, "VERSION"))
+    and os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR
+):
+    IS_PACKAGE_INSTALL = False
+    PROGRAM_FILES_DIR = GSUTIL_DIR
 
 # If the module was installed from source using editable mode
 # (i.e. pip install -e) then the files might be one directory up.
-if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')):
-  PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
-  IS_EDITABLE_INSTALL = True
+if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, "VERSION")):
+    PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, ".."))
+    IS_EDITABLE_INSTALL = True
 
 # If installed via editable mode, we have to add the mock_storage_service
 # module to the Python path, since the gsutil script path munging is not
 # executed in this mode.
 if IS_EDITABLE_INSTALL:
-  mock_storage_location = os.path.join(
-      PROGRAM_FILES_DIR, 'third_party', 'boto', 'tests', 'integration', 's3')
-  sys.path.append(mock_storage_location)
+    mock_storage_location = os.path.join(
+        PROGRAM_FILES_DIR, "third_party", "boto", "tests", "integration", "s3"
+    )
+    sys.path.append(mock_storage_location)
 
 
 def _GetFileContents(filename):
-  """Tries to find the given filename on disk or via pkgutil.get_data.
+    """Tries to find the given filename on disk or via pkgutil.get_data.
 
-  Args:
-    filename: String name of the file.
+    Args:
+      filename: String name of the file.
 
-  Returns:
-    A tuple containing the absolute path to the requested file and the file's
-    contents. If the file is not actually on disk, the file path will be None.
-  """
-  fpath = os.path.join(PROGRAM_FILES_DIR, filename)
-  if os.path.isfile(fpath):
-    with open(fpath, 'r') as f:
-      content = f.read()
-  else:
-    content = pkgutil.get_data('gslib', filename)
-    fpath = None
-  return (fpath, content.strip())
+    Returns:
+      A tuple containing the absolute path to the requested file and the file's
+      contents. If the file is not actually on disk, the file path will be None.
+    """
+    fpath = os.path.join(PROGRAM_FILES_DIR, filename)
+    if os.path.isfile(fpath):
+        with open(fpath, "r") as f:
+            content = f.read()
+    else:
+        content = pkgutil.get_data("gslib", filename)
+        fpath = None
+    return (fpath, content.strip())
+
 
 # Get the version file and store it.
-VERSION_FILE, VERSION = _GetFileContents('VERSION')
+VERSION_FILE, VERSION = _GetFileContents("VERSION")
 if not VERSION:
-  raise gslib.exception.CommandException(
-      'VERSION file not found. Please reinstall gsutil from scratch')
+    raise gslib.exception.CommandException(
+        "VERSION file not found. Please reinstall gsutil from scratch"
+    )
 __version__ = VERSION
 
 # Get the checksum file and store it.
-CHECKSUM_FILE, CHECKSUM = _GetFileContents('CHECKSUM')
+CHECKSUM_FILE, CHECKSUM = _GetFileContents("CHECKSUM")
 if not CHECKSUM:
-  raise gslib.exception.CommandException(
-      'CHECKSUM file not found. Please reinstall gsutil from scratch')
+    raise gslib.exception.CommandException(
+        "CHECKSUM file not found. Please reinstall gsutil from scratch"
+    )
 
 
 def GetGsutilVersionModifiedTime():
-  """Returns unix timestamp of when the VERSION file was last modified."""
-  if not VERSION_FILE:
-    return 0
-  return int(os.path.getmtime(VERSION_FILE))
+    """Returns unix timestamp of when the VERSION file was last modified."""
+    if not VERSION_FILE:
+        return 0
+    return int(os.path.getmtime(VERSION_FILE))

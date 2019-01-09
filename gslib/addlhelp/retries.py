@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>RETRY STRATEGY</B>
   There are a number of reasons that gsutil operations can fail; some are not
   retryable, and require that the user take some action, for example:
@@ -53,18 +53,18 @@ _DETAILED_HELP_TEXT = ("""
   Essentially, a transfer that was interrupted because of a transient error
   can be restarted without starting over from scratch. For more details
   about this, see the "RESUMABLE TRANSFERS" section of "gsutil help cp".
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help text about retry handling."""
+    """Additional help text about retry handling."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='retries',
-      help_name_aliases=['retry', 'backoff', 'reliability'],
-      help_type='additional_help',
-      help_one_line_summary='Retry Handling Strategy',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="retries",
+        help_name_aliases=["retry", "backoff", "reliability"],
+        help_type="additional_help",
+        help_one_line_summary="Retry Handling Strategy",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

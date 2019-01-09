@@ -30,103 +30,122 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 
-@SkipForS3('gsutil doesn\'t support S3 notifications')
+@SkipForS3("gsutil doesn't support S3 notifications")
 class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for notification command (the Cloud Pub/Sub parts)."""
+    """Integration tests for notification command (the Cloud Pub/Sub parts)."""
 
-  def setUp(self):
-    super(TestNotificationPubSub, self).setUp()
-    self.pubsub_api = PubsubApi(logger=logging.getLogger())
-    self.created_topic = None
+    def setUp(self):
+        super(TestNotificationPubSub, self).setUp()
+        self.pubsub_api = PubsubApi(logger=logging.getLogger())
+        self.created_topic = None
 
-  def tearDown(self):
-    super(TestNotificationPubSub, self).tearDown()
-    # Cleanup any created topics.
-    if self.created_topic:
-      self.pubsub_api.DeleteTopic(self.created_topic)
-      self.created_topic = None
+    def tearDown(self):
+        super(TestNotificationPubSub, self).tearDown()
+        # Cleanup any created topics.
+        if self.created_topic:
+            self.pubsub_api.DeleteTopic(self.created_topic)
+            self.created_topic = None
 
-  def _RegisterDefaultTopicCreation(self, bucket_name):
-    """Records the name of a topic we expect to create, for cleanup."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def _RegisterDefaultTopicCreation(self, bucket_name):
+        """Records the name of a topic we expect to create, for cleanup."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    expected_topic_name = 'projects/%s/topics/%s' % (
-        PopulateProjectId(None), bucket_name)
-    self.created_topic = expected_topic_name
-    return expected_topic_name
+        expected_topic_name = "projects/%s/topics/%s" % (
+            PopulateProjectId(None),
+            bucket_name,
+        )
+        self.created_topic = expected_topic_name
+        return expected_topic_name
 
-  def test_list_new_bucket(self):
-    """Tests listing notification configs on a new bucket."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def test_list_new_bucket(self):
+        """Tests listing notification configs on a new bucket."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil([
-        'notification', 'list', suri(bucket_uri)], return_stdout=True)
-    self.assertFalse(stdout)
+        bucket_uri = self.CreateBucket()
+        stdout = self.RunGsUtil(
+            ["notification", "list", suri(bucket_uri)], return_stdout=True
+        )
+        self.assertFalse(stdout)
 
-  def test_delete_with_no_notifications(self):
-    """Tests deleting all notification configs when there are none."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def test_delete_with_no_notifications(self):
+        """Tests deleting all notification configs when there are none."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil([
-        'notification', 'delete', suri(bucket_uri)], return_stdout=True)
-    self.assertFalse(stdout)
+        bucket_uri = self.CreateBucket()
+        stdout = self.RunGsUtil(
+            ["notification", "delete", suri(bucket_uri)], return_stdout=True
+        )
+        self.assertFalse(stdout)
 
-  def test_create_basic(self):
-    """Tests the create command succeeds in normal circumstances."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def test_create_basic(self):
+        """Tests the create command succeeds in normal circumstances."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    bucket_uri = self.CreateBucket()
-    topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
+        bucket_uri = self.CreateBucket()
+        topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
 
-    stderr = self.RunGsUtil(
-        ['notification', 'create', '-f', 'json', suri(bucket_uri)],
-        return_stderr=True)
-    self.assertIn('Created notification', stderr)
-    self.assertIn(topic_name, stderr)
+        stderr = self.RunGsUtil(
+            ["notification", "create", "-f", "json", suri(bucket_uri)],
+            return_stderr=True,
+        )
+        self.assertIn("Created notification", stderr)
+        self.assertIn(topic_name, stderr)
 
-  def test_list_one_entry(self):
-    """Tests notification config listing with one entry."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def test_list_one_entry(self):
+        """Tests notification config listing with one entry."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    bucket_uri = self.CreateBucket()
-    bucket_name = bucket_uri.bucket_name
-    topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
+        bucket_uri = self.CreateBucket()
+        bucket_name = bucket_uri.bucket_name
+        topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
 
-    self.RunGsUtil(
-        ['notification', 'create',
-         '-f', 'json',
-         '-e', 'OBJECT_FINALIZE',
-         '-e', 'OBJECT_DELETE',
-         '-m', 'someKey:someValue',
-         '-p', 'somePrefix',
-         suri(bucket_uri)],
-        return_stderr=True)
-    stdout = self.RunGsUtil(['notification', 'list', suri(bucket_uri)],
-                            return_stdout=True)
-    self.assertEquals(
-        stdout,
-        ('projects/_/buckets/{bucket_name}/notificationConfigs/1\n'
-         '\tCloud Pub/Sub topic: {topic_name}\n'
-         '\tCustom attributes:\n'
-         '\t\tsomeKey: someValue\n'
-         '\tFilters:\n'
-         '\t\tEvent Types: OBJECT_FINALIZE, OBJECT_DELETE\n'
-         '\t\tObject name prefix: \'somePrefix\'\n'.format(
-             bucket_name=bucket_name, topic_name=topic_name)))
+        self.RunGsUtil(
+            [
+                "notification",
+                "create",
+                "-f",
+                "json",
+                "-e",
+                "OBJECT_FINALIZE",
+                "-e",
+                "OBJECT_DELETE",
+                "-m",
+                "someKey:someValue",
+                "-p",
+                "somePrefix",
+                suri(bucket_uri),
+            ],
+            return_stderr=True,
+        )
+        stdout = self.RunGsUtil(
+            ["notification", "list", suri(bucket_uri)], return_stdout=True
+        )
+        self.assertEquals(
+            stdout,
+            (
+                "projects/_/buckets/{bucket_name}/notificationConfigs/1\n"
+                "\tCloud Pub/Sub topic: {topic_name}\n"
+                "\tCustom attributes:\n"
+                "\t\tsomeKey: someValue\n"
+                "\tFilters:\n"
+                "\t\tEvent Types: OBJECT_FINALIZE, OBJECT_DELETE\n"
+                "\t\tObject name prefix: 'somePrefix'\n".format(
+                    bucket_name=bucket_name, topic_name=topic_name
+                )
+            ),
+        )
 
-  def test_delete(self):
-    """Tests the create command succeeds in normal circumstances."""
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('Notifications only work with the JSON API.')
+    def test_delete(self):
+        """Tests the create command succeeds in normal circumstances."""
+        if self.test_api == ApiSelector.XML:
+            return unittest.skip("Notifications only work with the JSON API.")
 
-    bucket_uri = self.CreateBucket()
-    self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
-    self.RunGsUtil(['notification', 'create', '-f', 'json', suri(bucket_uri)])
-    self.RunGsUtil(['notification', 'delete', suri(bucket_uri)])
+        bucket_uri = self.CreateBucket()
+        self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
+        self.RunGsUtil(["notification", "create", "-f", "json", suri(bucket_uri)])
+        self.RunGsUtil(["notification", "delete", suri(bucket_uri)])

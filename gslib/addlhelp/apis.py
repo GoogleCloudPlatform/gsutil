@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   Google Cloud Storage offers two APIs: an XML and a JSON API. Gsutil can
   interact with both APIs. By default, gsutil versions starting with 4.0
@@ -53,19 +53,18 @@ _DETAILED_HELP_TEXT = ("""
   The XML API also requires separate calls to get different object and bucket
   metadata fields, such as ACLs or bucket configuration. Thus, using the JSON
   API when possible uses fewer operations (and thus has a lower cost).
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about gsutil's interaction with Cloud Storage APIs."""
+    """Additional help about gsutil's interaction with Cloud Storage APIs."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='apis',
-      help_name_aliases=['XML', 'JSON', 'api', 'force_api', 'prefer_api'],
-      help_type='additional_help',
-      help_one_line_summary='Cloud Storage APIs',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
-
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="apis",
+        help_name_aliases=["XML", "JSON", "api", "force_api", "prefer_api"],
+        help_type="additional_help",
+        help_one_line_summary="Cloud Storage APIs",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

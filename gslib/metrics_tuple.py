@@ -25,14 +25,16 @@ from collections import namedtuple
 # not a custom metric, which is a GA term for a specific number to track on the
 # Analytics dashboard. This is not nested within MetricsCollector to allow
 # pickle to dump a list of Metrics.
-Metric = namedtuple('Metric', [
-    # The URL of the request endpoint.
-    'endpoint',
-    # The HTTP method of request.
-    'method',
-    # The URL-encoded body to send with the request.
-    'body',
-    # The user-agent string to send as a header.
-    'user_agent'
-])
-
+Metric = namedtuple(
+    "Metric",
+    [
+        # The URL of the request endpoint.
+        "endpoint",
+        # The HTTP method of request.
+        "method",
+        # The URL-encoded body to send with the request.
+        "body",
+        # The user-agent string to send as a header.
+        "user_agent",
+    ],
+)

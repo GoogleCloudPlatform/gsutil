@@ -31,39 +31,45 @@ from gslib.tests.util import SetBotoConfigForTest
 
 
 class TestCredsConfig(testcase.GsUtilUnitTestCase):
-  """Tests for various combinations of configured credentials."""
+    """Tests for various combinations of configured credentials."""
 
-  def setUp(self):
-    super(TestCredsConfig, self).setUp()
-    self.log_handler = MockLoggingHandler()
-    self.logger.addHandler(self.log_handler)
+    def setUp(self):
+        super(TestCredsConfig, self).setUp()
+        self.log_handler = MockLoggingHandler()
+        self.logger.addHandler(self.log_handler)
 
-  def testMultipleConfiguredCreds(self):
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
-        ('Credentials', 'gs_service_client_id', 'bar'),
-        ('Credentials', 'gs_service_key_file', 'baz')]):
+    def testMultipleConfiguredCreds(self):
+        with SetBotoConfigForTest(
+            [
+                ("Credentials", "gs_oauth2_refresh_token", "foo"),
+                ("Credentials", "gs_service_client_id", "bar"),
+                ("Credentials", "gs_service_key_file", "baz"),
+            ]
+        ):
 
-      try:
-        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
-        self.fail('Succeeded with multiple types of configured creds.')
-      except CommandException as e:
-        msg = str(e)
-        self.assertIn('types of configured credentials', msg)
-        self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
-        self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
+            try:
+                GcsJsonApi(None, self.logger, DiscardMessagesQueue())
+                self.fail("Succeeded with multiple types of configured creds.")
+            except CommandException as e:
+                msg = str(e)
+                self.assertIn("types of configured credentials", msg)
+                self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
+                self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
 
 
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
-
-  @SkipForS3('Tests only uses gs credentials.')
-  def testExactlyOneInvalid(self):
-    bucket_uri = self.CreateBucket()
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
-        ('Credentials', 'gs_service_client_id', None),
-        ('Credentials', 'gs_service_key_file', None)],
-                              use_existing_config=False):
-      stderr = self.RunGsUtil(['ls', suri(bucket_uri)], expected_status=1,
-                              return_stderr=True)
-      self.assertIn('credentials are invalid', stderr)
+    @SkipForS3("Tests only uses gs credentials.")
+    def testExactlyOneInvalid(self):
+        bucket_uri = self.CreateBucket()
+        with SetBotoConfigForTest(
+            [
+                ("Credentials", "gs_oauth2_refresh_token", "foo"),
+                ("Credentials", "gs_service_client_id", None),
+                ("Credentials", "gs_service_key_file", None),
+            ],
+            use_existing_config=False,
+        ):
+            stderr = self.RunGsUtil(
+                ["ls", suri(bucket_uri)], expected_status=1, return_stderr=True
+            )
+            self.assertIn("credentials are invalid", stderr)

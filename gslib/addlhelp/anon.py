@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   gsutil users can access publicly readable data without obtaining
   credentials. For example, the gs://uspto-pair bucket contains a number
@@ -42,18 +42,18 @@ _DETAILED_HELP_TEXT = ("""
 <B>Configuring/Using Credentials via Standalone gsutil Distribution</B>
   If a user without credentials attempts to access protected data using gsutil,
   they will be prompted to run gsutil config to obtain credentials.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help text for anonymous access."""
+    """Additional help text for anonymous access."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='anon',
-      help_name_aliases=['anonymous', 'public'],
-      help_type='additional_help',
-      help_one_line_summary='Accessing Public Data Without Credentials',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="anon",
+        help_name_aliases=["anonymous", "public"],
+        help_type="additional_help",
+        help_one_line_summary="Accessing Public Data Without Credentials",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

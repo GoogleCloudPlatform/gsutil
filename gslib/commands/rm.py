@@ -50,9 +50,12 @@ _SYNOPSIS = """
   gsutil rm [-f] [-r] -I
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -146,245 +149,273 @@ older object versions (see "gsutil help lifecycle").
               and will delete all object versions.
 
   -a          Delete all versions of an object.
-""")
+"""
+)
 
 
 def _RemoveExceptionHandler(cls, e):
-  """Simple exception handler to allow post-completion status."""
-  if not cls.continue_on_error:
-    cls.logger.error(str(e))
-  # TODO: Use shared state to track missing bucket names when we get a
-  # BucketNotFoundException. Then improve bucket removal logic and exception
-  # messages.
-  if isinstance(e, BucketNotFoundException):
-    cls.bucket_not_found_count += 1
-    cls.logger.error(str(e))
-  else:
-    if _ExceptionMatchesBucketToDelete(cls.bucket_strings_to_delete, e):
-      DecrementFailureCount()
+    """Simple exception handler to allow post-completion status."""
+    if not cls.continue_on_error:
+        cls.logger.error(str(e))
+    # TODO: Use shared state to track missing bucket names when we get a
+    # BucketNotFoundException. Then improve bucket removal logic and exception
+    # messages.
+    if isinstance(e, BucketNotFoundException):
+        cls.bucket_not_found_count += 1
+        cls.logger.error(str(e))
     else:
-      cls.op_failure_count += 1
+        if _ExceptionMatchesBucketToDelete(cls.bucket_strings_to_delete, e):
+            DecrementFailureCount()
+        else:
+            cls.op_failure_count += 1
 
 
 # pylint: disable=unused-argument
 def _RemoveFoldersExceptionHandler(cls, e):
-  """When removing folders, we don't mind if none exist."""
-  if ((isinstance(e, CommandException) and
-       NO_URLS_MATCHED_GENERIC in e.reason)
-      or isinstance(e, NotFoundException)):
-    DecrementFailureCount()
-  else:
-    raise e
+    """When removing folders, we don't mind if none exist."""
+    if (
+        isinstance(e, CommandException) and NO_URLS_MATCHED_GENERIC in e.reason
+    ) or isinstance(e, NotFoundException):
+        DecrementFailureCount()
+    else:
+        raise e
 
 
 def _RemoveFuncWrapper(cls, name_expansion_result, thread_state=None):
-  cls.RemoveFunc(name_expansion_result, thread_state=thread_state)
+    cls.RemoveFunc(name_expansion_result, thread_state=thread_state)
 
 
 def _ExceptionMatchesBucketToDelete(bucket_strings_to_delete, e):
-  """Returns True if the exception matches a bucket slated for deletion.
+    """Returns True if the exception matches a bucket slated for deletion.
 
-  A recursive delete call on an empty bucket will raise an exception when
-  listing its objects, but if we plan to delete the bucket that shouldn't
-  result in a user-visible error.
+    A recursive delete call on an empty bucket will raise an exception when
+    listing its objects, but if we plan to delete the bucket that shouldn't
+    result in a user-visible error.
 
-  Args:
-    bucket_strings_to_delete: Buckets slated for recursive deletion.
-    e: Exception to check.
+    Args:
+      bucket_strings_to_delete: Buckets slated for recursive deletion.
+      e: Exception to check.
 
-  Returns:
-    True if the exception was a no-URLs-matched exception and it matched
-    one of bucket_strings_to_delete, None otherwise.
-  """
-  if bucket_strings_to_delete:
-    msg = NO_URLS_MATCHED_TARGET % ''
-    if msg in str(e):
-      parts = str(e).split(msg)
-      return len(parts) == 2 and parts[1] in bucket_strings_to_delete
+    Returns:
+      True if the exception was a no-URLs-matched exception and it matched
+      one of bucket_strings_to_delete, None otherwise.
+    """
+    if bucket_strings_to_delete:
+        msg = NO_URLS_MATCHED_TARGET % ""
+        if msg in str(e):
+            parts = str(e).split(msg)
+            return len(parts) == 2 and parts[1] in bucket_strings_to_delete
 
 
 class RmCommand(Command):
-  """Implementation of gsutil rm command."""
+    """Implementation of gsutil rm command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'rm',
-      command_name_aliases=['del', 'delete', 'remove'],
-      usage_synopsis=_SYNOPSIS,
-      min_args=0,
-      max_args=constants.NO_MAX,
-      supported_sub_args='afIrR',
-      file_url_ok=False,
-      provider_url_ok=False,
-      urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='rm',
-      help_name_aliases=['del', 'delete', 'remove'],
-      help_type='command_help',
-      help_one_line_summary='Remove objects',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "rm",
+        command_name_aliases=["del", "delete", "remove"],
+        usage_synopsis=_SYNOPSIS,
+        min_args=0,
+        max_args=constants.NO_MAX,
+        supported_sub_args="afIrR",
+        file_url_ok=False,
+        provider_url_ok=False,
+        urls_start_arg=0,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()],
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="rm",
+        help_name_aliases=["del", "delete", "remove"],
+        help_type="command_help",
+        help_one_line_summary="Remove objects",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def RunCommand(self):
-    """Command entry point for the rm command."""
-    # self.recursion_requested is initialized in command.py (so it can be
-    # checked in parent class for all commands).
-    self.continue_on_error = self.parallel_operations
-    self.read_args_from_stdin = False
-    self.all_versions = False
-    if self.sub_opts:
-      for o, unused_a in self.sub_opts:
-        if o == '-a':
-          self.all_versions = True
-        elif o == '-f':
-          self.continue_on_error = True
-        elif o == '-I':
-          self.read_args_from_stdin = True
-        elif o == '-r' or o == '-R':
-          self.recursion_requested = True
-          self.all_versions = True
+    def RunCommand(self):
+        """Command entry point for the rm command."""
+        # self.recursion_requested is initialized in command.py (so it can be
+        # checked in parent class for all commands).
+        self.continue_on_error = self.parallel_operations
+        self.read_args_from_stdin = False
+        self.all_versions = False
+        if self.sub_opts:
+            for o, unused_a in self.sub_opts:
+                if o == "-a":
+                    self.all_versions = True
+                elif o == "-f":
+                    self.continue_on_error = True
+                elif o == "-I":
+                    self.read_args_from_stdin = True
+                elif o == "-r" or o == "-R":
+                    self.recursion_requested = True
+                    self.all_versions = True
 
-    if self.read_args_from_stdin:
-      if self.args:
-        raise CommandException('No arguments allowed with the -I flag.')
-      url_strs = StdinIterator()
-    else:
-      if not self.args:
-        raise CommandException('The rm command (without -I) expects at '
-                               'least one URL.')
-      url_strs = self.args
+        if self.read_args_from_stdin:
+            if self.args:
+                raise CommandException("No arguments allowed with the -I flag.")
+            url_strs = StdinIterator()
+        else:
+            if not self.args:
+                raise CommandException(
+                    "The rm command (without -I) expects at " "least one URL."
+                )
+            url_strs = self.args
 
-    # Tracks number of object deletes that failed.
-    self.op_failure_count = 0
+        # Tracks number of object deletes that failed.
+        self.op_failure_count = 0
 
-    # Tracks if any buckets were missing.
-    self.bucket_not_found_count = 0
+        # Tracks if any buckets were missing.
+        self.bucket_not_found_count = 0
 
-    # Tracks buckets that are slated for recursive deletion.
-    bucket_urls_to_delete = []
-    self.bucket_strings_to_delete = []
+        # Tracks buckets that are slated for recursive deletion.
+        bucket_urls_to_delete = []
+        self.bucket_strings_to_delete = []
 
-    if self.recursion_requested:
-      bucket_fields = ['id']
-      for url_str in url_strs:
-        url = StorageUrlFromString(url_str)
-        if url.IsBucket() or url.IsProvider():
-          for blr in self.WildcardIterator(url_str).IterBuckets(
-              bucket_fields=bucket_fields):
-            bucket_urls_to_delete.append(blr.storage_url)
-            self.bucket_strings_to_delete.append(url_str)
+        if self.recursion_requested:
+            bucket_fields = ["id"]
+            for url_str in url_strs:
+                url = StorageUrlFromString(url_str)
+                if url.IsBucket() or url.IsProvider():
+                    for blr in self.WildcardIterator(url_str).IterBuckets(
+                        bucket_fields=bucket_fields
+                    ):
+                        bucket_urls_to_delete.append(blr.storage_url)
+                        self.bucket_strings_to_delete.append(url_str)
 
-    self.preconditions = PreconditionsFromHeaders(self.headers or {})
+        self.preconditions = PreconditionsFromHeaders(self.headers or {})
 
-    try:
-      # Expand wildcards, dirs, buckets, and bucket subdirs in URLs.
-      name_expansion_iterator = NameExpansionIterator(
-          self.command_name, self.debug, self.logger, self.gsutil_api,
-          url_strs, self.recursion_requested, project_id=self.project_id,
-          all_versions=self.all_versions,
-          continue_on_error=self.continue_on_error or self.parallel_operations)
-
-      seek_ahead_iterator = None
-      # Cannot seek ahead with stdin args, since we can only iterate them
-      # once without buffering in memory.
-      if not self.read_args_from_stdin:
-        seek_ahead_iterator = SeekAheadNameExpansionIterator(
-            self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
-            url_strs, self.recursion_requested,
-            all_versions=self.all_versions, project_id=self.project_id)
-
-      # Perform remove requests in parallel (-m) mode, if requested, using
-      # configured number of parallel processes and threads. Otherwise,
-      # perform requests with sequential function calls in current process.
-      self.Apply(_RemoveFuncWrapper, name_expansion_iterator,
-                 _RemoveExceptionHandler,
-                 fail_on_error=(not self.continue_on_error),
-                 shared_attrs=['op_failure_count', 'bucket_not_found_count'],
-                 seek_ahead_iterator=seek_ahead_iterator)
-
-    # Assuming the bucket has versioning enabled, url's that don't map to
-    # objects should throw an error even with all_versions, since the prior
-    # round of deletes only sends objects to a history table.
-    # This assumption that rm -a is only called for versioned buckets should be
-    # corrected, but the fix is non-trivial.
-    except CommandException as e:
-      # Don't raise if there are buckets to delete -- it's valid to say:
-      #   gsutil rm -r gs://some_bucket
-      # if the bucket is empty.
-      if _ExceptionMatchesBucketToDelete(self.bucket_strings_to_delete, e):
-        DecrementFailureCount()
-      else:
-        raise
-    except ServiceException as e:
-      if not self.continue_on_error:
-        raise
-
-    if self.bucket_not_found_count:
-      raise CommandException('Encountered non-existent bucket during listing')
-
-    if self.op_failure_count and not self.continue_on_error:
-      raise CommandException('Some files could not be removed.')
-
-    # If this was a gsutil rm -r command covering any bucket subdirs,
-    # remove any dir_$folder$ objects (which are created by various web UI
-    # tools to simulate folders).
-    if self.recursion_requested:
-      folder_object_wildcards = []
-      for url_str in url_strs:
-        url = StorageUrlFromString(url_str)
-        if url.IsObject():
-          folder_object_wildcards.append('%s**_$folder$' % url_str)
-      if folder_object_wildcards:
-        self.continue_on_error = True
         try:
-          name_expansion_iterator = NameExpansionIterator(
-              self.command_name, self.debug,
-              self.logger, self.gsutil_api,
-              folder_object_wildcards, self.recursion_requested,
-              project_id=self.project_id,
-              all_versions=self.all_versions)
-          # When we're removing folder objects, always continue on error
-          self.Apply(_RemoveFuncWrapper, name_expansion_iterator,
-                     _RemoveFoldersExceptionHandler,
-                     fail_on_error=False)
+            # Expand wildcards, dirs, buckets, and bucket subdirs in URLs.
+            name_expansion_iterator = NameExpansionIterator(
+                self.command_name,
+                self.debug,
+                self.logger,
+                self.gsutil_api,
+                url_strs,
+                self.recursion_requested,
+                project_id=self.project_id,
+                all_versions=self.all_versions,
+                continue_on_error=self.continue_on_error or self.parallel_operations,
+            )
+
+            seek_ahead_iterator = None
+            # Cannot seek ahead with stdin args, since we can only iterate them
+            # once without buffering in memory.
+            if not self.read_args_from_stdin:
+                seek_ahead_iterator = SeekAheadNameExpansionIterator(
+                    self.command_name,
+                    self.debug,
+                    self.GetSeekAheadGsutilApi(),
+                    url_strs,
+                    self.recursion_requested,
+                    all_versions=self.all_versions,
+                    project_id=self.project_id,
+                )
+
+            # Perform remove requests in parallel (-m) mode, if requested, using
+            # configured number of parallel processes and threads. Otherwise,
+            # perform requests with sequential function calls in current process.
+            self.Apply(
+                _RemoveFuncWrapper,
+                name_expansion_iterator,
+                _RemoveExceptionHandler,
+                fail_on_error=(not self.continue_on_error),
+                shared_attrs=["op_failure_count", "bucket_not_found_count"],
+                seek_ahead_iterator=seek_ahead_iterator,
+            )
+
+        # Assuming the bucket has versioning enabled, url's that don't map to
+        # objects should throw an error even with all_versions, since the prior
+        # round of deletes only sends objects to a history table.
+        # This assumption that rm -a is only called for versioned buckets should be
+        # corrected, but the fix is non-trivial.
         except CommandException as e:
-          # Ignore exception from name expansion due to an absent folder file.
-          if not e.reason.startswith(NO_URLS_MATCHED_GENERIC):
-            raise
+            # Don't raise if there are buckets to delete -- it's valid to say:
+            #   gsutil rm -r gs://some_bucket
+            # if the bucket is empty.
+            if _ExceptionMatchesBucketToDelete(self.bucket_strings_to_delete, e):
+                DecrementFailureCount()
+            else:
+                raise
+        except ServiceException as e:
+            if not self.continue_on_error:
+                raise
 
-    # Now that all data has been deleted, delete any bucket URLs.
-    for url in bucket_urls_to_delete:
-      self.logger.info('Removing %s...', url)
+        if self.bucket_not_found_count:
+            raise CommandException("Encountered non-existent bucket during listing")
 
-      @Retry(NotEmptyException, tries=3, timeout_secs=1)
-      def BucketDeleteWithRetry():
-        self.gsutil_api.DeleteBucket(url.bucket_name, provider=url.scheme)
+        if self.op_failure_count and not self.continue_on_error:
+            raise CommandException("Some files could not be removed.")
 
-      BucketDeleteWithRetry()
+        # If this was a gsutil rm -r command covering any bucket subdirs,
+        # remove any dir_$folder$ objects (which are created by various web UI
+        # tools to simulate folders).
+        if self.recursion_requested:
+            folder_object_wildcards = []
+            for url_str in url_strs:
+                url = StorageUrlFromString(url_str)
+                if url.IsObject():
+                    folder_object_wildcards.append("%s**_$folder$" % url_str)
+            if folder_object_wildcards:
+                self.continue_on_error = True
+                try:
+                    name_expansion_iterator = NameExpansionIterator(
+                        self.command_name,
+                        self.debug,
+                        self.logger,
+                        self.gsutil_api,
+                        folder_object_wildcards,
+                        self.recursion_requested,
+                        project_id=self.project_id,
+                        all_versions=self.all_versions,
+                    )
+                    # When we're removing folder objects, always continue on error
+                    self.Apply(
+                        _RemoveFuncWrapper,
+                        name_expansion_iterator,
+                        _RemoveFoldersExceptionHandler,
+                        fail_on_error=False,
+                    )
+                except CommandException as e:
+                    # Ignore exception from name expansion due to an absent folder file.
+                    if not e.reason.startswith(NO_URLS_MATCHED_GENERIC):
+                        raise
 
-    if self.op_failure_count:
-      plural_str = 's' if self.op_failure_count else ''
-      raise CommandException('%d file%s/object%s could not be removed.' % (
-          self.op_failure_count, plural_str, plural_str))
+        # Now that all data has been deleted, delete any bucket URLs.
+        for url in bucket_urls_to_delete:
+            self.logger.info("Removing %s...", url)
 
-    return 0
+            @Retry(NotEmptyException, tries=3, timeout_secs=1)
+            def BucketDeleteWithRetry():
+                self.gsutil_api.DeleteBucket(url.bucket_name, provider=url.scheme)
 
-  def RemoveFunc(self, name_expansion_result, thread_state=None):
-    gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
+            BucketDeleteWithRetry()
 
-    exp_src_url = name_expansion_result.expanded_storage_url
-    self.logger.info('Removing %s...', exp_src_url)
-    gsutil_api.DeleteObject(
-        exp_src_url.bucket_name, exp_src_url.object_name,
-        preconditions=self.preconditions, generation=exp_src_url.generation,
-        provider=exp_src_url.scheme)
-    _PutToQueueWithTimeout(gsutil_api.status_queue,
-                          MetadataMessage(message_time=time.time()))
+        if self.op_failure_count:
+            plural_str = "s" if self.op_failure_count else ""
+            raise CommandException(
+                "%d file%s/object%s could not be removed."
+                % (self.op_failure_count, plural_str, plural_str)
+            )
+
+        return 0
+
+    def RemoveFunc(self, name_expansion_result, thread_state=None):
+        gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
+
+        exp_src_url = name_expansion_result.expanded_storage_url
+        self.logger.info("Removing %s...", exp_src_url)
+        gsutil_api.DeleteObject(
+            exp_src_url.bucket_name,
+            exp_src_url.object_name,
+            preconditions=self.preconditions,
+            generation=exp_src_url.generation,
+            provider=exp_src_url.scheme,
+        )
+        _PutToQueueWithTimeout(
+            gsutil_api.status_queue, MetadataMessage(message_time=time.time())
+        )

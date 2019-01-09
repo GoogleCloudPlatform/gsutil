@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>DESCRIPTION</B>
   gsutil supports separate options for the top-level gsutil command and
   the individual sub-commands (like cp, rm, etc.) The top-level options
@@ -128,18 +128,18 @@ _DETAILED_HELP_TEXT = ("""
               For example:
 
                 gsutil -u "bill-this-project" cp ...
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about gsutil command-level options."""
+    """Additional help about gsutil command-level options."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='options',
-      help_name_aliases=['arg', 'args', 'cli', 'opt', 'opts'],
-      help_type='additional_help',
-      help_one_line_summary='Top-Level Command-Line Options',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="options",
+        help_name_aliases=["arg", "args", "cli", "opt", "opts"],
+        help_type="additional_help",
+        help_one_line_summary="Top-Level Command-Line Options",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

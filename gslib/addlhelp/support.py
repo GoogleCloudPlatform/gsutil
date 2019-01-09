@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>TECHNICAL SUPPORT</B>
   If you have any questions or encounter any problems with Google Cloud Storage,
   please first read the `FAQ <https://cloud.google.com/storage/docs/faq>`_.
@@ -80,20 +80,25 @@ _DETAILED_HELP_TEXT = ("""
   For other questions regarding your account, Terms Of Service, Google
   Cloud Console, or other administration-related questions please see
   `Google Cloud Platform support <https://support.google.com/cloud/answer/6282346#gcp>`_.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about technical and billing support."""
+    """Additional help about technical and billing support."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='support',
-      help_name_aliases=[
-          'techsupport', 'tech support', 'technical support', 'billing', 'faq',
-          'questions'],
-      help_type='additional_help',
-      help_one_line_summary='Google Cloud Storage Support',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="support",
+        help_name_aliases=[
+            "techsupport",
+            "tech support",
+            "technical support",
+            "billing",
+            "faq",
+            "questions",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Google Cloud Storage Support",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

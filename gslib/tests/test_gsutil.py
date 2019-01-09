@@ -24,26 +24,25 @@ import six
 import gslib
 import gslib.tests.testcase as testcase
 
-
 if six.PY3:
-  long = int
+    long = int
 
 
 class TestGsUtil(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for top-level gsutil command."""
+    """Integration tests for top-level gsutil command."""
 
-  def test_long_version_arg(self):
-    stdout = self.RunGsUtil(['--version'], return_stdout=True)
-    self.assertEqual('gsutil version: %s\n' % gslib.VERSION, stdout)
+    def test_long_version_arg(self):
+        stdout = self.RunGsUtil(["--version"], return_stdout=True)
+        self.assertEqual("gsutil version: %s\n" % gslib.VERSION, stdout)
 
-  def test_version_command(self):
-    stdout = self.RunGsUtil(['version'], return_stdout=True)
-    self.assertEqual('gsutil version: %s\n' % gslib.VERSION, stdout)
+    def test_version_command(self):
+        stdout = self.RunGsUtil(["version"], return_stdout=True)
+        self.assertEqual("gsutil version: %s\n" % gslib.VERSION, stdout)
 
-  def test_version_long(self):
-    stdout = self.RunGsUtil(['version', '-l'], return_stdout=True)
-    self.assertIn('gsutil version: %s\n' % gslib.VERSION, stdout)
-    self.assertIn('boto version', stdout)
-    self.assertIn('checksum', stdout)
-    self.assertIn('config path', stdout)
-    self.assertIn('gsutil path', stdout)
+    def test_version_long(self):
+        stdout = self.RunGsUtil(["version", "-l"], return_stdout=True)
+        self.assertIn("gsutil version: %s\n" % gslib.VERSION, stdout)
+        self.assertIn("boto version", stdout)
+        self.assertIn("checksum", stdout)
+        self.assertIn("config path", stdout)
+        self.assertIn("gsutil path", stdout)

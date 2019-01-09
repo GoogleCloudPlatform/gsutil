@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   This section discusses how to work with projects in Google Cloud Storage.
 
@@ -97,20 +97,26 @@ _DETAILED_HELP_TEXT = ("""
   Note that the project name is a user-friendly name that you can choose. It is
   not the same thing as the project ID that is required by the gsutil mb and ls
   commands.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about Google Cloud Storage projects."""
+    """Additional help about Google Cloud Storage projects."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='projects',
-      help_name_aliases=[
-          'apis console', 'cloud console', 'console', 'dev console', 'project',
-          'proj', 'project-id'],
-      help_type='additional_help',
-      help_one_line_summary='Working With Projects',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="projects",
+        help_name_aliases=[
+            "apis console",
+            "cloud console",
+            "console",
+            "dev console",
+            "project",
+            "proj",
+            "project-id",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Working With Projects",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

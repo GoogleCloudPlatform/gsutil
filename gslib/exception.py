@@ -31,9 +31,8 @@ from __future__ import unicode_literals
 
 import six
 
-
-NO_URLS_MATCHED_GENERIC = 'No URLs matched'
-NO_URLS_MATCHED_TARGET = 'No URLs matched: %s'
+NO_URLS_MATCHED_GENERIC = "No URLs matched"
+NO_URLS_MATCHED_TARGET = "No URLs matched: %s"
 
 if six.PY3:
     # StandardError was removed, so use the base exception type instead
@@ -41,69 +40,71 @@ if six.PY3:
 
 
 class AbortException(StandardError):
-  """Exception raised when a user aborts a command that needs to do cleanup."""
+    """Exception raised when a user aborts a command that needs to do cleanup."""
 
-  def __init__(self, reason):
-    StandardError.__init__(self)
-    self.reason = reason
+    def __init__(self, reason):
+        StandardError.__init__(self)
+        self.reason = reason
 
-  def __repr__(self):
-    return 'AbortException: %s' % self.reason
+    def __repr__(self):
+        return "AbortException: %s" % self.reason
 
-  def __str__(self):
-    return 'AbortException: %s' % self.reason
+    def __str__(self):
+        return "AbortException: %s" % self.reason
 
 
 class CommandException(StandardError):
-  """Exception raised when a problem is encountered running a gsutil command.
+    """Exception raised when a problem is encountered running a gsutil command.
 
-  This exception should be used to signal user errors or system failures
-  (like timeouts), not bugs (like an incorrect param value). For the
-  latter you should raise Exception so we can see where/how it happened
-  via gsutil -D (which will include a stack trace for raised Exceptions).
-  """
-
-  def __init__(self, reason, informational=False):
-    """Instantiate a CommandException.
-
-    Args:
-      reason: Text describing the problem.
-      informational: Indicates reason should be printed as FYI, not a failure.
+    This exception should be used to signal user errors or system failures
+    (like timeouts), not bugs (like an incorrect param value). For the
+    latter you should raise Exception so we can see where/how it happened
+    via gsutil -D (which will include a stack trace for raised Exceptions).
     """
-    StandardError.__init__(self)
-    self.reason = reason
-    self.informational = informational
 
-  def __repr__(self):
-    return str(self)
+    def __init__(self, reason, informational=False):
+        """Instantiate a CommandException.
 
-  def __str__(self):
-    return 'CommandException: %s' % self.reason
+        Args:
+          reason: Text describing the problem.
+          informational: Indicates reason should be printed as FYI, not a failure.
+        """
+        StandardError.__init__(self)
+        self.reason = reason
+        self.informational = informational
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "CommandException: %s" % self.reason
 
 
 class HashMismatchException(Exception):
-  """Exception raised when data integrity validation fails."""
-  pass
+    """Exception raised when data integrity validation fails."""
+
+    pass
 
 
 class ControlCException(Exception):
-  """Exception to report to analytics when the user exits via ctrl-C.
+    """Exception to report to analytics when the user exits via ctrl-C.
 
-  This exception is never actually raised, but is used by analytics collection
-  to provide a more descriptive name for user exit.
-  """
-  pass
+    This exception is never actually raised, but is used by analytics collection
+    to provide a more descriptive name for user exit.
+    """
+
+    pass
 
 
 class InvalidUrlError(Exception):
-  """Exception raised when URL is invalid."""
+    """Exception raised when URL is invalid."""
 
-  def __init__(self, message):
-    Exception.__init__(self, message)
-    self.message = message
+    def __init__(self, message):
+        Exception.__init__(self, message)
+        self.message = message
 
-  def __repr__(self):
-    return str(self)
+    def __repr__(self):
+        return str(self)
 
-  def __str__(self):
-    return 'InvalidUrlError: %s' % self.message
+    def __str__(self):
+        return "InvalidUrlError: %s" % self.message

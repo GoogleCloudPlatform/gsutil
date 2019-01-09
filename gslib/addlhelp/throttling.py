@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   Particularly when used with the -m (multi-threading) option, gsutil can
   consume a significant amount of network bandwidth. In some cases this can
@@ -51,18 +51,18 @@ _DETAILED_HELP_TEXT = ("""
   doesn't monopolize your local disk:
 
       ionice -c 2 -n 7 gsutil -m rsync -r ./dir gs://some bucket
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help text for throttling gsutil."""
+    """Additional help text for throttling gsutil."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='throttling',
-      help_name_aliases=['bandwidth', 'limit', 'nice'],
-      help_type='additional_help',
-      help_one_line_summary='Throttling gsutil',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="throttling",
+        help_name_aliases=["bandwidth", "limit", "nice"],
+        help_type="additional_help",
+        help_one_line_summary="Throttling gsutil",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

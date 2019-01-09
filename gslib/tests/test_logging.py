@@ -24,54 +24,57 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
 
-@SkipForS3('Logging command requires S3 ACL configuration on target bucket.')
+@SkipForS3("Logging command requires S3 ACL configuration on target bucket.")
 class TestLogging(testcase.GsUtilIntegrationTestCase):
-  """Integration tests for logging command."""
+    """Integration tests for logging command."""
 
-  _enable_log_cmd = ['logging', 'set', 'on']
-  _disable_log_cmd = ['logging', 'set', 'off']
-  _get_log_cmd = ['logging', 'get']
+    _enable_log_cmd = ["logging", "set", "on"]
+    _disable_log_cmd = ["logging", "set", "off"]
+    _get_log_cmd = ["logging", "get"]
 
-  def testLogging(self):
-    """Tests enabling and disabling logging."""
-    bucket_uri = self.CreateBucket()
-    bucket_suri = suri(bucket_uri)
-    stderr = self.RunGsUtil(
-        self._enable_log_cmd + ['-b', bucket_suri, bucket_suri],
-        return_stderr=True)
-    self.assertIn('Enabling logging', stderr)
+    def testLogging(self):
+        """Tests enabling and disabling logging."""
+        bucket_uri = self.CreateBucket()
+        bucket_suri = suri(bucket_uri)
+        stderr = self.RunGsUtil(
+            self._enable_log_cmd + ["-b", bucket_suri, bucket_suri], return_stderr=True
+        )
+        self.assertIn("Enabling logging", stderr)
 
-    stdout = self.RunGsUtil(self._get_log_cmd + [bucket_suri],
-                            return_stdout=True)
-    self.assertIn('LogObjectPrefix'.lower(), stdout.lower())
+        stdout = self.RunGsUtil(self._get_log_cmd + [bucket_suri], return_stdout=True)
+        self.assertIn("LogObjectPrefix".lower(), stdout.lower())
 
-    stderr = self.RunGsUtil(self._disable_log_cmd + [bucket_suri],
-                            return_stderr=True)
-    self.assertIn('Disabling logging', stderr)
+        stderr = self.RunGsUtil(
+            self._disable_log_cmd + [bucket_suri], return_stderr=True
+        )
+        self.assertIn("Disabling logging", stderr)
 
-  def testTooFewArgumentsFails(self):
-    """Ensures logging commands fail with too few arguments."""
-    # No arguments for enable, but valid subcommand.
-    stderr = self.RunGsUtil(self._enable_log_cmd, return_stderr=True,
-                            expected_status=1)
-    self.assertIn('command requires at least', stderr)
+    def testTooFewArgumentsFails(self):
+        """Ensures logging commands fail with too few arguments."""
+        # No arguments for enable, but valid subcommand.
+        stderr = self.RunGsUtil(
+            self._enable_log_cmd, return_stderr=True, expected_status=1
+        )
+        self.assertIn("command requires at least", stderr)
 
-    # No arguments for disable, but valid subcommand.
-    stderr = self.RunGsUtil(self._disable_log_cmd, return_stderr=True,
-                            expected_status=1)
-    self.assertIn('command requires at least', stderr)
+        # No arguments for disable, but valid subcommand.
+        stderr = self.RunGsUtil(
+            self._disable_log_cmd, return_stderr=True, expected_status=1
+        )
+        self.assertIn("command requires at least", stderr)
 
-    # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(self._get_log_cmd, return_stderr=True,
-                            expected_status=1)
-    self.assertIn('command requires at least', stderr)
+        # No arguments for get, but valid subcommand.
+        stderr = self.RunGsUtil(
+            self._get_log_cmd, return_stderr=True, expected_status=1
+        )
+        self.assertIn("command requires at least", stderr)
 
-    # Neither arguments nor subcommand.
-    stderr = self.RunGsUtil(['logging'], return_stderr=True, expected_status=1)
-    self.assertIn('command requires at least', stderr)
+        # Neither arguments nor subcommand.
+        stderr = self.RunGsUtil(["logging"], return_stderr=True, expected_status=1)
+        self.assertIn("command requires at least", stderr)
 
 
 class TestLoggingOldAlias(TestLogging):
-  _enable_log_cmd = ['enablelogging']
-  _disable_log_cmd = ['disablelogging']
-  _get_log_cmd = ['getlogging']
+    _enable_log_cmd = ["enablelogging"]
+    _disable_log_cmd = ["disablelogging"]
+    _get_log_cmd = ["getlogging"]

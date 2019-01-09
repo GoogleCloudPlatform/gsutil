@@ -36,14 +36,16 @@ from gslib.utils.constants import UTF8
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils import text_util
 
-
 _SYNOPSIS = """
   gsutil du url...
 """
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = (
+    """
 <B>SYNOPSIS</B>
-""" + _SYNOPSIS + """
+"""
+    + _SYNOPSIS
+    + """
 
 
 <B>DESCRIPTION</B>
@@ -111,181 +113,195 @@ _DETAILED_HELP_TEXT = ("""
   project:
 
       gsutil -o GSUtil:default_project_id=project-name du -shc
-""")
+"""
+)
 
 
 class DuCommand(Command):
-  """Implementation of gsutil du command."""
+    """Implementation of gsutil du command."""
 
-  # Command specification. See base class for documentation.
-  command_spec = Command.CreateCommandSpec(
-      'du',
-      command_name_aliases=[],
-      usage_synopsis=_SYNOPSIS,
-      min_args=0,
-      max_args=NO_MAX,
-      supported_sub_args='0ace:hsX:',
-      file_url_ok=False,
-      provider_url_ok=True,
-      urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
-      gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
-  # Help specification. See help_provider.py for documentation.
-  help_spec = Command.HelpSpec(
-      help_name='du',
-      help_name_aliases=[],
-      help_type='command_help',
-      help_one_line_summary='Display object size usage',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Command specification. See base class for documentation.
+    command_spec = Command.CreateCommandSpec(
+        "du",
+        command_name_aliases=[],
+        usage_synopsis=_SYNOPSIS,
+        min_args=0,
+        max_args=NO_MAX,
+        supported_sub_args="0ace:hsX:",
+        file_url_ok=False,
+        provider_url_ok=True,
+        urls_start_arg=0,
+        gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+        gs_default_api=ApiSelector.JSON,
+        argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()],
+    )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = Command.HelpSpec(
+        help_name="du",
+        help_name_aliases=[],
+        help_type="command_help",
+        help_one_line_summary="Display object size usage",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
 
-  def _PrintSummaryLine(self, num_bytes, name):
-    size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else six.text_type(num_bytes))
-    text_util.ttyprint('%(size)-10s  %(name)s' % {
-        'size': size_string, 'name': name}, end=self.line_ending)
+    def _PrintSummaryLine(self, num_bytes, name):
+        size_string = (
+            MakeHumanReadable(num_bytes)
+            if self.human_readable
+            else six.text_type(num_bytes)
+        )
+        text_util.ttyprint(
+            "%(size)-10s  %(name)s" % {"size": size_string, "name": name},
+            end=self.line_ending,
+        )
 
-  def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
-    """Print listing info for given bucket_listing_ref.
+    def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
+        """Print listing info for given bucket_listing_ref.
 
-    Args:
-      bucket_listing_ref: BucketListing being listed.
+        Args:
+          bucket_listing_ref: BucketListing being listed.
 
-    Returns:
-      Tuple (number of objects, object size)
+        Returns:
+          Tuple (number of objects, object size)
 
-    Raises:
-      Exception: if calling bug encountered.
-    """
-    obj = bucket_listing_ref.root_object
-    url_str = bucket_listing_ref.url_string
-    if (obj.metadata and S3_DELETE_MARKER_GUID in
-        obj.metadata.additionalProperties):
-      size_string = '0'
-      num_bytes = 0
-      num_objs = 0
-      url_str += '<DeleteMarker>'
-    else:
-      size_string = (MakeHumanReadable(obj.size)
-                     if self.human_readable else str(obj.size))
-      num_bytes = obj.size
-      num_objs = 1
+        Raises:
+          Exception: if calling bug encountered.
+        """
+        obj = bucket_listing_ref.root_object
+        url_str = bucket_listing_ref.url_string
+        if obj.metadata and S3_DELETE_MARKER_GUID in obj.metadata.additionalProperties:
+            size_string = "0"
+            num_bytes = 0
+            num_objs = 0
+            url_str += "<DeleteMarker>"
+        else:
+            size_string = (
+                MakeHumanReadable(obj.size) if self.human_readable else str(obj.size)
+            )
+            num_bytes = obj.size
+            num_objs = 1
 
-    if not self.summary_only:
-      text_util.ttyprint('%(size)-10s  %(url)s' % {
-          'size': size_string,
-          'url': url_str},
-          end=self.line_ending)
+        if not self.summary_only:
+            text_util.ttyprint(
+                "%(size)-10s  %(url)s" % {"size": size_string, "url": url_str},
+                end=self.line_ending,
+            )
 
-    return (num_objs, num_bytes)
+        return (num_objs, num_bytes)
 
-  def RunCommand(self):
-    """Command entry point for the du command."""
-    self.line_ending = '\n'
-    self.all_versions = False
-    self.produce_total = False
-    self.human_readable = False
-    self.summary_only = False
-    self.exclude_patterns = []
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o == '-0':
-          self.line_ending = '\0'
-        elif o == '-a':
-          self.all_versions = True
-        elif o == '-c':
-          self.produce_total = True
-        elif o == '-e':
-          self.exclude_patterns.append(a)
-        elif o == '-h':
-          self.human_readable = True
-        elif o == '-s':
-          self.summary_only = True
-        elif o == '-X':
-          if a == '-':
-            f = sys.stdin
-          else:
-            f = open(a, 'rb')
-          try:
-            for line in f:
-              line = line.strip().decode(UTF8)
-              if line:
-                self.exclude_patterns.append(line)
-          finally:
-            f.close()
+    def RunCommand(self):
+        """Command entry point for the du command."""
+        self.line_ending = "\n"
+        self.all_versions = False
+        self.produce_total = False
+        self.human_readable = False
+        self.summary_only = False
+        self.exclude_patterns = []
+        if self.sub_opts:
+            for o, a in self.sub_opts:
+                if o == "-0":
+                    self.line_ending = "\0"
+                elif o == "-a":
+                    self.all_versions = True
+                elif o == "-c":
+                    self.produce_total = True
+                elif o == "-e":
+                    self.exclude_patterns.append(a)
+                elif o == "-h":
+                    self.human_readable = True
+                elif o == "-s":
+                    self.summary_only = True
+                elif o == "-X":
+                    if a == "-":
+                        f = sys.stdin
+                    else:
+                        f = open(a, "rb")
+                    try:
+                        for line in f:
+                            line = line.strip().decode(UTF8)
+                            if line:
+                                self.exclude_patterns.append(line)
+                    finally:
+                        f.close()
 
-    if not self.args:
-      # Default to listing all gs buckets.
-      self.args = ['gs://']
+        if not self.args:
+            # Default to listing all gs buckets.
+            self.args = ["gs://"]
 
-    total_bytes = 0
-    got_nomatch_errors = False
+        total_bytes = 0
+        got_nomatch_errors = False
 
-    def _PrintObjectLong(blr):
-      return self._PrintInfoAboutBucketListingRef(blr)
+        def _PrintObjectLong(blr):
+            return self._PrintInfoAboutBucketListingRef(blr)
 
-    def _PrintNothing(unused_blr=None):
-      pass
+        def _PrintNothing(unused_blr=None):
+            pass
 
-    def _PrintDirectory(num_bytes, blr):
-      if not self.summary_only:
-        self._PrintSummaryLine(num_bytes, blr.url_string)
+        def _PrintDirectory(num_bytes, blr):
+            if not self.summary_only:
+                self._PrintSummaryLine(num_bytes, blr.url_string)
 
-    for url_arg in self.args:
-      top_level_storage_url = StorageUrlFromString(url_arg)
-      if top_level_storage_url.IsFileUrl():
-        raise CommandException('Only cloud URLs are supported for %s'
-                               % self.command_name)
-      bucket_listing_fields = ['size']
+        for url_arg in self.args:
+            top_level_storage_url = StorageUrlFromString(url_arg)
+            if top_level_storage_url.IsFileUrl():
+                raise CommandException(
+                    "Only cloud URLs are supported for %s" % self.command_name
+                )
+            bucket_listing_fields = ["size"]
 
-      listing_helper = ls_helper.LsHelper(
-          self.WildcardIterator, self.logger,
-          print_object_func=_PrintObjectLong, print_dir_func=_PrintNothing,
-          print_dir_header_func=_PrintNothing,
-          print_dir_summary_func=_PrintDirectory,
-          print_newline_func=_PrintNothing, all_versions=self.all_versions,
-          should_recurse=True, exclude_patterns=self.exclude_patterns,
-          fields=bucket_listing_fields)
+            listing_helper = ls_helper.LsHelper(
+                self.WildcardIterator,
+                self.logger,
+                print_object_func=_PrintObjectLong,
+                print_dir_func=_PrintNothing,
+                print_dir_header_func=_PrintNothing,
+                print_dir_summary_func=_PrintDirectory,
+                print_newline_func=_PrintNothing,
+                all_versions=self.all_versions,
+                should_recurse=True,
+                exclude_patterns=self.exclude_patterns,
+                fields=bucket_listing_fields,
+            )
 
-      # LsHelper expands to objects and prefixes, so perform a top-level
-      # expansion first.
-      if top_level_storage_url.IsProvider():
-        # Provider URL: use bucket wildcard to iterate over all buckets.
-        top_level_iter = self.WildcardIterator(
-            '%s://*' % top_level_storage_url.scheme).IterBuckets(
-                bucket_fields=['id'])
-      elif top_level_storage_url.IsBucket():
-        top_level_iter = self.WildcardIterator(
-            '%s://%s' % (top_level_storage_url.scheme,
-                         top_level_storage_url.bucket_name)).IterBuckets(
-                             bucket_fields=['id'])
-      else:
-        top_level_iter = [BucketListingObject(top_level_storage_url)]
+            # LsHelper expands to objects and prefixes, so perform a top-level
+            # expansion first.
+            if top_level_storage_url.IsProvider():
+                # Provider URL: use bucket wildcard to iterate over all buckets.
+                top_level_iter = self.WildcardIterator(
+                    "%s://*" % top_level_storage_url.scheme
+                ).IterBuckets(bucket_fields=["id"])
+            elif top_level_storage_url.IsBucket():
+                top_level_iter = self.WildcardIterator(
+                    "%s://%s"
+                    % (top_level_storage_url.scheme, top_level_storage_url.bucket_name)
+                ).IterBuckets(bucket_fields=["id"])
+            else:
+                top_level_iter = [BucketListingObject(top_level_storage_url)]
 
-      for blr in top_level_iter:
-        storage_url = blr.storage_url
-        if storage_url.IsBucket() and self.summary_only:
-          storage_url = StorageUrlFromString(
-              storage_url.CreatePrefixUrl(wildcard_suffix='**'))
-        _, exp_objs, exp_bytes = listing_helper.ExpandUrlAndPrint(storage_url)
-        if (storage_url.IsObject() and exp_objs == 0 and
-            ContainsWildcard(url_arg) and not self.exclude_patterns):
-          got_nomatch_errors = True
-        total_bytes += exp_bytes
+            for blr in top_level_iter:
+                storage_url = blr.storage_url
+                if storage_url.IsBucket() and self.summary_only:
+                    storage_url = StorageUrlFromString(
+                        storage_url.CreatePrefixUrl(wildcard_suffix="**")
+                    )
+                _, exp_objs, exp_bytes = listing_helper.ExpandUrlAndPrint(storage_url)
+                if (
+                    storage_url.IsObject()
+                    and exp_objs == 0
+                    and ContainsWildcard(url_arg)
+                    and not self.exclude_patterns
+                ):
+                    got_nomatch_errors = True
+                total_bytes += exp_bytes
 
-        if self.summary_only:
-          self._PrintSummaryLine(exp_bytes,
-                                 blr.url_string.rstrip('/'))
+                if self.summary_only:
+                    self._PrintSummaryLine(exp_bytes, blr.url_string.rstrip("/"))
 
-    if self.produce_total:
-      self._PrintSummaryLine(total_bytes, 'total')
+        if self.produce_total:
+            self._PrintSummaryLine(total_bytes, "total")
 
-    if got_nomatch_errors:
-      raise CommandException('One or more URLs matched no objects.')
+        if got_nomatch_errors:
+            raise CommandException("One or more URLs matched no objects.")
 
-    return 0
+        return 0

@@ -24,39 +24,39 @@ from datetime import tzinfo
 
 
 class UTC(tzinfo):
-  """Timezone information class used to convert datetime timestamps to UTC.
+    """Timezone information class used to convert datetime timestamps to UTC.
 
-  This class is necessary to convert timestamps to UTC. By default Python
-  datetime objects are timezone unaware. This created problems when interacting
-  with cloud object timestamps which are timezone-aware. This issue appeared
-  when handling the timeCreated metadata attribute; the values returned by the
-  service were placed in RFC 3339 format in the storage_v1_messages module. RFC
-  3339 requires a timezone in any timestamp. This caused problems as the
-  datetime object elsewhere in the code was timezone unaware and was different
-  by exactly one hour. The main problem was that the local system used daylight
-  savings time which adjusted the timestamp ahead by one hour.
-  """
-
-  def utcoffset(self, _):
-    """An offset of the number of minutes away from UTC this tzinfo object is.
-
-    Returns:
-      A time duration of zero. UTC is zero minutes away from UTC.
+    This class is necessary to convert timestamps to UTC. By default Python
+    datetime objects are timezone unaware. This created problems when interacting
+    with cloud object timestamps which are timezone-aware. This issue appeared
+    when handling the timeCreated metadata attribute; the values returned by the
+    service were placed in RFC 3339 format in the storage_v1_messages module. RFC
+    3339 requires a timezone in any timestamp. This caused problems as the
+    datetime object elsewhere in the code was timezone unaware and was different
+    by exactly one hour. The main problem was that the local system used daylight
+    savings time which adjusted the timestamp ahead by one hour.
     """
-    return timedelta(0)
 
-  def tzname(self, _):
-    """A method to retrieve the name of this timezone object.
+    def utcoffset(self, _):
+        """An offset of the number of minutes away from UTC this tzinfo object is.
 
-    Returns:
-      The name of the timezone (i.e. 'UTC').
-    """
-    return 'UTC'
+        Returns:
+          A time duration of zero. UTC is zero minutes away from UTC.
+        """
+        return timedelta(0)
 
-  def dst(self, _):
-    """A fixed offset to handle daylight savings time (DST).
+    def tzname(self, _):
+        """A method to retrieve the name of this timezone object.
 
-    Returns:
-      A time duration of zero as UTC does not use DST.
-    """
-    return timedelta(0)
+        Returns:
+          The name of the timezone (i.e. 'UTC').
+        """
+        return "UTC"
+
+    def dst(self, _):
+        """A fixed offset to handle daylight savings time (DST).
+
+        Returns:
+          A time duration of zero as UTC does not use DST.
+        """
+        return timedelta(0)

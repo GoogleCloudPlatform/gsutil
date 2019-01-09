@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>BUCKET NAME REQUIREMENTS</B>
   Google Cloud Storage has a single namespace, so you will not be allowed
   to create a bucket with a name already in use by another user. You can,
@@ -171,18 +171,18 @@ _DETAILED_HELP_TEXT = ("""
   inclusion of any other resource records if there is a CNAME resource record
   present. If you want to create a CNAME resource record for a domain, you must
   use the Meta tag verification method or the HTML file verification method.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about gsutil object and bucket naming."""
+    """Additional help about gsutil object and bucket naming."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='naming',
-      help_name_aliases=['domain', 'limits', 'name', 'names'],
-      help_type='additional_help',
-      help_one_line_summary='Object and Bucket Naming',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="naming",
+        help_name_aliases=["domain", "limits", "name", "names"],
+        help_type="additional_help",
+        help_one_line_summary="Object and Bucket Naming",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

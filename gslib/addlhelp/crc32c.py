@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   Google Cloud Storage provides a cyclic redundancy check (CRC) header that
   allows clients to verify the integrity of object contents. For non-composite
@@ -136,18 +136,18 @@ _DETAILED_HELP_TEXT = ("""
 
   Manually copying the crcmod directory to the correct location should resolve
   the issue.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about CRC32C and installing crcmod."""
+    """Additional help about CRC32C and installing crcmod."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='crc32c',
-      help_name_aliases=['crc32', 'crc', 'crcmod'],
-      help_type='additional_help',
-      help_one_line_summary='CRC32C and Installing crcmod',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="crc32c",
+        help_name_aliases=["crc32", "crc", "crcmod"],
+        help_type="additional_help",
+        help_one_line_summary="CRC32C and Installing crcmod",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

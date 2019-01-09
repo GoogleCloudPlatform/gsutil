@@ -23,7 +23,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   Access Control Lists (ACLs) allow you to control who can read and write
   your data, and who can read and write the ACLs themselves.
@@ -216,20 +216,25 @@ _DETAILED_HELP_TEXT = ("""
 <B>SHARING SCENARIOS</B>
   For more detailed examples how to achieve various useful sharing use
   cases see https://cloud.google.com/storage/docs/collaboration
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about Access Control Lists."""
+    """Additional help about Access Control Lists."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='acls',
-      help_name_aliases=[
-          'ACL', 'access control', 'access control list', 'authorization',
-          'canned', 'canned acl'],
-      help_type='additional_help',
-      help_one_line_summary='Working With Access Control Lists',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="acls",
+        help_name_aliases=[
+            "ACL",
+            "access control",
+            "access control list",
+            "authorization",
+            "canned",
+            "canned acl",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Working With Access Control Lists",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

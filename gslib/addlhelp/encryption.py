@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   By default, Google Cloud Storage encrypts all object data using Google-managed
   encryption keys and the AES256 encryption algorithm. However, you can also use
@@ -184,25 +184,18 @@ _DETAILED_HELP_TEXT = ("""
   gsutil does not support using the XML API to interact with encrypted objects,
   and will use the JSON API if any encryption_key or decryption_keys are
   specified in configuration.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Add'l help for customer-supplied and customer-managed encryption keys."""
+    """Add'l help for customer-supplied and customer-managed encryption keys."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='encryption',
-      help_name_aliases=[
-          'cmek',
-          'csk',
-          'csek',
-          'decrypt',
-          'decryption',
-          'encrypt',
-      ],
-      help_type='additional_help',
-      help_one_line_summary='Using Encryption Keys',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="encryption",
+        help_name_aliases=["cmek", "csk", "csek", "decrypt", "decryption", "encrypt"],
+        help_type="additional_help",
+        help_one_line_summary="Using Encryption Keys",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

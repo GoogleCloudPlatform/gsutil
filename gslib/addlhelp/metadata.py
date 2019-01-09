@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW OF METADATA</B>
   Objects can have associated metadata, which control aspects of how
   GET requests are handled, including Content-Type, Cache-Control,
@@ -186,20 +186,25 @@ _DETAILED_HELP_TEXT = ("""
   You can see what metadata is currently set on an object by using:
 
     gsutil ls -L gs://the_bucket/the_object
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about object metadata."""
+    """Additional help about object metadata."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='metadata',
-      help_name_aliases=[
-          'cache-control', 'caching', 'content type', 'mime type', 'mime',
-          'type'],
-      help_type='additional_help',
-      help_one_line_summary='Working With Object Metadata',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="metadata",
+        help_name_aliases=[
+            "cache-control",
+            "caching",
+            "content type",
+            "mime type",
+            "mime",
+            "type",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Working With Object Metadata",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

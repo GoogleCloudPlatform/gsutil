@@ -33,68 +33,95 @@ from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 
 
 class TestEncryptionHelper(GsUtilUnitTestCase):
-  """Unit tests for encryption helper functions."""
+    """Unit tests for encryption helper functions."""
 
-  def testMaxDecryptionKeys(self):
-    """Tests a config file with the maximum number of decryption keys."""
-    keys = []
-    boto_101_key_config = []
-    # Generate 101 keys.
-    for i in range(1, 102):
-      keys.append(base64.encodestring(os.urandom(32)).rstrip(b'\n'))
-      boto_101_key_config.append(('GSUtil', 'decryption_key%s' % i,
-                                  keys[i - 1]))
-    with SetBotoConfigForTest(boto_101_key_config):
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config))
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[99]), boto.config))
-      # Only 100 keys are supported.
-      self.assertIsNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[100]), boto.config))
+    def testMaxDecryptionKeys(self):
+        """Tests a config file with the maximum number of decryption keys."""
+        keys = []
+        boto_101_key_config = []
+        # Generate 101 keys.
+        for i in range(1, 102):
+            keys.append(base64.encodestring(os.urandom(32)).rstrip(b"\n"))
+            boto_101_key_config.append(("GSUtil", "decryption_key%s" % i, keys[i - 1]))
+        with SetBotoConfigForTest(boto_101_key_config):
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config
+                )
+            )
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[99]), boto.config
+                )
+            )
+            # Only 100 keys are supported.
+            self.assertIsNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[100]), boto.config
+                )
+            )
 
-    boto_100_key_config = list(boto_101_key_config)
-    boto_100_key_config.pop()
-    with SetBotoConfigForTest(boto_100_key_config):
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config))
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[99]), boto.config))
+        boto_100_key_config = list(boto_101_key_config)
+        boto_100_key_config.pop()
+        with SetBotoConfigForTest(boto_100_key_config):
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config
+                )
+            )
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[99]), boto.config
+                )
+            )
 
-  def testNonSequentialDecryptionKeys(self):
-    """Tests a config file with non-sequential decryption key numbering."""
-    keys = []
-    for _ in range(3):
-      keys.append(base64.encodestring(os.urandom(32)).rstrip(b'\n'))
-    boto_config = [
-        ('GSUtil', 'decryption_key4', keys[2]),
-        ('GSUtil', 'decryption_key1', keys[0]),
-        ('GSUtil', 'decryption_key2', keys[1])]
-    with SetBotoConfigForTest(boto_config):
-      # Because decryption_key3 does not exist in boto_config, decryption_key4
-      # should be ignored.
-      self.assertIsNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[2]), boto.config))
-      # decryption_key1 and decryption_key2 should work, though.
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config))
-      self.assertIsNotNone(FindMatchingCSEKInBotoConfig(
-          Base64Sha256FromBase64EncryptionKey(keys[1]), boto.config))
+    def testNonSequentialDecryptionKeys(self):
+        """Tests a config file with non-sequential decryption key numbering."""
+        keys = []
+        for _ in range(3):
+            keys.append(base64.encodestring(os.urandom(32)).rstrip(b"\n"))
+        boto_config = [
+            ("GSUtil", "decryption_key4", keys[2]),
+            ("GSUtil", "decryption_key1", keys[0]),
+            ("GSUtil", "decryption_key2", keys[1]),
+        ]
+        with SetBotoConfigForTest(boto_config):
+            # Because decryption_key3 does not exist in boto_config, decryption_key4
+            # should be ignored.
+            self.assertIsNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[2]), boto.config
+                )
+            )
+            # decryption_key1 and decryption_key2 should work, though.
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[0]), boto.config
+                )
+            )
+            self.assertIsNotNone(
+                FindMatchingCSEKInBotoConfig(
+                    Base64Sha256FromBase64EncryptionKey(keys[1]), boto.config
+                )
+            )
 
-  def testInvalidCSEKConfigurationRaises(self):
-    invalid_key = 'aP7KbmxLqDw1SWHeKvlfKOVgNRNNZc8L2sFz8ybLN==='
-    with self.assertRaises(CommandException) as cm:
-      CryptoKeyWrapperFromKey(invalid_key)
-    self.assertIn(
-        'Configured encryption_key or decryption_key looked like a CSEK',
-        cm.exception.reason)
+    def testInvalidCSEKConfigurationRaises(self):
+        invalid_key = "aP7KbmxLqDw1SWHeKvlfKOVgNRNNZc8L2sFz8ybLN==="
+        with self.assertRaises(CommandException) as cm:
+            CryptoKeyWrapperFromKey(invalid_key)
+        self.assertIn(
+            "Configured encryption_key or decryption_key looked like a CSEK",
+            cm.exception.reason,
+        )
 
-  def testInvalidCMEKConfigurationRaises(self):
-    invalid_key = (
-        'projects/my-project/locations/some-location/keyRings/keyring/'
-        'cryptoKeyWHOOPS-INVALID-RESOURCE-PORTION/somekey')
-    with self.assertRaises(CommandException) as cm:
-      CryptoKeyWrapperFromKey(invalid_key)
-    self.assertIn(
-        'Configured encryption_key or decryption_key looked like a CMEK',
-        cm.exception.reason)
+    def testInvalidCMEKConfigurationRaises(self):
+        invalid_key = (
+            "projects/my-project/locations/some-location/keyRings/keyring/"
+            "cryptoKeyWHOOPS-INVALID-RESOURCE-PORTION/somekey"
+        )
+        with self.assertRaises(CommandException) as cm:
+            CryptoKeyWrapperFromKey(invalid_key)
+        self.assertIn(
+            "Configured encryption_key or decryption_key looked like a CMEK",
+            cm.exception.reason,
+        )

@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   To reduce the chance for `filename encoding interoperability problems
   <https://en.wikipedia.org/wiki/Filename#Encoding_indication_interoperability>`_ 
@@ -150,19 +150,25 @@ _DETAILED_HELP_TEXT = ("""
   `Windows iconv <http://gnuwin32.sourceforge.net/packages/libiconv.htm>`_.
   For Unix-based systems, you can use
   `libiconv <https://www.gnu.org/software/libiconv/>`_.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about filename encoding and interoperability problems."""
+    """Additional help about filename encoding and interoperability problems."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='encoding',
-      help_name_aliases=['encodings', 'utf8', 'utf-8', 'latin1', 'unicode',
-                         'interoperability'],
-      help_type='additional_help',
-      help_one_line_summary='Filename encoding and interoperability problems',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="encoding",
+        help_name_aliases=[
+            "encodings",
+            "utf8",
+            "utf-8",
+            "latin1",
+            "unicode",
+            "interoperability",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="Filename encoding and interoperability problems",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

@@ -28,22 +28,20 @@ import oauth2client.contrib.devshell as devshell
 
 
 class DevshellAuth(AuthHandler):
-  """Developer Shell authorization plugin class."""
+    """Developer Shell authorization plugin class."""
 
-  capability = ['s3']
+    capability = ["s3"]
 
-  def __init__(self, path, config, provider):
-    # Provider here is a boto.provider.Provider object (as opposed to the
-    # provider attribute of CloudApi objects, which is a string).
-    if provider.name != 'google':
-      # Devshell credentials are valid for Google only and can't be used for s3.
-      raise NotReadyToAuthenticate()
-    try:
-      self.creds = devshell.DevshellCredentials()
-    except:
-      raise NotReadyToAuthenticate()
+    def __init__(self, path, config, provider):
+        # Provider here is a boto.provider.Provider object (as opposed to the
+        # provider attribute of CloudApi objects, which is a string).
+        if provider.name != "google":
+            # Devshell credentials are valid for Google only and can't be used for s3.
+            raise NotReadyToAuthenticate()
+        try:
+            self.creds = devshell.DevshellCredentials()
+        except:
+            raise NotReadyToAuthenticate()
 
-  def add_auth(self, http_request):
-    http_request.headers['Authorization'] = ('Bearer %s' %
-                                             self.creds.access_token)
-
+    def add_auth(self, http_request):
+        http_request.headers["Authorization"] = "Bearer %s" % self.creds.access_token

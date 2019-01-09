@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>DESCRIPTION</B>
   gsutil supports URI wildcards. For example, the command:
 
@@ -219,18 +219,18 @@ _DETAILED_HELP_TEXT = ("""
   request (which means fewer bucket requests, though it will list the entire
   bucket and filter locally, so that could require a non-trivial amount of
   network traffic).
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about wildcards."""
+    """Additional help about wildcards."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='wildcards',
-      help_name_aliases=['wildcard', '*', '**'],
-      help_type='additional_help',
-      help_one_line_summary='Wildcard Names',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="wildcards",
+        help_name_aliases=["wildcard", "*", "**"],
+        help_type="additional_help",
+        help_one_line_summary="Wildcard Names",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

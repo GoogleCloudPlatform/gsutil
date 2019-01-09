@@ -19,4 +19,4 @@
 import gsutil_measure_imports
 
 if __name__ == '__main__':
-  gsutil_measure_imports.initialize()
+    gsutil_measure_imports.initialize()

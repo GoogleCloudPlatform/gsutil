@@ -21,8 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   This help section provides details about various precautions taken by gsutil
   to protect data security, as well as recommendations for how customers should
@@ -209,18 +208,18 @@ _DETAILED_HELP_TEXT = ("""
   than individual user account credentials. These credentials were designed for
   such use and, for example, protect you from losing access when an employee
   leaves your company.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about security and privacy considerations using gsutil."""
+    """Additional help about security and privacy considerations using gsutil."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='security',
-      help_name_aliases=['protection', 'privacy', 'proxies', 'proxy'],
-      help_type='additional_help',
-      help_one_line_summary='Security and Privacy Considerations',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="security",
+        help_name_aliases=["protection", "privacy", "proxies", "proxy"],
+        help_type="additional_help",
+        help_one_line_summary="Security and Privacy Considerations",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )

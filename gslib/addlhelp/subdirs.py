@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-_DETAILED_HELP_TEXT = ("""
+_DETAILED_HELP_TEXT = """
 <B>OVERVIEW</B>
   This section provides details about how subdirectories work in gsutil.
   Most users probably don't need to know these details, and can simply use
@@ -147,20 +147,28 @@ _DETAILED_HELP_TEXT = ("""
   at least one object under that subdirectory you can delete the placeholder
   object and subsequent uploads to that subdirectory will continue to work
   with naming working as you'd expect.
-""")
+"""
 
 
 class CommandOptions(HelpProvider):
-  """Additional help about subdirectory handling in gsutil."""
+    """Additional help about subdirectory handling in gsutil."""
 
-  # Help specification. See help_provider.py for documentation.
-  help_spec = HelpProvider.HelpSpec(
-      help_name='subdirs',
-      help_name_aliases=[
-          'dirs', 'directory', 'directories', 'folder', 'folders', 'hierarchy',
-          'subdir', 'subdirectory', 'subdirectories'],
-      help_type='additional_help',
-      help_one_line_summary='How Subdirectories Work',
-      help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={},
-  )
+    # Help specification. See help_provider.py for documentation.
+    help_spec = HelpProvider.HelpSpec(
+        help_name="subdirs",
+        help_name_aliases=[
+            "dirs",
+            "directory",
+            "directories",
+            "folder",
+            "folders",
+            "hierarchy",
+            "subdir",
+            "subdirectory",
+            "subdirectories",
+        ],
+        help_type="additional_help",
+        help_one_line_summary="How Subdirectories Work",
+        help_text=_DETAILED_HELP_TEXT,
+        subcommand_help_text={},
+    )
