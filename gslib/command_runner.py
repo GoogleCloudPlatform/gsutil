@@ -60,6 +60,7 @@ from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.update_util import LookUpGsutilVersion
+from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
 
 
 def HandleHeaderCoding(headers):
@@ -433,13 +434,10 @@ class CommandRunner(object):
     # - user is using a Cloud SDK install (which should only be updated via
     #   gcloud components update)
     logger = logging.getLogger()
-    gs_host = boto.config.get('Credentials', 'gs_host', None)
-    gs_host_is_not_default = (
-        gs_host != boto.gs.connection.GSConnection.DefaultHost)
     if (not system_util.IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logger.isEnabledFor(logging.INFO)
-        or gs_host_is_not_default
+        or HAS_NON_DEFAULT_GS_HOST
         or system_util.InvokedViaCloudSdk()):
       return False
 
