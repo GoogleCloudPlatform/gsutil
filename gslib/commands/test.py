@@ -435,7 +435,7 @@ class TestCommand(Command):
             (process_run_finish_time - parallel_start_time))
 
   def PrintTestResults(self, num_sequential_tests, sequential_success,
-                       sequential_time_elapsed,
+                       sequential_skipped, sequential_time_elapsed,
                        num_parallel_tests, num_parallel_failures,
                        parallel_time_elapsed):
     """Prints test results for parallel and sequential tests."""
@@ -450,6 +450,7 @@ class TestCommand(Command):
            float(sequential_time_elapsed),
            num_parallel_tests,
            float(parallel_time_elapsed))))
+    self.PrintSkippedTests(sequential_skipped)
     print()
 
     if not num_parallel_failures and sequential_success:
@@ -459,6 +460,30 @@ class TestCommand(Command):
         print('FAILED (parallel tests)')
       if not sequential_success:
         print('FAILED (sequential tests)')
+
+  # TODO: Parallel skipped tests are never gathered anywhere, this needs implementation in RunParallelTests
+  def PrintSkippedTests(self, sequential_skipped=set(), parallel_skipped=set()):
+    """Prints all skipped tests, and the reasons they  were skipped.
+
+    Takes the union of sequentual_skipped and parallel_skipped,
+    and pretty-prints the resulting methods and reasons. Note that these two
+    arguments are lists of tuples from TestResult.skipped as described here:
+    https://docs.python.org/2/library/unittest.html#unittest.TestResult.skipped
+
+    Args:
+        sequentual_skipped: An instance of TestResult.skipped.
+        parallel_skipped: An instance of TestResult.skipped.
+    """
+    if len(sequential_skipped) > 0 or len(parallel_skipped) > 0:
+      sequential_skipped = set(sequential_skipped)
+      parallel_skipped = set(parallel_skipped)
+      all_skipped = sequential_skipped.union(parallel_skipped)
+
+      print('Tests skipped:')
+      for method, reason in all_skipped:
+        print('  ' + method.id())
+        print('    Reason: ' + reason)
+
 
   def RunCommand(self):
     """Command entry point for the test command."""
@@ -634,6 +659,7 @@ class TestCommand(Command):
 
         ret = runner.run(suite)
         sequential_success = ret.wasSuccessful()
+        sequential_skipped = ret.skipped
       else:
         num_sequential_tests = 0
         sequential_success = True
@@ -666,7 +692,7 @@ class TestCommand(Command):
             coverage_controller.data_files.filename if perform_coverage
             else None)
         self.PrintTestResults(
-            num_sequential_tests, sequential_success,
+            num_sequential_tests, sequential_success, sequential_skipped,
             sequential_time_elapsed,
             num_parallel_tests, num_parallel_failures,
             parallel_time_elapsed)
