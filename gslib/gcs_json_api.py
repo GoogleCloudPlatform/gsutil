@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 from contextlib import contextmanager
 import functools
 from six.moves import http_client
-import json
+from gslib.utils import json_six
 import logging
 import socket
 import ssl
@@ -387,7 +387,7 @@ class GcsJsonApi(CloudApi):
       request = apitools_messages.StorageBucketAccessControlsListRequest(
           bucket=bucket_name)
       return self.api_client.bucketAccessControls.List(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def ListObjectAccessControls(self, bucket_name, object_name):
@@ -396,7 +396,7 @@ class GcsJsonApi(CloudApi):
       request = apitools_messages.StorageObjectAccessControlsListRequest(
           bucket=bucket_name, object=object_name)
       return self.api_client.objectAccessControls.List(request)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
                                        object_name=object_name)
 
@@ -490,7 +490,7 @@ class GcsJsonApi(CloudApi):
     try:
       return self.api_client.buckets.LockRetentionPolicy(
           apitools_request, global_params=global_params)
-    except TRANSLATABLE_APITOOLS_EXCEPTIONS, e:
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
   def CreateBucket(self, bucket_name, project_id=None, metadata=None,
@@ -957,7 +957,7 @@ class GcsJsonApi(CloudApi):
     if end_byte:
       outer_total_size = end_byte + 1
     elif serialization_data:
-      outer_total_size = json.loads(serialization_data)['total_size']
+      outer_total_size = json_six.loads(serialization_data)['total_size']
 
     if progress_callback:
       if outer_total_size is None:
@@ -984,9 +984,9 @@ class GcsJsonApi(CloudApi):
       # a well-defined way to express query parameters. Currently, we assume
       # the URL ends in ?alt=media, and this will break if that changes.
       if self.trace_token:
-        serialization_dict = json.loads(serialization_data)
+        serialization_dict = json_six.loads(serialization_data)
         serialization_dict['url'] += '&trace=token%%3A%s' % self.trace_token
-        serialization_data = json.dumps(serialization_dict)
+        serialization_data = json_six.dumps(serialization_dict)
 
       apitools_download = apitools_transfer.Download.FromData(
           download_stream, serialization_data, self.api_client.http,
@@ -1320,7 +1320,7 @@ class GcsJsonApi(CloudApi):
       bytes_uploaded_container.bytes_transferred = apitools_upload.progress
 
       if tracker_callback:
-        tracker_callback(json.dumps(apitools_upload.serialization_data))
+        tracker_callback(json_six.dumps(apitools_upload.serialization_data))
 
       retries = 0
       last_progress_byte = apitools_upload.progress
@@ -1814,7 +1814,7 @@ class GcsJsonApi(CloudApi):
     if isinstance(http_error, apitools_exceptions.HttpError):
       if getattr(http_error, 'content', None):
         try:
-          json_obj = json.loads(http_error.content)
+          json_obj = json_six.loads(http_error.content)
           if 'error' in json_obj and 'message' in json_obj['error']:
             return json_obj['error']['message']
         except Exception:  # pylint: disable=broad-except
