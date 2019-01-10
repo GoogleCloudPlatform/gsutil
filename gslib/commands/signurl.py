@@ -295,8 +295,15 @@ def _GenSignedUrl(key, client_id, method, duration,
     logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
                  % string_to_sign)
 
+  if six.PY2:
+    encoding = b'RSA-SHA256'
+  else:
+    # Your IDE may complain about this due to a bad docstring in pyOpenSsl:
+    # https://github.com/pyca/pyopenssl/issues/741
+    encoding = 'RSA-SHA256'
+
   signature = base64.b16encode(
-      sign(key, string_to_sign, b'RSA-SHA256')).lower()
+      sign(key, string_to_sign, encoding)).lower()
 
   final_url = _SIGNED_URL_FORMAT.format(
       host=gs_host, path=gcs_path, sig=signature,
