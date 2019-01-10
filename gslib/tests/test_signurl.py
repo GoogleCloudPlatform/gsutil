@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 from datetime import datetime
 from datetime import timedelta
 import pkgutil
+from six import PY2, PY3
 
 import gslib.commands.signurl
 from gslib.commands.signurl import HAVE_OPENSSL
@@ -198,7 +199,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignPut(self):
     """Tests the _GenSignedUrl function with a PUT method."""
-    expected = sigs.TEST_SIGN_PUT_SIG
+    if PY2:
+      expected = sigs.TEST_SIGN_PUT_SIG_PY2
+    else:
+      expected = sigs.TEST_SIGN_PUT_SIG_PY3
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
@@ -216,7 +220,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignResumable(self):
     """Tests the _GenSignedUrl function with a RESUMABLE method."""
-    expected = sigs.TEST_SIGN_RESUMABLE
+    if PY2:
+      expected = sigs.TEST_SIGN_RESUMABLE_PY2
+    else:
+      expected = sigs.TEST_SIGN_RESUMABLE_PY3
 
     class MockLogger(object):
 
@@ -260,7 +267,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlPutContentype(self):
     """Tests the _GenSignedUrl function a PUT method and content type."""
-    expected = sigs.TEST_SIGN_URL_PUT_CONTENT
+    if PY2:
+      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY2
+    else:
+      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY3
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
@@ -278,7 +288,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGet(self):
     """Tests the _GenSignedUrl function with a GET method."""
-    expected = sigs.TEST_SIGN_URL_GET
+    if PY2:
+      expected = sigs.TEST_SIGN_URL_GET_PY2
+    else:
+      expected = sigs.TEST_SIGN_URL_GET_PY3
 
     duration = timedelta(seconds=0)
     with SetBotoConfigForTest([
@@ -296,7 +309,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGetWithJSONKey(self):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
-    expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY
+    if PY2:
+      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY2
+    else:
+      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY3
 
     json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json').decode()
     key, client_email = gslib.commands.signurl._ReadJSONKeystore(
