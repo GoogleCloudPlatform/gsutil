@@ -272,6 +272,9 @@ def _GenSignedUrl(key, client_id, method, duration,
       query_string=canonical_query_string, headers=canonical_headers,
       signed_headers=canonical_signed_headers, hashed_payload=_UNSIGNED_PAYLOAD)
 
+  if six.PY3:
+    canonical_request = canonical_request.encode()
+
   canonical_request_hasher = hashlib.sha256()
   canonical_request_hasher.update(canonical_request)
   hashed_canonical_request = base64.b16encode(
