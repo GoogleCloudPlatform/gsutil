@@ -154,6 +154,10 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
   """Unit tests for the signurl command."""
 
+  # Helpful for comparing mismatched signed URLs that would be truncated.
+  # https://stackoverflow.com/questions/14493670/how-to-set-self-maxdiff-in-nose-to-get-full-diff-output
+  maxDiff = None
+
   def setUp(self):
     super(UnitTestSignUrl, self).setUp()
     ks_contents = pkgutil.get_data('gslib', 'tests/test_data/test.p12')
