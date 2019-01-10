@@ -353,7 +353,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                 '2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-'
                 'expires=0&x-goog-signedheaders=host')
 
-    json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json')
+    json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json').decode()
     key, client_email = gslib.commands.signurl._ReadJSONKeystore(
         json_contents)
 
