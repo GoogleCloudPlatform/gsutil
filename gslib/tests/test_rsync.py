@@ -221,11 +221,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/obj2', '/obj3', '/obj4',
-                                       '/obj5']))
+      self.assertEquals(listing1, {'/obj1', '/obj2', '/obj3', '/obj4', '/obj5'})
       # dst_bucket should have new content from src_bucket.
-      self.assertEquals(listing2, set(['/obj1', '/obj2', '/obj3', '/obj4',
-                                       '/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/obj2', '/obj3', '/obj4', '/obj5'})
       self.assertIn('Copying POSIX attributes from src to dst for', stderr)
     _Check1()
 
@@ -288,7 +286,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['rsync', '-r', suri(src_bucket), suri(dst_bucket)])
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/subdir/obj2']))
+      self.assertEquals(listing1, {'/obj1', '/subdir/obj2'})
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -325,9 +323,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/subdir/obj2']))
+      self.assertEquals(listing1, {'/obj1', '/subdir/obj2'})
       # Second bucket should have new objects added from source bucket.
-      self.assertEquals(listing2, set(['/obj1', '/subdir/obj2']))
+      self.assertEquals(listing2, {'/obj1', '/subdir/obj2'})
     _Check1()
 
     # Get and verify the metadata for the 2 objects at the destination.
@@ -372,11 +370,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/subdir/obj2', '/.obj3',
-                                       '/subdir/obj4', '/obj6']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/subdir/obj2', '/.obj3', '/subdir/obj4',
+                         '/obj6'})
       # Second bucket should have new objects added from source bucket.
-      self.assertEquals(listing2, set(['/obj1', '/subdir/obj2', '/.obj3',
-                                       '/subdir/obj4', '/obj6']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/subdir/obj2', '/.obj3', '/subdir/obj4',
+                         '/obj6'})
     _Check1()
 
     # Get and verify the metadata for the objects at the destination.
@@ -421,11 +421,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(src_bucket), self.FlatListBucket(src_bucket))
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/subdir/obj2', '/.obj3',
-                                       '/subdir/obj4', '/obj6']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/subdir/obj2', '/.obj3', '/subdir/obj4',
+                         '/obj6'})
       # Second bucket should have new objects added from source bucket.
-      self.assertEquals(listing2, set(['/obj1', '/subdir/obj2', '/.obj3',
-                                       '/subdir/obj4', '/obj6']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/subdir/obj2', '/.obj3', '/subdir/obj4',
+                         '/obj6'})
       # Assert that the contents of obj6 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('OBJ6', self.RunGsUtil(
@@ -469,13 +471,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3', '/obj6'})
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
-                                       '/subdir/obj5', '/obj6']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/obj4', '/subdir/obj5', '/obj6'})
       # Assert that the src/dest objects that had same length but different
       # content were correctly synchronized (bucket to bucket rsync uses
       # checksums).
@@ -513,13 +514,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir/obj3'})
       # Second bucket should have objects tha were newly added to first bucket
       # (wihout removing extraneous dest bucket objects), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4', '/obj6',
-                                       '/obj7', '/subdir/obj3',
-                                       '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/obj4', '/obj6', '/obj7',
+                                   '/subdir/obj3', '/subdir/obj5'})
     _Check3()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -561,10 +561,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Second bucket should have content like first bucket but without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
       # Assert that the src/dest objects that had same length but different
       # content were correctly synchronized (bucket to bucket rsync uses
       # checksums).
@@ -599,10 +599,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir/obj3'})
       # Second bucket should have content like first bucket but without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing2, {'/.obj2', '/obj6', '/subdir/obj3'})
     _Check3()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -671,11 +671,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6', '/obj7']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/subdir/obj5',
+                         '/obj6', '/obj7'})
       # Bucket should have content like dir.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6', '/obj7']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/subdir/obj5',
+                         '/obj6', '/obj7'})
       # Check that obj6 didn't change even though the contents did. This is
       # because the object/file have the same mtime.
       self.assertEquals('OBJ6', self.RunGsUtil(
@@ -718,11 +720,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6', '/obj7']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/subdir/obj5',
+                         '/obj6', '/obj7'})
       # Bucket should have content like dir with the subdirectories synced.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/subdir/obj5', '/obj6', '/obj7']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/subdir/obj5',
+                         '/obj6', '/obj7'})
       # Assert that the contents of obj6 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('obj6', self.RunGsUtil(
@@ -829,10 +833,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Bucket should have content like dir but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
       # Assert that the src/dest objects that had same length but different
       # content were synchronized (dir to bucket rsync uses checksums as a
       # backup to mtime unless you specify -c to make hashes the priority).
@@ -859,10 +863,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Bucket should have content like dir but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
       # Assert that the src/dest objects that had same length but different
       # content were synchronized (dir to bucket rsync with -c uses checksums).
       with open(os.path.join(tmpdir, '.obj2')) as f:
@@ -893,10 +897,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir/obj3'})
       # Bucket should have content like dir but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing2, {'/.obj2', '/obj6', '/subdir/obj3'})
     _Check5()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -947,11 +951,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6', '/obj7']))
+    self.assertEquals(listing1,
+                      {'/obj1', '/.obj2', '/subdir1/obj3', '/obj6', '/obj7'})
     # dir2 should now have content like dir1.
-    self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6', '/obj7']))
+    self.assertEquals(listing2,
+                      {'/obj1', '/.obj2', '/subdir1/obj3', '/obj6', '/obj7'})
     # Assert that the src/dest objects that had same length but different
     # checksums were synchronized properly according to mtime.
     with open(os.path.join(tmpdir2, '.obj2')) as f:
@@ -972,11 +976,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6', '/obj7']))
+    self.assertEquals(listing1,
+                      {'/obj1', '/.obj2', '/subdir1/obj3', '/obj6', '/obj7'})
     # dir2 should now have content like dir1.
-    self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir1/obj3',
-                                     '/obj6', '/obj7']))
+    self.assertEquals(listing2,
+                      {'/obj1', '/.obj2', '/subdir1/obj3', '/obj6', '/obj7'})
     # Assert that the src/dst objects that had same length, mtime, but different
     # content were synchronized (dir to dir rsync with -c uses checksums).
     with open(os.path.join(tmpdir1, '.obj2')) as f:
@@ -1006,9 +1010,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir1/obj3']))
+    self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir1/obj3'})
     # dir2 should have content like dir1.
-    self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir1/obj3']))
+    self.assertEquals(listing2, {'/.obj2', '/obj6', '/subdir1/obj3'})
 
     def _Check3():
       # Check that re-running the same rsync command causes no more changes.
@@ -1044,10 +1048,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3']))
+    self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir1/obj3'})
     # dir2 should have content like dir1 but without the subdir1 objects
     # synchronized.
-    self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir2/obj5']))
+    self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir2/obj5'})
     # Assert that the src/dest objects that had same length but different
     # checksums were not synchronized (dir to dir rsync doesn't use checksums
     # unless you specify -c).
@@ -1071,10 +1075,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir1/obj3']))
+    self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir1/obj3'})
     # dir2 should have content like dir but without the subdir objects
     # synchronized.
-    self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir2/obj5']))
+    self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir2/obj5'})
     # Assert that the src/dest objects that had same length but different
     # content were synchronized (dir to dir rsync with -c uses checksums).
     with open(os.path.join(tmpdir1, '.obj2')) as f:
@@ -1100,10 +1104,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # dir1 should have un-altered content.
-    self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir1/obj3']))
+    self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir1/obj3'})
     # dir2 should have content like dir but without the subdir objects
     # synchronized.
-    self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir1/obj3']))
+    self.assertEquals(listing2, {'/.obj2', '/obj6', '/subdir1/obj3'})
 
     # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
     # worry about eventual consistency of bucket listings.
@@ -1127,9 +1131,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
     listing2 = TailSet(tmpdir2, self.FlatListDir(tmpdir2))
     # First dir should have un-altered content.
-    self.assertEquals(listing1, set(['/obj1', '/obj2']))
+    self.assertEquals(listing1, {'/obj1', '/obj2'})
     # Second dir should have same content as first.
-    self.assertEquals(listing2, set(['/obj1', '/obj2']))
+    self.assertEquals(listing2, {'/obj1', '/obj2'})
 
     # Don't use @Retry since this is a dir-to-dir test, thus we don't need to
     # worry about eventual consistency of bucket listings.
@@ -1249,14 +1253,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10', '/obj11']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj4', '/obj6',
+                         '/obj7', '/obj8', '/obj9', '/obj10', '/obj11'})
       # Dir should have content like bucket except without sub-directories
       # synced.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
-                                       '/subdir/obj5', '/obj6', '/obj7',
-                                       '/obj8', '/obj9', '/obj10', '/obj11']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/obj4', '/subdir/obj5', '/obj6',
+                         '/obj7', '/obj8', '/obj9', '/obj10', '/obj11'})
       # Assert that the dst objects that had an earlier mtime were not
       # synchronized because the source didn't have an mtime.
       with open(os.path.join(tmpdir, '.obj2')) as f:
@@ -1300,14 +1304,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10', '/obj11']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj4', '/obj6',
+                         '/obj7', '/obj8', '/obj9', '/obj10', '/obj11'})
       # Dir should have content like bucket this time with subdirectories
       # synced.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/obj6', '/obj7', '/obj8',
-                                       '/obj9', '/obj10', '/obj11']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj4', '/obj6',
+                         '/obj7', '/obj8', '/obj9', '/obj10', '/obj11'})
       # Assert that the contents of obj7 have now changed because the -c flag
       # was used to force checksums.
       self.assertEquals('obj7', self.RunGsUtil(
@@ -1402,13 +1406,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6', '/obj7', '/obj8', '/obj9',
-                                       '/obj10', '/obj11', '/obj12', '/obj13',
-                                       '/obj14', '/obj15', '/obj16', '/obj17',
-                                       '/obj18', '/obj19']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj6', '/obj7',
+                         '/obj8', '/obj9', '/obj10', '/obj11', '/obj12',
+                         '/obj13', '/obj14', '/obj15', '/obj16', '/obj17',
+                         '/obj18', '/obj19'})
       # Dir should have un-altered content.
-      self.assertEquals(listing2, set(['/.obj2', '/obj4', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/.obj2', '/obj4', '/subdir/obj5'})
     _Check1()
 
     # Set a valid mode for another object.
@@ -1427,13 +1431,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6', '/obj7', '/obj8', '/obj9',
-                                       '/obj10', '/obj11', '/obj12', '/obj13',
-                                       '/obj14', '/obj15', '/obj16', '/obj17',
-                                       '/obj18', '/obj19']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj6', '/obj7',
+                         '/obj8', '/obj9', '/obj10', '/obj11', '/obj12',
+                         '/obj13', '/obj14', '/obj15', '/obj16', '/obj17',
+                         '/obj18', '/obj19'})
       # Dir should have un-altered content.
-      self.assertEquals(listing2, set(['/.obj2', '/obj4', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/.obj2', '/obj4', '/subdir/obj5'})
     _Check2()
 
   @SequentialAndParallelTransfer
@@ -1484,15 +1488,15 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6', '/obj7', '/obj8', '/obj9',
-                                       '/obj10', '/obj11', '/obj12', '/obj13',
-                                       '/obj14']))
+      self.assertEquals(listing1,
+                        {'/obj1', '/.obj2', '/subdir/obj3', '/obj6', '/obj7',
+                         '/obj8', '/obj9', '/obj10', '/obj11', '/obj12',
+                         '/obj13', '/obj14'})
       # Dir should have any new content from bucket.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj4', '/subdir/obj5', '/obj6',
-                                       '/obj7', '/obj8', '/obj9', '/obj10',
-                                       '/obj11', '/obj12', '/obj13', '/obj14']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj3', '/obj4',
+                                   '/subdir/obj5', '/obj6', '/obj7', '/obj8',
+                                   '/obj9', '/obj10', '/obj11', '/obj12',
+                                   '/obj13', '/obj14'})
     _Check1()
 
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
@@ -1558,10 +1562,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Dir should have content like bucket but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
       # Assert that the src/dest objects that had same length but different
       # content were synchronized (bucket to dir rsync uses checksums as a
       # backup to mtime unless you specify -c).
@@ -1588,10 +1592,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Dir should have content like bucket but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
       # Assert that the src/dest objects that had same length but different
       # content were synchronized (bucket to dir rsync with -c uses checksums).
       self.assertEquals('.obj2', self.RunGsUtil(
@@ -1622,10 +1626,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/.obj2', '/obj6', '/subdir/obj3'})
       # Dir should have content like bucket but without the subdir objects
       # synchronized.
-      self.assertEquals(listing2, set(['/.obj2', '/obj6', '/subdir/obj3']))
+      self.assertEquals(listing2, {'/.obj2', '/obj6', '/subdir/obj3'})
     _Check5()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1699,9 +1703,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       listing2 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '//']))
+      self.assertEquals(listing1, {'/obj1', '//'})
       # Bucket should not have the placeholder object.
-      self.assertEquals(listing2, set(['/obj1']))
+      self.assertEquals(listing2, {'/obj1'})
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
@@ -1753,10 +1757,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       # Dir should have un-altered content.
       self.assertEquals(
           listing1,
-          set(['/obj1', '/.obj2', '/subdir/obj3', '/symlink1', '/symlink2']))
+        {'/obj1', '/.obj2', '/subdir/obj3', '/symlink1', '/symlink2'})
       # Bucket should have content like dir but without the symlink, and
       # without subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj5']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj5'})
     _Check1()
 
     # Now remove invalid symlink and run without -e, and see that symlink gets
@@ -1771,11 +1775,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
       self.assertEquals(
-          listing1, set(['/obj1', '/.obj2', '/subdir/obj3', '/symlink1']))
+          listing1, {'/obj1', '/.obj2', '/subdir/obj3', '/symlink1'})
       # Bucket should have content like dir but without the symlink, and
       # without subdir objects synchronized.
       self.assertEquals(
-          listing2, set(['/obj1', '/.obj2', '/subdir/obj5', '/symlink1']))
+          listing2, {'/obj1', '/.obj2', '/subdir/obj5', '/symlink1'})
       self.assertEquals('obj1', self.RunGsUtil(
           ['cat', suri(bucket_uri, 'symlink1')], return_stdout=True))
     _Check2()
@@ -1812,10 +1816,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/obj3'})
       # Second bucket should have content like first bucket but without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj3']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/obj3'})
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1842,8 +1846,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['rsync', '-d', suri(bucket1_uri), suri(bucket2_uri)])
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
-      self.assertEquals(listing1, set(['/obj1', '/.obj2']))
-      self.assertEquals(listing2, set(['/obj1', '/.obj2']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2'})
+      self.assertEquals(listing2, {'/obj1', '/.obj2'})
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1902,8 +1906,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       suri(bucket2_uri)])
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
-      self.assertEquals(listing1, set(['/obj1']))
-      self.assertEquals(listing2, set(['/obj1']))
+      self.assertEquals(listing1, {'/obj1'})
+      self.assertEquals(listing2, {'/obj1'})
       acl1_json = self.RunGsUtil(['acl', 'get', suri(bucket1_uri, 'obj1')],
                                  return_stdout=True)
       acl2_json = self.RunGsUtil(['acl', 'get', suri(bucket2_uri, 'obj1')],
@@ -1936,8 +1940,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       suri(bucket2_uri)])
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
-      self.assertEquals(listing1, set(['/obj1']))
-      self.assertEquals(listing2, set(['/obj1']))
+      self.assertEquals(listing1, {'/obj1'})
+      self.assertEquals(listing2, {'/obj1'})
       # Set public-read on the original key after the rsync so we can compare
       # the ACLs.
       self.RunGsUtil(['acl', 'set', 'public-read', suri(bucket1_uri, 'obj1')])
@@ -1969,9 +1973,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           suri(bucket_url, 'subdir'),
           self.FlatListBucket(bucket_url.clone_replace_name('subdir')))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3'})
       # Bucket subdir should have content like dir.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/subdir/obj3']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/subdir/obj3'})
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1995,7 +1999,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Caught non-retryable exception', stderr)
     listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
     # Dir should have un-altered content.
-    self.assertEquals(listing, set(['/obj1', '/.obj2']))
+    self.assertEquals(listing, {'/obj1', '/.obj2'})
 
   def test_rsync_to_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
@@ -2009,7 +2013,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Caught non-retryable exception', stderr)
     listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
     # Dir should have un-altered content.
-    self.assertEquals(listing, set(['/obj1', '/.obj2']))
+    self.assertEquals(listing, {'/obj1', '/.obj2'})
 
   def test_bucket_to_bucket_minus_d_with_overwrite_and_punc_chars(self):
     """Tests that punc chars in filenames don't confuse sort order."""
@@ -2039,8 +2043,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/e/obj1', '/e-1/.obj2']))
-      self.assertEquals(listing2, set(['/e/obj1', '/e-1/.obj2']))
+      self.assertEquals(listing1, {'/e/obj1', '/e-1/.obj2'})
+      self.assertEquals(listing2, {'/e/obj1', '/e-1/.obj2'})
       # Assert correct contents.
       self.assertEquals('obj1', self.RunGsUtil(
           ['cat', suri(bucket2_uri, 'e/obj1')], return_stdout=True))
@@ -2084,10 +2088,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/obj3'})
       # Bucket should have content like dir but ignoring obj3 from dir and not
       # deleting obj4 from bucket (per exclude regex).
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4']))
+      self.assertEquals(listing2, {'/obj1', '/.obj2', '/obj4'})
     _Check1()
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -2121,9 +2125,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/obj2', '/obj3']))
+      self.assertEquals(listing1, {'/obj1', '/obj2', '/obj3'})
       # Bucket should have obj1 and obj3 even though obj2 was unreadable.
-      self.assertEquals(listing2, set(['/obj1', '/obj3']))
+      self.assertEquals(listing2, {'/obj1', '/obj3'})
     _Check()
 
   @unittest.skipIf(IS_WINDOWS,

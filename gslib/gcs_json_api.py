@@ -141,11 +141,15 @@ HTTP_TRANSFER_EXCEPTIONS = (apitools_exceptions.TransferRetryError,
                             ValueError)
 
 # Fields requiring projection=full across all API calls.
-_ACL_FIELDS_SET = set(['acl', 'defaultObjectAcl', 'items/acl',
-                       'items/defaultObjectAcl', 'items/owner', 'owner'])
+_ACL_FIELDS_SET = {
+  'acl',
+  'defaultObjectAcl',
+  'items/acl',
+  'items/defaultObjectAcl', 'items/owner', 'owner'
+}
 
 # Fields that may be encrypted.
-_ENCRYPTED_HASHES_SET = set(['crc32c', 'md5Hash'])
+_ENCRYPTED_HASHES_SET = {'crc32c', 'md5Hash'}
 
 # During listing, if we attempt to decrypt an object but it has been removed,
 # we skip including the object in the listing.
@@ -1473,8 +1477,7 @@ class GcsJsonApi(CloudApi):
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       # Rewrite returns the resultant object under the 'resource' field.
-      new_fields = set(['done', 'objectSize', 'rewriteToken',
-                        'totalBytesRewritten'])
+      new_fields = {'done', 'objectSize', 'rewriteToken', 'totalBytesRewritten'}
       for field in fields:
         new_fields.add('resource/' + field)
       global_params.fields = ','.join(set(new_fields))

@@ -71,32 +71,32 @@ GLOBAL_DIMENSIONS_URL_PARAMS = (
 GLOBAL_PARAMETERS = ['a=b', 'c=d', 'cd1=cmd1 action1', 'cd2=x,y,z',
                      'cd3=opta,optb', 'cd6=CommandException', 'cm1=0',
                      'ev=0', 'el={0}'.format(VERSION)]
-COMMAND_AND_ERROR_TEST_METRICS = set([
-    Metric(
-        'https://example.com', 'POST',
-        '{0}&cm2=3&ea=cmd1+action1&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_COMMANDS_CATEGORY,
-            VERSION),
-        'user-agent-007'),
-    Metric(
-        'https://example.com', 'POST',
-        '{0}&cm2=2&ea=Exception&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
-            VERSION),
-        'user-agent-007'),
-    Metric(
-        'https://example.com', 'POST',
-        '{0}&cm2=1&ea=ValueError&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
-            VERSION),
-        'user-agent-007'),
-    Metric(
-        'https://example.com', 'POST',
-        '{0}&ea=CommandException&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORFATAL_CATEGORY,
-            VERSION),
-        'user-agent-007')
-])
+COMMAND_AND_ERROR_TEST_METRICS = {
+  Metric(
+    'https://example.com', 'POST',
+    '{0}&cm2=3&ea=cmd1+action1&ec={1}&el={2}&ev=0'.format(
+      GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_COMMANDS_CATEGORY,
+      VERSION),
+    'user-agent-007'),
+  Metric(
+    'https://example.com', 'POST',
+    '{0}&cm2=2&ea=Exception&ec={1}&el={2}&ev=0'.format(
+      GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
+      VERSION),
+    'user-agent-007'),
+  Metric(
+    'https://example.com', 'POST',
+    '{0}&cm2=1&ea=ValueError&ec={1}&el={2}&ev=0'.format(
+      GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
+      VERSION),
+    'user-agent-007'),
+  Metric(
+    'https://example.com', 'POST',
+    '{0}&ea=CommandException&ec={1}&el={2}&ev=0'.format(
+      GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORFATAL_CATEGORY,
+      VERSION),
+    'user-agent-007')
+}
 
 # A regex to find the list of metrics in log output.
 METRICS_LOG_RE = re.compile(r'(\[Metric.*\])')

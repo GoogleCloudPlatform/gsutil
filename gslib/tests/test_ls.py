@@ -243,7 +243,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-b', wildcard], return_stdout=True)
-      expected = set([suri(bucket1_uri) + '/', suri(bucket2_uri) + '/'])
+      expected = {suri(bucket1_uri) + '/', suri(bucket2_uri) + '/'}
       actual = set(stdout.split())
       self.assertEqual(expected, actual)
     _Check1()

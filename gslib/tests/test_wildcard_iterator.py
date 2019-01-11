@@ -86,9 +86,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testMatchingObjectSubset(self):
     """Tests matching a subset of objects, based on wildcard."""
-    exp_obj_uri_strs = set(
-        [str(self.test_bucket0_uri.clone_replace_name('abcd')),
-         str(self.test_bucket0_uri.clone_replace_name('abdd'))])
+    exp_obj_uri_strs = {str(self.test_bucket0_uri.clone_replace_name('abcd')),
+                        str(self.test_bucket0_uri.clone_replace_name('abdd'))}
     actual_obj_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(
             self.test_bucket0_uri.clone_replace_name('ab??')).IterAll(
@@ -97,8 +96,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testMatchingNonWildcardedUri(self):
     """Tests matching a single named object."""
-    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name('abcd')
-                               )])
+    exp_obj_uri_strs = {str(self.test_bucket0_uri.clone_replace_name('abcd')
+                            )}
     actual_obj_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(
             self.test_bucket0_uri.clone_replace_name('abcd')).IterAll(
@@ -148,7 +147,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
       else:
         actual_uri_strs.add(blr.url_string)
     expected_uri_strs = set()
-    expected_prefixes = set(['nested1/'])
+    expected_prefixes = {'nested1/'}
     self.assertEqual(expected_prefixes, actual_prefixes)
     self.assertEqual(expected_uri_strs, actual_uri_strs)
 
@@ -162,9 +161,9 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
         actual_prefixes.add(blr.root_object)
       else:
         actual_uri_strs.add(blr.url_string)
-    expected_uri_strs = set([
-        self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz1').uri,
-        self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz2').uri])
+    expected_uri_strs = {
+    self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz1').uri,
+    self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz2').uri}
     expected_prefixes = set()
     self.assertEqual(expected_prefixes, actual_prefixes)
     self.assertEqual(expected_uri_strs, actual_uri_strs)
@@ -188,8 +187,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testSingleMatchWildcardedBucketUri(self):
     """Tests matching a single bucket based on a wildcarded bucket URI."""
-    exp_obj_uri_strs = set([
-        suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim])
+    exp_obj_uri_strs = {
+    suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim}
     with SetDummyProjectForUnitTest():
       actual_obj_uri_strs = set(
           str(u) for u in self._test_wildcard_iterator(
@@ -198,9 +197,9 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testMultiMatchWildcardedBucketUri(self):
     """Tests matching a multiple buckets based on a wildcarded bucket URI."""
-    exp_obj_uri_strs = set([
-        suri(self.test_bucket0_uri) + self.test_bucket0_uri.delim,
-        suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim])
+    exp_obj_uri_strs = {
+    suri(self.test_bucket0_uri) + self.test_bucket0_uri.delim,
+    suri(self.test_bucket1_uri) + self.test_bucket1_uri.delim}
     with SetDummyProjectForUnitTest():
       actual_obj_uri_strs = set(
           str(u) for u in self._test_wildcard_iterator(
@@ -209,8 +208,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testWildcardBucketAndObjectUri(self):
     """Tests matching with both bucket and object wildcards."""
-    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
-        'abcd'))])
+    exp_obj_uri_strs = {str(self.test_bucket0_uri.clone_replace_name(
+      'abcd'))}
     with SetDummyProjectForUnitTest():
       actual_obj_uri_strs = set(
           str(u) for u in self._test_wildcard_iterator(
@@ -220,8 +219,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testWildcardUpToFinalCharSubdirPlusObjectName(self):
     """Tests wildcard subd*r/obj name."""
-    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
-        'nested1/nested2/xyz1'))])
+    exp_obj_uri_strs = {str(self.test_bucket0_uri.clone_replace_name(
+      'nested1/nested2/xyz1'))}
     actual_obj_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(
             '%snested1/nest*2/xyz1' % self.test_bucket0_uri.uri).IterAll(
@@ -230,8 +229,8 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testPostRecursiveWildcard(self):
     """Tests wildcard containing ** followed by an additional wildcard."""
-    exp_obj_uri_strs = set([str(self.test_bucket0_uri.clone_replace_name(
-        'nested1/nested2/xyz2'))])
+    exp_obj_uri_strs = {str(self.test_bucket0_uri.clone_replace_name(
+      'nested1/nested2/xyz2'))}
     actual_obj_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(
             '%s**/*y*2' % self.test_bucket0_uri.uri).IterAll(
@@ -266,15 +265,13 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     self.test_dir = self.CreateTempDir(test_files=[
         'abcd', 'abdd', 'ade$', ('dir1', 'dir2', 'zzz')])
 
-    self.root_files_uri_strs = set([
-        suri(self.test_dir, 'abcd'),
-        suri(self.test_dir, 'abdd'),
-        suri(self.test_dir, 'ade$')])
+    self.root_files_uri_strs = {suri(self.test_dir, 'abcd'),
+                                suri(self.test_dir, 'abdd'),
+                                suri(self.test_dir, 'ade$')}
 
-    self.subdirs_uri_strs = set([suri(self.test_dir, 'dir1')])
+    self.subdirs_uri_strs = {suri(self.test_dir, 'dir1')}
 
-    self.nested_files_uri_strs = set([
-        suri(self.test_dir, 'dir1', 'dir2', 'zzz')])
+    self.nested_files_uri_strs = {suri(self.test_dir, 'dir1', 'dir2', 'zzz')}
 
     self.immed_child_uri_strs = self.root_files_uri_strs | self.subdirs_uri_strs
     self.all_file_uri_strs = (
@@ -320,8 +317,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testMatchingFileSubset(self):
     """Tests matching a subset of files, based on wildcard."""
-    exp_uri_strs = set(
-        [suri(self.test_dir, 'abcd'), suri(self.test_dir, 'abdd')])
+    exp_uri_strs = {suri(self.test_dir, 'abcd'), suri(self.test_dir, 'abdd')}
     uri = self._test_storage_uri(suri(self.test_dir, 'ab??'))
     actual_uri_strs = set(str(u) for u in
                           self._test_wildcard_iterator(uri).IterAll(
@@ -330,7 +326,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testMatchingNonWildcardedUri(self):
     """Tests matching a single named file."""
-    exp_uri_strs = set([suri(self.test_dir, 'abcd')])
+    exp_uri_strs = {suri(self.test_dir, 'abcd')}
     uri = self._test_storage_uri(suri(self.test_dir, 'abcd'))
     actual_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(uri).IterAll(
@@ -340,7 +336,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
   def testMatchingFilesIgnoringOtherRegexChars(self):
     """Tests ignoring non-wildcard regex chars (e.g., ^ and $)."""
 
-    exp_uri_strs = set([suri(self.test_dir, 'ade$')])
+    exp_uri_strs = {suri(self.test_dir, 'ade$')}
     uri = self._test_storage_uri(suri(self.test_dir, 'ad*$'))
     actual_uri_strs = set(
         str(u) for u in self._test_wildcard_iterator(uri).IterAll(

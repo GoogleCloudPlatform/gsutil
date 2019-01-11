@@ -128,10 +128,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', [src_file0, src_file1, suri(dst_bucket_uri)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([
-        suri(dst_bucket_uri, 'f0'),
-        suri(dst_bucket_uri, 'f1'),
-    ])
+    expected = {suri(dst_bucket_uri, 'f0'), suri(dst_bucket_uri, 'f1')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -151,10 +148,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterObjects())
-    expected = set([
-        suri(dst_bucket_uri, 'subdir', 'a'),
-        suri(dst_bucket_uri, 'subdir', 'obj'),
-    ])
+    expected = {suri(dst_bucket_uri, 'subdir', 'a'),
+                suri(dst_bucket_uri, 'subdir', 'obj')}
     self.assertEqual(expected, actual)
 
   def testCopyingBucketSubdirsToBucket(self):
@@ -169,7 +164,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'sub-test', 'foo')])
+    expected = {suri(dst_bucket_uri, 'sub-test', 'foo')}
     self.assertEqual(expected, actual)
 
     src_bucket_uri2 = self.CreateBucket()
@@ -185,8 +180,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri2)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri2, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri2, 'dir2', 'foo'),
-                    suri(dst_bucket_uri2, 'dir2', 'bar')])
+    expected = {suri(dst_bucket_uri2, 'dir2', 'foo'),
+                suri(dst_bucket_uri2, 'dir2', 'bar')}
     self.assertEqual(expected, actual)
 
     dst_bucket_uri3 = self.CreateBucket()
@@ -194,8 +189,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri3)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri3, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri3, 'dir2', 'foo'),
-                    suri(dst_bucket_uri3, 'dir2', 'bar')])
+    expected = {suri(dst_bucket_uri3, 'dir2', 'foo'),
+                suri(dst_bucket_uri3, 'dir2', 'bar')}
     self.assertEqual(expected, actual)
 
     src_bucket_uri3 = self.CreateBucket()
@@ -211,8 +206,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri4)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri4, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri4, 'dir3', 'foo'),
-                    suri(dst_bucket_uri4, 'dir3', 'bar')])
+    expected = {suri(dst_bucket_uri4, 'dir3', 'foo'),
+                suri(dst_bucket_uri4, 'dir3', 'bar')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -225,11 +220,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     src_tmpdir = os.path.split(src_dir_root)[1]
-    expected = set([
-        suri(dst_bucket_uri, src_tmpdir, 'f0'),
-        suri(dst_bucket_uri, src_tmpdir, 'f1'),
-        suri(dst_bucket_uri, src_tmpdir, 'f2.txt'),
-        suri(dst_bucket_uri, src_tmpdir, 'dir0', 'dir1', 'nested')])
+    expected = {suri(dst_bucket_uri, src_tmpdir, 'f0'),
+                suri(dst_bucket_uri, src_tmpdir, 'f1'),
+                suri(dst_bucket_uri, src_tmpdir, 'f2.txt'),
+                suri(dst_bucket_uri, src_tmpdir, 'dir0', 'dir1', 'nested')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -240,7 +234,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', ['-R', 'dir0', suri(dst_bucket_uri)], cwd=src_dir)
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dir0', 'f1')])
+    expected = {suri(dst_bucket_uri, 'dir0', 'f1')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -260,8 +254,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'abc')], cwd=src_dir)
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'abc_$folder$'),
-                    suri(dst_bucket_uri, 'abc', 'dir1', 'f1')])
+    expected = {suri(dst_bucket_uri, 'abc_$folder$'),
+                suri(dst_bucket_uri, 'abc', 'dir1', 'f1')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -276,7 +270,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'abc') + '/'], cwd=src_dir)
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'abc', 'dir1', 'f1')])
+    expected = {suri(dst_bucket_uri, 'abc', 'dir1', 'f1')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -288,7 +282,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri)], cwd=src_dir)
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dir1', 'f1')])
+    expected = {suri(dst_bucket_uri, 'dir1', 'f1')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -303,7 +297,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                       cwd=src_dir)
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-      expected = set([suri(dst_bucket_uri, 'foo')])
+      expected = {suri(dst_bucket_uri, 'foo')}
       self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -343,8 +337,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('cp', ['-R', suri(src_bucket_uri), dst_dir])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_dir, src_bucket_uri.bucket_name, 'foo'),
-                    suri(dst_dir, src_bucket_uri.bucket_name, 'dir', 'foo2')])
+    expected = {suri(dst_dir, src_bucket_uri.bucket_name, 'foo'),
+                suri(dst_dir, src_bucket_uri.bucket_name, 'dir', 'foo2')}
     self.assertEqual(expected, actual)
 
   @unittest.skipIf(
@@ -371,7 +365,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected_object_path = suri(bucket_uri, os.path.basename(tmpdir),
                                 'subdir', os.path.basename(fpath1))
-    expected = set([expected_object_path])
+    expected = {expected_object_path}
     self.assertEqual(expected, actual)
     desired_msg = (
         'Skipping symlink directory "%s"' % os.path.join(subdir, 'symlinkdir'))
@@ -386,9 +380,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', ['-R', suri(src_bucket_uri), suri(dst_bucket_uri)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([
-        suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'foo'),
-        suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'dir', 'foo2')])
+    expected = {suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'foo'),
+                suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'dir', 'foo2')}
     self.assertEqual(expected, actual)
 
   def testCopyingDirectoryToDirectory(self):
@@ -399,8 +392,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     actual = set(str(u) for u in self._test_wildcard_iterator(
         '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
     src_dir_base = os.path.split(src_dir)[1]
-    expected = set([suri(dst_dir, src_dir_base, 'foo'),
-                    suri(dst_dir, src_dir_base, 'dir', 'foo2')])
+    expected = {suri(dst_dir, src_dir_base, 'foo'),
+                suri(dst_dir, src_dir_base, 'dir', 'foo2')}
     self.assertEqual(expected, actual)
 
   def testCopyingFilesAndDirNonRecursive(self):
@@ -411,7 +404,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', ['%s%s*' % (src_dir, os.sep), dst_dir])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_dir, 'foo'), suri(dst_dir, 'bar')])
+    expected = {suri(dst_dir, 'foo'), suri(dst_dir, 'bar')}
     self.assertEqual(expected, actual)
 
   def testCopyingFileToDir(self):
@@ -474,7 +467,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            '%s*' % dst_bucket_uri.uri])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '*')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dstobj')])
+    expected = {suri(dst_bucket_uri, 'dstobj')}
     self.assertEqual(expected, actual)
 
   def testCopyingObjsAndFilesToDir(self):
@@ -488,7 +481,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                              os.path.join(src_dir, '**'), dst_dir])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         os.path.join(dst_dir, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_dir, 'f1'), suri(dst_dir, 'f2')])
+    expected = {suri(dst_dir, 'f1'), suri(dst_dir, 'f2')}
     self.assertEqual(expected, actual)
 
   def testCopyingObjToDot(self):
@@ -506,7 +499,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           actual.add(os.path.join(dirname, subdirname))
         for filename in filenames:
           actual.add(os.path.join(dirname, filename))
-      expected = set([os.path.join(dst_dir, 'f1')])
+      expected = {os.path.join(dst_dir, 'f1')}
       self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -519,7 +512,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            '%s%s**' % (src_dir, os.sep), suri(dst_bucket_uri)])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'f1'), suri(dst_bucket_uri, 'f2')])
+    expected = {suri(dst_bucket_uri, 'f1'), suri(dst_bucket_uri, 'f2')}
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -541,7 +534,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'dir3')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dir3/dir2/foo')])
+    expected = {suri(dst_bucket_uri, 'dir3/dir2/foo')}
     self.assertEqual(expected, actual)
 
   def testCopyingFileToDirRecursive(self):
@@ -552,7 +545,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'dir/foo')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dir/foo')])
+    expected = {suri(dst_bucket_uri, 'dir/foo')}
     self.assertEqual(expected, actual)
 
   def testCopyingMultipleFilesToDirRecursive(self):
@@ -565,8 +558,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'dir/foo')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dir/foo/foo'),
-                    suri(dst_bucket_uri, 'dir/foo/bar')])
+    expected = {suri(dst_bucket_uri, 'dir/foo/foo'),
+                suri(dst_bucket_uri, 'dir/foo/bar')}
     self.assertEqual(expected, actual)
 
   def testAttemptDirCopyWithoutRecursion(self):
@@ -668,7 +661,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'new')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'new')])
+    expected = {suri(dst_bucket_uri, 'new')}
     self.assertEqual(expected, actual)
 
   def testLsNonExistentObjectWithPrefixName(self):
@@ -687,11 +680,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', [suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
-                    (suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim).encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected = {suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                suri(src_bucket_uri, 'd1', ':').encode('utf-8'), (
+                      suri(src_bucket_uri, 'd1',
+                           'd2') + src_bucket_uri.delim).encode('utf-8'),
+                suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
     actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
@@ -702,12 +696,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', ['-R', suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', 'd2', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', 'd2', 'foo3').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected = {suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
+                suri(src_bucket_uri, 'd1', 'd2', ':').encode('utf-8'),
+                suri(src_bucket_uri, 'd1', 'd2', 'foo3').encode('utf-8'),
+                suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
     actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
@@ -717,7 +711,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
     output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(dst_bucket_uri, 'f0').encode('utf-8')])
+    expected = {suri(dst_bucket_uri, 'f0').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
     actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
@@ -728,9 +722,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'src_subdir/nested/foo2'])
     output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
                              return_stdout=True)
-    expected = set([
-        suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
-        (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode('utf-8')])
+    expected = {suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'), (
+          suri(src_bucket_uri, 'src_subdir',
+               'nested') + src_bucket_uri.delim).encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
     actual = set(output.split(b'\n'))
     self.assertEqual(expected, actual)
@@ -743,11 +737,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       output = self.RunCommand(
           'ls', ['-R', suri(src_bucket_uri, 'src_subdir') + final_char],
           return_stdout=True)
-      expected = set([
-          suri(src_bucket_uri, 'src_subdir', ':').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode('utf-8')])
+      expected = {suri(src_bucket_uri, 'src_subdir', ':').encode('utf-8'),
+                  suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
+                  suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode(
+                    'utf-8'),
+                  suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode(
+                    'utf-8')}
       expected.add(b'')  # Blank line between subdir listings.
       actual = set(output.split(b'\n'))
       self.assertEqual(expected, actual)
@@ -840,13 +835,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
               expand_top_level_buckets=True))
       tmp_dirname = os.path.split(src_dir)[1]
       bucketname = src_bucket_uri.bucket_name
-      expected = set([
-          suri(dst_bucket_uri, 'dst_subdir%d' % i, 'existing_obj'),
-          suri(dst_bucket_uri, 'dst_subdir%d' % i, bucketname, 'f0'),
-          suri(dst_bucket_uri, 'dst_subdir%d' % i, bucketname, 'nested', 'f1'),
-          suri(dst_bucket_uri, 'dst_subdir%d' % i, tmp_dirname, 'f2'),
-          suri(dst_bucket_uri, 'dst_subdir%d' % i, tmp_dirname, 'nested', 'f3')
-      ])
+      expected = {suri(dst_bucket_uri, 'dst_subdir%d' % i, 'existing_obj'),
+                  suri(dst_bucket_uri, 'dst_subdir%d' % i, bucketname, 'f0'),
+                  suri(dst_bucket_uri, 'dst_subdir%d' % i, bucketname, 'nested',
+                       'f1'),
+                  suri(dst_bucket_uri, 'dst_subdir%d' % i, tmp_dirname, 'f2'),
+                  suri(dst_bucket_uri, 'dst_subdir%d' % i, tmp_dirname,
+                       'nested', 'f3')}
       self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -859,10 +854,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                            suri(dst_bucket_uri, 'dst_subdir')])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'dst_subdir', 'f0'),
-                    suri(dst_bucket_uri, 'dst_subdir', 'nested', 'f1'),
-                    suri(dst_bucket_uri, 'dst_subdir', 'f2'),
-                    suri(dst_bucket_uri, 'dst_subdir', 'nested', 'f3')])
+    expected = {suri(dst_bucket_uri, 'dst_subdir', 'f0'),
+                suri(dst_bucket_uri, 'dst_subdir', 'nested', 'f1'),
+                suri(dst_bucket_uri, 'dst_subdir', 'f2'),
+                suri(dst_bucket_uri, 'dst_subdir', 'nested', 'f3')}
     self.assertEqual(expected, actual)
 
   def testCopyingBucketSubDirToDir(self):
@@ -879,7 +874,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                    dst_dir + final_dst_char])
       actual = set(str(u) for u in self._test_wildcard_iterator(
           '%s%s**' % (dst_dir, os.sep)).IterAll(expand_top_level_buckets=True))
-      expected = set([suri(dst_dir, 'src_subdir', 'obj')])
+      expected = {suri(dst_dir, 'src_subdir', 'obj')}
       self.assertEqual(expected, actual)
 
   def testCopyingWildcardSpecifiedBucketSubDirToExistingDir(self):
@@ -899,7 +894,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           os.path.join(dst_dir, 'src_sub%ddir' % i, '**')).IterAll(
               expand_top_level_buckets=True))
-      expected = set([suri(dst_dir, 'src_sub%ddir' % i, 'foo')])
+      expected = {suri(dst_dir, 'src_sub%ddir' % i, 'foo')}
       self.assertEqual(expected, actual)
 
   def testCopyingBucketSubDirToDirFailsWithoutMinusR(self):
@@ -929,9 +924,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, 'dst_subdir_%d' % i, '**')).IterAll(
               expand_top_level_buckets=True))
-      expected = set([suri(dst_bucket_uri, 'dst_subdir_%d' % i,
-                           'src_subdir_%d' % i, 'obj'),
-                      suri(dst_bucket_uri, 'dst_subdir_%d' % i, 'obj2')])
+      expected = {suri(dst_bucket_uri, 'dst_subdir_%d' % i,
+                       'src_subdir_%d' % i, 'obj'),
+                  suri(dst_bucket_uri, 'dst_subdir_%d' % i, 'obj2')}
       self.assertEqual(expected, actual)
 
   def testCopyingBucketSubDirToBucketSubDirWithNested(self):
@@ -951,11 +946,11 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, 'dst_subdir_%d' % i, '**')).IterAll(
               expand_top_level_buckets=True))
-      expected = set([suri(dst_bucket_uri, 'dst_subdir_%d' % i,
-                           'src_subdir_%d' % i, 'obj'),
-                      suri(dst_bucket_uri, 'dst_subdir_%d' % i,
-                           'src_subdir_%d' % i, 'nested', 'obj'),
-                      suri(dst_bucket_uri, 'dst_subdir_%d' % i, 'obj2')])
+      expected = {suri(dst_bucket_uri, 'dst_subdir_%d' % i,
+                       'src_subdir_%d' % i, 'obj'),
+                  suri(dst_bucket_uri, 'dst_subdir_%d' % i,
+                       'src_subdir_%d' % i, 'nested', 'obj'),
+                  suri(dst_bucket_uri, 'dst_subdir_%d' % i, 'obj2')}
       self.assertEqual(expected, actual)
 
   def testMovingBucketSubDirToExistingBucketSubDir(self):
@@ -997,8 +992,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, 'dir%d' % i, '**')).IterAll(
               expand_top_level_buckets=True))
-      expected = set([suri(dst_bucket_uri, 'dir%d' % i, 'obj0'),
-                      suri(dst_bucket_uri, 'dir%d' % i, 'existing')])
+      expected = {suri(dst_bucket_uri, 'dir%d' % i, 'obj0'),
+                  suri(dst_bucket_uri, 'dir%d' % i, 'existing')}
       self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -1015,10 +1010,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, 'subdir%d' % i, '**')).IterAll(
               expand_top_level_buckets=True))
-      expected = set([suri(dst_bucket_uri, 'subdir%d' % i, 'existing'),
-                      suri(dst_bucket_uri, 'subdir%d' % i, 'f0'),
-                      suri(dst_bucket_uri, 'subdir%d' % i, 'f1'),
-                      suri(dst_bucket_uri, 'subdir%d' % i, 'f2')])
+      expected = {suri(dst_bucket_uri, 'subdir%d' % i, 'existing'),
+                  suri(dst_bucket_uri, 'subdir%d' % i, 'f0'),
+                  suri(dst_bucket_uri, 'subdir%d' % i, 'f1'),
+                  suri(dst_bucket_uri, 'subdir%d' % i, 'f2')}
       self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -1033,11 +1028,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                              suri(dst_bucket_uri, 'd%d' % i) + final_dst_char])
       actual = set(str(u) for u in self._test_wildcard_iterator(
           suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([
-        suri(dst_bucket_uri, 'd0', 'placeholder'),
-        suri(dst_bucket_uri, 'd1', 'placeholder'),
-        suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'),
-        suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1')])
+    expected = {suri(dst_bucket_uri, 'd0', 'placeholder'),
+                suri(dst_bucket_uri, 'd1', 'placeholder'),
+                suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'),
+                suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1')}
     self.assertEqual(expected, actual)
 
   def testMovingWildcardedFilesToNonExistentBucketSubDir(self):
@@ -1064,17 +1058,16 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([
-        suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
-        suri(dst_bucket_uri, 'dst_subdir0', 'f0f0'),
-        suri(dst_bucket_uri, 'dst_subdir0', 'f0f1'),
-        suri(dst_bucket_uri, 'nonexisting0', 'f0f0'),
-        suri(dst_bucket_uri, 'nonexisting0', 'f0f1'),
-        suri(dst_bucket_uri, 'dst_subdir1', 'existing_obj'),
-        suri(dst_bucket_uri, 'dst_subdir1', 'f1f0'),
-        suri(dst_bucket_uri, 'dst_subdir1', 'f1f1'),
-        suri(dst_bucket_uri, 'nonexisting1', 'f1f0'),
-        suri(dst_bucket_uri, 'nonexisting1', 'f1f1')])
+    expected = {suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
+                suri(dst_bucket_uri, 'dst_subdir0', 'f0f0'),
+                suri(dst_bucket_uri, 'dst_subdir0', 'f0f1'),
+                suri(dst_bucket_uri, 'nonexisting0', 'f0f0'),
+                suri(dst_bucket_uri, 'nonexisting0', 'f0f1'),
+                suri(dst_bucket_uri, 'dst_subdir1', 'existing_obj'),
+                suri(dst_bucket_uri, 'dst_subdir1', 'f1f0'),
+                suri(dst_bucket_uri, 'dst_subdir1', 'f1f1'),
+                suri(dst_bucket_uri, 'nonexisting1', 'f1f0'),
+                suri(dst_bucket_uri, 'nonexisting1', 'f1f1')}
     self.assertEqual(expected, actual)
 
   def testMovingObjectToBucketSubDir(self):
@@ -1090,11 +1083,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([
-        suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
-        suri(dst_bucket_uri, 'dst_subdir0', 'obj0'),
-        suri(dst_bucket_uri, 'dst_subdir1', 'existing_obj'),
-        suri(dst_bucket_uri, 'dst_subdir1', 'obj1')])
+    expected = {suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
+                suri(dst_bucket_uri, 'dst_subdir0', 'obj0'),
+                suri(dst_bucket_uri, 'dst_subdir1', 'existing_obj'),
+                suri(dst_bucket_uri, 'dst_subdir1', 'obj1')}
     self.assertEqual(expected, actual)
 
     actual = set(str(u) for u in self._test_wildcard_iterator(
@@ -1129,10 +1121,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # Unlike the case with copying, with mv we expect renaming to occur
     # at the level of the src subdir, vs appending that subdir beneath the
     # dst subdir like is done for copying.
-    expected = set([suri(dst_bucket, 'dst_subdir0', 'foo2'),
-                    suri(dst_bucket, 'dst_subdir1', 'foo2'),
-                    suri(dst_bucket, 'dst_subdir0', 'nested', 'foo3'),
-                    suri(dst_bucket, 'dst_subdir1', 'nested', 'foo3')])
+    expected = {suri(dst_bucket, 'dst_subdir0', 'foo2'),
+                suri(dst_bucket, 'dst_subdir1', 'foo2'),
+                suri(dst_bucket, 'dst_subdir0', 'nested', 'foo3'),
+                suri(dst_bucket, 'dst_subdir1', 'nested', 'foo3')}
     self.assertEqual(expected, actual)
 
   def testRemovingBucketSubDir(self):
@@ -1146,7 +1138,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           'rm', ['-R', suri(dst_bucket_uri, 'dir%d' % i) + final_src_char])
     actual = set(str(u) for u in self._test_wildcard_iterator(
         suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'f0')])
+    expected = {suri(dst_bucket_uri, 'f0')}
     self.assertEqual(expected, actual)
 
   def testRecursiveRemoveObjsInBucket(self):

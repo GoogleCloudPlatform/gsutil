@@ -167,9 +167,10 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
         ['label', 'set', self.json_fpath, suri(bucket_uri), suri(bucket2_uri)],
         return_stderr=True)
     actual = set(stderr.splitlines())
-    expected = set([
-        LABEL_SETTING_OUTPUT % suri(bucket_uri),
-        LABEL_SETTING_OUTPUT % suri(bucket2_uri)])
+    expected = {
+      LABEL_SETTING_OUTPUT % suri(bucket_uri),
+      LABEL_SETTING_OUTPUT % suri(bucket2_uri)
+    }
     self.assertSetEqual(actual, expected)
 
   def testSetOverwritesOldLabelConfig(self):

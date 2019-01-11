@@ -98,13 +98,13 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_convert_bindings_simple(self):
     """Tests that Policy.bindings lists are converted to dicts properly."""
     self.assertEquals(BindingsToDict([]), defaultdict(set))
-    expected = defaultdict(set, {'x': set(['y'])})
+    expected = defaultdict(set, {'x': {'y'}})
     self.assertEquals(
         BindingsToDict([bvle(role='x', members=['y'])]), expected)
 
   def test_convert_bindings_duplicates(self):
     """Test that role and member duplication are converted correctly."""
-    expected = defaultdict(set, {'x': set(['y', 'z'])})
+    expected = defaultdict(set, {'x': {'y', 'z'}})
     duplicate_roles = [
         bvle(role='x', members=['y']),
         bvle(role='x', members=['z'])]

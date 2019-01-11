@@ -32,15 +32,17 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def _create_nested_subdir(self):
     """Creates a nested subdirectory for use by tests in this module."""
     bucket_uri = self.CreateBucket()
-    obj_uris = []
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/five', contents=b'5five'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents=b'four'))
+    obj_uris = [
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/five',
+        contents=b'5five'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents=b'four')
+    ]
     self.AssertNObjectsInBucket(bucket_uri, 4)
     return bucket_uri, obj_uris
 
@@ -71,14 +73,17 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(['du', suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[1])),
           '%-10s  %s' % (5, suri(obj_uris[2])),
           '%-10s  %s' % (4, suri(obj_uris[3])),
           '%-10s  %s/sub1材/sub2/' % (9, suri(bucket_uri)),
-          '%-10s  %s/sub1材/' % (18, suri(bucket_uri)),
-      ]))
+          '%-10s  %s/sub1材/' % (18, suri(bucket_uri))
+        }
+      )
     _Check()
 
   def test_multi_args(self):
@@ -91,10 +96,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil(['du', suri(obj_uri1), suri(obj_uri2)],
                               return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (3, suri(obj_uri1)),
-          '%-10s  %s' % (4, suri(obj_uri2)),
-      ]))
+          '%-10s  %s' % (4, suri(obj_uri2))
+        }
+      )
     _Check()
 
   def test_total(self):
@@ -107,11 +115,14 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil(['du', '-c', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (3, suri(obj_uri1)),
           '%-10s  %s' % (5, suri(obj_uri2)),
-          '%-10s  total' % 8,
-      ]))
+          '%-10s  total' % 8
+        }
+      )
     _Check()
 
   def test_human_readable(self):
@@ -133,10 +144,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-s', suri(bucket_uri1), suri(bucket_uri2)], return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (18, suri(bucket_uri1)),
-          '%-10s  %s' % (18, suri(bucket_uri2)),
-      ]))
+          '%-10s  %s' % (18, suri(bucket_uri2))
+        }
+      )
     _Check()
 
   def test_subdir_summary(self):
@@ -151,10 +165,10 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil(
           ['du', '-s', subdir1, subdir2], return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
-          '%-10s  %s' % (18, subdir1),
-          '%-10s  %s' % (18, subdir2),
-      ]))
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {'%-10s  %s' % (18, subdir1), '%-10s  %s' % (18, subdir2)}
+      )
     _Check()
 
   @SkipForS3('S3 lists versions in reverse order.')
@@ -179,12 +193,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check2():
       stdout = self.RunGsUtil(['du', '-a', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
-          '%-10s  %s#%s' % (
-              3, suri(object_uri1), object_uri1.generation),
-          '%-10s  %s#%s' % (
-              4, suri(object_uri2), object_uri2.generation),
-      ]))
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
+          '%-10s  %s#%s' % (3, suri(object_uri1), object_uri1.generation),
+          '%-10s  %s#%s' % (4, suri(object_uri2), object_uri2.generation)
+        }
+      )
     _Check2()
 
   def test_null_endings(self):
@@ -197,12 +212,14 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil(['du', '-0c', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertSetEqual(set(stdout.split('\0')), set([
+      self.assertSetEqual(
+        set(stdout.split('\0')),
+        {
           '%-10s  %s' % (3, suri(obj_uri1)),
           '%-10s  %s' % (5, suri(obj_uri2)),
-          '%-10s  total' % 8,
-          ''
-      ]))
+          '%-10s  total' % 8, ''
+        }
+      )
     _Check()
 
   def test_excludes(self):
@@ -215,12 +232,15 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil([
           'du', '-e', '*sub2/five*', '-e', '*sub1材/four',
           suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[3])),
           '%-10s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
-          '%-10s  %s/sub1材/' % (9, suri(bucket_uri)),
-      ]))
+          '%-10s  %s/sub1材/' % (9, suri(bucket_uri))
+        }
+      )
     _Check()
 
   def test_excludes_file(self):
@@ -234,10 +254,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     def _Check():
       stdout = self.RunGsUtil([
           'du', '-X', fpath, suri(bucket_uri)], return_stdout=True)
-      self.assertSetEqual(set(stdout.splitlines()), set([
+      self.assertSetEqual(
+        set(stdout.splitlines()),
+        {
           '%-10s  %s' % (5, suri(obj_uris[0])),
           '%-10s  %s' % (4, suri(obj_uris[3])),
           '%-10s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
-          '%-10s  %s/sub1材/' % (9, suri(bucket_uri)),
-      ]))
+          '%-10s  %s/sub1材/' % (9, suri(bucket_uri))
+        }
+      )
     _Check()

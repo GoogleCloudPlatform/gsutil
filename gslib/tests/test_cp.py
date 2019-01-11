@@ -229,9 +229,9 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
     listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
     # Bucket should have un-altered content.
-    cls.assertEquals(listing1, set(['/%s' % obj.object_name]))
+    cls.assertEquals(listing1, {'/%s' % obj.object_name})
     # Dir should have un-altered content.
-    cls.assertEquals(listing2, set(['']))
+    cls.assertEquals(listing2, {''})
 
 
 def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
@@ -267,8 +267,22 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
     cls.RunGsUtil(['cp' if is_cp else 'mv', '-P', suri(bucket_uri, obj_name),
                    tmpdir])
   listing = TailSet(tmpdir, cls.FlatListDir(tmpdir))
-  cls.assertEquals(listing, set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5',
-                                 '/obj6', '/obj7', '/obj8', '/obj9', '/obj10']))
+  cls.assertEquals(
+    listing,
+    set(["/obj%d" % i for i in range(1, 11)]),
+    {
+      '/obj1',
+      '/obj2',
+      '/obj3',
+      '/obj4',
+      '/obj5',
+      '/obj6',
+      '/obj7',
+      '/obj8',
+      '/obj9',
+      '/obj10'
+    }
+  )
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
                                   gid=PRIMARY_GID, mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj2'),
@@ -3034,8 +3048,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                     'cp', suri(input_filename), suri(object_uri)])
     # Compute the MD5 of the uncompressed bytes.
     with gzip.open(input_filename) as fp:
-      hash_dict = {}
-      hash_dict['md5'] = md5()
+      hash_dict = {'md5': md5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       in_file_md5 = hash_dict['md5'].digest()
 
@@ -3044,8 +3057,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
     # Compute MD5 of the downloaded (uncompressed) file, and validate it.
     with open(fpath2, 'rb') as fp:
-      hash_dict = {}
-      hash_dict['md5'] = md5()
+      hash_dict = {'md5': md5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       out_file_md5 = hash_dict['md5'].digest()
     self.assertEqual(in_file_md5, out_file_md5)

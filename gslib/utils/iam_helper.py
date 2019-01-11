@@ -28,18 +28,9 @@ from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 
-TYPES = set([
-    'user',
-    'serviceAccount',
-    'group',
-    'domain',
-])
+TYPES = {'user', 'serviceAccount', 'group', 'domain'}
 
-DISCOURAGED_TYPES = set([
-    'projectOwner',
-    'projectEditor',
-    'projectViewer'
-])
+DISCOURAGED_TYPES = {'projectOwner', 'projectEditor', 'projectViewer'}
 
 DISCOURAGED_TYPES_MSG = (
     'Assigning roles (e.g. objectCreator, legacyBucketOwner) for project '
@@ -50,10 +41,7 @@ DISCOURAGED_TYPES_MSG = (
     'information. Assigning a role to a project group can be achieved by '
     'setting the IAM policy directly (see gsutil help iam for specifics).')
 
-PUBLIC_MEMBERS = set([
-    'allUsers',
-    'allAuthenticatedUsers'
-])
+PUBLIC_MEMBERS = {'allUsers', 'allAuthenticatedUsers'}
 
 # This is a convenience class to handle returned results from
 # BindingStringToTuple. is_grant is a boolean specifying if the

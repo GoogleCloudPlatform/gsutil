@@ -217,7 +217,7 @@ class CloudWildcardIterator(WildcardIterator):
 
           # If we have a suffix wildcard, we only care about listing prefixes.
           listing_fields = (
-              set(['prefixes']) if suffix_wildcard else bucket_listing_fields)
+              {'prefixes'} if suffix_wildcard else bucket_listing_fields)
 
           # List bucket for objects matching prefix up to delimiter.
           for obj_or_prefix in self.gsutil_api.ListObjects(
@@ -361,7 +361,7 @@ class CloudWildcardIterator(WildcardIterator):
       BucketListingRefereneces of type BUCKET.
     """
     bucket_url = StorageUrlFromString(self.wildcard_url.bucket_url_string)
-    if (bucket_fields and set(bucket_fields) == set(['id']) and
+    if (bucket_fields and set(bucket_fields) == {'id'} and
         not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we just want the name of a non-wildcarded bucket URL,
       # don't make an RPC.

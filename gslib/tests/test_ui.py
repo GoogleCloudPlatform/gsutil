@@ -886,13 +886,12 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6']))
+      self.assertEquals(listing1, {'/obj1', '/.obj2', '/subdir/obj3', '/obj6'})
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
-                                       '/subdir/obj5', '/obj6']))
+      self.assertEquals(listing2,
+                        {'/obj1', '/.obj2', '/obj4', '/subdir/obj5', '/obj6'})
       # Assert that the src/dest objects that had same length but different
       # content were correctly synchronized (bucket to bucket rsync uses
       # checksums).
