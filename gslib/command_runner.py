@@ -174,10 +174,6 @@ class CommandRunner(object):
         command_map[command_name_aliases] = command
     return command_map
 
-  def _GetTabCompleteLogger(self):
-    """Returns a logger for tab completion."""
-    return CreateOrGetGsutilLogger('tab_complete')
-
   def _ConfigureCommandArgumentParserArguments(
       self, parser, subcommands_or_arguments, gsutil_api):
     """Creates parsers recursively for potentially nested subcommands.
@@ -193,7 +189,7 @@ class CommandRunner(object):
       TypeError: if subcommands_or_arguments is not a dict or list
 
     """
-    logger = self._GetTabCompleteLogger()
+    logger = CreateOrGetGsutilLogger('tab_complete')
 
     def HandleList():
       for command_argument in subcommands_or_arguments:
@@ -243,8 +239,11 @@ class CommandRunner(object):
         self.gsutil_api_class_map_factory, support_map, default_map)
 
     gsutil_api = CloudApiDelegator(
-        self.bucket_storage_uri_class, gsutil_api_map,
-        self._GetTabCompleteLogger(), DiscardMessagesQueue(), debug=0)
+      self.bucket_storage_uri_class, gsutil_api_map,
+      CreateOrGetGsutilLogger('tab_complete'),
+      DiscardMessagesQueue(),
+      debug=0
+    )
     return gsutil_api
 
   def ConfigureCommandArgumentParsers(self, main_parser):
