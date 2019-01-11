@@ -84,7 +84,8 @@ class GsUtilTestCase(unittest.TestCase):
   def GetTestMethodName(self):
     return self._testMethodName
 
-  def MakeRandomTestString(self):
+  @staticmethod
+  def MakeRandomTestString():
     """Creates a random string of hex characters 8 characters long."""
     return '%08x' % random.randrange(256**4)
 

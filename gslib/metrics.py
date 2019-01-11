@@ -170,7 +170,8 @@ class MetricsCollector(object):
   # Whether analytics collection is disabled or not.
   _disabled_cache = None
 
-  def _ValidateAndGetConfigValues(self):
+  @staticmethod
+  def _ValidateAndGetConfigValues():
     """Parses the user's config file to aggregate non-PII config values.
 
     Returns:

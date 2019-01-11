@@ -128,7 +128,8 @@ class BotoResumableUpload(object):
         parse_result.path, parse_result.query)
     self.service_has_bytes = 0
 
-  def _BuildContentRangeHeader(self, range_spec='*', length_spec='*'):
+  @staticmethod
+  def _BuildContentRangeHeader(range_spec='*', length_spec='*'):
     return 'bytes %s/%s' % (range_spec, length_spec)
 
   def _QueryServiceState(self, conn, file_length):

@@ -443,7 +443,8 @@ class BotoTranslation(CloudApi):
                                        object_name=object_name,
                                        generation=generation)
 
-  def _CurryDigester(self, digester_object):
+  @staticmethod
+  def _CurryDigester(digester_object):
     """Curries a digester object into a form consumable by boto.
 
     Key instantiates its own digesters by calling hash_algs[alg]() [note there

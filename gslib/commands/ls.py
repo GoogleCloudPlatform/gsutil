@@ -309,7 +309,8 @@ class LsCommand(Command):
       subcommand_help_text={},
   )
 
-  def _PrintBucketInfo(self, bucket_blr, listing_style):
+  @staticmethod
+  def _PrintBucketInfo(bucket_blr, listing_style):
     """Print listing info for given bucket.
 
     Args:

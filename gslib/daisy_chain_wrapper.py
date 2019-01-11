@@ -309,5 +309,6 @@ class DaisyChainWrapper(object):
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)
 
-  def seekable(self):  # pylint: disable=invalid-name
+  @staticmethod
+  def seekable():  # pylint: disable=invalid-name
     return True

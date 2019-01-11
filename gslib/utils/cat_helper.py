@@ -55,7 +55,8 @@ class CatHelper(object):
     """
     self.command_obj = command_obj
 
-  def _WriteBytesBufferedFileToFile(self, src_fd, dst_fd):
+  @staticmethod
+  def _WriteBytesBufferedFileToFile(src_fd, dst_fd):
     """Copies contents of the source to the destination via buffered IO.
 
     Buffered reads are necessary in the case where you're reading from a

@@ -218,7 +218,8 @@ class KmsApi(object):
     else:
       raise
 
-  def _GetMessageFromHttpError(self, http_error):
+  @staticmethod
+  def _GetMessageFromHttpError(http_error):
     if isinstance(http_error, apitools_exceptions.HttpError):
       if getattr(http_error, 'content', None):
         try:
@@ -229,7 +230,8 @@ class KmsApi(object):
           # If we couldn't decode anything, just leave the message as None.
           pass
 
-  def _GetAcceptableScopesFromHttpError(self, http_error):
+  @staticmethod
+  def _GetAcceptableScopesFromHttpError(http_error):
     try:
       www_authenticate = http_error.response['www-authenticate']
       # In the event of a scope error, the www-authenticate field of the HTTP

@@ -718,7 +718,8 @@ class ConfigCommand(Command):
       subcommand_help_text={},
   )
 
-  def _OpenConfigFile(self, file_path):
+  @staticmethod
+  def _OpenConfigFile(file_path):
     """Creates and opens a configuration file for writing.
 
     The file is created with mode 0600, and attempts to open existing files will
@@ -791,7 +792,8 @@ class ConfigCommand(Command):
             'If you would like to fix this yourself, consider running:\n'
             '"sudo chmod 400 </path/to/key>" for improved security.')
 
-  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(self, varname, prompt,
+  @staticmethod
+  def _PromptForProxyConfigVarAndMaybeSaveToBotoConfig(varname, prompt,
                                                        convert_to_bool=False):
     """Prompts for one proxy config line, saves to boto.config if not empty.
 
@@ -826,7 +828,8 @@ class ConfigCommand(Command):
         'disallows client DNS lookups)? ',
         convert_to_bool=True)
 
-  def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
+  @staticmethod
+  def _WriteConfigLineMaybeCommented(config_file, name, value, desc):
     """Writes proxy name/value pair or comment line to config file.
 
     Writes proxy name/value pair if value is not None.  Otherwise writes

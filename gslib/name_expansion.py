@@ -163,7 +163,7 @@ class _NameExpansionIterator(object):
     self.project_id = project_id
     self.ignore_symlinks = ignore_symlinks
     self.continue_on_error = continue_on_error
-    self.bucket_listing_fields = (set(['name']) if not bucket_listing_fields
+    self.bucket_listing_fields = ({'name'} if not bucket_listing_fields
                                   else bucket_listing_fields)
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.

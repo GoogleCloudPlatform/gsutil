@@ -153,7 +153,8 @@ class HashCommand(Command):
 
     return calc_crc32c, calc_md5, format_func, cloud_format_func, output_format
 
-  def _GetHashClassesFromArgs(self, calc_crc32c, calc_md5):
+  @staticmethod
+  def _GetHashClassesFromArgs(calc_crc32c, calc_md5):
     """Constructs the dictionary of hashes to compute based on the arguments.
 
     Args:
