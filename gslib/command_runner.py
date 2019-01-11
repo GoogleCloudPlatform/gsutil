@@ -137,6 +137,18 @@ def _StringToSysArgType(unicode_str):
   return unicode_str
 
 
+def _OriginalPrint(s=''):
+  """Prints only if sys.stdout hasn't been modified.
+
+  Useful for not printing during unit tests.
+
+  Args:
+    s: String to maybe print
+  """
+  if type(sys.stdout) == type(sys.__stdout__):
+    print(s)
+
+
 class CommandRunner(object):
   """Runs gsutil commands and does some top-level argument handling."""
 
@@ -479,7 +491,7 @@ class CommandRunner(object):
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
       if m:
-        print('\n'.join(textwrap.wrap(
+        _OriginalPrint('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). NOTE: This is a major new version, so it is '
             'strongly recommended that you review the release note details at '
@@ -487,18 +499,18 @@ class CommandRunner(object):
             'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print()
+        _OriginalPrint()
         answer = input('Would you like to update [y/N]? ')
         return answer and answer.lower()[0] == 'y'
       elif g:
-        print('\n'.join(textwrap.wrap(
+        _OriginalPrint('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
             'available at %s if you would like to read them before updating.'
             % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print()
+        _OriginalPrint()
         answer = input('Would you like to update [Y/n]? ')
         return not answer or answer.lower()[0] != 'n'
     return False
