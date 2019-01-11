@@ -285,11 +285,23 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:u:mq',
-                                 ['debug', 'detailedDebug', 'version', 'option',
-                                  'help', 'header', 'multithreaded', 'quiet',
-                                  'testexceptiontraces', 'trace-token=',
-                                  'perf-trace-token='])
+      opts, args = getopt.getopt(
+        sys.argv[1:],
+        'dDvo:h:u:mq',
+        [
+          'debug',
+          'detailedDebug',
+          'version',
+          'option',
+          'help',
+          'header',
+          'multithreaded',
+          'quiet',
+          'testexceptiontraces',
+          'trace-token=',
+          'perf-trace-token='
+        ]
+      )
     except getopt.GetoptError as e:
       _HandleCommandException(CommandException(e.msg))
     for o, a in opts:
