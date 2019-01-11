@@ -2997,8 +2997,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       sliced_download_threshold = HumanReadableToBytes(
           boto.config.get('GSUtil', 'sliced_object_download_threshold',
                           DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD))
-      sliced_download = (len(contents) > sliced_download_threshold
-                         and sliced_download_threshold > 0
+      sliced_download = (len(contents) > sliced_download_threshold > 0
                          and UsingCrcmodExtension(crcmod))
       if sliced_download:
         trackerfile_type = TrackerFileType.SLICED_DOWNLOAD
