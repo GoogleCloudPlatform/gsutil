@@ -25,6 +25,11 @@ Public functions:
   decode_message: Merge from a JSON string in to a message.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import json
 from six import PY3
 from six import binary_type
