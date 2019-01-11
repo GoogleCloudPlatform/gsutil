@@ -96,6 +96,13 @@ from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.wildcard_iterator import CreateWildcardIterator
 from six.moves import queue as Queue
 
+# pylint: disable=g-import-not-at-top
+try:
+  from Crypto import Random as CryptoRandom
+except ImportError:
+  CryptoRandom = None
+# pylint: enable=g-import-not-at-top
+
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
 
 
@@ -170,6 +177,15 @@ def SetAclExceptionHandler(cls, e):
 # Python exit function cleanup) under the impression that they are non-empty.
 # However, this also lets us shut down somewhat more cleanly when interrupted.
 queues = []
+
+
+def _CryptoRandomAtFork():
+  if CryptoRandom and getattr(CryptoRandom, 'atfork', None):
+    # Fixes https://github.com/GoogleCloudPlatform/gsutil/issues/390. The
+    # oauth2client module uses Python's Crypto library when pyOpenSSL isn't
+    # present; that module requires calling atfork() in both the parent and
+    # child process after a new process is forked.
+    CryptoRandom.atfork()
 
 
 def _NewMultiprocessingQueue():
@@ -1300,6 +1316,7 @@ class Command(HelpProvider):
                 status_queue))
       p.daemon = True
       processes.append(p)
+      _CryptoRandomAtFork()
       p.start()
     consumer_pool = _ConsumerPool(processes, task_queue)
     consumer_pools.append(consumer_pool)
@@ -1742,6 +1759,7 @@ class Command(HelpProvider):
     assert process_count > 1, (
         'Invalid state, calling command._ApplyThreads with only one process.')
 
+    _CryptoRandomAtFork()
     # Separate processes should exit on a terminating signal,
     # but to avoid race conditions only the main process should handle
     # multiprocessing cleanup. Override child processes to use a single signal
