@@ -255,13 +255,13 @@ def _GenSignedUrl(key, client_id, method, duration,
   canonical_scope = '{date}/{region}/storage/goog4_request'.format(
       date=canonical_day, region=region)
 
-  signed_query_params = {}
-  signed_query_params['x-goog-algorithm'] = _SIGNING_ALGO
-  signed_query_params['x-goog-credential'] = client_id + '/' + canonical_scope
-  signed_query_params['x-goog-date'] = canonical_time
-  signed_query_params['x-goog-signedheaders'] = ';'.join(
-      sorted(signed_headers.keys()))
-  signed_query_params['x-goog-expires'] = '%d' % duration.total_seconds()
+  signed_query_params = {
+    'x-goog-algorithm': _SIGNING_ALGO,
+    'x-goog-credential': client_id + '/' + canonical_scope,
+    'x-goog-date': canonical_time,
+    'x-goog-signedheaders': ';'.join(sorted(signed_headers.keys())),
+    'x-goog-expires': '%d' % duration.total_seconds()
+  }
 
   canonical_resource = '/{}'.format(gcs_path)
   canonical_query_string = '&'.join(

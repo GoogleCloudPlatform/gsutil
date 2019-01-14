@@ -215,8 +215,10 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=self.cors_doc.encode('utf-8'))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    expected = set(['Setting CORS on %s/...' % suri(bucket1_uri),
-                    'Setting CORS on %s/...' % suri(bucket2_uri)])
+    expected = {
+      'Setting CORS on %s/...' % suri(bucket1_uri),
+      'Setting CORS on %s/...' % suri(bucket2_uri)
+    }
     actual = set()
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():

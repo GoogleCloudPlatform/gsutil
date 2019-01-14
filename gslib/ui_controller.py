@@ -166,7 +166,7 @@ class StatusMessageManager(object):
     self.refresh_message_time = (self.custom_time if self.custom_time
                                  else time.time())
     self.start_time = self.refresh_message_time
-	# Time at last spinner update.
+    # Time at last spinner update.
     self.refresh_spinner_time = self.refresh_message_time
 
     # Measured in objects/second or bytes/second, depending on the superclass.

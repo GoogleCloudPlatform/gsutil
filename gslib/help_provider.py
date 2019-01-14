@@ -66,13 +66,12 @@ class HelpProvider(object):
 def SanityCheck(help_provider, help_name_map):
   """Helper for checking that a HelpProvider has minimally adequate content."""
   # Sanity check the content.
-  assert (len(help_provider.help_spec.help_name) > 1
-          and len(help_provider.help_spec.help_name) < MAX_HELP_NAME_LEN)
+  assert (1 < len(help_provider.help_spec.help_name) < MAX_HELP_NAME_LEN)
   for hna in help_provider.help_spec.help_name_aliases:
     assert hna
   one_line_summary_len = len(help_provider.help_spec.help_one_line_summary)
-  assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN
-          and one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
+  assert (
+        MIN_ONE_LINE_SUMMARY_LEN < one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
   assert len(help_provider.help_spec.help_text) > 10
 
   # Ensure there are no dupe help names or aliases across commands.

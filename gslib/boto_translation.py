@@ -405,8 +405,15 @@ class BotoTranslation(CloudApi):
           key_to_convert = key
 
           # Listed keys are populated with these fields during bucket listing.
-          key_http_fields = set(['bucket', 'etag', 'name', 'updated',
-                                 'generation', 'metageneration', 'size'])
+          key_http_fields = {
+            'bucket',
+            'etag',
+            'name',
+            'updated',
+            'generation',
+            'metageneration',
+            'size'
+          }
 
           # When fields == None, the caller is requesting all possible fields.
           # If the caller requested any fields that are not populated by bucket
@@ -919,10 +926,9 @@ class BotoTranslation(CloudApi):
     try:
       md5 = None
       if object_metadata.md5Hash:
-        md5 = []
         # boto expects hex at index 0, base64 at index 1
-        md5.append(Base64ToHexHash(object_metadata.md5Hash))
-        md5.append(object_metadata.md5Hash.strip('\n"\''))
+        md5 = [Base64ToHexHash(object_metadata.md5Hash),
+               object_metadata.md5Hash.strip('\n"\'')]
       self._PerformSimpleUpload(dst_uri, upload_stream, md5=md5,
                                 canned_acl=canned_acl,
                                 progress_callback=progress_callback,

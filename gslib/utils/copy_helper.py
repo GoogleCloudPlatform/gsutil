@@ -1280,8 +1280,7 @@ def _ShouldDoParallelCompositeUpload(logger, allow_splitting, src_url, dst_url,
         suggested_sliced_transfers['suggested'] = True
 
   if not (all_factors_but_size
-          and parallel_composite_upload_threshold > 0
-          and file_size >= parallel_composite_upload_threshold):
+          and 0 < parallel_composite_upload_threshold <= file_size):
     return False
 
   # TODO(KMS, Compose): Once GCS supports compose operations over
