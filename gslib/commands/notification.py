@@ -374,7 +374,8 @@ class NotificationCommand(Command):
   #  canonical form:  projects/_/buckets/bucket/notificationConfigs/3
   #  JSON API form:   b/bucket/notificationConfigs/5
   # Either of the above might start with a / if a user is copying & pasting.
-  def _GetNotificationPathRegex(self):
+  @staticmethod
+  def _GetNotificationPathRegex():
     if not NotificationCommand._notification_path_regex:
       NotificationCommand._notification_path_regex = re.compile(
           ('/?(projects/[^/]+/)?b(uckets)?/(?P<bucket>[^/]+)/'

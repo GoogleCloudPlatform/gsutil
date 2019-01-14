@@ -56,8 +56,8 @@ except:  # pylint: disable=bare-except
           pass
 
         # pylint: disable=invalid-name
-        def request(self, endpoint, method=None, body=None,
-                    headers=None):
+        @staticmethod
+        def request(endpoint, method=None, body=None, headers=None):
           # Strip 'https://'
           https_con = http_client.HTTPSConnection(endpoint[8:].split('/')[0])
           https_con.request(method, endpoint, body=body,

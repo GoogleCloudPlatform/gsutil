@@ -56,7 +56,7 @@ class StorageUrl(object):
   def IsCloudUrl(self):
     raise NotImplementedError('IsCloudUrl not overridden')
 
-  def IsStream():
+  def IsStream(self):
     raise NotImplementedError('IsStream not overridden')
 
   def IsFifo(self):

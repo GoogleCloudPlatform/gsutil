@@ -178,7 +178,8 @@ class HelpCommand(Command):
     self._OutputHelp(''.join(output))
     return 0
 
-  def _OutputHelp(self, help_str):
+  @staticmethod
+  def _OutputHelp(help_str):
     """Outputs simply formatted string.
 
     This function paginates if the string is too long, PAGER is defined, and
@@ -210,7 +211,8 @@ class HelpCommand(Command):
     else:
       text_util.ttyprint(help_str)
 
-  def _LoadHelpMaps(self):
+  @staticmethod
+  def _LoadHelpMaps():
     """Returns tuple of help type and help name.
 
     help type is a dict with key: help type

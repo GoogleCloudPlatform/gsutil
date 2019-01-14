@@ -1184,7 +1184,8 @@ class Command(HelpProvider):
   # Private functions. #
   ######################
 
-  def _ResetConnectionPool(self):
+  @staticmethod
+  def _ResetConnectionPool():
     # Each OS process needs to establish its own set of connections to
     # the server to avoid writes from different OS processes interleaving
     # onto the same socket (and garbling the underlying SSL session).
@@ -1717,7 +1718,8 @@ class Command(HelpProvider):
     if is_main_thread and not parallel_operations_override:
       PutToQueueWithTimeout(glob_status_queue, FinalMessage(time.time()))
 
-  def _ProcessSourceUrlTypes(self, args_iterator):
+  @staticmethod
+  def _ProcessSourceUrlTypes(args_iterator):
     """Logs the URL type information to analytics collection."""
     if not isinstance(args_iterator, CopyObjectsIterator):
       return

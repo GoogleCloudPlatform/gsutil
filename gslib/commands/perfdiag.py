@@ -1327,7 +1327,8 @@ class PerfDiagCommand(Command):
     except NotFoundException:
       pass
 
-  def _GetDiskCounters(self):
+  @staticmethod
+  def _GetDiskCounters():
     """Retrieves disk I/O statistics for all disks.
 
     Adapted from the psutil module's psutil._pslinux.disk_io_counters:
@@ -1637,7 +1638,8 @@ class PerfDiagCommand(Command):
 
     self.results['sysinfo'] = sysinfo
 
-  def _DisplayStats(self, trials):
+  @staticmethod
+  def _DisplayStats(trials):
     """Prints out mean, standard deviation, median, and 90th percentile."""
     n = len(trials)
     mean = float(sum(trials)) / n
@@ -1920,7 +1922,8 @@ class PerfDiagCommand(Command):
 
     text_util.ttyprint()
 
-  def _ParsePositiveInteger(self, val, msg):
+  @staticmethod
+  def _ParsePositiveInteger(val, msg):
     """Tries to convert val argument to a positive integer.
 
     Args:

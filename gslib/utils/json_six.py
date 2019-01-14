@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-# Copyright 2014 Google Inc. All Rights Reserved.
+#!/usr/bin/env python
+#
+# Copyright 2019 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +13,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""No-op implementation of credentials for JSON HTTP requests."""
+#
+
+"""JSON support for python 2 and 3.
+
+Public classes:
+  MessageJSONEncoder: JSON encoder for message objects.
+
+Public functions:
+  encode_message: Encodes a message in to a JSON string.
+  decode_message: Merge from a JSON string in to a message.
+"""
 
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
+from six import PY3
+from six import binary_type
 
-class NoOpCredentials(object):
+# used for including both loads and dumps methods for ease of importing
+from json import dumps
 
-  def __init__(self):
-    pass
-
-  @staticmethod
-  def authorize(http_obj):  # pylint: disable=invalid-name
-    return http_obj
-
-  def set_store(self, store):  # pylint: disable=invalid-name
-    pass
-
+def loads(json_data):
+  """
+  Converts a string OR bytes into a json structure
+  """
+  if PY3 and isinstance(json_data, binary_type):
+    json_data = str(json_data, "utf-8")
+  return json.loads(json_data)

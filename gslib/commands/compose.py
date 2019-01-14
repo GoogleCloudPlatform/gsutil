@@ -117,7 +117,8 @@ class ComposeCommand(Command):
       subcommand_help_text={},
   )
 
-  def CheckProvider(self, url):
+  @staticmethod
+  def CheckProvider(url):
     if url.scheme != 'gs':
       raise CommandException(
           '"compose" called on URL with unsupported provider (%s).' % str(url))

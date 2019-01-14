@@ -218,7 +218,8 @@ class AclChange(object):
                              self.scope_type)
     current_acl.append(entry)
 
-  def _GetEntriesClass(self, current_acl):
+  @staticmethod
+  def _GetEntriesClass(current_acl):
     # Entries will share the same class, so just return the first one.
     for acl_entry in current_acl:
       return acl_entry.__class__

@@ -32,8 +32,7 @@ import sys
 import textwrap
 import traceback
 
-import six
-from six.moves import configparser
+from six.moves.configparser import ConfigParser
 from six.moves import range
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
@@ -286,11 +285,23 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:h:u:mq',
-                                 ['debug', 'detailedDebug', 'version', 'option',
-                                  'help', 'header', 'multithreaded', 'quiet',
-                                  'testexceptiontraces', 'trace-token=',
-                                  'perf-trace-token='])
+      opts, args = getopt.getopt(
+        sys.argv[1:],
+        'dDvo:h:u:mq',
+        [
+          'debug',
+          'detailedDebug',
+          'version',
+          'option',
+          'help',
+          'header',
+          'multithreaded',
+          'quiet',
+          'testexceptiontraces',
+          'trace-token=',
+          'perf-trace-token='
+        ]
+      )
     except getopt.GetoptError as e:
       _HandleCommandException(CommandException(e.msg))
     for o, a in opts:
@@ -612,7 +623,7 @@ def _RunNamedCommandAndHandleExceptions(
     _OutputAndExit(message='InvalidUriError: %s.' % e.message, exception=e)
   except gslib.exception.InvalidUrlError as e:
     _OutputAndExit(message='InvalidUrlError: %s.' % e.message, exception=e)
-  except boto.auth_handler.NotReadyToAuthenticate:
+  except boto.auth_handler.NotReadyToAuthenticate as e:
     _OutputAndExit(message='NotReadyToAuthenticate', exception=e)
   except OSError as e:
     # In Python 3, IOError (next except) is an alias for OSError

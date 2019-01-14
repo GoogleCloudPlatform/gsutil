@@ -128,7 +128,8 @@ class BotoResumableUpload(object):
         parse_result.path, parse_result.query)
     self.service_has_bytes = 0
 
-  def _BuildContentRangeHeader(self, range_spec='*', length_spec='*'):
+  @staticmethod
+  def _BuildContentRangeHeader(range_spec='*', length_spec='*'):
     return 'bytes %s/%s' % (range_spec, length_spec)
 
   def _QueryServiceState(self, conn, file_length):
@@ -150,10 +151,10 @@ class BotoResumableUpload(object):
     """
     # Send an empty PUT so that service replies with this resumable
     # transfer's state.
-    put_headers = {}
-    put_headers['Content-Range'] = (
-        self._BuildContentRangeHeader('*', file_length))
-    put_headers['Content-Length'] = '0'
+    put_headers = {
+      'Content-Range': (self._BuildContentRangeHeader('*', file_length)),
+      'Content-Length': '0'
+    }
     return AWSAuthConnection.make_request(
         conn, 'PUT', path=self.upload_url_path, auth_path=self.upload_url_path,
         headers=put_headers, host=self.upload_url_host)

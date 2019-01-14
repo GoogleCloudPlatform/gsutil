@@ -149,7 +149,7 @@ class DaisyChainWrapper(object):
     self.download_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
-    if self.download_started.wait(60) == False:
+    if not self.download_started.wait(60):
       raise Exception('Could not start download thread after 60 seconds.')
 
   def StartDownloadThread(self, start_byte=0, progress_callback=None):
@@ -309,5 +309,6 @@ class DaisyChainWrapper(object):
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)
 
-  def seekable(self):  # pylint: disable=invalid-name
+  @staticmethod
+  def seekable():  # pylint: disable=invalid-name
     return True

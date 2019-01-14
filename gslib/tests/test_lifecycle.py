@@ -217,9 +217,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=self.lifecycle_doc.encode('ascii'))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
-    expected = set([
-        'Setting lifecycle configuration on %s/...' % suri(bucket1_uri),
-        'Setting lifecycle configuration on %s/...' % suri(bucket2_uri)])
+    expected = {
+      'Setting lifecycle configuration on %s/...' % suri(bucket1_uri),
+      'Setting lifecycle configuration on %s/...' % suri(bucket2_uri)
+    }
     actual = set()
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():

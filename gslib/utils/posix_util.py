@@ -430,11 +430,11 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
     if atime > NA_TIME and mtime > NA_TIME:
       # Set both atime and mtime.
       os.utime(path, (atime, mtime))
-    elif atime > NA_TIME and mtime <= NA_TIME:
+    elif atime > NA_TIME >= mtime:
       # atime is valid but mtime isn't.
       mtime_tmp = os.stat(path).st_mtime
       os.utime(path, (atime, mtime_tmp))
-    elif atime <= NA_TIME and mtime > NA_TIME:
+    elif atime <= NA_TIME < mtime:
       # mtime is valid but atime isn't
       atime_tmp = os.stat(path).st_atime
       os.utime(path, (atime_tmp, mtime))
@@ -449,10 +449,10 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
     if uid > NA_ID and gid > NA_ID:
       # Set both uid and gid.
       os.chown(path, uid, gid)
-    elif uid > NA_ID and gid <= NA_ID:
+    elif uid > NA_ID >= gid:
       # uid is valid but gid isn't.
       os.chown(path, uid, -1)
-    elif uid <= NA_ID and gid > NA_ID:
+    elif uid <= NA_ID < gid:
       # gid is valid but uid isn't.
       os.chown(path, -1, gid)
     if found_mode:
