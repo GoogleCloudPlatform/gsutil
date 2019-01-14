@@ -172,7 +172,8 @@ class CommandRunner(object):
     else:
       self.command_map = self._LoadCommandMap()
 
-  def _LoadCommandMap(self):
+  @staticmethod
+  def _LoadCommandMap():
     """Returns dict mapping each command_name to implementing class."""
     # Import all gslib.commands submodules.
     for _, module_name, _ in pkgutil.iter_modules(gslib.commands.__path__):

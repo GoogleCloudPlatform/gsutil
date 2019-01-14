@@ -75,25 +75,25 @@ warnings.filterwarnings('ignore', category=UserWarning,
 # the directory under third_party and the second element is the subdirectory
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
-    ('argcomplete', ''),  # For tab-completion (gcloud installs only).
-    ('mock', ''),  # mock and dependencies must be before boto.
-    ('funcsigs', ''),  # mock dependency
-    ('google-reauth-python', ''),  # Package name: google_reauth
-    ('pyu2f', ''),  # google_reauth dependency
-    ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
-    ('pyasn1', ''),  # oauth2client dependency
-    ('pyasn1-modules', ''),  # oauth2client dependency
-    ('rsa', ''),  # oauth2client dependency
-    ('apitools', ''),
-    ('boto', ''),
-    ('gcs-oauth2-boto-plugin', ''),
-    ('fasteners', ''), # oauth2client and apitools dependency
-    ('monotonic', ''), # fasteners dependency
-    ('httplib2', submodule_pyvers),
-    ('python-gflags', ''),
-    ('retry-decorator', ''),
-    ('six', ''),
-    ('socksipy-branch', ''),
+  ('argcomplete', ''),  # For tab-completion (gcloud installs only).
+  ('mock', ''),  # mock and dependencies must be before boto.
+  ('funcsigs', ''),  # mock dependency
+  ('google-reauth-python', ''),  # Package name: google_reauth
+  ('pyu2f', ''),  # google_reauth dependency
+  ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
+  ('pyasn1', ''),  # oauth2client dependency
+  ('pyasn1-modules', ''),  # oauth2client dependency
+  ('rsa', ''),  # oauth2client dependency
+  ('apitools', ''),
+  ('boto', ''),
+  ('gcs-oauth2-boto-plugin', ''),
+  ('fasteners', ''),  # oauth2client and apitools dependency
+  ('monotonic', ''),  # fasteners dependency
+  ('httplib2', submodule_pyvers),
+  ('python-gflags', ''),
+  ('retry-decorator', ''),
+  ('six', ''),
+  ('socksipy-branch', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
   if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
@@ -127,6 +127,7 @@ def RunMain():
   # pylint: disable=g-import-not-at-top
   import gslib.__main__
   sys.exit(gslib.__main__.main())
+
 
 if __name__ == '__main__':
   RunMain()
