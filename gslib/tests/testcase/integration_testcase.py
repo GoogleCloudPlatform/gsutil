@@ -315,7 +315,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                     '-h', 'x-%s-meta-%s' % (provider_meta_string, MODE_ATTR),
                     suri(obj)])
 
-  def _ServiceAccountCredentialsPresent(self):
+  @staticmethod
+  def _ServiceAccountCredentialsPresent():
     # TODO: Currently, service accounts cannot be project owners (unless
     # they are grandfathered). Unfortunately, setting a canned ACL other
     # than project-private, the ACL that buckets get by default, removes
@@ -326,7 +327,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return (config.has_option('Credentials', 'gs_service_key_file') or
             config.has_option('GoogleCompute', 'service_account'))
 
-  def _ListBucket(self, bucket_uri):
+  @staticmethod
+  def _ListBucket(bucket_uri):
     if bucket_uri.scheme == 's3':
       # storage_uri will omit delete markers from bucket listings, but
       # these must be deleted before we can remove an S3 bucket.
@@ -477,7 +479,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       self.assertGreater(effective_time_in_seconds,
                          current_time_in_seconds - 60)
 
-  def DateTimeToSeconds(self, datetime_obj):
+  @staticmethod
+  def DateTimeToSeconds(datetime_obj):
     return int(time.mktime(datetime_obj.timetuple()))
 
   def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
@@ -1019,7 +1022,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if mode is not None:
       self._VerifyLocalMode(path, mode)
 
-  def FlatListDir(self, directory):
+  @staticmethod
+  def FlatListDir(directory):
     """Perform a flat listing over directory.
 
     Args:
