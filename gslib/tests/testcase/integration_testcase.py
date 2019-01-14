@@ -536,8 +536,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if provider == 'gs':
       # Apply API version and project ID headers if necessary.
-      headers = {'x-goog-api-version': self.api_version}
-      headers[GOOG_PROJ_ID_HDR] = PopulateProjectId()
+      headers = {'x-goog-api-version': self.api_version,
+                 GOOG_PROJ_ID_HDR: PopulateProjectId()}
     else:
       headers = {}
 
