@@ -9,3 +9,5 @@ gsutil_*.zip
 .settings/*
 .coverage*
 .metadata/*
+.idea/*
+.vscode/*
