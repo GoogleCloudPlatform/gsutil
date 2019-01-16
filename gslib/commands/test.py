@@ -677,6 +677,7 @@ class TestCommand(Command):
       if not num_parallel_tests:
         pass
       else:
+        sequential_success = sequential_skipped = []
         num_processes = min(max_parallel_tests, num_parallel_tests)
         if num_parallel_tests > 1 and max_parallel_tests > 1:
           message = 'Running %d tests in parallel mode (%d processes).'
