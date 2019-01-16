@@ -3434,9 +3434,7 @@ def PerformCopy(
     else:
       preconditions.gen_match = 0
     if dst_url.IsFileUrl() and os.path.exists(dst_url.object_name):
-      # The local file may be a partial. Check the file sizes.
-      if src_obj_size == os.path.getsize(dst_url.object_name):
-        raise ItemExistsError()
+      raise ItemExistsError()
     elif dst_url.IsCloudUrl():
       try:
         dst_object = gsutil_api.GetObjectMetadata(
