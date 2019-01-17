@@ -1732,7 +1732,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_non_resumable(self):
-    """Test non resumable, gzip encoded files upload correctly in parallel."""
+    """Test non resumable, gzip encoded files upload correctly in parallel.
+    
+    This test generates a small amount of data (e.g. 100 chars) to upload.
+    Due to the small size, it will be below the resumable threshold,
+    and test the behavior of non-resumable uploads.
+    """
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
     contents = b'x' * 100
@@ -1753,7 +1758,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_resumable(self):
-    """Test resumable, gzip encoded files upload correctly in parallel."""
+    """Test resumable, gzip encoded files upload correctly in parallel.
+    
+    This test generates a large amount of data (e.g. halt_size amount of chars)
+    to upload. Due to the large size, it will be above the resumable threshold,
+    and test the behavior of resumable uploads.
+    """
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
     contents = self.get_random_ascii_chars(self.halt_size)
