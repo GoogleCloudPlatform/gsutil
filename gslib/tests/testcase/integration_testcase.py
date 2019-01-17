@@ -276,6 +276,29 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       self.xml_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
                                        provider=provider)
 
+  def get_random_ascii_chars(self, size):
+    """Generates random ASCII characters up to a given size.
+
+    Args:
+      size: Integer quantity of characters to generate.
+
+    Returns:
+      String of length equal to size argument.
+    """
+    random.seed(0)
+    def _random_ascii_char():
+      return random.choice(string.ascii_letters)
+
+    if six.PY2:
+      range = xrange
+
+    contents = ''
+    for _ in range(size):
+      contents += _random_ascii_char()
+
+    random.seed()  # Reset the seed for any other tests.
+    return contents
+
 
   def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
                        mtime=None, uid=None, gid=None, mode=None):
