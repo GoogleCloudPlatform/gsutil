@@ -286,15 +286,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       String of length equal to size argument.
     """
     random.seed(0)
-    def _random_ascii_char():
-      return random.choice(string.printable)
+    charset = string.printable.encode('ascii')
 
-    contents = ''
-    for _ in six.moves.range(size):
-      contents += _random_ascii_char()
+    contents = ''.join([random.choice(charset) for _ in range(size)]
+                        ).encode('ascii')
 
     random.seed()  # Reset the seed for any other tests.
-    return contents.encode('ascii')
+    return contents
 
 
   def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
