@@ -124,7 +124,7 @@ class UploadCallbackConnectionClassFactory(object):
       # Override httplib.HTTPConnection._send_output for debug logging.
       # Because the distinction between headers and message body occurs
       # only in this httplib function, we can only differentiate them here.
-      def _send_output(self, message_body=None):
+      def _send_output(self, message_body=None, encode_chunked=False):
         r"""Send the currently buffered request and clear the buffer.
 
         Appends an extra \r\n to the buffer.
